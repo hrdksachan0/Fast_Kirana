@@ -28,11 +28,11 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
   static const Color primaryRed = Color(0xFFE20A22);
 
   Future<void> _handleAdminLogin() async {
-    final email = _emailController.text.trim();
+    final input = _emailController.text.trim();
     final password = _passwordController.text;
 
-    if (email.isEmpty || password.isEmpty) {
-      setState(() => _errorMessage = 'Please enter both email and password');
+    if (input.isEmpty || password.isEmpty) {
+      setState(() => _errorMessage = 'Please enter admin email or phone and password');
       return;
     }
 
@@ -41,14 +41,18 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
       _errorMessage = null;
     });
 
-    if (email.toLowerCase() == 'admin@fastkirana.in' &&
+    final isEmailAdmin = input.toLowerCase() == 'admin@fastkirana.in';
+    final cleanDigits = input.replaceAll(RegExp(r'[^0-9]'), '');
+    final isPhoneAdmin = cleanDigits == '7054470303' || cleanDigits == '8112849854';
+
+    if ((isEmailAdmin || isPhoneAdmin) &&
         (password == 'FastKirana@2026' || password == 'admin123')) {
       final prefs = await SharedPreferences.getInstance();
       final adminUser = User(
         id: 'admin_master',
         name: 'FastKirana Admin',
-        email: email,
-        phone: AppConfig.supportPhone,
+        email: isEmailAdmin ? input.toLowerCase() : 'admin@fastkirana.in',
+        phone: isPhoneAdmin ? '7054470303' : AppConfig.supportPhone,
         role: 'ADMIN',
         isBlocked: false,
       );
@@ -69,7 +73,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Invalid admin email or password.';
+        _errorMessage = 'Invalid admin email/phone or password.';
       });
     }
   }
@@ -200,9 +204,9 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                     const SizedBox(height: 16),
                   ],
 
-                  // 3. Email Input
+                  // 3. Email / Phone Input
                   Text(
-                    'Admin Email',
+                    'Admin Email or Phone',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -223,9 +227,9 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                       keyboardType: TextInputType.emailAddress,
                       style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w600),
                       decoration: const InputDecoration(
-                        icon: Icon(Icons.email_outlined, size: 18, color: Color(0xFF9CA3AF)),
+                        icon: Icon(Icons.person_outline_rounded, size: 18, color: Color(0xFF9CA3AF)),
                         border: InputBorder.none,
-                        hintText: 'admin@fastkirana.in',
+                        hintText: 'admin@fastkirana.in or 7054470303',
                       ),
                     ),
                   ),

@@ -28,19 +28,21 @@ class _RestaurantLoginScreenState extends ConsumerState<RestaurantLoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 100,
-                height: 100,
+                width: 90,
+                height: 90,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [AppDesignSystem.cafeAccent, const Color(0xFFEA580C)]),
+                  gradient: const LinearGradient(colors: [Color(0xFFE20A22), Color(0xFFDC2626)]),
                   borderRadius: BorderRadius.circular(24),
-                  boxShadow: AppDesignSystem.shadowGlow,
+                  boxShadow: [
+                    BoxShadow(color: const Color(0xFFDC2626).withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 6)),
+                  ],
                 ),
-                child: Center(child: Text('☕', style: TextStyle(fontSize: 56))),
+                child: const Center(child: Text('👨‍🍳', style: TextStyle(fontSize: 48))),
               ),
-              const SizedBox(height: 32),
-              Text('Restaurant Owner Login', style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary), textAlign: TextAlign.center),
-              const SizedBox(height: 8),
-              Text('Manage your cafe/restaurant orders', style: GoogleFonts.inter(fontSize: 14, color: AppDesignSystem.textSecondary), textAlign: TextAlign.center),
+              const SizedBox(height: 24),
+              Text('Restaurant Kitchen Login', style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w900, color: AppDesignSystem.textPrimary), textAlign: TextAlign.center),
+              const SizedBox(height: 6),
+              Text('Manage live kitchen orders, cooking timer & stock', style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textSecondary), textAlign: TextAlign.center),
               const SizedBox(height: 40),
               Container(
                 padding: const EdgeInsets.all(16),

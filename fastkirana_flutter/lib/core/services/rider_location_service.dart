@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
 import '../config/app_config.dart';
 import '../network/api_client.dart';
 import 'supabase_service.dart';
@@ -17,6 +18,7 @@ class RiderLocationService {
   String? _activeOrderId;
   String? _riderId;
   DateTime? _lastUploadTime;
+  DateTime? _lastDbInsertTime;
   Position? _lastPosition;
   bool _isTracking = false;
   Dio? _dio;
@@ -93,10 +95,10 @@ class RiderLocationService {
       debugPrint('[RiderLocation] Initial GPS acquisition error: $e');
     }
 
-    // Subscribe to location stream with battery-efficient 15m distance filter & high accuracy
+    // Subscribe to location stream with ultra-responsive 2m distance filter & high accuracy navigation
     const locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 15, // Only triggers after 15 meters movement
+      accuracy: LocationAccuracy.bestForNavigation,
+      distanceFilter: 2, // Immediate trigger after 2 meters movement
     );
 
     _positionSubscription = Geolocator.getPositionStream(
@@ -116,9 +118,9 @@ class RiderLocationService {
   void _handleNewPosition(Position position) {
     final now = DateTime.now();
 
-    // Throttle: avoid uploading faster than once every 10 seconds unless moved > 30 meters
+    // High-speed responsiveness: upload every 1.5 seconds or if moved > 3 meters
     if (_lastUploadTime != null && _lastPosition != null) {
-      final elapsedSecs = now.difference(_lastUploadTime!).inSeconds;
+      final elapsedMs = now.difference(_lastUploadTime!).inMilliseconds;
       final distanceMoved = Geolocator.distanceBetween(
         _lastPosition!.latitude,
         _lastPosition!.longitude,
@@ -126,7 +128,7 @@ class RiderLocationService {
         position.longitude,
       );
 
-      if (elapsedSecs < 10 && distanceMoved < 30) {
+      if (elapsedMs < 1500 && distanceMoved < 3) {
         return;
       }
     }
@@ -136,6 +138,8 @@ class RiderLocationService {
 
     _sendLocationUpdate(position);
   }
+
+  RealtimeChannel? _trackingChannel;
 
   /// Broadcast GPS coordinate update to Backend and Supabase Realtime
   Future<void> _sendLocationUpdate(Position position) async {
@@ -154,7 +158,7 @@ class RiderLocationService {
 
     debugPrint('[RiderLocation] Broadcasting GPS: Lat: ${position.latitude.toStringAsFixed(5)}, Lng: ${position.longitude.toStringAsFixed(5)}, Heading: ${position.heading.toStringAsFixed(1)}°');
 
-    // 1. Post to FastAPI /api/delivery/location
+    // 1. Post to /api/delivery/location
     try {
       if (_dio != null) {
         await _dio!.post(
@@ -163,6 +167,7 @@ class RiderLocationService {
             'lat': position.latitude,
             'lng': position.longitude,
             'orderId': _activeOrderId,
+            'riderId': _riderId,
             'heading': position.heading,
             'speed': position.speed,
             'accuracy': position.accuracy,
@@ -170,31 +175,74 @@ class RiderLocationService {
           options: Options(
             sendTimeout: const Duration(seconds: 5),
             receiveTimeout: const Duration(seconds: 5),
+            headers: {
+              if (_riderId != null) 'x-rider-id': _riderId,
+              if (_riderId != null) 'x-user-id': _riderId,
+            },
           ),
         );
       }
     } catch (e) {
-      debugPrint('[RiderLocation] FastAPI upload failed, queuing for offline sync: $e');
+      debugPrint('[RiderLocation] API upload failed, queuing for offline sync: $e');
       _queueOfflineLocation(payload);
     }
 
-    // 2. Direct Supabase insert if client is available
+    // 2. Direct Supabase Broadcast & DB Update
     try {
       final sb = SupabaseService.client;
       if (sb != null && _activeOrderId != null) {
-        await sb.from('delivery_locations').insert({
-          'order_id': _activeOrderId,
-          'rider_id': _riderId,
-          'latitude': position.latitude,
-          'longitude': position.longitude,
-          'accuracy': position.accuracy,
-          'heading': position.heading,
-          'speed': position.speed,
-          'timestamp': DateTime.now().toIso8601String(),
-        });
+        var cleanId = _activeOrderId!.trim();
+        if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
+
+        // Ensure channel is subscribed
+        if (_trackingChannel == null) {
+          _trackingChannel = sb.channel('order-live-tracking-$cleanId');
+          _trackingChannel!.subscribe();
+        }
+
+        // Instant in-memory WebSocket broadcast (0ms latency)
+        _trackingChannel!.sendBroadcastMessage(
+          event: 'location_update',
+          payload: {
+            'lat': position.latitude,
+            'lng': position.longitude,
+            'heading': position.heading,
+            'speed': position.speed,
+            'accuracy': position.accuracy,
+            'timestamp': DateTime.now().toIso8601String(),
+          },
+        );
+
+        // Update orders table with live deliveryLat & deliveryLng
+        final now = DateTime.now();
+        if (_lastDbInsertTime == null || now.difference(_lastDbInsertTime!).inSeconds >= 5) {
+          _lastDbInsertTime = now;
+          sb.from('orders').update({
+            'deliveryLat': position.latitude,
+            'deliveryLng': position.longitude,
+          }).eq('id', cleanId).then((_) {}).catchError((_) {});
+
+          if (_riderId != null && _riderId!.isNotEmpty) {
+            sb.from('users').update({
+              'liveLat': position.latitude,
+              'liveLng': position.longitude,
+            }).eq('id', _riderId!).then((_) {}).catchError((_) {});
+          }
+
+          sb.from('delivery_locations').insert({
+            'order_id': cleanId,
+            'rider_id': _riderId,
+            'latitude': position.latitude,
+            'longitude': position.longitude,
+            'accuracy': position.accuracy,
+            'heading': position.heading,
+            'speed': position.speed,
+            'timestamp': now.toIso8601String(),
+          }).then((_) {}).catchError((_) {});
+        }
       }
     } catch (e) {
-      // Handled silently since FastAPI also updates Postgres
+      // Handled silently
     }
   }
 
@@ -250,6 +298,10 @@ class RiderLocationService {
     debugPrint('[RiderLocation] Stopping GPS tracking for Order #$_activeOrderId');
     await _positionSubscription?.cancel();
     _positionSubscription = null;
+    if (_trackingChannel != null) {
+      SupabaseService.unsubscribe(_trackingChannel);
+      _trackingChannel = null;
+    }
     _isTracking = false;
     _activeOrderId = null;
     _lastPosition = null;

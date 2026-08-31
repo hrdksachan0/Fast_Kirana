@@ -655,7 +655,7 @@ model RiderWallet {
   id             String   @id @default(cuid())
   userId         String   @unique
   cashInHand     Float    @default(0.0)
-  cashLimit      Float    @default(2000.0)
+  cashLimit      Float    @default(10000.0)
   totalCollected Float    @default(0.0)
   totalDeposited Float    @default(0.0)
   updatedAt      DateTime @updatedAt

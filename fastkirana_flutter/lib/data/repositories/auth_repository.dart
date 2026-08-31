@@ -86,6 +86,38 @@ class AuthRepository {
     }
   }
 
+  Future<void> sendPhoneOtp(String phone) async {
+    try {
+      await dio.post('/api/profile/send-phone-otp', data: {'phone': phone});
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<void> updatePhoneWithOtp(String phone, String otp) async {
+    try {
+      await dio.post('/api/profile/update-phone', data: {'phone': phone, 'otp': otp});
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<void> sendEmailOtp(String email) async {
+    try {
+      await dio.post('/api/profile/send-email-otp', data: {'email': email});
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<void> updateEmailWithOtp(String email, String otp) async {
+    try {
+      await dio.post('/api/profile/update-email', data: {'email': email, 'otp': otp});
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   Future<void> updateEmail(String email) async {
     try {
       await dio.post('/api/profile/update-email', data: {'email': email});

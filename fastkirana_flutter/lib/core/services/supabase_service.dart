@@ -51,6 +51,27 @@ class SupabaseService {
       final channelName = 'order-live-tracking-$orderId';
       final channel = sb.channel(channelName);
 
+      // Listen for direct broadcast events for sub-100ms ultra-fast updates
+      channel.onBroadcast(
+        event: 'location_update',
+        callback: (payload) {
+          if (payload.isNotEmpty) {
+            final lat = (payload['lat'] ?? payload['latitude']) as num?;
+            final lng = (payload['lng'] ?? payload['longitude']) as num?;
+            if (lat != null && lng != null) {
+              onLocationUpdate({
+                'lat': lat.toDouble(),
+                'lng': lng.toDouble(),
+                'heading': (payload['heading'] as num?)?.toDouble() ?? 0.0,
+                'speed': (payload['speed'] as num?)?.toDouble() ?? 0.0,
+                'accuracy': (payload['accuracy'] as num?)?.toDouble() ?? 0.0,
+                'timestamp': payload['timestamp'] ?? DateTime.now().toIso8601String(),
+              });
+            }
+          }
+        },
+      );
+
       // Listen for delivery_locations INSERT/UPDATE for this order
       channel.onPostgresChanges(
         event: PostgresChangeEvent.all,
@@ -116,6 +137,50 @@ class SupabaseService {
       return channel;
     } catch (e) {
       debugPrint('[SupabaseService] Subscribe error: $e');
+      return null;
+    }
+  }
+
+  /// Listen for ALL live order changes in realtime (INSERT, UPDATE, DELETE) over WebSocket for Admin
+  static RealtimeChannel? subscribeToAllOrdersRealtime({
+    required void Function(Map<String, dynamic> orderRecord) onOrderChange,
+  }) {
+    final sb = client;
+    if (sb == null) return null;
+
+    try {
+      final channel = sb.channel('admin-global-orders-websocket');
+
+      // Listen for all Postgres changes on 'orders' table
+      channel.onPostgresChanges(
+        event: PostgresChangeEvent.all,
+        schema: 'public',
+        table: 'orders',
+        callback: (payload) {
+          final record = payload.newRecord.isNotEmpty ? payload.newRecord : payload.oldRecord;
+          if (record.isNotEmpty) {
+            onOrderChange(record);
+          }
+        },
+      );
+
+      // Listen for direct broadcast events
+      channel.onBroadcast(
+        event: 'new_order',
+        callback: (payload) {
+          if (payload.isNotEmpty) {
+            onOrderChange(payload);
+          }
+        },
+      );
+
+      channel.subscribe((status, [error]) {
+        debugPrint('[SupabaseService] Admin orders WebSocket status: $status (error: $error)');
+      });
+
+      return channel;
+    } catch (e) {
+      debugPrint('[SupabaseService] Global orders subscribe error: $e');
       return null;
     }
   }

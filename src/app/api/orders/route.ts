@@ -6,7 +6,7 @@ import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED
 import { STORE_PINCODE, GROCERY_PICKUP_ADDRESS, RESTAURANT_PICKUP_ADDRESS, resolvePincode } from '@/lib/store-config'
 import { apiWriteLimiter, apiReadLimiter } from '@/lib/rate-limit'
 import { sseEmitter } from '@/lib/sse-emitter'
-import { sendPushNotificationToRoles } from '@/lib/push-notification'
+import { sendPushNotificationToRoles, sendPushNotificationToRestaurant } from '@/lib/push-notification'
 import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
 import { buildOrderFcmPayload, sendTopicWithRetry } from '@/lib/fcm-utils'
 import { getDistanceKm, getDeliveryRules, DEFAULT_STORE_LAT, DEFAULT_STORE_LNG } from '@/lib/distance'
@@ -1139,13 +1139,32 @@ export async function POST(request: NextRequest) {
             restaurantId: order.restaurantId,
           })
 
-          // Send push notifications to all workers for any new order
-          sendPushNotificationToRoles([Role.ADMIN, Role.CHEF, Role.DELIVERY, Role.PICKER], {
-            title: isOnlinePaid ? '💳 Online Payment Order Confirmed!' : notificationTitle,
-            body: isOnlinePaid ? `Order #${displayId} of ₹${order.total} — PAID Online ✅` : `Order #${displayId} of ₹${order.total} has been placed.`,
-            tag: `order-${order.id}`,
-            data: { orderId: order.id }
-          }).catch((err: any) => console.error('Error sending push notification to workers:', err))
+          // Send push notifications to workers
+          if (isRestaurant) {
+            // 1. Notify Admin & Delivery with full info
+            sendPushNotificationToRoles([Role.ADMIN, Role.DELIVERY], {
+              title: isOnlinePaid ? '💳 Online Payment Order Confirmed!' : notificationTitle,
+              body: isOnlinePaid ? `Order #${displayId} of ₹${order.total} — PAID Online ✅` : `Order #${displayId} of ₹${order.total} has been placed.`,
+              tag: `order-${order.id}`,
+              data: { orderId: order.id }
+            }).catch((err: any) => console.error('Error sending push notification to admins:', err))
+
+            // 2. Notify ONLY the specific Restaurant Owner / Chef WITHOUT ANY AMOUNT
+            sendPushNotificationToRestaurant(order.restaurantId, {
+              title: `👨‍🍳 New Food Order #${displayId}!`,
+              body: `New order #${displayId} received for ${order.shopName || 'Kitchen'}. Tap to prepare dishes.`,
+              tag: `restaurant-order-${order.id}`,
+              data: { orderId: order.id, restaurantId: order.restaurantId }
+            }).catch((err: any) => console.error('Error sending push notification to restaurant:', err))
+          } else {
+            // Pure Grocery order — ONLY notify Admin, Picker, Delivery. (CHEF/RESTAURANT NEVER NOTIFIED)
+            sendPushNotificationToRoles([Role.ADMIN, Role.PICKER, Role.DELIVERY], {
+              title: isOnlinePaid ? '💳 Online Payment Order Confirmed!' : notificationTitle,
+              body: isOnlinePaid ? `Order #${displayId} of ₹${order.total} — PAID Online ✅` : `Order #${displayId} of ₹${order.total} has been placed.`,
+              tag: `order-${order.id}`,
+              data: { orderId: order.id }
+            }).catch((err: any) => console.error('Error sending push notification to grocery staff:', err))
+          }
 
           // Send FCM Push Notification directly to Customer Phone & User Topic
           try {
@@ -1190,7 +1209,8 @@ export async function POST(request: NextRequest) {
                 }
               }
 
-              // 2. Direct device token push to Admin & Staff workers
+              // 2. Direct device token push to Admin & Grocery Staff (Admin, Delivery, Picker)
+              const staffRoles = isRestaurant ? ['ADMIN', 'DELIVERY'] : ['ADMIN', 'PICKER', 'DELIVERY']
               const staffPayload = buildOrderFcmPayload(
                 isOnlinePaid ? '💳 New PAID Order Received!' : '🛎️ New Order Received!',
                 `New order #${displayId} of ₹${order.total} has been placed.`,
@@ -1205,14 +1225,55 @@ export async function POST(request: NextRequest) {
                 }
               )
               const staffTokens = await prisma.fcmToken.findMany({
-                where: { user: { role: { in: ['ADMIN', 'DELIVERY', 'PICKER', 'CHEF'] } } },
+                where: { user: { role: { in: staffRoles as any } } },
                 select: { token: true },
                 orderBy: { createdAt: 'desc' },
-                take: 10,
+                take: 15,
               })
               const uniqueStaffTokens = Array.from(new Set(staffTokens.map(t => t.token)))
               for (const token of uniqueStaffTokens) {
                 fcmMessaging.send({ token, ...staffPayload }).catch(() => {})
+              }
+
+              // 3. Direct device token push STRICTLY to the specific restaurant owner ONLY (WITHOUT AMOUNT)
+              if (isRestaurant && order.restaurantId) {
+                const restInfo = await prisma.restaurant.findUnique({
+                  where: { id: order.restaurantId },
+                  select: { ownerPhone: true }
+                })
+                const cleanRestPhone = restInfo?.ownerPhone ? getLast10Digits(restInfo.ownerPhone) : ''
+
+                const restaurantPayload = buildOrderFcmPayload(
+                  `👨‍🍳 New Order for ${order.shopName || 'Kitchen'}!`,
+                  `Order #${displayId} received! Open kitchen console to prepare dishes.`,
+                  {
+                    title: `👨‍🍳 New Order for ${order.shopName || 'Kitchen'}!`,
+                    body: `Order #${displayId} received! Open kitchen console to prepare dishes.`,
+                    orderId: order.id,
+                    readableId: displayId,
+                    restaurantId: order.restaurantId,
+                    status: order.status,
+                    screen: 'restaurant-console',
+                    timestamp: Date.now().toString(),
+                  }
+                )
+                const restTokens = await prisma.fcmToken.findMany({
+                  where: {
+                    user: {
+                      OR: [
+                        { assignedRestaurantId: order.restaurantId },
+                        ...(cleanRestPhone ? [{ phone: { contains: cleanRestPhone } }] : []),
+                      ]
+                    }
+                  },
+                  select: { token: true },
+                  orderBy: { createdAt: 'desc' },
+                  take: 10,
+                })
+                const uniqueRestTokens = Array.from(new Set(restTokens.map(t => t.token)))
+                for (const token of uniqueRestTokens) {
+                  fcmMessaging.send({ token, ...restaurantPayload }).catch(() => {})
+                }
               }
             }
           } catch (fcmErr) {
@@ -1251,7 +1312,13 @@ export async function POST(request: NextRequest) {
     })
 
     const mainOrder = createdOrders.find((o) => !o.restaurantId) || createdOrders[0]
-    return NextResponse.json(mainOrder)
+    return NextResponse.json({
+      ...mainOrder,
+      order: mainOrder,
+      orders: createdOrders,
+      readableId: mainOrder.readableId,
+      id: mainOrder.id,
+    })
   } catch (error: any) {
     console.error('Order creation error:', error)
     return NextResponse.json({ error: error.message || 'Failed to place order' }, { status: 500 })
@@ -1263,13 +1330,23 @@ export async function GET(request: NextRequest) {
   if (limited) return limited
 
   const session = await auth()
-  let userId = session?.user?.id || request.headers.get('x-user-id')
-  const headerPhone = request.headers.get('x-user-phone')
+  const { searchParams } = new URL(request.url)
+  const queryUserId = searchParams.get('userId')
+  const queryPhone = searchParams.get('phone') || searchParams.get('customerPhone')
+
+  let userId = session?.user?.id || request.headers.get('x-user-id') || queryUserId
+  const headerPhone = request.headers.get('x-user-phone') || queryPhone
   let sessionPhone = (session?.user as any)?.phone ? getLast10Digits((session.user as any).phone) : (headerPhone ? getLast10Digits(headerPhone) : '')
 
   if (!userId && sessionPhone) {
     const dbUser = await prisma.user.findFirst({
-      where: { phone: { contains: sessionPhone } }
+      where: {
+        OR: [
+          { phone: sessionPhone },
+          { phone: `+91${sessionPhone}` },
+          { phone: { contains: sessionPhone } }
+        ]
+      }
     })
     if (dbUser) userId = dbUser.id
   }

@@ -11,6 +11,7 @@ import '../../core/theme/design_system.dart';
 import '../../core/theme/responsive.dart';
 import '../../providers/cart_provider.dart';
 import '../../widgets/floating_cart_bar.dart';
+import '../../widgets/floating_order_tracking_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/notification_service.dart';
@@ -129,7 +130,11 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
     ];
 
     final cartAsync = ref.watch(cartProvider);
+    final cartCount = cartAsync.value?.items.fold<int>(0, (s, item) => s + item.quantity) ?? 0;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    final cartBottomOffset = _isBottomNavVisible ? (bottomPadding + 76) : (bottomPadding + 16);
+    final trackingBottomOffset = cartCount > 0 ? (cartBottomOffset + 58) : cartBottomOffset;
 
     return PopScope(
       canPop: false,
@@ -184,8 +189,11 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
                 children: screens,
               ),
 
+              // Floating Order Tracking Pill (Stacked right above Floating Cart, perfectly synchronized)
+              FloatingOrderTrackingBar(bottomOffset: trackingBottomOffset),
+
               // Slim Modern Floating Sticky Cart Bar (Shared across all pages)
-              FloatingCartBar(bottomOffset: _isBottomNavVisible ? (bottomPadding + 76) : (bottomPadding + 16)),
+              FloatingCartBar(bottomOffset: cartBottomOffset),
 
               // Liquid Flow Glass Bottom Navigation (Auto Hide & Auto Reveal in 1s)
               AnimatedPositioned(

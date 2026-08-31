@@ -311,7 +311,7 @@ export async function GET(
         tag: 'chilled-drinks',
         title: 'Chilled Cold Drinks & Sodas',
         emoji: '🥤',
-        imageUrl: '/beverages_category.png',
+        imageUrl: '/beverages_category.webp',
         description: 'Chilled soft drinks, energy boosts & refreshing coolers from FastKirana Darkstore',
         sortOrder: 90,
         itemsCount: coldDrinksDishes.length,

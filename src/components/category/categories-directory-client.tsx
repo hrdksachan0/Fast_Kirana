@@ -51,7 +51,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
     'fruits-vegetables': {
       title: 'Fruits & Vegetables',
       emoji: '🥦',
-      image: '/fruits_vegetables_category.png',
+      image: '/fruits_vegetables_category.webp',
       gradient: 'from-emerald-500/10 to-emerald-500/5',
       borderColor: 'border-zinc-150 dark:border-zinc-800/40',
       labelColor: 'text-[#029664] dark:text-emerald-400',
@@ -75,7 +75,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
     'dairy-breakfast': {
       title: 'Dairy & Breakfast',
       emoji: '🥛',
-      image: '/dairy_breakfast_category.png',
+      image: '/dairy_breakfast_category.webp',
       gradient: 'from-blue-500/10 to-blue-500/5',
       borderColor: 'border-zinc-150 dark:border-zinc-800/40',
       labelColor: 'text-[#2563EB] dark:text-blue-400',
@@ -99,7 +99,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
     'snacks-munchies': {
       title: 'Snacks & Munchies',
       emoji: '🍿',
-      image: '/snacks_munchies_category.png',
+      image: '/snacks_munchies_category.webp',
       gradient: 'from-amber-500/10 to-amber-500/5',
       borderColor: 'border-zinc-150 dark:border-zinc-800/40',
       labelColor: 'text-[#EA580C] dark:text-orange-400',
@@ -124,7 +124,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
     'beverages': {
       title: 'Beverages',
       emoji: '🥤',
-      image: '/beverages_category.png',
+      image: '/beverages_category.webp',
       gradient: 'from-purple-500/10 to-purple-500/5',
       borderColor: 'border-zinc-150 dark:border-zinc-800/40',
       labelColor: 'text-[#7C3AED] dark:text-purple-400',
@@ -148,7 +148,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
     'personal-care': {
       title: 'Personal Care',
       emoji: '🧴',
-      image: '/personal_care_category.png',
+      image: '/personal_care_category.webp',
       gradient: 'from-pink-500/10 to-pink-500/5',
       borderColor: 'border-zinc-150 dark:border-zinc-800/40',
       labelColor: 'text-[#DB2777] dark:text-pink-400',
@@ -172,7 +172,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
     'household': {
       title: 'Household Needs',
       emoji: '🧼',
-      image: '/household_category.png',
+      image: '/household_category.webp',
       gradient: 'from-teal-500/10 to-teal-500/5',
       borderColor: 'border-zinc-150 dark:border-zinc-800/40',
       labelColor: 'text-[#0D9488] dark:text-teal-400',
@@ -196,7 +196,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
     'bakery-biscuits': {
       title: 'Bakery & Bread',
       emoji: '🥐',
-      image: '/bakery_biscuits_category.png',
+      image: '/bakery_biscuits_category.webp',
       gradient: 'from-orange-500/10 to-orange-500/5',
       borderColor: 'border-zinc-150 dark:border-zinc-800/40',
       labelColor: 'text-[#EA580C] dark:text-orange-400',
@@ -219,7 +219,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
     'atta-rice-dal': {
       title: 'Atta, Rice & Dal',
       emoji: '🌾',
-      image: '/atta_rice_dal_category.png',
+      image: '/atta_rice_dal_category.webp',
       gradient: 'from-yellow-500/10 to-yellow-500/5',
       borderColor: 'border-zinc-150 dark:border-zinc-800/40',
       labelColor: 'text-[#B45309] dark:text-yellow-450',
@@ -243,7 +243,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
     'ice-cream': {
       title: 'Ice Cream & Desserts',
       emoji: '🍦',
-      image: '/ice_cream_category.png',
+      image: '/ice_cream_category.webp',
       gradient: 'from-sky-500/10 to-sky-500/5',
       borderColor: 'border-zinc-150 dark:border-zinc-800/40',
       labelColor: 'text-[#0284C7] dark:text-sky-400',
@@ -266,7 +266,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
     'cafe': {
       title: 'FastKirana Café',
       emoji: '☕',
-      image: '/cafe_category.png',
+      image: '/cafe_category.webp',
       gradient: 'from-amber-500/10 to-amber-500/5',
       borderColor: 'border-zinc-150 dark:border-zinc-800/40',
       labelColor: 'text-[#D97706] dark:text-amber-250',
@@ -330,7 +330,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
         {/* Shopping Bag Image Banner */}
         <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 select-none pointer-events-none hidden min-[375px]:block">
           <Image
-            src="/grocery_bag_banner.png"
+            src="/grocery_bag_banner.webp"
             alt="Grocery Bag"
             fill
             className="object-contain"
@@ -366,7 +366,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
             const config = categoryConfigs[c.slug] || {
               title: c.name,
               emoji: '🛒',
-              image: (c.imageUrl && (c.imageUrl.startsWith('/') || c.imageUrl.startsWith('http'))) ? c.imageUrl : '/fruits_vegetables_category.png',
+              image: (c.imageUrl && (c.imageUrl.startsWith('/') || c.imageUrl.startsWith('http'))) ? c.imageUrl : '/fruits_vegetables_category.webp',
               gradient: 'from-zinc-500/10 to-zinc-500/5',
               borderColor: 'border-zinc-200/60 dark:border-zinc-900/20',
               labelColor: 'text-zinc-700 dark:text-zinc-355 font-extrabold',

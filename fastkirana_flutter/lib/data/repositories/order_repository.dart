@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/order.dart';
 import '../../core/network/api_client.dart';
+import '../../core/services/supabase_service.dart';
 
 class OrderRepository {
   final Dio dio;
@@ -12,9 +14,16 @@ class OrderRepository {
 
   Future<String> _getCacheKey() async {
     final prefs = await SharedPreferences.getInstance();
-    final phone = prefs.getString('user_phone') ?? prefs.getString('user_id') ?? 'guest';
+    final phone = prefs.getString('user_phone') ?? prefs.getString('auth_phone') ?? '';
     final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
-    return 'user_placed_orders_cache_${cleanPhone.isNotEmpty ? cleanPhone : 'guest'}';
+    if (cleanPhone.length >= 10) {
+      return 'user_placed_orders_cache_${cleanPhone.substring(cleanPhone.length - 10)}';
+    }
+    final userId = prefs.getString('user_id');
+    if (userId != null && userId.isNotEmpty) {
+      return 'user_placed_orders_cache_$userId';
+    }
+    return 'user_placed_orders_cache_guest';
   }
 
   Future<List<Order>> getOrders(String userId) async {
@@ -38,6 +47,10 @@ class OrderRepository {
       if (userId.isNotEmpty) {
         queryParams['userId'] = userId;
       }
+      final phone = prefs.getString('user_phone') ?? prefs.getString('auth_phone') ?? '';
+      if (phone.isNotEmpty) {
+        queryParams['phone'] = phone;
+      }
 
       final response = await dio.get('/api/orders', queryParameters: queryParams);
       final data = response.data;
@@ -59,7 +72,9 @@ class OrderRepository {
           merged[o.id] = o;
         }
         for (final o in localOrders) {
-          if (!merged.containsKey(o.id) && (o.readableId == null || !merged.values.any((m) => m.readableId == o.readableId))) {
+          final isMatched = merged.containsKey(o.id) ||
+              (o.readableId != null && merged.values.any((m) => m.readableId == o.readableId));
+          if (!isMatched) {
             merged[o.id] = o;
           }
         }
@@ -67,6 +82,42 @@ class OrderRepository {
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
         await _saveToCache(combined);
         return combined;
+      }
+    } catch (_) {}
+
+    // Fallback: Direct Supabase query for real-time status - STRICTLY filtered by customer
+    try {
+      final sb = SupabaseService.client;
+      if (sb != null) {
+        final phone = prefs.getString('user_phone') ?? prefs.getString('auth_phone') ?? '';
+        final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+        final last10 = cleanPhone.length >= 10 ? cleanPhone.substring(cleanPhone.length - 10) : cleanPhone;
+        final effectiveUserId = userId.isNotEmpty ? userId : (prefs.getString('user_id') ?? '');
+
+        if (effectiveUserId.isNotEmpty) {
+          final List<dynamic> sbData = await sb
+              .from('orders')
+              .select('*, order_items(*), addresses(*)')
+              .eq('userId', effectiveUserId)
+              .order('createdAt', ascending: false)
+              .limit(30);
+
+          if (sbData.isNotEmpty) {
+            final sbOrders = sbData
+                .whereType<Map<String, dynamic>>()
+                .map((json) {
+                  final map = Map<String, dynamic>.from(json);
+                  map['items'] = map['order_items'];
+                  map['address'] = map['addresses'];
+                  return Order.fromJson(map);
+                })
+                .toList();
+            if (sbOrders.isNotEmpty) {
+              await _saveToCache(sbOrders);
+              return sbOrders;
+            }
+          }
+        }
       }
     } catch (_) {}
 
@@ -96,19 +147,27 @@ class OrderRepository {
   }
 
   Future<Order> getOrder(String orderId) async {
+    final cleanId = orderId.replaceAll('#', '').trim();
     try {
-      final response = await dio.get('/api/orders/$orderId');
+      final response = await dio.get('/api/orders/$cleanId');
       if (response.data is Map<String, dynamic>) {
-        return Order.fromJson(response.data as Map<String, dynamic>);
+        final orderData = response.data['order'] ?? response.data;
+        if (orderData is Map<String, dynamic>) {
+          return Order.fromJson(orderData);
+        }
       }
     } catch (_) {}
 
     final orders = await getOrders('');
     return orders.firstWhere(
-      (o) => o.id == orderId || o.readableId == orderId,
+      (o) =>
+          o.id == cleanId ||
+          o.readableId == cleanId ||
+          o.displayId == cleanId ||
+          (cleanId.isNotEmpty && (o.id.endsWith(cleanId) || (o.readableId?.endsWith(cleanId) ?? false))),
       orElse: () => Order(
-        id: orderId,
-        readableId: orderId,
+        id: cleanId,
+        readableId: cleanId,
         userId: '',
         addressId: '',
         status: OrderStatus.confirmed,
@@ -233,6 +292,64 @@ class OrderRepository {
       return o;
     }).toList();
     await _saveToCache(updated);
+
+    Order? cancelledOrder;
+    for (final o in orders) {
+      if (o.id == orderId || o.readableId == orderId) {
+        cancelledOrder = o;
+        break;
+      }
+    }
+
+    if (cancelledOrder != null && cancelledOrder.status != OrderStatus.cancelled) {
+      final sb = SupabaseService.client;
+      if (sb != null) {
+        try {
+          final items = cancelledOrder.items ?? [];
+          for (final item in items) {
+            final pId = item.productId;
+            if (pId != null && pId.isNotEmpty) {
+              final prodRes = await sb
+                  .from('products')
+                  .select('id, stock, variants')
+                  .eq('id', pId)
+                  .maybeSingle();
+
+              if (prodRes != null) {
+                if (item.selectedVariant != null && item.selectedVariant!.isNotEmpty) {
+                  final rawVars = prodRes['variants'];
+                  if (rawVars is List) {
+                    final updatedVariants = rawVars.map((v) {
+                      if (v is Map && v['name'] == item.selectedVariant) {
+                        final curStock = (v['stock'] as num?)?.toInt() ?? 0;
+                        return Map<String, dynamic>.from(v)..['stock'] = curStock + item.quantity;
+                      }
+                      return v;
+                    }).toList();
+                    final newTotalStock = updatedVariants.fold<int>(
+                      0,
+                      (sum, v) => sum + ((v is Map ? v['stock'] as num? : 0)?.toInt() ?? 0),
+                    );
+                    await sb.from('products').update({
+                      'variants': updatedVariants,
+                      'stock': newTotalStock,
+                    }).eq('id', pId);
+                  }
+                } else {
+                  final curStock = (prodRes['stock'] as num?)?.toInt() ?? 0;
+                  final newStock = curStock + item.quantity;
+                  await sb.from('products').update({
+                    'stock': newStock,
+                  }).eq('id', pId);
+                }
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('[CancelOrder Stock Restore Error]: $e');
+        }
+      }
+    }
 
     try {
       await dio.patch('/api/orders/$orderId', data: {

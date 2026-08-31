@@ -43,8 +43,8 @@ class AppConfig {
   );
 
   // ─── Brand Assets ───────────────────────────────────────────────
-  static const String appIconAsset = 'assets/brand/fastkirana_app_icon.png';
-  static const String exactLogoAsset = 'assets/brand/fastkirana_exact_logo.png';
+  static const String appIconAsset = 'assets/brand/fastkirana_app_icon.webp';
+  static const String exactLogoAsset = 'assets/brand/fastkirana_exact_logo.webp';
 
   // ─── Support & Contacts ─────────────────────────────────────────
   static const String supportPhone = '+91 81128 49854';

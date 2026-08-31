@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!-- Optional: Background location for live delivery tracking (API 29+) -->
     <!-- Request at runtime only when needed — not needed for grocery-only app -->
@@ -77,8 +78,11 @@
             android:value="2" />
     </application>
 
-    <!-- Required for text processing queries (Flutter engine) -->
+    <!-- Required for speech recognition (Android 11+) and text processing -->
     <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

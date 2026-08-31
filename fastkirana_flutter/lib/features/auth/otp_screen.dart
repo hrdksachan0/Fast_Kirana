@@ -12,7 +12,11 @@ import '../../data/models/user.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../core/network/api_client.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/address_provider.dart';
 import '../../core/services/notification_service.dart';
+import '../../core/routes/page_transitions.dart';
+import '../delivery/delivery_dashboard.dart';
+import '../admin/admin_dashboard.dart';
 
 class OtpScreen extends ConsumerStatefulWidget {
   final String identifier;
@@ -215,11 +219,46 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
 
         if (!mounted) return;
 
+        // Role-Based Smart Navigation after OTP Verification
+        final roleUpper = user.role.toUpperCase();
+        if (roleUpper == 'DELIVERY' || roleUpper == 'RIDER') {
+          await prefs.setString('user_role', 'DELIVERY');
+          if (mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              FadeSlideRoute(page: const DeliveryDashboard()),
+              (route) => false,
+            );
+          }
+          return;
+        }
+
+        if (roleUpper == 'ADMIN') {
+          await prefs.setString('user_role', 'ADMIN');
+          if (mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              FadeSlideRoute(page: const AdminDashboard()),
+              (route) => false,
+            );
+          }
+          return;
+        }
+
+        // Customer Navigation
         final hasChosenLocation = prefs.getBool('has_chosen_location') ?? false;
         if (!hasChosenLocation) {
-          Navigator.of(context).pushNamedAndRemoveUntil('/location', (route) => false);
+          if (mounted) Navigator.of(context).pushNamedAndRemoveUntil('/location', (route) => false);
         } else {
-          Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+          try {
+            final addresses = await ref.read(addressRepositoryProvider).getAddresses();
+            if (!mounted) return;
+            if (addresses.isEmpty || !addresses.any((a) => a.latitude != null && a.latitude != 0.0)) {
+              Navigator.of(context).pushNamedAndRemoveUntil('/location', (route) => false);
+            } else {
+              Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+            }
+          } catch (_) {
+            if (mounted) Navigator.of(context).pushNamedAndRemoveUntil('/location', (route) => false);
+          }
         }
         return;
       } else {
@@ -650,47 +689,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                         ),
                       ],
 
-                      // Smart Clipboard Autofill Pill
-                      if (_clipboardOtp != null && _currentOtp.length < 6) ...[
-                        Center(
-                          child: GestureDetector(
-                            onTap: () => _fillOtp(_clipboardOtp!),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              margin: const EdgeInsets.only(bottom: 18),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFFEFF6FF), Color(0xFFDBEAFE)],
-                                ),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: const Color(0xFF93C5FD)),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text('📋', style: TextStyle(fontSize: 13)),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Paste code $_clipboardOtp',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w800,
-                                      color: const Color(0xFF1E40AF),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ).animate().fadeIn(duration: 250.ms),
-                      ],
 
                       // 6 Tactile, High-End OTP Boxes
                       LayoutBuilder(

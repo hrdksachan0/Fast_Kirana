@@ -626,10 +626,15 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                             GestureDetector(
                               onTap: () {
                                 HapticFeedback.mediumImpact();
+                                final effectiveOrder = _liveOrder ?? widget.order;
+                                final trackingId = effectiveOrder?.id ?? effectiveOrder?.readableId ?? widget.orderId ?? displayId;
                                 Navigator.push(
                                   context,
                                   FadeSlideRoute(
-                                    page: OrderTrackingScreen(orderId: displayId),
+                                    page: OrderTrackingScreen(
+                                      orderId: trackingId,
+                                      initialOrder: effectiveOrder,
+                                    ),
                                   ),
                                 );
                               },

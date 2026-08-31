@@ -13,6 +13,7 @@ import '../../core/theme/responsive.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../core/network/api_client.dart';
 import '../../core/utils/restaurant_utils.dart';
+import '../../core/services/location_service.dart';
 import '../../data/models/cart.dart';
 import '../../data/models/product.dart';
 import '../../data/models/store_settings.dart';
@@ -24,6 +25,8 @@ import '../../providers/store_settings_provider.dart';
 import '../../widgets/cart_conflict_dialog.dart';
 import '../auth/login_screen.dart';
 import '../checkout/checkout_screen.dart';
+import 'coupons_screen.dart';
+import 'package:flutter_bounceable/flutter_bounceable.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -299,9 +302,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   Widget _buildCartScreenContent(BuildContext context, WidgetRef ref, Cart cart) {
-    final settings = ref.watch(storeSettingsProvider).valueOrNull ?? StoreSettings();
+    final tier = ref.watch(deliveryTierProvider);
     final subtotal = cart.subtotal;
-    final deliveryFee = subtotal >= settings.freeDeliveryThreshold ? 0.0 : settings.deliveryFee;
+    final deliveryFee = tier.deliveryFee;
     final packagingFee = 5.0;
     final packagingLabel = 'Standard Packaging';
     final itemSavings = cart.savings;
@@ -373,8 +376,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 0. Dynamic Free Delivery Progress Bar
-              _buildFreeDeliveryProgressBar(subtotal, settings.freeDeliveryThreshold),
+              // 0. Dynamic Distance-Tiered Delivery Progress Bar
+              _buildFreeDeliveryProgressBar(subtotal, tier),
 
               // 1. Grocery Items Section (if present)
               if (groceryItems.isNotEmpty) ...[
@@ -541,145 +544,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               _buildTipSelector(),
               const SizedBox(height: 14),
 
-              // 6. Apply Promo / Coupon Code Card
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: slateBorder, width: 1.2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Text('🎟️', style: TextStyle(fontSize: 13)),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Apply Promo / Coupon Code',
-                          style: GoogleFonts.inter(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w800,
-                            color: slateDark,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    if (_appliedCoupon != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFECFDF5),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFA7F3D0)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.check_circle_rounded, size: 16, color: brandGreen),
-                            const SizedBox(width: 8),
-                            Text(
-                              '$_appliedCoupon applied (-₹${_couponDiscount.toInt()})',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xFF065F46),
-                              ),
-                            ),
-                            const Spacer(),
-                            GestureDetector(
-                              onTap: _removeCoupon,
-                              child: Text(
-                                'Remove',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  color: primaryRed,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              height: 40,
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF8FAFC),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
-                              ),
-                              child: TextField(
-                                controller: _couponController,
-                                textCapitalization: TextCapitalization.characters,
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: slateDark,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: 'ENTER COUPON (E.G. RESTAURANT50)',
-                                  hintStyle: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF94A3B8),
-                                  ),
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () {
-                              if (_couponController.text.isNotEmpty) {
-                                _applyCoupon(_couponController.text, subtotal);
-                              }
-                            },
-                            child: Container(
-                              height: 40,
-                              padding: const EdgeInsets.symmetric(horizontal: 18),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE85B76),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Center(
-                                child: _isApplyingCoupon
-                                    ? const SizedBox(
-                                        width: 14,
-                                        height: 14,
-                                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                      )
-                                    : Text(
-                                        'Apply',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w800,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
+              // 6. Apply Promo / Coupon Code Card (Ultra-Premium Zepto/Swiggy Voucher Card)
+              _buildCouponSection(subtotal),
               const SizedBox(height: 14),
 
               // 7. Bill Details Card
@@ -712,7 +578,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             heightFactor: 1.0,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: Responsive.defaultMaxContentWidth),
-              child: _buildBottomCheckoutBar(context, totalSavings, grandTotal, subtotal, deliveryFee),
+              child: _buildBottomCheckoutBar(context, totalSavings, grandTotal, subtotal, deliveryFee, tier),
             ),
           ),
         ),
@@ -940,7 +806,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     );
   }
 
-  Widget _buildBottomCheckoutBar(BuildContext context, double totalSavings, double grandTotal, double subtotal, double deliveryFee) {
+  Widget _buildBottomCheckoutBar(BuildContext context, double totalSavings, double grandTotal, double subtotal, double deliveryFee, DeliveryTierInfo tier) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
     return Container(
       padding: EdgeInsets.fromLTRB(14, 8, 14, 10 + bottomInset),
@@ -948,22 +814,24 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Savings Callout Pill
+          // Savings / Zone Callout Pill
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: const Color(0xFFECFDF5),
+              color: !tier.isServiceable ? const Color(0xFFFEF2F2) : const Color(0xFFECFDF5),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFA7F3D0), width: 0.8),
+              border: Border.all(color: !tier.isServiceable ? const Color(0xFFFECDD3) : const Color(0xFFA7F3D0), width: 0.8),
             ),
             child: Center(
               child: Text(
-                '🎉 You are saving ₹${totalSavings > 0 ? totalSavings.toInt() : 20} on this order!',
+                !tier.isServiceable
+                    ? '⚠️ Outside 5.0 km Central Hub Delivery Zone'
+                    : '🎉 You are saving ₹${totalSavings > 0 ? totalSavings.toInt() : 20} on this order!',
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
-                  color: const Color(0xFF047857),
+                  color: !tier.isServiceable ? const Color(0xFFDC2626) : const Color(0xFF047857),
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -1017,6 +885,22 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 child: GestureDetector(
                   onTap: () async {
                     HapticFeedback.mediumImpact();
+
+                    if (!tier.isServiceable) {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: const Color(0xFFDC2626),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          content: Text(
+                            'Delivery is currently limited to a maximum of 5.0 km from our central hub. (Selected address is ${tier.distanceKm.toStringAsFixed(1)} km away)',
+                            style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+                          ),
+                        ),
+                      );
+                      return;
+                    }
 
                     final currentCart = ref.read(cartProvider).value;
                     final settings = ref.read(storeSettingsProvider).valueOrNull;
@@ -1099,15 +983,17 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   child: Container(
                     height: 44,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF00A344), Color(0xFF008736)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      gradient: !tier.isServiceable
+                          ? const LinearGradient(colors: [Color(0xFF94A3B8), Color(0xFF64748B)])
+                          : const LinearGradient(
+                              colors: [Color(0xFF00A344), Color(0xFF008736)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF00A344).withValues(alpha: 0.3),
+                          color: (!tier.isServiceable ? const Color(0xFF94A3B8) : const Color(0xFF00A344)).withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 3),
                         ),
@@ -1117,7 +1003,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'Proceed to Checkout',
+                          !tier.isServiceable ? 'Outside 5km Zone' : 'Proceed to Checkout',
                           style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: FontWeight.w900,
@@ -1126,7 +1012,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           ),
                         ),
                         const SizedBox(width: 5),
-                        const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 16),
+                        Icon(
+                          !tier.isServiceable ? Icons.block_rounded : Icons.arrow_forward_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
                       ],
                     ),
                   ),
@@ -1377,17 +1267,53 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     );
   }
 
-  Widget _buildFreeDeliveryProgressBar(double subtotal, double freeDeliveryThreshold) {
+  Widget _buildFreeDeliveryProgressBar(double subtotal, DeliveryTierInfo tier) {
+    if (!tier.isServiceable) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF2F2),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFFECDD3), width: 1.2),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('⚠️', style: TextStyle(fontSize: 16)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Outside Delivery Zone (${tier.distanceKm.toStringAsFixed(1)} km away)',
+                    style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800, color: const Color(0xFFDC2626)),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'Delivery is currently limited to a maximum of 5.0 km from our central hub in Ghatampur. Please select an address within 5 km.',
+                    style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF991B1B)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final freeDeliveryThreshold = tier.freeDeliveryThreshold;
     final remaining = (freeDeliveryThreshold - subtotal).clamp(0.0, freeDeliveryThreshold);
     final progress = (subtotal / freeDeliveryThreshold).clamp(0.0, 1.0);
     final isUnlocked = remaining <= 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: isUnlocked ? const Color(0xFFF0FDF4) : const Color(0xFFFFF7ED),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isUnlocked ? const Color(0xFF86EFAC) : const Color(0xFFFED7AA),
           width: 1.1,
@@ -1404,23 +1330,43 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  isUnlocked
-                      ? 'FREE Express Delivery Unlocked!'
-                      : 'Add ₹${remaining.toInt()} more for FREE Delivery',
-                  style: GoogleFonts.inter(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w800,
-                    color: isUnlocked ? const Color(0xFF15803D) : const Color(0xFFC2410C),
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isUnlocked
+                          ? 'FREE Express Delivery Unlocked!'
+                          : 'Add ₹${remaining.toInt()} more for FREE Delivery',
+                      style: GoogleFonts.inter(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                        color: isUnlocked ? const Color(0xFF15803D) : const Color(0xFFC2410C),
+                      ),
+                    ),
+                    Text(
+                      '📍 ${tier.tierName}',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: isUnlocked ? const Color(0xFF16A34A) : const Color(0xFFEA580C),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              Text(
-                isUnlocked ? 'SAVED ₹25' : 'Save ₹25',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  color: isUnlocked ? const Color(0xFF16A34A) : const Color(0xFFEA580C),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isUnlocked ? const Color(0xFFDCFCE7) : const Color(0xFFFFEDD5),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  isUnlocked ? 'SAVED ₹${tier.baseFee.toInt()}' : 'Save ₹${tier.baseFee.toInt()}',
+                  style: GoogleFonts.inter(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w900,
+                    color: isUnlocked ? const Color(0xFF16A34A) : const Color(0xFFEA580C),
+                  ),
                 ),
               ),
             ],
@@ -1733,6 +1679,277 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCouponSection(double subtotal) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Row: Icon + Title + "View offers"
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7ED),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFFFEDD5)),
+                    ),
+                    child: const Icon(Icons.local_offer_rounded, size: 16, color: Color(0xFFEA580C)),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Apply Coupon',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: slateDark,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ],
+              ),
+              Bounceable(
+                onTap: () async {
+                  HapticFeedback.lightImpact();
+                  final selected = await Navigator.push<String>(
+                    context,
+                    FadeSlideRoute(page: CouponsScreen(currentSubtotal: subtotal)),
+                  );
+                  if (selected != null && selected.isNotEmpty) {
+                    _couponController.text = selected;
+                    _applyCoupon(selected, subtotal);
+                  }
+                },
+                child: Row(
+                  children: [
+                    Text(
+                      'View offers',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFFEA580C),
+                      ),
+                    ),
+                    const SizedBox(width: 3),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 11, color: Color(0xFFEA580C)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          // Applied State vs Input State
+          if (_appliedCoupon != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFECFDF5), Color(0xFFD1FAE5)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFF6EE7B7), width: 1.2),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF10B981),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.check_rounded, size: 14, color: Colors.white),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              _appliedCoupon!,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF065F46),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF047857),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'APPLIED',
+                                style: GoogleFonts.inter(
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'You saved ₹${_couponDiscount.toInt()} with this coupon!',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF047857),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Bounceable(
+                    onTap: _removeCoupon,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFECDD3)),
+                      ),
+                      child: Text(
+                        'Remove',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFFE11D48),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            // Gorgeous Seamless Pill Input Box with Integrated Gradient APPLY Button
+            Container(
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 14),
+                  const Icon(Icons.confirmation_number_outlined, size: 19, color: Color(0xFF94A3B8)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: _couponController,
+                      textCapitalization: TextCapitalization.characters,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: slateDark,
+                        letterSpacing: 0.6,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Enter coupon code',
+                        hintStyle: GoogleFonts.inter(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF94A3B8),
+                        ),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ),
+                  if (_couponController.text.isNotEmpty)
+                    GestureDetector(
+                      onTap: () {
+                        _couponController.clear();
+                        setState(() {});
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 6),
+                        child: Icon(Icons.cancel_rounded, size: 16, color: Color(0xFF94A3B8)),
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.all(4.0),
+                    child: Bounceable(
+                      onTap: () {
+                        if (_couponController.text.trim().isNotEmpty) {
+                          _applyCoupon(_couponController.text.trim(), subtotal);
+                        }
+                      },
+                      child: Container(
+                        height: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 22),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(11),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFEA580C).withValues(alpha: 0.28),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: _isApplyingCoupon
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                )
+                              : Text(
+                                  'APPLY',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                    letterSpacing: 0.6,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

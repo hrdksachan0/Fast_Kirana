@@ -9,16 +9,16 @@ import { cn } from '@/lib/utils'
 
 const getCafeSectionImage = (tag: string) => {
   const mapping: Record<string, string> = {
-    'hot-beverage': '/cafe_brews_category.png',
-    'hot-bite': '/cafe_snacks_category.png',
-    'sandwiches': '/cafe_sandwiches_category.png',
-    'frankie-rolls': '/cafe_rolls_category.png',
-    'chinese': '/cafe_chinese_category.png',
-    'italian-pasta': '/cafe_pasta_category.png',
-    'bombay-bites': '/cafe_bombay_bites_category.png',
-    'rice-dishes': '/cafe_rice_category.png',
+    'hot-beverage': '/cafe_brews_category.webp',
+    'hot-bite': '/cafe_snacks_category.webp',
+    'sandwiches': '/cafe_sandwiches_category.webp',
+    'frankie-rolls': '/cafe_rolls_category.webp',
+    'chinese': '/cafe_chinese_category.webp',
+    'italian-pasta': '/cafe_pasta_category.webp',
+    'bombay-bites': '/cafe_bombay_bites_category.webp',
+    'rice-dishes': '/cafe_rice_category.webp',
   }
-  return mapping[tag] || '/cafe_all_menu_category.png'
+  return mapping[tag] || '/cafe_all_menu_category.webp'
 }
 
 const getCafeSectionTitle = (tag: string) => {
@@ -64,16 +64,16 @@ const iconMap: Record<string, React.ComponentType<any>> = {
 }
 
 const categoryPhotos: Record<string, string> = {
-  'fruits-vegetables': '/fruits_vegetables_category.png',
-  'dairy-breakfast': '/dairy_breakfast_category.png',
-  'snacks-munchies': '/snacks_munchies_category.png',
-  'beverages': '/beverages_category.png',
-  'personal-care': '/personal_care_category.png',
-  'household': '/household_category.png',
-  'bakery-biscuits': '/bakery_biscuits_category.png',
-  'atta-rice-dal': '/atta_rice_dal_category.png',
-  'ice-cream': '/ice_cream_category.png',
-  'cafe': '/cafe_category.png',
+  'fruits-vegetables': '/fruits_vegetables_category.webp',
+  'dairy-breakfast': '/dairy_breakfast_category.webp',
+  'snacks-munchies': '/snacks_munchies_category.webp',
+  'beverages': '/beverages_category.webp',
+  'personal-care': '/personal_care_category.webp',
+  'household': '/household_category.webp',
+  'bakery-biscuits': '/bakery_biscuits_category.webp',
+  'atta-rice-dal': '/atta_rice_dal_category.webp',
+  'ice-cream': '/ice_cream_category.webp',
+  'cafe': '/cafe_category.webp',
 }
 
 export function CategoryGrid({ categories }: CategoryGridProps) {

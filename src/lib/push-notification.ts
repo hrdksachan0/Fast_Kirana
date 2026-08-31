@@ -202,3 +202,37 @@ export async function sendPushNotificationToRoles(roles: Role[], payload: PushPa
   }
 }
 
+/**
+ * Send push notification strictly to the specific restaurant owner/staff.
+ */
+export async function sendPushNotificationToRestaurant(restaurantId: string, payload: PushPayload) {
+  if (!publicKey || !privateKey) {
+    console.error('Cannot send push notification to restaurant: VAPID keys not configured.')
+    return
+  }
+
+  try {
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      select: { ownerPhone: true }
+    })
+    const cleanPhone = restaurant?.ownerPhone?.replace(/\D/g, '').slice(-10)
+
+    const users = await prisma.user.findMany({
+      where: {
+        OR: [
+          { assignedRestaurantId: restaurantId },
+          ...(cleanPhone ? [{ phone: { contains: cleanPhone } }] : [])
+        ]
+      },
+      select: { id: true }
+    })
+
+    if (users.length === 0) return
+
+    await Promise.all(users.map(user => sendPushNotification(user.id, payload)))
+  } catch (error) {
+    console.error('Error sending push notification to restaurant:', error)
+  }
+}
+

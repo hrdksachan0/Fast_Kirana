@@ -119,6 +119,8 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
         'phone': receiverPhone,
         'lat': widget.lat,
         'lng': widget.lng,
+        'latitude': widget.lat,
+        'longitude': widget.lng,
         'isDefault': true,
       });
 

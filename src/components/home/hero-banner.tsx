@@ -127,7 +127,7 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
         {/* Right Column Visual Graphic */}
         <div className="relative w-[35%] h-full flex items-center justify-end select-none pointer-events-none flex-shrink-0 pr-1 md:pr-4">
           <Image
-            src="/grocery_bag_banner.png"
+            src="/grocery_bag_banner.webp"
             alt="Grocery bag with fresh vegetables"
             fill
             sizes="(max-width: 768px) 30vw, 300px"
@@ -180,7 +180,7 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
       {currentBanner.type === 'express-delivery' ? (
         <div className="relative w-[32%] h-full flex items-center justify-end select-none pointer-events-none flex-shrink-0 pr-1 md:pr-4">
           <Image
-            src="/grocery_bag_banner.png"
+            src="/grocery_bag_banner.webp"
             alt="Grocery bag with fresh vegetables"
             fill
             sizes="(max-width: 768px) 30vw, 300px"

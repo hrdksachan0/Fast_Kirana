@@ -6,9 +6,9 @@ import '../../core/theme/design_system.dart';
 class PrivacyPolicyScreen extends StatelessWidget {
   const PrivacyPolicyScreen({super.key});
 
-  static const _effectiveDate = '2025-01-01';
-  static const _supportEmail = 'admin@fastkirana.in';
-  static const _supportPhone = '+91 70544 70303';
+  static const _effectiveDate = '2026-01-01';
+  static const _supportEmail = 'fastkiranadelivery@gmail.com';
+  static const _supportPhone = '+91 81128 49854';
 
   @override
   Widget build(BuildContext context) {

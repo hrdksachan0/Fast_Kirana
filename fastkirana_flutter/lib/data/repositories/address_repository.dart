@@ -73,9 +73,12 @@ class AddressRepository {
       area: data['area']?.toString() ?? '',
       city: data['city']?.toString() ?? 'Ghatampur',
       pincode: data['pincode']?.toString() ?? '209206',
-      phone: data['phone']?.toString() ?? '',
-      latitude: data['lat'] != null ? double.tryParse(data['lat'].toString()) : 26.1534,
-      longitude: data['lng'] != null ? double.tryParse(data['lng'].toString()) : 80.1714,
+      latitude: data['lat'] != null
+          ? double.tryParse(data['lat'].toString())
+          : (data['latitude'] != null ? double.tryParse(data['latitude'].toString()) : null),
+      longitude: data['lng'] != null
+          ? double.tryParse(data['lng'].toString())
+          : (data['longitude'] != null ? double.tryParse(data['longitude'].toString()) : null),
       isDefault: data['isDefault'] == true,
     );
 

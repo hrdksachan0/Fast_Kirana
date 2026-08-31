@@ -491,7 +491,7 @@ export async function PATCH(
                 data: {
                   userId: riderId,
                   cashInHand: actualCashChange,
-                  cashLimit: 2000,
+                  cashLimit: 10000,
                   totalCollected: Math.max(0, actualCashChange),
                   totalDeposited: 0
                 }
@@ -506,11 +506,17 @@ export async function PATCH(
       const latVal = deliveryLat !== undefined && deliveryLat !== null ? parseFloat(deliveryLat) : null
       const lngVal = deliveryLng !== undefined && deliveryLng !== null ? parseFloat(deliveryLng) : null
 
+      const defaultDeliveryRider = await prisma.user.findFirst({
+        where: { OR: [{ email: 'delivery@fastkirana.com' }, { role: 'DELIVERY' }] },
+        select: { id: true }
+      })
+      const targetRiderId = session?.user?.id || headerUserId || defaultDeliveryRider?.id || userId
+
       if (latVal !== null && lngVal !== null) {
         await prisma.$executeRaw`
           UPDATE orders 
           SET status = ${status}::"OrderStatus", 
-              "deliveryUserId" = ${session.user.id},
+              "deliveryUserId" = ${targetRiderId},
               "deliveryLat" = ${latVal},
               "deliveryLng" = ${lngVal},
               "shippedAt" = COALESCE("shippedAt", NOW()),
@@ -518,11 +524,6 @@ export async function PATCH(
           WHERE id = ${id}
         `
       } else {
-        const defaultDeliveryRider = await prisma.user.findFirst({
-          where: { OR: [{ email: 'delivery@fastkirana.com' }, { role: 'DELIVERY' }] },
-          select: { id: true }
-        })
-        const targetRiderId = defaultDeliveryRider?.id || userId
         await prisma.$executeRaw`
           UPDATE orders 
           SET status = ${status}::"OrderStatus", 
@@ -579,7 +580,13 @@ export async function PATCH(
             
             const product = await prisma.product.findUnique({
               where: { id: item.productId },
-              select: { stock: true, name: true, variants: true, category: true, tags: true }
+              select: {
+                stock: true,
+                name: true,
+                variants: true,
+                category: { select: { slug: true } },
+                tags: true
+              }
             })
             
             if (!product) continue
@@ -589,15 +596,17 @@ export async function PATCH(
               continue
             }
 
+            const prevStock = product.stock || 0
+
             if (item.selectedVariant) {
               if (product.variants && Array.isArray(product.variants)) {
                 const updatedVariants = (product.variants as any[]).map((v) => {
                   if (v.name === item.selectedVariant) {
-                    return { ...v, stock: v.stock + item.quantity }
+                    return { ...v, stock: (Number(v.stock) || 0) + item.quantity }
                   }
                   return v
                 })
-                const newTotalStock = updatedVariants.reduce((sum, v) => sum + v.stock, 0)
+                const newTotalStock = updatedVariants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
                 
                 await prisma.product.update({
                   where: { id: item.productId },
@@ -606,6 +615,16 @@ export async function PATCH(
                     stock: newTotalStock
                   }
                 })
+
+                await prisma.stockLog.create({
+                  data: {
+                    productId: item.productId,
+                    quantity: item.quantity,
+                    type: 'ORDER_CANCELLED',
+                    prevStock,
+                    newStock: newTotalStock,
+                  }
+                }).catch(() => {})
               }
             } else {
               const batches = await prisma.productBatch.findMany({
@@ -622,20 +641,40 @@ export async function PATCH(
                 const activeBatches = await prisma.productBatch.findMany({
                   where: { productId: item.productId, quantity: { gt: 0 } }
                 })
-                const newTotalStock = activeBatches.reduce((sum, b) => sum + b.quantity, 0)
+                const newTotalStock = activeBatches.reduce((sum, b) => sum + (Number(b.quantity) || 0), 0)
                 
                 await prisma.product.update({
                   where: { id: item.productId },
                   data: { stock: newTotalStock }
                 })
+
+                await prisma.stockLog.create({
+                  data: {
+                    productId: item.productId,
+                    quantity: item.quantity,
+                    type: 'ORDER_CANCELLED',
+                    prevStock,
+                    newStock: newTotalStock,
+                  }
+                }).catch(() => {})
               } else {
+                const newStock = prevStock + item.quantity
                 await prisma.product.update({
                   where: { id: item.productId },
                   data: { stock: { increment: item.quantity } }
                 })
+
+                await prisma.stockLog.create({
+                  data: {
+                    productId: item.productId,
+                    quantity: item.quantity,
+                    type: 'ORDER_CANCELLED',
+                    prevStock,
+                    newStock,
+                  }
+                }).catch(() => {})
               }
             }
-            // Inventory restored silently on cancellation
           }
         } catch (stockErr) {
           console.error('Failed to restore inventory for cancelled order:', id, stockErr)

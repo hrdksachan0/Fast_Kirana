@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
@@ -493,46 +494,92 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: ID + Store + Status Badge
+          // Header: ID + Status on top, Store + Date below
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                // Top Row: Order ID + Status Badge
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      '#${order.displayId}',
+                      style: GoogleFonts.inter(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w900,
+                        color: slateDark,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+                      decoration: BoxDecoration(
+                        color: statusBg,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
+                          if (isActive)
+                            Container(
+                              width: 6,
+                              height: 6,
+                              margin: const EdgeInsets.only(right: 5),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: statusColor,
+                              ),
+                            ),
                           Text(
-                            '#${order.displayId}',
+                            statusText,
                             style: GoogleFonts.inter(
-                              fontSize: 14.5,
+                              fontSize: 10,
                               fontWeight: FontWeight.w900,
-                              color: slateDark,
+                              color: statusColor,
+                              letterSpacing: 0.3,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: shopName.contains('Restaurant') || shopName.contains('Cafe')
-                                    ? const Color(0xFFFFF7ED)
-                                    : const Color(0xFFFEF3C7),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: shopName.contains('Restaurant') || shopName.contains('Cafe')
-                                      ? const Color(0xFFFFEDD5)
-                                      : const Color(0xFFFDE68A),
-                                  width: 0.6,
-                                ),
-                              ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Sub-Row: Store Badge + Date Time (Guaranteed Zero Truncation)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                        decoration: BoxDecoration(
+                          color: shopName.contains('Restaurant') || shopName.contains('Cafe')
+                              ? const Color(0xFFFFF7ED)
+                              : const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: shopName.contains('Restaurant') || shopName.contains('Cafe')
+                                ? const Color(0xFFFFEDD5)
+                                : const Color(0xFFFDE68A),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              shopName.contains('Restaurant') || shopName.contains('Cafe') ? '🍽️ ' : '🏪 ',
+                              style: const TextStyle(fontSize: 10),
+                            ),
+                            Flexible(
                               child: Text(
                                 shopName,
                                 style: GoogleFonts.inter(
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w800,
                                   color: shopName.contains('Restaurant') || shopName.contains('Cafe')
                                       ? const Color(0xFFC2410C)
@@ -542,51 +589,20 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        Helpers.formatDate(order.createdAt),
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: slateMuted,
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
-                  decoration: BoxDecoration(
-                    color: statusBg,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (isActive)
-                        Container(
-                          width: 6,
-                          height: 6,
-                          margin: const EdgeInsets.only(right: 5),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: statusColor,
-                          ),
-                        ),
-                      Text(
-                        statusText,
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                          color: statusColor,
-                          letterSpacing: 0.3,
-                        ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      DateFormat('dd MMM, hh:mm a').format(order.createdAt),
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: slateMuted,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ],
             ),

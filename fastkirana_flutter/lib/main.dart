@@ -40,23 +40,31 @@ void main() async {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    kDebugMode
-                        ? details.exceptionAsString()
-                        : 'Please restart the app. If the problem persists, contact support.',
+                    details.exceptionAsString(),
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, color: AppDesignSystem.textSecondary, height: 1.5),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, color: AppDesignSystem.textSecondary, height: 1.4),
                   ),
-                  const SizedBox(height: 24),
-                  if (kDebugMode)
-                    ElevatedButton.icon(
-                      onPressed: () => FlutterError.dumpErrorToConsole(details),
-                      icon: const Icon(Icons.bug_report_rounded, size: 18),
-                      label: const Text('Show Stack Trace'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppDesignSystem.danger,
-                        foregroundColor: Colors.white,
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          AppRouter.navigatorKey.currentState?.pop();
+                        },
+                        icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                        label: const Text('Go Back'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFDC2626),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
                       ),
-                    ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -116,6 +124,7 @@ class FastKiranaApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'FastKirana',
+      navigatorKey: AppRouter.navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

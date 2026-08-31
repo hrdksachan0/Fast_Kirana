@@ -190,15 +190,17 @@ class Product {
           final vMap = Map<String, dynamic>.from(v);
           final p = double.tryParse(vMap['price']?.toString() ?? '') ?? price;
           final m = double.tryParse(vMap['mrp']?.toString() ?? '') ?? (p > 0 ? p : mrp);
+          final s = int.tryParse(vMap['stock']?.toString() ?? '') ?? stock;
           return ProductVariant(
             name: vMap['name']?.toString() ?? vMap['unit']?.toString() ?? unit,
             price: p,
             mrp: m,
+            stock: s,
           );
         } else if (v is String) {
-          return ProductVariant(name: v, price: price, mrp: mrp);
+          return ProductVariant(name: v, price: price, mrp: mrp, stock: stock);
         }
-        return ProductVariant(name: v.toString(), price: price, mrp: mrp);
+        return ProductVariant(name: v.toString(), price: price, mrp: mrp, stock: stock);
       }).toList();
     }
     return [];
@@ -231,17 +233,20 @@ class ProductVariant {
   final String name;
   final double price;
   final double mrp;
+  final int stock;
 
   ProductVariant({
     required this.name,
     required this.price,
     required this.mrp,
+    this.stock = 999,
   });
 
   Map<String, dynamic> toJson() => {
         'name': name,
         'price': price,
         'mrp': mrp,
+        'stock': stock,
       };
 }
 

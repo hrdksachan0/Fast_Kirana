@@ -1,9 +1,30 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
-import { Utensils, LogOut, Clock, ShieldCheck, Home, ChefHat, BarChart3, Settings, IndianRupee, SlidersHorizontal, Layers, Star } from 'lucide-react'
+import { 
+  Utensils, 
+  LogOut, 
+  Clock, 
+  ShieldCheck, 
+  Home, 
+  ChefHat, 
+  BarChart3, 
+  Settings, 
+  IndianRupee, 
+  SlidersHorizontal, 
+  Layers, 
+  Star,
+  Maximize2,
+  Minimize2,
+  Volume2,
+  VolumeX,
+  Store,
+  ChevronDown,
+  Sparkles
+} from 'lucide-react'
+import { toast } from 'sonner'
 import { RestaurantOrdersConsole } from '@/components/admin/restaurant-orders-console'
 import { RestaurantSalesConsole } from '@/components/admin/restaurant-sales-console'
 import { RestaurantPayoutsLedger } from '@/components/admin/restaurant-payouts-ledger'
@@ -11,8 +32,10 @@ import { RestaurantSettingsTab } from '@/components/admin/restaurant-settings-ta
 import { RestaurantCatalogManager } from '@/components/admin/restaurant-catalog-manager'
 import { RestaurantMenuSectionsEditor } from '@/components/admin/restaurant-menu-sections-editor'
 import { RestaurantReviewsTab } from '@/components/admin/restaurant-reviews-tab'
+import { MenuQuickStockModal } from '@/components/restaurant/menu-quick-stock-modal'
 import { useUIStore } from '@/stores/ui-store'
 import { formatDate } from '@/lib/date-helpers'
+import { playKitchenAlarmChime, tryUnlockAudioContext, isAudioContextSuspended } from '@/lib/audio'
 
 export default function RestaurantKitchenPage() {
   const { data: session, status } = useSession()
@@ -20,7 +43,22 @@ export default function RestaurantKitchenPage() {
   const [currentTime, setCurrentTime] = useState(new Date())
   const { restaurantOpen } = useUIStore()
   const [activeTab, setActiveTab] = useState<'orders' | 'analytics' | 'catalog' | 'sections' | 'payouts' | 'reviews' | 'settings'>('orders')
+  
+  // Restaurant Multi-Store Selector
+  const [restaurants, setRestaurants] = useState<any[]>([])
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('')
   const [restaurantName, setRestaurantName] = useState('Restaurant Console')
+  const [isCafe, setIsCafe] = useState(false)
+  
+  // Quick 86 Stock Modal
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false)
+  
+  // Fullscreen Mode
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  
+  // Audio state
+  const [soundEnabled, setSoundEnabled] = useState(true)
+  const [audioBlocked, setAudioBlocked] = useState(false)
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -28,27 +66,68 @@ export default function RestaurantKitchenPage() {
   }, [])
 
   useEffect(() => {
-    const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId
-    if (assignedRestaurantId) {
-      fetch(`/api/restaurants/${assignedRestaurantId}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.name) {
-            setRestaurantName(`${data.name} Console`)
-            
-            // Auto-redirect if they belong strictly to FastKirana Cafe and are not an ADMIN/OWNER
-            if (session?.user?.role !== 'ADMIN' && session?.user?.role !== 'RESTAURANT_OWNER') {
-              if (data.slug === 'fastkirana-cafe') {
-                router.push('/cafe-kitchen')
-              }
-            }
-          }
-        })
-        .catch(err => console.error(err))
-    } else {
-      setRestaurantName('Restaurant Console')
+    // Check sound preference
+    const storedSound = localStorage.getItem('kitchen_sound_enabled')
+    if (storedSound !== null) {
+      setSoundEnabled(storedSound === 'true')
     }
-  }, [session, router])
+    if (isAudioContextSuspended()) {
+      setAudioBlocked(true)
+    }
+  }, [])
+
+  // Fetch available restaurants for selection
+  useEffect(() => {
+    fetch('/api/restaurants')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.restaurants && Array.isArray(data.restaurants)) {
+          setRestaurants(data.restaurants)
+          const assignedId = (session?.user as any)?.assignedRestaurantId
+          if (assignedId) {
+            setSelectedRestaurantId(assignedId)
+            const matched = data.restaurants.find((r: any) => r.id === assignedId)
+            if (matched) {
+              setRestaurantName(`${matched.name} Console`)
+              setIsCafe(matched.slug === 'fastkirana-cafe' || matched.slug?.includes('cafe'))
+            }
+          } else if (data.restaurants.length > 0) {
+            const first = data.restaurants[0]
+            setSelectedRestaurantId(first.id)
+            setRestaurantName(`${first.name} Console`)
+            setIsCafe(first.slug === 'fastkirana-cafe' || first.slug?.includes('cafe'))
+          }
+        }
+      })
+      .catch(console.error)
+  }, [session])
+
+  const handleRestaurantChange = (restId: string) => {
+    setSelectedRestaurantId(restId)
+    const found = restaurants.find(r => r.id === restId)
+    if (found) {
+      setRestaurantName(`${found.name} Console`)
+      setIsCafe(found.slug === 'fastkirana-cafe' || found.slug?.includes('cafe'))
+      toast.success(`Switched to ${found.name}`)
+    }
+  }
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {})
+    } else {
+      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {})
+    }
+  }
+
+  const handleUnblockAudio = async () => {
+    const unlocked = await tryUnlockAudioContext()
+    if (unlocked) {
+      setAudioBlocked(false)
+      playKitchenAlarmChime()
+      toast.success('Audio alarm enabled! 🔔')
+    }
+  }
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -75,47 +154,111 @@ export default function RestaurantKitchenPage() {
     )
   }
 
+  const isAdmin = session?.user?.role === 'ADMIN'
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950/20 py-3 sm:py-6 px-3 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         
+        {/* Browser Audio Unblock Alert */}
+        {audioBlocked && (
+          <button
+            onClick={handleUnblockAudio}
+            className="w-full text-center text-xs font-black text-rose-600 bg-rose-500/10 hover:bg-rose-500/15 border border-rose-500/20 py-3 px-4 rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer animate-pulse shadow-inner"
+          >
+            <span>🔊</span> Click here to enable Live Kitchen Sound Alerts & Alarms
+          </button>
+        )}
+
         {/* Header Bar */}
-        <div className="flex flex-row justify-between items-center gap-3 bg-card border border-border/70 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xs">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center shrink-0 border border-red-500/20">
-              <Utensils className="h-5 w-5 sm:h-6 sm:w-6 animate-pulse-gentle" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="text-xs sm:text-lg font-black text-text-primary uppercase tracking-tight truncate">{restaurantName}</h1>
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider shrink-0 ${
-                  restaurantOpen
-                    ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
-                    : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
-                }`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${restaurantOpen ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                  {restaurantOpen ? 'OPEN' : 'CLOSED'}
-                </span>
+        <div className="flex flex-col md:flex-row justify-between md:items-center gap-3.5 bg-card border border-border/70 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xs">
+          <div className="flex items-center justify-between md:justify-start gap-3 min-w-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center shrink-0 border border-red-500/20 shadow-inner">
+                <Utensils className="h-5 w-5 sm:h-6 sm:w-6 animate-pulse-gentle" />
               </div>
-              <p className="text-[9px] sm:text-xs text-text-secondary mt-0.5 flex items-center gap-1 font-medium truncate">
-                <ShieldCheck className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-emerald-500 shrink-0" />
-                <span className="truncate">{session?.user?.email}</span>
-              </p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {isAdmin && restaurants.length > 1 ? (
+                    <div className="relative inline-flex items-center">
+                      <select
+                        value={selectedRestaurantId}
+                        onChange={(e) => handleRestaurantChange(e.target.value)}
+                        className="appearance-none bg-muted/60 border border-border/80 font-black text-xs sm:text-base text-text-primary uppercase tracking-tight py-1 pl-2.5 pr-8 rounded-xl cursor-pointer focus:outline-none focus:border-red-500"
+                      >
+                        {restaurants.map(r => (
+                          <option key={r.id} value={r.id} className="bg-card text-text-primary">
+                            {r.name} Console
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-2 pointer-events-none h-3.5 w-3.5 text-text-muted" />
+                    </div>
+                  ) : (
+                    <h1 className="text-xs sm:text-lg font-black text-text-primary uppercase tracking-tight truncate">{restaurantName}</h1>
+                  )}
+
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider shrink-0 ${
+                    restaurantOpen
+                      ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                      : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
+                  }`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${restaurantOpen ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                    {restaurantOpen ? 'OPEN' : 'CLOSED'}
+                  </span>
+                </div>
+
+                <p className="text-[9px] sm:text-xs text-text-secondary mt-0.5 flex items-center gap-1 font-medium truncate">
+                  <ShieldCheck className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-emerald-500 shrink-0" />
+                  <span className="truncate">{session?.user?.email}</span>
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Action Header Buttons */}
+          <div className="flex items-center justify-between md:justify-end gap-2 shrink-0 border-t md:border-t-0 border-border/40 pt-2.5 md:pt-0">
+            {/* Quick 86 Stock Drawer Trigger */}
+            <button
+              onClick={() => setIsStockModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 text-[11px] sm:text-xs font-black rounded-xl transition-all cursor-pointer border border-rose-500/25 active:scale-95 shadow-xs"
+              title="Quick 86 Out of Stock toggle"
+            >
+              <Utensils className="h-3.5 w-3.5" />
+              <span>Quick 86 Stock</span>
+            </button>
+
+            {/* Fullscreen Mode */}
+            <button
+              onClick={toggleFullscreen}
+              className="p-2 bg-muted/50 hover:bg-muted text-text-secondary hover:text-text-primary rounded-xl transition-all cursor-pointer border border-border/50 hidden sm:inline-flex"
+              title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen KDS Mode'}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </button>
+
+            {/* Live Clock */}
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-muted/40 rounded-xl border border-border/40 text-[11px] font-mono font-bold text-text-secondary select-none shadow-inner">
               <Clock className="h-3.5 w-3.5 text-text-muted" />
               <span>{formatDate(currentTime, 'hh:mm:ss a')}</span>
             </div>
 
+            {/* Home button */}
             <button
               onClick={() => router.push('/')}
               className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 bg-red-500/5 hover:bg-red-500/10 text-red-600 hover:text-red-700 text-[11px] sm:text-xs font-black rounded-xl transition-all cursor-pointer border border-red-500/10 hover:border-red-500/20 shadow-xs active:scale-95 shrink-0"
             >
               <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span>Home</span>
+            </button>
+
+            {/* Logout */}
+            <button
+              onClick={() => signOut({ callbackUrl: '/restaurant-login' })}
+              className="p-2 bg-muted/40 hover:bg-rose-500/10 text-text-secondary hover:text-rose-600 rounded-xl transition-all cursor-pointer border border-border/40"
+              title="Logout"
+            >
+              <LogOut className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </button>
           </div>
         </div>
@@ -208,20 +351,31 @@ export default function RestaurantKitchenPage() {
           {activeTab === 'catalog' && <RestaurantCatalogManager />}
           {activeTab === 'sections' && (
             <RestaurantMenuSectionsEditor 
-              assignedRestaurantId={(session?.user as any)?.assignedRestaurantId || ''} 
-              isCafe={false} 
+              assignedRestaurantId={selectedRestaurantId || (session?.user as any)?.assignedRestaurantId || ''} 
+              isCafe={isCafe} 
             />
           )}
-          {activeTab === 'payouts' && <RestaurantPayoutsLedger isAdmin={false} />}
+          {activeTab === 'payouts' && <RestaurantPayoutsLedger isAdmin={isAdmin} />}
           {activeTab === 'reviews' && (
             <RestaurantReviewsTab 
-              restaurantId={(session?.user as any)?.assignedRestaurantId} 
+              restaurantId={selectedRestaurantId || (session?.user as any)?.assignedRestaurantId} 
             />
           )}
-          {activeTab === 'settings' && <RestaurantSettingsTab />}
+          {activeTab === 'settings' && (
+            <RestaurantSettingsTab 
+              restaurantId={selectedRestaurantId || (session?.user as any)?.assignedRestaurantId} 
+            />
+          )}
         </div>
 
       </div>
+
+      {/* Quick 86 Stock-Out Modal */}
+      <MenuQuickStockModal
+        isOpen={isStockModalOpen}
+        onClose={() => setIsStockModalOpen(false)}
+        restaurantId={selectedRestaurantId}
+      />
     </div>
   )
 }

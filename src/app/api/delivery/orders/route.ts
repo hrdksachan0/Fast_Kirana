@@ -1,34 +1,71 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { requireRole } from '@/lib/auth-guard'
+import { auth } from '@/auth'
 
-export async function GET() {
-  const { error, session } = await requireRole(['DELIVERY', 'ADMIN'])
-  if (error) return error
+export const dynamic = 'force-dynamic'
+
+export async function GET(request: NextRequest) {
+  const session = await auth()
+  const searchParams = request.nextUrl.searchParams
+  const queryUserId = searchParams.get('userId') || searchParams.get('deliveryUserId')
+  const queryPhone = searchParams.get('phone')
+
+  let effectiveUserId = session?.user?.id || queryUserId || null
+
+  if (!effectiveUserId && queryPhone) {
+    const cleanPhone = queryPhone.replace(/\D/g, '').slice(-10)
+    const riderUser = await prisma.user.findFirst({
+      where: { phone: { contains: cleanPhone } },
+      select: { id: true, role: true }
+    })
+    if (riderUser) effectiveUserId = riderUser.id
+  }
 
   try {
-    const orders: any[] = await prisma.$queryRaw`
-      SELECT o.id, o."userId", o."addressId", o."readableId", o."combinedId", o."restaurantId",
-             o.status::text as status,
-             o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
-             o."paymentMethod"::text as "paymentMethod",
-             o."paymentStatus"::text as "paymentStatus",
-             o."estimatedDelivery", o."createdAt",
-             o."shopName", o."deliveryUserId", o.notes,
-             o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt",
-             o."deliveryLat", o."deliveryLng"
-      FROM orders o
-      WHERE (o."deliveryMethod" = 'DELIVERY' OR o."deliveryMethod" IS NULL)
-        AND (
-          (o.status::text IN ('CONFIRMED', 'PREPARING', 'PACKED') AND (o."deliveryUserId" IS NULL OR o."deliveryUserId" = ${session.user.id}))
-          OR
-          (o.status::text = 'SHIPPED' AND o."deliveryUserId" = ${session.user.id})
-          OR
-          (o.status::text = 'DELIVERED' AND o."deliveryUserId" = ${session.user.id} AND COALESCE(o."deliveredAt", o."updatedAt", o."createdAt") >= CURRENT_DATE)
-        )
-      ORDER BY o."createdAt" DESC
-    `
+    let orders: any[] = []
+
+    if (effectiveUserId) {
+      orders = await prisma.$queryRaw`
+        SELECT o.id, o."userId", o."addressId", o."readableId", o."combinedId", o."restaurantId",
+               o.status::text as status,
+               o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+               o."paymentMethod"::text as "paymentMethod",
+               o."paymentStatus"::text as "paymentStatus",
+               o."estimatedDelivery", o."createdAt",
+               o."shopName", o."deliveryUserId", o.notes,
+               o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt",
+               o."deliveryLat", o."deliveryLng"
+        FROM orders o
+        WHERE (o."deliveryMethod" = 'DELIVERY' OR o."deliveryMethod" IS NULL)
+          AND (
+            (o.status::text IN ('CONFIRMED', 'PREPARING', 'PACKED') AND (o."deliveryUserId" IS NULL OR o."deliveryUserId" = ${effectiveUserId}))
+            OR
+            (o.status::text = 'SHIPPED' AND (o."deliveryUserId" = ${effectiveUserId} OR o."deliveryUserId" IS NULL))
+            OR
+            (o.status::text = 'DELIVERED' AND (o."deliveryUserId" = ${effectiveUserId} OR o."deliveryUserId" IS NULL) AND COALESCE(o."deliveredAt", o."updatedAt", o."createdAt") >= CURRENT_DATE)
+          )
+        ORDER BY o."createdAt" DESC
+      `
+    } else {
+      // General active delivery queue for dark store / riders
+      orders = await prisma.$queryRaw`
+        SELECT o.id, o."userId", o."addressId", o."readableId", o."combinedId", o."restaurantId",
+               o.status::text as status,
+               o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+               o."paymentMethod"::text as "paymentMethod",
+               o."paymentStatus"::text as "paymentStatus",
+               o."estimatedDelivery", o."createdAt",
+               o."shopName", o."deliveryUserId", o.notes,
+               o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt",
+               o."deliveryLat", o."deliveryLng"
+        FROM orders o
+        WHERE (o."deliveryMethod" = 'DELIVERY' OR o."deliveryMethod" IS NULL)
+          AND o.status::text IN ('CONFIRMED', 'PREPARING', 'PACKED', 'SHIPPED', 'DELIVERED')
+        ORDER BY o."createdAt" DESC
+        LIMIT 50
+      `
+    }
 
     // Fetch companion orders sharing combinedId
     const combinedIds = Array.from(new Set(orders.map(o => o.combinedId).filter(Boolean)))

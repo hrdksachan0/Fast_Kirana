@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
+import '../../providers/auth_provider.dart';
 
-class ReferEarnScreen extends StatelessWidget {
+class ReferEarnScreen extends ConsumerWidget {
   const ReferEarnScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authProvider).value;
+    final phone = user?.phone?.replaceAll('+91', '').replaceAll(' ', '').trim() ?? '';
+    final referralCode = phone.length >= 4
+        ? 'FK${phone.substring(phone.length - 4)}'
+        : (user?.id.isNotEmpty == true && user!.id.length >= 4 ? 'FK${user.id.substring(user.id.length - 4).toUpperCase()}' : 'FASTKIRANA');
+
     return Scaffold(
       backgroundColor: AppDesignSystem.background,
       appBar: AppBar(
@@ -38,23 +47,43 @@ class ReferEarnScreen extends StatelessWidget {
                 children: [
                   Text(
                     'Your Referral Code',
-                    style: GoogleFonts.inter(fontSize: 14, color: Colors.white.withOpacity(0.9)),
+                    style: GoogleFonts.inter(fontSize: 14, color: Colors.white.withValues(alpha: 0.9)),
                   ),
                   const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'FAST2024',
-                      style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 2),
+                  GestureDetector(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: referralCode));
+                      HapticFeedback.lightImpact();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Copied "$referralCode" to clipboard!'),
+                          backgroundColor: const Color(0xFF00A344),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            referralCode,
+                            style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 2),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.copy_rounded, size: 16, color: Colors.white),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Share with friends & earn ₹50 each!',
+                    'Share with friends & earn rewards!',
                     style: GoogleFonts.inter(fontSize: 15, color: Colors.white, fontWeight: FontWeight.w600),
                   ),
                 ],

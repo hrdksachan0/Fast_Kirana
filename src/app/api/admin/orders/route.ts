@@ -4,7 +4,7 @@ import { auth } from '@/auth'
 import { requireAdmin } from '@/lib/auth-guard'
 
 export async function GET(request: Request) {
-  const adminResult = await requireAdmin()
+  const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
   const session = adminResult.session
 

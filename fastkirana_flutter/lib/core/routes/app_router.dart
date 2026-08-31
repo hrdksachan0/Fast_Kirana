@@ -17,10 +17,13 @@ import '../../features/delivery/delivery_dashboard.dart';
 import '../../features/location/delivery_location_screen.dart';
 import '../../features/location/map_picker_screen.dart';
 import '../../features/cafe/restaurant_delivery_loading_screen.dart';
+import '../../features/cafe/restaurant_dashboard.dart';
 import '../../features/splash/grocery_delivery_loading_screen.dart';
 import '../theme/design_system.dart';
 
 class AppRouter {
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case '/':
@@ -43,6 +46,10 @@ class AppRouter {
         return FadeSlideRoute(page: const DeliveryDashboard());
       case '/delivery/login':
         return FadeSlideRoute(page: const DeliveryLoginScreen());
+      case '/restaurant':
+      case '/restaurant/dashboard':
+      case '/kitchen':
+        return FadeSlideRoute(page: const RestaurantDashboard());
       case '/otp':
         final identifier = (settings.arguments as String?) ?? '';
         return FadeSlideRoute(page: OtpScreen(identifier: identifier));

@@ -93,7 +93,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(28),
                       child: Image.asset(
-                        'assets/brand/fastkirana_app_icon.png',
+                        'assets/brand/fastkirana_app_icon.webp',
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Icon(
                           Icons.shopping_bag_rounded,

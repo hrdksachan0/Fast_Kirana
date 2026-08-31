@@ -54,23 +54,23 @@ class _RestaurantCardState extends State<RestaurantCard> {
 
     if (lower.contains('a.s') || lower.contains('as-restaurant') || lower.contains('cafe_all_menu')) {
       return Image.asset(
-        'assets/categories/cafe_all_menu_category.png',
+        'assets/categories/cafe_all_menu_category.webp',
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => _buildDefaultFallback(),
       );
     } else if (lower.contains('wedson')) {
       return Image.asset(
-        'assets/categories/wedson_restaurant_bg.png',
+        'assets/categories/wedson_restaurant_bg.webp',
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => Image.asset(
-          'assets/categories/wedson_restaurant_banner.png',
+          'assets/categories/wedson_restaurant_banner.webp',
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => _buildDefaultFallback(),
         ),
       );
     } else if (lower.contains('bal udyan') || lower.contains('thali')) {
       return Image.asset(
-        'assets/categories/cafe_category.png',
+        'assets/categories/cafe_category.webp',
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => _buildDefaultFallback(),
       );
@@ -94,7 +94,7 @@ class _RestaurantCardState extends State<RestaurantCard> {
 
   Widget _buildDefaultFallback() {
     return Image.asset(
-      'assets/categories/cafe_category.png',
+      'assets/categories/cafe_category.webp',
       fit: BoxFit.cover,
     );
   }

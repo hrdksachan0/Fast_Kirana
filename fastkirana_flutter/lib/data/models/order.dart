@@ -100,6 +100,10 @@ class Order {
   final DateTime? shippedAt;
   final DateTime? deliveredAt;
   final List<OrderItem>? items;
+  final String? combinedId;
+  final bool isCombined;
+  final List<Order>? subOrders;
+  final List<String>? subLabels;
 
   Order({
     required this.id,
@@ -137,17 +141,27 @@ class Order {
     this.shippedAt,
     this.deliveredAt,
     this.items,
+    this.combinedId,
+    this.isCombined = false,
+    this.subOrders,
+    this.subLabels,
   });
 
   ({String? name, String? phone})? get deliveryUser =>
       (deliveryBoyName != null || deliveryBoyPhone != null) ? (name: deliveryBoyName, phone: deliveryBoyPhone) : null;
 
-  ({String label, String formattedAddress, double? lat, double? lng})? get address => {
-        'label': 'Delivery Location',
-        'formattedAddress': customerAddress ?? 'Ghatampur Zone',
-        'lat': (addressRaw?['lat'] as num?)?.toDouble() ?? (addressRaw?['latitude'] as num?)?.toDouble() ?? deliveryLat,
-        'lng': (addressRaw?['lng'] as num?)?.toDouble() ?? (addressRaw?['longitude'] as num?)?.toDouble() ?? deliveryLng,
-      } as dynamic;
+  ({String label, String formattedAddress, double? lat, double? lng})? get address {
+    final rawLat = (addressRaw?['lat'] as num?)?.toDouble() ?? (addressRaw?['latitude'] as num?)?.toDouble() ?? deliveryLat;
+    final rawLng = (addressRaw?['lng'] as num?)?.toDouble() ?? (addressRaw?['longitude'] as num?)?.toDouble() ?? deliveryLng;
+    final rawAddr = customerAddress ?? (addressRaw?['formattedAddress'] as String?) ?? (addressRaw?['address'] as String?) ?? 'Ghatampur Zone';
+    final rawLabel = (addressRaw?['label'] as String?) ?? 'Delivery Location';
+    return (
+      label: rawLabel,
+      formattedAddress: rawAddr,
+      lat: rawLat,
+      lng: rawLng,
+    );
+  }
 
   String get displayId {
     if (readableId != null && readableId!.trim().isNotEmpty) {
@@ -191,8 +205,9 @@ class Order {
 
   factory Order.fromJson(Map<String, dynamic> json) {
     List<OrderItem> itemsList = [];
-    if (json['items'] is List) {
-      itemsList = (json['items'] as List)
+    final rawItems = json['items'] ?? json['order_items'];
+    if (rawItems is List) {
+      itemsList = rawItems
           .whereType<Map<String, dynamic>>()
           .map((itemJson) => OrderItem.fromJson(itemJson))
           .toList();
@@ -295,8 +310,12 @@ class Order {
       addressRaw: json['address'] is Map ? Map<String, dynamic>.from(json['address']) : null,
       notes: json['notes']?.toString(),
       couponCode: json['couponCode']?.toString(),
-      customerName: json['customerName']?.toString() ?? json['userName']?.toString(),
-      customerPhone: json['customerPhone']?.toString() ?? json['phone']?.toString(),
+      customerName: json['customer'] is Map
+          ? (json['customer']['name']?.toString() ?? json['customerName']?.toString())
+          : (json['customerName']?.toString() ?? json['userName']?.toString()),
+      customerPhone: json['customer'] is Map
+          ? (json['customer']['phone']?.toString() ?? json['customerPhone']?.toString())
+          : (json['customerPhone']?.toString() ?? json['phone']?.toString()),
       customerAddress: parseCustomerAddress(),
       createdAt: parseDate(json['createdAt']),
       confirmedAt: parseNullableDate(json['confirmedAt']),
@@ -304,6 +323,12 @@ class Order {
       shippedAt: parseNullableDate(json['shippedAt']),
       deliveredAt: parseNullableDate(json['deliveredAt']),
       items: itemsList,
+      combinedId: json['combinedId']?.toString(),
+      isCombined: json['isCombined'] == true || (json['combinedId'] != null && json['combinedId'].toString().trim().isNotEmpty),
+      subOrders: (json['subOrders'] is List)
+          ? (json['subOrders'] as List).map((x) => x is Order ? x : Order.fromJson(x)).toList()
+          : null,
+      subLabels: (json['subLabels'] is List) ? (json['subLabels'] as List).map((x) => x.toString()).toList() : null,
     );
   }
 
@@ -340,6 +365,10 @@ class Order {
     DateTime? shippedAt,
     DateTime? deliveredAt,
     List<OrderItem>? items,
+    String? combinedId,
+    bool? isCombined,
+    List<Order>? subOrders,
+    List<String>? subLabels,
   }) {
     return Order(
       id: id ?? this.id,
@@ -374,6 +403,10 @@ class Order {
       shippedAt: shippedAt ?? this.shippedAt,
       deliveredAt: deliveredAt ?? this.deliveredAt,
       items: items ?? this.items,
+      combinedId: combinedId ?? this.combinedId,
+      isCombined: isCombined ?? this.isCombined,
+      subOrders: subOrders ?? this.subOrders,
+      subLabels: subLabels ?? this.subLabels,
     );
   }
 

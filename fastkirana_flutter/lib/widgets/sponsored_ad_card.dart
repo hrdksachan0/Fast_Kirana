@@ -14,12 +14,12 @@ class SponsoredAdCard extends StatelessWidget {
 
   const SponsoredAdCard({
     super.key,
-    this.title = '🔥 Special Offer — 20% OFF at AS Restaurant & Cafe',
-    this.subtitle = 'Craving hot snacks & meals? Use coupon while ordering.',
-    this.promoCode = 'FEAST20',
-    this.discountText = 'FLAT 20% OFF',
+    this.title = '⚡ FastKirana Central Helpline & WhatsApp',
+    this.subtitle = 'For live order queries, custom additions, or direct assistance.',
+    this.promoCode,
+    this.discountText = 'DIRECT CARE',
     this.imageUrl,
-    this.actionText = 'Order Now',
+    this.actionText = 'WhatsApp / Call',
     this.onTap,
   });
 

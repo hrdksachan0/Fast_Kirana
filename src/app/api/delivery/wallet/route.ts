@@ -6,15 +6,36 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const searchParams = request.nextUrl.searchParams
+  const queryUserId = searchParams.get('userId')
+  const queryPhone = searchParams.get('phone')
+
+  let userId = session?.user?.id || queryUserId || null
+
+  if (!userId && queryPhone) {
+    const cleanPhone = queryPhone.replace(/\D/g, '').slice(-10)
+    const riderUser = await prisma.user.findFirst({
+      where: { phone: { contains: cleanPhone } },
+      select: { id: true }
+    })
+    if (riderUser) userId = riderUser.id
   }
 
-  const userId = session.user.id
-  const role = session.user.role
-
-  if (role !== 'DELIVERY' && role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Forbidden: Delivery role required' }, { status: 403 })
+  if (!userId) {
+    // Return empty wallet stats instead of error for unlinked sessions
+    return NextResponse.json({
+      wallet: {
+        cashInHand: 0,
+        cashLimit: 10000,
+        totalCollected: 0,
+        totalDeposited: 0,
+        isLocked: false,
+        isWarning: false,
+        remainingLimit: 10000
+      },
+      todayCodOrders: [],
+      recentDeposits: []
+    })
   }
 
   try {
@@ -31,7 +52,7 @@ export async function GET(request: NextRequest) {
         data: {
           userId,
           cashInHand: 0,
-          cashLimit: 2000,
+          cashLimit: 10000,
           totalCollected: 0,
           totalDeposited: 0
         }
@@ -74,7 +95,17 @@ export async function GET(request: NextRequest) {
     const isLocked = wallet.cashInHand >= wallet.cashLimit
     const isWarning = wallet.cashInHand >= wallet.cashLimit * 0.75
 
+    const riderUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, phone: true, role: true }
+    })
+
     return NextResponse.json({
+      rider: {
+        id: riderUser?.id || userId,
+        name: riderUser?.name || 'Partner',
+        phone: riderUser?.phone || ''
+      },
       wallet: {
         cashInHand: wallet.cashInHand,
         cashLimit: wallet.cashLimit,

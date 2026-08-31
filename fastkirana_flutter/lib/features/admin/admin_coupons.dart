@@ -1,77 +1,122 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
-import '../../widgets/brand_button.dart';
+import '../../providers/coupon_provider.dart';
+import '../../data/models/coupon.dart';
 
-class AdminCouponsScreen extends StatelessWidget {
+class AdminCouponsScreen extends ConsumerWidget {
   const AdminCouponsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final coupons = List.generate(6, (i) => {
-      'code': ['WELCOME50', 'FREEDEL', 'KIRANA100', 'CAFE20', 'WEEKEND30', 'BULK200'][i],
-      'discount': ['₹50 OFF', 'Free Delivery', '₹100 OFF', '20% OFF', '30% OFF', '₹200 OFF'][i],
-      'min': ['₹199', '₹0', '₹999', '₹299', '₹399', '₹1499'][i],
-      'used': [1200, 3500, 800, 450, 900, 200][i],
-      'active': i != 2,
-    });
+  Widget build(BuildContext context, WidgetRef ref) {
+    final couponsAsync = ref.watch(couponsProvider);
 
     return Scaffold(
       backgroundColor: AppDesignSystem.background,
       appBar: AppBar(
         backgroundColor: AppDesignSystem.background,
         elevation: 0,
-        title: Text('Coupons Management', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+        title: Text(
+          'Coupons Management',
+          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
+        ),
         actions: [
-          IconButton(icon: Icon(Icons.add_rounded, color: AppDesignSystem.primary), onPressed: () {}),
+          IconButton(
+            icon: Icon(Icons.refresh_rounded, color: AppDesignSystem.primary),
+            onPressed: () => ref.invalidate(couponsProvider),
+          ),
         ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: coupons.length,
-        itemBuilder: (context, index) {
-          final c = coupons[index];
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppDesignSystem.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppDesignSystem.borderLight),
-              boxShadow: AppDesignSystem.shadowSm,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+      body: couponsAsync.when(
+        data: (coupons) {
+          if (coupons.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: AppDesignSystem.primary.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(child: Text('🎟️', style: TextStyle(fontSize: 28))),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No Coupons Created Yet',
+                      style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Create coupons in Web Admin Portal to offer discounts to customers.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: coupons.length,
+            itemBuilder: (context, index) {
+              final c = coupons[index];
+              final discountText = c.discountType == DiscountType.percent
+                  ? 'FLAT ${c.value.toInt()}% OFF'
+                  : 'FLAT ₹${c.value.toInt()} OFF';
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppDesignSystem.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppDesignSystem.borderLight),
+                  boxShadow: AppDesignSystem.shadowSm,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(c['code'] as String, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: (c['active'] as bool) ? AppDesignSystem.success.withOpacity(0.1) : AppDesignSystem.danger.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text((c['active'] as bool) ? 'ACTIVE' : 'INACTIVE', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: (c['active'] as bool) ? AppDesignSystem.success : AppDesignSystem.danger)),
+                          Row(
+                            children: [
+                              Text(c.code, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: c.isActive ? AppDesignSystem.success.withValues(alpha: 0.1) : AppDesignSystem.danger.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  c.isActive ? 'ACTIVE' : 'INACTIVE',
+                                  style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: c.isActive ? AppDesignSystem.success : AppDesignSystem.danger),
+                                ),
+                              ),
+                            ],
                           ),
+                          const SizedBox(height: 4),
+                          Text('$discountText • Min: ₹${c.minOrder.toInt()}', style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Text('${c['discount']} • Min: ${c['min']}', style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
-                      const SizedBox(height: 4),
-                      Text('Used: ${c['used']}', style: GoogleFonts.inter(fontSize: 11, color: AppDesignSystem.textMuted)),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                IconButton(icon: Icon(Icons.edit_outlined, color: AppDesignSystem.primary), onPressed: () {}),
-              ],
-            ),
+              );
+            },
           );
         },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => Center(child: Text('Error loading coupons: $err')),
       ),
     );
   }

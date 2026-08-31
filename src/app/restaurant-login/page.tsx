@@ -44,25 +44,8 @@ export default function RestaurantLoginPage() {
       const isAllowed = role === 'ADMIN' || role === 'RESTAURANT_OWNER' || role === 'CHEF'
 
       if (isAllowed) {
-        toast.success('Welcome back! Redirecting to dashboard...')
-        if (assignedRestaurantId) {
-          // Fetch restaurant details to decide where to route
-          const restRes = await fetch(`/api/restaurants/${assignedRestaurantId}`)
-          const restData = await restRes.json()
-          const isCafe = restData.slug === 'fastkirana-cafe' || restData.slug?.includes('cafe')
-          if (isCafe) {
-            window.location.href = '/cafe-kitchen'
-          } else {
-            window.location.href = '/restaurant-kitchen'
-          }
-        } else {
-          // Fallback based on email startsWith if no assigned ID
-          if (userEmail.toLowerCase().startsWith('restaurant') || userEmail.toLowerCase().startsWith('owner')) {
-            window.location.href = '/restaurant-kitchen'
-          } else {
-            window.location.href = '/cafe-kitchen'
-          }
-        }
+        toast.success('Welcome back! Redirecting to restaurant console...')
+        window.location.href = '/restaurant-kitchen'
       } else {
         toast.error('Access Denied. Only registered staff members are allowed to log in here.')
         await signOut({ redirect: false })

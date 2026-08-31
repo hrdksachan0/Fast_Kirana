@@ -26,91 +26,91 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
       'tagline': '100% Farm-Fresh Organic',
       'items': 33,
       'btnColor': Color(0xFF059669),
-      'asset': 'assets/categories/fruits_vegetables_category.png',
+      'asset': 'assets/categories/fruits_vegetables_category.webp',
       'webImage': 'https://www.fastkirana.in/fruits-vegetables.png',
     },
     'healthy-foods': {
       'tagline': 'Essential Products',
       'items': 11,
       'btnColor': Color(0xFFDC2626),
-      'asset': 'assets/categories/fruits_vegetables_category.png',
+      'asset': 'assets/categories/fruits_vegetables_category.webp',
       'webImage': 'https://www.fastkirana.in/healthy-foods.png',
     },
     'kitchen-needs': {
       'tagline': 'Fortune Oil, Atta & Dal',
       'items': 42,
       'btnColor': Color(0xFF059669),
-      'asset': 'assets/categories/atta_rice_dal_category.png',
+      'asset': 'assets/categories/atta_rice_dal_category.webp',
       'webImage': 'https://www.fastkirana.in/kitchen-needs.png',
     },
     'atta-rice-dal': {
       'tagline': 'Fortune Oil, Atta & Dal',
       'items': 42,
       'btnColor': Color(0xFF059669),
-      'asset': 'assets/categories/atta_rice_dal_category.png',
+      'asset': 'assets/categories/atta_rice_dal_category.webp',
       'webImage': 'https://www.fastkirana.in/kitchen-needs.png',
     },
     'snacks-munchies': {
       'tagline': 'Crisps, Namkeen & Chips',
       'items': 28,
       'btnColor': Color(0xFFDC2626),
-      'asset': 'assets/categories/snacks_munchies_category.png',
+      'asset': 'assets/categories/snacks_munchies_category.webp',
       'webImage': 'https://www.fastkirana.in/snacks-munchies.png',
     },
     'beverages': {
       'tagline': 'Cold Drinks & Real Juices',
       'items': 19,
       'btnColor': Color(0xFF0284C7),
-      'asset': 'assets/categories/beverages_category.png',
+      'asset': 'assets/categories/beverages_category.webp',
       'webImage': 'https://www.fastkirana.in/beverages.png',
     },
     'ice-cream': {
       'tagline': 'Cool Tubs, Cones & Treats',
       'items': 15,
       'btnColor': Color(0xFFDC2626),
-      'asset': 'assets/categories/ice_cream_category.png',
+      'asset': 'assets/categories/ice_cream_category.webp',
       'webImage': 'https://www.fastkirana.in/ice-cream.png',
     },
     'chocolates': {
       'tagline': 'Silk, Bars & Confectionery',
       'items': 24,
       'btnColor': Color(0xFF7C3AED),
-      'asset': 'assets/categories/bakery_biscuits_category.png',
+      'asset': 'assets/categories/bakery_biscuits_category.webp',
       'webImage': 'https://www.fastkirana.in/chocolates.png',
     },
     'bakery': {
       'tagline': 'Fresh Cookies & Rusks',
       'items': 16,
       'btnColor': Color(0xFFEA580C),
-      'asset': 'assets/categories/bakery_biscuits_category.png',
+      'asset': 'assets/categories/bakery_biscuits_category.webp',
       'webImage': 'https://www.fastkirana.in/bakery.png',
     },
     'packaged-foods': {
       'tagline': 'Instant Maggi & Ready Meals',
       'items': 18,
       'btnColor': Color(0xFFDC2626),
-      'asset': 'assets/categories/snacks_munchies_category.png',
+      'asset': 'assets/categories/snacks_munchies_category.webp',
       'webImage': 'https://www.fastkirana.in/packaged-foods.png',
     },
     'personal-care': {
       'tagline': 'Soaps, Shampoos & Skincare',
       'items': 22,
       'btnColor': Color(0xFF0D9488),
-      'asset': 'assets/categories/personal_care_category.png',
+      'asset': 'assets/categories/personal_care_category.webp',
       'webImage': 'https://www.fastkirana.in/personal-care.png',
     },
     'home-needs-and-cleaning': {
       'tagline': 'Detergents & Home Cleaners',
       'items': 20,
       'btnColor': Color(0xFF0284C7),
-      'asset': 'assets/categories/household_category.png',
+      'asset': 'assets/categories/household_category.webp',
       'webImage': 'https://www.fastkirana.in/home-cleaning.png',
     },
     'restaurant-food': {
       'tagline': 'Hot Burgers, Rolls & Meals',
       'items': 35,
       'btnColor': Color(0xFFEA580C),
-      'asset': 'assets/categories/cafe_category.png',
+      'asset': 'assets/categories/cafe_category.webp',
       'webImage': 'https://www.fastkirana.in/restaurant-food.png',
     },
   };
@@ -224,10 +224,10 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(16),
                         child: Image.asset(
-                          'assets/categories/hero_welcome.png',
+                          'assets/categories/hero_welcome.webp',
                           fit: BoxFit.contain,
                           errorBuilder: (_, __, ___) => Image.asset(
-                            'assets/categories/fruits_vegetables_category.png',
+                            'assets/categories/fruits_vegetables_category.webp',
                             fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) => const Center(
                               child: Text('🛍️', style: TextStyle(fontSize: 36)),
@@ -390,14 +390,14 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
           'tagline': 'Essential Products',
           'items': category.productCount ?? 15,
           'btnColor': const Color(0xFFDC2626),
-          'asset': 'assets/categories/fruits_vegetables_category.png',
+          'asset': 'assets/categories/fruits_vegetables_category.webp',
           'webImage': category.imageUrl ?? 'https://www.fastkirana.in/fruits-vegetables.png',
         };
 
     final int itemCount = (meta['items'] as int?) ?? (category.productCount ?? 20);
     final Color btnColor = (meta['btnColor'] as Color?) ?? const Color(0xFFDC2626);
     final String tagline = (meta['tagline'] as String?) ?? '100% Quality Checked';
-    final String assetPath = (meta['asset'] as String?) ?? 'assets/categories/fruits_vegetables_category.png';
+    final String assetPath = (meta['asset'] as String?) ?? 'assets/categories/fruits_vegetables_category.webp';
     final String? webUrl = category.imageUrl ?? (meta['webImage'] as String?);
 
     return GestureDetector(

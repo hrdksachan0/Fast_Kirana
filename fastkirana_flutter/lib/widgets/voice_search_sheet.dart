@@ -29,20 +29,8 @@ class VoiceSearchSheet extends StatefulWidget {
 class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerProviderStateMixin {
   static const MethodChannel _voiceChannel = MethodChannel('com.fastkirana.app/voice_search');
   late AnimationController _waveController;
-  String _liveTranscript = 'Listening... Speak in Hindi or English';
+  String _liveTranscript = 'Listening... Speak now in Hindi or English';
   bool _isListening = false;
-  Timer? _silenceTimer;
-
-  final List<String> _quickSuggestions = [
-    'Amul Milk',
-    'Fortune Oil',
-    'Maggi',
-    'Atta 5kg',
-    'A.S. Restaurant Thali',
-    'Wedson Burger',
-    'Lays Chips',
-    'Eggs',
-  ];
 
   @override
   void initState() {
@@ -86,7 +74,7 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
           setState(() {
             _isListening = false;
             if (_liveTranscript.startsWith('Listening')) {
-              _liveTranscript = 'Tap mic to speak or choose a popular search below:';
+              _liveTranscript = 'Tap mic to speak';
             }
           });
           break;
@@ -100,7 +88,7 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
       if (micStatus.isDenied || micStatus.isPermanentlyDenied) {
         if (mounted) {
           setState(() {
-            _liveTranscript = 'Microphone permission needed. Tap a suggestion below:';
+            _liveTranscript = 'Microphone permission needed to use voice search';
           });
         }
         return;
@@ -112,14 +100,14 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
       } else {
         if (mounted) {
           setState(() {
-            _liveTranscript = 'Tap mic or choose a popular search below:';
+            _liveTranscript = 'Tap mic to speak';
           });
         }
       }
     } catch (_) {
       if (mounted) {
         setState(() {
-          _liveTranscript = 'Tap mic or choose a popular search below:';
+          _liveTranscript = 'Tap mic to speak';
         });
       }
     }
@@ -155,7 +143,6 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
 
   @override
   void dispose() {
-    _silenceTimer?.cancel();
     _stopListening();
     _waveController.dispose();
     super.dispose();
@@ -164,7 +151,7 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+      padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).viewInsets.bottom + 28),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.only(
@@ -175,22 +162,22 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Drag Handle Bar
+          // Drag Handle
           Container(
             width: 44,
-            height: 4,
+            height: 4.5,
             decoration: BoxDecoration(
               color: const Color(0xFFCBD5E1),
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(10),
             ),
           ),
           const SizedBox(height: 20),
 
-          // Header Title
+          // Header
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('🎙️', style: TextStyle(fontSize: 20)),
+              const Text('🎙️', style: TextStyle(fontSize: 22)),
               const SizedBox(width: 8),
               Text(
                 'Voice Search',
@@ -198,48 +185,47 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
                   fontSize: 18,
                   fontWeight: FontWeight.w900,
                   color: const Color(0xFF0F172A),
-                  letterSpacing: -0.3,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
-            'Say any product or dish name (e.g. "Milk", "Maggi", "Burger")',
+            'Speak product or grocery name in Hindi or English',
             style: GoogleFonts.inter(
               fontSize: 12.5,
-              fontWeight: FontWeight.w500,
               color: const Color(0xFF64748B),
+              fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 32),
 
-          // Animated Concentric Pulsing Audio Wave Circles
+          // Pulsing Soundwave & Big Mic Button
           GestureDetector(
             onTap: () {
               if (_isListening) {
                 _stopListening();
               } else {
-                _startListening();
+                _initAndStartSpeech();
               }
             },
             child: SizedBox(
-              width: 130,
-              height: 130,
+              width: 140,
+              height: 140,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   if (_isListening)
                     AnimatedBuilder(
                       animation: _waveController,
-                      builder: (context, child) {
+                      builder: (_, __) {
                         return Container(
-                          width: 80 + (_waveController.value * 46),
-                          height: 80 + (_waveController.value * 46),
+                          width: 80 + (_waveController.value * 50),
+                          height: 80 + (_waveController.value * 50),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: const Color(0xFFE20A22).withValues(
-                              alpha: (1.0 - _waveController.value) * 0.25,
+                              alpha: (1.0 - _waveController.value).clamp(0.0, 0.4),
                             ),
                           ),
                         );
@@ -248,15 +234,15 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
 
                   // Center Mic Action Button
                   Container(
-                    width: 74,
-                    height: 74,
+                    width: 78,
+                    height: 78,
                     decoration: BoxDecoration(
+                      shape: BoxShape.circle,
                       gradient: const LinearGradient(
                         colors: [Color(0xFFE20A22), Color(0xFFFF2D4B)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
                           color: const Color(0xFFE20A22).withValues(alpha: 0.35),
@@ -276,16 +262,18 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
             ),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
           // Real-time speech transcript box
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
             decoration: BoxDecoration(
               color: const Color(0xFFF8FAFC),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: _isListening ? const Color(0xFFFECDD3) : const Color(0xFFE2E8F0),
+                width: 1.2,
               ),
             ),
             child: Text(
@@ -299,48 +287,7 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
             ),
           ),
 
-          const SizedBox(height: 20),
-
-          // Quick Suggestion Chips
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'POPULAR SEARCHES',
-              style: GoogleFonts.inter(
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF94A3B8),
-                letterSpacing: 1.0,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: _quickSuggestions.map((query) {
-              return GestureDetector(
-                onTap: () => _finishWithResult(query),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Text(
-                    query,
-                    style: GoogleFonts.inter(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF334155),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
+          const SizedBox(height: 16),
         ],
       ),
     );

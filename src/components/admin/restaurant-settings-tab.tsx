@@ -6,22 +6,40 @@ import { Loader2, UtensilsCrossed } from 'lucide-react'
 import { toast } from 'sonner'
 import { RestaurantForm } from './restaurant-form'
 
-export function RestaurantSettingsTab() {
+interface RestaurantSettingsTabProps {
+  restaurantId?: string
+}
+
+export function RestaurantSettingsTab({ restaurantId }: RestaurantSettingsTabProps) {
   const { data: session } = useSession()
   const [restaurant, setRestaurant] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
-  const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId
+  const assignedRestaurantId = restaurantId || (session?.user as any)?.assignedRestaurantId
 
   useEffect(() => {
-    if (!assignedRestaurantId) {
-      setLoading(false)
-      return
-    }
-
     const fetchDetails = async () => {
+      setLoading(true)
       try {
-        const res = await fetch(`/api/restaurants/${assignedRestaurantId}`)
+        let targetId = assignedRestaurantId
+
+        // If no assigned restaurant (e.g. admin logged in), fetch the first available restaurant
+        if (!targetId) {
+          const listRes = await fetch('/api/restaurants')
+          if (listRes.ok) {
+            const listData = await listRes.json()
+            if (listData?.restaurants && listData.restaurants.length > 0) {
+              targetId = listData.restaurants[0].id
+            }
+          }
+        }
+
+        if (!targetId) {
+          setLoading(false)
+          return
+        }
+
+        const res = await fetch(`/api/restaurants/${targetId}`)
         if (!res.ok) throw new Error('Failed to fetch details')
         const data = await res.json()
         setRestaurant(data)
@@ -61,7 +79,7 @@ export function RestaurantSettingsTab() {
 
   return (
     <div className="animate-fade-in">
-      <RestaurantForm restaurant={restaurant} isAdmin={false} />
+      <RestaurantForm restaurant={restaurant} isAdmin={session?.user?.role === 'ADMIN'} />
     </div>
   )
 }

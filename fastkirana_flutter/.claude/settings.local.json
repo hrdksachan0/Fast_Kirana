@@ -14,7 +14,13 @@
       "Bash(/d/flutter/bin/flutter.bat *)",
       "Bash(git checkout *)",
       "Bash(curl *)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(npm --version)",
+      "Bash(npm list *)",
+      "Bash(npm install *)",
+      "Bash(node convert-webp.mjs)",
+      "Bash(cd *)",
+      "Bash(grep -v \"//\\\\|\\\\.webp\\\\|ImageByteFormat\\\\|media_\")"
     ]
   }
 }

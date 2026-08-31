@@ -71,29 +71,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     'cta': 'Shop Now →',
     'bgColor': Color(0xFFFDF0F1),
     'textColor': Color(0xFFE20A22),
-    'imageAsset': 'assets/categories/grocery_bag_banner.png',
+    'imageAsset': 'assets/categories/grocery_bag_banner.webp',
     'webFallback': 'https://www.fastkirana.in/grocery_bag_banner.png',
     'categorySlug': 'fruits-vegetables',
   };
 
   static const Map<String, String> _categoryAssetMap = {
-    'fruits-vegetables': 'assets/categories/fruits_vegetables_category.png',
-    'fruits-and-vegetables': 'assets/categories/fruits_vegetables_category.png',
-    'dairy-breakfast': 'assets/categories/dairy_breakfast_category.png',
-    'dairy-bread-eggs': 'assets/categories/dairy_breakfast_category.png',
-    'snacks-munchies': 'assets/categories/snacks_munchies_category.png',
-    'snacks': 'assets/categories/snacks_munchies_category.png',
-    'beverages': 'assets/categories/beverages_category.png',
-    'personal-care': 'assets/categories/personal_care_category.png',
-    'household': 'assets/categories/household_category.png',
-    'home-cleaning': 'assets/categories/household_category.png',
-    'bakery-biscuits': 'assets/categories/bakery_biscuits_category.png',
-    'bakery': 'assets/categories/bakery_biscuits_category.png',
-    'atta-rice-dal': 'assets/categories/atta_rice_dal_category.png',
-    'kitchen-needs': 'assets/categories/atta_rice_dal_category.png',
-    'ice-cream': 'assets/categories/ice_cream_category.png',
-    'instant-foods': 'assets/categories/snacks_munchies_category.png',
-    'chocolates': 'assets/categories/bakery_biscuits_category.png',
+    'fruits-vegetables': 'assets/categories/fruits_vegetables_category.webp',
+    'fruits-and-vegetables': 'assets/categories/fruits_vegetables_category.webp',
+    'dairy-breakfast': 'assets/categories/dairy_breakfast_category.webp',
+    'dairy-bread-eggs': 'assets/categories/dairy_breakfast_category.webp',
+    'snacks-munchies': 'assets/categories/snacks_munchies_category.webp',
+    'snacks': 'assets/categories/snacks_munchies_category.webp',
+    'beverages': 'assets/categories/beverages_category.webp',
+    'personal-care': 'assets/categories/personal_care_category.webp',
+    'household': 'assets/categories/household_category.webp',
+    'home-cleaning': 'assets/categories/household_category.webp',
+    'bakery-biscuits': 'assets/categories/bakery_biscuits_category.webp',
+    'bakery': 'assets/categories/bakery_biscuits_category.webp',
+    'atta-rice-dal': 'assets/categories/atta_rice_dal_category.webp',
+    'kitchen-needs': 'assets/categories/atta_rice_dal_category.webp',
+    'ice-cream': 'assets/categories/ice_cream_category.webp',
+    'instant-foods': 'assets/categories/snacks_munchies_category.webp',
+    'chocolates': 'assets/categories/bakery_biscuits_category.webp',
   };
 
   static const Map<String, String> _sectionCategorySlugs = {
@@ -202,206 +202,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               ),
             ),
-
-            // 🚀 Sleek Compact Floating Active Delivery Pill (Zero-Truncation Premium Responsive Design)
-            if (latestOrder != null &&
-                latestOrder.status != OrderStatus.delivered &&
-                latestOrder.status != OrderStatus.cancelled)
-              Positioned(
-                left: 12,
-                right: 12,
-                bottom: MediaQuery.of(context).padding.bottom + (cartCount > 0 ? 132 : 78),
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: Responsive.defaultMaxContentWidth),
-                    child: GestureDetector(
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        Navigator.push(
-                          context,
-                          FadeSlideRoute(page: OrderTrackingScreen(orderId: latestOrder.readableId ?? latestOrder.id)),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: const Color(0xFFE2E8F0),
-                            width: 1.2,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
-                              blurRadius: 20,
-                              offset: const Offset(0, 6),
-                            ),
-                            BoxShadow(
-                              color: const Color(0xFF00A344).withValues(alpha: 0.08),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            // 1. Left Animated Status Icon Badge
-                            Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFECFDF5),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: const Color(0xFFA7F3D0),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  latestOrder.status == OrderStatus.shipped
-                                      ? '🛵'
-                                      : (latestOrder.status == OrderStatus.packed ? '📦' : '⚡'),
-                                  style: const TextStyle(fontSize: 18),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 9),
-
-                            // 2. Middle Content (Line 1: Order ID + Status Pill | Line 2: Store / ETA)
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // Line 1: Real Database Order ID + Status Pill
-                                  Row(
-                                    children: [
-                                      Builder(
-                                        builder: (context) {
-                                          var cleanId = (latestOrder.readableId != null && latestOrder.readableId!.isNotEmpty)
-                                              ? latestOrder.readableId!
-                                              : (latestOrder.id.length > 6 ? latestOrder.id.substring(latestOrder.id.length - 6).toUpperCase() : latestOrder.id);
-                                          if (cleanId.startsWith('FK-') && cleanId.length > 8) {
-                                            cleanId = cleanId.substring(cleanId.length - 4);
-                                          }
-                                          final formattedId = cleanId.startsWith('#') ? cleanId : '#$cleanId';
-                                          return Text(
-                                            formattedId,
-                                            style: GoogleFonts.inter(
-                                              fontSize: 12.5,
-                                              fontWeight: FontWeight.w900,
-                                              color: const Color(0xFF0F172A),
-                                              letterSpacing: -0.2,
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                      const SizedBox(width: 5),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFECFDF5),
-                                          borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(color: const Color(0xFFA7F3D0)),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Container(
-                                              width: 4.5,
-                                              height: 4.5,
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFF10B981),
-                                                shape: BoxShape.circle,
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: const Color(0xFF10B981).withValues(alpha: 0.8),
-                                                    blurRadius: 4,
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            const SizedBox(width: 3.5),
-                                            Text(
-                                              latestOrder.status.displayName,
-                                              style: GoogleFonts.inter(
-                                                fontSize: 9.5,
-                                                fontWeight: FontWeight.w800,
-                                                color: const Color(0xFF059669),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 2),
-
-                                  // Line 2: Store / Outlet Name (Timing removed)
-                                  Row(
-                                    children: [
-                                      Text(
-                                        '🏪 ${latestOrder.shopName != null && latestOrder.shopName!.isNotEmpty ? (latestOrder.shopName!.toLowerCase().contains('dark') ? 'FastKirana Dark Store' : latestOrder.shopName!) : (latestOrder.restaurantId != null ? 'Restaurant' : 'FastKirana Dark Store')}',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w600,
-                                          color: const Color(0xFF64748B),
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-
-                            // 3. Right: Compact Emerald Track Pill Button
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6.5),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF00A344), Color(0xFF008736)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF00A344).withValues(alpha: 0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'Track',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                      letterSpacing: 0.2,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 3),
-                                  const Icon(Icons.arrow_forward_rounded, size: 11, color: Colors.white),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
           ],
         ),
       ),
@@ -429,12 +229,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: Consumer(
                   builder: (context, ref, _) {
                     final selectedAddress = ref.watch(selectedAddressProvider);
-                    final locationTitle = selectedAddress != null
-                        ? selectedAddress.displayLabel
-                        : 'Home';
-                    final locationSubtitle = selectedAddress != null
-                        ? selectedAddress.displayArea
-                        : 'Ghatampur Zone';
+                    final locationLabel = selectedAddress?.displayLabel ?? 'Home';
+                    final shortLocation = selectedAddress?.shortAddress ?? 'Ghatampur';
 
                     return GestureDetector(
                       onTap: () {
@@ -460,16 +256,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 ),
                               ),
                               const SizedBox(width: 5),
-                              Flexible(
-                                child: Text(
-                                  'Delivering to • $locationSubtitle',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF6B7280),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                              Text(
+                                'Delivering to $locationLabel',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF6B7280),
                                 ),
                               ),
                             ],
@@ -480,13 +272,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             children: [
                               Flexible(
                                 child: Text(
-                                  locationTitle,
+                                  shortLocation,
                                   style: GoogleFonts.inter(
                                     fontSize: 14.5,
                                     fontWeight: FontWeight.w900,
                                     color: const Color(0xFF111827),
                                     height: 1.1,
                                   ),
+                                  maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -1581,17 +1374,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(height: 10),
           categoriesAsync.when(
             data: (categories) {
-              if (categories.isEmpty) return const SizedBox.shrink();
+              final groceryCategories = categories.where((c) {
+                final slug = c.slug.toLowerCase();
+                final name = c.name.toLowerCase();
+                if (slug.contains('restaurant') ||
+                    slug.contains('kitchen') ||
+                    slug.contains('fast-food') ||
+                    slug.contains('fastfood') ||
+                    slug.contains('cafe') ||
+                    slug.contains('food-restaurant') ||
+                    slug.contains('thali') ||
+                    slug.contains('pizza') ||
+                    slug.contains('burger') ||
+                    slug == 'restaurant-food') {
+                  return false;
+                }
+                if (name.contains('restaurant') ||
+                    name.contains('kitchen') ||
+                    name.contains('fast food') ||
+                    name.contains('cafe') ||
+                    name.contains('thali')) {
+                  return false;
+                }
+                return true;
+              }).toList();
+
+              if (groceryCategories.isEmpty) return const SizedBox.shrink();
               return AnimationLimiter(
                 child: SizedBox(
                   height: 102,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     physics: const BouncingScrollPhysics(),
-                    itemCount: categories.length,
+                    itemCount: groceryCategories.length,
                     separatorBuilder: (_, __) => const SizedBox(width: 12),
                     itemBuilder: (context, index) {
-                      final cat = categories[index];
+                      final cat = groceryCategories[index];
 
                       return AnimationConfiguration.staggeredList(
                         position: index,
@@ -1727,34 +1545,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // 3. Check exact slug mappings
     final slug = cat.slug.toLowerCase().trim();
     if (slug == 'fruits-vegetables' || slug.contains('fruit') || slug.contains('veg')) {
-      return Image.asset('assets/categories/fruits_vegetables_category.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+      return Image.asset('assets/categories/fruits_vegetables_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
     }
     if (slug == 'dairy-breakfast' || slug.contains('dairy') || slug.contains('milk')) {
-      return Image.asset('assets/categories/dairy_breakfast_category.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+      return Image.asset('assets/categories/dairy_breakfast_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
     }
     if (slug == 'snacks-munchies' || slug.contains('snack')) {
-      return Image.asset('assets/categories/snacks_munchies_category.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+      return Image.asset('assets/categories/snacks_munchies_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
     }
     if (slug == 'beverages' || slug.contains('drink') || slug.contains('cold')) {
-      return Image.asset('assets/categories/beverages_category.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+      return Image.asset('assets/categories/beverages_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
     }
     if (slug == 'ice-cream' || slug.contains('ice') || slug.contains('dessert')) {
-      return Image.asset('assets/categories/ice_cream_category.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+      return Image.asset('assets/categories/ice_cream_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
     }
     if (slug == 'atta-rice-dal' || slug.contains('atta') || slug.contains('rice') || slug.contains('kitchen')) {
-      return Image.asset('assets/categories/atta_rice_dal_category.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+      return Image.asset('assets/categories/atta_rice_dal_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
     }
     if (slug == 'personal-care' || slug.contains('care') || slug.contains('hygiene')) {
-      return Image.asset('assets/categories/personal_care_category.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+      return Image.asset('assets/categories/personal_care_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
     }
     if (slug == 'home-needs-and-cleaning' || slug == 'household' || slug.contains('clean')) {
-      return Image.asset('assets/categories/household_category.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+      return Image.asset('assets/categories/household_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
     }
     if (slug == 'bakery' || slug.contains('biscuit')) {
-      return Image.asset('assets/categories/bakery_biscuits_category.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+      return Image.asset('assets/categories/bakery_biscuits_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
     }
     if (slug == 'restaurant-food' || slug.contains('cafe') || slug.contains('food')) {
-      return Image.asset('assets/categories/cafe_category.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+      return Image.asset('assets/categories/cafe_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
     }
 
     return _buildCategoryFallback(cat);
@@ -2041,18 +1859,48 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       data: (categories) {
         if (categories.isEmpty) return [const SliverToBoxAdapter(child: SizedBox.shrink())];
 
-        return categories.map((cat) {
+        final groceryCategories = categories.where((c) {
+          final slug = c.slug.toLowerCase();
+          final name = c.name.toLowerCase();
+          if (slug.contains('restaurant') ||
+              slug.contains('kitchen') ||
+              slug.contains('fast-food') ||
+              slug.contains('fastfood') ||
+              slug.contains('cafe') ||
+              slug.contains('food-restaurant') ||
+              slug.contains('thali') ||
+              slug.contains('pizza') ||
+              slug.contains('burger') ||
+              slug == 'restaurant-food') {
+            return false;
+          }
+          if (name.contains('restaurant') ||
+              name.contains('kitchen') ||
+              name.contains('fast food') ||
+              name.contains('cafe') ||
+              name.contains('thali')) {
+            return false;
+          }
+          return true;
+        }).toList();
+
+        if (groceryCategories.isEmpty) return [const SliverToBoxAdapter(child: SizedBox.shrink())];
+
+        return groceryCategories.map((cat) {
           final productsAsync = ref.watch(productsProvider(cat.slug));
           return SliverToBoxAdapter(
             child: productsAsync.when(
               data: (products) {
-                if (products.isEmpty) return const SizedBox.shrink();
+                // Filter out any restaurant items that might have slipped into this category
+                final groceryOnlyProducts = products.where((p) => p.restaurantId == null && p.restaurant == null).toList();
+                if (groceryOnlyProducts.isEmpty) return const SizedBox.shrink();
+
                 // Take up to 10 products for the home preview
-                final displayProducts = products.take(10).toList();
+                final displayProducts = groceryOnlyProducts.take(10).toList();
                 return _buildHorizontalProductSection(
                   cat,
                   displayProducts,
-                  totalCount: products.length,
+                  totalCount: groceryOnlyProducts.length,
                 );
               },
               loading: () => _buildProductSectionSkeleton(cat.name),
@@ -2073,7 +1921,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (lower.contains('snack') || lower.contains('munch')) return 'Crunchy chips, namkeen & snacks';
     if (lower.contains('choco') || lower.contains('sweet')) return 'Dairy Milk Silk, bars & confectionery';
     if (lower.contains('fruit') || lower.contains('veg')) return 'Farm fresh vegetables & fruits';
-    if (lower.contains('atta') || lower.contains('rice') || lower.contains('kitchen')) return 'Fortune oil, grains, atta & pulses';
+    if (lower.contains('atta') || lower.contains('rice') || lower.contains('dal') || lower.contains('oil') || lower.contains('grain') || lower.contains('pulse')) return 'Fortune oil, grains, atta & pulses';
     if (lower.contains('ice') || lower.contains('cream') || lower.contains('dessert')) return 'Cool tubs, cones, kulfi & desserts';
     if (lower.contains('beverage') || lower.contains('drink')) return 'Cold drinks, real juices & energy sodas';
     if (lower.contains('bakery') || lower.contains('biscuit')) return 'Fresh cookies, rusks & bakery bites';
@@ -2310,11 +2158,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             const SizedBox(height: 10),
             Text(
-              '+91 70544 70303 | help@fastkirana.com',
-              style: GoogleFonts.inter(fontSize: 10.5, color: AppDesignSystem.textSecondary),
+              '+91 81128 49854 | fastkiranadelivery@gmail.com',
+              style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppDesignSystem.textSecondary),
             ),
+            const SizedBox(height: 2),
             Text(
-              '6 AM – 12 AM | NH34, Ghatampur, Kanpur Nagar',
+              '7 AM – 10 PM | NH34, Ghatampur, Kanpur Nagar',
               style: GoogleFonts.inter(fontSize: 9.5, color: AppDesignSystem.textMuted),
             ),
           ],

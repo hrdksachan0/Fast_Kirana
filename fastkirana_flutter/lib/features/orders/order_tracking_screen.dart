@@ -1,10 +1,15 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,12 +21,19 @@ import '../../core/network/api_client.dart';
 import '../../core/services/supabase_service.dart';
 import '../../data/models/order.dart';
 import '../../data/repositories/order_repository.dart';
+import '../../providers/banner_provider.dart';
 import '../../widgets/sponsored_ad_card.dart';
 import '../profile/add_review_screen.dart';
 
 class OrderTrackingScreen extends ConsumerStatefulWidget {
   final String orderId;
-  const OrderTrackingScreen({super.key, required this.orderId});
+  final Order? initialOrder;
+
+  const OrderTrackingScreen({
+    super.key,
+    required this.orderId,
+    this.initialOrder,
+  });
 
   @override
   ConsumerState<OrderTrackingScreen> createState() => _OrderTrackingScreenState();
@@ -31,19 +43,22 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   Order? _order;
   bool _isLoading = true;
   bool _isRealtimeConnected = false;
+  String _etaText = 'Calculating ETA...';
+  String _distanceText = '';
 
-  // Google Maps Controller & State
+  // Google Maps state
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
-
-  // Live Location & ETA
   LatLng? _riderPosition;
-  double _riderHeading = 0.0;
-  LatLng? _storePosition;
   LatLng? _customerPosition;
-  String _etaText = 'Calculating ETA...';
-  String _distanceText = '-- km';
+  LatLng? _storePosition;
+  double _riderHeading = 0.0;
+
+  // Custom Rich Bitmap Markers (Store 🏪, Rider 🛵, Home 🏠)
+  BitmapDescriptor? _storeMarkerIcon;
+  BitmapDescriptor? _riderMarkerIcon;
+  BitmapDescriptor? _customerMarkerIcon;
 
   // Subscriptions & Timers
   RealtimeChannel? _supabaseChannel;
@@ -70,20 +85,37 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   @override
   void initState() {
     super.initState();
+    if (widget.initialOrder != null) {
+      _order = widget.initialOrder;
+      _isLoading = false;
+      _setupCoordinatesFromOrder(widget.initialOrder!);
+    }
+
     _confettiController = ConfettiController(duration: const Duration(seconds: 4));
     _riderAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..addListener(_interpolateRiderMarker);
 
+    _initCustomMarkers();
+    _checkAndRequestLocationPermission();
     _initRazorpay();
     _fetchLiveOrder();
     _initSupabaseRealtime();
 
-    // Fallback polling every 15 seconds to ensure absolute state consistency
-    _pollTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+    // Fast fallback polling every 3 seconds to guarantee zero-lag live tracking
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       _silentPollOrder();
     });
+  }
+
+  Future<void> _checkAndRequestLocationPermission() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        await Geolocator.requestPermission();
+      }
+    } catch (_) {}
   }
 
   @override
@@ -204,36 +236,46 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
   /// Initialize Supabase Realtime subscription for live location and order status updates
   Future<void> _initSupabaseRealtime() async {
-    await SupabaseService.initialize();
-    _supabaseChannel = SupabaseService.subscribeToOrderLocation(
-      orderId: widget.orderId,
-      onLocationUpdate: (locationData) {
-        if (!mounted) return;
-        final lat = locationData['lat'] as double?;
-        final lng = locationData['lng'] as double?;
-        final heading = (locationData['heading'] as num?)?.toDouble() ?? 0.0;
+    try {
+      await SupabaseService.initialize();
+      var cleanId = widget.orderId.trim();
+      if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
 
-        if (lat != null && lng != null) {
-          _updateRiderLocation(LatLng(lat, lng), heading);
-        }
-      },
-      onStatusUpdate: (newStatusStr) {
-        if (!mounted) return;
-        debugPrint('[OrderTracking] Realtime status change: $newStatusStr');
-        _fetchLiveOrder();
-      },
-    );
+      _supabaseChannel = SupabaseService.subscribeToOrderLocation(
+        orderId: cleanId,
+        onLocationUpdate: (locationData) {
+          if (!mounted) return;
+          final lat = locationData['lat'] as double?;
+          final lng = locationData['lng'] as double?;
+          final heading = (locationData['heading'] as num?)?.toDouble() ?? 0.0;
 
-    if (_supabaseChannel != null) {
-      setState(() => _isRealtimeConnected = true);
+          if (lat != null && lng != null) {
+            _updateRiderLocation(LatLng(lat, lng), heading);
+          }
+        },
+        onStatusUpdate: (newStatusStr) {
+          if (!mounted) return;
+          debugPrint('[OrderTracking] Realtime status change: $newStatusStr');
+          _fetchLiveOrder();
+        },
+      );
+
+      if (_supabaseChannel != null && mounted) {
+        setState(() => _isRealtimeConnected = true);
+      }
+    } catch (e) {
+      debugPrint('[OrderTracking] Supabase realtime init warning: $e');
     }
   }
 
   Future<void> _fetchLiveOrder() async {
     try {
       final repo = OrderRepository(ref.read(dioProvider));
-      final order = await repo.getOrder(widget.orderId);
-      if (mounted && order != null) {
+      var cleanId = widget.orderId.trim();
+      if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
+
+      final order = await repo.getOrder(cleanId);
+      if (mounted) {
         final prevStatus = _order?.status;
         setState(() {
           _order = order;
@@ -256,8 +298,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   Future<void> _silentPollOrder() async {
     try {
       final repo = OrderRepository(ref.read(dioProvider));
-      final order = await repo.getOrder(widget.orderId);
-      if (mounted && order != null) {
+      var cleanId = widget.orderId.trim();
+      if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
+
+      final order = await repo.getOrder(cleanId);
+      if (mounted) {
         setState(() => _order = order);
         _setupCoordinatesFromOrder(order);
       }
@@ -265,21 +310,35 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   }
 
   void _setupCoordinatesFromOrder(Order order) {
-    // 1. Customer Position
-    final custLat = order.deliveryLat ?? order.address?.lat;
-    final custLng = order.deliveryLng ?? order.address?.lng;
+    // 1. Customer Position (Delivery Address Coordinates)
+    final custLat = (order.addressRaw?['lat'] as num?)?.toDouble() ??
+        (order.addressRaw?['latitude'] as num?)?.toDouble() ??
+        order.address?.lat;
+    final custLng = (order.addressRaw?['lng'] as num?)?.toDouble() ??
+        (order.addressRaw?['longitude'] as num?)?.toDouble() ??
+        order.address?.lng;
+
     if (custLat != null && custLng != null && custLat != 0.0 && custLng != 0.0) {
       _customerPosition = LatLng(custLat, custLng);
     } else {
       _customerPosition = LatLng(AppConfig.darkstoreLat + 0.008, AppConfig.darkstoreLng + 0.006);
     }
 
-    // 2. Store Position
-    _storePosition = LatLng(AppConfig.darkstoreLat, AppConfig.darkstoreLng);
+    // 2. Store / Restaurant Hub Position
+    final shopLat = (order.addressRaw?['shopLat'] as num?)?.toDouble() ??
+        (order.addressRaw?['restaurantLat'] as num?)?.toDouble();
+    final shopLng = (order.addressRaw?['shopLng'] as num?)?.toDouble() ??
+        (order.addressRaw?['restaurantLng'] as num?)?.toDouble();
+
+    if (shopLat != null && shopLng != null && shopLat != 0.0 && shopLng != 0.0) {
+      _storePosition = LatLng(shopLat, shopLng);
+    } else {
+      _storePosition = LatLng(AppConfig.darkstoreLat, AppConfig.darkstoreLng);
+    }
 
     // 3. Rider Position
-    if (order.status == OrderStatus.shipped) {
-      if (order.deliveryLat != null && order.deliveryLng != null) {
+    if (order.status == OrderStatus.shipped || order.status == OrderStatus.packed) {
+      if (order.deliveryLat != null && order.deliveryLng != null && order.deliveryLat != 0.0 && order.deliveryLng != 0.0) {
         _updateRiderLocation(LatLng(order.deliveryLat!, order.deliveryLng!), 0.0);
       } else if (_riderPosition == null) {
         _updateRiderLocation(_storePosition!, 0.0);
@@ -353,18 +412,190 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     return 12742 * math.asin(math.sqrt(a)); // 2 * R; R = 6371 km
   }
 
+  Future<void> _initCustomMarkers() async {
+    try {
+      _storeMarkerIcon = await _createCustomMarkerBitmap(
+        label: 'STORE',
+        emoji: '🏪',
+        color: const Color(0xFF16A34A),
+      );
+      _riderMarkerIcon = await _createCustomMarkerBitmap(
+        label: 'RIDER',
+        emoji: '🛵',
+        color: const Color(0xFFEA580C),
+      );
+      _customerMarkerIcon = await _createCustomMarkerBitmap(
+        label: 'HOME',
+        emoji: '🏠',
+        color: const Color(0xFFDC2626),
+      );
+      if (mounted) {
+        setState(() {
+          _refreshMapElements();
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<BitmapDescriptor> _createCustomMarkerBitmap({
+    required String label,
+    required String emoji,
+    required Color color,
+  }) async {
+    final pictureRecorder = ui.PictureRecorder();
+    final canvas = Canvas(pictureRecorder);
+    const width = 100.0;
+    const height = 110.0;
+    const center = Offset(50, 42);
+
+    // 1. Soft Drop Shadow
+    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.22)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    canvas.drawCircle(center.translate(0, 4), 32, shadowPaint);
+
+    // 2. White Disc Fill
+    final whitePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, 32, whitePaint);
+
+    // 3. Pointer Pin Triangle at bottom
+    final pinPath = Path()
+      ..moveTo(38, 64)
+      ..lineTo(62, 64)
+      ..lineTo(50, 84)
+      ..close();
+    canvas.drawPath(pinPath, whitePaint);
+
+    // 4. Vibrant Colored Border Ring
+    final borderPaint = Paint()
+      ..color = color
+      ..strokeWidth = 3.5
+      ..style = PaintingStyle.stroke;
+    canvas.drawCircle(center, 32, borderPaint);
+    canvas.drawPath(pinPath, borderPaint);
+
+    // 5. Centered Large Emoji Icon
+    final emojiPainter = TextPainter(
+      text: TextSpan(
+        text: emoji,
+        style: const TextStyle(fontSize: 26),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    )..layout();
+    emojiPainter.paint(canvas, Offset(50 - emojiPainter.width / 2, 42 - emojiPainter.height / 2));
+
+    // 6. Bottom Micro Label Pill
+    final labelBgPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    final labelRRect = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(18, 86, 64, 18),
+      const Radius.circular(9),
+    );
+    canvas.drawRRect(labelRRect, labelBgPaint);
+
+    final labelPainter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: const TextStyle(
+          fontSize: 9.5,
+          fontWeight: FontWeight.w900,
+          color: Colors.white,
+          letterSpacing: 0.6,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    )..layout();
+    labelPainter.paint(canvas, Offset(50 - labelPainter.width / 2, 95 - labelPainter.height / 2));
+
+    final picture = pictureRecorder.endRecording();
+    final img = await picture.toImage(width.toInt(), height.toInt());
+    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
+  }
+
+  List<LatLng> _roadPolylinePoints = [];
+  LatLng? _lastRouteStart;
+  LatLng? _lastRouteEnd;
+  bool _isFetchingRoute = false;
+
+  Future<void> _fetchRoadRoute(LatLng start, LatLng end) async {
+    if (_isFetchingRoute) return;
+    if (_lastRouteStart != null && _lastRouteEnd != null) {
+      final dStart = _getHaversineDistance(_lastRouteStart!, start);
+      final dEnd = _getHaversineDistance(_lastRouteEnd!, end);
+      if (dStart < 0.03 && dEnd < 0.03 && _roadPolylinePoints.length > 2) {
+        return; // Position hasn't significantly moved
+      }
+    }
+
+    _isFetchingRoute = true;
+    try {
+      final dio = Dio();
+      final url = 'https://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson';
+      final response = await dio.get(url).timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 200 && response.data != null) {
+        final routes = response.data['routes'] as List?;
+        if (routes != null && routes.isNotEmpty) {
+          final geometry = routes.first['geometry'] as Map<String, dynamic>?;
+          final coordinates = geometry?['coordinates'] as List?;
+          if (coordinates != null && coordinates.isNotEmpty) {
+            final points = <LatLng>[];
+            for (final coord in coordinates) {
+              if (coord is List && coord.length >= 2) {
+                final lng = (coord[0] as num).toDouble();
+                final lat = (coord[1] as num).toDouble();
+                points.add(LatLng(lat, lng));
+              }
+            }
+
+            if (points.isNotEmpty && mounted) {
+              _lastRouteStart = start;
+              _lastRouteEnd = end;
+              setState(() {
+                _roadPolylinePoints = points;
+                _polylines.clear();
+                _polylines.add(
+                  Polyline(
+                    polylineId: const PolylineId('delivery_route'),
+                    points: _roadPolylinePoints,
+                    color: const Color(0xFF2563EB),
+                    width: 5,
+                    jointType: JointType.round,
+                    startCap: Cap.roundCap,
+                    endCap: Cap.roundCap,
+                  ),
+                );
+              });
+              _isFetchingRoute = false;
+              return;
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    _isFetchingRoute = false;
+  }
+
   /// Build Google Map markers and polyline
   void _refreshMapElements() {
     final markers = <Marker>{};
     final polylineCoords = <LatLng>[];
 
-    // Store Marker
+    // 1. Store Marker
     if (_storePosition != null) {
       markers.add(
         Marker(
           markerId: const MarkerId('store'),
           position: _storePosition!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          anchor: const Offset(0.5, 0.8),
+          icon: _storeMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
           infoWindow: InfoWindow(
             title: _order?.shopName ?? 'FastKirana Store',
             snippet: 'Store / Pickup Location',
@@ -373,13 +604,14 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       );
     }
 
-    // Customer Marker
+    // 2. Customer Doorstep Marker
     if (_customerPosition != null) {
       markers.add(
         Marker(
           markerId: const MarkerId('customer'),
           position: _customerPosition!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          anchor: const Offset(0.5, 0.8),
+          icon: _customerMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
           infoWindow: InfoWindow(
             title: 'Your Delivery Location',
             snippet: _order?.address?.formattedAddress ?? 'Doorstep',
@@ -388,31 +620,34 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       );
     }
 
-    // Live Rider Marker
+    // 3. Live Moving Rider Marker
     if (_riderPosition != null && (_order?.status == OrderStatus.shipped || _order?.status == OrderStatus.packed)) {
       markers.add(
         Marker(
           markerId: const MarkerId('rider'),
           position: _riderPosition!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+          icon: _riderMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
           rotation: _riderHeading,
           flat: true,
-          anchor: const Offset(0.5, 0.5),
-          infoWindow: InfoWindow(
+          anchor: const Offset(0.5, 0.8),
+          infoWindow: const InfoWindow(
             title: '🛵 Delivery Executive',
-            snippet: _etaText,
+            snippet: 'Live On the Way',
           ),
         ),
       );
+    }
 
-      // Route Polyline from Rider to Customer
-      if (_customerPosition != null) {
-        polylineCoords.add(_riderPosition!);
+    // 4. Trigger Turn-by-Turn Road-Wise Polyline Route
+    final startPoint = _riderPosition ?? _storePosition;
+    if (startPoint != null && _customerPosition != null) {
+      _fetchRoadRoute(startPoint, _customerPosition!);
+      if (_roadPolylinePoints.length >= 2) {
+        polylineCoords.addAll(_roadPolylinePoints);
+      } else {
+        polylineCoords.add(startPoint);
         polylineCoords.add(_customerPosition!);
       }
-    } else if (_storePosition != null && _customerPosition != null) {
-      polylineCoords.add(_storePosition!);
-      polylineCoords.add(_customerPosition!);
     }
 
     final polylines = <Polyline>{};
@@ -421,12 +656,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         Polyline(
           polylineId: const PolylineId('delivery_route'),
           points: polylineCoords,
-          color: primaryRed,
-          width: 4,
+          color: const Color(0xFF2563EB),
+          width: 5,
           jointType: JointType.round,
           startCap: Cap.roundCap,
           endCap: Cap.roundCap,
-          patterns: [PatternItem.dash(12), PatternItem.gap(6)],
         ),
       );
     }
@@ -440,37 +674,46 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   }
 
   void _fitMapBounds() {
-    if (_mapController == null) return;
-    final points = <LatLng>[];
-    if (_storePosition != null) points.add(_storePosition!);
-    if (_customerPosition != null) points.add(_customerPosition!);
-    if (_riderPosition != null) points.add(_riderPosition!);
+    if (_mapController == null || !mounted) return;
+    try {
+      final points = <LatLng>[];
+      if (_storePosition != null) points.add(_storePosition!);
+      if (_customerPosition != null) points.add(_customerPosition!);
+      if (_riderPosition != null) points.add(_riderPosition!);
 
-    if (points.isEmpty) return;
+      if (points.isEmpty) return;
 
-    if (points.length == 1) {
-      _mapController!.animateCamera(CameraUpdate.newLatLngZoom(points.first, 15.5));
-      return;
+      if (points.length == 1) {
+        _mapController!.animateCamera(CameraUpdate.newLatLngZoom(points.first, 14.5));
+        return;
+      }
+
+      double minLat = points.first.latitude;
+      double maxLat = points.first.latitude;
+      double minLng = points.first.longitude;
+      double maxLng = points.first.longitude;
+
+      for (final p in points) {
+        if (p.latitude < minLat) minLat = p.latitude;
+        if (p.latitude > maxLat) maxLat = p.latitude;
+        if (p.longitude < minLng) minLng = p.longitude;
+        if (p.longitude > maxLng) maxLng = p.longitude;
+      }
+
+      final latSpan = (maxLat - minLat).abs();
+      final lngSpan = (maxLng - minLng).abs();
+      final latMargin = math.max(0.005, latSpan * 0.35);
+      final lngMargin = math.max(0.005, lngSpan * 0.35);
+
+      final bounds = LatLngBounds(
+        southwest: LatLng(minLat - latMargin, minLng - lngMargin),
+        northeast: LatLng(maxLat + latMargin, maxLng + lngMargin),
+      );
+
+      _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 30));
+    } catch (e) {
+      debugPrint('[OrderTracking] _fitMapBounds error: $e');
     }
-
-    double minLat = points.first.latitude;
-    double maxLat = points.first.latitude;
-    double minLng = points.first.longitude;
-    double maxLng = points.first.longitude;
-
-    for (final p in points) {
-      if (p.latitude < minLat) minLat = p.latitude;
-      if (p.latitude > maxLat) maxLat = p.latitude;
-      if (p.longitude < minLng) minLng = p.longitude;
-      if (p.longitude > maxLng) maxLng = p.longitude;
-    }
-
-    final bounds = LatLngBounds(
-      southwest: LatLng(minLat, minLng),
-      northeast: LatLng(maxLat, maxLng),
-    );
-
-    _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 60));
   }
 
   int _getStatusStep(OrderStatus? status) {
@@ -522,7 +765,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Live Delivery Tracking',
+              'Order Tracking',
               style: GoogleFonts.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
@@ -593,22 +836,78 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Pay Online Banner (if COD)
-                        if (!isPaid && !isDelivered && !isCancelled && _order?.deliveryMethod != 'PICKUP') ...[
-                          _buildPayOnlineCard(),
-                          const SizedBox(height: 12),
+                        // 0. Cancelled Order Alert Card
+                        if (isCancelled) ...[
+                          _buildCancelledOrderCard(),
+                          const SizedBox(height: 14),
+                        ] else ...[
+                          // Pay Online Banner (if COD)
+                          if (!isPaid && !isDelivered && _order?.deliveryMethod != 'PICKUP') ...[
+                            _buildPayOnlineCard(),
+                            const SizedBox(height: 12),
+                          ],
+
+                          // 1. Google Maps Viewport (ONLY WHEN ON THE WAY / RIDER ASSIGNED)
+                          if (statusStep >= 2 && !isDelivered) ...[
+                            _buildGoogleMapsCard(initialTarget, isDelivered),
+                            const SizedBox(height: 14),
+                          ] else if (!isDelivered) ...[
+                            _buildPreparingOrderCard(),
+                            const SizedBox(height: 14),
+                          ],
                         ],
 
-                        // 1. Google Maps Viewport with Live Rider & ETA Overlay
-                        _buildGoogleMapsCard(initialTarget, isDelivered),
-                        const SizedBox(height: 14),
-
-                        // 2. Sponsored Local-Business Ad Banner (BELOW MAP)
-                        const SponsoredAdCard(
-                          title: '🔥 Special Offer — 20% OFF at AS Restaurant',
-                          subtitle: 'Craving delicious biryani, snacks & drinks? Order now.',
-                          promoCode: 'FAST20',
-                          discountText: 'FLAT 20% OFF',
+                        // 2. Dedicated Sponsored Ad Banner Slot (Type: sponsored_ad)
+                        Consumer(
+                          builder: (context, ref, _) {
+                            final bannersAsync = ref.watch(bannersProvider('sponsored_ad'));
+                            return bannersAsync.when(
+                              data: (banners) {
+                                final activeBanner = banners.where((b) => b.isActive).firstOrNull;
+                                if (activeBanner != null) {
+                                  return SponsoredAdCard(
+                                    title: activeBanner.title,
+                                    subtitle: activeBanner.subtitle ?? 'Special Partner Offer on FastKirana',
+                                    imageUrl: activeBanner.imageUrl,
+                                    discountText: 'EXCLUSIVE PROMO',
+                                    actionText: 'View Details',
+                                    onTap: () {
+                                      if (activeBanner.link != null && activeBanner.link!.isNotEmpty) {
+                                        launchUrl(Uri.parse(activeBanner.link!), mode: LaunchMode.externalApplication);
+                                      }
+                                    },
+                                  );
+                                }
+                                return SponsoredAdCard(
+                                  title: '📢 Feature Your Restaurant or Shop Here!',
+                                  subtitle: 'Reach thousands of daily shoppers in Ghatampur. Tap to partner.',
+                                  discountText: 'PARTNER WITH US',
+                                  actionText: 'Contact Admin',
+                                  onTap: () {
+                                    HapticFeedback.lightImpact();
+                                    launchUrl(
+                                      Uri.parse('https://wa.me/918112849854?text=Hi%20FastKirana%2C%20I%20want%20to%20feature%20my%20business%20on%20FastKirana%20App'),
+                                      mode: LaunchMode.externalApplication,
+                                    );
+                                  },
+                                );
+                              },
+                              loading: () => const SizedBox.shrink(),
+                              error: (_, __) => SponsoredAdCard(
+                                title: '📢 Feature Your Restaurant or Shop Here!',
+                                subtitle: 'Reach thousands of daily shoppers in Ghatampur. Tap to partner.',
+                                discountText: 'PARTNER WITH US',
+                                actionText: 'Contact Admin',
+                                onTap: () {
+                                  HapticFeedback.lightImpact();
+                                  launchUrl(
+                                    Uri.parse('https://wa.me/918112849854?text=Hi%20FastKirana%2C%20I%20want%20to%20feature%20my%20business%20on%20FastKirana%20App'),
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                },
+                              ),
+                            );
+                          },
                         ),
                         const SizedBox(height: 14),
 
@@ -619,7 +918,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                         ],
 
                         // 4. Swiggy/Zomato Multi-Stage Order Stepper
-                        _buildStatusStepperCard(statusStep, isDelivered, cleanDisplayId),
+                        _buildStatusStepperCard(statusStep, isDelivered, isCancelled, cleanDisplayId),
                         const SizedBox(height: 14),
 
                         // 5. Delivery Address Card
@@ -666,116 +965,82 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     );
   }
 
-  /// 1. Interactive Google Map Card with Live Rider, Store & Customer Pinpoints
-  Widget _buildGoogleMapsCard(LatLng initialTarget, bool isDelivered) {
+  /// 0. Order Preparation Hero Card (When Order is Confirmed / Packing)
+  Widget _buildPreparingOrderCard() {
+    final shopName = _order?.shopName ?? 'FastKirana Store';
     return Container(
-      height: 250,
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFFBEB), Color(0xFFFEF3C7)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: slateBorder, width: 1.2),
+        border: Border.all(color: const Color(0xFFFDE68A), width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: const Color(0xFFD97706).withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
+      child: Row(
         children: [
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: initialTarget,
-              zoom: 14.5,
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFFCD34D), width: 1.5),
             ),
-            markers: _markers,
-            polylines: _polylines,
-            myLocationEnabled: false,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: false,
-            compassEnabled: true,
-            mapToolbarEnabled: false,
-            onMapCreated: (controller) {
-              _mapController = controller;
-              _fitMapBounds();
-            },
-          ),
-
-          // Floating ETA & Distance Badge
-          Positioned(
-            top: 12,
-            left: 12,
-            right: 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.95),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(7),
-                    decoration: BoxDecoration(
-                      color: isDelivered ? const Color(0xFFDCFCE7) : const Color(0xFFFEF2F2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      isDelivered ? Icons.check_circle_rounded : Icons.delivery_dining_rounded,
-                      color: isDelivered ? brandGreen : primaryRed,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          isDelivered ? 'Order Delivered' : 'Estimated Delivery: $_etaText',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            color: slateDark,
-                          ),
-                        ),
-                        Text(
-                          isDelivered ? 'Delivered safely at your doorstep' : '🛵 Rider is $_distanceText',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: slateMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+            child: const Center(
+              child: Text('👨‍🍳', style: TextStyle(fontSize: 24)),
             ),
           ),
-
-          // Map Re-center Floating Button
-          Positioned(
-            bottom: 12,
-            right: 12,
-            child: FloatingActionButton.small(
-              heroTag: 'recenter_map',
-              backgroundColor: Colors.white,
-              foregroundColor: slateDark,
-              elevation: 4,
-              onPressed: _fitMapBounds,
-              child: const Icon(Icons.my_location_rounded, size: 18),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD97706),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'STORE ACCEPTED & PREPARING',
+                    style: GoogleFonts.inter(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  'Packing Fresh at $shopName',
+                  style: GoogleFonts.inter(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF78350F),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Live GPS tracking map will automatically open as soon as your rider picks up the order.',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF92400E),
+                    height: 1.25,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -783,130 +1048,601 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     );
   }
 
-  /// 3. Rider Profile Card with Call Button & Delivery PIN
-  Widget _buildRiderCard() {
-    final riderName = _order?.deliveryUser?.name ?? 'FastKirana Delivery Partner';
-    final riderPhone = _order?.deliveryUser?.phone ?? '+919696503759';
-    final displayId = _order?.readableId ?? widget.orderId;
-    final pin = (displayId.hashCode.abs() % 9000 + 1000).toString();
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: slateBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+  /// 1. Interactive Google Map Card with Live Rider, Store & Customer Pinpoints
+  Widget _buildGoogleMapsCard(LatLng initialTarget, bool isDelivered) {
+    final shopName = _order?.shopName ?? 'FastKirana Store';
+    return Column(
+      children: [
+        Container(
+          height: 290,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: slateBorder, width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 18,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
             children: [
-              // Avatar
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(24),
+              GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: initialTarget,
+                  zoom: 14.0,
                 ),
-                child: const Center(
-                  child: Text('🛵', style: TextStyle(fontSize: 22)),
+                markers: _markers,
+                polylines: _polylines,
+                myLocationEnabled: false,
+                myLocationButtonEnabled: false,
+                zoomControlsEnabled: false,
+                compassEnabled: true,
+                mapToolbarEnabled: false,
+                scrollGesturesEnabled: true,
+                zoomGesturesEnabled: true,
+                tiltGesturesEnabled: true,
+                rotateGesturesEnabled: true,
+                gestureRecognizers: {
+                  Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer()),
+                },
+                onMapCreated: (controller) {
+                  _mapController = controller;
+                  Future.delayed(const Duration(milliseconds: 400), () {
+                    if (mounted) _fitMapBounds();
+                  });
+                },
+              ),
+
+              // Bottom-Left Live GPS Pill
+              Positioned(
+                bottom: 12,
+                left: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.94),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: slateBorder),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(0xFF16A34A),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Live GPS Active',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: slateDark,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
-              // Rider Details
-              Expanded(
+
+              // Bottom-Right Floating Controls (Zoom In, Zoom Out, Fit Bounds)
+              Positioned(
+                bottom: 12,
+                right: 12,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          riderName,
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w900,
-                            color: slateDark,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.verified_rounded, size: 14, color: Color(0xFF2563EB)),
-                      ],
+                    // Zoom In
+                    _buildMapCircleBtn(
+                      icon: Icons.add_rounded,
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        _mapController?.animateCamera(CameraUpdate.zoomIn());
+                      },
                     ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        const Icon(Icons.star_rounded, size: 13, color: Color(0xFFF59E0B)),
-                        const SizedBox(width: 2),
-                        Text(
-                          '4.9 (500+ Deliveries)',
-                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: slateMuted),
-                        ),
-                      ],
+                    const SizedBox(height: 6),
+                    // Zoom Out
+                    _buildMapCircleBtn(
+                      icon: Icons.remove_rounded,
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        _mapController?.animateCamera(CameraUpdate.zoomOut());
+                      },
+                    ),
+                    const SizedBox(height: 6),
+                    // Fit All
+                    _buildMapCircleBtn(
+                      icon: Icons.crop_free_rounded,
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        _fitMapBounds();
+                      },
                     ),
                   ],
                 ),
               ),
-              // Call Rider Button
-              ElevatedButton.icon(
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  launchUrl(Uri.parse('tel:$riderPhone'));
-                },
-                icon: const Icon(Icons.phone_rounded, size: 14, color: Colors.white),
-                label: Text(
-                  'Call Rider',
-                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        // Clean Delivery Journey Legend Bar Beneath Map
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: slateBorder),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // 1. Store
+              Expanded(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('🏪', style: TextStyle(fontSize: 14)),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        shopName,
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF15803D),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: brandGreen,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: Icon(Icons.arrow_forward_rounded, size: 13, color: Color(0xFF94A3B8)),
+              ),
+              // 2. Rider
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('🛵', style: TextStyle(fontSize: 14)),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        'On the Way',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFFEA580C),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: Icon(Icons.arrow_forward_rounded, size: 13, color: Color(0xFF94A3B8)),
+              ),
+              // 3. You
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('🏠', style: TextStyle(fontSize: 14)),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        'Your Home',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFFDC2626),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: slateBorder),
-          const SizedBox(height: 10),
-          // Delivery PIN Handover Pill
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Delivery Security PIN:',
-                style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: slateMuted),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMapCircleBtn({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: slateBorder),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Icon(icon, size: 18, color: slateDark),
+        ),
+      ),
+    );
+  }
+
+  /// 3. Redesigned Premium Delivery Partner (Rider) Profile Card
+  Widget _buildRiderCard() {
+    final riderName = _order?.deliveryUser?.name?.isNotEmpty == true ? _order!.deliveryUser!.name! : 'Aryan';
+    final riderPhone = _order?.deliveryUser?.phone?.isNotEmpty == true ? _order!.deliveryUser!.phone! : '+918112849854';
+    final cleanPhone = riderPhone.replaceAll(RegExp(r'[^0-9]'), '');
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top Header Strip
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(19),
+                topRight: Radius.circular(19),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFCBD5E1)),
+              border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0xFF16A34A),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'DELIVERY PARTNER ASSIGNED',
+                      style: GoogleFonts.inter(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF475569),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
                 ),
-                child: Text(
-                  pin,
-                  style: GoogleFonts.robotoMono(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                    color: slateDark,
-                    letterSpacing: 2.0,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.verified_user_rounded, size: 11, color: Color(0xFF16A34A)),
+                      const SizedBox(width: 3),
+                      Text(
+                        'Verified',
+                        style: GoogleFonts.inter(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF15803D),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Row(
+              children: [
+                // Avatar with Scooter Icon & Online Badge
+                Stack(
+                  children: [
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF2563EB).withValues(alpha: 0.25),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Text('🛵', style: TextStyle(fontSize: 22)),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF16A34A),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 10),
+
+                // Rider Details (Name + Rating)
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              riderName,
+                              style: GoogleFonts.inter(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF0F172A),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.verified_rounded, size: 14, color: Color(0xFF2563EB)),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.star_rounded, size: 11, color: Color(0xFFD97706)),
+                                const SizedBox(width: 1.5),
+                                Text(
+                                  '4.9',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFFB45309),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Flexible(
+                            child: Text(
+                              '500+ orders',
+                              style: GoogleFonts.inter(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF64748B),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 6),
+
+                // Quick Action Buttons
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // WhatsApp Button
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        launchUrl(
+                          Uri.parse('https://wa.me/$cleanPhone?text=Hi%20FastKirana%20Rider%2C%20regarding%20my%20order'),
+                          mode: LaunchMode.externalApplication,
+                        );
+                      },
+                      child: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFBBF7D0)),
+                        ),
+                        child: const Center(
+                          child: Text('💬', style: TextStyle(fontSize: 17)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+
+                    // Call Button
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        HapticFeedback.heavyImpact();
+                        launchUrl(Uri.parse('tel:$riderPhone'));
+                      },
+                      icon: const Icon(Icons.phone_rounded, size: 13, color: Colors.white),
+                      label: Text(
+                        'Call',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF16A34A),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 0. Cancelled Order Alert Card
+  Widget _buildCancelledOrderCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFFECACA), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFDC2626).withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFEE2E2),
+              shape: BoxShape.circle,
+            ),
+            child: const Center(
+              child: Icon(Icons.cancel_rounded, color: Color(0xFFDC2626), size: 28),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDC2626),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'ORDER CANCELLED',
+                    style: GoogleFonts.inter(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'This order has been cancelled',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF991B1B),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'If you have already paid online via UPI/Card, a full refund has been initiated to your original payment method within 2-4 business days.',
+                  style: GoogleFonts.inter(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFFB91C1C),
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -914,7 +1650,88 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   }
 
   /// 4. Swiggy/Zomato Status Stepper Card
-  Widget _buildStatusStepperCard(int statusStep, bool isDelivered, String cleanDisplayId) {
+  Widget _buildStatusStepperCard(int statusStep, bool isDelivered, bool isCancelled, String cleanDisplayId) {
+    if (isCancelled) {
+      return Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFFECACA)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Live Order Status',
+                  style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w900, color: slateDark),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEE2E2),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFFECACA)),
+                  ),
+                  child: Text(
+                    'CANCELLED',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFFDC2626),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFFDC2626),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.close_rounded, size: 16, color: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Order Closed & Cancelled',
+                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, color: const Color(0xFF991B1B)),
+                      ),
+                      Text(
+                        'Items were returned to stock. You can place a new order anytime.',
+                        style: GoogleFonts.inter(fontSize: 11, color: slateMuted),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
     final steps = [
       {'title': 'Order Confirmed', 'subtitle': 'Store has accepted your order', 'icon': Icons.check_circle_outline_rounded},
       {'title': 'Preparing Fresh', 'subtitle': 'Packing fresh items from warehouse', 'icon': Icons.inventory_2_outlined},
@@ -931,7 +1748,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         border: Border.all(color: slateBorder),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),
@@ -1180,6 +1997,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     final items = _order?.items ?? [];
     final subtotal = _order?.subtotal ?? 0.0;
     final deliveryFee = _order?.deliveryFee ?? 0.0;
+    final miscFee = _order?.miscFee ?? 0.0;
+    final taxes = _order?.taxes ?? 0.0;
     final discount = _order?.discount ?? 0.0;
     final total = _order?.total ?? 0.0;
 
@@ -1220,30 +2039,55 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Subtotal', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
-              Text('₹${subtotal.toInt()}', style: GoogleFonts.inter(fontSize: 12, color: slateDark)),
+              Text('₹${subtotal.toInt()}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: slateDark)),
             ],
           ),
-          if (deliveryFee > 0) ...[
-            const SizedBox(height: 4),
+          const SizedBox(height: 5),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Delivery Fee', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
+              Text(
+                deliveryFee > 0 ? '₹${deliveryFee.toInt()}' : 'FREE',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: deliveryFee > 0 ? FontWeight.w600 : FontWeight.w800,
+                  color: deliveryFee > 0 ? slateDark : brandGreen,
+                ),
+              ),
+            ],
+          ),
+          if (miscFee > 0) ...[
+            const SizedBox(height: 5),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Delivery Fee', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
-                Text('₹${deliveryFee.toInt()}', style: GoogleFonts.inter(fontSize: 12, color: slateDark)),
+                Text('Handling & Packaging', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
+                Text('₹${miscFee.toInt()}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: slateDark)),
+              ],
+            ),
+          ],
+          if (taxes > 0) ...[
+            const SizedBox(height: 5),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Taxes & GST', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
+                Text('₹${taxes.toInt()}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: slateDark)),
               ],
             ),
           ],
           if (discount > 0) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: 5),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Discount', style: GoogleFonts.inter(fontSize: 12, color: brandGreen)),
-                Text('-₹${discount.toInt()}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: brandGreen)),
+                Text('Discount Savings', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: brandGreen)),
+                Text('-₹${discount.toInt()}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: brandGreen)),
               ],
             ),
           ],
-          const SizedBox(height: 8),
+          const Divider(height: 16, color: slateBorder),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -1256,49 +2100,150 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     );
   }
 
-  /// Review Card (Delivered State)
+  /// Review & Rating Card (Delivered State)
   Widget _buildReviewCard() {
+    final riderName = _order?.deliveryUser?.name ?? 'Delivery Partner';
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0FDF4),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFDCFCE7)),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFF0FDF4), Color(0xFFDCFCE7)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFBBF7D0), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF16A34A).withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          const Icon(Icons.sentiment_very_satisfied_rounded, size: 36, color: brandGreen),
-          const SizedBox(height: 6),
-          Text(
-            'How was your delivery experience?',
-            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: slateDark),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16A34A),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.check_circle_rounded, size: 12, color: Colors.white),
+                    const SizedBox(width: 4),
+                    Text(
+                      'DELIVERED SAFELY',
+                      style: GoogleFonts.inter(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 10),
           Text(
-            'Help us improve our delivery speed & quality.',
-            style: GoogleFonts.inter(fontSize: 11.5, color: slateMuted),
+            'How was your delivery with $riderName?',
+            style: GoogleFonts.inter(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w900,
+              color: const Color(0xFF0F172A),
+            ),
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => AddReviewScreen(
-                    productName: _order?.items?.firstOrNull?.name ?? 'FastKirana Delivery',
-                    restaurantId: _order?.restaurantId,
+          const SizedBox(height: 3),
+          Text(
+            'Rate your experience to help us reward top delivery partners.',
+            style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF64748B)),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 14),
+
+          // Interactive 5 Gold Stars
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (index) {
+              return GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AddReviewScreen(
+                        productName: (_order?.items != null && _order!.items!.isNotEmpty)
+                            ? _order!.items!.first.name
+                            : 'FastKirana Delivery',
+                        restaurantId: _order?.restaurantId,
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFD97706).withValues(alpha: 0.1),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.star_rounded,
+                    size: 26,
+                    color: Color(0xFFF59E0B),
                   ),
                 ),
               );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: brandGreen,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: Text(
-              'Rate Delivery Partner & Order',
-              style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800, color: Colors.white),
+            }),
+          ),
+          const SizedBox(height: 14),
+
+          // Rate Button
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AddReviewScreen(
+                      productName: (_order?.items != null && _order!.items!.isNotEmpty)
+                          ? _order!.items!.first.name
+                          : 'FastKirana Delivery',
+                      restaurantId: _order?.restaurantId,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.rate_review_rounded, size: 16, color: Colors.white),
+              label: Text(
+                'Write Detailed Review',
+                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF16A34A),
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
             ),
           ),
         ],

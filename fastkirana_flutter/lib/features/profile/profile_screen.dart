@@ -16,7 +16,12 @@ import '../../providers/wishlist_provider.dart';
 import '../../providers/product_provider.dart';
 import '../auth/login_screen.dart';
 import '../auth/admin_login.dart';
+import '../auth/delivery_login.dart';
+import '../delivery/delivery_dashboard.dart';
+import '../delivery/picker_dashboard.dart';
 import '../admin/admin_dashboard.dart';
+import '../cafe/restaurant_dashboard.dart';
+import '../../core/utils/restaurant_utils.dart';
 import 'package:share_plus/share_plus.dart';
 import '../orders/orders_screen.dart';
 import 'address_book_screen.dart';
@@ -195,19 +200,56 @@ class ProfileScreen extends ConsumerWidget {
                     }
 
                     HapticFeedback.heavyImpact();
+                    final authRepo = AuthRepository(ref.read(dioProvider));
 
-                    try {
-                      final authRepo = AuthRepository(ref.read(dioProvider));
-                      if (newName.isNotEmpty && newName != user.name) {
+                    // 1. Phone number changed -> Require Phone OTP Verification
+                    if (newPhone.isNotEmpty && newPhone != user.phone) {
+                      try {
+                        await authRepo.sendPhoneOtp(newPhone);
+                        final verified = await _promptOtpVerification(
+                          context: context,
+                          title: 'Verify New Phone Number',
+                          subtitle: 'Enter the 6-digit OTP code sent to +91 $newPhone via SMS / WhatsApp.',
+                          onVerify: (otp) => authRepo.updatePhoneWithOtp(newPhone, otp),
+                        );
+                        if (!verified) return;
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to send phone OTP: $e')),
+                          );
+                        }
+                        return;
+                      }
+                    }
+
+                    // 2. Email changed -> Require Email OTP Verification
+                    if (newEmail.isNotEmpty && newEmail.toLowerCase() != (user.email.toLowerCase())) {
+                      try {
+                        await authRepo.sendEmailOtp(newEmail);
+                        final verified = await _promptOtpVerification(
+                          context: context,
+                          title: 'Verify New Email Address',
+                          subtitle: 'Enter the 6-digit verification code sent to $newEmail.',
+                          onVerify: (otp) => authRepo.updateEmailWithOtp(newEmail, otp),
+                        );
+                        if (!verified) return;
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to send email OTP: $e')),
+                          );
+                        }
+                        return;
+                      }
+                    }
+
+                    // 3. Name changed
+                    if (newName.isNotEmpty && newName != user.name) {
+                      try {
                         await authRepo.updateName(newName);
-                      }
-                      if (newPhone.isNotEmpty && newPhone != user.phone) {
-                        await authRepo.updatePhone(newPhone);
-                      }
-                      if (newEmail.isNotEmpty && newEmail != user.email) {
-                        await authRepo.updateEmail(newEmail);
-                      }
-                    } catch (_) {}
+                      } catch (_) {}
+                    }
 
                     final updatedUser = User(
                       id: user.id,
@@ -251,6 +293,130 @@ class ProfileScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<bool> _promptOtpVerification({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required Future<void> Function(String otp) onVerify,
+  }) async {
+    final otpCtrl = TextEditingController();
+    String? errorText;
+    bool isLoading = false;
+
+    final success = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          backgroundColor: Colors.white,
+          insetPadding: const EdgeInsets.all(20),
+          child: Padding(
+            padding: const EdgeInsets.all(22.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF64748B)),
+                      onPressed: () => Navigator.pop(dialogCtx, false),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.inter(fontSize: 12.5, color: const Color(0xFF64748B), height: 1.3),
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: errorText != null ? const Color(0xFFDC2626) : const Color(0xFFE2E8F0)),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: TextField(
+                    controller: otpCtrl,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 4),
+                    decoration: InputDecoration(
+                      hintText: 'ENTER 6-DIGIT OTP',
+                      hintStyle: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8), letterSpacing: 0.5),
+                      border: InputBorder.none,
+                      counterText: '',
+                    ),
+                  ),
+                ),
+                if (errorText != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    errorText!,
+                    style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFFDC2626), fontWeight: FontWeight.w600),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFDC2626),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    onPressed: isLoading
+                        ? null
+                        : () async {
+                            final otp = otpCtrl.text.trim();
+                            if (otp.length < 4) {
+                              setDialogState(() => errorText = 'Please enter a valid OTP');
+                              return;
+                            }
+                            setDialogState(() {
+                              isLoading = true;
+                              errorText = null;
+                            });
+                            try {
+                              await onVerify(otp);
+                              if (context.mounted) {
+                                Navigator.pop(dialogCtx, true);
+                              }
+                            } catch (e) {
+                              setDialogState(() {
+                                isLoading = false;
+                                errorText = 'Invalid OTP code. Please check and retry.';
+                              });
+                            }
+                          },
+                    child: isLoading
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Text(
+                            'Verify & Update',
+                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    return success ?? false;
   }
 
   void _showLogoutDialog(BuildContext context, WidgetRef ref) {
@@ -384,6 +550,31 @@ class ProfileScreen extends ConsumerWidget {
 
     final ordersCount = ordersAsync.valueOrNull?.length ?? 0;
 
+    final cleanPhone = (user?.phone ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+    
+    // 1. Super Admin Role (7054470303)
+    final isAdmin = user?.role == 'ADMIN' || 
+                    cleanPhone == '7054470303' || 
+                    (user?.email.toLowerCase() == 'admin@fastkirana.in') ||
+                    (user?.email.toLowerCase() == 'admin@fastkirana.com');
+
+    // 2. Rider / Delivery Role (Aryan & Delivery Partners)
+    final isRider = user?.role == 'RIDER' || 
+                    user?.role == 'DELIVERY' ||
+                    user?.role == 'DELIVERY_PARTNER' ||
+                    isAdmin;
+
+    // 3. Restaurant Head Role (8112849854 - AS Restaurant / Wedson Restaurant)
+    final isChefOrOwner = user?.role == 'CHEF' || 
+                          user?.role == 'RESTAURANT_OWNER' || 
+                          cleanPhone == '8112849854' ||
+                          isAdmin;
+
+    // 4. Warehouse Picker Role (9800001122 - Suresh Picker)
+    final isPicker = user?.role == 'PICKER' || 
+                     cleanPhone == '9800001122' || 
+                     isAdmin;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: ResponsiveContainer(
@@ -421,6 +612,407 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
           ),
+
+          // Top Delivery Partner Quick Access Banner (Only when logged in as RIDER)
+          if (isRider)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+                child: Bounceable(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.push(
+                      context,
+                      FadeSlideRoute(page: const DeliveryDashboard()),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF15803D), Color(0xFF16A34A)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF16A34A).withValues(alpha: 0.3),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Center(
+                            child: Text('🛵', style: TextStyle(fontSize: 21)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'Delivery Partner Dashboard',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(5),
+                                    ),
+                                    child: Text(
+                                      'RIDER',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 8.5,
+                                        fontWeight: FontWeight.w900,
+                                        color: const Color(0xFF15803D),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Tap to manage live pickups, GPS & deliveries',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Top Admin & Store Portal Quick Access Banner (Shows for 7054470303 or ADMIN)
+          if (isAdmin)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+                child: Bounceable(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.push(
+                      context,
+                      FadeSlideRoute(page: const AdminDashboard()),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFB45309), Color(0xFFD97706)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFD97706).withValues(alpha: 0.3),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Center(
+                            child: Text('🛡️', style: TextStyle(fontSize: 21)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'Admin & Store Portal',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(5),
+                                    ),
+                                    child: Text(
+                                      'ADMIN',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 8.5,
+                                        fontWeight: FontWeight.w900,
+                                        color: const Color(0xFFB45309),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Manage live orders, catalog & store operations',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Top Restaurant Partner Console Quick Access Banner (Shows for Chef, Owner, or Admin)
+          if (isChefOrOwner)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+                child: Bounceable(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    String? targetRestId;
+                    String? targetRestName;
+                    if (cleanPhone == '8112849854') {
+                      targetRestId = outletAsRestaurantId;
+                      targetRestName = 'A.S. Restaurant';
+                    } else if (cleanPhone == '9250138656') {
+                      targetRestId = outletWedsonId;
+                      targetRestName = 'Wedson Restaurant';
+                    } else if (cleanPhone == '7991488783') {
+                      targetRestId = outletBalUdyanId;
+                      targetRestName = 'Bal Udyan Restaurant';
+                    }
+                    Navigator.push(
+                      context,
+                      FadeSlideRoute(
+                        page: RestaurantDashboard(
+                          initialRestaurantId: targetRestId,
+                          initialRestaurantName: targetRestName,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFDC2626), Color(0xFFE11D48)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFDC2626).withValues(alpha: 0.3),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Center(
+                            child: Text('👨‍🍳', style: TextStyle(fontSize: 21)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'Restaurant Partner Console',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(5),
+                                    ),
+                                    child: Text(
+                                      'KITCHEN',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 8.5,
+                                        fontWeight: FontWeight.w900,
+                                        color: const Color(0xFFDC2626),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Manage live kitchen orders, cooking timer & 86 stock',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Top Picker Dashboard Quick Access Banner (Shows for Picker or Admin)
+          if (isPicker)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+                child: Bounceable(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.push(
+                      context,
+                      FadeSlideRoute(page: const PickerDashboard()),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFEA580C).withOpacity(0.3),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Center(
+                            child: Text('📦', style: TextStyle(fontSize: 21)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'Warehouse Picker Dashboard',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(5),
+                                    ),
+                                    child: Text(
+                                      'PICKER',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 8.5,
+                                        fontWeight: FontWeight.w900,
+                                        color: const Color(0xFFEA580C),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Pack incoming grocery items & notify riders',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white.withOpacity(0.9),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
           // 2. Quick 3-Column Shortcut Strip (Connected to Real DB & Stores)
           SliverToBoxAdapter(
@@ -564,9 +1156,25 @@ class ProfileScreen extends ConsumerWidget {
                       icon: Icons.headset_mic_rounded,
                       iconBg: const Color(0xFFFAF5FF),
                       iconColor: const Color(0xFF7E22CE),
-                      title: 'Help & 24x7 Support',
-                      subtitle: '+91 70544 70303 · Ghatampur Care Team',
+                      title: 'Help & Customer Support',
+                      subtitle: '+91 81128 49854 (7 AM – 10 PM) · Ghatampur Care',
                       onTap: () => _showSupportModal(context),
+                    ),
+                    const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.restaurant_menu_rounded,
+                      iconBg: const Color(0xFFFFF1F2),
+                      iconColor: primaryRed,
+                      title: 'Restaurant Partner Console',
+                      subtitle: 'Live kitchen KDS, order cooking timers & 86 stock',
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        Navigator.push(
+                          context,
+                          FadeSlideRoute(page: const RestaurantDashboard()),
+                        );
+                      },
                     ),
                     const Divider(height: 1, color: Color(0xFFF1F5F9)),
                     _buildMenuItem(
@@ -903,6 +1511,7 @@ class ProfileScreen extends ConsumerWidget {
     required String title,
     required String subtitle,
     String? badge,
+    Color? badgeColor,
     required VoidCallback onTap,
   }) {
     return Material(
@@ -936,7 +1545,7 @@ class ProfileScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
+                  color: badgeColor != null ? badgeColor.withValues(alpha: 0.12) : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -944,7 +1553,7 @@ class ProfileScreen extends ConsumerWidget {
                   style: GoogleFonts.inter(
                     fontSize: 9.5,
                     fontWeight: FontWeight.w800,
-                    color: const Color(0xFF475569),
+                    color: badgeColor ?? const Color(0xFF475569),
                   ),
                 ),
               ),

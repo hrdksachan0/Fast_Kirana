@@ -37,6 +37,37 @@ class AdminNotificationService {
     return buffer.toString();
   }
 
+  /// Format clean restaurant / kitchen ticket with ONLY items and quantities (no name, no phone, no price)
+  static String formatRestaurantKOTMessage(Order order) {
+    final orderId = order.readableId ?? (order.id.length > 8 ? order.id.substring(0, 8).toUpperCase() : order.id);
+    final items = order.items ?? [];
+    final outlet = order.shopName?.isNotEmpty == true ? order.shopName! : '';
+
+    final buffer = StringBuffer();
+    buffer.writeln('📋 *ORDER PREPARATION SLIP*');
+    buffer.writeln('----------------------------------------');
+    buffer.writeln('*Order ID:* #$orderId');
+    if (outlet.isNotEmpty) {
+      buffer.writeln('*Outlet:* $outlet');
+    }
+    buffer.writeln('');
+    buffer.writeln('*ITEMS & QUANTITY:*');
+    if (items.isNotEmpty) {
+      for (final item in items) {
+        buffer.writeln('• ${item.quantity}x ${item.name}');
+      }
+    } else {
+      buffer.writeln('• 1x Items');
+    }
+    if (order.notes?.trim().isNotEmpty == true) {
+      buffer.writeln('\n*Special Instruction:* ${order.notes!.trim()}');
+    }
+    buffer.writeln('----------------------------------------');
+    buffer.writeln('⚡ *FastKirana Ghatampur Hub*');
+
+    return buffer.toString();
+  }
+
   /// Fire WhatsApp message directly to Admin WhatsApp number
   static Future<bool> fireAdminWhatsAppAlert(Order order, {String? targetPhone}) async {
     final phone = (targetPhone != null && targetPhone.trim().isNotEmpty)

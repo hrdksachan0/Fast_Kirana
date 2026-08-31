@@ -1,7 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_config.dart';
+import '../../data/models/address.dart';
+import '../../providers/address_provider.dart';
+import '../../providers/cart_provider.dart';
 
 class LocationDetails {
   final double latitude;
@@ -29,27 +33,105 @@ class LocationDetails {
   });
 }
 
+class DeliveryTierInfo {
+  final double distanceKm;
+  final double deliveryFee;
+  final double baseFee;
+  final double freeDeliveryThreshold;
+  final bool isServiceable;
+  final String tierName;
+  final String freeDeliveryLabel;
+  final String feeDescription;
+
+  const DeliveryTierInfo({
+    required this.distanceKm,
+    required this.deliveryFee,
+    required this.baseFee,
+    required this.freeDeliveryThreshold,
+    required this.isServiceable,
+    required this.tierName,
+    required this.freeDeliveryLabel,
+    required this.feeDescription,
+  });
+}
+
 class LocationService {
   static const double maxDeliveryRadiusKm = 5.0; // FastKirana delivery zone radius (Strict 5.0 km)
 
-  /// Distance-tiered delivery fee & free delivery threshold calculation
-  /// • 0 to 2 km: ₹25 fee — FREE above ₹199
-  /// • 2 to 3 km: ₹35 fee — FREE above ₹299
-  /// • 3 to 5 km: ₹50 fee — FREE above ₹399
-  /// • > 5 km: Unserviceable
-  static ({double deliveryFee, double freeDeliveryThreshold, bool isServiceable, String tierName}) getDeliveryTier(double distanceKm, double subtotal) {
+  /// Calculate distance in km from Central Darkstore Hub (Ghatampur) to given coordinates
+  static double getDistanceKm(double lat, double lng) {
+    final distanceMeters = Geolocator.distanceBetween(
+      AppConfig.darkstoreLat,
+      AppConfig.darkstoreLng,
+      lat,
+      lng,
+    );
+    return distanceMeters / 1000.0;
+  }
+
+  /// Distance-tiered delivery fee & free delivery threshold calculation:
+  /// • 0 to 2 km (Local Ghatampur): ₹25 delivery fee — FREE Delivery on orders above ₹199!
+  /// • 2 to 3 km (Suburban Area): ₹35 delivery fee — FREE Delivery on orders above ₹299!
+  /// • 3 to 5 km (Extended Area): ₹50 delivery fee — FREE Delivery on orders above ₹399!
+  /// • Outside 5 km: Delivery is currently limited to a maximum of 5.0 km from our central hub.
+  static DeliveryTierInfo getDeliveryTier(double distanceKm, double subtotal) {
     if (distanceKm <= 2.0) {
-      final fee = subtotal >= 199.0 ? 0.0 : 25.0;
-      return (deliveryFee: fee, freeDeliveryThreshold: 199.0, isServiceable: true, tierName: '0 to 2 km (Local Zone)');
+      final isFree = subtotal >= 199.0;
+      return DeliveryTierInfo(
+        distanceKm: distanceKm,
+        deliveryFee: isFree ? 0.0 : 25.0,
+        baseFee: 25.0,
+        freeDeliveryThreshold: 199.0,
+        isServiceable: true,
+        tierName: '0 to 2 km (Local Ghatampur)',
+        freeDeliveryLabel: 'FREE Delivery above ₹199',
+        feeDescription: '₹25 fee (FREE above ₹199)',
+      );
     } else if (distanceKm <= 3.0) {
-      final fee = subtotal >= 299.0 ? 0.0 : 35.0;
-      return (deliveryFee: fee, freeDeliveryThreshold: 299.0, isServiceable: true, tierName: '2 to 3 km (Suburban Area)');
+      final isFree = subtotal >= 299.0;
+      return DeliveryTierInfo(
+        distanceKm: distanceKm,
+        deliveryFee: isFree ? 0.0 : 35.0,
+        baseFee: 35.0,
+        freeDeliveryThreshold: 299.0,
+        isServiceable: true,
+        tierName: '2 to 3 km (Suburban Area)',
+        freeDeliveryLabel: 'FREE Delivery above ₹299',
+        feeDescription: '₹35 fee (FREE above ₹299)',
+      );
     } else if (distanceKm <= 5.0) {
-      final fee = subtotal >= 399.0 ? 0.0 : 50.0;
-      return (deliveryFee: fee, freeDeliveryThreshold: 399.0, isServiceable: true, tierName: '3 to 5 km (Extended Area)');
+      final isFree = subtotal >= 399.0;
+      return DeliveryTierInfo(
+        distanceKm: distanceKm,
+        deliveryFee: isFree ? 0.0 : 50.0,
+        baseFee: 50.0,
+        freeDeliveryThreshold: 399.0,
+        isServiceable: true,
+        tierName: '3 to 5 km (Extended Area)',
+        freeDeliveryLabel: 'FREE Delivery above ₹399',
+        feeDescription: '₹50 fee (FREE above ₹399)',
+      );
     } else {
-      return (deliveryFee: 0.0, freeDeliveryThreshold: 499.0, isServiceable: false, tierName: 'Outside 5.0 km (Out of Zone)');
+      return DeliveryTierInfo(
+        distanceKm: distanceKm,
+        deliveryFee: 0.0,
+        baseFee: 0.0,
+        freeDeliveryThreshold: 499.0,
+        isServiceable: false,
+        tierName: 'Outside 5.0 km (Out of Zone)',
+        freeDeliveryLabel: 'Outside delivery zone',
+        feeDescription: 'Delivery is currently limited to a maximum of 5.0 km from our central hub.',
+      );
     }
+  }
+
+  /// Convenience: calculate tier directly from an Address object
+  static DeliveryTierInfo getTierForAddress(Address? address, double subtotal) {
+    if (address == null || address.latitude == null || address.longitude == null || (address.latitude == 0.0 && address.longitude == 0.0)) {
+      return getDeliveryTier(1.0, subtotal);
+    }
+    final dist = getDistanceKm(address.latitude!, address.longitude!);
+    return getDeliveryTier(dist, subtotal);
   }
 
   /// Check & request location permission, then fetch current GPS location
@@ -116,13 +198,7 @@ class LocationService {
       debugPrint('Geocoding error: $e');
     }
 
-    final distanceMeters = Geolocator.distanceBetween(
-      AppConfig.darkstoreLat,
-      AppConfig.darkstoreLng,
-      lat,
-      lng,
-    );
-    final distanceKm = distanceMeters / 1000.0;
+    final distanceKm = getDistanceKm(lat, lng);
     final isServiceable = distanceKm <= maxDeliveryRadiusKm;
 
     return LocationDetails(
@@ -146,3 +222,11 @@ class LocationService {
     return await getAddressFromCoordinates(pos.latitude, pos.longitude);
   }
 }
+
+/// Provider that calculates the dynamic distance tier for the currently selected address & cart
+final deliveryTierProvider = Provider<DeliveryTierInfo>((ref) {
+  final address = ref.watch(selectedAddressProvider);
+  final cart = ref.watch(cartProvider).value;
+  final subtotal = cart?.subtotal ?? 0.0;
+  return LocationService.getTierForAddress(address, subtotal);
+});

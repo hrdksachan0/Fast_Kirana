@@ -42,14 +42,10 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     prisma.product.findMany({
       where: {
         isAvailable: true,
-        OR: [
-          { restaurantId: null },
-          { category: { slug: { in: ['beverages', 'ice-cream'] } } },
-          { tags: { hasSome: ['beverages', 'ice-cream'] } }
-        ],
-        NOT: [
-          { category: { slug: { in: ['restaurant', 'fastkirana-restaurant', 'cafe', 'fastkirana-cafe'] } } }
-        ]
+        restaurantId: null,
+        category: {
+          slug: { notIn: ['cafe', 'restaurant', 'fastkirana-cafe', 'fastkirana-restaurant', 'restaurant-food', 'fast-food-kitchen'] }
+        }
       },
       select: {
         id: true,
@@ -139,7 +135,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   ]
 
   const relatedTagsMap: Record<string, string[]> = {
-    'beverages': ['beverages', 'beverage', 'drinks', 'drink', 'cold-drinks', 'cold-beverages', 'hot-beverages', 'shake', 'shakes', 'chilled', 'juices', 'juice', 'soda', 'tea', 'coffee', 'campa', 'energy'],
+    'beverages': ['beverages', 'beverage', 'drinks', 'drink', 'cold-drinks', 'cold-beverages', 'hot-beverages', 'chilled', 'juices', 'juice', 'soda', 'tea', 'coffee', 'campa', 'energy'],
     'ice-cream': ['ice-cream', 'ice cream', 'ice_cream', 'kulfi', 'cassatta', 'cornetto', 'chocobar', 'icecream', 'amul ice', 'kwality wall', 'havmor', 'vadilal', 'baskin', 'nic ice'],
     'dairy-breakfast': ['dairy', 'breakfast', 'milk', 'curd', 'paneer', 'butter', 'nashta', 'bread', 'eggs', 'dahi'],
     'snacks-munchies': ['snack', 'snacks', 'namkeen', 'chips', 'biscuits', 'munchies', 'bhujia', 'biscuit'],
@@ -163,6 +159,10 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const productsRaw = await prisma.product.findMany({
     where: {
       isAvailable: true,
+      restaurantId: null,
+      category: {
+        slug: { notIn: ['cafe', 'restaurant', 'fastkirana-cafe', 'fastkirana-restaurant', 'restaurant-food', 'fast-food-kitchen'] }
+      },
       OR: conditions,
     },
     orderBy,
@@ -174,21 +174,26 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     return []
   })
 
-  // Filter products for category view: Exclude Classic Cold Coffee and hot main course meals from grocery category pages
+  // Filter products for category view: Exclude prepared restaurant items, shakes, coffee, and hot meals from grocery category pages
   let finalProductsRaw = productsRaw.filter((p: any) => {
+    // Strictly dark-store grocery products only
+    if (p.restaurantId) return false
+    const catSlug = (p.category?.slug || '').toLowerCase()
+    if (['restaurant-food', 'cafe', 'restaurant', 'fastkirana-cafe', 'fastkirana-restaurant', 'fast-food-kitchen'].includes(catSlug)) {
+      return false
+    }
+
     const pName = (p.name || '').toLowerCase()
     const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : []
-    const catSlug = (p.category?.slug || '').toLowerCase()
 
-    // Exclude Classic Cold Coffee specifically from grocery category view
-    if (pName.includes('classic cold coffee')) return false
+    // Exclude prepared shakes and cold coffee specifically from grocery category view
+    if (/shake|smoothie|frappe|classic cold coffee/i.test(pName)) return false
 
     // Exclude hot restaurant main courses, parathas, pizzas, burgers, biryanis from grocery catalog
     const isHotPreparedFood = /paratha|naan|roti|biryani|paneer 65|makhani|lababdaar|do pyaaza|kulcha|handi|chaap|pizza|burger|hakkah|manchurian|chilli paneer|tandoori|tikka|dosa|thali/i.test(pName)
     if (isHotPreparedFood) return false
 
     if (normSlug === 'ice-cream' || normSlug === 'ice_cream') {
-      if (/shake|milkshake|smoothie|frappe/i.test(pName)) return false
       const isNonIceCream = /shampoo|soap|paste|lotion|cleaner|chips|namkeen|biscuit|cookie|atta|rice|dal|tea|coffee|coke|pepsi|sprite|soda|paratha|pizza|burger|oil|ghee|paneer|curd|milkshake|shake|smoothie/i.test(pName)
       if (isNonIceCream && !/ice.?cream|kulfi|chocobar|cornetto|cassatta|sundae|scoop/i.test(pName)) return false
 

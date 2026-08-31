@@ -518,8 +518,29 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       return;
     }
 
+    final addresses = ref.read(addressesProvider).valueOrNull ?? [];
+    final selectedAddress = ref.read(selectedAddressProvider) ??
+        (_selectedAddressIndex < addresses.length ? addresses[_selectedAddressIndex] : null);
     final subtotal = cart.subtotal;
-    final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : (subtotal >= settings.freeDeliveryThreshold ? 0.0 : settings.deliveryFee);
+    final tier = LocationService.getTierForAddress(selectedAddress, subtotal);
+
+    if (_deliveryMethod == 'DELIVERY' && !tier.isServiceable) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: Text(
+            'Delivery is currently limited to a maximum of 5.0 km from our central hub. (Selected location is ${tier.distanceKm.toStringAsFixed(1)} km away)',
+            style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : tier.deliveryFee;
     final packagingFee = _selectedPackaging == 'PREMIUM' ? 15.0 : 5.0;
     final grandTotal = (subtotal + deliveryFee + packagingFee - widget.discountAmount).clamp(0.0, 999999.0);
 
@@ -569,15 +590,32 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 
   Future<void> _completeOrderPlacement(Cart cart, {String? paymentId}) async {
-    final settings = ref.read(storeSettingsProvider).valueOrNull ?? StoreSettings();
     final subtotal = cart.subtotal;
-    final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : (subtotal >= settings.freeDeliveryThreshold ? 0.0 : settings.deliveryFee);
-    final packagingFee = _selectedPackaging == 'PREMIUM' ? 15.0 : 0.0;
-    final grandTotal = (subtotal + deliveryFee + packagingFee - widget.discountAmount).clamp(0.0, 999999.0);
-
     final addresses = ref.read(addressesProvider).valueOrNull ?? [];
     final selectedAddress = ref.read(selectedAddressProvider) ??
         (_selectedAddressIndex < addresses.length ? addresses[_selectedAddressIndex] : null);
+    final tier = LocationService.getTierForAddress(selectedAddress, subtotal);
+
+    if (_deliveryMethod == 'DELIVERY' && !tier.isServiceable) {
+      setState(() => _isPlacingOrder = false);
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: Text(
+            'Delivery is currently limited to a maximum of 5.0 km from our central hub. (Selected address is ${tier.distanceKm.toStringAsFixed(1)} km away)',
+            style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : tier.deliveryFee;
+    final packagingFee = _selectedPackaging == 'PREMIUM' ? 15.0 : 0.0;
+    final grandTotal = (subtotal + deliveryFee + packagingFee - widget.discountAmount).clamp(0.0, 999999.0);
 
     final selectedAddr = _deliveryMethod == 'PICKUP'
         ? '🏬 Self Pickup: FastKirana Darkstore Counter'
@@ -588,6 +626,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final user = ref.read(authProvider).value;
     final prefs = await SharedPreferences.getInstance();
     final userId = user?.id ?? prefs.getString('user_id') ?? '';
+    final phoneFromPrefs = prefs.getString('user_phone') ?? prefs.getString('auth_phone') ?? '';
 
     final customerName = _customReceiverName?.isNotEmpty == true
         ? _customReceiverName!
@@ -601,7 +640,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         ? _customReceiverPhone!
         : (user?.phone?.isNotEmpty == true
             ? user!.phone!
-            : (prefs.getString('user_phone') ?? selectedAddress?.phone ?? ''));
+            : (phoneFromPrefs.isNotEmpty ? phoneFromPrefs : (selectedAddress?.phone.isNotEmpty == true ? selectedAddress!.phone : '7054470303')));
 
     String orderNotes = _deliveryInstruction;
     if (_customReceiverName?.isNotEmpty == true || _customReceiverPhone?.isNotEmpty == true) {
@@ -680,6 +719,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         'customerAddress': selectedAddr,
         'latitude': selectedAddress?.latitude,
         'longitude': selectedAddress?.longitude,
+        'lat': selectedAddress?.latitude,
+        'lng': selectedAddress?.longitude,
         'shopName': shopName,
         'packagingOption': _selectedPackaging,
         'packagingFee': packagingFee,
@@ -717,12 +758,50 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             readableId: serverReadableId,
           );
         }
+
+        // If multiple orders were created (e.g. 1255-G Grocery + 1255-R Restaurant)
+        if (data['orders'] is List && (data['orders'] as List).isNotEmpty) {
+          final repo = OrderRepository(ref.read(dioProvider));
+          for (final raw in data['orders']) {
+            if (raw is Map<String, dynamic>) {
+              try {
+                final ord = Order.fromJson(raw);
+                await repo.savePlacedOrderLocally(ord);
+              } catch (_) {}
+            }
+          }
+        }
       }
     } catch (e) {
       debugPrint('Backend sync notice: $e');
+      if (mounted) {
+        setState(() => _isPlacingOrder = false);
+        String errorMsg = 'Failed to place order. Please try again.';
+        if (e is DioException) {
+          final serverErr = e.response?.data;
+          if (serverErr is Map && serverErr['error'] != null) {
+            errorMsg = serverErr['error'].toString();
+          } else if (serverErr is String && serverErr.isNotEmpty) {
+            errorMsg = serverErr;
+          }
+        }
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFDC2626),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: Text(
+              errorMsg,
+              style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+            ),
+          ),
+        );
+      }
+      return;
     }
 
-    // 2. Save the real database order locally
+    // 2. Save the primary order locally
     await OrderRepository(ref.read(dioProvider)).savePlacedOrderLocally(placedOrder);
 
     // Celebratory Haptic Feedback
@@ -773,14 +852,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final items = cart?.items ?? [];
     final settings = ref.watch(storeSettingsProvider).valueOrNull ?? StoreSettings();
     final subtotal = cart?.subtotal ?? 0.0;
-    final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : (subtotal >= settings.freeDeliveryThreshold ? 0.0 : settings.deliveryFee);
-    final packagingFee = _selectedPackaging == 'PREMIUM' ? 15.0 : 5.0;
-    final packagingLabel = _selectedPackaging == 'PREMIUM' ? 'Premium Thermal Packaging' : 'Standard Packaging';
-    final grandTotal = (subtotal + deliveryFee + packagingFee - widget.discountAmount).clamp(0.0, 999999.0);
-
     final addresses = ref.watch(addressesProvider).valueOrNull ?? [];
     final selectedAddress = ref.watch(selectedAddressProvider) ??
         (_selectedAddressIndex < addresses.length ? addresses[_selectedAddressIndex] : null);
+    final tier = LocationService.getTierForAddress(selectedAddress, subtotal);
+    final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : tier.deliveryFee;
+    final packagingFee = _selectedPackaging == 'PREMIUM' ? 15.0 : 5.0;
+    final packagingLabel = _selectedPackaging == 'PREMIUM' ? 'Premium Thermal Packaging' : 'Standard Packaging';
+    final grandTotal = (subtotal + deliveryFee + packagingFee - widget.discountAmount).clamp(0.0, 999999.0);
 
     final user = ref.watch(authProvider).value;
     final customerName = _customReceiverName?.isNotEmpty == true
@@ -890,40 +969,40 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       children: [
                         // Header: Icon + Deliver To Label + Change Button
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFFF7ED),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: const Color(0xFFFFEDD5)),
-                                  ),
-                                  child: Icon(
-                                    selectedAddress?.label.toLowerCase().contains('work') == true
-                                        ? Icons.work_rounded
-                                        : Icons.home_rounded,
-                                    size: 20,
-                                    color: const Color(0xFFEA580C),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          'Deliver to ',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: slateMuted,
-                                          ),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF7ED),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFFFEDD5)),
+                              ),
+                              child: Icon(
+                                selectedAddress?.label.toLowerCase().contains('work') == true
+                                    ? Icons.work_rounded
+                                    : Icons.home_rounded,
+                                size: 20,
+                                color: const Color(0xFFEA580C),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        'Deliver to ',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: slateMuted,
                                         ),
-                                        Text(
+                                      ),
+                                      Flexible(
+                                        child: Text(
                                           selectedAddress != null && selectedAddress.label.isNotEmpty && selectedAddress.label.trim() != '.'
                                               ? selectedAddress.label
                                               : 'Home',
@@ -932,27 +1011,32 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                             fontWeight: FontWeight.w900,
                                             color: slateDark,
                                           ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 1),
-                                    Text(
-                                      (selectedAddress?.area != null &&
-                                              selectedAddress!.area.trim().isNotEmpty &&
-                                              selectedAddress!.area.trim() != '.' &&
-                                              selectedAddress!.area.trim().toLowerCase() != 'n/a')
-                                          ? selectedAddress!.area.trim()
-                                          : 'Ghatampur Zone',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: const Color(0xFFEA580C),
                                       ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 1),
+                                  Text(
+                                    (selectedAddress?.area != null &&
+                                            selectedAddress!.area.trim().isNotEmpty &&
+                                            selectedAddress!.area.trim() != '.' &&
+                                            selectedAddress!.area.trim().toLowerCase() != 'n/a')
+                                        ? selectedAddress!.area.trim()
+                                        : 'Ghatampur Zone',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFFEA580C),
                                     ),
-                                  ],
-                                ),
-                              ],
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 8),
 
                             // Interactive Change Address Pill
                             Bounceable(
@@ -1033,35 +1117,42 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
                         const SizedBox(height: 10),
 
-                        // Delivery Speed / Service Tag
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFECFDF5),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: const Color(0xFFA7F3D0)),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text('⚡', style: TextStyle(fontSize: 11)),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'EXPRESS DELIVERY',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w900,
-                                      color: const Color(0xFF065F46),
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                        // Distance & Delivery Tier Badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: !tier.isServiceable ? const Color(0xFFFEF2F2) : const Color(0xFFF0FDF4),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: !tier.isServiceable ? const Color(0xFFFECDD3) : const Color(0xFFBBF7D0),
+                              width: 1.1,
                             ),
-                          ],
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                !tier.isServiceable ? Icons.error_outline_rounded : Icons.delivery_dining_rounded,
+                                size: 16,
+                                color: !tier.isServiceable ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+                              ),
+                              const SizedBox(width: 7),
+                              Expanded(
+                                child: Text(
+                                  !tier.isServiceable
+                                      ? '⚠️ Outside 5.0 km Hub (${tier.distanceKm.toStringAsFixed(1)} km) • Delivery Unavailable'
+                                      : '${tier.tierName} (${tier.distanceKm.toStringAsFixed(1)} km) • ${tier.freeDeliveryLabel}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: !tier.isServiceable ? const Color(0xFFDC2626) : const Color(0xFF15803D),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
+
+
                       ],
                     ),
                   ),

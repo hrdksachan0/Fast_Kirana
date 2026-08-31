@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import crypto from 'crypto'
 import { sseEmitter } from '@/lib/sse-emitter'
-import { sendPushNotificationToRoles } from '@/lib/push-notification'
+import { sendPushNotificationToRoles, sendPushNotificationToRestaurant } from '@/lib/push-notification'
 import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
 import { Role } from '@prisma/client'
 
@@ -106,13 +106,31 @@ export async function POST(req: Request) {
         createdAt: updatedOrder.createdAt,
       })
 
-      // Push notification to all staff
-      sendPushNotificationToRoles([Role.ADMIN, Role.CHEF, Role.DELIVERY, Role.PICKER], {
-        title: '💳 Online Payment Order Confirmed!',
-        body: `Order #${displayId} of ₹${notifyTotal} — PAID via Razorpay ✅`,
-        tag: `order-${updatedOrder.id}`,
-        data: { orderId: updatedOrder.id }
-      }).catch((err: any) => console.error('Error sending push notification:', err))
+      // Push notification to staff
+      const isRestaurantOrder = !!order.restaurantId
+      if (isRestaurantOrder) {
+        sendPushNotificationToRoles([Role.ADMIN, Role.DELIVERY], {
+          title: '💳 Online Payment Order Confirmed!',
+          body: `Order #${displayId} of ₹${notifyTotal} — PAID via Razorpay ✅`,
+          tag: `order-${updatedOrder.id}`,
+          data: { orderId: updatedOrder.id }
+        }).catch((err: any) => console.error('Error sending push notification to admin:', err))
+
+        sendPushNotificationToRestaurant(order.restaurantId, {
+          title: `👨‍🍳 New Food Order #${displayId}!`,
+          body: `Order #${displayId} for ${outletName} is confirmed and paid. Start preparing dishes!`,
+          tag: `restaurant-order-${updatedOrder.id}`,
+          data: { orderId: updatedOrder.id, restaurantId: order.restaurantId }
+        }).catch((err: any) => console.error('Error sending push notification to restaurant:', err))
+      } else {
+        // Grocery order: only Admin, Picker, Delivery
+        sendPushNotificationToRoles([Role.ADMIN, Role.PICKER, Role.DELIVERY], {
+          title: '💳 Online Payment Order Confirmed!',
+          body: `Order #${displayId} of ₹${notifyTotal} — PAID via Razorpay ✅`,
+          tag: `order-${updatedOrder.id}`,
+          data: { orderId: updatedOrder.id }
+        }).catch((err: any) => console.error('Error sending push notification to grocery staff:', err))
+      }
 
       // WhatsApp Order Alert to Admin Phones
       const settings = await prisma.storeSetting.findMany({

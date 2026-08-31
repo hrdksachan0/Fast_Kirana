@@ -125,34 +125,34 @@ const List<WebMenuSection> webRestaurantSections = [
 
 String? getCategoryAssetImage(String tag) {
   const mapping = <String, String>{
-    'all': 'assets/categories/cafe_all_menu_category.png',
-    'hot-beverage': 'assets/categories/cafe_brews_category.png',
-    'hot-bite': 'assets/categories/cafe_snacks_category.png',
-    'sandwiches': 'assets/categories/cafe_sandwiches_category.png',
-    'burgers': 'assets/categories/cafe_burgers_category.png',
-    'frankie-rolls': 'assets/categories/cafe_rolls_category.png',
-    'garlic-bread': 'assets/categories/cafe_garlic_bread_category.png',
-    'pizza': 'assets/categories/cafe_pizza_category.png',
-    'pizzas-burgers': 'assets/categories/cafe_pizza_category.png',
-    'pav-bhaji': 'assets/categories/cafe_bombay_bites_category.png',
-    'bombay-bites': 'assets/categories/cafe_bombay_bites_category.png',
-    'chinese': 'assets/categories/cafe_chinese_category.png',
-    'chinese-soups': 'assets/categories/cafe_chinese_category.png',
-    'italian-pasta': 'assets/categories/cafe_pasta_category.png',
-    'south-indian': 'assets/categories/cafe_south_indian_category.png',
-    'rice-dishes': 'assets/categories/cafe_rice_category.png',
-    'biryani-rice': 'assets/categories/cafe_rice_category.png',
-    'main-course': 'assets/categories/cafe_south_indian_category.png',
-    'roti-naan-breads': 'assets/categories/cafe_south_indian_category.png',
-    'starters-tandoori': 'assets/categories/cafe_snacks_category.png',
-    'breakfast': 'assets/categories/dairy_breakfast_category.png',
-    'shakes': 'assets/categories/cafe_shakes_category.png',
-    'shakes-beverages': 'assets/categories/cafe_shakes_category.png',
-    'mocktails': 'assets/categories/cafe_mocktails_category.png',
-    'cold-coffee': 'assets/categories/cafe_coffee_category.png',
-    'chilled': 'assets/categories/cafe_cold_drinks_category.png',
-    'beverages': 'assets/categories/cafe_cold_drinks_category.png',
-    'desserts': 'assets/categories/ice_cream_category.png',
+    'all': 'assets/categories/cafe_all_menu_category.webp',
+    'hot-beverage': 'assets/categories/cafe_brews_category.webp',
+    'hot-bite': 'assets/categories/cafe_snacks_category.webp',
+    'sandwiches': 'assets/categories/cafe_sandwiches_category.webp',
+    'burgers': 'assets/categories/cafe_burgers_category.webp',
+    'frankie-rolls': 'assets/categories/cafe_rolls_category.webp',
+    'garlic-bread': 'assets/categories/cafe_garlic_bread_category.webp',
+    'pizza': 'assets/categories/cafe_pizza_category.webp',
+    'pizzas-burgers': 'assets/categories/cafe_pizza_category.webp',
+    'pav-bhaji': 'assets/categories/cafe_bombay_bites_category.webp',
+    'bombay-bites': 'assets/categories/cafe_bombay_bites_category.webp',
+    'chinese': 'assets/categories/cafe_chinese_category.webp',
+    'chinese-soups': 'assets/categories/cafe_chinese_category.webp',
+    'italian-pasta': 'assets/categories/cafe_pasta_category.webp',
+    'south-indian': 'assets/categories/cafe_south_indian_category.webp',
+    'rice-dishes': 'assets/categories/cafe_rice_category.webp',
+    'biryani-rice': 'assets/categories/cafe_rice_category.webp',
+    'main-course': 'assets/categories/cafe_south_indian_category.webp',
+    'roti-naan-breads': 'assets/categories/cafe_south_indian_category.webp',
+    'starters-tandoori': 'assets/categories/cafe_snacks_category.webp',
+    'breakfast': 'assets/categories/dairy_breakfast_category.webp',
+    'shakes': 'assets/categories/cafe_shakes_category.webp',
+    'shakes-beverages': 'assets/categories/cafe_shakes_category.webp',
+    'mocktails': 'assets/categories/cafe_mocktails_category.webp',
+    'cold-coffee': 'assets/categories/cafe_coffee_category.webp',
+    'chilled': 'assets/categories/cafe_cold_drinks_category.webp',
+    'beverages': 'assets/categories/cafe_cold_drinks_category.webp',
+    'desserts': 'assets/categories/ice_cream_category.webp',
   };
   return mapping[tag.toLowerCase()];
 }
@@ -464,23 +464,23 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
     final lower = name.toLowerCase();
     if (lower.contains('wedson')) {
       return Image.asset(
-        'assets/categories/wedson_restaurant_banner.png',
+        'assets/categories/wedson_restaurant_banner.webp',
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => Image.asset(
-          'assets/categories/wedson_restaurant_bg.png',
+          'assets/categories/wedson_restaurant_bg.webp',
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1F2937)),
         ),
       );
     } else if (lower.contains('bal') || lower.contains('udyan')) {
       return Image.asset(
-        'assets/categories/cafe_banner.png',
+        'assets/categories/cafe_banner.webp',
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1F2937)),
       );
     }
     return Image.asset(
-      'assets/categories/cafe_banner.png',
+      'assets/categories/cafe_banner.webp',
       fit: BoxFit.cover,
       errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1F2937)),
     );
@@ -513,29 +513,29 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
     final lower = name.toLowerCase();
     if (lower.contains('wedson')) {
       return Image.asset(
-        'assets/categories/wedson_restaurant_bg.png',
+        'assets/categories/wedson_restaurant_bg.webp',
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => Image.asset(
-          'assets/categories/wedson_restaurant_banner.png',
+          'assets/categories/wedson_restaurant_banner.webp',
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => const Center(child: Text('🍽️', style: TextStyle(fontSize: 24))),
         ),
       );
     } else if (lower.contains('a.s') || lower.contains('as-')) {
       return Image.asset(
-        'assets/categories/cafe_all_menu_category.png',
+        'assets/categories/cafe_all_menu_category.webp',
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => const Center(child: Text('☕', style: TextStyle(fontSize: 24))),
       );
     } else if (lower.contains('bal') || lower.contains('udyan')) {
       return Image.asset(
-        'assets/categories/cafe_category.png',
+        'assets/categories/cafe_category.webp',
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => const Center(child: Text('🍲', style: TextStyle(fontSize: 24))),
       );
     }
     return Image.asset(
-      'assets/categories/cafe_category.png',
+      'assets/categories/cafe_category.webp',
       fit: BoxFit.cover,
       errorBuilder: (_, __, ___) => const Center(child: Text('🍽️', style: TextStyle(fontSize: 24))),
     );

@@ -15,28 +15,28 @@ import { toast } from 'sonner'
 
 const getCafeSectionImage = (tag: string) => {
   const mapping: Record<string, string> = {
-    'hot-beverage': '/cafe_brews_category.png',
-    'hot-bite': '/cafe_snacks_category.png',
-    'sandwiches': '/cafe_sandwiches_category.png',
-    'frankie-rolls': '/cafe_rolls_category.png',
-    'chinese': '/cafe_chinese_category.png',
-    'italian-pasta': '/cafe_pasta_category.png',
-    'bombay-bites': '/cafe_bombay_bites_category.png',
-    'rice-dishes': '/cafe_rice_category.png',
-    'shakes': '/cafe_shakes_category.png',
-    'mocktails': '/cafe_mocktails_category.png',
-    'cold-coffee': '/cafe_coffee_category.png',
-    'south-indian': '/cafe_south_indian_category.png',
-    'chilled': '/cafe_cold_drinks_category.png',
-    'beverages': '/cafe_cold_drinks_category.png',
-    'drinks': '/cafe_cold_drinks_category.png',
-    'bakery': '/bakery_biscuits_category.png',
-    'pizza': '/cafe_pizza_category.png',
-    'burgers': '/cafe_burgers_category.png',
-    'garlic-bread': '/cafe_garlic_bread_category.png',
-    'desserts': '/ice_cream_category.png',
-    'north-indian': '/cafe_south_indian_category.png',
-    'biryani-rice': '/cafe_rice_category.png',
+    'hot-beverage': '/cafe_brews_category.webp',
+    'hot-bite': '/cafe_snacks_category.webp',
+    'sandwiches': '/cafe_sandwiches_category.webp',
+    'frankie-rolls': '/cafe_rolls_category.webp',
+    'chinese': '/cafe_chinese_category.webp',
+    'italian-pasta': '/cafe_pasta_category.webp',
+    'bombay-bites': '/cafe_bombay_bites_category.webp',
+    'rice-dishes': '/cafe_rice_category.webp',
+    'shakes': '/cafe_shakes_category.webp',
+    'mocktails': '/cafe_mocktails_category.webp',
+    'cold-coffee': '/cafe_coffee_category.webp',
+    'south-indian': '/cafe_south_indian_category.webp',
+    'chilled': '/cafe_cold_drinks_category.webp',
+    'beverages': '/cafe_cold_drinks_category.webp',
+    'drinks': '/cafe_cold_drinks_category.webp',
+    'bakery': '/bakery_biscuits_category.webp',
+    'pizza': '/cafe_pizza_category.webp',
+    'burgers': '/cafe_burgers_category.webp',
+    'garlic-bread': '/cafe_garlic_bread_category.webp',
+    'desserts': '/ice_cream_category.webp',
+    'north-indian': '/cafe_south_indian_category.webp',
+    'biryani-rice': '/cafe_rice_category.webp',
   }
   return mapping[tag] || null
 }
@@ -117,15 +117,15 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
 
 
   const [categories, setCategories] = useState<any[]>([
-    { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png' },
-    { tag: 'hot-beverage', title: 'Brews', emoji: '☕', image: '/cafe_brews_category.png' },
-    { tag: 'hot-bite', title: 'Snacks', emoji: '🥟', image: '/cafe_snacks_category.png' },
-    { tag: 'sandwiches', title: 'Sandwiches', emoji: '🥪', image: '/cafe_sandwiches_category.png' },
-    { tag: 'frankie-rolls', title: 'Rolls', emoji: '🌯', image: '/cafe_rolls_category.png' },
-    { tag: 'chinese', title: 'Chinese', emoji: '🥡', image: '/cafe_chinese_category.png' },
-    { tag: 'italian-pasta', title: 'Pasta', emoji: '🍝', image: '/cafe_pasta_category.png' },
-    { tag: 'bombay-bites', title: 'Bombay Bites', emoji: '🥪', image: '/cafe_bombay_bites_category.png' },
-    { tag: 'rice-dishes', title: 'Rice', emoji: '🍚', image: '/cafe_rice_category.png' },
+    { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.webp' },
+    { tag: 'hot-beverage', title: 'Brews', emoji: '☕', image: '/cafe_brews_category.webp' },
+    { tag: 'hot-bite', title: 'Snacks', emoji: '🥟', image: '/cafe_snacks_category.webp' },
+    { tag: 'sandwiches', title: 'Sandwiches', emoji: '🥪', image: '/cafe_sandwiches_category.webp' },
+    { tag: 'frankie-rolls', title: 'Rolls', emoji: '🌯', image: '/cafe_rolls_category.webp' },
+    { tag: 'chinese', title: 'Chinese', emoji: '🥡', image: '/cafe_chinese_category.webp' },
+    { tag: 'italian-pasta', title: 'Pasta', emoji: '🍝', image: '/cafe_pasta_category.webp' },
+    { tag: 'bombay-bites', title: 'Bombay Bites', emoji: '🥪', image: '/cafe_bombay_bites_category.webp' },
+    { tag: 'rice-dishes', title: 'Rice', emoji: '🍚', image: '/cafe_rice_category.webp' },
   ])
 
   const filteredCategories = useMemo(() => {
@@ -297,7 +297,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
 
         // Show configured/predefined + dynamic categories that have products in the database
         setCategories([
-          { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.png', products: dbProducts },
+          { tag: 'all', title: 'All Menu', emoji: '🍽️', image: '/cafe_all_menu_category.webp', products: dbProducts },
           ...finalCategories
         ])
       })
@@ -381,7 +381,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
         className="group relative overflow-hidden rounded-2xl md:rounded-3xl cursor-pointer transition-shadow duration-300 w-full min-h-[125px] sm:min-h-[145px] md:h-[170px] lg:h-[200px] aspect-[2.5/1] sm:aspect-[2.9/1] md:aspect-none shadow-md hover:shadow-lg bg-[#fdf8f4] dark:bg-[#181614] border border-zinc-200/40 dark:border-zinc-800/40"
       >
         <Image
-          src="/food_banner_bg.png"
+          src="/food_banner_bg.webp"
           alt="Good Food, Great Mood"
           fill
           sizes="100vw"
@@ -514,7 +514,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           {((experienceMode as string) === 'restaurant') && (
             <div className="relative w-full aspect-[3.1/1] md:aspect-none md:h-[160px] lg:h-[190px] overflow-hidden rounded-2xl md:rounded-3xl border border-zinc-250/50 dark:border-zinc-800/60 shadow-sm my-2.5 select-none">
               <Image
-                src="/wedson_restaurant_bg.png"
+                src="/wedson_restaurant_bg.webp"
                 alt="Wedson Restaurant"
                 fill
                 sizes="100vw"
