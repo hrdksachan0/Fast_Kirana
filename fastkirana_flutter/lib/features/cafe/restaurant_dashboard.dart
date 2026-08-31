@@ -51,10 +51,24 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
   Timer? _autoRefreshTimer;
   Timer? _clockTimer;
   String _currentTime = '';
-  String? _updatingOrderId;
   String _restaurantName = 'Restaurant Console';
   String? _assignedRestaurantId;
-  double _commissionRate = 15.0;
+  double _commissionRate = 25.0;
+
+  double _getCommissionRateForOutlet(String? restId, String? restName) {
+    final id = (restId ?? '').toLowerCase().trim();
+    final name = (restName ?? '').toLowerCase().trim();
+    if (id == outletWedsonId || id.contains('wedson') || name.contains('wedson')) {
+      return 25.0;
+    }
+    if (id == outletAsRestaurantId || id.contains('as') || name.contains('a.s') || name.contains('as-')) {
+      return 25.0;
+    }
+    if (id == outletBalUdyanId || id.contains('bal') || name.contains('bal') || name.contains('udyan')) {
+      return 20.0;
+    }
+    return 25.0;
+  }
 
   final Set<String> _knownPendingOrderIds = {};
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -164,6 +178,8 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
       );
       _restaurantName = match['name'] ?? _restaurantName;
     }
+
+    _commissionRate = _getCommissionRateForOutlet(_assignedRestaurantId, _restaurantName);
 
     if (mounted) setState(() {});
 
@@ -851,6 +867,7 @@ $formattedItems
                       setState(() {
                         _assignedRestaurantId = outlet['id'];
                         _restaurantName = outlet['name'] ?? _restaurantName;
+                        _commissionRate = _getCommissionRateForOutlet(_assignedRestaurantId, _restaurantName);
                       });
                       _fetchOrders();
                       _fetchMenuItems();
@@ -1083,41 +1100,45 @@ $formattedItems
           backgroundColor: Colors.white,
           elevation: 0.5,
           surfaceTintColor: Colors.transparent,
-          titleSpacing: 8,
+          titleSpacing: 0,
+          leadingWidth: 40,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: slateDark),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 17, color: slateDark),
             onPressed: _handleBackPress,
           ),
-        title: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: isAdmin ? _showOutletSwitcherModal : null,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF1F2),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFFECDD3)),
+          title: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: isAdmin ? _showOutletSwitcherModal : null,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF1F2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFECDD3)),
+                    ),
+                    child: const Center(child: Text('👨‍🍳', style: TextStyle(fontSize: 15))),
                   ),
-                  child: const Text('👨‍🍳', style: TextStyle(fontSize: 15)),
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Column(
+                  const SizedBox(width: 7),
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Flexible(
-                            child: Text(
-                              _restaurantName,
-                              style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w900, color: slateDark),
+                          Text(
+                            _restaurantName,
+                            style: GoogleFonts.inter(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w900,
+                              color: slateDark,
+                              letterSpacing: -0.2,
                             ),
                           ),
                           if (isAdmin) ...[
@@ -1126,6 +1147,7 @@ $formattedItems
                           ],
                         ],
                       ),
+                      const SizedBox(height: 1),
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -1141,87 +1163,88 @@ $formattedItems
                           Text(
                             _isStoreOpen ? 'STORE OPEN' : 'STORE CLOSED',
                             style: GoogleFonts.inter(
-                              fontSize: 9,
+                              fontSize: 8.5,
                               fontWeight: FontWeight.w900,
                               color: _isStoreOpen ? brandGreen : primaryRed,
+                              letterSpacing: 0.3,
                             ),
                           ),
                         ],
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          // Stock / Menu Items Quick Manager
-          Bounceable(
-            onTap: _showQuick86BottomSheet,
-            child: Container(
-              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 3),
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF1F2),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFFECDD3)),
-              ),
-              child: const Icon(Icons.inventory_2_outlined, size: 16, color: primaryRed),
-            ),
-          ),
-          // Live Sync Timer Indicator
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              '${_refreshCountdown}s',
-              style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: slateMuted),
-            ),
-          ),
-          const SizedBox(width: 6),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Sub-Header Metric Strip
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-            color: Colors.white,
-            child: Row(
-              children: [
-                _buildHeaderMetric('New Orders', '$pendingCount', pendingCount > 0 ? primaryRed : slateDark, isAlert: pendingCount > 0),
-                const SizedBox(width: 10),
-                _buildHeaderMetric('Cooking Now', '$activeOrders', brandAmber),
-                const SizedBox(width: 10),
-                _buildHeaderMetric('Live Time', _currentTime, slateDark),
-              ],
-            ),
-          ),
-          const Divider(height: 1, color: slateBorder),
-
-          // Main Tabs Segmented Control
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildTabButton(0, 'Live Orders', Icons.restaurant_menu),
-                  const SizedBox(width: 8),
-                  _buildTabButton(1, 'Menu Catalog', Icons.menu_book_rounded),
-                  const SizedBox(width: 8),
-                  _buildTabButton(2, 'Sales & Payouts', Icons.currency_rupee_rounded),
-                  const SizedBox(width: 8),
-                  _buildTabButton(3, 'Store Settings', Icons.tune_rounded),
                 ],
               ),
             ),
           ),
+          actions: [
+            // Stock / Menu Items Quick Manager
+            Bounceable(
+              onTap: _showQuick86BottomSheet,
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF1F2),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFECDD3)),
+                ),
+                child: const Icon(Icons.inventory_2_outlined, size: 15, color: primaryRed),
+              ),
+            ),
+            // Live Sync Timer Indicator
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '${_refreshCountdown}s',
+                style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w800, color: slateMuted),
+              ),
+            ),
+            const SizedBox(width: 4),
+          ],
+        ),
+        body: Column(
+          children: [
+            // Sub-Header Metric Strip
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+              color: Colors.white,
+              child: Row(
+                children: [
+                  _buildHeaderMetric('New Orders', '$pendingCount', pendingCount > 0 ? primaryRed : slateDark, isAlert: pendingCount > 0),
+                  const SizedBox(width: 10),
+                  _buildHeaderMetric('Cooking Now', '$activeOrders', brandAmber),
+                  const SizedBox(width: 10),
+                  _buildHeaderMetric('Live Time', _currentTime, slateDark),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: slateBorder),
+
+            // Main Tabs Segmented Control
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  children: [
+                    _buildTabButton(0, 'Live Orders', Icons.restaurant_menu),
+                    const SizedBox(width: 8),
+                    _buildTabButton(1, 'Menu', Icons.menu_book_rounded),
+                    const SizedBox(width: 8),
+                    _buildTabButton(2, 'Sales & Payouts', Icons.currency_rupee_rounded),
+                    const SizedBox(width: 8),
+                    _buildTabButton(3, 'Settings', Icons.tune_rounded),
+                  ],
+                ),
+              ),
+            ),
 
           // Tab Content
           Expanded(
@@ -1796,7 +1819,6 @@ $formattedItems
     else if (_selectedSalesPeriod == 'WEEK') periodTitle = "Last 7 Days Net Settlement";
     else if (_selectedSalesPeriod == 'MONTH') periodTitle = "This Month's Net Settlement";
     else if (_selectedSalesPeriod == 'ALL') periodTitle = "All Time Net Settlement";
-
     final periods = [
       {'id': 'TODAY', 'label': 'Today'},
       {'id': 'YESTERDAY', 'label': 'Yesterday'},
@@ -1806,13 +1828,15 @@ $formattedItems
     ];
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 1. Date-wise Filter Bar
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
             child: Row(
               children: periods.map((p) {
                 final isSel = _selectedSalesPeriod == p['id'];
@@ -1824,7 +1848,7 @@ $formattedItems
                       setState(() => _selectedSalesPeriod = p['id']!);
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
                       decoration: BoxDecoration(
                         color: isSel ? primaryRed : Colors.white,
                         borderRadius: BorderRadius.circular(20),
@@ -1853,30 +1877,34 @@ $formattedItems
               }).toList(),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
 
           // 2. Net Settlement Highlight Card
           Container(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [primaryRed, Color(0xFFB91C1C)]),
-              borderRadius: BorderRadius.circular(18),
+              gradient: const LinearGradient(
+                colors: [primaryRed, Color(0xFFB91C1C)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
               boxShadow: [
-                BoxShadow(color: primaryRed.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4)),
+                BoxShadow(color: primaryRed.withValues(alpha: 0.35), blurRadius: 14, offset: const Offset(0, 5)),
               ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(periodTitle, style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.9), fontWeight: FontWeight.w700)),
-                const SizedBox(height: 4),
-                Text('₹${netProfit.toStringAsFixed(2)}', style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white)),
+                Text(periodTitle, style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.9), fontWeight: FontWeight.w700)),
+                const SizedBox(height: 6),
+                Text('₹${netProfit.toStringAsFixed(2)}', style: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white)),
                 const SizedBox(height: 14),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Food Sales: ₹${totalSales.toInt()}', style: GoogleFonts.inter(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w700)),
-                    Text('Orders: $ordersCount', style: GoogleFonts.inter(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w700)),
+                    Text('Food Sales: ₹${totalSales.toStringAsFixed(0)}', style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white, fontWeight: FontWeight.w700)),
+                    Text('Orders: $ordersCount', style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white, fontWeight: FontWeight.w700)),
                   ],
                 ),
               ],
@@ -1902,12 +1930,12 @@ $formattedItems
             '₹${netProfit.toStringAsFixed(2)}',
             brandGreen,
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 22),
 
           // 4. Settled Orders for this period
           if (filteredOrdersList.isNotEmpty) ...[
             Text('Orders in this Period ($ordersCount)', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: slateDark)),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             ...filteredOrdersList.map((o) {
               final String id = (o['id'] ?? '').toString();
               final rawReadable = o['readableId'];
@@ -1917,29 +1945,42 @@ $formattedItems
               final num tot = (o['total'] is num) ? (o['total'] as num) : (num.tryParse(o['total']?.toString() ?? '0') ?? 0);
               final dynamic rawItems = o['items'];
               final List items = (rawItems is List) ? rawItems : [];
+              double orderFoodSum = 0.0;
+              if (items.isNotEmpty) {
+                for (final it in items) {
+                  final num p = (it['price'] is num) ? (it['price'] as num) : (num.tryParse(it['price']?.toString() ?? '0') ?? 0);
+                  final int q = (it['quantity'] is num) ? (it['quantity'] as num).toInt() : (int.tryParse(it['quantity']?.toString() ?? '1') ?? 1);
+                  orderFoodSum += (p * q).toDouble();
+                }
+              } else {
+                orderFoodSum = tot.toDouble();
+              }
               final String itemsDesc = items.isNotEmpty
                   ? items.map((i) => '${i['quantity'] ?? 1}x ${i['name'] ?? 'Dish'}').join(', ')
                   : 'Food Items';
 
               return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(13),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: slateBorder),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 1)),
+                  ],
                 ),
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(9),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(Icons.receipt_long_rounded, size: 18, color: slateDark),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1947,12 +1988,12 @@ $formattedItems
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(displayId, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, color: slateDark)),
-                              Text('₹${tot.toInt()}', style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w900, color: brandGreen)),
+                              Text(displayId, style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w900, color: slateDark)),
+                              Text('₹${orderFoodSum.toStringAsFixed(0)}', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: brandGreen)),
                             ],
                           ),
-                          const SizedBox(height: 2),
-                          Text(itemsDesc, style: GoogleFonts.inter(fontSize: 11, color: slateMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          const SizedBox(height: 3),
+                          Text(itemsDesc, style: GoogleFonts.inter(fontSize: 11.5, color: slateMuted, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
                         ],
                       ),
                     ),
@@ -1960,6 +2001,20 @@ $formattedItems
                 ),
               );
             }),
+          ] else ...[
+            Container(
+              padding: const EdgeInsets.all(28),
+              alignment: Alignment.center,
+              child: Column(
+                children: [
+                  Icon(Icons.receipt_outlined, size: 44, color: slateMuted.withValues(alpha: 0.5)),
+                  const SizedBox(height: 10),
+                  Text('No Settled Orders Found', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: slateDark)),
+                  const SizedBox(height: 4),
+                  Text('Delivered restaurant orders will appear here.', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
+                ],
+              ),
+            ),
           ],
         ],
       ),

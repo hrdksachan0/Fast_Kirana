@@ -27,6 +27,9 @@ export async function GET(request: NextRequest) {
       })
       if (user?.assignedRestaurantId) {
         effectiveRestId = user.assignedRestaurantId
+      }
+    }
+
     // Default fallback to Wedson if no specific outlet requested
     if (!effectiveRestId) {
       effectiveRestId = 'cms2p1lyx0001n0idod904lfu'

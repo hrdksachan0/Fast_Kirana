@@ -2104,9 +2104,25 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         : (customer['phone']?.toString().trim() ?? '');
     final avatarLetter = customerName.isNotEmpty ? customerName[0].toUpperCase() : 'C';
 
-    String deliverAddress = address?['formattedAddress'] ??
-        '${address?['houseNo'] ?? ''} ${address?['street'] ?? ''} ${address?['area'] ?? 'Jawahar Nagar'}'.trim();
-    if (deliverAddress.isEmpty) deliverAddress = 'Jawahar Nagar, Ghatampur';
+    String deliverAddress = '';
+    if (address != null) {
+      if (address['formattedAddress'] != null && address['formattedAddress'].toString().trim().isNotEmpty) {
+        deliverAddress = address['formattedAddress'].toString().trim();
+      } else {
+        final parts = [
+          address['houseNo'],
+          address['street'],
+          address['area'],
+          address['landmark'],
+          address['city'],
+          address['pincode'],
+        ].where((p) => p != null && p.toString().trim().isNotEmpty && p.toString() != 'null')
+         .map((p) => p.toString().trim())
+         .toList();
+        deliverAddress = parts.isNotEmpty ? parts.join(', ') : '';
+      }
+    }
+    if (deliverAddress.isEmpty) deliverAddress = 'Ghatampur, Kanpur Nagar';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -2270,6 +2286,39 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+
+                // Delivery Address Row
+                if (deliverAddress.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFFECACA)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.location_on_rounded, size: 14, color: Color(0xFFDC2626)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            deliverAddress,
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF991B1B),
+                              height: 1.3,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 const SizedBox(height: 10),
 
                 // Items List (Clean vertical list for delivery boy to check all products)

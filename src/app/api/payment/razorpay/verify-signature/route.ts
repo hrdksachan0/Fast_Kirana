@@ -108,6 +108,10 @@ export async function POST(req: Request) {
 
       // Push notification to staff
       const isRestaurantOrder = !!order.restaurantId
+      const outletName = order.shopName || (order.restaurantId ? 'Restaurant' : 'FastKirana Grocery')
+      const customerName = order.userName || 'Customer'
+      const customerPhone = order.userPhone || 'N/A'
+
       if (isRestaurantOrder) {
         sendPushNotificationToRoles([Role.ADMIN, Role.DELIVERY], {
           title: '💳 Online Payment Order Confirmed!',
@@ -149,9 +153,6 @@ export async function POST(req: Request) {
 
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
       const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
-      const outletName = order.shopName || (order.restaurantId ? 'Restaurant' : 'FastKirana Grocery')
-      const customerName = order.userName || 'Customer'
-      const customerPhone = order.userPhone || 'N/A'
       
       const adminText = `💳 *PAID Online Order* #${displayId} for [${outletName}] of ₹${notifyTotal} from ${customerName} (${customerPhone}). Payment: Razorpay PAID ✅. Manage: ${cleanAppUrl}/admin`
 

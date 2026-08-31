@@ -1952,6 +1952,42 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   /// Delivery Destination Address Card
   Widget _buildDeliveryDestinationCard() {
     final addr = _order?.address;
+    final raw = _order?.addressRaw;
+
+    // Build full address from individual parts if formattedAddress is missing
+    String fullAddress = addr?.formattedAddress ?? '';
+    if (fullAddress.isEmpty || fullAddress == 'Ghatampur Zone') {
+      if (raw is Map) {
+        final parts = [
+          raw['houseNo'],
+          raw['street'],
+          raw['area'],
+          raw['landmark'],
+          raw['city'],
+          raw['pincode'],
+        ]
+            .where((p) => p != null && p.toString().trim().isNotEmpty && p.toString() != 'null')
+            .map((p) => p.toString().trim())
+            .toList();
+        if (parts.isNotEmpty) {
+          fullAddress = parts.join(', ');
+        }
+      }
+      // Fallback to customerAddress
+      if (fullAddress.isEmpty) {
+        fullAddress = _order?.customerAddress ?? 'Ghatampur, Kanpur Nagar - 209206';
+      }
+    }
+
+    // Determine label - use "Delivery Address" as header if label is generic
+    String labelText = 'Delivery Address';
+    final rawLabel = addr?.label ?? '';
+    if (rawLabel.isNotEmpty &&
+        rawLabel != 'Delivery Location' &&
+        !rawLabel.toLowerCase().contains('express delivery')) {
+      labelText = rawLabel;
+    }
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1965,10 +2001,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
+              color: const Color(0xFFFEF2F2),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.location_on_rounded, color: Color(0xFF2563EB), size: 18),
+            child: const Icon(Icons.location_on_rounded, color: primaryRed, size: 18),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1976,13 +2012,13 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  addr?.label ?? 'Delivery Address',
+                  labelText,
                   style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: slateDark),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
-                  addr?.formattedAddress ?? 'Ghatampur, Kanpur Nagar - 209206',
-                  style: GoogleFonts.inter(fontSize: 11.5, color: slateMuted, height: 1.3),
+                  fullAddress,
+                  style: GoogleFonts.inter(fontSize: 11.5, color: slateMuted, height: 1.4),
                 ),
               ],
             ),
@@ -1995,7 +2031,15 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   /// Order Items and Billing Receipt Card
   Widget _buildOrderReceiptCard() {
     final items = _order?.items ?? [];
-    final subtotal = _order?.subtotal ?? 0.0;
+
+    // Calculate item total from actual items (price * qty) for accuracy
+    double calculatedItemTotal = 0.0;
+    for (final item in items) {
+      calculatedItemTotal += item.price * item.quantity;
+    }
+
+    // Use calculated item total if it's > 0, else fallback to subtotal
+    final subtotal = calculatedItemTotal > 0 ? calculatedItemTotal : (_order?.subtotal ?? 0.0);
     final deliveryFee = _order?.deliveryFee ?? 0.0;
     final miscFee = _order?.miscFee ?? 0.0;
     final taxes = _order?.taxes ?? 0.0;
@@ -2012,18 +2056,52 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Order Items (${items.length})',
-            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: slateDark),
+          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Bill Details',
+                style: GoogleFonts.inter(fontSize: 14.5, fontWeight: FontWeight.w900, color: slateDark),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '${items.length} ITEMS',
+                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: slateMuted, letterSpacing: 0.5),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           ...items.map((item) => Padding(
                 padding: const EdgeInsets.only(bottom: 8.0),
                 child: Row(
                   children: [
+                    // Qty badge
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(color: slateBorder),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${item.quantity}x',
+                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: slateDark),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '${item.quantity}x ${item.name}',
+                        item.name,
                         style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: slateDark),
                       ),
                     ),
@@ -2034,11 +2112,13 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                   ],
                 ),
               )),
-          const Divider(height: 16, color: slateBorder),
+          const SizedBox(height: 4),
+          const Divider(height: 1, color: slateBorder),
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Subtotal', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
+              Text('Item Total', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
               Text('₹${subtotal.toInt()}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: slateDark)),
             ],
           ),
@@ -2062,7 +2142,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Handling & Packaging', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
+                Text('Packaging Charge', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
                 Text('₹${miscFee.toInt()}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: slateDark)),
               ],
             ),
@@ -2072,7 +2152,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Taxes & GST', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
+                Text('Handling & Taxes', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
                 Text('₹${taxes.toInt()}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: slateDark)),
               ],
             ),
@@ -2087,12 +2167,26 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
               ],
             ),
           ],
-          const Divider(height: 16, color: slateBorder),
+          const SizedBox(height: 8),
+          const Divider(height: 1, color: slateBorder),
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Total Bill', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: slateDark)),
-              Text('₹${total.toInt()}', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w900, color: primaryRed)),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Total Paid', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: slateDark)),
+                  Text(
+                    _order?.paymentMethod.displayName ?? 'COD',
+                    style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: slateMuted),
+                  ),
+                ],
+              ),
+              Text(
+                '₹${total.toInt()}',
+                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: primaryRed),
+              ),
             ],
           ),
         ],
