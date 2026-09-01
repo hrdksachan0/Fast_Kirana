@@ -186,8 +186,27 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
 
       <LockscreenAlertMockup orderId={order.id} deliveryMethod={order.deliveryMethod} />
 
-      {/* Pay Online Option for COD Orders */}
-      {order.paymentStatus !== 'PAID' && (
+      {/* Payment Status Reassurance Card */}
+      {order.paymentStatus === 'PAID' ? (
+        <div className="p-4 sm:p-5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-500/30 rounded-3xl shadow-sm flex items-center gap-4">
+          <div className="h-12 w-12 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0 border border-emerald-500/20">
+            ✅
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-emerald-900 dark:text-emerald-200">
+                Payment Confirmed • {formatPrice(order.total)}
+              </h3>
+              <span className="text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                {order.paymentMethod === 'UPI' ? 'UPI / Online' : order.paymentMethod}
+              </span>
+            </div>
+            <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5 font-medium">
+              Payment received successfully. No cash needed at doorstep! 🎉
+            </p>
+          </div>
+        </div>
+      ) : (
         <PayOnlineButton
           orderId={order.id}
           amount={order.total}

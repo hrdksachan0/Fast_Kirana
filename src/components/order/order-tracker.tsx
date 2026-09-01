@@ -28,7 +28,7 @@ import {
   Plus,
   Minus
 } from 'lucide-react'
-import { cn, formatPhone, formatAddress, getDeliveryPin } from '@/lib/utils'
+import { cn, formatPhone, formatAddress, getDeliveryPin, formatPrice } from '@/lib/utils'
 import { getDistanceKm } from '@/lib/distance'
 import { toast } from 'sonner'
 
@@ -716,8 +716,27 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
         </div>
       )}
       
-      {/* Pay Online Option for COD Orders */}
-      {order.paymentStatus !== 'PAID' && order.status !== 'CANCELLED' && (
+      {/* Payment Status Reassurance or Pay Online Option */}
+      {order.paymentStatus === 'PAID' ? (
+        <div className="p-4 sm:p-5 bg-emerald-50/90 dark:bg-emerald-950/30 border border-emerald-500/30 rounded-3xl shadow-sm flex items-center gap-3.5">
+          <div className="h-10 w-10 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg shrink-0 border border-emerald-500/20">
+            💳
+          </div>
+          <div className="flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h4 className="text-xs sm:text-sm font-bold text-emerald-900 dark:text-emerald-200">
+                Payment Confirmed • {formatPrice(combinedTotal || order.total)} Paid Online
+              </h4>
+              <span className="text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                {order.paymentMethod === 'UPI' ? 'UPI / Razorpay' : order.paymentMethod}
+              </span>
+            </div>
+            <p className="text-[11px] sm:text-xs text-emerald-700 dark:text-emerald-400 mt-0.5 font-medium">
+              Payment received successfully. No cash payment needed upon delivery! 🎉
+            </p>
+          </div>
+        </div>
+      ) : order.status !== 'CANCELLED' ? (
         <PayOnlineButton
           orderId={order.id}
           amount={combinedTotal || order.total}
@@ -744,7 +763,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
           }}
           variant="card"
         />
-      )}
+      ) : null}
 
       {/* Premium Visual Delivery Status Card */}
       <div className="bg-card border border-border/80 p-5 sm:p-7 rounded-3xl shadow-xl space-y-6 overflow-hidden relative">
@@ -780,6 +799,17 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                  order.status === 'PACKED' ? 'Packed & Ready' : 
                  order.status === 'CONFIRMED' ? 'Confirmed & Preparing' : 'Order Placed'}
               </span>
+
+              {/* Live Payment Status Pill in Header */}
+              {order.paymentStatus === 'PAID' ? (
+                <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                  💳 Paid Online ✅
+                </span>
+              ) : combinedStatus !== 'CANCELLED' ? (
+                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                  💵 Cash on Delivery
+                </span>
+              ) : null}
 
               {order.isCombined ? (
                 <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
