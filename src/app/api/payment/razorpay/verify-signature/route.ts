@@ -46,8 +46,6 @@ export async function POST(req: Request) {
     }
 
     // Update ALL sub-orders in the combined group (or just this one if standalone)
-    // Each sub-order keeps its own status progression, but paymentStatus + paymentMethod are set to PAID/UPI
-    // Update ALL sub-orders in the combined group (or just this one if standalone)
     // Mark paymentStatus = PAID and paymentMethod = UPI, while keeping order status (e.g. PENDING) for admin confirmation
     if (order.combinedId) {
       await prisma.$executeRaw`
@@ -63,19 +61,19 @@ export async function POST(req: Request) {
         SET "paymentStatus" = 'PAID'::"PaymentStatus",
             "paymentMethod" = 'UPI'::"PaymentMethod",
             "updatedAt" = NOW()
-        WHERE id = ${orderId}
+        WHERE id = ${order.id}
       `
     }
 
-    // Re-fetch to get fresh state
+    // Re-fetch to get fresh state using the confirmed order.id
     const freshOrders: any[] = await prisma.$queryRaw`
       SELECT id, status::text as status, total,
              "paymentStatus"::text as "paymentStatus",
              "paymentMethod"::text as "paymentMethod",
              "readableId", "createdAt"
-      FROM orders WHERE id = ${orderId} LIMIT 1
+      FROM orders WHERE id = ${order.id} LIMIT 1
     `
-    const updatedOrder = freshOrders[0] || order
+    const updatedOrder = freshOrders[0] || { ...order, paymentStatus: 'PAID', paymentMethod: 'UPI' }
 
     // Fire notifications — payment is confirmed!
     try {
@@ -170,7 +168,12 @@ export async function POST(req: Request) {
             channel.send({
               type: 'broadcast',
               event: 'order-payment-updated',
-              payload: { orderId: updatedOrder.id, paymentStatus: 'PAID', status: updatedOrder.status }
+              payload: {
+                orderId: updatedOrder.id,
+                readableId: displayId,
+                paymentStatus: 'PAID',
+                status: updatedOrder.status
+              }
             }).finally(() => {
               supabase.removeChannel(channel)
             })
@@ -180,7 +183,13 @@ export async function POST(req: Request) {
         console.warn('Supabase broadcast notice:', sbErr)
       }
 
-
+      // Revalidate storefront cache
+      try {
+        const { revalidateStorefront } = await import('@/lib/revalidate')
+        revalidateStorefront()
+      } catch (e) {
+        console.warn('Revalidation notice:', e)
+      }
 
     } catch (notifErr) {
       console.error('Notification error after payment verification:', notifErr)
@@ -190,6 +199,7 @@ export async function POST(req: Request) {
       success: true,
       message: 'Payment verified successfully!',
       orderId: updatedOrder.id,
+      readableId: updatedOrder.readableId,
       status: updatedOrder.status,
       paymentStatus: 'PAID',
     })

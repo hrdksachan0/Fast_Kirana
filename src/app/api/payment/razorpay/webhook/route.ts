@@ -208,7 +208,12 @@ export async function POST(req: Request) {
               channel.send({
                 type: 'broadcast',
                 event: 'order-payment-updated',
-                payload: { orderId: updatedOrder.id, paymentStatus: 'PAID', status: updatedOrder.status }
+                payload: {
+                  orderId: updatedOrder.id,
+                  readableId: displayId,
+                  paymentStatus: 'PAID',
+                  status: updatedOrder.status
+                }
               }).finally(() => {
                 supabase.removeChannel(channel)
               })
@@ -216,6 +221,14 @@ export async function POST(req: Request) {
           })
         } catch (sbErr) {
           console.warn('Supabase broadcast notice:', sbErr)
+        }
+
+        // Revalidate storefront cache
+        try {
+          const { revalidateStorefront } = await import('@/lib/revalidate')
+          revalidateStorefront()
+        } catch (e) {
+          console.warn('Revalidation notice:', e)
         }
 
 
