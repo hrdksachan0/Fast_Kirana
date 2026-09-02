@@ -135,12 +135,34 @@ export async function PATCH(
 
     const updateData: any = {}
     if (name !== undefined && typeof name === 'string') updateData.name = name.trim()
-    if (description !== undefined) updateData.description = description
-    if (imageUrl !== undefined) updateData.imageUrl = imageUrl
-    if (categoryId !== undefined && categoryId !== '') {
+    if (description !== undefined) updateData.description = description || ''
+    if (imageUrl !== undefined) updateData.imageUrl = imageUrl || '📦'
+    
+    // Restaurant ID & Category ID auto-alignment
+    const targetRestaurantId = restaurantId !== undefined ? (restaurantId || null) : product.restaurantId
+    if (targetRestaurantId) {
+      updateData.restaurantId = targetRestaurantId
+      // Auto-assign to restaurant-food category to prevent category missing errors
+      let restCat = await prisma.category.findFirst({
+        where: {
+          OR: [
+            { slug: 'restaurant-food' },
+            { slug: 'restaurant' },
+            { name: { contains: 'Fast Food', mode: 'insensitive' } },
+            { name: { contains: 'Restaurant', mode: 'insensitive' } }
+          ]
+        }
+      })
+      if (!restCat) {
+        restCat = await prisma.category.create({
+          data: { name: 'Fast Food & Restaurant Kitchen', slug: 'restaurant-food', imageUrl: '🍽️', sortOrder: 99 }
+        })
+      }
+      updateData.categoryId = restCat.id
+    } else if (categoryId !== undefined && categoryId !== '') {
       updateData.categoryId = categoryId
+      updateData.restaurantId = null
     }
-    if (restaurantId !== undefined) updateData.restaurantId = restaurantId || null
     if (unit !== undefined) updateData.unit = (unit && typeof unit === 'string') ? unit.trim() : ''
     
     if (stock !== undefined) {

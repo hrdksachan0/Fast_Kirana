@@ -1742,11 +1742,16 @@ export function AdminDashboard({
 
   const saveProductChanges = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!editingProduct) return
-
     const requiresBasePrice = !hasVariantsEdit
-    const isSpecialProduct = isEditProductCafe || isEditProductRestaurant || !!productEditForm.restaurantId
+    const isRestaurant = isEditProductRestaurant || editProductType === 'restaurant' || !!productEditForm.restaurantId
+    const isSpecialProduct = isEditProductCafe || isRestaurant
     const hasCategory = productEditForm.categoryId || isSpecialProduct
+
+    if (isRestaurant && !productEditForm.restaurantId) {
+      toast.error('Please select a Restaurant Outlet for this dish *')
+      return
+    }
+
     if (!productEditForm.name || !hasCategory || (requiresBasePrice && (!productEditForm.price || !productEditForm.mrp))) {
       toast.error('Please fill in all required fields')
       return
@@ -1851,8 +1856,15 @@ export function AdminDashboard({
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault()
     const requiresBasePrice = !hasVariantsNew
-    const isSpecialProduct = isNewProductCafe || isNewProductRestaurant
+    const isRestaurant = isNewProductRestaurant || newProductType === 'restaurant' || !!newProduct.restaurantId
+    const isSpecialProduct = isNewProductCafe || isRestaurant
     const hasCategory = newProduct.categoryId || isSpecialProduct
+
+    if (isRestaurant && !newProduct.restaurantId) {
+      toast.error('Please select a Restaurant Outlet for this dish *')
+      return
+    }
+
     if (!newProduct.name || !hasCategory || (requiresBasePrice && (!newProduct.price || !newProduct.mrp))) {
       toast.error('Please fill in all required fields')
       return

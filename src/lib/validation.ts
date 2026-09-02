@@ -93,26 +93,26 @@ export const addToCartSchema = z.object({
 
 export const createProductSchema = z.object({
   name: z.string().min(1, 'Product name is required').max(200),
-  description: z.string().optional().default(''),
-  imageUrl: z.string().optional().default('📦'),
-  categoryId: z.string().optional(),
-  restaurantId: z.string().optional(),
+  description: z.string().nullable().optional().default(''),
+  imageUrl: z.string().nullable().optional().default('📦'),
+  categoryId: z.string().nullable().optional(),
+  restaurantId: z.string().nullable().optional(),
   mrp: z.coerce.number().nonnegative(),
   price: z.coerce.number().nonnegative(),
-  unit: z.string().optional().default(''),
+  unit: z.string().nullable().optional().default(''),
   stock: z.coerce.number().int().nonnegative().optional().default(0),
-  isAvailable: z.union([z.boolean(), z.string()]).optional(),
-  tags: z.union([z.array(z.string()), z.string()]).optional().default([]),
-  minStock: z.coerce.number().int().nonnegative().optional().default(10),
-  expiryDate: z.string().optional(),
-  costPrice: z.coerce.number().nonnegative().optional().default(0),
-  variants: z.union([z.array(z.any()), z.string()]).optional(),
-  location: z.string().optional(),
-  isFlashDeal: z.union([z.boolean(), z.string()]).optional(),
-  isTopPick: z.union([z.boolean(), z.string()]).optional(),
-  isBestSeller: z.union([z.boolean(), z.string()]).optional(),
-  sortOrder: z.coerce.number().int().nonnegative().optional().default(0),
-  barcode: z.string().optional(),
+  isAvailable: z.union([z.boolean(), z.string()]).nullable().optional(),
+  tags: z.union([z.array(z.string()), z.string()]).nullable().optional().default([]),
+  minStock: z.coerce.number().int().nonnegative().nullable().optional().default(10),
+  expiryDate: z.string().nullable().optional(),
+  costPrice: z.coerce.number().nonnegative().nullable().optional().default(0),
+  variants: z.union([z.array(z.any()), z.string()]).nullable().optional(),
+  location: z.string().nullable().optional(),
+  isFlashDeal: z.union([z.boolean(), z.string()]).nullable().optional(),
+  isTopPick: z.union([z.boolean(), z.string()]).nullable().optional(),
+  isBestSeller: z.union([z.boolean(), z.string()]).nullable().optional(),
+  sortOrder: z.coerce.number().int().nonnegative().nullable().optional().default(0),
+  barcode: z.string().nullable().optional(),
 })
 
 // ── Coupon Schema ───────────────────────────────────────────────────
@@ -121,9 +121,9 @@ export const validateCouponSchema = z.object({
   code: z.string().min(1, 'Coupon code is required'),
   subtotal: z.coerce.number().nonnegative('Subtotal must be a positive number'),
   items: z.array(z.object({
-    productId: z.string().optional(),
-    categoryId: z.string().optional(),
-    restaurantId: z.string().optional(),
+    productId: z.string().nullable().optional(),
+    categoryId: z.string().nullable().optional(),
+    restaurantId: z.string().nullable().optional(),
     price: z.coerce.number().nonnegative(),
     quantity: z.coerce.number().int().positive(),
   })).optional().default([]),
@@ -133,15 +133,15 @@ export const validateCouponSchema = z.object({
 
 export const createOrderSchema = z.object({
   // Mobile app user resolution (optional, only used when no NextAuth session)
-  phone: z.string().optional(),
-  email: z.string().optional(),
-  userId: z.string().optional(),
-  customerPhone: z.string().optional(),
-  userName: z.string().optional(),
-  customerName: z.string().optional(),
+  phone: z.string().nullable().optional(),
+  email: z.string().nullable().optional(),
+  userId: z.string().nullable().optional(),
+  customerPhone: z.string().nullable().optional(),
+  userName: z.string().nullable().optional(),
+  customerName: z.string().nullable().optional(),
 
   // Core order fields
-  addressId: z.string().optional(),
+  addressId: z.string().nullable().optional(),
   paymentMethod: z.enum(['COD', 'RAZORPAY', 'UPI', 'CARD', 'WALLET', 'ONLINE']),
   items: z.array(z.object({
     product: z.object({
@@ -150,32 +150,32 @@ export const createOrderSchema = z.object({
       price: z.coerce.number().nonnegative().optional().default(0),
       slug: z.string().optional(),
       imageUrl: z.string().optional(),
-      restaurantId: z.string().optional(),
+      restaurantId: z.string().nullable().optional(),
     }),
     quantity: z.coerce.number().int().positive().optional().default(1),
-    selectedVariant: z.string().optional(),
+    selectedVariant: z.string().nullable().optional(),
   })).min(1, 'At least one item is required'),
-  couponCode: z.string().optional().default(''),
+  couponCode: z.string().nullable().optional().default(''),
   deliveryMethod: z.enum(['DELIVERY', 'PICKUP']).optional().default('DELIVERY'),
-  isB2B: z.union([z.boolean(), z.string()]).optional().default(false),
-  scheduledSlot: z.string().optional().default('INSTANT'),
-  shopName: z.string().optional(),
-  shopPhone: z.string().optional(),
-  storeId: z.string().optional(),
+  isB2B: z.union([z.boolean(), z.string()]).nullable().optional().default(false),
+  scheduledSlot: z.string().nullable().optional().default('INSTANT'),
+  shopName: z.string().nullable().optional(),
+  shopPhone: z.string().nullable().optional(),
+  storeId: z.string().nullable().optional(),
   packagingOption: z.enum(['NORMAL', 'PREMIUM']).optional().default('NORMAL'),
   packagingFee: z.coerce.number().nonnegative().optional().default(0),
   // Payment verification (webhook callback)
-  paymentStatus: z.string().optional(),
-  paymentId: z.string().optional(),
-  razorpayPaymentId: z.string().optional(),
-  razorpay_payment_id: z.string().optional(),
-  customerAddress: z.string().optional(),
+  paymentStatus: z.string().nullable().optional(),
+  paymentId: z.string().nullable().optional(),
+  razorpayPaymentId: z.string().nullable().optional(),
+  razorpay_payment_id: z.string().nullable().optional(),
+  customerAddress: z.string().nullable().optional(),
 })
 
 // ── Payment Schema ──────────────────────────────────────────────────
 
 export const createRazorpayOrderSchema = z.object({
-  orderId: z.string().optional(),
+  orderId: z.string().nullable().optional(),
   amount: z.coerce.number().positive('Amount must be greater than 0').optional(),
 })
 
@@ -188,7 +188,7 @@ export const validateCartSchema = z.object({
       name: z.string().optional(),
       price: z.coerce.number().nonnegative(),
       mrp: z.coerce.number().nonnegative().optional(),
-      restaurantId: z.string().optional(),
+      restaurantId: z.string().nullable().optional(),
     }),
     quantity: z.coerce.number().int().positive(),
   })).min(1, 'Cart items are required'),
@@ -212,7 +212,10 @@ export async function validateBody<T extends z.ZodType>(
 
   const result = schema.safeParse(body)
   if (!result.success) {
-    const messages = result.error.issues.map((i) => i.message).join(', ')
+    const messages = result.error.issues.map((i) => {
+      const field = i.path.join('.')
+      return field ? `${field}: ${i.message}` : i.message
+    }).join(', ')
     return {
       success: false as const,
       error: NextResponse.json({ error: messages }, { status: 400 }),
