@@ -562,19 +562,17 @@ export function AdminDashboard({
   const handleOpenOrderModal = useCallback(async (order: any) => {
     if (!order) return
     setSelectedOrderForTracking(order)
-    if (!order.items || order.items.length === 0) {
-      setIsLoadingOrderItems(true)
-      try {
-        const res = await fetch(`/api/orders/${order.id}`)
-        if (res.ok) {
-          const fullData = await res.json()
-          setSelectedOrderForTracking((prev: any) => ({ ...prev, ...fullData }))
-        }
-      } catch (err) {
-        console.error('Failed to fetch full order details:', err)
-      } finally {
-        setIsLoadingOrderItems(false)
+    setIsLoadingOrderItems(true)
+    try {
+      const res = await fetch(`/api/orders/${order.id}`)
+      if (res.ok) {
+        const fullData = await res.json()
+        setSelectedOrderForTracking((prev: any) => ({ ...prev, ...fullData }))
       }
+    } catch (err) {
+      console.error('Failed to fetch full order details:', err)
+    } finally {
+      setIsLoadingOrderItems(false)
     }
   }, [])
   

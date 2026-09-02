@@ -1467,11 +1467,14 @@ export async function GET(request: NextRequest) {
 
         const subOrders = relatedOrders.map(o => ({
           id: o.id,
+          readableId: o.readableId,
           type: o.restaurantId ? 'RESTAURANT' : 'GROCERY',
           restaurantId: o.restaurantId,
+          shopName: o.restaurantId ? (o.shopName || (o.restaurant?.name) || 'Restaurant') : (o.shopName || 'FastKirana Dark Store'),
           status: o.status,
           total: o.total,
-          itemsCount: o.items?.length || 0
+          itemsCount: o.items?.length || 0,
+          items: o.items || [],
         }))
 
         // Deduplicate items if any overlap

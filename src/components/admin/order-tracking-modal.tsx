@@ -420,9 +420,19 @@ export default function OrderTrackingModal({
                 <div className="divide-y divide-border/40">
                   {order.isCombined && order.subOrders && order.subOrders.length > 1 ? (
                     order.subOrders.map((sub: any, subIdx: number) => {
-                      const isRest = sub.type === 'RESTAURANT'
-                      const subItems = sub.items || []
-                      if (subItems.length === 0) return null
+                      const isRest = sub.type === 'RESTAURANT' || !!sub.restaurantId
+                      // Strictly match items belonging to this specific sub-order
+                      let subItems: OrderItem[] = []
+                      if (sub.items && Array.isArray(sub.items) && sub.items.length > 0) {
+                        // If sub.items is populated, only keep items whose orderId matches this sub (or all if not tagged)
+                        const filtered = sub.items.filter((item: any) => !item.orderId || item.orderId === sub.id)
+                        subItems = filtered.length > 0 ? filtered : sub.items
+                      }
+                      if ((!subItems || subItems.length === 0) && order.items) {
+                        subItems = order.items.filter((item: any) => item.orderId === sub.id)
+                      }
+                      // If still empty or no sub-order items, skip this group
+                      if (!subItems || subItems.length === 0) return null
                       return (
                         <div key={sub.id || subIdx} className="space-y-0">
                           <div className="bg-muted/60 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider flex items-center justify-between text-text-secondary border-b border-border/40">
