@@ -14,6 +14,13 @@ subprojects {
             force 'androidx.core:core-ktx:1.13.1'
         }
     }
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                compileSdkVersion 35
+            }
+        }
+    }
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {
             freeCompilerArgs += ["-Xskip-metadata-version-check"]

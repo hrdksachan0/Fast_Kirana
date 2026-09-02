@@ -10,6 +10,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/supabase_service.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/live_clock_badge.dart';
 
 class PickerDashboard extends ConsumerStatefulWidget {
   const PickerDashboard({super.key});
@@ -21,13 +22,12 @@ class PickerDashboard extends ConsumerStatefulWidget {
 class _PickerDashboardState extends ConsumerState<PickerDashboard> {
   bool _isLoading = true;
   bool _isRefreshing = false;
-  int _refreshCountdown = 20;
+  bool _isFetching = false;
+  int _refreshCountdown = 30;
   List<Map<String, dynamic>> _orders = [];
   final Map<String, Set<String>> _pickedItemIds = {}; // orderId -> Set of picked itemIds
   String? _updatingOrderId;
   Timer? _autoRefreshTimer;
-  Timer? _clockTimer;
-  String _currentTime = '';
 
   static const Color brandOrange = Color(0xFFEA580C);
   static const Color brandGreen = Color(0xFF10B981);
@@ -39,38 +39,20 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
   @override
   void initState() {
     super.initState();
-    _updateClock();
-    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) => _updateClock());
-
     _fetchPickerOrders();
     _initSupabaseRealtime();
 
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() {
-        if (_refreshCountdown <= 1) {
-          _refreshCountdown = 20;
-          _fetchPickerOrders(silent: true);
-        } else {
-          _refreshCountdown--;
-        }
-      });
+    // 30-second calm background refresh (without 1-second full-screen rebuilds)
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!mounted || _isFetching) return;
+      _fetchPickerOrders(silent: true);
     });
   }
 
   @override
   void dispose() {
-    _clockTimer?.cancel();
     _autoRefreshTimer?.cancel();
     super.dispose();
-  }
-
-  void _updateClock() {
-    if (!mounted) return;
-    final now = DateTime.now();
-    setState(() {
-      _currentTime = DateFormat('hh:mm:ss a').format(now);
-    });
   }
 
   void _initSupabaseRealtime() {
@@ -245,7 +227,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
               children: [
                 _buildMetric('Orders to Pack', '$pendingCount', pendingCount > 0 ? brandOrange : slateDark, isAlert: pendingCount > 0),
                 const SizedBox(width: 10),
-                _buildMetric('Live Clock', _currentTime, slateDark),
+                _buildLiveClockMetric(),
               ],
             ),
           ),
@@ -286,6 +268,32 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                       ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLiveClockMetric() {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: slateBorder),
+        ),
+        child: Column(
+          children: [
+            const LiveDigitalClockBadge(
+              backgroundColor: Colors.transparent,
+              borderColor: Colors.transparent,
+              textColor: slateDark,
+              iconColor: slateMuted,
+              fontSize: 13,
+              showSeconds: false,
+            ),
+            Text('Live Clock', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: slateMuted)),
+          ],
+        ),
       ),
     );
   }

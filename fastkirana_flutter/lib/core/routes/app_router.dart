@@ -19,6 +19,7 @@ import '../../features/location/map_picker_screen.dart';
 import '../../features/cafe/restaurant_delivery_loading_screen.dart';
 import '../../features/cafe/restaurant_dashboard.dart';
 import '../../features/splash/grocery_delivery_loading_screen.dart';
+import '../widgets/contextual_brand_transition_screen.dart';
 import '../theme/design_system.dart';
 
 class AppRouter {
@@ -31,50 +32,98 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const SplashScreen());
       case '/home':
       case '/main':
-        return FadeSlideRoute(page: const MainShell());
+        return FadeThroughRoute(page: const MainShell());
       case '/location':
-        return FadeSlideRoute(page: const DeliveryLocationScreen());
+        return SwiggyModalRoute(page: const DeliveryLocationScreen());
       case '/map-picker':
-        return FadeSlideRoute(page: const MapPickerScreen());
+        return SwiggyModalRoute(page: const MapPickerScreen());
       case '/login':
-        return FadeSlideRoute(page: const LoginScreen());
+        return ZeptoSlideRoute(page: const LoginScreen());
       case '/admin':
       case '/admin/login':
-        return FadeSlideRoute(page: const AdminLoginScreen());
+        return ZeptoSlideRoute(page: const AdminLoginScreen());
       case '/delivery':
       case '/delivery/dashboard':
-        return FadeSlideRoute(page: const DeliveryDashboard());
+        return FadeThroughRoute(page: const DeliveryDashboard());
       case '/delivery/login':
-        return FadeSlideRoute(page: const DeliveryLoginScreen());
+        return ZeptoSlideRoute(page: const DeliveryLoginScreen());
       case '/restaurant':
       case '/restaurant/dashboard':
       case '/kitchen':
-        return FadeSlideRoute(page: const RestaurantDashboard());
+        return FadeThroughRoute(page: const RestaurantDashboard());
       case '/otp':
         final identifier = (settings.arguments as String?) ?? '';
-        return FadeSlideRoute(page: OtpScreen(identifier: identifier));
+        return ZeptoSlideRoute(page: OtpScreen(identifier: identifier));
       case '/products':
-        return FadeSlideRoute(page: const ProductsScreen());
+        return ZeptoSlideRoute(page: const ProductsScreen());
       case '/categories':
-        return FadeSlideRoute(page: const CategoriesScreen());
+        return ZeptoSlideRoute(page: const CategoriesScreen());
       case '/cart':
-        return FadeSlideRoute(page: const CartScreen());
+        return SwiggyModalRoute(page: const CartScreen());
       case '/checkout':
-        return FadeSlideRoute(page: const CheckoutScreen());
+        return SwiggyModalRoute(page: const CheckoutScreen());
       case '/orders':
-        return FadeSlideRoute(page: const OrdersScreen());
+        return ZeptoSlideRoute(page: const OrdersScreen());
       case '/profile':
-        return FadeSlideRoute(page: const ProfileScreen());
+        return ZeptoSlideRoute(page: const ProfileScreen());
       case '/search':
-        return FadeSlideRoute(page: const SearchScreen());
+        return FadeScaleRoute(page: const SearchScreen());
       case '/restaurant-loading':
       case '/food-loading':
-        return FadeSlideRoute(page: const RestaurantDeliveryLoadingScreen());
+      case '/cafe-loading':
+        return FadeThroughRoute(
+          page: ContextualBrandTransitionScreen(
+            contextType: TransitionContextType.cafe,
+            autoDismissDuration: const Duration(milliseconds: 1300),
+            onFinished: () {
+              AppRouter.navigatorKey.currentState?.pushReplacementNamed('/home');
+            },
+          ),
+        );
       case '/grocery-loading':
       case '/store-loading':
-        return FadeSlideRoute(page: const GroceryDeliveryLoadingScreen());
+        return FadeThroughRoute(
+          page: ContextualBrandTransitionScreen(
+            contextType: TransitionContextType.grocery,
+            autoDismissDuration: const Duration(milliseconds: 1300),
+            onFinished: () {
+              AppRouter.navigatorKey.currentState?.pushReplacementNamed('/home');
+            },
+          ),
+        );
+      case '/essentials-loading':
+      case '/quick-loading':
+        return FadeThroughRoute(
+          page: ContextualBrandTransitionScreen(
+            contextType: TransitionContextType.essentials,
+            autoDismissDuration: const Duration(milliseconds: 1300),
+            onFinished: () {
+              AppRouter.navigatorKey.currentState?.pushReplacementNamed('/home');
+            },
+          ),
+        );
+      case '/checkout-loading':
+        return FadeThroughRoute(
+          page: ContextualBrandTransitionScreen(
+            contextType: TransitionContextType.checkout,
+            autoDismissDuration: const Duration(milliseconds: 1300),
+            onFinished: () {
+              AppRouter.navigatorKey.currentState?.pushReplacementNamed('/orders');
+            },
+          ),
+        );
+      case '/locator-loading':
+        return FadeThroughRoute(
+          page: ContextualBrandTransitionScreen(
+            contextType: TransitionContextType.storeFinder,
+            autoDismissDuration: const Duration(milliseconds: 1300),
+            onFinished: () {
+              AppRouter.navigatorKey.currentState?.pushReplacementNamed('/home');
+            },
+          ),
+        );
       default:
-        return FadeSlideRoute(
+        return FadeThroughRoute(
           page: Scaffold(
             body: Center(
               child: Text(

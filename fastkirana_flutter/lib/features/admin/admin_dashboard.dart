@@ -346,8 +346,9 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildDockItem({
     required int index,

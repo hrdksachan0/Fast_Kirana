@@ -130,6 +130,18 @@ export function AdminOrders({ initialOrders }: AdminOrdersProps) {
                     <div className="font-extrabold text-text-primary text-xs">
                       #{o.readableId || (o.id.length > 12 ? o.id.slice(-6).toUpperCase() : o.id)}
                     </div>
+                    {/* Outlet / Restaurant Badge */}
+                    <div className="mt-1">
+                      {o.restaurantId || (o.shopName && o.shopName.toLowerCase().includes('restaurant')) || o.readableId?.endsWith('-R') ? (
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 inline-flex items-center gap-1">
+                          🍽️ {o.shopName || o.restaurantName || o.restaurant?.name || 'Wedson Restaurant'}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 inline-flex items-center gap-1">
+                          🛒 {o.shopName || 'FastKirana Dark Store'}
+                        </span>
+                      )}
+                    </div>
                     {o.combinedId && (
                       <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/30 inline-flex items-center gap-1 mt-1">
                         🔗 Combined

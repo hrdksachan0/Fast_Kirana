@@ -19,6 +19,7 @@ import '../../core/theme/responsive.dart';
 import '../../core/config/app_config.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/supabase_service.dart';
+import '../../core/utils/restaurant_utils.dart';
 import '../../data/models/order.dart';
 import '../../data/repositories/order_repository.dart';
 import '../../providers/banner_provider.dart';
@@ -53,10 +54,14 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   LatLng? _riderPosition;
   LatLng? _customerPosition;
   LatLng? _storePosition;
+  LatLng? _restaurantPosition; // Dedicated for restaurant in combined orders
+  OutletLocation? _primaryOutlet;
+  OutletLocation? _restaurantOutlet; // Dedicated for combined orders
   double _riderHeading = 0.0;
 
-  // Custom Rich Bitmap Markers (Store 🏪, Rider 🛵, Home 🏠)
+  // Custom Rich Bitmap Markers (Store 🏪, Restaurant 🍽️, Rider 🛵, Home 🏠)
   BitmapDescriptor? _storeMarkerIcon;
+  BitmapDescriptor? _restaurantMarkerIcon;
   BitmapDescriptor? _riderMarkerIcon;
   BitmapDescriptor? _customerMarkerIcon;
 
@@ -324,19 +329,37 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       _customerPosition = LatLng(AppConfig.darkstoreLat + 0.008, AppConfig.darkstoreLng + 0.006);
     }
 
-    // 2. Store / Restaurant Hub Position
-    final shopLat = (order.addressRaw?['shopLat'] as num?)?.toDouble() ??
-        (order.addressRaw?['restaurantLat'] as num?)?.toDouble();
-    final shopLng = (order.addressRaw?['shopLng'] as num?)?.toDouble() ??
-        (order.addressRaw?['restaurantLng'] as num?)?.toDouble();
+    // 2. Dynamic Store / Restaurant Hub Resolution
+    _primaryOutlet = getOutletLocation(
+      restaurantId: order.restaurantId,
+      shopName: order.shopName,
+      items: order.items,
+      rawOrder: order.toJson(),
+    );
+    _storePosition = LatLng(_primaryOutlet!.lat, _primaryOutlet!.lng);
 
-    if (shopLat != null && shopLng != null && shopLat != 0.0 && shopLng != 0.0) {
-      _storePosition = LatLng(shopLat, shopLng);
+    // 3. Check for Combined Order Multi-Outlets
+    if (order.isCombined && order.subOrders != null && order.subOrders!.isNotEmpty) {
+      // Find Restaurant Sub-Order
+      final restSub = order.subOrders!.firstWhere(
+        (s) => s.restaurantId != null || (s.readableId != null && s.readableId!.toUpperCase().endsWith('-R')),
+        orElse: () => order.subOrders!.first,
+      );
+      _restaurantOutlet = getOutletLocation(
+        restaurantId: restSub.restaurantId,
+        shopName: restSub.shopName,
+        items: restSub.items ?? order.items,
+        rawOrder: restSub.toJson(),
+      );
+      _restaurantPosition = LatLng(_restaurantOutlet!.lat, _restaurantOutlet!.lng);
+      // Darkstore location for Grocery Sub-Order
+      _storePosition = LatLng(darkstoreLocation.lat, darkstoreLocation.lng);
     } else {
-      _storePosition = LatLng(AppConfig.darkstoreLat, AppConfig.darkstoreLng);
+      _restaurantPosition = null;
+      _restaurantOutlet = null;
     }
 
-    // 3. Rider Position
+    // 4. Rider Position
     if (order.status == OrderStatus.shipped || order.status == OrderStatus.packed) {
       if (order.deliveryLat != null && order.deliveryLng != null && order.deliveryLat != 0.0 && order.deliveryLng != 0.0) {
         _updateRiderLocation(LatLng(order.deliveryLat!, order.deliveryLng!), 0.0);
@@ -418,6 +441,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         label: 'STORE',
         emoji: '🏪',
         color: const Color(0xFF16A34A),
+      );
+      _restaurantMarkerIcon = await _createCustomMarkerBitmap(
+        label: 'FOOD',
+        emoji: '🍽️',
+        color: const Color(0xFF7C3AED),
       );
       _riderMarkerIcon = await _createCustomMarkerBitmap(
         label: 'RIDER',
@@ -588,17 +616,53 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     final markers = <Marker>{};
     final polylineCoords = <LatLng>[];
 
-    // 1. Store Marker
-    if (_storePosition != null) {
+    // 1. Store / Restaurant Hub Markers
+    if (_order?.isCombined == true && _restaurantPosition != null) {
+      // Combined Order: Pin 1 (Darkstore Grocery)
+      if (_storePosition != null) {
+        markers.add(
+          Marker(
+            markerId: const MarkerId('store_darkstore'),
+            position: _storePosition!,
+            anchor: const Offset(0.5, 0.8),
+            icon: _storeMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+            infoWindow: const InfoWindow(
+              title: '🛒 FastKirana Darkstore',
+              snippet: 'Grocery Fulfillment Hub',
+            ),
+          ),
+        );
+      }
+      // Combined Order: Pin 2 (Restaurant Kitchen)
+      markers.add(
+        Marker(
+          markerId: const MarkerId('store_restaurant'),
+          position: _restaurantPosition!,
+          anchor: const Offset(0.5, 0.8),
+          icon: _restaurantMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
+          infoWindow: InfoWindow(
+            title: '🍽️ ${_restaurantOutlet?.name ?? "Restaurant Kitchen"}',
+            snippet: _restaurantOutlet?.address ?? 'Fresh Food Kitchen',
+          ),
+        ),
+      );
+    } else if (_storePosition != null) {
+      // Single Order: Darkstore OR Specific Restaurant (A.S. Restaurant, Wedson, etc.)
+      final isRest = _primaryOutlet?.isRestaurant == true;
+      final outletName = _primaryOutlet?.name ?? (_order?.shopName ?? 'FastKirana Store');
+      final outletAddress = _primaryOutlet?.address ?? 'Pickup Location';
+
       markers.add(
         Marker(
           markerId: const MarkerId('store'),
           position: _storePosition!,
           anchor: const Offset(0.5, 0.8),
-          icon: _storeMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          icon: isRest
+              ? (_restaurantMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet))
+              : (_storeMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)),
           infoWindow: InfoWindow(
-            title: _order?.shopName ?? 'FastKirana Store',
-            snippet: 'Store / Pickup Location',
+            title: '${isRest ? "🍽️" : "🏪"} $outletName',
+            snippet: outletAddress,
           ),
         ),
       );
@@ -678,6 +742,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     try {
       final points = <LatLng>[];
       if (_storePosition != null) points.add(_storePosition!);
+      if (_restaurantPosition != null) points.add(_restaurantPosition!);
       if (_customerPosition != null) points.add(_customerPosition!);
       if (_riderPosition != null) points.add(_riderPosition!);
 
@@ -1197,86 +1262,177 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
               ),
             ],
           ),
-          child: Row(
-            children: [
-              // 1. Store
-              Expanded(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+          child: _order?.isCombined == true
+              ? Row(
                   children: [
-                    const Text('🏪', style: TextStyle(fontSize: 14)),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        shopName,
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF15803D),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    // 1. Dark Store
+                    Expanded(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('🛒', style: TextStyle(fontSize: 13)),
+                          const SizedBox(width: 3),
+                          Flexible(
+                            child: Text(
+                              'Darkstore',
+                              style: GoogleFonts.inter(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF15803D),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_rounded, size: 11, color: Color(0xFF94A3B8)),
+                    // 2. Restaurant
+                    Expanded(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('🍽️', style: TextStyle(fontSize: 13)),
+                          const SizedBox(width: 3),
+                          Flexible(
+                            child: Text(
+                              _restaurantOutlet?.name ?? 'Kitchen',
+                              style: GoogleFonts.inter(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF7C3AED),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_rounded, size: 11, color: Color(0xFF94A3B8)),
+                    // 3. Rider
+                    Expanded(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('🛵', style: TextStyle(fontSize: 13)),
+                          const SizedBox(width: 3),
+                          Flexible(
+                            child: Text(
+                              '1 Rider',
+                              style: GoogleFonts.inter(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFFEA580C),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_rounded, size: 11, color: Color(0xFF94A3B8)),
+                    // 4. Home
+                    Expanded(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('🏠', style: TextStyle(fontSize: 13)),
+                          const SizedBox(width: 3),
+                          Flexible(
+                            child: Text(
+                              'Home',
+                              style: GoogleFonts.inter(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFFDC2626),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Icon(Icons.arrow_forward_rounded, size: 13, color: Color(0xFF94A3B8)),
-              ),
-              // 2. Rider
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('🛵', style: TextStyle(fontSize: 14)),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        'On the Way',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFFEA580C),
+                )
+              : Builder(
+                  builder: (context) {
+                    final rawName = _primaryOutlet?.name ?? shopName;
+                    String displayStoreName = rawName;
+                    final lower = displayStoreName.toLowerCase();
+                    if (lower.contains('dark store') || lower.contains('fastkirana')) {
+                      displayStoreName = 'FastKirana';
+                    } else if (lower.contains('a.s') || lower.contains('as ')) {
+                      displayStoreName = 'A.S. Restaurant';
+                    } else if (lower.contains('wedson')) {
+                      displayStoreName = 'Wedson';
+                    } else if (lower.contains('bal udyan') || lower.contains('baludyan')) {
+                      displayStoreName = 'Bal Udyan';
+                    }
+
+                    final isRest = _primaryOutlet?.isRestaurant == true;
+
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // 1. Store / Restaurant
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(isRest ? '🍽️' : '🏪', style: const TextStyle(fontSize: 13)),
+                            const SizedBox(width: 4),
+                            Text(
+                              displayStoreName,
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: isRest ? const Color(0xFF7C3AED) : const Color(0xFF15803D),
+                              ),
+                            ),
+                          ],
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Icon(Icons.arrow_forward_rounded, size: 13, color: Color(0xFF94A3B8)),
-              ),
-              // 3. You
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('🏠', style: TextStyle(fontSize: 14)),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        'Your Home',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFFDC2626),
+                        const Icon(Icons.arrow_forward_rounded, size: 12, color: Color(0xFF94A3B8)),
+                        // 2. Rider
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('🛵', style: TextStyle(fontSize: 13)),
+                            const SizedBox(width: 4),
+                            Text(
+                              'On the Way',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFFEA580C),
+                              ),
+                            ),
+                          ],
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
+                        const Icon(Icons.arrow_forward_rounded, size: 12, color: Color(0xFF94A3B8)),
+                        // 3. You
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('🏠', style: TextStyle(fontSize: 13)),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Your Home',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFFDC2626),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
                 ),
-              ),
-            ],
-          ),
         ),
       ],
     );
@@ -1782,7 +1938,99 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
+
+          // Combined Order Multi-Outlet Live Breakdown Strip
+          if (_order?.isCombined == true && _order?.subOrders != null && _order!.subOrders!.length > 1) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFAF5FF),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE9D5FF)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.auto_awesome, size: 14, color: Color(0xFF7C3AED)),
+                      const SizedBox(width: 6),
+                      Text(
+                        'COMBINED ORDER FULFILLMENT',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF7C3AED),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  ..._order!.subOrders!.map((sub) {
+                    final isRest = sub.restaurantId != null || (sub.readableId != null && sub.readableId!.toUpperCase().endsWith('-R'));
+                    final subOutletName = isRest ? (_restaurantOutlet?.name ?? 'Restaurant') : 'Dark Store (Grocery)';
+                    final subIcon = isRest ? '🍽️' : '🛒';
+                    final subStatusText = sub.status.displayName;
+                    final isSubDone = sub.status == OrderStatus.packed || sub.status == OrderStatus.shipped || sub.status == OrderStatus.delivered;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFF3E8FF)),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(subIcon, style: const TextStyle(fontSize: 16)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  subOutletName,
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: const Color(0xFF1E1B4B)),
+                                ),
+                                Text(
+                                  isSubDone ? 'Ready for pickup' : 'Preparing items...',
+                                  style: GoogleFonts.inter(fontSize: 10.5, color: const Color(0xFF6B7280)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: isSubDone ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              subStatusText.toUpperCase(),
+                              style: GoogleFonts.inter(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w900,
+                                color: isSubDone ? const Color(0xFF15803D) : const Color(0xFFB45309),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 4),
+                  Text(
+                    '🛵 1 delivery partner is collecting both outlet packages for a single doorstep drop.',
+                    style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w600, color: const Color(0xFF6B21A8)),
+                  ),
+                ],
+              ),
+            ),
+          ],
           ...steps.asMap().entries.map((entry) {
             final idx = entry.key;
             final item = entry.value;
@@ -1957,7 +2205,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     // Build full address from individual parts if formattedAddress is missing
     String fullAddress = addr?.formattedAddress ?? '';
     if (fullAddress.isEmpty || fullAddress == 'Ghatampur Zone') {
-      if (raw is Map) {
+      if (raw != null) {
         final parts = [
           raw['houseNo'],
           raw['street'],

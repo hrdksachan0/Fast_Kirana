@@ -25,28 +25,22 @@ async function main() {
   try {
     await client.connect();
     
-    // Fetch latest order details
-    const res = await client.query('SELECT * FROM orders ORDER BY "createdAt" DESC LIMIT 1');
-    if (res.rows.length === 0) {
-      console.log('{"error": "No orders found"}');
-      return;
-    }
-    
-    const order = res.rows[0];
-    
-    // Fetch items
-    const itemsRes = await client.query('SELECT * FROM "order_items" WHERE "orderId" = $1', [order.id]);
-    order.items = itemsRes.rows;
-    
-    // Fetch address
-    const addressRes = await client.query('SELECT * FROM addresses WHERE id = $1', [order.addressId]);
-    order.address = addressRes.rows[0];
-
-    // Fetch user
-    const userRes = await client.query('SELECT name, email, phone FROM users WHERE id = $1', [order.userId]);
-    order.user = userRes.rows[0];
-    
-    console.log(JSON.stringify(order, null, 2));
+    // Add SELECT policy for order_items if missing
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_policies 
+          WHERE tablename = 'order_items' AND policyname = 'Allow read order_items'
+        ) THEN
+          CREATE POLICY "Allow read order_items" ON public.order_items
+            FOR SELECT TO anon, authenticated
+            USING (true);
+        END IF;
+      END
+      $$;
+    `);
+    console.log('Policy applied successfully.');
   } catch (err) {
     console.error('Error:', err);
   } finally {

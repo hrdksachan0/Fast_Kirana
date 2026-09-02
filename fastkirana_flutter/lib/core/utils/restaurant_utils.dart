@@ -129,6 +129,170 @@ String getOutletName(Product product) {
   return 'FastKirana Store';
 }
 
+/// Model representing an exact physical outlet/store location in Ghatampur
+class OutletLocation {
+  final String id;
+  final String name;
+  final double lat;
+  final double lng;
+  final String address;
+  final bool isRestaurant;
+
+  const OutletLocation({
+    required this.id,
+    required this.name,
+    required this.lat,
+    required this.lng,
+    required this.address,
+    required this.isRestaurant,
+  });
+}
+
+// ─── Exact Physical GPS Coordinates for Ghatampur Outlets ────────────────────
+const OutletLocation darkstoreLocation = OutletLocation(
+  id: 'darkstore-ghatampur',
+  name: 'FastKirana Dark Store',
+  lat: 26.1534185,
+  lng: 80.1714024,
+  address: 'Ghatampur Market, Kanpur Nagar, UP 209206',
+  isRestaurant: false,
+);
+
+const OutletLocation wedsonLocation = OutletLocation(
+  id: outletWedsonId,
+  name: 'Wedson Restaurant',
+  lat: 26.147862,
+  lng: 80.172482,
+  address: 'Hamirpur Road, Ghatampur, UP 209206',
+  isRestaurant: true,
+);
+
+const OutletLocation asRestaurantLocation = OutletLocation(
+  id: outletAsRestaurantId,
+  name: 'A.S. Restaurant',
+  lat: 26.1494833,
+  lng: 80.1672394,
+  address: 'Nagar Palika, Ghatampur, UP 209206',
+  isRestaurant: true,
+);
+
+const OutletLocation balUdyanLocation = OutletLocation(
+  id: outletBalUdyanId,
+  name: 'Bal Udyan Restaurant',
+  lat: 26.1468042,
+  lng: 80.1773979,
+  address: 'Near Tehsil / Railway Fatak, Birshibpur, Ghatampur, UP 209206',
+  isRestaurant: true,
+);
+
+/// Resolves the exact physical store/restaurant location dynamically
+OutletLocation getOutletLocation({
+  String? restaurantId,
+  String? shopName,
+  String? orderType,
+  List<dynamic>? items,
+  dynamic rawOrder,
+}) {
+  // 1. If order has sub-orders, check for restaurant suborder
+  if (rawOrder is Map && rawOrder['subOrders'] is List) {
+    final subOrders = rawOrder['subOrders'] as List;
+    final restSub = subOrders.firstWhere(
+      (s) => s is Map && (s['type'] == 'RESTAURANT' || s['restaurantId'] != null || (s['readableId']?.toString().toUpperCase().endsWith('-R') ?? false)),
+      orElse: () => null,
+    );
+    if (restSub != null) {
+      final subRestId = restSub['restaurantId']?.toString();
+      final subShopName = (restSub['shopName'] ?? restSub['restaurantName'])?.toString();
+      final subItems = restSub['items'] as List<dynamic>?;
+      return getOutletLocation(restaurantId: subRestId, shopName: subShopName, items: subItems);
+    }
+  }
+
+  // 2. Extract from rawOrder if passed
+  if (rawOrder is Map) {
+    restaurantId ??= rawOrder['restaurantId']?.toString();
+    shopName ??= (rawOrder['restaurantName'] ?? rawOrder['shopName'])?.toString();
+    orderType ??= rawOrder['orderType']?.toString();
+    if (items == null && rawOrder['items'] is List) {
+      items = rawOrder['items'] as List<dynamic>;
+    }
+  }
+
+  final rId = (restaurantId ?? '').toLowerCase().trim();
+  final sName = (shopName ?? '').toLowerCase().trim();
+
+  // 3. Direct Bal Udyan Restaurant Checks
+  if (rId == outletBalUdyanId ||
+      rId == 'bal-udyan-restaurant' ||
+      rId == 'bal-udyan' ||
+      rId == 'baludyan' ||
+      sName.contains('bal udyan') ||
+      sName.contains('baludyan') ||
+      sName.contains('bal udayan') ||
+      sName.contains('birshibpur')) {
+    return balUdyanLocation;
+  }
+
+  // 4. Direct A.S. Restaurant Checks
+  if (rId == outletAsRestaurantId ||
+      rId == 'as-restaurant' ||
+      rId == 'as-cafe' ||
+      rId == 'as' ||
+      sName.contains('a.s.') ||
+      sName.contains('a.s') ||
+      sName.contains('as restaurant') ||
+      sName.contains('as cafe') ||
+      sName.contains('nagar palika')) {
+    return asRestaurantLocation;
+  }
+
+  // 5. Direct Wedson Restaurant Checks
+  if (rId == outletWedsonId ||
+      rId == 'wedson' ||
+      rId == 'wedson-restaurant' ||
+      sName.contains('wedson') ||
+      sName.contains('hamirpur road')) {
+    return wedsonLocation;
+  }
+
+  // 6. Inspect Item Names / Product Tags if available
+  if (items != null && items.isNotEmpty) {
+    for (final it in items) {
+      final itemName = (it is Map ? it['name'] : (it.name ?? '')).toString().toLowerCase();
+      final itemRestId = (it is Map ? it['restaurantId'] : null)?.toString().toLowerCase().trim();
+
+      if (itemRestId == outletBalUdyanId || itemName.contains('bal udyan')) {
+        return balUdyanLocation;
+      }
+      if (itemRestId == outletWedsonId || itemName.contains('wedson')) {
+        return wedsonLocation;
+      }
+      if (itemRestId == outletAsRestaurantId ||
+          itemName.contains('a.s') ||
+          itemName.contains('pizza') ||
+          itemName.contains('dal fry') ||
+          itemName.contains('naan') ||
+          itemName.contains('tandoori') ||
+          itemName.contains('burger') ||
+          itemName.contains('chowmein') ||
+          itemName.contains('paneer')) {
+        return asRestaurantLocation;
+      }
+    }
+  }
+
+  // 7. Check if order explicitly mentions restaurant
+  if (sName.contains('restaurant') ||
+      sName.contains('cafe') ||
+      sName.contains('kitchen') ||
+      (orderType != null && orderType.toUpperCase() == 'RESTAURANT')) {
+    return asRestaurantLocation;
+  }
+
+  // 8. Default to FastKirana Darkstore for Grocery orders
+  return darkstoreLocation;
+}
+
 /// Extension on Product for clean outlet & restaurant queries
 extension ProductRestaurantExtension on Product {
   bool get isRestaurantProduct => isCafeProduct(this);

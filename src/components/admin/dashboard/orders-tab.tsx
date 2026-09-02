@@ -259,10 +259,26 @@ export function OrdersTab({
         })
       })
 
+      const targetItems = (targetOrder.restaurantItems && targetOrder.restaurantItems.length > 0)
+        ? targetOrder.restaurantItems
+        : (targetOrder.subOrders?.find((s: any) => s.type === 'RESTAURANT')?.items) || targetOrder.items || []
+      const customerName = targetOrder.userName || targetOrder.user?.name || targetOrder.customerName || 'Customer'
+
+      const kotPayload = {
+        orderId: targetOrder.id,
+        readableId: targetOrder.readableId,
+        customerName,
+        items: targetItems,
+        deliveryMethod: targetOrder.deliveryMethod || 'DELIVERY',
+        notes: targetOrder.notes || null,
+        shopName: targetOrder.shopName || targetOrder.restaurantName || 'Kitchen',
+        printedAt: new Date().toISOString(),
+      }
+
       await channel.send({
         type: 'broadcast',
         event: 'reprint-kot',
-        payload: { orderId: targetOrder.id, readableId: targetOrder.readableId }
+        payload: kotPayload
       })
 
       toast.dismiss(toastId)
@@ -278,10 +294,24 @@ export function OrdersTab({
 
       // Fallback: Call server API to trigger KOT print via server-side broadcast
       try {
+        const targetItems = (targetOrder.restaurantItems && targetOrder.restaurantItems.length > 0)
+          ? targetOrder.restaurantItems
+          : (targetOrder.subOrders?.find((s: any) => s.type === 'RESTAURANT')?.items) || targetOrder.items || []
+        const customerName = targetOrder.userName || targetOrder.user?.name || targetOrder.customerName || 'Customer'
+
         const res = await fetch('/api/kot-broadcast', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId: targetOrder.id, readableId: targetOrder.readableId }),
+          body: JSON.stringify({
+            orderId: targetOrder.id,
+            readableId: targetOrder.readableId,
+            customerName,
+            items: targetItems,
+            deliveryMethod: targetOrder.deliveryMethod || 'DELIVERY',
+            notes: targetOrder.notes || null,
+            shopName: targetOrder.shopName || targetOrder.restaurantName || 'Kitchen',
+            printedAt: new Date().toISOString(),
+          }),
         })
         if (res.ok) {
           toast.dismiss(toastId)
@@ -563,7 +593,6 @@ export function OrdersTab({
               {[
                 { key: 'ALL', label: '🏪 All Stores' },
                 { key: 'GROCERY', label: '🛒 Grocery' },
-                { key: 'CAFE', label: '☕ Cafe' },
                 { key: 'RESTAURANT', label: '🍽️ Restaurant' },
               ].map((s) => (
                 <button
@@ -670,11 +699,11 @@ export function OrdersTab({
                           <div className="mt-1 flex items-center gap-1 flex-wrap">
                             {o.isCombined ? (
                               <>
-                                <span className="px-1.5 py-0.5 rounded-md bg-blue-500/15 text-blue-700 dark:text-blue-300 font-black text-[8.5px] border border-blue-500/20">
-                                  🛒 KIRANA (₹{o.subOrders?.[0]?.total || 0})
+                                <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-black text-[8.5px] border border-emerald-500/20">
+                                  🛒 DARK STORE (₹{o.subOrders?.[0]?.total || 0})
                                 </span>
-                                <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[8.5px] border border-rose-500/20 flex items-center gap-1">
-                                  🥘 {(o.restaurantName || o.subOrders?.[1]?.shopName || 'KITCHEN').toUpperCase()} (₹{o.subOrders?.[1]?.total || 0})
+                                <span className="px-1.5 py-0.5 rounded-md bg-purple-500/15 text-purple-700 dark:text-purple-300 font-black text-[8.5px] border border-purple-500/20 flex items-center gap-1">
+                                  🍽️ {(o.restaurantName || o.subOrders?.[1]?.shopName || 'WEDSON RESTAURANT').toUpperCase()} (₹{o.subOrders?.[1]?.total || 0})
                                   {(printedKotIds.has(o.id) || o.subOrders?.some((s: any) => printedKotIds.has(s.id))) ? (
                                     <span className="text-emerald-600 dark:text-emerald-400 font-black" title="KOT Printed ✓">🖨️✓</span>
                                   ) : (
@@ -685,30 +714,24 @@ export function OrdersTab({
                             ) : (
                               (() => {
                                 const displayName = ((o as any).restaurantName || o.shopName || '').trim()
-                                const isDarkStoreOrGrocery = storeType === 'GROCERY' || isGroceryOrder(o) || !o.restaurantId || displayName.toLowerCase().includes('dark') || displayName.toLowerCase().includes('grocery')
+                                const isRestaurant = o.restaurantId || (displayName && (displayName.toLowerCase().includes('restaurant') || displayName.toLowerCase().includes('wedson') || displayName.toLowerCase().includes('as ') || displayName.toLowerCase().includes('bal'))) || o.readableId?.endsWith('-R')
                                 const isKotPrinted = printedKotIds.has(o.id)
 
-                                if (isDarkStoreOrGrocery) {
-                                  const storeLabel = (displayName && !displayName.toLowerCase().includes('grocery mart') && displayName !== 'FastKirana Grocery') 
-                                    ? displayName 
-                                    : 'FASTKIRANA DARK STORE'
+                                if (!isRestaurant) {
                                   return (
-                                    <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30 truncate max-w-[140px]" title={storeLabel}>
-                                      🥘 {storeLabel.toUpperCase()}
+                                    <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-black text-[9px] border border-emerald-500/30 truncate max-w-[150px]" title="FastKirana Dark Store">
+                                      🛒 FASTKIRANA DARK STORE
                                     </span>
                                   )
                                 }
-                                if (storeType === 'CAFE') {
-                                  return (
-                                    <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 font-black text-[9px] border border-amber-500/30 truncate max-w-[160px] inline-flex items-center gap-1" title={displayName || 'Cafe'}>
-                                      ☕ {displayName ? displayName.toUpperCase() : 'CAFE'}
-                                      {isKotPrinted ? <span className="text-emerald-600 dark:text-emerald-400 font-black">🖨️✓</span> : <span className="text-amber-600 font-black">🖨️⏳</span>}
-                                    </span>
-                                  )
-                                }
+
+                                const restLabel = displayName && !displayName.toLowerCase().includes('dark') && !displayName.toLowerCase().includes('grocery')
+                                  ? displayName
+                                  : 'WEDSON RESTAURANT'
+
                                 return (
-                                  <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 font-black text-[9px] border border-rose-500/30 truncate max-w-[160px] inline-flex items-center gap-1" title={displayName || 'Restaurant'}>
-                                    🥘 {displayName ? displayName.toUpperCase() : 'RESTAURANT'}
+                                  <span className="px-1.5 py-0.5 rounded-md bg-purple-500/15 text-purple-700 dark:text-purple-300 font-black text-[9px] border border-purple-500/30 truncate max-w-[170px] inline-flex items-center gap-1" title={restLabel}>
+                                    🍽️ {restLabel.toUpperCase()}
                                     {isKotPrinted ? <span className="text-emerald-600 dark:text-emerald-400 font-black">🖨️✓</span> : <span className="text-amber-600 font-black">🖨️⏳</span>}
                                   </span>
                                 )

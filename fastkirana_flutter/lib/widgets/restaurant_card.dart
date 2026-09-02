@@ -304,9 +304,9 @@ class _RestaurantCardState extends State<RestaurantCard> {
                                 const SizedBox(width: 3),
                                 Expanded(
                                   child: Text(
-                                    r.address != null && r.address!.isNotEmpty
+                                    (r.address != null && r.address!.isNotEmpty)
                                         ? r.address!
-                                        : 'Nagar Palika Ghatampur',
+                                        : 'Ghatampur, UP',
                                     style: GoogleFonts.inter(
                                       fontSize: 10.5,
                                       fontWeight: FontWeight.w500,

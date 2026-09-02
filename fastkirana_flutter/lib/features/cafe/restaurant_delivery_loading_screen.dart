@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -125,7 +124,7 @@ class _RestaurantDeliveryLoadingScreenState extends State<RestaurantDeliveryLoad
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 36),
                         child: Text(
-                          'Cravings sorted,\ndelicious food delivered!',
+                          'Hot & fresh food from\nnearby restaurants delivered!',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 22,
@@ -154,7 +153,7 @@ class _RestaurantDeliveryLoadingScreenState extends State<RestaurantDeliveryLoad
                           ),
                           const SizedBox(width: 7),
                           Text(
-                            'FASTKIRANA FOOD EXPRESS',
+                            'NEARBY RESTAURANTS',
                             style: GoogleFonts.inter(
                               fontSize: 10,
                               fontWeight: FontWeight.w800,

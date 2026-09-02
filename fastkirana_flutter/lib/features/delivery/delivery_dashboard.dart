@@ -12,14 +12,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:dio/dio.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../core/network/api_client.dart';
 import '../../core/config/app_config.dart';
 import '../../core/services/rider_location_service.dart';
 import '../../core/services/supabase_service.dart';
+import '../../core/utils/restaurant_utils.dart';
 import '../../widgets/brand_logo.dart';
 import '../../providers/auth_provider.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
+import 'widgets/connectivity_banner.dart';
+import 'widgets/delivery_header.dart';
+import 'widgets/delivery_theme.dart';
 
 class DeliveryDashboard extends ConsumerStatefulWidget {
   const DeliveryDashboard({super.key});
@@ -38,9 +42,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
   List<Map<String, dynamic>> _orders = [];
   Map<String, dynamic>? _walletInfo;
   Timer? _autoRefreshTimer;
-  Timer? _clockTimer;
-  int _refreshCountdown = 38;
-  String _currentTime = '';
+  int _refreshCountdown = 30;
   String? _updatingOrderId;
   String? _currentUserId;
   String _userName = 'Partner';
@@ -70,30 +72,23 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
   static const Color slateMuted = Color(0xFF64748B);
   static const Color slateBorder = Color(0xFFE2E8F0);
 
+  bool _isFetchingOrders = false;
+
   @override
   void initState() {
     super.initState();
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
-    _updateClock();
-    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) => _updateClock());
 
     _loadUserInfo();
     _initConnectivityAndOfflineQueue();
     _fetchOrders();
     _fetchWallet();
 
-    // 30-second periodic auto-refresh countdown
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() {
-        if (_refreshCountdown <= 1) {
-          _refreshCountdown = 30;
-          _fetchOrders(silent: true);
-          _fetchWallet();
-        } else {
-          _refreshCountdown--;
-        }
-      });
+    // 30-second calm background refresh (without 1-second full-screen rebuilds)
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!mounted || _isFetchingOrders) return;
+      _fetchOrders(silent: true);
+      _fetchWallet();
     });
   }
 
@@ -278,26 +273,10 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     await prefs.setBool('rider_dark_mode', updated);
   }
 
-  void _updateClock() {
-    if (!mounted) return;
-    final now = DateTime.now();
-    setState(() {
-      _currentTime = DateFormat('hh:mm:ss a').format(now);
-    });
-  }
-
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
-  }
-
   @override
   void dispose() {
     _connectivitySubscription?.cancel();
     _autoRefreshTimer?.cancel();
-    _clockTimer?.cancel();
     _confettiController.dispose();
     _audioPlayer.dispose();
     super.dispose();
@@ -366,6 +345,9 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
   /// Fetch 100% Real Live Orders from Database
   Future<void> _fetchOrders({bool silent = false}) async {
+    if (_isFetchingOrders) return;
+    _isFetchingOrders = true;
+
     if (!silent) setState(() => _isLoading = true);
     else setState(() => _isRefreshing = true);
 
@@ -400,6 +382,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           _checkAndTriggerNewOrderAlert(merged);
           _manageGpsTrackingLifecycle(merged);
           _calculateWalletFromOrders(parsed); // wallet uses un-merged for accurate per-order COD total
+          _isFetchingOrders = false;
           return;
         }
       }
@@ -429,8 +412,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       );
 
       if (response.statusCode == 200 && response.data != null) {
-        final List<dynamic> raw = response.data is List ? response.data : (response.data['orders'] ?? []);
-        final parsed = raw
+        final List<dynamic> list = response.data is List ? response.data : (response.data['orders'] ?? []);
+        final parsed = list
             .map((e) => Map<String, dynamic>.from(e))
             .where((o) => !_isSelfPickupOrder(o))
             .toList();
@@ -451,6 +434,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     } catch (e) {
       debugPrint('[DeliveryDashboard] REST fetch error: $e');
     } finally {
+      _isFetchingOrders = false;
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -768,9 +752,18 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     }
   }
 
-  void _openGoogleMapsNavigation(double lat, double lng, String label) async {
-    final uri = Uri.parse('google.navigation:q=$lat,$lng&mode=d');
-    final fallbackUri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
+  void _openGoogleMapsNavigation(double lat, double lng, String label, {String? address}) async {
+    Uri uri;
+    Uri fallbackUri;
+
+    if (lat != 0.0 && lng != 0.0 && lat >= 20.0) {
+      uri = Uri.parse('google.navigation:q=$lat,$lng&mode=d');
+      fallbackUri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
+    } else {
+      final query = Uri.encodeComponent('${address?.isNotEmpty == true ? address : label}, Ghatampur, UP');
+      uri = Uri.parse('google.navigation:q=$query&mode=d');
+      fallbackUri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$query');
+    }
 
     try {
       if (await canLaunchUrl(uri)) {
@@ -973,412 +966,60 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       child: Scaffold(
         backgroundColor: bgMain,
         body: Stack(
-        children: [
-          Column(
-            children: [
-              // 🔴 Realtime Offline Alert Banner (Network Drop Resilience)
-              if (_isDeviceOffline)
-                SafeArea(
-                  bottom: false,
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
-                    decoration: const BoxDecoration(color: Color(0xFFDC2626)),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 14),
-                        const SizedBox(width: 6),
-                        Text(
-                          'No Internet • Offline Mode (Actions will auto-sync)',
-                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white),
-                        ),
-                      ],
-                    ),
+          children: [
+            Column(
+              children: [
+                if (_isDeviceOffline)
+                  SafeArea(
+                    bottom: false,
+                    child: const ConnectivityBanner(),
                   ),
+
+                DeliveryHeader(
+                  isOnline: _isOnline,
+                  isDarkMode: _isDarkMode,
+                  userName: _userName,
+                  refreshCountdown: _refreshCountdown,
+                  activeTab: _activeTab,
+                  onBack: _handleBackPress,
+                  onToggleOnline: () {
+                    setState(() => _isOnline = !_isOnline);
+                    if (!_isOnline) {
+                      _locationService.stopTracking();
+                    } else {
+                      _manageGpsTrackingLifecycle(_orders);
+                    }
+                  },
+                  onToggleDarkMode: _toggleDarkMode,
+                  onRefresh: () => _fetchOrders(silent: true),
+                  onTabChanged: (index) => setState(() => _activeTab = index),
                 ),
 
-              // 2. Emerald Green Partner Header Container (Full bleed SafeArea)
-              _buildPartnerHeader(),
-
-              // 3. Tab Body
-              Expanded(
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator(color: brandGreen))
-                    : IndexedStack(
-                        index: _activeTab,
-                        children: [
-                          // Tab 0: Deliveries
-                          _buildDeliveriesTab(activeDeliveries, pendingPickups),
-
-                          // Tab 1: Cash Wallet
-                          _buildWalletTab(),
-
-                          // Tab 2: History
-                          _buildHistoryTab(completedToday),
-                        ],
-                      ),
-              ),
-            ],
-          ),
-
-          // Confetti overlay on delivery completion
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConfettiWidget(
-              confettiController: _confettiController,
-              blastDirectionality: BlastDirectionality.explosive,
-              shouldLoop: false,
-              colors: const [Color(0xFF00A344), Color(0xFFE20A22), Color(0xFF2563EB), Color(0xFFF59E0B)],
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-  }
-
-  /// 2. Emerald Green Partner Header Container
-  Widget _buildPartnerHeader() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF00965E), Color(0xFF007A48), Color(0xFF045D38)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-          child: Column(
-            children: [
-              // Row 1: Status Bar (Back Button + Online pill + Clock pill + Dark Mode + Refresh button)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Back Button
-                  Bounceable(
-                    onTap: _handleBackPress,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                      ),
-                      child: const Icon(Icons.arrow_back_ios_new_rounded, size: 14, color: Colors.white),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Online Pill
-                  Bounceable(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      setState(() => _isOnline = !_isOnline);
-                      if (!_isOnline) {
-                        _locationService.stopTracking();
-                      } else {
-                        _manageGpsTrackingLifecycle(_orders);
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 7,
-                            height: 7,
-                            decoration: BoxDecoration(
-                              color: _isOnline ? const Color(0xFF4ADE80) : const Color(0xFFF87171),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: _isOnline ? const Color(0xFF4ADE80) : const Color(0xFFF87171),
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            _isOnline ? 'Online' : 'Offline',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const Spacer(),
-
-                  // Live Clock Pill
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.access_time_rounded, size: 12, color: Colors.white),
-                        const SizedBox(width: 4),
-                        Text(
-                          _currentTime.isNotEmpty ? _currentTime : '12:00:00 PM',
-                          style: GoogleFonts.robotoMono(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Dark Mode Theme Toggle Button (Battery Saver)
-                  Bounceable(
-                    onTap: _toggleDarkMode,
-                    child: Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                      ),
-                      child: Icon(
-                        _isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-                        size: 15,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Circular Refresh Button
-                  Bounceable(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      _fetchOrders();
-                      _fetchWallet();
-                    },
-                    child: Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                      ),
-                      child: Center(
-                        child: _isRefreshing
-                            ? const SizedBox(
-                                width: 12,
-                                height: 12,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              )
-                            : const Icon(Icons.refresh_rounded, size: 15, color: Colors.white),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Row 2: Partner Profile & Greeting
-              Row(
-                children: [
-                  // Avatar
-                  Stack(
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.22),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 1.5),
-                        ),
-                        child: Center(
-                          child: Text(
-                            _userName.isNotEmpty ? _userName[0].toUpperCase() : 'P',
-                            style: GoogleFonts.inter(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF10B981),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.auto_awesome, color: Colors.white, size: 8),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${_getGreeting().toUpperCase()} · DELIVERY PARTNER',
-                          style: GoogleFonts.inter(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white.withValues(alpha: 0.82),
-                            letterSpacing: 0.4,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator(color: Color(0xFF10B981)))
+                      : IndexedStack(
+                          index: _activeTab,
                           children: [
-                            Flexible(
-                              child: Text(
-                                _userName,
-                                style: GoogleFonts.inter(
-                                  fontSize: 16.5,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                  letterSpacing: -0.3,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 5),
-                            const Text('👋', style: TextStyle(fontSize: 14)),
+                            _buildDeliveriesTab(activeDeliveries, pendingPickups),
+                            _buildWalletTab(),
+                            _buildHistoryTab(completedToday),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Sync Indicator (Sleek Compact Pill)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 5,
-                          height: 5,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF34D399),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          '${_refreshCountdown}s',
-                          style: GoogleFonts.robotoMono(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
+                ),
+              ],
+            ),
 
-              // Row 3: Segmented Tab Bar (Deliveries | Cash Wallet | History)
-              Container(
-                padding: const EdgeInsets.all(3.5),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF02462A),
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: Row(
-                  children: [
-                    _buildSegmentTab(index: 0, label: 'Deliveries', icon: Icons.local_shipping_rounded),
-                    _buildSegmentTab(index: 1, label: 'Cash Wallet', icon: Icons.account_balance_wallet_rounded),
-                    _buildSegmentTab(index: 2, label: 'History', icon: Icons.check_circle_outline_rounded),
-                  ],
-                ),
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirectionality: BlastDirectionality.explosive,
+                shouldLoop: false,
+                colors: const [Color(0xFF00A344), Color(0xFFE20A22), Color(0xFF2563EB), Color(0xFFF59E0B)],
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSegmentTab({required int index, required String label, required IconData icon}) {
-    final isSelected = _activeTab == index;
-    return Expanded(
-      child: Bounceable(
-        onTap: () {
-          HapticFeedback.lightImpact();
-          setState(() => _activeTab = index);
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.12),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 14,
-                color: isSelected ? const Color(0xFF007A48) : Colors.white.withValues(alpha: 0.85),
-              ),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w800,
-                  color: isSelected ? const Color(0xFF007A48) : Colors.white.withValues(alpha: 0.9),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1550,7 +1191,13 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     final orderId = order['id']?.toString() ?? '';
     final orderNum = order['readableId'] ?? orderId.substring(0, math.min(8, orderId.length));
     final isFood = (order['orderType'] == 'RESTAURANT') || (order['restaurantId'] != null) || orderNum.contains('-R');
-    final shopName = order['shopName'] ?? (isFood ? 'A.S. Restaurant' : 'FastKirana Dark Store');
+    final outlet = getOutletLocation(
+      restaurantId: order['restaurantId']?.toString(),
+      shopName: order['shopName']?.toString(),
+      orderType: order['orderType']?.toString(),
+      rawOrder: order,
+    );
+    final shopName = outlet.name;
     final status = (order['status'] ?? 'CONFIRMED').toString().toUpperCase();
     final customer = order['user'] is Map ? order['user'] : {'name': 'Customer', 'phone': null};
     final address = order['address'] is Map ? order['address'] : null;
@@ -1569,9 +1216,37 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         : (customer['phone']?.toString().trim() ?? '');
     final avatarLetter = customerName.isNotEmpty ? customerName[0].toUpperCase() : 'C';
 
-    String deliverAddress = address?['formattedAddress'] ??
-        '${address?['houseNo'] ?? ''} ${address?['street'] ?? ''} ${address?['area'] ?? 'Jawahar Nagar'}'.trim();
-    if (deliverAddress.isEmpty) deliverAddress = 'Jawahar Nagar, Ghatampur';
+    DateTime orderDate = DateTime.now();
+    if (order['createdAt'] != null) {
+      try {
+        String s = order['createdAt'].toString().trim();
+        if (!s.endsWith('Z') && !s.contains('+') && !RegExp(r'-\d{2}:\d{2}$').hasMatch(s)) {
+          s = '${s.replaceAll(' ', 'T')}Z';
+        }
+        orderDate = DateTime.parse(s).toLocal();
+      } catch (_) {}
+    }
+    final orderTimeStr = DateFormat('hh:mm a').format(orderDate);
+
+    String deliverAddress = '';
+    if (address != null) {
+      if (address['formattedAddress'] != null && address['formattedAddress'].toString().trim().isNotEmpty) {
+        deliverAddress = address['formattedAddress'].toString().trim();
+      } else {
+        final parts = [
+          address['houseNo'],
+          address['street'],
+          address['area'],
+          address['landmark'],
+          address['city'],
+          address['pincode'],
+        ].where((p) => p != null && p.toString().trim().isNotEmpty && p.toString() != 'null')
+         .map((p) => p.toString().trim())
+         .toList();
+        deliverAddress = parts.isNotEmpty ? parts.join(', ') : '';
+      }
+    }
+    if (deliverAddress.isEmpty) deliverAddress = 'Ghatampur, Kanpur Nagar';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -1674,18 +1349,78 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                     ),
                   ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  shopName,
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: slateMuted,
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: outlet.isRestaurant ? const Color(0xFFFAF5FF) : const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: outlet.isRestaurant ? const Color(0xFFE9D5FF) : const Color(0xFFBBF7D0),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(outlet.isRestaurant ? '🍽️' : '🏪', style: const TextStyle(fontSize: 13)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              outlet.name,
+                              style: GoogleFonts.inter(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                                color: outlet.isRestaurant ? const Color(0xFF6B21A8) : const Color(0xFF166534),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              outlet.address,
+                              style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF64748B)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Bounceable(
+                        onTap: () => _openGoogleMapsNavigation(outlet.lat, outlet.lng, outlet.name),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: outlet.isRestaurant ? const Color(0xFFD8B4FE) : const Color(0xFF86EFAC),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.directions_rounded, size: 12, color: outlet.isRestaurant ? const Color(0xFF7C3AED) : const Color(0xFF15803D)),
+                              const SizedBox(width: 3),
+                              Text(
+                                'Go Store',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: outlet.isRestaurant ? const Color(0xFF7C3AED) : const Color(0xFF15803D),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
 
-                // Customer Info Box
+                // Customer Info Box with Order Received Time
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
@@ -1719,15 +1454,45 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              customerName,
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                color: slateDark,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    customerName,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: slateDark,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEFF6FF),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFFBFDBFE), width: 0.8),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.access_time_rounded, size: 9, color: Color(0xFF2563EB)),
+                                      const SizedBox(width: 2.5),
+                                      Text(
+                                        orderTimeStr,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w800,
+                                          color: const Color(0xFF1D4ED8),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                             if (customerPhone.isNotEmpty)
                               Text(
@@ -1743,22 +1508,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           ],
                         ),
                       ),
-                      // Action buttons: Maps + Phone
-                      Bounceable(
-                        onTap: () => _openGoogleMapsNavigation(lat, lng, customerName),
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Center(
-                            child: Icon(Icons.location_on_outlined, size: 18, color: Color(0xFF15803D)),
-                          ),
-                        ),
-                      ),
                       const SizedBox(width: 8),
+                      // Action button: Direct Call (Google Maps is prominently available below)
                       Bounceable(
                         onTap: () {
                           if (customerPhone.isNotEmpty) {
@@ -1766,11 +1517,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           }
                         },
                         child: Container(
-                          width: 36,
-                          height: 36,
+                          width: 38,
+                          height: 38,
                           decoration: BoxDecoration(
                             color: const Color(0xFFEFF6FF),
                             borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFBFDBFE), width: 0.8),
                           ),
                           child: const Center(
                             child: Icon(Icons.phone_outlined, size: 18, color: Color(0xFF2563EB)),
@@ -1821,6 +1573,46 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                         ],
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // 📍 1-Tap Turn-by-Turn Google Maps Navigation Banner
+                Bounceable(
+                  onTap: () => _openGoogleMapsNavigation(lat, lng, customerName, address: deliverAddress),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF047857), Color(0xFF10B981)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.navigation_rounded, color: Colors.white, size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Navigate in Google Maps ➔',
+                          style: GoogleFonts.inter(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -2104,6 +1896,18 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         : (customer['phone']?.toString().trim() ?? '');
     final avatarLetter = customerName.isNotEmpty ? customerName[0].toUpperCase() : 'C';
 
+    DateTime orderDate = DateTime.now();
+    if (order['createdAt'] != null) {
+      try {
+        String s = order['createdAt'].toString().trim();
+        if (!s.endsWith('Z') && !s.contains('+') && !RegExp(r'-\d{2}:\d{2}$').hasMatch(s)) {
+          s = '${s.replaceAll(' ', 'T')}Z';
+        }
+        orderDate = DateTime.parse(s).toLocal();
+      } catch (_) {}
+    }
+    final orderTimeStr = DateFormat('hh:mm a').format(orderDate);
+
     String deliverAddress = '';
     if (address != null) {
       if (address['formattedAddress'] != null && address['formattedAddress'].toString().trim().isNotEmpty) {
@@ -2180,111 +1984,149 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                 ),
                 const SizedBox(height: 10),
 
-                // Customer details with Navigate & Call Action Buttons
-                Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: const BoxDecoration(color: Color(0xFF3B82F6), shape: BoxShape.circle),
-                      child: Center(
-                        child: Text(avatarLetter,
-                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white)),
+                // Customer details with Order Time & Call Action Button
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFF1F5F9)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: const BoxDecoration(color: Color(0xFF3B82F6), shape: BoxShape.circle),
+                        child: Center(
+                          child: Text(avatarLetter,
+                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white)),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            customerName,
-                            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: slateDark),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 2),
-                          if (customerPhone.isNotEmpty)
-                            Bounceable(
-                              onTap: () {
-                                final cleanPhone = customerPhone.replaceAll(' ', '').trim();
-                                launchUrl(Uri.parse('tel:$cleanPhone'));
-                              },
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.phone_rounded, size: 10, color: Color(0xFF2563EB)),
-                                  const SizedBox(width: 3),
-                                  Expanded(
-                                    child: Text(
-                                      customerPhone.startsWith('+') ? customerPhone : '+91 $customerPhone',
-                                      style: GoogleFonts.robotoMono(
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: const Color(0xFF2563EB),
-                                        decoration: TextDecoration.underline,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    customerName,
+                                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: slateDark),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ],
-                              ),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEFF6FF),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFFBFDBFE), width: 0.8),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.access_time_rounded, size: 9, color: Color(0xFF2563EB)),
+                                      const SizedBox(width: 2.5),
+                                      Text(
+                                        orderTimeStr,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w800,
+                                          color: const Color(0xFF1D4ED8),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    // Action Buttons: Navigate + Call
-                    Bounceable(
-                      onTap: () => _openGoogleMapsNavigation(lat, lng, customerName),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF2563EB),
-                          borderRadius: BorderRadius.circular(9),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.navigation_rounded, size: 11, color: Colors.white),
-                            const SizedBox(width: 3),
-                            Text('Navigate',
-                                style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w800, color: Colors.white)),
+                            const SizedBox(height: 2),
+                            if (customerPhone.isNotEmpty)
+                              Text(
+                                customerPhone.startsWith('+') ? customerPhone : '+91 $customerPhone',
+                                style: GoogleFonts.robotoMono(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: slateMuted,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                           ],
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 5),
-                    Bounceable(
-                      onTap: () {
-                        if (customerPhone.isNotEmpty) {
-                          final cleanPhone = customerPhone.replaceAll(' ', '').trim();
-                          launchUrl(Uri.parse('tel:$cleanPhone'));
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Customer phone number not available')),
-                          );
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFDCFCE7),
-                          borderRadius: BorderRadius.circular(9),
-                          border: Border.all(color: const Color(0xFF86EFAC)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.phone_rounded, size: 11, color: Color(0xFF15803D)),
-                            const SizedBox(width: 3),
-                            Text('Call',
-                                style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w800, color: const Color(0xFF15803D))),
-                          ],
+                      const SizedBox(width: 8),
+                      // Call Button
+                      Bounceable(
+                        onTap: () {
+                          if (customerPhone.isNotEmpty) {
+                            final cleanPhone = customerPhone.replaceAll(' ', '').trim();
+                            launchUrl(Uri.parse('tel:$cleanPhone'));
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Customer phone number not available')),
+                            );
+                          }
+                        },
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFBFDBFE), width: 0.8),
+                          ),
+                          child: const Center(
+                            child: Icon(Icons.phone_outlined, size: 18, color: Color(0xFF2563EB)),
+                          ),
                         ),
                       ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // 📍 1-Tap Turn-by-Turn Google Maps Navigation Banner
+                Bounceable(
+                  onTap: () => _openGoogleMapsNavigation(lat, lng, customerName, address: deliverAddress),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF047857), Color(0xFF10B981)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                  ],
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.navigation_rounded, color: Colors.white, size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Navigate in Google Maps ➔',
+                          style: GoogleFonts.inter(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 8),
 
@@ -2894,7 +2736,25 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
               final userObj = item['user'] is Map ? item['user'] : null;
               final userName = userObj?['name'] ?? item['userName'] ?? 'Customer';
               final addrObj = item['address'] is Map ? item['address'] : null;
-              final addr = addrObj?['formattedAddress'] ?? addrObj?['street'] ?? 'Ghatampur';
+              String addr = '';
+              if (addrObj != null) {
+                if (addrObj['formattedAddress'] != null && addrObj['formattedAddress'].toString().trim().isNotEmpty) {
+                  addr = addrObj['formattedAddress'].toString().trim();
+                } else {
+                  final parts = [
+                    addrObj['houseNo'],
+                    addrObj['street'],
+                    addrObj['area'],
+                    addrObj['landmark'],
+                    addrObj['city'],
+                    addrObj['pincode'],
+                  ].where((p) => p != null && p.toString().trim().isNotEmpty && p.toString() != 'null')
+                   .map((p) => p.toString().trim())
+                   .toList();
+                  addr = parts.isNotEmpty ? parts.join(', ') : '';
+                }
+              }
+              if (addr.isEmpty) addr = 'Ghatampur, Kanpur Nagar';
               final isLast = idx == completed.length - 1;
 
               String timeStr = 'Today';

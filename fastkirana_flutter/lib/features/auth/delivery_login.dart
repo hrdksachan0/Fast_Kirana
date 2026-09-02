@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../core/network/api_client.dart';
+import '../../core/services/secure_storage_service.dart';
 import '../../data/models/user.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/brand_button.dart';
@@ -86,6 +87,12 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
           await prefs.setString('user_id', userMap?['id'] ?? 'rider_$phone');
           await prefs.setString('user_role', 'DELIVERY');
 
+          // Mirror to secure storage so the Dio interceptor finds it there.
+          await SecureStorage.write('auth_token', token.toString());
+          await SecureStorage.write('user_phone', phone);
+          await SecureStorage.write('user_id', (userMap?['id'] ?? 'rider_$phone').toString());
+          await SecureStorage.write('user_role', 'DELIVERY');
+
           if (userMap != null) {
             final user = User.fromJson(Map<String, dynamic>.from(userMap));
             await ref.read(authProvider.notifier).setUser(user);
@@ -99,6 +106,12 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
         await prefs.setString('user_id', 'rider_$phone');
         await prefs.setString('user_role', 'DELIVERY');
         await prefs.setString('user_name', 'FastKirana Rider ($phone)');
+
+        await SecureStorage.write('auth_token', 'rider_token_$phone');
+        await SecureStorage.write('user_phone', phone);
+        await SecureStorage.write('user_id', 'rider_$phone');
+        await SecureStorage.write('user_role', 'DELIVERY');
+        await SecureStorage.write('user_name', 'FastKirana Rider ($phone)');
       }
 
       if (mounted) {

@@ -544,7 +544,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
               ),
               const SizedBox(height: 6),
 
-              // 2. VEG / NON-VEG + PRODUCT TITLE (moved up for prominence)
+              // 2. VEG / NON-VEG + PRODUCT TITLE
               SizedBox(
                 height: 32,
                 child: Row(
@@ -593,86 +593,105 @@ class _ProductCardState extends ConsumerState<ProductCard> {
               ),
               const SizedBox(height: 4),
 
-              // 3. PRICE & PACK SIZE ROW
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Price
-                  Text(
-                    '₹${startingPrice.toInt()}',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      color: const Color(0xFF0F172A),
-                      letterSpacing: -0.3,
+              // 3. PACK SIZE / UNIT / VARIANT PILL
+              if (hasVariants)
+                GestureDetector(
+                  onTap: () {
+                    if (!isOutOfStock) {
+                      VariantSelectorSheet.show(context, product);
+                    }
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 5),
+                    padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFA7F3D0)),
                     ),
-                  ),
-                  if (startingMrp > startingPrice) ...[
-                    const SizedBox(width: 4),
-                    Text(
-                      '₹${startingMrp.toInt()}',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        decoration: TextDecoration.lineThrough,
-                        color: const Color(0xFF94A3B8),
-                      ),
-                    ),
-                  ],
-                  const Spacer(),
-                  // Pack size / unit pill
-                  if (hasVariants)
-                    GestureDetector(
-                      onTap: () {
-                        if (!isOutOfStock) {
-                          VariantSelectorSheet.show(context, product);
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFECFDF5),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: const Color(0xFFA7F3D0)),
-                        ),
-                        child: Text(
-                          '${variants.length} Options ▾',
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${variants.length} Options',
                           style: GoogleFonts.inter(
-                            fontSize: 9,
+                            fontSize: 8.5,
                             fontWeight: FontWeight.w800,
                             color: const Color(0xFF059669),
                           ),
                         ),
-                      ),
-                    )
-                  else
-                    Text(
-                      product.unit.isNotEmpty && product.unit != '1 unit'
-                          ? product.unit
-                          : (isFood ? 'Serves 1' : '1 pc'),
-                      style: GoogleFonts.inter(
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF94A3B8),
-                      ),
+                        const SizedBox(width: 1.5),
+                        const Icon(Icons.keyboard_arrow_down_rounded, size: 11, color: Color(0xFF059669)),
+                      ],
                     ),
-                ],
-              ),
-              const SizedBox(height: 6),
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    product.unit.isNotEmpty && product.unit != '1 unit'
+                        ? product.unit
+                        : (isFood ? 'Serves 1' : '1 pc'),
+                    style: GoogleFonts.inter(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF94A3B8),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
 
-              // 4. ADD BUTTON (full width)
-              _buildAddButton(
-                context,
-                product,
-                inCartQty,
-                hasVariants,
-                isOutOfStock,
-                !timingStatus.isAvailableNow,
-                timingStatus.nextAvailableTimeStr,
-                isStoreOpen,
-                isFood,
-                gradientColors,
-                primaryColor,
+              // 4. PRICE ON LEFT & COMPACT ADD BUTTON ON RIGHT ROW
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Left Side: Price & MRP
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '₹${startingPrice.toInt()}',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF0F172A),
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        if (startingMrp > startingPrice)
+                          Text(
+                            '₹${startingMrp.toInt()}',
+                            style: GoogleFonts.inter(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w500,
+                              decoration: TextDecoration.lineThrough,
+                              color: const Color(0xFF94A3B8),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  // Right Side: Compact ADD Button / Stepper
+                  _buildAddButton(
+                    context,
+                    product,
+                    inCartQty,
+                    hasVariants,
+                    isOutOfStock,
+                    !timingStatus.isAvailableNow,
+                    timingStatus.nextAvailableTimeStr,
+                    isStoreOpen,
+                    isFood,
+                    gradientColors,
+                    primaryColor,
+                  ),
+                ],
               ),
             ],
           ),
@@ -886,11 +905,11 @@ class _ProductCardState extends ConsumerState<ProductCard> {
           );
         },
         child: Container(
-          height: 26,
+          height: 27,
           padding: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
             color: const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(7),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
           alignment: Alignment.center,
@@ -906,21 +925,21 @@ class _ProductCardState extends ConsumerState<ProductCard> {
       );
     }
 
-    // 4. In Cart Stepper (For Single Product or Variant Trigger)
+    // 4. In Cart Stepper (Compact Gradient Stepper)
     if (inCartQty > 0) {
       return Container(
-        height: 26,
+        height: 27,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: gradientColors,
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(8),
           boxShadow: [
             BoxShadow(
-              color: primaryColor.withValues(alpha: 0.3),
-              blurRadius: 4,
+              color: primaryColor.withValues(alpha: 0.28),
+              blurRadius: 5,
               offset: const Offset(0, 1.5),
             ),
           ],
@@ -928,6 +947,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Minus Button
             InkWell(
               onTap: () {
                 if (hasVariants) {
@@ -938,21 +958,23 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                 }
               },
               child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-                child: Icon(Icons.remove_rounded, size: 13, color: Colors.white),
+                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                child: Icon(Icons.remove_rounded, size: 14, color: Colors.white),
               ),
             ),
+            // Quantity Number
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 3),
               child: Text(
                 '$inCartQty',
                 style: GoogleFonts.inter(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
-                  fontSize: 11.5,
+                  fontSize: 12,
                 ),
               ),
             ),
+            // Plus Button
             InkWell(
               onTap: () {
                 if (hasVariants) {
@@ -993,8 +1015,8 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                 }
               },
               child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-                child: Icon(Icons.add_rounded, size: 13, color: Colors.white),
+                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                child: Icon(Icons.add_rounded, size: 14, color: Colors.white),
               ),
             ),
           ],
@@ -1002,7 +1024,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
       );
     }
 
-    // 5. Default ADD Button
+    // 5. Default ADD Button (Compact & Balanced on Right)
     return Bounceable(
       onTap: () {
         if (hasVariants) {
@@ -1012,11 +1034,11 @@ class _ProductCardState extends ConsumerState<ProductCard> {
         }
       },
       child: Container(
-        height: 26,
+        height: 27,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(color: primaryColor, width: 1.2),
           boxShadow: [
             BoxShadow(
@@ -1032,14 +1054,14 @@ class _ProductCardState extends ConsumerState<ProductCard> {
             Text(
               'ADD',
               style: GoogleFonts.inter(
-                fontSize: 10,
+                fontSize: 10.5,
                 fontWeight: FontWeight.w900,
                 color: primaryColor,
                 letterSpacing: 0.4,
               ),
             ),
-            const SizedBox(width: 2),
-            Icon(Icons.add_rounded, size: 12, color: primaryColor),
+            const SizedBox(width: 2.5),
+            Icon(Icons.add_rounded, size: 13, color: primaryColor),
           ],
         ),
       ),
@@ -1126,24 +1148,33 @@ class ProductCardSkeleton extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
+          Container(
+            width: 45,
+            height: 12,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                width: 50,
-                height: 16,
+                width: 40,
+                height: 14,
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
               Container(
-                width: 55,
-                height: 26,
+                width: 58,
+                height: 27,
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(7),
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
             ],

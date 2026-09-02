@@ -380,13 +380,21 @@ async def direct_login(
         phone = normalize_phone(ident)
         if len(phone) != 10:
             raise HTTPException(status_code=400, detail="Please enter a valid 10-digit phone number")
-        result = await db.execute(select(User).where(User.phone == phone))
-        user = result.scalars().first()
+        from sqlalchemy import or_
+        phone_patterns = [phone, f"+91{phone}", f"91{phone}"]
+        email_patterns = [f"wa-{phone}@fastkirana.in", f"wa-{phone}@fastkirana.com", f"wa-91{phone}@fastkirana.in", f"wa-91{phone}@fastkirana.com"]
+        result = await db.execute(select(User).where(or_(User.phone.in_(phone_patterns), User.email.in_(email_patterns))))
+        matching_users = result.scalars().all()
+        # Prioritize staff role if user has a designated role in DB, otherwise standard USER
+        role_priority = {"ADMIN": 1, "RESTAURANT_OWNER": 2, "CHEF": 3, "DELIVERY": 4, "PICKER": 5, "USER": 6}
+        sorted_users = sorted(matching_users, key=lambda u: role_priority.get((u.role.value if hasattr(u.role, 'value') else str(u.role)).upper(), 99))
+        user = sorted_users[0] if sorted_users else None
+
         if not user:
             user = User(
                 id=f"c{uuid.uuid4().hex[:24]}",
-                email=f"wa-{phone}@fastkirana.in",
-                phone=phone,
+                email=f"wa-{phone}@fastkirana.com",
+                phone=f"+91{phone}",
                 name=body.name or f"User {phone[-4:]}",
                 role=Role.USER.value,
                 isBlocked=False,
@@ -681,15 +689,18 @@ async def verify_otp(
     result = await db.execute(stmt_u)
     matching_users = result.scalars().all()
 
-    # Prefer USER role account for mobile customers, fallback to first account
+    # Prioritize staff/admin roles over standard USER for multi-account records
     user = None
-    for u in matching_users:
-        role_str = u.role.value if hasattr(u.role, 'value') else str(u.role)
-        if role_str == "USER":
-            user = u
-            break
-    if not user and matching_users:
-        user = matching_users[0]
+    role_priority = {"ADMIN": 1, "RESTAURANT_OWNER": 2, "CHEF": 3, "DELIVERY": 4, "PICKER": 5, "USER": 6}
+    sorted_users = sorted(
+        matching_users,
+        key=lambda u: role_priority.get(
+            (u.role.value if hasattr(u.role, 'value') else str(u.role)).upper(),
+            99
+        )
+    )
+    if sorted_users:
+        user = sorted_users[0]
 
     if not user:
         try:

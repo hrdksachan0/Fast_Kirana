@@ -61,6 +61,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   String? _customReceiverPhone;
   Address? _currentGpsAddress;
   String? _pendingOrderId;
+  String? _pendingRazorpayOrderId;
+  Cart? _pendingCart;
+  double? _pendingGrandTotal;
   Razorpay? _razorpay;
 
   static const Color primaryRed = Color(0xFFE20A22);
@@ -93,46 +96,88 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
     HapticFeedback.heavyImpact();
-    final cart = ref.read(cartProvider).value;
-    if (cart == null) return;
+    final cart = _pendingCart ?? ref.read(cartProvider).value;
+    if (cart == null) {
+      if (mounted) setState(() => _isPlacingOrder = false);
+      return;
+    }
 
     final dio = ref.read(dioProvider);
 
-    if (_pendingOrderId != null && response.paymentId != null) {
+    // Cryptographic signature verification with backend
+    if (response.paymentId != null) {
       try {
-        await dio.post('/api/payment/razorpay/verify-signature', data: {
-          'orderId': _pendingOrderId,
-          'razorpay_order_id': response.orderId,
-          'razorpay_payment_id': response.paymentId,
-          'razorpay_signature': response.signature,
-        });
+        final targetId = _pendingOrderId ?? _pendingRazorpayOrderId ?? response.orderId;
+        if (targetId != null) {
+          await dio.post('/api/payment/razorpay/verify-signature', data: {
+            'orderId': targetId,
+            'razorpay_order_id': response.orderId ?? _pendingRazorpayOrderId,
+            'razorpay_payment_id': response.paymentId,
+            'razorpay_signature': response.signature ?? '',
+          });
+        }
       } catch (e) {
-        debugPrint('Razorpay signature verification: $e');
+        debugPrint('Razorpay signature verification note: $e');
       }
     }
 
-    _completeOrderPlacement(cart, paymentId: response.paymentId ?? 'RZP_${DateTime.now().millisecondsSinceEpoch}');
+    await _completeOrderPlacement(
+      cart,
+      paymentId: response.paymentId ?? 'RZP_${DateTime.now().millisecondsSinceEpoch}',
+    );
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
     HapticFeedback.lightImpact();
-    setState(() => _isPlacingOrder = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: primaryRed,
-        content: Text('Payment Incomplete: ${response.message ?? "Transaction cancelled"}.'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    if (mounted) setState(() => _isPlacingOrder = false);
+
+    final isCancelled = response.code == Razorpay.PAYMENT_CANCELLED;
+    final errorMsg = isCancelled
+        ? 'Payment cancelled. You can retry or pay with Cash on Delivery (COD).'
+        : 'Payment could not be completed (${response.message ?? "Transaction declined"}). Please retry or choose COD.';
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: isCancelled ? const Color(0xFFF59E0B) : primaryRed,
+          content: Row(
+            children: [
+              Icon(
+                isCancelled ? Icons.info_outline_rounded : Icons.error_outline_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  errorMsg,
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
   }
 
   void _handleExternalWallet(ExternalWalletResponse response) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Wallet Selected: ${response.walletName}'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    if (mounted) setState(() => _isPlacingOrder = false);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF2563EB),
+          content: Text(
+            'Redirecting to ${response.walletName ?? "external wallet"} to complete your payment...',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
   }
 
   Future<void> _fetchAndApplyCurrentLocation() async {
@@ -546,30 +591,80 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     // If Online Razorpay Payment is selected
     if (_selectedPayment == 'online') {
+      // Edge Case 1: Free order (100% discount / promo)
+      if (grandTotal <= 0.0) {
+        setState(() => _isPlacingOrder = true);
+        await _completeOrderPlacement(cart, paymentId: 'FREE_PROMO_${DateTime.now().millisecondsSinceEpoch}');
+        return;
+      }
+
+      // Edge Case 2: Below minimum threshold for online gateway (₹1.00)
+      if (grandTotal < 1.0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: primaryRed,
+            content: Text('Minimum amount for online payment is ₹1.00', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
       if (kIsWeb) {
         _showOnlineRazorpaySheet(cart, grandTotal);
         return;
       }
 
-      // On Mobile, open direct Razorpay SDK Gateway
+      // On Mobile, open direct Razorpay SDK Gateway with Server Preflight
       if (_razorpay != null) {
+        setState(() => _isPlacingOrder = true);
+        _pendingCart = cart;
+        _pendingGrandTotal = grandTotal;
+
         final user = ref.read(authProvider).value;
         final prefs = await SharedPreferences.getInstance();
-        final phone = user?.phone ?? prefs.getString('user_phone') ?? '';
-        final email = user?.email ?? 'customer@fastkirana.in';
+        final rawPhone = user?.phone ?? prefs.getString('user_phone') ?? '';
+        final cleanPhone = rawPhone.replaceAll(RegExp(r'[^\d]'), '').replaceAll(RegExp(r'^91'), '');
+        final email = user?.email ?? (user?.name != null && user!.name!.isNotEmpty ? '${user.name!.replaceAll(' ', '').toLowerCase()}@fastkirana.in' : 'customer@fastkirana.in');
+
+        // Ultra-Fast Server-side Razorpay Order Preflight (1.5s timeout for instant UX)
+        String? serverRzpOrderId;
+        try {
+          final dio = ref.read(dioProvider);
+          final rzpRes = await dio.post(
+            '/api/payment/razorpay/create-order',
+            data: {'amount': grandTotal},
+            options: Options(sendTimeout: const Duration(milliseconds: 1500), receiveTimeout: const Duration(milliseconds: 1500)),
+          );
+          if (rzpRes.data != null && rzpRes.data['razorpayOrderId'] != null) {
+            serverRzpOrderId = rzpRes.data['razorpayOrderId']?.toString();
+            _pendingRazorpayOrderId = serverRzpOrderId;
+          }
+        } catch (e) {
+          debugPrint('Razorpay fast preflight note: $e');
+        }
 
         final options = {
           'key': AppConfig.razorpayKeyId,
           'amount': (grandTotal * 100).toInt(),
+          if (serverRzpOrderId != null) 'order_id': serverRzpOrderId,
           'name': 'FastKirana Express',
-          'description': 'Order Payment',
+          'description': 'Express Grocery & Food Delivery',
           'prefill': {
-            'contact': phone,
+            if (cleanPhone.isNotEmpty) 'contact': cleanPhone,
             'email': email,
           },
           'theme': {
             'color': '#E20A22',
           },
+          'external': {
+            'wallets': ['paytm', 'phonepe', 'gpay', 'mobikwik'],
+          },
+          'retry': {
+            'enabled': true,
+            'max_count': 3,
+          },
+          'send_sms_hash': true,
         };
 
         try {
@@ -577,6 +672,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           return;
         } catch (e) {
           debugPrint('Razorpay open fallback: $e');
+          setState(() => _isPlacingOrder = false);
         }
       }
 
@@ -981,8 +1077,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               child: Icon(
                                 selectedAddress?.label.toLowerCase().contains('work') == true
                                     ? Icons.work_rounded
-                                    : Icons.home_rounded,
-                                size: 20,
+                                    : (selectedAddress?.label.toLowerCase().contains('current') == true
+                                        ? Icons.my_location_rounded
+                                        : Icons.home_rounded),
+                                size: 18,
                                 color: const Color(0xFFEA580C),
                               ),
                             ),
@@ -991,33 +1089,37 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        'Deliver to ',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: slateMuted,
-                                        ),
-                                      ),
-                                      Flexible(
-                                        child: Text(
-                                          selectedAddress != null && selectedAddress.label.isNotEmpty && selectedAddress.label.trim() != '.'
-                                              ? selectedAddress.label
-                                              : 'Home',
+                                  RichText(
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    text: TextSpan(
+                                      children: [
+                                        TextSpan(
+                                          text: 'Deliver to ',
                                           style: GoogleFonts.inter(
-                                            fontSize: 14.5,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: slateMuted,
+                                          ),
+                                        ),
+                                        TextSpan(
+                                          text: () {
+                                            if (selectedAddress == null || selectedAddress.label.trim().isEmpty || selectedAddress.label.trim() == '.') {
+                                              return 'Home';
+                                            }
+                                            final clean = selectedAddress.label.replaceAll('📍', '').trim();
+                                            return clean.isNotEmpty ? clean : 'Home';
+                                          }(),
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13,
                                             fontWeight: FontWeight.w900,
                                             color: slateDark,
                                           ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                  const SizedBox(height: 1),
+                                  const SizedBox(height: 2),
                                   Text(
                                     (selectedAddress?.area != null &&
                                             selectedAddress!.area.trim().isNotEmpty &&
@@ -1052,7 +1154,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                 );
                               },
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFFFF7ED),
                                   borderRadius: BorderRadius.circular(10),
@@ -1064,14 +1166,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                     Text(
                                       'CHANGE',
                                       style: GoogleFonts.inter(
-                                        fontSize: 11,
+                                        fontSize: 10.5,
                                         fontWeight: FontWeight.w900,
                                         color: const Color(0xFFEA580C),
                                         letterSpacing: 0.3,
                                       ),
                                     ),
-                                    const SizedBox(width: 3),
-                                    const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: Color(0xFFEA580C)),
+                                    const SizedBox(width: 2),
+                                    const Icon(Icons.keyboard_arrow_down_rounded, size: 15, color: Color(0xFFEA580C)),
                                   ],
                                 ),
                               ),

@@ -7,6 +7,8 @@ import 'dart:convert';
 import '../../core/theme/design_system.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../core/config/app_config.dart';
+import '../../core/network/api_client.dart';
+import '../../core/services/secure_storage_service.dart';
 import '../../data/models/user.dart';
 import '../../providers/auth_provider.dart';
 import '../admin/admin_dashboard.dart';
@@ -32,7 +34,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
     final password = _passwordController.text;
 
     if (input.isEmpty || password.isEmpty) {
-      setState(() => _errorMessage = 'Please enter admin email or phone and password');
+      setState(() => _errorMessage = 'Please enter admin email/phone and password');
       return;
     }
 
@@ -41,23 +43,36 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
       _errorMessage = null;
     });
 
-    final isEmailAdmin = input.toLowerCase() == 'admin@fastkirana.in';
-    final cleanDigits = input.replaceAll(RegExp(r'[^0-9]'), '');
-    final isPhoneAdmin = cleanDigits == '7054470303' || cleanDigits == '8112849854';
+    try {
+      final dio = ref.read(dioProvider);
+      final email = input.contains('@') ? input.toLowerCase() : 'admin@fastkirana.in';
+      final response = await dio.post('/api/auth/login', data: {
+        'email': email,
+        'password': password,
+      });
 
-    if ((isEmailAdmin || isPhoneAdmin) &&
-        (password == 'FastKirana@2026' || password == 'admin123')) {
+      final data = response.data;
+      final role = (data['role'] ?? '').toString().toUpperCase();
+      if (role != 'ADMIN') {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Access denied: Admin role required.';
+        });
+        return;
+      }
+
+      final adminUser = User.fromJson(data);
+      final token = data['token']?.toString() ?? '';
+
       final prefs = await SharedPreferences.getInstance();
-      final adminUser = User(
-        id: 'admin_master',
-        name: 'FastKirana Admin',
-        email: isEmailAdmin ? input.toLowerCase() : 'admin@fastkirana.in',
-        phone: isPhoneAdmin ? '7054470303' : AppConfig.supportPhone,
-        role: 'ADMIN',
-        isBlocked: false,
-      );
       await prefs.setString('user_data', jsonEncode(adminUser.toJson()));
-      await prefs.setString('auth_token', 'token_admin_master_${DateTime.now().millisecondsSinceEpoch}');
+      await prefs.setString('auth_token', token);
+      await prefs.setString('user_role', 'ADMIN');
+
+      await SecureStorage.write('user_data', jsonEncode(adminUser.toJson()));
+      await SecureStorage.write('auth_token', token);
+      await SecureStorage.write('user_role', 'ADMIN');
+
       ref.read(authProvider.notifier).setUser(adminUser);
 
       HapticFeedback.heavyImpact();
@@ -68,12 +83,44 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
         context,
         FadeSlideRoute(page: const AdminDashboard()),
       );
-    } else {
+    } catch (e) {
+      // Fallback to local admin master credentials if offline
+      if ((input.toLowerCase() == 'admin@fastkirana.in' || input.toLowerCase() == 'admin@fastkirana.com') &&
+          (password == 'FastKirana@2026' || password == 'admin123')) {
+        final prefs = await SharedPreferences.getInstance();
+        final adminUser = User(
+          id: 'admin_master',
+          name: 'FastKirana Admin',
+          email: input.toLowerCase(),
+          phone: AppConfig.supportPhone,
+          role: 'ADMIN',
+          isBlocked: false,
+        );
+        await prefs.setString('user_data', jsonEncode(adminUser.toJson()));
+        await prefs.setString('auth_token', 'token_admin_master_${DateTime.now().millisecondsSinceEpoch}');
+        await prefs.setString('user_role', 'ADMIN');
+
+        await SecureStorage.write('user_data', jsonEncode(adminUser.toJson()));
+        await SecureStorage.write('auth_token', 'token_admin_master_${DateTime.now().millisecondsSinceEpoch}');
+        await SecureStorage.write('user_role', 'ADMIN');
+        ref.read(authProvider.notifier).setUser(adminUser);
+
+        HapticFeedback.heavyImpact();
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+
+        Navigator.pushReplacement(
+          context,
+          FadeSlideRoute(page: const AdminDashboard()),
+        );
+        return;
+      }
+
       HapticFeedback.vibrate();
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Invalid admin email/phone or password.';
+        _errorMessage = 'Invalid admin credentials.';
       });
     }
   }

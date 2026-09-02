@@ -269,16 +269,52 @@ class Order {
 
     DateTime parseDate(dynamic val) {
       if (val == null) return DateTime.now();
-      final parsed = DateTime.tryParse(val.toString());
+      String s = val.toString().trim();
+      if (s.isEmpty) return DateTime.now();
+      if (!s.endsWith('Z') && !s.contains('+') && !RegExp(r'-\d{2}:\d{2}$').hasMatch(s)) {
+        s = '${s.replaceAll(' ', 'T')}Z';
+      }
+      final parsed = DateTime.tryParse(s);
       if (parsed == null) return DateTime.now();
-      return parsed.isUtc ? parsed.toLocal() : parsed;
+      return parsed.toLocal();
     }
 
     DateTime? parseNullableDate(dynamic val) {
       if (val == null) return null;
-      final parsed = DateTime.tryParse(val.toString());
+      String s = val.toString().trim();
+      if (s.isEmpty) return null;
+      if (!s.endsWith('Z') && !s.contains('+') && !RegExp(r'-\d{2}:\d{2}$').hasMatch(s)) {
+        s = '${s.replaceAll(' ', 'T')}Z';
+      }
+      final parsed = DateTime.tryParse(s);
       if (parsed == null) return null;
-      return parsed.isUtc ? parsed.toLocal() : parsed;
+      return parsed.toLocal();
+    }
+
+    String? parseShopName() {
+      final explicit = json['shopName']?.toString() ??
+          json['restaurantName']?.toString() ??
+          (json['restaurant'] is Map ? json['restaurant']['name']?.toString() : null);
+      if (explicit != null && explicit.trim().isNotEmpty && explicit != 'null') {
+        return explicit.trim();
+      }
+      final restId = json['restaurantId']?.toString();
+      if (restId != null && restId.isNotEmpty && restId != 'null') {
+        if (restId == 'cms2p1lyx0001n0idod904lfu' || restId == 'wedson' || restId == 'wedson-restaurant') {
+          return 'Wedson Restaurant';
+        }
+        if (restId == 'cms2p1lap0000n0id8alldboy' || restId == 'as-restaurant' || restId == 'as-cafe') {
+          return 'A.S. Restaurant';
+        }
+        if (restId == 'cmsbhxb6a000304if8kf1cwji' || restId == 'bal-udyan' || restId == 'bal-udyan-restaurant') {
+          return 'Bal Udyan Restaurant';
+        }
+      }
+      final rid = (json['readableId']?.toString() ?? '').toUpperCase();
+      if (rid.endsWith('-R')) {
+        return 'Wedson Restaurant';
+      }
+      return null;
     }
 
     return Order(
@@ -299,7 +335,7 @@ class Order {
       estimatedDelivery: parseNullableDate(json['estimatedDelivery']),
       deliveryPhoto: json['deliveryPhoto']?.toString(),
       deliveryMethod: json['deliveryMethod']?.toString(),
-      shopName: json['shopName']?.toString(),
+      shopName: parseShopName(),
       shopPhone: json['shopPhone']?.toString(),
       deliveryBoyName: parseDeliveryBoyName(),
       deliveryBoyPhone: parseDeliveryBoyPhone(),
@@ -453,6 +489,9 @@ class OrderItem {
   final int quantity;
   final String? imageUrl;
   final String? selectedVariant;
+  final String? notes;
+
+  String? get variant => selectedVariant;
 
   OrderItem({
     required this.id,
@@ -462,6 +501,7 @@ class OrderItem {
     required this.quantity,
     this.imageUrl,
     this.selectedVariant,
+    this.notes,
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
@@ -472,7 +512,8 @@ class OrderItem {
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       quantity: (json['quantity'] as num?)?.toInt() ?? 1,
       imageUrl: json['imageUrl']?.toString(),
-      selectedVariant: json['selectedVariant']?.toString(),
+      selectedVariant: json['selectedVariant']?.toString() ?? json['variant']?.toString(),
+      notes: json['notes']?.toString(),
     );
   }
 
@@ -484,6 +525,7 @@ class OrderItem {
     'quantity': quantity,
     'imageUrl': imageUrl,
     'selectedVariant': selectedVariant,
+    'notes': notes,
   };
 
   double get lineTotal => price * quantity;

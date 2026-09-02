@@ -12,11 +12,13 @@ import '../../data/models/user.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../core/network/api_client.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/address_provider.dart';
 import '../../core/services/notification_service.dart';
+import '../../core/services/secure_storage_service.dart';
 import '../../core/routes/page_transitions.dart';
 import '../delivery/delivery_dashboard.dart';
 import '../admin/admin_dashboard.dart';
+import '../cafe/restaurant_dashboard.dart';
+import '../delivery/picker_dashboard.dart';
 
 class OtpScreen extends ConsumerStatefulWidget {
   final String identifier;
@@ -181,11 +183,23 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
               isBlocked: false,
             );
 
-        final rawName = (user.name ?? '').trim();
-        final isExistingUser = rawName.isNotEmpty && !rawName.toLowerCase().startsWith('user ');
+        final roleUpper = user.role.toUpperCase();
+        final isStaffRole = roleUpper == 'ADMIN' ||
+            roleUpper == 'DELIVERY' ||
+            roleUpper == 'RIDER' ||
+            roleUpper == 'DELIVERY_PARTNER' ||
+            roleUpper == 'RESTAURANT_OWNER' ||
+            roleUpper == 'CHEF' ||
+            roleUpper == 'RESTAURANT' ||
+            roleUpper == 'PICKER';
 
-        // If new customer -> Prompt Full Name
-        if (!isExistingUser) {
+        final rawName = (user.name ?? '').trim();
+        final isExistingUser = rawName.isNotEmpty &&
+            !rawName.toLowerCase().startsWith('user ') &&
+            rawName != 'FastKirana Customer';
+
+        // If new customer -> Prompt Full Name (Skip for Staff)
+        if (!isExistingUser && !isStaffRole) {
           if (!mounted) return;
           final enteredName = await _showNameBottomSheet(context);
           if (enteredName != null && enteredName.trim().isNotEmpty) {
@@ -210,6 +224,16 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
           await prefs.setString('auth_token', response.token!);
         }
 
+        // Mirror auth data to secure storage (tokens & credentials).
+        // The Dio interceptor reads these from SecureStorage first, then falls
+        // back to SharedPreferences for legacy users.
+        await SecureStorage.write('user_id', user.id);
+        await SecureStorage.write('user_phone', widget.identifier);
+        await SecureStorage.write('user_data', jsonEncode(user.toJson()));
+        if (response.token != null && response.token!.isNotEmpty) {
+          await SecureStorage.write('auth_token', response.token!);
+        }
+
         try {
           NotificationService().registerDeviceToken(ref.read(dioProvider));
         } catch (_) {}
@@ -219,10 +243,10 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
 
         if (!mounted) return;
 
-        // Role-Based Smart Navigation after OTP Verification
-        final roleUpper = user.role.toUpperCase();
-        if (roleUpper == 'DELIVERY' || roleUpper == 'RIDER') {
+        // Role-Based Smart Navigation after OTP Verification (100% Dynamic DB Role)
+        if (roleUpper == 'DELIVERY' || roleUpper == 'RIDER' || roleUpper == 'DELIVERY_PARTNER') {
           await prefs.setString('user_role', 'DELIVERY');
+          await SecureStorage.write('user_role', 'DELIVERY');
           if (mounted) {
             Navigator.of(context).pushAndRemoveUntil(
               FadeSlideRoute(page: const DeliveryDashboard()),
@@ -234,6 +258,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
 
         if (roleUpper == 'ADMIN') {
           await prefs.setString('user_role', 'ADMIN');
+          await SecureStorage.write('user_role', 'ADMIN');
           if (mounted) {
             Navigator.of(context).pushAndRemoveUntil(
               FadeSlideRoute(page: const AdminDashboard()),
@@ -243,22 +268,35 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
           return;
         }
 
-        // Customer Navigation
-        final hasChosenLocation = prefs.getBool('has_chosen_location') ?? false;
-        if (!hasChosenLocation) {
-          if (mounted) Navigator.of(context).pushNamedAndRemoveUntil('/location', (route) => false);
-        } else {
-          try {
-            final addresses = await ref.read(addressRepositoryProvider).getAddresses();
-            if (!mounted) return;
-            if (addresses.isEmpty || !addresses.any((a) => a.latitude != null && a.latitude != 0.0)) {
-              Navigator.of(context).pushNamedAndRemoveUntil('/location', (route) => false);
-            } else {
-              Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
-            }
-          } catch (_) {
-            if (mounted) Navigator.of(context).pushNamedAndRemoveUntil('/location', (route) => false);
+        if (roleUpper == 'RESTAURANT_OWNER' || roleUpper == 'CHEF' || roleUpper == 'RESTAURANT') {
+          await prefs.setString('user_role', 'RESTAURANT_OWNER');
+          await SecureStorage.write('user_role', 'RESTAURANT_OWNER');
+          if (mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              FadeSlideRoute(page: RestaurantDashboard(
+                initialRestaurantId: user.assignedRestaurantId,
+              )),
+              (route) => false,
+            );
           }
+          return;
+        }
+
+        if (roleUpper == 'PICKER') {
+          await prefs.setString('user_role', 'PICKER');
+          await SecureStorage.write('user_role', 'PICKER');
+          if (mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              FadeSlideRoute(page: PickerDashboard()),
+              (route) => false,
+            );
+          }
+          return;
+        }
+
+        // Customer Navigation: Compulsory Delivery Location Setup
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil('/location', (route) => false);
         }
         return;
       } else {

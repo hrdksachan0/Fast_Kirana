@@ -30,6 +30,21 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
   static const Color slateBorder = Color(0xFFE2E8F0);
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndAutoPromptLocation();
+    });
+  }
+
+  Future<void> _checkAndAutoPromptLocation() async {
+    final activeAddress = ref.read(selectedAddressProvider);
+    if (activeAddress == null || activeAddress.latitude == null || activeAddress.latitude == 0.0) {
+      _useCurrentLocation();
+    }
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();

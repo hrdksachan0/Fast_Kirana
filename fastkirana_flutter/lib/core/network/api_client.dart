@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
+import '../services/secure_storage_service.dart';
 
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(
@@ -20,8 +21,7 @@ final dioProvider = Provider<Dio>((ref) {
         if (options.extra.containsKey('override_base_url')) {
           options.baseUrl = options.extra['override_base_url'] as String;
         }
-        final prefs = await SharedPreferences.getInstance();
-        final token = prefs.getString('auth_token');
+        final token = await SecureStorage.read('auth_token');
 
         final isOtpRoute = options.path.contains('/api/auth/otp');
         if (token != null && token.isNotEmpty && !isOtpRoute) {
@@ -36,21 +36,24 @@ final dioProvider = Provider<Dio>((ref) {
             !options.path.contains('/api/user');
 
         if (!isAuthRoute && !isPublicGetRoute) {
-          final rawUserData = prefs.getString('user_data');
-          String? userId = prefs.getString('user_id');
-          String? directPhone = prefs.getString('user_phone');
-          String? userEmail;
-          String? userName;
-          String? userRole;
+          final authFields = await SecureStorage.readMany(const [
+            'user_data', 'user_id', 'user_phone', 'user_email', 'user_name', 'user_role',
+          ]);
+          final rawUserData = authFields['user_data'];
+          String? userId = authFields['user_id'];
+          String? directPhone = authFields['user_phone'];
+          String? userEmail = authFields['user_email'];
+          String? userName = authFields['user_name'];
+          String? userRole = authFields['user_role'];
           String? userPhone = directPhone;
 
           if (rawUserData != null && rawUserData.isNotEmpty) {
             try {
               final json = jsonDecode(rawUserData) as Map<String, dynamic>;
               userId ??= json['id']?.toString();
-              userEmail = json['email']?.toString();
-              userName = json['name']?.toString();
-              userRole = json['role']?.toString();
+              userEmail = json['email']?.toString() ?? userEmail;
+              userName = json['name']?.toString() ?? userName;
+              userRole = json['role']?.toString() ?? userRole;
               userPhone ??= json['phone']?.toString();
             } catch (_) {}
           }

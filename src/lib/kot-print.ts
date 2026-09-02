@@ -182,11 +182,26 @@ export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): st
   const restSub = order.subOrders?.find((s: any) => s.type === 'RESTAURANT' || s.restaurantId)
   
   // Extract strictly restaurant dishes (omit any grocery items)
-  const targetItems = (order.restaurantItems && order.restaurantItems.length > 0)
+  let targetItems = (order.restaurantItems && order.restaurantItems.length > 0)
     ? order.restaurantItems
     : (restSub?.items && restSub.items.length > 0)
     ? restSub.items
     : (order.items || [])
+
+  if (order.isCombined && (!order.restaurantItems || order.restaurantItems.length === 0) && (!restSub?.items || restSub.items.length === 0)) {
+    const groceryCategories = ['dairy', 'atta', 'personal', 'household', 'grocery', 'snack']
+    const groceryKeywords = ['atta', 'rice', 'dal', 'oil', 'ghee', 'flour', 'sugar', 'salt', 'spice', 'soap', 'shampoo', 'surf', 'detergent', 'biscuit', 'chips', 'munchies', 'dairy', 'milk']
+    const filtered = targetItems.filter((it: any) => {
+      const name = (it.name || '').toLowerCase()
+      const slug = (it.categorySlug || it.category?.slug || '').toLowerCase()
+      if (groceryCategories.some((c: string) => slug.includes(c))) return false
+      if (groceryKeywords.some((k: string) => name.includes(k))) return false
+      return true
+    })
+    if (filtered.length > 0) {
+      targetItems = filtered
+    }
+  }
 
   const outletName = restSub?.shopName || order.restaurantName || (order.restaurantId ? order.shopName : null) || shopType
   const orderIdText = restSub?.readableId 

@@ -28,7 +28,8 @@ try {
 const {
   SUPABASE_URL,
   SUPABASE_ANON_KEY,
-  PRINTER_NAME = 'XP-80',
+  PRINTER_NAME = 'POS-80C',
+  LINE_LENGTH = 38,
   RESTAURANT_ID = null,
   AUTO_PRINT_ON_CONFIRM = false
 } = config;
@@ -86,7 +87,8 @@ function wrapText(text, limit) {
 /// 3. Printing Mechanism (PowerShell Silent Print)
 function printKOT(order, items, user) {
   try {
-    const lineLength = 40; // Re-adjusted for standard 3-inch (80mm) POS thermal printer rolls
+    const lineLength = LINE_LENGTH || 38;
+    const thickDivider = '='.repeat(lineLength);
     const thinDivider = '-'.repeat(lineLength);
 
     const centerText = (text) => {
@@ -96,30 +98,45 @@ function printKOT(order, items, user) {
     };
 
     let lines = [];
-    lines.push(centerText('FASTKIRANA ONLINE KOT'));
-    lines.push(thinDivider);
+    lines.push(thickDivider);
+    lines.push(centerText('FASTKIRANA KOT'));
+    lines.push(thickDivider);
 
     const orderIdText = order.readableId ? `#${order.readableId}` : `#${order.id.slice(0, 8).toUpperCase()}`;
-    lines.push(`KOT ID: ${orderIdText}`);
+    const customerName = (user?.name || order.userName || order.customerName || '').trim();
+    const tokenLine = customerName ? `TOKEN : ${orderIdText} | ${customerName}` : `TOKEN : ${orderIdText}`;
+    lines.push(tokenLine);
+    lines.push(`TYPE  : ${order.deliveryMethod || 'DELIVERY'}`);
 
-    const dateStr = new Date(order.createdAt).toLocaleString('en-IN', {
+    const printDateStr = new Date().toLocaleString('en-IN', {
       timeZone: 'Asia/Kolkata',
       day: '2-digit',
       month: 'short',
       hour: '2-digit',
       minute: '2-digit',
       hour12: true
-    });
-    lines.push(`Date  : ${dateStr}`);
-    lines.push(`Type  : ${order.deliveryMethod || 'DELIVERY'}`);
-    lines.push(`Cust  : ${user?.name || 'Customer'}`);
+    }).replace(',', '');
+    lines.push(`Print : ${printDateStr}`);
+
+    if (order.notes && order.notes.trim()) {
+      lines.push(`Note  : ${order.notes.trim()}`);
+    }
+
+    lines.push(thinDivider);
+    lines.push('QTY   ITEM');
     lines.push(thinDivider);
 
     items.forEach((item) => {
-      const prefix = `[${item.quantity}x] `;
+      const qtyStr = `${item.quantity}`.padEnd(2, ' ');
+      const prefix = `${qtyStr} x  `;
       const availableWidth = lineLength - prefix.length;
       
-      const wrappedName = wrapText(item.name, availableWidth);
+      let itemName = item.name;
+      if (item.selectedVariant) {
+        itemName += ` (${item.selectedVariant})`;
+      }
+
+      const wrappedName = wrapText(itemName, availableWidth);
       if (wrappedName.length > 0) {
         lines.push(`${prefix}${wrappedName[0]}`);
         for (let i = 1; i < wrappedName.length; i++) {
@@ -127,15 +144,14 @@ function printKOT(order, items, user) {
         }
       }
       
-      if (item.selectedVariant) {
-        lines.push(' '.repeat(prefix.length) + `Var: ${item.selectedVariant}`);
-      }
       if (item.notes) {
-        lines.push(' '.repeat(prefix.length) + `Note: ${item.notes}`);
+        lines.push('      * Note: ' + item.notes);
       }
     });
 
     lines.push(thinDivider);
+    lines.push(centerText('*** FASTKIRANA KITCHEN ***'));
+    lines.push(thickDivider);
     lines.push('\n\n\n'); // Tearing whitespace
 
     const receiptText = lines.join('\n');
@@ -169,7 +185,7 @@ $doc.add_PrintPage({
   # Consolas size 10 is clean, readable, and stretches properly on 80mm rolls
   $font = New-Object System.Drawing.Font("Consolas", 10)
   $brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::Black)
-  $text = Get-Content -Path "${tempFilePath}" -Raw
+  $text = Get-Content -Path "${tempFilePath}" -Raw -Encoding UTF8
   $e.Graphics.DrawString($text, $font, $brush, 0, 0)
 })
 $doc.Print()
@@ -196,7 +212,7 @@ $doc.Print()
 }
 
 // 4. Fetch Details & Execute
-async function handlePrintRequest(orderId, isForceReprint = false) {
+async function handlePrintRequest(orderId, isForceReprint = false, broadcastPayload = {}) {
   try {
     if (!isForceReprint && printedOrderIds.has(orderId)) {
       // Avoid duplicate prints
@@ -206,48 +222,106 @@ async function handlePrintRequest(orderId, isForceReprint = false) {
     console.log(`[Database] Fetching details for Order ID: ${orderId}...`);
     
     // Fetch Order details
-    const { data: order, error: orderErr } = await supabase
+    let order = null;
+    const { data: orderData, error: orderErr } = await supabase
       .from('orders')
       .select('*')
       .eq('id', orderId)
-      .single();
+      .maybeSingle();
 
-    if (orderErr || !order) {
-      throw new Error(`Order not found or fetch error: ${orderErr?.message}`);
+    if (orderData) {
+      order = orderData;
+    } else {
+      // Try searching by readableId
+      const cleanReadable = orderId.replace(/^#/, '');
+      const { data: orderByReadable } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('readableId', cleanReadable)
+        .maybeSingle();
+      if (orderByReadable) {
+        order = orderByReadable;
+      }
+    }
+
+    if (!order) {
+      // Fallback: build minimal order from broadcast payload
+      order = {
+        id: orderId,
+        readableId: broadcastPayload.readableId || orderId,
+        deliveryMethod: broadcastPayload.deliveryMethod || 'DELIVERY',
+        createdAt: broadcastPayload.printedAt || new Date().toISOString(),
+        notes: broadcastPayload.notes,
+        restaurantId: broadcastPayload.restaurantId,
+        shopName: broadcastPayload.shopName,
+      };
     }
 
     // Filter by Restaurant ID if configured
-    if (RESTAURANT_ID && order.restaurantId !== RESTAURANT_ID) {
+    if (RESTAURANT_ID && order.restaurantId && order.restaurantId !== RESTAURANT_ID) {
       return;
     }
 
-    // Fetch Order Items
-    const { data: items, error: itemsErr } = await supabase
+    // Fetch Order Items from DB
+    let items = [];
+    const { data: itemsData, error: itemsErr } = await supabase
       .from('order_items')
       .select('*')
-      .eq('orderId', orderId);
+      .eq('orderId', order.id);
 
-    if (itemsErr) {
-      throw new Error(`Failed to fetch items: ${itemsErr.message}`);
+    if (itemsData && itemsData.length > 0) {
+      items = itemsData;
+    } else if (broadcastPayload.items && Array.isArray(broadcastPayload.items) && broadcastPayload.items.length > 0) {
+      console.log('[Bridge] Using items from broadcast payload fallback');
+      items = broadcastPayload.items;
     }
 
     // Fetch Customer details
     let user = null;
-    if (order.userId) {
-      const { data: userData } = await supabase
-        .from('users')
-        .select('name')
-        .eq('id', order.userId)
-        .single();
-      user = userData;
+    if (broadcastPayload.customerName) {
+      user = { name: broadcastPayload.customerName };
+    } else if (order.userName) {
+      user = { name: order.userName };
+    } else if (order.userId) {
+      try {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('name')
+          .eq('id', order.userId)
+          .maybeSingle();
+        if (userData) user = userData;
+      } catch (_) {}
+    }
+
+    // Filter restaurant items if combined order
+    let targetItems = items || [];
+    const isCombined = order.isCombined === true ||
+        (order.shopName && (order.shopName.includes('Combined') || order.shopName.includes('+')));
+
+    if (isCombined) {
+      const groceryKeywords = [
+        'atta', 'rice', 'dal', 'oil', 'ghee', 'flour', 'sugar', 'salt', 'spice', 'masala',
+        'soap', 'shampoo', 'paste', 'brush', 'detergent', 'surf', 'cleaning', 'biscuit',
+        'namkeen', 'chips', 'munchies', 'dairy', 'milk', 'bread', 'butter', 'paneer',
+        'personal care', 'household', 'grocery'
+      ];
+      const filtered = targetItems.filter((it) => {
+        const name = (it.name || '').toLowerCase();
+        return !groceryKeywords.some((k) => name.includes(k));
+      });
+      if (filtered.length > 0) {
+        targetItems = filtered;
+      }
     }
 
     // Mark as printed (always write to local log to keep history in sync)
     printedOrderIds.add(orderId);
+    if (order.id) printedOrderIds.add(order.id);
+    if (order.readableId) printedOrderIds.add(order.readableId);
     savePrintedOrderLog();
 
     // Print
-    printKOT(order, items, user);
+    printKOT(order, targetItems, user);
 
   } catch (err) {
     console.error(`[Error] handlePrintRequest failed for Order ${orderId}:`, err.message);
@@ -281,12 +355,13 @@ function setupSubscription() {
 
   channel = supabase.channel('restaurant-orders-live');
 
-  // Subscribe to direct "reprint-kot" broadcast signals (from Admin Mobile Click)
+  // Subscribe to direct "reprint-kot" broadcast signals (from Admin Mobile Click / Web App)
   channel.on('broadcast', { event: 'reprint-kot' }, (payload) => {
-    const { orderId } = payload.payload || {};
+    const data = payload.payload || {};
+    const { orderId } = data;
     if (orderId) {
       console.log(`[Broadcast] Received Reprint request for Order: ${orderId}`);
-      handlePrintRequest(orderId, true); // True forces print bypassing duplicate filters
+      handlePrintRequest(orderId, true, data); // True forces print bypassing duplicate filters
     }
   });
 

@@ -1,11 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'design_system.dart';
+import '../routes/page_transitions.dart';
 
 class AppTheme {
+  static const _pageTransitionsTheme = PageTransitionsTheme(
+    builders: {
+      TargetPlatform.android: FastKiranaPageTransitionsBuilder(),
+      TargetPlatform.iOS: FastKiranaPageTransitionsBuilder(),
+      TargetPlatform.macOS: FastKiranaPageTransitionsBuilder(),
+      TargetPlatform.windows: FastKiranaPageTransitionsBuilder(),
+      TargetPlatform.linux: FastKiranaPageTransitionsBuilder(),
+    },
+  );
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
+      pageTransitionsTheme: _pageTransitionsTheme,
       colorScheme: const ColorScheme.light(
         primary: AppDesignSystem.primary,
         onPrimary: Colors.white,
@@ -72,6 +84,21 @@ class AppTheme {
         color: AppDesignSystem.divider,
         thickness: 1,
       ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF0F172A),
+        contentTextStyle: GoogleFonts.inter(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+        elevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFF334155), width: 1),
+        ),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      ),
       textTheme: GoogleFonts.interTextTheme(),
     );
   }
@@ -79,6 +106,7 @@ class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
+      pageTransitionsTheme: _pageTransitionsTheme,
       colorScheme: const ColorScheme.dark(
         primary: AppDesignSystem.primary,
         onPrimary: Colors.white,
@@ -152,6 +180,21 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF0F172A),
+        contentTextStyle: GoogleFonts.inter(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+        elevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFF334155), width: 1),
+        ),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
       textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
     );

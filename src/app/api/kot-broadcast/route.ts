@@ -40,11 +40,11 @@ export async function POST(request: NextRequest) {
       })
     })
 
-    // Send the broadcast
+    // Send the broadcast with all order details
     await channel.send({
       type: 'broadcast',
       event: 'reprint-kot',
-      payload: { orderId, readableId }
+      payload: body
     })
 
     // Keep alive briefly for propagation

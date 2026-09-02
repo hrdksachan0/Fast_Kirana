@@ -17,8 +17,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/network/api_client.dart';
 import '../../core/config/app_config.dart';
 import '../../core/services/supabase_service.dart';
+import '../../core/services/kot_print_service.dart';
 import '../../core/utils/restaurant_utils.dart';
+import '../../core/utils/app_toast.dart';
 import '../../widgets/brand_logo.dart';
+import '../../widgets/live_clock_badge.dart';
 import '../../providers/auth_provider.dart';
 
 class RestaurantDashboard extends ConsumerStatefulWidget {
@@ -49,10 +52,10 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
   Map<String, dynamic> _salesSummary = {};
   
   Timer? _autoRefreshTimer;
-  Timer? _clockTimer;
-  String _currentTime = '';
+  bool _isFetchingOrders = false;
   String _restaurantName = 'Restaurant Console';
   String? _assignedRestaurantId;
+  String? _updatingOrderId;
   double _commissionRate = 25.0;
 
   double _getCommissionRateForOutlet(String? restId, String? restName) {
@@ -75,6 +78,11 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
   String _selectedStatusFilter = 'ALL'; // ALL, PENDING, CONFIRMED, PACKED, COMPLETED
   String _selectedSalesPeriod = 'TODAY'; // TODAY, YESTERDAY, WEEK, MONTH, ALL
 
+  // Menu Search & Filter State
+  String _menuSearchQuery = '';
+  String _menuStockFilter = 'ALL'; // ALL, IN_STOCK, OUT_STOCK
+  final TextEditingController _menuSearchController = TextEditingController();
+
   // Dynamic Theme Colors
   static const Color primaryRed = Color(0xFFE20A22);
   static const Color brandGreen = Color(0xFF10B981);
@@ -94,39 +102,21 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
   @override
   void initState() {
     super.initState();
-    _updateClock();
-    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) => _updateClock());
-
     _initOutletDetails();
 
-    // 20-second auto-refresh countdown
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() {
-        if (_refreshCountdown <= 1) {
-          _refreshCountdown = 20;
-          _fetchOrders(silent: true);
-        } else {
-          _refreshCountdown--;
-        }
-      });
+    // 25-second calm background refresh (without 1-second full-screen rebuilds)
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 25), (_) {
+      if (!mounted || _isFetchingOrders) return;
+      _fetchOrders(silent: true);
     });
   }
 
   @override
   void dispose() {
-    _clockTimer?.cancel();
     _autoRefreshTimer?.cancel();
     _audioPlayer.dispose();
+    _menuSearchController.dispose();
     super.dispose();
-  }
-
-  void _updateClock() {
-    if (!mounted) return;
-    final now = DateTime.now();
-    setState(() {
-      _currentTime = DateFormat('hh:mm:ss a').format(now);
-    });
   }
 
   Future<void> _initOutletDetails() async {
@@ -138,20 +128,12 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
       }
     }
 
-    // 2. Logged in user profile & phone matching
+    // 2. Logged in user profile & assigned restaurant
     final user = ref.read(authProvider).valueOrNull;
-    final cleanPhone = (user?.phone ?? '').replaceAll(RegExp(r'\D'), '');
 
     if (_assignedRestaurantId == null || _assignedRestaurantId!.isEmpty) {
-      if (cleanPhone == '8112849854') {
-        _assignedRestaurantId = outletAsRestaurantId;
-        _restaurantName = 'A.S. Restaurant';
-      } else if (cleanPhone == '9250138656') {
-        _assignedRestaurantId = outletWedsonId;
-        _restaurantName = 'Wedson Restaurant';
-      } else if (cleanPhone == '7991488783') {
-        _assignedRestaurantId = outletBalUdyanId;
-        _restaurantName = 'Bal Udyan Restaurant';
+      if (user?.assignedRestaurantId != null && user!.assignedRestaurantId!.isNotEmpty) {
+        _assignedRestaurantId = user.assignedRestaurantId;
       } else {
         final prefs = await SharedPreferences.getInstance();
         final rawUserData = prefs.getString('user_data');
@@ -183,11 +165,27 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
 
     if (mounted) setState(() {});
 
+    // Only fetch live orders on init (the active tab). Menu and Sales load lazily.
     _fetchOrders();
-    _fetchMenuItems();
-    _fetchSalesSummary();
-    _fetchSalesOrders();
     _initSupabaseRealtime();
+  }
+
+  // Lazy tab loading flags
+  bool _menuTabLoaded = false;
+  bool _salesTabLoaded = false;
+
+  /// Called when user switches tabs — lazy-loads data for Menu and Sales tabs
+  void _onTabChanged(int newTab) {
+    setState(() => _activeTab = newTab);
+
+    if (newTab == 1 && !_menuTabLoaded) {
+      _menuTabLoaded = true;
+      _fetchMenuItems();
+    } else if (newTab == 2 && !_salesTabLoaded) {
+      _salesTabLoaded = true;
+      _fetchSalesSummary();
+      _fetchSalesOrders();
+    }
   }
 
   void _initSupabaseRealtime() {
@@ -195,12 +193,25 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
       final supabase = SupabaseService.client;
       if (supabase == null) return;
 
+      // 1. Database table changes
       supabase
           .channel('public:restaurant_orders_channel_${_assignedRestaurantId ?? 'all'}')
           .onPostgresChanges(
             event: PostgresChangeEvent.all,
             schema: 'public',
             table: 'orders',
+            callback: (payload) {
+              _fetchOrders(silent: true);
+              _playChime();
+            },
+          )
+          .subscribe();
+
+      // 2. Direct broadcast channel for instant KOT sync across devices
+      supabase
+          .channel('restaurant-orders-live')
+          .onBroadcast(
+            event: 'reprint-kot',
             callback: (payload) {
               _fetchOrders(silent: true);
               _playChime();
@@ -217,6 +228,9 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
   }
 
   Future<void> _fetchOrders({bool silent = false}) async {
+    if (_isFetchingOrders) return;
+    _isFetchingOrders = true;
+
     if (!silent) {
       setState(() => _isLoading = true);
     } else {
@@ -273,6 +287,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
     } catch (e) {
       debugPrint('[Restaurant Orders Fetch Error]: $e');
     } finally {
+      _isFetchingOrders = false;
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -392,31 +407,33 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
       final res = await dio.patch('/api/orders/$orderId', data: body);
       if (res.statusCode == 200) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                nextStatus == 'CONFIRMED'
-                    ? '✅ Order Accepted! Kitchen timer set.'
-                    : nextStatus == 'PACKED'
-                        ? '🥡 Food marked as READY for rider pickup!'
-                        : 'Order status updated to $nextStatus',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-              ),
-              backgroundColor: brandGreen,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          if (nextStatus == 'CONFIRMED') {
+            AppToast.showSuccess(
+              context,
+              'Order Accepted! 👨‍🍳',
+              subtitle: 'Kitchen timer set and cooking started.',
+            );
+          } else if (nextStatus == 'PACKED') {
+            AppToast.showSuccess(
+              context,
+              'Food Ready for Pickup! 🥡',
+              subtitle: 'Rider notified to collect the package.',
+            );
+          } else {
+            AppToast.showSuccess(
+              context,
+              'Order status updated to $nextStatus',
+            );
+          }
         }
         _fetchOrders(silent: true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update order status', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-            backgroundColor: primaryRed,
-            behavior: SnackBarBehavior.floating,
-          ),
+        AppToast.showError(
+          context,
+          'Failed to update order status',
+          subtitle: 'Please check your connection and try again',
         );
       }
     } finally {
@@ -442,17 +459,19 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
       final dio = ref.read(dioProvider);
       await dio.patch('/api/restaurant-dashboard/products/$itemId', data: {'isAvailable': newStatus});
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${item['name']} is now ${newStatus ? 'IN STOCK 🟢' : 'OUT OF STOCK 🔴 (86)'}',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-            ),
-            backgroundColor: newStatus ? brandGreen : primaryRed,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        if (newStatus) {
+          AppToast.showSuccess(
+            context,
+            '${item['name']} is now IN STOCK 🟢',
+            subtitle: 'Available for customers to order',
+          );
+        } else {
+          AppToast.showWarning(
+            context,
+            '${item['name']} marked OUT OF STOCK 🔴 (86)',
+            subtitle: 'Hidden from customer menu for today',
+          );
+        }
       }
     } catch (_) {
       // Revert optimistic update
@@ -576,6 +595,76 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
     );
   }
 
+  String _generateKitchenWhatsAppMessage(Map<String, dynamic> order) {
+    final String orderId = (order['id'] ?? '').toString();
+    final dynamic rawReadable = order['readableId'];
+    final String readableId = (rawReadable != null && rawReadable.toString().isNotEmpty)
+        ? rawReadable.toString()
+        : (orderId.length > 4 ? orderId.substring(orderId.length - 4) : orderId);
+
+    final List items = KotPrintService.extractRestaurantItems(order);
+
+    DateTime orderDate = DateTime.now();
+    if (order['createdAt'] != null) {
+      try {
+        orderDate = DateTime.parse(order['createdAt'].toString()).toLocal();
+      } catch (_) {}
+    }
+    final timeStr = DateFormat('hh:mm a').format(orderDate);
+
+    final String deliveryMethod = (order['deliveryMethod'] ?? 'DELIVERY').toString().toUpperCase();
+    final String typeStr = (deliveryMethod == 'PICKUP' || deliveryMethod == 'SELF_PICKUP')
+        ? '🚶 Self Pickup (Customer Takeaway)'
+        : '🛵 Doorstep Delivery (Rider Pickup)';
+
+    final outletName = (order['shopName'] != null && order['shopName'].toString().isNotEmpty)
+        ? order['shopName'].toString()
+        : _restaurantName;
+
+    final buffer = StringBuffer();
+    buffer.writeln('🍽️ *FASTKIRANA KITCHEN ORDER*');
+    buffer.writeln('━━━━━━━━━━━━━━━━━━━━━');
+    buffer.writeln('🆔 *Order Token:* #$readableId');
+    buffer.writeln('⏰ *Order Time:* $timeStr');
+    buffer.writeln('📦 *Type:* $typeStr');
+    buffer.writeln('🏪 *Outlet:* $outletName');
+    buffer.writeln('━━━━━━━━━━━━━━━━━━━━━');
+    buffer.writeln('📋 *ITEMS TO PREPARE:*\n');
+
+    int totalQty = 0;
+    for (int idx = 0; idx < items.length; idx++) {
+      final i = items[idx];
+      final name = (i['name'] ?? 'Food Item').toString();
+      final qty = (i['quantity'] is num) ? (i['quantity'] as num).toInt() : (int.tryParse(i['quantity']?.toString() ?? '1') ?? 1);
+      totalQty += qty;
+      final variant = (i['selectedVariant'] != null && i['selectedVariant'].toString().isNotEmpty)
+          ? ' (${i['selectedVariant']})'
+          : '';
+      final itemNote = (i['notes'] != null && i['notes'].toString().isNotEmpty)
+          ? ' [Note: ${i['notes']}]'
+          : '';
+      buffer.writeln('${idx + 1}. $name$variant$itemNote  ➜  *Qty: $qty*');
+    }
+
+    if (items.isEmpty) {
+      buffer.writeln('1. Food Items  ➜  *Qty: 1*');
+      totalQty = 1;
+    }
+
+    buffer.writeln('\n🔢 *Total Items to Pack:* $totalQty items');
+    buffer.writeln('━━━━━━━━━━━━━━━━━━━━━');
+
+    final customerNote = (order['notes'] ?? order['customerNote'] ?? '').toString().trim();
+    if (customerNote.isNotEmpty && customerNote != 'null') {
+      buffer.writeln('📝 *Customer Note:* $customerNote');
+      buffer.writeln('━━━━━━━━━━━━━━━━━━━━━');
+    }
+
+    buffer.writeln('👨‍🍳 *Chef Note:* Kripya fresh prepare karein aur safely pack karein');
+
+    return buffer.toString();
+  }
+
   String _generateKOTText(Map<String, dynamic> order) {
     final String orderId = (order['id'] ?? '').toString();
     final dynamic rawReadable = order['readableId'];
@@ -583,8 +672,8 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
         ? rawReadable.toString()
         : (orderId.length > 4 ? orderId.substring(orderId.length - 4) : orderId);
 
-    final dynamic rawItems = order['items'];
-    final List items = (rawItems is List) ? rawItems : [];
+    // Extract restaurant items strictly (omit grocery items on combined orders)
+    final List items = KotPrintService.extractRestaurantItems(order);
 
     final formattedItems = items.isNotEmpty
         ? items.map((i) {
@@ -594,29 +683,41 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
                 ? ' (${i['selectedVariant']})'
                 : '';
             final note = (i['notes'] != null && i['notes'].toString().isNotEmpty)
-                ? '\n  📝 Note: ${i['notes']}'
+                ? '\n      * Note: ${i['notes']}'
                 : '';
-            return '[$qty x]  $name$variant$note';
+            final qtyStr = '$qty'.padRight(2);
+            return '$qtyStr x  $name$variant$note';
           }).join('\n')
-        : '[1 x]  Kitchen Food';
+        : '1  x  Kitchen Food';
 
-    final now = DateTime.now();
-    final timeStr = DateFormat('hh:mm a, dd MMM yyyy').format(now);
+    DateTime orderDate = DateTime.now();
+    if (order['createdAt'] != null) {
+      try {
+        String s = order['createdAt'].toString().trim();
+        if (!s.endsWith('Z') && !s.contains('+') && !RegExp(r'-\d{2}:\d{2}$').hasMatch(s)) {
+          s = '${s.replaceAll(' ', 'T')}Z';
+        }
+        orderDate = DateTime.parse(s).toLocal();
+      } catch (_) {}
+    }
+    final rawCustName = (order['userName'] ?? (order['user'] is Map ? order['user']['name'] : null) ?? order['customerName'])?.toString().trim();
+    final custName = rawCustName != null && rawCustName.isNotEmpty ? ' | $rawCustName' : '';
+    final printTimeStr = DateFormat('dd MMM  hh:mm a').format(DateTime.now());
+    final typeStr = (order['deliveryMethod'] ?? 'DELIVERY').toString();
 
-    return '''========================================
-              FASTKIRANA
-      KITCHEN ORDER TICKET (KOT)
-========================================
-Order ID : #$readableId-R
-Time     : $timeStr
-Outlet   : $_restaurantName
-----------------------------------------
-QTY    ITEM
-----------------------------------------
+    return '''======================================
+            FASTKIRANA KOT
+======================================
+TOKEN : #$readableId$custName
+TYPE  : $typeStr
+Print :  $printTimeStr
+--------------------------------------
+QTY   ITEM
+--------------------------------------
 $formattedItems
-----------------------------------------
-     ⚡ Ghatampur Food Kitchen Slip
-========================================''';
+--------------------------------------
+      *** FASTKIRANA KITCHEN ***
+======================================''';
   }
 
   void _showKOTPrintModal(Map<String, dynamic> order) {
@@ -627,6 +728,9 @@ $formattedItems
     final String readableId = (rawReadable != null && rawReadable.toString().isNotEmpty)
         ? rawReadable.toString()
         : (orderId.length > 4 ? orderId.substring(orderId.length - 4) : orderId);
+
+    final user = ref.read(authProvider).valueOrNull;
+    final isAdmin = user?.role.toUpperCase() == 'ADMIN';
 
     showModalBottomSheet(
       context: context,
@@ -706,88 +810,103 @@ $formattedItems
               // Action Buttons
               Row(
                 children: [
-                  // Bluetooth Print Trigger
+                  // 1. Primary Print Thermal POS (For Restaurant Console)
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () async {
+                      onPressed: () {
                         HapticFeedback.heavyImpact();
                         Navigator.pop(ctx);
-                        try {
-                          final sb = SupabaseService.client;
-                          if (sb != null) {
-                            // Send to the channel the web kitchen console listens on
-                            await sb.channel('restaurant-orders-live').sendBroadcastMessage(
-                              event: 'reprint-kot',
-                              payload: {
-                                'orderId': orderId,
-                                'kotText': kotText,
-                                'shopName': _restaurantName,
-                                'printedAt': DateTime.now().toIso8601String(),
-                              },
-                            );
-                          }
-                        } catch (_) {}
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Row(
-                                children: [
-                                  const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      '🖨️ KOT sent to Bluetooth / POS Printer!',
-                                      style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              backgroundColor: brandGreen,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        }
+                        KotPrintService.printKOTReceipt(context, order);
                       },
-                      icon: const Icon(Icons.bluetooth_connected_rounded, size: 16, color: Colors.white),
-                      label: Text('Bluetooth Print', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white)),
+                      icon: const Icon(Icons.print_rounded, size: 17, color: Colors.white),
+                      label: Text('Print KOT (Thermal POS)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2563EB),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
                       ),
                     ),
                   ),
+                  // 2. Admin Only: Send Remote Broadcast to Web Kitchen Console
+                  if (isAdmin) ...[
+                    const SizedBox(width: 8),
+                    Bounceable(
+                      onTap: () async {
+                        HapticFeedback.heavyImpact();
+                        Navigator.pop(ctx);
+
+                        final extractedItems = KotPrintService.extractRestaurantItems(order);
+                        final custName = (order['userName'] ?? (order['user'] is Map ? order['user']['name'] : null) ?? order['customerName'])?.toString();
+
+                        KotPrintService.sendRemoteKOTToKitchen(
+                          orderId: orderId,
+                          readableId: order['readableId']?.toString() ?? orderId,
+                          shopName: _restaurantName,
+                          customerName: custName,
+                          items: extractedItems,
+                          deliveryMethod: order['deliveryMethod']?.toString() ?? 'DELIVERY',
+                          notes: order['notes']?.toString(),
+                          kotText: kotText,
+                        );
+
+                        if (context.mounted) {
+                          AppToast.showSuccess(
+                            context,
+                            'KOT Sent to Kitchen! 👨‍🍳',
+                            subtitle: 'Order #${order['readableId'] ?? orderId} sent to kitchen',
+                          );
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDCFCE7),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF86EFAC)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('👨‍🍳', style: TextStyle(fontSize: 15)),
+                            SizedBox(width: 4),
+                            Text('Kitchen', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF15803D))),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(width: 8),
-                  // WhatsApp KOT Share
+                  // 3. WhatsApp Kitchen Share
                   Bounceable(
                     onTap: () async {
                       HapticFeedback.lightImpact();
-                      final uri = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(kotText)}');
+                      final whatsappText = _generateKitchenWhatsAppMessage(order);
+                      final uri = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(whatsappText)}');
                       if (await canLaunchUrl(uri)) {
                         await launchUrl(uri, mode: LaunchMode.externalApplication);
                       } else {
-                        await Clipboard.setData(ClipboardData(text: kotText));
+                        await Clipboard.setData(ClipboardData(text: whatsappText));
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('KOT Slip copied to clipboard!')),
+                          AppToast.showInfo(
+                            context,
+                            'Kitchen Order Copied! 📋',
+                            subtitle: 'Ready to share on WhatsApp',
                           );
                         }
                       }
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFDCFCE7),
+                        color: const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF86EFAC)),
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('💬', style: TextStyle(fontSize: 16)),
-                          SizedBox(width: 4),
-                          Text('WhatsApp', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: Color(0xFF15803D))),
+                          Text('💬', style: TextStyle(fontSize: 15)),
                         ],
                       ),
                     ),
@@ -1083,7 +1202,7 @@ $formattedItems
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).valueOrNull;
-    final isAdmin = user?.role?.toUpperCase() == 'ADMIN' || (user?.phone ?? '').replaceAll(RegExp(r'\D'), '') == '7054470303';
+    final isAdmin = user?.role.toUpperCase() == 'ADMIN';
     
     final pendingCount = _orders.where((o) => o['status'] == 'PENDING').length;
     final activeOrders = _orders.where((o) => o['status'] == 'CONFIRMED' || o['status'] == 'PREPARING').length;
@@ -1220,7 +1339,7 @@ $formattedItems
                   const SizedBox(width: 10),
                   _buildHeaderMetric('Cooking Now', '$activeOrders', brandAmber),
                   const SizedBox(width: 10),
-                  _buildHeaderMetric('Live Time', _currentTime, slateDark),
+                  _buildHeaderLiveClock(),
                 ],
               ),
             ),
@@ -1264,6 +1383,32 @@ $formattedItems
   );
   }
 
+  Widget _buildHeaderLiveClock() {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: slateBorder),
+        ),
+        child: Column(
+          children: [
+            const LiveDigitalClockBadge(
+              backgroundColor: Colors.transparent,
+              borderColor: Colors.transparent,
+              textColor: slateDark,
+              iconColor: slateMuted,
+              fontSize: 12,
+              showSeconds: false,
+            ),
+            Text('Live Time', style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w700, color: slateMuted)),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildHeaderMetric(String label, String value, Color col, {bool isAlert = false}) {
     return Expanded(
       child: Container(
@@ -1288,7 +1433,7 @@ $formattedItems
     return Bounceable(
       onTap: () {
         HapticFeedback.selectionClick();
-        setState(() => _activeTab = index);
+        _onTabChanged(index);
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -1378,7 +1523,6 @@ $formattedItems
     final dynamic rawUser = order['user'];
     final Map<String, dynamic> user = (rawUser is Map<String, dynamic>) ? rawUser : {};
     final String customerName = (user['name'] ?? 'Customer').toString();
-    final String? customerPhone = user['phone']?.toString();
     final assignedRider = order['assignedPicker'] ?? order['assignedRider'];
 
     Color statusBadgeColor = primaryRed;
@@ -1700,51 +1844,345 @@ $formattedItems
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(14),
-      itemCount: _menuItems.length,
-      itemBuilder: (context, idx) {
-        final item = _menuItems[idx];
-        final isAvailable = item['isAvailable'] ?? true;
-        final num price = (item['price'] is num)
-            ? (item['price'] as num)
-            : (num.tryParse(item['price']?.toString() ?? '0') ?? 0);
+    final query = _menuSearchQuery.trim().toLowerCase();
+    final inStockCount = _menuItems.where((p) => p['isAvailable'] == true).length;
+    final outStockCount = _menuItems.length - inStockCount;
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: slateBorder),
-          ),
-          child: Row(
+    // Filter items by search query and stock filter
+    final filteredItems = _menuItems.where((item) {
+      final name = (item['name'] ?? '').toString().toLowerCase();
+      final category = (item['category'] is Map ? item['category']['name'] : '').toString().toLowerCase();
+      final priceStr = (item['price'] ?? '').toString();
+
+      final matchesQuery = query.isEmpty ||
+          name.contains(query) ||
+          category.contains(query) ||
+          priceStr.contains(query);
+
+      if (!matchesQuery) return false;
+
+      final isAvailable = item['isAvailable'] ?? true;
+      if (_menuStockFilter == 'IN_STOCK') return isAvailable == true;
+      if (_menuStockFilter == 'OUT_STOCK') return isAvailable == false;
+      return true;
+    }).toList();
+
+    return Column(
+      children: [
+        // ─── 1. Premium Search Bar & Filter Header ──────────────────────────
+        Container(
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+          color: bgMain,
+          child: Column(
             children: [
+              // Modern Search Box
               Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(8)),
-                child: const Center(child: Text('🍲', style: TextStyle(fontSize: 18))),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _menuSearchQuery.isNotEmpty ? primaryRed : const Color(0xFFE2E8F0),
+                    width: _menuSearchQuery.isNotEmpty ? 1.5 : 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: _menuSearchController,
+                  onChanged: (val) {
+                    setState(() {
+                      _menuSearchQuery = val;
+                    });
+                  },
+                  style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w600, color: slateDark),
+                  decoration: InputDecoration(
+                    hintText: 'Search dish name, price or category...',
+                    hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w500),
+                    prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF64748B)),
+                    suffixIcon: _menuSearchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.cancel_rounded, size: 18, color: Color(0xFF94A3B8)),
+                            onPressed: () {
+                              _menuSearchController.clear();
+                              setState(() {
+                                _menuSearchQuery = '';
+                              });
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                  ),
+                ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 10),
+
+              // Filter Chips (All, In Stock, 86 / Out of Stock)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
                   children: [
-                    Text(item['name']?.toString() ?? '', style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w800, color: slateDark)),
-                    Text('₹${price.toInt()}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: slateMuted)),
+                    _buildMenuFilterChip(
+                      label: 'All Dishes (${_menuItems.length})',
+                      isSelected: _menuStockFilter == 'ALL',
+                      color: slateDark,
+                      onTap: () => setState(() => _menuStockFilter = 'ALL'),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildMenuFilterChip(
+                      label: '🟢 In Stock ($inStockCount)',
+                      isSelected: _menuStockFilter == 'IN_STOCK',
+                      color: const Color(0xFF15803D),
+                      onTap: () => setState(() => _menuStockFilter = 'IN_STOCK'),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildMenuFilterChip(
+                      label: '🔴 86 / Out of Stock ($outStockCount)',
+                      isSelected: _menuStockFilter == 'OUT_STOCK',
+                      color: primaryRed,
+                      onTap: () => setState(() => _menuStockFilter = 'OUT_STOCK'),
+                    ),
                   ],
                 ),
               ),
-              Switch.adaptive(
-                value: isAvailable,
-                activeColor: brandGreen,
-                onChanged: (_) => _toggleItemAvailability(item),
-              ),
             ],
           ),
-        );
+        ),
+
+        // ─── 2. Dishes List / Empty State ─────────────────────────────────────
+        Expanded(
+          child: filteredItems.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Center(
+                            child: Icon(Icons.search_off_rounded, size: 32, color: Color(0xFF94A3B8)),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          'No dishes found',
+                          style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: slateDark),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _menuSearchQuery.isNotEmpty
+                              ? 'No items match "$_menuSearchQuery"'
+                              : 'No dishes match selected stock filter',
+                          style: GoogleFonts.inter(fontSize: 12.5, color: slateMuted),
+                          textAlign: TextAlign.center,
+                        ),
+                        if (_menuSearchQuery.isNotEmpty) ...[
+                          const SizedBox(height: 14),
+                          ElevatedButton(
+                            onPressed: () {
+                              _menuSearchController.clear();
+                              setState(() {
+                                _menuSearchQuery = '';
+                              });
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: slateDark,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            ),
+                            child: Text(
+                              'Clear Search',
+                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
+                  itemCount: filteredItems.length,
+                  itemBuilder: (context, idx) {
+                    final item = filteredItems[idx];
+                    final isAvailable = item['isAvailable'] ?? true;
+                    final num price = (item['price'] is num)
+                        ? (item['price'] as num)
+                        : (num.tryParse(item['price']?.toString() ?? '0') ?? 0);
+
+                    final String name = item['name']?.toString() ?? 'Dish';
+                    final String? imageUrl = (item['images'] is List && (item['images'] as List).isNotEmpty)
+                        ? item['images'][0].toString()
+                        : item['image']?.toString();
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: isAvailable ? const Color(0xFFF1F5F9) : const Color(0xFFFEE2E2),
+                          width: isAvailable ? 1.2 : 1.4,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          // Dish Thumbnail / Avatar
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: isAvailable ? const Color(0xFFF8FAFC) : const Color(0xFFFEF2F2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isAvailable ? const Color(0xFFE2E8F0) : const Color(0xFFFECACA),
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: (imageUrl != null && imageUrl.trim().isNotEmpty)
+                                  ? CachedNetworkImage(
+                                      imageUrl: imageUrl,
+                                      fit: BoxFit.cover,
+                                      errorWidget: (_, __, ___) => const Center(
+                                        child: Text('🍲', style: TextStyle(fontSize: 20)),
+                                      ),
+                                    )
+                                  : const Center(
+                                      child: Text('🍲', style: TextStyle(fontSize: 20)),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+
+                          // Dish Info & Price
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  name,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: isAvailable ? slateDark : const Color(0xFF94A3B8),
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 3),
+                                Row(
+                                  children: [
+                                    Text(
+                                      '₹${price.toInt()}',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w900,
+                                        color: isAvailable ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: isAvailable ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        isAvailable ? 'LIVE' : '86 • OFF',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w900,
+                                          color: isAvailable ? const Color(0xFF15803D) : const Color(0xFFDC2626),
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Availability Switch
+                          Switch.adaptive(
+                            value: isAvailable,
+                            activeColor: brandGreen,
+                            activeTrackColor: const Color(0xFF86EFAC),
+                            inactiveThumbColor: const Color(0xFF94A3B8),
+                            inactiveTrackColor: const Color(0xFFE2E8F0),
+                            onChanged: (_) => _toggleItemAvailability(item),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMenuFilterChip({
+    required String label,
+    required bool isSelected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Bounceable(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
       },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? color : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.4 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 11.5,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+            color: isSelected ? Colors.white : const Color(0xFF64748B),
+          ),
+        ),
+      ),
     );
   }
 

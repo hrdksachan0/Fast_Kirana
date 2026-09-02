@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -222,10 +221,26 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
 
   Widget _buildLiquidBottomNav(BuildContext context, WidgetRef ref, int selectedIndex) {
     final navItems = [
-      {'label': 'Home', 'icon': Icons.home_outlined},
-      {'label': 'Search', 'icon': Icons.search_rounded},
-      {'label': 'Category', 'icon': Icons.grid_view_rounded},
-      {'label': 'Account', 'icon': Icons.person_outline_rounded},
+      {
+        'label': 'Home',
+        'activeIcon': Icons.home_rounded,
+        'inactiveIcon': Icons.home_outlined,
+      },
+      {
+        'label': 'Search',
+        'activeIcon': Icons.search_rounded,
+        'inactiveIcon': Icons.search_rounded,
+      },
+      {
+        'label': 'Category',
+        'activeIcon': Icons.grid_view_rounded,
+        'inactiveIcon': Icons.grid_view_outlined,
+      },
+      {
+        'label': 'Account',
+        'activeIcon': Icons.person_rounded,
+        'inactiveIcon': Icons.person_outline_rounded,
+      },
     ];
 
     final screenWidth = MediaQuery.of(context).size.width;
@@ -236,27 +251,23 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
       width: navWidth,
       height: 58,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: Colors.grey.withOpacity(0.18)),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 30,
+            color: const Color(0xFF0F172A).withValues(alpha: 0.08),
+            blurRadius: 24,
             offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(30),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Stack(
+      child: Stack(
             alignment: Alignment.centerLeft,
             children: [
               // Liquid Water Droplet Active Indicator
               AnimatedPositioned(
-                duration: const Duration(milliseconds: 320),
+                duration: const Duration(milliseconds: 300),
                 curve: Curves.easeOutBack,
                 left: 6 + (selectedIndex * tabWidth),
                 top: 8,
@@ -264,20 +275,13 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
                   width: tabWidth,
                   height: 42,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.white.withOpacity(0.9),
-                        const Color(0xFFF3F4F6).withOpacity(0.6),
-                      ],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
+                    color: const Color(0xFFFEF2F2),
                     borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: Colors.grey.withOpacity(0.22)),
+                    border: Border.all(color: const Color(0xFFFECDD3)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
-                        blurRadius: 10,
+                        color: const Color(0xFFDC2626).withValues(alpha: 0.06),
+                        blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
                     ],
@@ -307,9 +311,9 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
                               scale: isSelected ? 1.08 : 1.0,
                               duration: const Duration(milliseconds: 200),
                               child: Icon(
-                                item['icon'] as IconData,
+                                (isSelected ? item['activeIcon'] : item['inactiveIcon']) as IconData,
                                 size: 21,
-                                color: isSelected ? const Color(0xFFF33B30) : const Color(0xFF9CA3AF),
+                                color: isSelected ? const Color(0xFFDC2626) : const Color(0xFF94A3B8),
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -317,8 +321,8 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
                               item['label'] as String,
                               style: GoogleFonts.inter(
                                 fontSize: 9.5,
-                                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                color: isSelected ? const Color(0xFFF33B30) : const Color(0xFF9CA3AF),
+                                fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                                color: isSelected ? const Color(0xFFDC2626) : const Color(0xFF94A3B8),
                                 letterSpacing: -0.2,
                               ),
                             ),
@@ -331,8 +335,6 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 }

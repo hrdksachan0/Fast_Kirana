@@ -185,6 +185,34 @@ class SupabaseService {
     }
   }
 
+  /// Broadcast live rider position to all listeners of an order (sub-100ms websocket)
+  static Future<void> broadcastRiderLocation({
+    required String orderId,
+    required double lat,
+    required double lng,
+    double heading = 0.0,
+    double speed = 0.0,
+  }) async {
+    final sb = client;
+    if (sb == null) return;
+    try {
+      final channelName = 'order-live-tracking-$orderId';
+      final channel = sb.channel(channelName);
+      await channel.sendBroadcastMessage(
+        event: 'location_update',
+        payload: {
+          'lat': lat,
+          'lng': lng,
+          'heading': heading,
+          'speed': speed,
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      debugPrint('[SupabaseService] broadcastRiderLocation error: $e');
+    }
+  }
+
   /// Unsubscribe and remove channel
   static Future<void> unsubscribe(RealtimeChannel? channel) async {
     if (channel != null && client != null) {

@@ -12,6 +12,7 @@ class User {
   final String role;
   final bool isBlocked;
   final String? blockReason;
+  final String? assignedRestaurantId;
   final DateTime? createdAt;
 
   User({
@@ -23,10 +24,28 @@ class User {
     required this.role,
     required this.isBlocked,
     this.blockReason,
+    this.assignedRestaurantId,
     this.createdAt,
   });
 
-  factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
+  factory User.fromJson(Map<String, dynamic> json) {
+    try {
+      return _$UserFromJson(json);
+    } catch (_) {
+      return User(
+        id: json['id']?.toString() ?? '',
+        name: json['name']?.toString(),
+        email: json['email']?.toString() ?? '',
+        phone: json['phone']?.toString(),
+        image: json['image']?.toString(),
+        role: json['role']?.toString() ?? 'USER',
+        isBlocked: json['isBlocked'] == true,
+        blockReason: json['blockReason']?.toString(),
+        assignedRestaurantId: json['assignedRestaurantId']?.toString(),
+        createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'].toString()) : null,
+      );
+    }
+  }
   Map<String, dynamic> toJson() => _$UserToJson(this);
 
   User copyWith({
@@ -38,6 +57,7 @@ class User {
     String? role,
     bool? isBlocked,
     String? blockReason,
+    String? assignedRestaurantId,
     DateTime? createdAt,
   }) {
     return User(
@@ -49,6 +69,7 @@ class User {
       role: role ?? this.role,
       isBlocked: isBlocked ?? this.isBlocked,
       blockReason: blockReason ?? this.blockReason,
+      assignedRestaurantId: assignedRestaurantId ?? this.assignedRestaurantId,
       createdAt: createdAt ?? this.createdAt,
     );
   }

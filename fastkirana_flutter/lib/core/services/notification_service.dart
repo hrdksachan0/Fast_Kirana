@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/secure_storage_service.dart';
 
 // Top-level background message handler for when app is killed or phone screen is off
 @pragma('vm:entry-point')
@@ -299,10 +300,10 @@ class NotificationService {
       String? token = await _fcm?.getToken();
       if (token == null) return;
 
-      final prefs = await SharedPreferences.getInstance();
-      String? authToken = prefs.getString('auth_token');
+      String? authToken = await SecureStorage.read('auth_token');
 
       if (authToken == null) {
+        final prefs = await SharedPreferences.getInstance();
         await prefs.setString('pending_fcm_token', token);
         return;
       }
@@ -316,7 +317,8 @@ class NotificationService {
 
       if (response.statusCode == 200) {
         print("FCM Token refreshed successfully!");
-        await prefs.remove('pending_fcm_token');
+        final p = await SharedPreferences.getInstance();
+        await p.remove('pending_fcm_token');
       }
     } catch (e) {
       print("Error refreshing FCM token: $e");

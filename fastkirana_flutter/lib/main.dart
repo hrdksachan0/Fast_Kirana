@@ -4,21 +4,40 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'core/theme/design_system.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/supabase_service.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // ─── CRITICAL PERFORMANCE FIX ──────────────────────────────────
+  // Disable runtime font downloading. All 1,356 GoogleFonts calls will now
+  // use bundled assets only — zero network latency on cold start.
+  GoogleFonts.config.allowRuntimeFetching = false;
+
   // ─── Global Flutter Error Handling ───────────────────────────────
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
-    debugPrint("Flutter Error: ${details.exceptionAsString()}");
-  };
+  // When Crashlytics is enabled (Firebase initialized below) we forward
+  // every uncaught Flutter framework error to it. In debug / web we keep
+  // the local console error so devs still see the stack trace.
+  if (!kIsWeb && !kDebugMode) {
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      FirebaseCrashlytics.instance.recordFlutterFatalError(
+        details,
+      );
+    };
+  } else {
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      debugPrint("Flutter Error: ${details.exceptionAsString()}");
+    };
+  }
 
   ErrorWidget.builder = (FlutterErrorDetails details) {
     return Material(
