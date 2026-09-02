@@ -51,6 +51,8 @@ const InputField = ({ label, id, required, children }: { label: string; id: stri
   </div>
 )
 
+const inputClass = "w-full px-3.5 py-2.5 text-sm font-semibold bg-background border border-border rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-text-secondary/40"
+
 // Interactive Leaflet Map Preview that centers exactly on coordinates with a draggable pin
 function RestaurantMapPreview({
   lat,
