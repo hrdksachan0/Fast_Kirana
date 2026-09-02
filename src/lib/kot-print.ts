@@ -73,7 +73,7 @@ async function processPrintQueue() {
         iframeDoc.write(item.html)
         iframeDoc.close()
 
-        await new Promise((resolve) => setTimeout(resolve, 300))
+        await new Promise((resolve) => setTimeout(resolve, 50))
 
         try {
           iframe.contentWindow.focus()
@@ -106,81 +106,62 @@ async function processPrintQueue() {
       if (printQueue.length > 0) {
         processPrintQueue()
       }
-    }, 500)
+    }, 50)
   }
 }
 
 /**
- * Format date strictly in Indian Standard Time (IST - Asia/Kolkata)
+ * Parse any date representation (UTC string, ISO string, Date object, timestamp) reliably
  */
-function formatKOTDate(dateValue?: string | Date | number | null): string {
-  if (!dateValue) {
-    return new Intl.DateTimeFormat('en-IN', {
-      timeZone: 'Asia/Kolkata',
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    }).format(new Date())
-  }
-
-  let d: Date
+export function parseOrderDate(dateValue?: string | Date | number | null): Date {
+  if (!dateValue) return new Date()
   if (dateValue instanceof Date) {
-    d = dateValue
-  } else if (typeof dateValue === 'number') {
-    d = new Date(dateValue)
-  } else {
-    const s = String(dateValue).trim()
-    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-      if (s.endsWith('Z') || s.includes('+') || (s.includes('T') && s.slice(10).includes('-'))) {
-        d = new Date(s)
-      } else {
-        d = new Date(s.replace(' ', 'T') + 'Z')
-        if (isNaN(d.getTime())) d = new Date(s)
-      }
-    } else {
-      d = new Date(s)
-    }
+    return isNaN(dateValue.getTime()) ? new Date() : dateValue
+  }
+  if (typeof dateValue === 'number') {
+    const d = new Date(dateValue)
+    return isNaN(d.getTime()) ? new Date() : d
   }
 
-  if (isNaN(d.getTime())) {
-    d = new Date()
+  const s = String(dateValue).trim()
+  if (!s) return new Date()
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    if (s.endsWith('Z') || /[+-]\d{2}(:\d{2})?$/.test(s)) {
+      const d = new Date(s)
+      return isNaN(d.getTime()) ? new Date() : d
+    }
+    // PostgreSQL UTC timestamp without trailing Z
+    const utcIso = s.replace(' ', 'T') + 'Z'
+    const d = new Date(utcIso)
+    if (!isNaN(d.getTime())) return d
   }
+
+  const fallback = new Date(s)
+  return isNaN(fallback.getTime()) ? new Date() : fallback
+}
+
+/**
+ * Format date strictly in Indian Standard Time (IST - Asia/Kolkata)
+ * Example output: "01 Sep 2026, 9:28 pm"
+ */
+export function formatKOTDate(dateValue?: string | Date | number | null): string {
+  const d = parseOrderDate(dateValue)
 
   return new Intl.DateTimeFormat('en-IN', {
     timeZone: 'Asia/Kolkata',
     day: '2-digit',
     month: 'short',
     year: 'numeric',
-    hour: '2-digit',
+    hour: 'numeric',
     minute: '2-digit',
     hour12: true
   }).format(d)
 }
 
-function getElapsedText(createdAt?: string | Date | number | null): string {
+export function getElapsedText(createdAt?: string | Date | number | null): string {
   if (!createdAt) return 'Just now'
-  let d: Date
-  if (createdAt instanceof Date) {
-    d = createdAt
-  } else if (typeof createdAt === 'number') {
-    d = new Date(createdAt)
-  } else {
-    const s = String(createdAt).trim()
-    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-      if (s.endsWith('Z') || s.includes('+') || (s.includes('T') && s.slice(10).includes('-'))) {
-        d = new Date(s)
-      } else {
-        d = new Date(s.replace(' ', 'T') + 'Z')
-        if (isNaN(d.getTime())) d = new Date(s)
-      }
-    } else {
-      d = new Date(s)
-    }
-  }
-  if (isNaN(d.getTime())) return 'Just now'
+  const d = parseOrderDate(createdAt)
 
   const diffMs = Date.now() - d.getTime()
   const mins = Math.max(0, Math.floor(diffMs / 60000))

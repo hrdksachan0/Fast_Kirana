@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { formatPrice } from '@/lib/utils'
-import { printKOTReceipt as silentPrintKOT } from '@/lib/kot-print'
+import { printKOTReceipt as silentPrintKOT, parseOrderDate } from '@/lib/kot-print'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase-client'
 import { 
@@ -102,7 +102,7 @@ function getItemEmoji(index: number) {
 }
 
 function formatElapsed(createdAt: string | Date): string {
-  const created = new Date(createdAt)
+  const created = parseOrderDate(createdAt)
   const now = new Date()
   const diffMs = now.getTime() - created.getTime()
   const mins = Math.floor(diffMs / 60000)
@@ -114,7 +114,7 @@ function formatElapsed(createdAt: string | Date): string {
 
 function getSlaClass(createdAt: string | Date, status: string): string {
   if (status !== 'PENDING') return 'text-zinc-500 font-semibold'
-  const created = new Date(createdAt)
+  const created = parseOrderDate(createdAt)
   const now = new Date()
   const diffMs = now.getTime() - created.getTime()
   const mins = Math.floor(diffMs / 60000)
@@ -125,7 +125,7 @@ function getSlaClass(createdAt: string | Date, status: string): string {
 
 function getOrderCardSlaBorder(createdAt: string | Date, status: string): string {
   if (status !== 'PENDING') return 'border-border/55'
-  const created = new Date(createdAt)
+  const created = parseOrderDate(createdAt)
   const now = new Date()
   const diffMs = now.getTime() - created.getTime()
   const mins = Math.floor(diffMs / 60000)
@@ -360,15 +360,15 @@ export function RestaurantOrdersConsole() {
         const data = await res.json()
         setOrders(data)
 
-        // Auto-print KOT for new incoming CONFIRMED orders
+        // Auto-print KOT for new incoming orders (CONFIRMED or PENDING)
         if (isFirstFetchRef.current) {
-          // On initial load, mark all current CONFIRMED orders as "already printed"
-          const existingConfirmedIds = data.filter((o: Order) => o.status === 'CONFIRMED').map((o: Order) => o.id)
-          printedOrderIdsRef.current = new Set(existingConfirmedIds)
+          // On initial load, mark all current active orders as "already printed"
+          const existingIds = data.filter((o: Order) => o.status === 'CONFIRMED' || o.status === 'PENDING').map((o: Order) => o.id)
+          printedOrderIdsRef.current = new Set(existingIds)
           isFirstFetchRef.current = false
         } else {
           data.forEach((order: Order) => {
-            if (order.status === 'CONFIRMED' && !printedOrderIdsRef.current.has(order.id)) {
+            if ((order.status === 'CONFIRMED' || order.status === 'PENDING') && !printedOrderIdsRef.current.has(order.id)) {
               printedOrderIdsRef.current.add(order.id)
               // Trigger automatic print
               if (autoPrintEnabledRef.current) {
@@ -439,11 +439,11 @@ export function RestaurantOrdersConsole() {
               }
             }
 
-            // Debounce fetchOrders to avoid event storm when multiple concurrent orders arrive
+            // Fast near-instant fetchOrders on update
             if (updateTimeout) clearTimeout(updateTimeout)
             updateTimeout = setTimeout(() => {
               fetchOrders(true)
-            }, 1000)
+            }, 50)
           } else if (payload.eventType === 'INSERT') {
             const newOrder = payload.new as any
             const isRestaurantOrder = newOrder.restaurantId || newOrder.orderType === 'RESTAURANT'
@@ -451,7 +451,7 @@ export function RestaurantOrdersConsole() {
             if (updateTimeout) clearTimeout(updateTimeout)
             updateTimeout = setTimeout(() => {
               fetchOrders(true)
-            }, 1000)
+            }, 50)
 
             if (isRestaurantOrder) {
               if (soundEnabledRef.current && !audioContextBlockedRef.current) {
@@ -468,7 +468,7 @@ export function RestaurantOrdersConsole() {
         async (payload) => {
           const { orderId } = payload.payload || {}
           if (orderId) {
-            let orderToPrint = ordersRef.current.find((o) => o.id === orderId)
+            let orderToPrint = ordersRef.current.find((o) => o.id === orderId || o.readableId === orderId)
             if (!orderToPrint) {
               try {
                 const res = await fetch(`/api/orders/${orderId}`)
@@ -482,13 +482,48 @@ export function RestaurantOrdersConsole() {
             }
             if (orderToPrint) {
               console.log('Received remote reprint request for Order ID:', orderId)
+              // Play alert so kitchen staff notices the KOT
+              if (soundEnabledRef.current && !audioContextBlockedRef.current) {
+                playKitchenAlarmChime()
+              }
+              triggerHaptic()
               printKOTReceiptRef.current?.(orderToPrint)
-              toast.info(`🖨️ KOT #${orderToPrint.readableId || orderId.slice(0, 8)} printed on kitchen printer!`)
+              toast.info(`🖨️ KOT #${orderToPrint.readableId || orderId.slice(0, 8)} printed!`)
             }
           }
         }
       )
-      .subscribe()
+      .on(
+        'broadcast',
+        { event: 'print_kot' },
+        async (payload) => {
+          const { orderId } = payload.payload || {}
+          if (orderId) {
+            let orderToPrint = ordersRef.current.find((o) => o.id === orderId || o.readableId === orderId)
+            if (!orderToPrint) {
+              try {
+                const res = await fetch(`/api/orders/${orderId}`)
+                if (res.ok) {
+                  const data = await res.json()
+                  orderToPrint = data.order || data
+                }
+              } catch (e) {}
+            }
+            if (orderToPrint) {
+              printKOTReceiptRef.current?.(orderToPrint)
+            }
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Kitchen KOT Channel] Subscription status:', status)
+        if (status === 'CHANNEL_ERROR') {
+          console.error('[Kitchen KOT Channel] Failed to subscribe to realtime channel')
+          toast.error('⚠️ Kitchen realtime connection failed — KOT auto-receive disabled. Refresh the page.')
+        } else if (status === 'SUBSCRIBED') {
+          console.log('[Kitchen KOT Channel] ✅ Successfully subscribed — ready to receive KOT broadcasts')
+        }
+      })
     
     return () => {
       supabase.removeChannel(channel)

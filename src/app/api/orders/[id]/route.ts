@@ -176,6 +176,7 @@ export async function GET(
           return {
             id: o.id,
             readableId: o.readableId,
+            restaurantId: o.restaurantId || null,
             type: isRest ? 'RESTAURANT' : 'GROCERY',
             shopName: isRest ? (o.shopName || 'Restaurant') : (o.shopName || 'FastKirana Dark Store'),
             status: o.status,

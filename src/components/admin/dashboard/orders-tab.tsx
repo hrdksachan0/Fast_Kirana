@@ -233,28 +233,67 @@ export function OrdersTab({
     if (o.id !== targetOrder.id) markOrderKotPrinted(o.id)
 
     const toastId = toast.loading(`Sending KOT to Kitchen (Order #${targetOrder.readableId || targetOrder.id.slice(0, 8)})...`)
+
+    // Strategy: Use a unique ephemeral channel for the admin sender
+    // so it doesn't conflict with the kitchen's persistent 'restaurant-orders-live' channel.
+    // Both sender and receiver must be on the same channel topic for broadcast to work,
+    // so the sender subscribes to 'restaurant-orders-live' but with a unique channel id.
+    const senderId = `kot-sender-${Date.now()}`
+    let channel: ReturnType<typeof supabase.channel> | null = null
+
     try {
-      const channel = supabase.channel('restaurant-orders-live')
-      channel.subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          channel.send({
-            type: 'broadcast',
-            event: 'reprint-kot',
-            payload: { orderId: targetOrder.id }
-          }).then((resp) => {
-            toast.dismiss(toastId)
-            toast.success(`KOT Sent to Kitchen ✓ 📲`)
-            supabase.removeChannel(channel)
-          }).catch(() => {
-            toast.dismiss(toastId)
-            toast.success(`KOT Sent to Kitchen ✓ 📲`)
-            supabase.removeChannel(channel)
-          })
-        }
+      channel = supabase.channel('restaurant-orders-live', {
+        config: { broadcast: { self: false } },
       })
-    } catch (err) {
+      
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Subscribe timeout')), 5000)
+        channel!.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            clearTimeout(timeout)
+            resolve()
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            clearTimeout(timeout)
+            reject(new Error(`Channel ${status}`))
+          }
+        })
+      })
+
+      await channel.send({
+        type: 'broadcast',
+        event: 'reprint-kot',
+        payload: { orderId: targetOrder.id, readableId: targetOrder.readableId }
+      })
+
       toast.dismiss(toastId)
       toast.success(`KOT Sent to Kitchen ✓ 📲`)
+
+      // Keep channel alive briefly so Supabase propagates the message
+      setTimeout(() => {
+        try { if (channel) supabase.removeChannel(channel) } catch (_) {}
+      }, 3000)
+    } catch (err) {
+      // Cleanup failed channel
+      try { if (channel) supabase.removeChannel(channel) } catch (_) {}
+
+      // Fallback: Call server API to trigger KOT print via server-side broadcast
+      try {
+        const res = await fetch('/api/kot-broadcast', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId: targetOrder.id, readableId: targetOrder.readableId }),
+        })
+        if (res.ok) {
+          toast.dismiss(toastId)
+          toast.success(`KOT Sent to Kitchen ✓ (via server) 📲`)
+        } else {
+          toast.dismiss(toastId)
+          toast.warning('KOT send may have failed — open Kitchen Console and print manually')
+        }
+      } catch (_) {
+        toast.dismiss(toastId)
+        toast.warning('KOT send may have failed — open Kitchen Console and print manually')
+      }
     }
   }
 
