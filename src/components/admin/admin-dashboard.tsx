@@ -1743,7 +1743,7 @@ export function AdminDashboard({
   const saveProductChanges = async (e: React.FormEvent) => {
     e.preventDefault()
     const requiresBasePrice = !hasVariantsEdit
-    const isRestaurant = isEditProductRestaurant || editProductType === 'restaurant' || !!productEditForm.restaurantId
+    const isRestaurant = isEditProductRestaurant || !!productEditForm.restaurantId
     const isSpecialProduct = isEditProductCafe || isRestaurant
     const hasCategory = productEditForm.categoryId || isSpecialProduct
 
@@ -1856,7 +1856,7 @@ export function AdminDashboard({
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault()
     const requiresBasePrice = !hasVariantsNew
-    const isRestaurant = isNewProductRestaurant || newProductType === 'restaurant' || !!newProduct.restaurantId
+    const isRestaurant = isNewProductRestaurant || !!newProduct.restaurantId
     const isSpecialProduct = isNewProductCafe || isRestaurant
     const hasCategory = newProduct.categoryId || isSpecialProduct
 
