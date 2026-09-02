@@ -9,9 +9,8 @@ import {
   Star, X, Plus, Phone, Mail, ExternalLink, Upload, Utensils,
   TrendingUp, Percent, ArrowLeft, Eye, EyeOff, Leaf,
   UserCheck, UserPlus, ShieldCheck, User, Activity, Check, Search,
-  Navigation
+  Navigation, Globe
 } from 'lucide-react'
-import { FreeMapPicker } from '@/components/shared/free-map-picker'
 
 interface RestaurantFormProps {
   restaurant?: any
@@ -53,130 +52,6 @@ const InputField = ({ label, id, required, children }: { label: string; id: stri
 
 const inputClass = "w-full px-3.5 py-2.5 text-sm font-semibold bg-background border border-border rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-text-secondary/40"
 
-// Interactive Leaflet Map Preview that centers exactly on coordinates with a draggable pin
-function RestaurantMapPreview({
-  lat,
-  lng,
-  onCoordinateChange,
-}: {
-  lat: number | null
-  lng: number | null
-  onCoordinateChange: (lat: number, lng: number) => void
-}) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<any>(null)
-  const markerRef = useRef<any>(null)
-  const [isMapReady, setIsMapReady] = useState(false)
-
-  useEffect(() => {
-    let active = true
-
-    // Dynamically load Leaflet assets if not present
-    if (!document.getElementById('leaflet-css-cdn')) {
-      const link = document.createElement('link')
-      link.id = 'leaflet-css-cdn'
-      link.rel = 'stylesheet'
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-      document.head.appendChild(link)
-    }
-
-    const loadScript = () => {
-      if ((window as any).L) return Promise.resolve((window as any).L)
-      return new Promise((resolve, reject) => {
-        const script = document.createElement('script')
-        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-        script.onload = () => resolve((window as any).L)
-        script.onerror = reject
-        document.head.appendChild(script)
-      })
-    }
-
-    loadScript().then((L: any) => {
-      if (!active || !containerRef.current || !L) return
-
-      const targetLat = (lat && !isNaN(lat)) ? lat : 26.1558
-      const targetLng = (lng && !isNaN(lng)) ? lng : 80.1685
-
-      if (!mapRef.current) {
-        // Clear container if reused
-        containerRef.current.innerHTML = ''
-
-        const map = L.map(containerRef.current, {
-          center: [targetLat, targetLng],
-          zoom: 17,
-          zoomControl: true,
-        })
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 19,
-          attribution: '&copy; OpenStreetMap contributors',
-        }).addTo(map)
-
-        const customIcon = L.divIcon({
-          html: `<div style="transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; cursor: grab;">
-            <div style="background: #e11d48; color: white; padding: 4px 8px; border-radius: 8px; font-weight: 800; font-size: 11px; box-shadow: 0 4px 12px rgba(225,29,72,0.4); border: 2px solid white; white-space: nowrap; margin-bottom: 2px;">
-              📍 Restaurant Pin
-            </div>
-            <div style="width: 14px; height: 14px; background: #e11d48; border: 2px solid white; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>
-          </div>`,
-          className: 'custom-restaurant-pin',
-          iconSize: [30, 42],
-          iconAnchor: [15, 42],
-        })
-
-        const marker = L.marker([targetLat, targetLng], {
-          icon: customIcon,
-          draggable: true,
-        }).addTo(map)
-
-        marker.on('dragend', (e: any) => {
-          const newPos = e.target.getLatLng()
-          onCoordinateChange(Number(newPos.lat.toFixed(6)), Number(newPos.lng.toFixed(6)))
-        })
-
-        map.on('click', (e: any) => {
-          marker.setLatLng(e.latlng)
-          onCoordinateChange(Number(e.latlng.lat.toFixed(6)), Number(e.latlng.lng.toFixed(6)))
-        })
-
-        mapRef.current = map
-        markerRef.current = marker
-        setIsMapReady(true)
-      } else {
-        mapRef.current.setView([targetLat, targetLng], 17)
-        if (markerRef.current) {
-          markerRef.current.setLatLng([targetLat, targetLng])
-        }
-      }
-    }).catch(err => console.warn('Leaflet load notice:', err))
-
-    return () => {
-      active = false
-    }
-  }, [lat, lng, onCoordinateChange])
-
-  // Sync marker position when inputs are typed manually
-  useEffect(() => {
-    if (mapRef.current && markerRef.current && lat && lng && !isNaN(lat) && !isNaN(lng)) {
-      const current = markerRef.current.getLatLng()
-      if (Math.abs(current.lat - lat) > 0.00005 || Math.abs(current.lng - lng) > 0.00005) {
-        markerRef.current.setLatLng([lat, lng])
-        mapRef.current.setView([lat, lng], mapRef.current.getZoom() || 17)
-      }
-    }
-  }, [lat, lng])
-
-  return (
-    <div className="relative h-64 w-full rounded-2xl border border-border overflow-hidden bg-muted/20 shadow-inner">
-      <div ref={containerRef} className="h-full w-full z-0" />
-      <div className="absolute bottom-2.5 left-2.5 z-[400] bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-border/80 text-[11px] font-bold text-text-primary shadow-md flex items-center gap-1.5 pointer-events-none">
-        <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
-        <span>Click on map or drag pin to pinpoint exact shop location</span>
-      </div>
-    </div>
-  )
-}
-
 export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: RestaurantFormProps) {
   const router = useRouter()
   const { data: session } = useSession()
@@ -193,7 +68,49 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
   const [showStaffOnly, setShowStaffOnly] = useState(true)
   const [headPassword, setHeadPassword] = useState('')
   const [showPasswordText, setShowPasswordText] = useState(true)
-  const [showMapPickerModal, setShowMapPickerModal] = useState(false)
+  const [mapType, setMapType] = useState<'m' | 'k'>('m') // 'm' = Roadmap, 'k' = Satellite
+  const [mapZoom, setMapZoom] = useState<number>(18)
+  const [pasteInput, setPasteInput] = useState('')
+
+  const handleExtractFromGoogleMaps = (rawText: string) => {
+    const text = rawText.trim()
+    if (!text) {
+      toast.error('Please paste a Google Maps link or coordinates first')
+      return
+    }
+
+    // Direct coordinates: "26.1558, 80.1685" or "26.1558,80.1685"
+    const directMatch = text.match(/(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/)
+    if (directMatch) {
+      const lat = directMatch[1]
+      const lng = directMatch[2]
+      setFormData(prev => ({ ...prev, lat, lng }))
+      toast.success(`Google Maps coordinates applied: ${lat}, ${lng} 📍`)
+      return
+    }
+
+    // Google Maps URL pattern: /@26.1558,80.1685,17z
+    const urlAtMatch = text.match(/@(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/)
+    if (urlAtMatch) {
+      const lat = urlAtMatch[1]
+      const lng = urlAtMatch[2]
+      setFormData(prev => ({ ...prev, lat, lng }))
+      toast.success(`Coordinates extracted from link: ${lat}, ${lng} 📍`)
+      return
+    }
+
+    // Google Maps query URL: ?q=26.1558,80.1685
+    const urlQMatch = text.match(/[?&]q=(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/)
+    if (urlQMatch) {
+      const lat = urlQMatch[1]
+      const lng = urlQMatch[2]
+      setFormData(prev => ({ ...prev, lat, lng }))
+      toast.success(`Coordinates extracted from link: ${lat}, ${lng} 📍`)
+      return
+    }
+
+    toast.error('Could not extract coordinates. Please enter Lat/Lng directly.')
+  }
 
   const [ownerUserId, setOwnerUserId] = useState<string>(() => {
     if (restaurant?.staff && restaurant.staff.length > 0) {
@@ -1260,147 +1177,207 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
             />
           </InputField>
 
-          {/* Lat/Lng & GPS Auto Fetch */}
+          {/* Google Maps Link / Coordinates Quick Paste Helper */}
+          <div className="md:col-span-2 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-800/40 rounded-2xl p-4 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
+                <Globe className="h-4 w-4 text-blue-600" />
+                Paste Google Maps Link / Coordinates
+              </span>
+              <a
+                href="https://www.google.com/maps"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1"
+              >
+                Open Google Maps <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Paste Google Maps link (maps.app.goo.gl/...) or coordinates (e.g. 26.1558, 80.1685)"
+                value={pasteInput}
+                onChange={(e) => setPasteInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleExtractFromGoogleMaps(pasteInput)
+                  }
+                }}
+                className="flex-1 px-3.5 py-2.5 text-xs bg-background border border-border rounded-xl font-medium outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-text-secondary/40"
+              />
+              <button
+                type="button"
+                onClick={() => handleExtractFromGoogleMaps(pasteInput)}
+                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer shadow-sm active:scale-95 flex items-center gap-1.5"
+              >
+                <Check className="h-3.5 w-3.5" />
+                Auto-Extract
+              </button>
+            </div>
+            <p className="text-[10px] text-text-secondary/80 font-medium">
+              💡 <strong>Google Maps Tip:</strong> Google Maps app mein dukaan par long press karke <em>Share Link</em> ya coordinates copy karein aur yahan paste karke Auto-Extract dabayein.
+            </p>
+          </div>
+
+          {/* Manual Latitude / Longitude & GPS Auto Fetch */}
           <div className="md:col-span-2 space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <label className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">
                 Map Coordinates (GPS)
               </label>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowMapPickerModal(true)}
-                  className="flex items-center gap-1.5 px-3 py-1 bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-lg text-[10px] font-black hover:bg-rose-500/20 transition-all cursor-pointer shadow-2xs active:scale-95"
-                >
-                  <MapPin className="h-3 w-3" />
-                  Pick on Map
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (navigator.geolocation) {
-                      toast.loading('Fetching current GPS coordinates...')
-                      navigator.geolocation.getCurrentPosition(
-                        (pos) => {
-                          toast.dismiss()
-                          setFormData(prev => ({
-                            ...prev,
-                            lat: pos.coords.latitude.toFixed(6),
-                            lng: pos.coords.longitude.toFixed(6)
-                          }))
-                          toast.success('GPS coordinates auto-filled! 📍')
-                        },
-                        (err) => {
-                          toast.dismiss()
-                          toast.error('Location permission denied or unavailable.')
-                        }
-                      )
-                    } else {
-                      toast.error('Geolocation is not supported by your browser')
-                    }
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 rounded-lg text-[10px] font-black hover:bg-blue-500/20 transition-all cursor-pointer shadow-2xs active:scale-95"
-                >
-                  <Navigation className="h-3 w-3" />
-                  Auto-fill GPS
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (navigator.geolocation) {
+                    toast.loading('Fetching current GPS coordinates...')
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => {
+                        toast.dismiss()
+                        setFormData(prev => ({
+                          ...prev,
+                          lat: pos.coords.latitude.toFixed(6),
+                          lng: pos.coords.longitude.toFixed(6)
+                        }))
+                        toast.success('GPS coordinates auto-filled! 📍')
+                      },
+                      (err) => {
+                        toast.dismiss()
+                        toast.error('Location permission denied or unavailable.')
+                      }
+                    )
+                  } else {
+                    toast.error('Geolocation is not supported by your browser')
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 rounded-lg text-[10px] font-black hover:bg-blue-500/20 transition-all cursor-pointer shadow-2xs active:scale-95"
+              >
+                <Navigation className="h-3 w-3" />
+                Auto-fill Live Device GPS
+              </button>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <input
-                id="lat"
-                name="lat"
-                type="number"
-                step="any"
-                value={formData.lat}
-                onChange={handleChange}
-                placeholder="Latitude e.g. 26.1558"
-                className={inputClass}
-              />
-              <input
-                id="lng"
-                name="lng"
-                type="number"
-                step="any"
-                value={formData.lng}
-                onChange={handleChange}
-                placeholder="Longitude e.g. 80.1685"
-                className={inputClass}
-              />
+              <InputField label="Latitude" id="lat">
+                <input
+                  id="lat"
+                  name="lat"
+                  type="number"
+                  step="any"
+                  value={formData.lat}
+                  onChange={handleChange}
+                  placeholder="Latitude e.g. 26.1558"
+                  className={inputClass}
+                />
+              </InputField>
+              <InputField label="Longitude" id="lng">
+                <input
+                  id="lng"
+                  name="lng"
+                  type="number"
+                  step="any"
+                  value={formData.lng}
+                  onChange={handleChange}
+                  placeholder="Longitude e.g. 80.1685"
+                  className={inputClass}
+                />
+              </InputField>
             </div>
           </div>
 
-          {/* Interactive Map Preview */}
+          {/* Dedicated Google Maps Preview */}
           <div className="md:col-span-2 space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-text-secondary block">
-                📍 Interactive Map Location
-              </label>
-              {formData.lat && formData.lng && (
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${formData.lat},${formData.lng}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:text-blue-700 transition-colors"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  Open in Google Maps
-                </a>
-              )}
-            </div>
-
-            <RestaurantMapPreview
-              lat={formData.lat ? parseFloat(formData.lat) : null}
-              lng={formData.lng ? parseFloat(formData.lng) : null}
-              onCoordinateChange={(newLat, newLng) => {
-                setFormData(prev => ({
-                  ...prev,
-                  lat: newLat.toString(),
-                  lng: newLng.toString()
-                }))
-              }}
-            />
-          </div>
-
-          {/* Fullscreen Map Picker Modal */}
-          {showMapPickerModal && (
-            <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-              <div className="bg-card w-full max-w-2xl rounded-3xl border border-border shadow-2xl overflow-hidden relative max-h-[90vh] flex flex-col">
-                <div className="p-4 border-b border-border flex items-center justify-between bg-muted/40">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-rose-500" />
-                    <h3 className="font-bold text-sm text-text-primary">Pinpoint Shop Location on Map</h3>
-                  </div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-text-secondary block">
+                  📍 Google Maps Preview
+                </label>
+                {formData.lat && formData.lng && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    {formData.lat}, {formData.lng}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Map Type Switcher */}
+                <div className="flex items-center bg-muted p-0.5 rounded-lg border border-border">
                   <button
                     type="button"
-                    onClick={() => setShowMapPickerModal(false)}
-                    className="h-8 w-8 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center text-text-secondary cursor-pointer"
+                    onClick={() => setMapType('m')}
+                    className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                      mapType === 'm' ? 'bg-background shadow-xs text-text-primary' : 'text-text-secondary hover:text-text-primary'
+                    }`}
                   >
-                    <X className="h-4 w-4" />
+                    🗺️ Map
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMapType('k')}
+                    className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                      mapType === 'k' ? 'bg-background shadow-xs text-text-primary' : 'text-text-secondary hover:text-text-primary'
+                    }`}
+                  >
+                    🛰️ Satellite
                   </button>
                 </div>
-                <div className="p-4 flex-1 overflow-auto min-h-[450px]">
-                  <FreeMapPicker
-                    initialLat={formData.lat ? parseFloat(formData.lat) : 26.1558}
-                    initialLng={formData.lng ? parseFloat(formData.lng) : 80.1685}
-                    deliveryRadiusKm={25.0}
-                    onLocationSelect={(data) => {
-                      setFormData(prev => ({
-                        ...prev,
-                        lat: data.lat.toFixed(6),
-                        lng: data.lng.toFixed(6),
-                        address: prev.address || data.address,
-                        city: prev.city || data.city
-                      }))
-                      setShowMapPickerModal(false)
-                      toast.success('Location updated from map! 📍')
-                    }}
-                    onClose={() => setShowMapPickerModal(false)}
-                  />
+
+                {/* Zoom Controls */}
+                <div className="flex items-center bg-muted p-0.5 rounded-lg border border-border">
+                  <button
+                    type="button"
+                    onClick={() => setMapZoom(z => Math.max(12, z - 1))}
+                    className="px-2 py-0.5 text-xs font-bold text-text-secondary hover:text-text-primary cursor-pointer"
+                    title="Zoom Out"
+                  >
+                    -
+                  </button>
+                  <span className="text-[10px] font-bold px-1.5 text-text-secondary">{mapZoom}z</span>
+                  <button
+                    type="button"
+                    onClick={() => setMapZoom(z => Math.min(21, z + 1))}
+                    className="px-2 py-0.5 text-xs font-bold text-text-secondary hover:text-text-primary cursor-pointer"
+                    title="Zoom In"
+                  >
+                    +
+                  </button>
                 </div>
+
+                {formData.lat && formData.lng && (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${formData.lat},${formData.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:text-blue-700 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 rounded-lg border border-blue-200 dark:border-blue-800 transition-colors"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Open in Google Maps App
+                  </a>
+                )}
               </div>
             </div>
-          )}
+
+            <div className="h-72 w-full rounded-2xl border border-border overflow-hidden bg-muted/20 relative shadow-inner">
+              {formData.lat && formData.lng ? (
+                <iframe
+                  key={`gmap-${formData.lat}-${formData.lng}-${mapType}-${mapZoom}`}
+                  src={`https://maps.google.com/maps?q=${formData.lat},${formData.lng}&hl=en&z=${mapZoom}&t=${mapType}&output=embed`}
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  className="rounded-2xl w-full h-full"
+                />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-text-secondary/50 p-6 text-center">
+                  <MapPin className="h-10 w-10 mb-2 text-rose-500/60 animate-bounce" />
+                  <p className="text-xs font-bold text-text-primary">Enter or Paste Coordinates above</p>
+                  <p className="text-[10px] text-text-secondary mt-1">Google Maps preview with Satellite View will appear here</p>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Divider */}
           <div className="md:col-span-2 border-t border-border/40 pt-5">
