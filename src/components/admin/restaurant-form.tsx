@@ -79,7 +79,17 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
       return
     }
 
-    // Direct coordinates: "26.1558, 80.1685" or "26.1558,80.1685"
+    // 1. Google Maps Place URL with exact pin coordinates: !3d26.1468042!4d80.1773979
+    const place3dMatch = text.match(/!3d(-?\d{1,2}\.\d+)!4d(-?\d{1,3}\.\d+)/)
+    if (place3dMatch) {
+      const lat = place3dMatch[1]
+      const lng = place3dMatch[2]
+      setFormData(prev => ({ ...prev, lat, lng }))
+      toast.success(`Exact Place coordinates extracted: ${lat}, ${lng} 📍`)
+      return
+    }
+
+    // 2. Direct coordinates: "26.1558, 80.1685" or "26.1558,80.1685"
     const directMatch = text.match(/(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/)
     if (directMatch) {
       const lat = directMatch[1]
