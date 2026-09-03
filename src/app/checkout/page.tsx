@@ -1251,7 +1251,10 @@ export default function CheckoutPage() {
                     onClick={() => {
                       setAddressForm({
                         label: 'Home',
+                        houseNo: '',
                         street: '',
+                        area: '',
+                        city: 'Ghatampur',
                         pincode: '209206',
                         phone: addressForm.phone,
                         isDefault: false,
