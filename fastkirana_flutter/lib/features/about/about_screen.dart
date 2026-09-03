@@ -15,7 +15,7 @@ class AboutScreen extends StatelessWidget {
         centerTitle: true,
         title: Text(
           'About Us',
-          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
         ),
       ),
       body: SingleChildScrollView(
@@ -41,11 +41,11 @@ class AboutScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               'FastKirana',
-              style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 24), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
             ),
             Text(
               'v1.0.0',
-              style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textSecondary),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textSecondary),
             ),
 
             const SizedBox(height: 24),
@@ -62,11 +62,11 @@ class AboutScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Our Story', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+                  Text('Our Story', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
                   const SizedBox(height: 12),
                   Text(
                     'FastKirana brings the local kirana store to your fingertips. We deliver fresh groceries, daily essentials, and cafe delights fast — from farm to your home, we ensure quality and freshness at the best prices.',
-                    style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textSecondary, height: 1.6),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textSecondary, height: 1.6),
                   ),
                 ],
               ),
@@ -86,7 +86,7 @@ class AboutScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Our Reach', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+                  Text('Our Reach', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -125,7 +125,7 @@ class AboutScreen extends StatelessWidget {
             const SizedBox(height: 24),
             Text(
               'Made with ❤️ in India',
-              style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textMuted),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textMuted),
             ),
           ],
         ),
@@ -136,16 +136,16 @@ class AboutScreen extends StatelessWidget {
   Widget _statBox(String number, String label) {
     return Column(
       children: [
-        Text(number, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: AppDesignSystem.primary)),
+        Text(number, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 20), fontWeight: FontWeight.w800, color: AppDesignSystem.primary)),
         const SizedBox(height: 4),
-        Text(label, style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
+        Text(label, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary)),
       ],
     );
   }
 
   Widget _linkItem(String label) {
     return ListTile(
-      title: Text(label, style: GoogleFonts.inter(fontSize: 14, color: AppDesignSystem.textPrimary)),
+      title: Text(label, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: AppDesignSystem.textPrimary)),
       trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppDesignSystem.textMuted),
       onTap: () {},
     );

@@ -5,60 +5,95 @@ import '../../core/network/api_client.dart';
 
 class ProductRepository {
   final Dio dio;
-  List<Product>? _cachedProducts;
-  DateTime? _lastFetchTime;
+  static List<Product>? _cachedProducts;
+  static DateTime? _lastFetchTime;
+  // Keyed in-flight fetch map to prevent cross-contamination between different query types
+  static final Map<String, Future<List<Product>>> _inFlightFetches = {};
 
   ProductRepository(this.dio);
+
+  /// Build a stable cache key from query parameters
+  static String _cacheKey({String? search, String? restaurantId}) {
+    return '${search ?? ''}|${restaurantId ?? ''}';
+  }
 
   Future<List<Product>> getProducts({
     String? category,
     String? search,
     String? restaurantId,
-    int limit = 1000,
+    int limit = 100,
     bool forceRefresh = false,
   }) async {
+    final isFullCatalog = (search == null || search.isEmpty) && (restaurantId == null || restaurantId.isEmpty);
     try {
       final now = DateTime.now();
-      // Cache products in memory for 2 minutes to keep app super fast
+      // Only serve from cache for full catalog fetches (never for filtered/restaurant queries)
       if (!forceRefresh &&
+          isFullCatalog &&
           _cachedProducts != null &&
           _lastFetchTime != null &&
-          now.difference(_lastFetchTime!).inMinutes < 2) {
+          now.difference(_lastFetchTime!).inMinutes < 5) {
         return _filterProducts(_cachedProducts!, category: category, search: search, restaurantId: restaurantId);
       }
 
-      final response = await dio.get(
-        '/api/products',
-        queryParameters: {
-          'limit': limit,
-          'includeRestaurants': 'true',
-          if (search != null && search.isNotEmpty) 'search': search,
-          if (restaurantId != null && restaurantId.isNotEmpty) 'restaurantId': restaurantId,
-        },
-      );
-
-      final data = response.data;
-      List productsJson = [];
-      if (data is List) {
-        productsJson = data;
-      } else if (data is Map && data['products'] is List) {
-        productsJson = data['products'];
+      // If a network fetch with the same parameters is already in flight, reuse it
+      final key = _cacheKey(search: search, restaurantId: restaurantId);
+      if (_inFlightFetches.containsKey(key) && !forceRefresh) {
+        final products = await _inFlightFetches[key]!;
+        return _filterProducts(products, category: category, search: search, restaurantId: restaurantId);
       }
 
-      final liveProducts = productsJson
-          .map((json) => Product.fromJson(json as Map<String, dynamic>))
-          .toList();
-
-      _cachedProducts = liveProducts;
-      _lastFetchTime = now;
+      final future = _fetchLiveProducts(limit: limit, search: search, restaurantId: restaurantId);
+      _inFlightFetches[key] = future;
+      final liveProducts = await future;
+      _inFlightFetches.remove(key);
 
       return _filterProducts(liveProducts, category: category, search: search, restaurantId: restaurantId);
     } catch (e) {
+      _inFlightFetches.remove(_cacheKey(search: search, restaurantId: restaurantId));
       if (_cachedProducts != null && _cachedProducts!.isNotEmpty) {
         return _filterProducts(_cachedProducts!, category: category, search: search, restaurantId: restaurantId);
       }
       return _filterProducts(_getStaticFallbackProducts(), category: category, search: search, restaurantId: restaurantId);
     }
+  }
+
+  Future<List<Product>> _fetchLiveProducts({
+    required int limit,
+    String? search,
+    String? restaurantId,
+  }) async {
+    final response = await dio.get(
+      '/api/products',
+      queryParameters: {
+        'limit': limit,
+        'includeRestaurants': 'true',
+        if (search != null && search.isNotEmpty) 'search': search,
+        if (restaurantId != null && restaurantId.isNotEmpty) 'restaurantId': restaurantId,
+      },
+    );
+
+    final data = response.data;
+    List productsJson = [];
+    if (data is List) {
+      productsJson = data;
+    } else if (data is Map && data['products'] is List) {
+      productsJson = data['products'];
+    }
+
+    final liveProducts = productsJson
+        .map((json) => Product.fromJson(json as Map<String, dynamic>))
+        .toList();
+
+    // CRITICAL: Only cache full unfiltered catalog fetches.
+    // Never cache restaurant-specific or search-specific results into _cachedProducts
+    // as that would corrupt the global grocery cache.
+    final isFullCatalog = (search == null || search.isEmpty) && (restaurantId == null || restaurantId.isEmpty);
+    if (isFullCatalog) {
+      _cachedProducts = liveProducts;
+      _lastFetchTime = DateTime.now();
+    }
+    return liveProducts;
   }
 
   /// Exact Web App Smart Recommendation Engine:
@@ -307,17 +342,26 @@ class ProductRepository {
     }
   }
 
-  Future<List<Category>> getCategories() async {
+  static List<Category>? _cachedCategories;
+
+  Future<List<Category>> getCategories({bool forceRefresh = false}) async {
+    if (!forceRefresh && _cachedCategories != null && _cachedCategories!.isNotEmpty) {
+      return _cachedCategories!;
+    }
     try {
       final response = await dio.get('/api/categories');
       final data = response.data;
       if (data is List) {
-        return data.map((json) => Category.fromJson(json as Map<String, dynamic>)).toList();
+        final cats = data.map((json) => Category.fromJson(json as Map<String, dynamic>)).toList();
+        if (cats.isNotEmpty) {
+          _cachedCategories = cats;
+          return cats;
+        }
       }
     } catch (_) {}
 
     try {
-      final allProducts = await getProducts(limit: 500);
+      final allProducts = await getProducts(limit: 30);
       final Map<String, Category> uniqueCategories = {};
 
       for (final p in allProducts) {
@@ -337,11 +381,13 @@ class ProductRepository {
       }
 
       if (uniqueCategories.isNotEmpty) {
-        return uniqueCategories.values.toList();
+        final list = uniqueCategories.values.toList();
+        _cachedCategories = list;
+        return list;
       }
     } catch (_) {}
 
-    return [
+    final fallbacks = [
       Category(id: 'cmqh1haw30000zcid4vj7i1yj', name: 'Fruits & Vegetables', slug: 'fruits-vegetables', imageUrl: '/fruits_vegetables_category.png', sortOrder: 0),
       Category(id: 'cmsfuzs73000404l7q139nk61', name: 'Atta, Rice & Dal', slug: 'atta-rice-dal', imageUrl: '/atta_rice_dal_category.png', sortOrder: 1),
       Category(id: 'cmqgzqfz20008vkidoycqg5u2', name: 'Cold Drinks & Juices', slug: 'beverages', imageUrl: '/beverages_category.png', sortOrder: 2),
@@ -353,5 +399,7 @@ class ProductRepository {
       Category(id: 'cmrv2psby000004ldl25xjrlt', name: 'Home & Cleaning', slug: 'home-needs-and-cleaning', imageUrl: '/household_category.png', sortOrder: 8),
       Category(id: 'cmt59fuss0000tgidoc35458x', name: 'Cafe & Fast Food', slug: 'restaurant-food', imageUrl: '/cafe_category.png', sortOrder: 9),
     ];
+    _cachedCategories = fallbacks;
+    return fallbacks;
   }
 }

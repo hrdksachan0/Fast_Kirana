@@ -38,10 +38,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
   }
 
   Future<void> _checkAndAutoPromptLocation() async {
-    final activeAddress = ref.read(selectedAddressProvider);
-    if (activeAddress == null || activeAddress.latitude == null || activeAddress.latitude == 0.0) {
-      _useCurrentLocation();
-    }
+    _useCurrentLocation();
   }
 
   @override
@@ -161,7 +158,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
               Text(
                 'Select Delivery Location',
                 style: GoogleFonts.inter(
-                  fontSize: 16,
+                  fontSize: Responsive.scaledFontSize(context, 16),
                   fontWeight: FontWeight.w900,
                   color: slateDark,
                   letterSpacing: -0.3,
@@ -181,7 +178,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                   Text(
                     'FastKirana Express • Ghatampur Zone',
                     style: GoogleFonts.inter(
-                      fontSize: 11,
+                      fontSize: Responsive.scaledFontSize(context, 11),
                       fontWeight: FontWeight.w600,
                       color: slateMuted,
                     ),
@@ -228,10 +225,10 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                         Expanded(
                           child: TextField(
                             controller: _searchController,
-                            style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w600, color: slateDark),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w600, color: slateDark),
                             decoration: InputDecoration(
                               hintText: 'Search area, street, landmark in Ghatampur...',
-                              hintStyle: GoogleFonts.inter(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                              hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: const Color(0xFF94A3B8)),
                               border: InputBorder.none,
                               enabledBorder: InputBorder.none,
                               focusedBorder: InputBorder.none,
@@ -321,7 +318,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                                   Text(
                                     'Use Current Location',
                                     style: GoogleFonts.inter(
-                                      fontSize: 14,
+                                      fontSize: Responsive.scaledFontSize(context, 14),
                                       fontWeight: FontWeight.w900,
                                       color: slateDark,
                                     ),
@@ -336,7 +333,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                                     child: Text(
                                       'GPS 🎯',
                                       style: GoogleFonts.inter(
-                                        fontSize: 9,
+                                        fontSize: Responsive.scaledFontSize(context, 9),
                                         fontWeight: FontWeight.w900,
                                         color: const Color(0xFF15803D),
                                       ),
@@ -348,7 +345,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                               Text(
                                 'Enable GPS for fastest doorstep delivery',
                                 style: GoogleFonts.inter(
-                                  fontSize: 11.5,
+                                  fontSize: Responsive.scaledFontSize(context, 11.5),
                                   fontWeight: FontWeight.w500,
                                   color: slateMuted,
                                 ),
@@ -415,14 +412,14 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                                     Text(
                                       'Add Address',
                                       style: GoogleFonts.inter(
-                                        fontSize: 12.5,
+                                        fontSize: Responsive.scaledFontSize(context, 12.5),
                                         fontWeight: FontWeight.w800,
                                         color: slateDark,
                                       ),
                                     ),
                                     Text(
                                       'Pin on Map',
-                                      style: GoogleFonts.inter(fontSize: 10.5, color: slateMuted, fontWeight: FontWeight.w500),
+                                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), color: slateMuted, fontWeight: FontWeight.w500),
                                     ),
                                   ],
                                 ),
@@ -471,14 +468,14 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                                     Text(
                                       'Share Link',
                                       style: GoogleFonts.inter(
-                                        fontSize: 12.5,
+                                        fontSize: Responsive.scaledFontSize(context, 12.5),
                                         fontWeight: FontWeight.w800,
                                         color: slateDark,
                                       ),
                                     ),
                                     Text(
                                       'Via WhatsApp',
-                                      style: GoogleFonts.inter(fontSize: 10.5, color: slateMuted, fontWeight: FontWeight.w500),
+                                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), color: slateMuted, fontWeight: FontWeight.w500),
                                     ),
                                   ],
                                 ),
@@ -500,7 +497,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                     Text(
                       'SAVED ADDRESSES',
                       style: GoogleFonts.inter(
-                        fontSize: 11.5,
+                        fontSize: Responsive.scaledFontSize(context, 11.5),
                         fontWeight: FontWeight.w800,
                         color: slateMuted,
                         letterSpacing: 0.5,
@@ -510,7 +507,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                       data: (list) => Text(
                         '${list.length} Saved',
                         style: GoogleFonts.inter(
-                          fontSize: 11,
+                          fontSize: Responsive.scaledFontSize(context, 11),
                           fontWeight: FontWeight.w700,
                           color: primaryOrange,
                         ),
@@ -547,7 +544,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                               Text(
                                 'No saved addresses yet',
                                 style: GoogleFonts.inter(
-                                  fontSize: 14,
+                                  fontSize: Responsive.scaledFontSize(context, 14),
                                   fontWeight: FontWeight.w800,
                                   color: slateDark,
                                 ),
@@ -557,7 +554,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                                 'Add an address in Ghatampur to get fast deliveries.',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.inter(
-                                  fontSize: 11.5,
+                                  fontSize: Responsive.scaledFontSize(context, 11.5),
                                   color: slateMuted,
                                 ),
                               ),
@@ -637,7 +634,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                                             Text(
                                               addr.label.isNotEmpty ? addr.label : 'Saved Address',
                                               style: GoogleFonts.inter(
-                                                fontSize: 14,
+                                                fontSize: Responsive.scaledFontSize(context, 14),
                                                 fontWeight: FontWeight.w900,
                                                 color: slateDark,
                                               ),
@@ -658,7 +655,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                                                     Text(
                                                       'SELECTED',
                                                       style: GoogleFonts.inter(
-                                                        fontSize: 9,
+                                                        fontSize: Responsive.scaledFontSize(context, 9),
                                                         fontWeight: FontWeight.w900,
                                                         color: const Color(0xFF16A34A),
                                                         letterSpacing: 0.3,
@@ -676,7 +673,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                                               ? addr.fullAddress
                                               : '${addr.houseNo}, ${addr.street}, ${addr.area}',
                                           style: GoogleFonts.inter(
-                                            fontSize: 12,
+                                            fontSize: Responsive.scaledFontSize(context, 12),
                                             fontWeight: FontWeight.w500,
                                             color: slateMuted,
                                             height: 1.35,
@@ -756,12 +753,12 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('⚡', style: TextStyle(fontSize: 14)),
+                      const Text('⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
                       const SizedBox(width: 6),
                       Text(
                         'FastKirana',
                         style: GoogleFonts.inter(
-                          fontSize: 13.5,
+                          fontSize: Responsive.scaledFontSize(context, 13.5),
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF64748B),
                           letterSpacing: 0.3,

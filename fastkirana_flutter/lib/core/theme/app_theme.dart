@@ -88,7 +88,7 @@ class AppTheme {
         behavior: SnackBarBehavior.floating,
         backgroundColor: const Color(0xFF0F172A),
         contentTextStyle: GoogleFonts.inter(
-          fontSize: 13,
+          fontSize: Responsive.scaledFontSize(context, 13),
           fontWeight: FontWeight.w700,
           color: Colors.white,
         ),
@@ -185,7 +185,7 @@ class AppTheme {
         behavior: SnackBarBehavior.floating,
         backgroundColor: const Color(0xFF0F172A),
         contentTextStyle: GoogleFonts.inter(
-          fontSize: 13,
+          fontSize: Responsive.scaledFontSize(context, 13),
           fontWeight: FontWeight.w700,
           color: Colors.white,
         ),

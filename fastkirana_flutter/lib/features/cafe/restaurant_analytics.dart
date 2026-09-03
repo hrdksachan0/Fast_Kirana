@@ -12,7 +12,7 @@ class RestaurantAnalyticsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppDesignSystem.background,
         elevation: 0,
-        title: Text('Analytics', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+        title: Text('Analytics', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -33,18 +33,18 @@ class RestaurantAnalyticsScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('This Month', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+                      Text('This Month', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
                       Icon(Icons.calendar_today_rounded, size: 16, color: AppDesignSystem.textSecondary),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Text('₹98,450', style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+                  Text('₹98,450', style: GoogleFonts.poppins(fontSize: Responsive.scaledFontSize(context, 28), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       Icon(Icons.trending_up_rounded, color: AppDesignSystem.success, size: 14),
                       const SizedBox(width: 4),
-                      Text('+18.5% vs last month', style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.success)),
+                      Text('+18.5% vs last month', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.success)),
                     ],
                   ),
                 ],
@@ -59,7 +59,7 @@ class RestaurantAnalyticsScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
-            Text('Popular Items', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+            Text('Popular Items', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
             const SizedBox(height: 12),
             ...['Cappuccino (340)', 'Masala Chai (280)', 'Cold Coffee (195)', 'Veg Burger (150)'].asMap().entries.map((e) {
               return Container(
@@ -68,10 +68,10 @@ class RestaurantAnalyticsScreen extends StatelessWidget {
                 decoration: BoxDecoration(color: AppDesignSystem.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppDesignSystem.borderLight)),
                 child: Row(
                   children: [
-                    Container(width: 32, height: 32, decoration: BoxDecoration(color: AppDesignSystem.cafeAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: Center(child: Text('${e.key + 1}', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppDesignSystem.cafeAccent)))),
+                    Container(width: 32, height: 32, decoration: BoxDecoration(color: AppDesignSystem.cafeAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: Center(child: Text('${e.key + 1}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: AppDesignSystem.cafeAccent)))),
                     const SizedBox(width: 12),
-                    Expanded(child: Text(e.value.split(' (')[0], style: GoogleFonts.inter(fontSize: 14, color: AppDesignSystem.textPrimary))),
-                    Text(e.value.split(' (')[1].replaceAll(')', ''), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppDesignSystem.cafeAccent)),
+                    Expanded(child: Text(e.value.split(' (')[0], style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: AppDesignSystem.textPrimary))),
+                    Text(e.value.split(' (')[1].replaceAll(')', ''), style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: AppDesignSystem.cafeAccent)),
                   ],
                 ),
               );
@@ -91,8 +91,8 @@ class RestaurantAnalyticsScreen extends StatelessWidget {
         children: [
           Container(width: 32, height: 32, decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: Icon(Icons.bar_chart_rounded, color: color, size: 18)),
           const SizedBox(height: 12),
-          Text(value, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
-          Text(label, style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
+          Text(value, style: GoogleFonts.poppins(fontSize: Responsive.scaledFontSize(context, 20), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+          Text(label, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary)),
         ],
       ),
     );

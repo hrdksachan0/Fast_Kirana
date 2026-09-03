@@ -188,14 +188,43 @@ export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): st
     ? restSub.items
     : (order.items || [])
 
+  // 1. Primary: Strict ID-wise & Type Filter (Most Reliable & Accurate)
+  if (Array.isArray(targetItems) && targetItems.length > 0) {
+    const idFiltered = targetItems.filter((it: any) => {
+      if (!it) return false
+      return (
+        Boolean(it.restaurantId) ||
+        it.type === 'RESTAURANT' ||
+        it.isRestaurantItem === true ||
+        Boolean(it.product?.restaurantId) ||
+        it.product?.isRestaurantItem === true
+      )
+    })
+    if (idFiltered.length > 0) {
+      targetItems = idFiltered
+    }
+  }
+
+  // 2. Secondary fallback for combined orders where item flags are missing
   if (order.isCombined && (!order.restaurantItems || order.restaurantItems.length === 0) && (!restSub?.items || restSub.items.length === 0)) {
-    const groceryCategories = ['dairy', 'atta', 'personal', 'household', 'grocery', 'snack']
-    const groceryKeywords = ['atta', 'rice', 'dal', 'oil', 'ghee', 'flour', 'sugar', 'salt', 'spice', 'soap', 'shampoo', 'surf', 'detergent', 'biscuit', 'chips', 'munchies', 'dairy', 'milk']
+    const cookedFoodWhitelists = [
+      'dosa', 'burger', 'pizza', 'sandwich', 'roll', 'frankie', 'chowmein', 'noodles',
+      'fried rice', 'paneer', 'manchurian', 'shake', 'cold coffee', 'tea', 'chai', 'coffee',
+      'pasta', 'thali', 'roti', 'naan', 'gravy', 'curry', 'biryani', 'pav bhaji', 'fries',
+      'momos', 'samosa', 'maggi', 'soup'
+    ]
+    const pureGroceryCategories = ['personal-care', 'home-cleaning', 'household', 'grocery', 'staples']
+    const pureGroceryKeywords = [
+      'atta', 'raw rice', 'dal packet', 'mustard oil', 'refined oil', 'washing powder',
+      'soap', 'shampoo', 'toothpaste', 'brush', 'detergent', 'surf excel', 'toilet cleaner'
+    ]
     const filtered = targetItems.filter((it: any) => {
+      if (Boolean(it.restaurantId) || it.type === 'RESTAURANT' || it.isRestaurantItem === true) return true
       const name = (it.name || '').toLowerCase()
+      if (cookedFoodWhitelists.some((cw) => name.includes(cw))) return true
       const slug = (it.categorySlug || it.category?.slug || '').toLowerCase()
-      if (groceryCategories.some((c: string) => slug.includes(c))) return false
-      if (groceryKeywords.some((k: string) => name.includes(k))) return false
+      if (pureGroceryCategories.some((c: string) => slug.includes(c))) return false
+      if (pureGroceryKeywords.some((k: string) => name.includes(k))) return false
       return true
     })
     if (filtered.length > 0) {
@@ -335,10 +364,23 @@ export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): st
   `
 }
 
+const recentPrintTimesWeb = new Map<string, number>()
+
 /**
  * Queue KOT print job cleanly without UI lag or blocking popups
  */
-export function printKOTReceipt(order: any, shopType: string = 'RESTAURANT') {
+export function printKOTReceipt(order: any, shopType: string = 'RESTAURANT', force: boolean = false) {
+  const cleanId = (order.id || order.readableId || '').toString().trim()
+  const now = Date.now()
+  if (!force && cleanId) {
+    const lastTime = recentPrintTimesWeb.get(cleanId)
+    if (lastTime && (now - lastTime) < 8000) {
+      console.warn(`[KOT Print] Ignored duplicate print for #${cleanId} (${Math.round((8000 - (now - lastTime))/1000)}s cooldown active)`)
+      return
+    }
+    recentPrintTimesWeb.set(cleanId, now)
+  }
+
   const html = generateKOTHtml(order, shopType)
   const orderIdText = order.readableId ? `#${order.readableId}` : `#${(order.id || '').slice(0, 8)}`
 

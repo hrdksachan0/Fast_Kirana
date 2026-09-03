@@ -42,9 +42,10 @@ class AddressesNotifier extends StateNotifier<AsyncValue<List<Address>>> {
   }
 }
 
-final addressesProvider = StateNotifierProvider<AddressesNotifier, AsyncValue<List<Address>>>((ref) {
-  final repo = ref.watch(addressRepositoryProvider);
-  return AddressesNotifier(repo);
+final addressesProvider = StateNotifierProvider.autoDispose<AddressesNotifier, AsyncValue<List<Address>>>((ref) {
+  final notifier = AddressesNotifier(ref.watch(addressRepositoryProvider));
+  ref.keepAlive();
+  return notifier;
 });
 
 // Active chosen address for delivery / header

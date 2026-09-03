@@ -151,7 +151,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               Expanded(
                 child: Text(
                   errorMsg,
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 12),
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white, fontSize: Responsive.scaledFontSize(context, 12)),
                 ),
               ),
             ],
@@ -246,7 +246,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 Expanded(
                   child: Text(
                     '📍 Set to Current Location: ${details.formattedAddress}',
-                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: Colors.white),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -325,7 +325,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             child: Text(
                               'Razorpay',
                               style: GoogleFonts.inter(
-                                fontSize: 11,
+                                fontSize: Responsive.scaledFontSize(context, 11),
                                 fontWeight: FontWeight.w900,
                                 color: const Color(0xFF3395FF),
                               ),
@@ -335,7 +335,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           Text(
                             'Online Payment',
                             style: GoogleFonts.inter(
-                              fontSize: 16,
+                              fontSize: Responsive.scaledFontSize(context, 16),
                               fontWeight: FontWeight.w900,
                               color: slateDark,
                             ),
@@ -345,7 +345,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       const SizedBox(height: 3),
                       Text(
                         '100% Encrypted & Secure Razorpay Gateway',
-                        style: GoogleFonts.inter(fontSize: 11, color: slateMuted),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: slateMuted),
                       ),
                     ],
                   ),
@@ -359,7 +359,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     child: Text(
                       '₹${grandTotal.toInt()}',
                       style: GoogleFonts.inter(
-                        fontSize: 16,
+                        fontSize: Responsive.scaledFontSize(context, 16),
                         fontWeight: FontWeight.w900,
                         color: const Color(0xFF047857),
                       ),
@@ -372,7 +372,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               // Razorpay Option 1: Instant UPI (GPay / PhonePe / Paytm)
               _buildRazorpayOptionTile(
                 ctx,
-                iconWidget: const Text('⚡', style: TextStyle(fontSize: 18)),
+                iconWidget: const Text('⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18))),
                 title: 'UPI Payment (GPay / PhonePe / Paytm)',
                 subtitle: 'Zero transaction charges • Fast confirmation',
                 badge: 'Popular',
@@ -456,7 +456,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       Text(
                         title,
                         style: GoogleFonts.inter(
-                          fontSize: 13,
+                          fontSize: Responsive.scaledFontSize(context, 13),
                           fontWeight: FontWeight.w800,
                           color: slateDark,
                         ),
@@ -472,7 +472,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           child: Text(
                             badge,
                             style: GoogleFonts.inter(
-                              fontSize: 9,
+                              fontSize: Responsive.scaledFontSize(context, 9),
                               fontWeight: FontWeight.w800,
                               color: const Color(0xFF16A34A),
                             ),
@@ -483,7 +483,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   ),
                   Text(
                     subtitle,
-                    style: GoogleFonts.inter(fontSize: 11, color: slateMuted),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: slateMuted),
                   ),
                 ],
               ),
@@ -513,7 +513,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             const SizedBox(width: 12),
             Text(
               'Connecting to Razorpay ($method)...',
-              style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w700),
             ),
           ],
         ),
@@ -1011,7 +1011,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             Text(
               'Checkout',
               style: GoogleFonts.inter(
-                fontSize: 15.5,
+                fontSize: Responsive.scaledFontSize(context, 15.5),
                 fontWeight: FontWeight.w900,
                 color: slateDark,
                 letterSpacing: -0.3,
@@ -1021,7 +1021,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             Text(
               outletTitle,
               style: GoogleFonts.inter(
-                fontSize: 11,
+                fontSize: Responsive.scaledFontSize(context, 11),
                 fontWeight: FontWeight.w600,
                 color: slateMuted,
               ),
@@ -1035,12 +1035,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       ),
       body: SafeArea(
         bottom: false,
-        child: Stack(
-          children: [
-            SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-              child: Column(
+        child: ResponsiveContainer(
+          maxWidth: Responsive.wideMaxContentWidth,
+          fillHeight: true,
+          child: Stack(
+            children: [
+              SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(Responsive.horizontalPadding(context), Responsive.scale(context, 12), Responsive.horizontalPadding(context), 100),
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 1. 📍 HIGH-VISIBILITY PROMINENT DELIVERY ADDRESS CARD (Swiggy Hero Style)
@@ -1097,7 +1100,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                         TextSpan(
                                           text: 'Deliver to ',
                                           style: GoogleFonts.inter(
-                                            fontSize: 12,
+                                            fontSize: Responsive.scaledFontSize(context, 12),
                                             fontWeight: FontWeight.w600,
                                             color: slateMuted,
                                           ),
@@ -1111,7 +1114,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                             return clean.isNotEmpty ? clean : 'Home';
                                           }(),
                                           style: GoogleFonts.inter(
-                                            fontSize: 13,
+                                            fontSize: Responsive.scaledFontSize(context, 13),
                                             fontWeight: FontWeight.w900,
                                             color: slateDark,
                                           ),
@@ -1128,7 +1131,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                         ? selectedAddress!.area.trim()
                                         : 'Ghatampur Zone',
                                     style: GoogleFonts.inter(
-                                      fontSize: 11.5,
+                                      fontSize: Responsive.scaledFontSize(context, 11.5),
                                       fontWeight: FontWeight.w700,
                                       color: const Color(0xFFEA580C),
                                     ),
@@ -1166,7 +1169,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                     Text(
                                       'CHANGE',
                                       style: GoogleFonts.inter(
-                                        fontSize: 10.5,
+                                        fontSize: Responsive.scaledFontSize(context, 10.5),
                                         fontWeight: FontWeight.w900,
                                         color: const Color(0xFFEA580C),
                                         letterSpacing: 0.3,
@@ -1204,7 +1207,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                       .replaceAll(RegExp(r',\s*,+'), ', ')
                                       .trim(),
                                   style: GoogleFonts.inter(
-                                    fontSize: 12,
+                                    fontSize: Responsive.scaledFontSize(context, 12),
                                     fontWeight: FontWeight.w600,
                                     color: const Color(0xFF334155),
                                     height: 1.35,
@@ -1244,7 +1247,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                       ? '⚠️ Outside 5.0 km Hub (${tier.distanceKm.toStringAsFixed(1)} km) • Delivery Unavailable'
                                       : '${tier.tierName} (${tier.distanceKm.toStringAsFixed(1)} km) • ${tier.freeDeliveryLabel}',
                                   style: GoogleFonts.inter(
-                                    fontSize: 11,
+                                    fontSize: Responsive.scaledFontSize(context, 11),
                                     fontWeight: FontWeight.w800,
                                     color: !tier.isServiceable ? const Color(0xFFDC2626) : const Color(0xFF15803D),
                                   ),
@@ -1270,12 +1273,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Text('✨', style: TextStyle(fontSize: 14)),
+                          const Text('✨', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
                           const SizedBox(width: 8),
                           Text(
                             '₹${totalSavings.toStringAsFixed(0)} saved! On this order',
                             style: GoogleFonts.inter(
-                              fontSize: 12.5,
+                              fontSize: Responsive.scaledFontSize(context, 12.5),
                               fontWeight: FontWeight.w800,
                               color: const Color(0xFF065F46),
                             ),
@@ -1317,14 +1320,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               ),
                               child: Text(
                                 _customReceiverName != null ? '🎁' : '👤',
-                                style: const TextStyle(fontSize: 13),
+                                style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 13)),
                               ),
                             ),
                             const SizedBox(width: 8),
                             Text(
                               _customReceiverName != null ? 'Ordering for someone else' : 'Contact Details for Order',
                               style: GoogleFonts.inter(
-                                fontSize: 11.5,
+                                fontSize: Responsive.scaledFontSize(context, 11.5),
                                 fontWeight: FontWeight.w700,
                                 color: slateMuted,
                               ),
@@ -1347,7 +1350,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                     Text(
                                       'Edit',
                                       style: GoogleFonts.inter(
-                                        fontSize: 11,
+                                        fontSize: Responsive.scaledFontSize(context, 11),
                                         fontWeight: FontWeight.w800,
                                         color: const Color(0xFFEA580C),
                                       ),
@@ -1366,7 +1369,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             Text(
                               customerName,
                               style: GoogleFonts.inter(
-                                fontSize: 13.5,
+                                fontSize: Responsive.scaledFontSize(context, 13.5),
                                 fontWeight: FontWeight.w900,
                                 color: slateDark,
                               ),
@@ -1376,7 +1379,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               Text(
                                 '•   $customerPhone',
                                 style: GoogleFonts.inter(
-                                  fontSize: 12.5,
+                                  fontSize: Responsive.scaledFontSize(context, 12.5),
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFF475569),
                                 ),
@@ -1388,7 +1391,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         Text(
                           'Order tracking and delivery updates will be sent here',
                           style: GoogleFonts.inter(
-                            fontSize: 10.5,
+                            fontSize: Responsive.scaledFontSize(context, 10.5),
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF94A3B8),
                           ),
@@ -1474,7 +1477,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               children: [
                 Text(
                   'Edit Receiver Details',
-                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: slateDark),
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: slateDark),
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(ctx),
@@ -1524,7 +1527,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 child: Center(
                   child: Text(
                     'Save Details',
-                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: Colors.white),
                   ),
                 ),
               ),
@@ -1547,7 +1550,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             Text(
               'COMPLETE YOUR MEAL',
               style: GoogleFonts.inter(
-                fontSize: 11.5,
+                fontSize: Responsive.scaledFontSize(context, 11.5),
                 fontWeight: FontWeight.w800,
                 color: slateMuted,
                 letterSpacing: 0.5,
@@ -1590,7 +1593,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         const SizedBox(height: 6),
                         Text(
                           p.name,
-                          style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: slateDark),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w700, color: slateDark),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1600,7 +1603,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           children: [
                             Text(
                               '₹${p.price.toStringAsFixed(0)}',
-                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: slateDark),
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: slateDark),
                             ),
                             Bounceable(
                               onTap: () {
@@ -1616,7 +1619,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                 ),
                                 child: Text(
                                   '+ ADD',
-                                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF16A34A)),
+                                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w800, color: const Color(0xFF16A34A)),
                                 ),
                               ),
                             ),
@@ -1680,7 +1683,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               Text(
                 'Placing Your Order...',
                 style: GoogleFonts.inter(
-                  fontSize: 18,
+                  fontSize: Responsive.scaledFontSize(context, 18),
                   fontWeight: FontWeight.w900,
                   color: const Color(0xFF0F172A),
                   letterSpacing: -0.3,
@@ -1691,7 +1694,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 'Connecting to FastKirana Darkstore...',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
-                  fontSize: 12.5,
+                  fontSize: Responsive.scaledFontSize(context, 12.5),
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF64748B),
                 ),
@@ -1735,12 +1738,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             children: [
               Row(
                 children: [
-                  const Text('🛍️', style: TextStyle(fontSize: 14)),
+                  const Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
                   const SizedBox(width: 6),
                   Text(
                     'Order Items Review',
                     style: GoogleFonts.inter(
-                      fontSize: 13,
+                      fontSize: Responsive.scaledFontSize(context, 13),
                       fontWeight: FontWeight.w900,
                       color: slateDark,
                     ),
@@ -1756,7 +1759,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 child: Text(
                   '${items.length} ${items.length == 1 ? 'item' : 'items'}',
                   style: GoogleFonts.inter(
-                    fontSize: 10.5,
+                    fontSize: Responsive.scaledFontSize(context, 10.5),
                     fontWeight: FontWeight.w700,
                     color: slateMuted,
                   ),
@@ -1780,12 +1783,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 children: [
                   Row(
                     children: [
-                      const Text('📦', style: TextStyle(fontSize: 12)),
+                      const Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
                       const SizedBox(width: 5),
                       Text(
                         'Grocery & Daily Essentials',
                         style: GoogleFonts.inter(
-                          fontSize: 11.5,
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w800,
                           color: primaryRed,
                         ),
@@ -1794,7 +1797,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       Text(
                         'Darkstore',
                         style: GoogleFonts.inter(
-                          fontSize: 9.5,
+                          fontSize: Responsive.scaledFontSize(context, 9.5),
                           fontWeight: FontWeight.w600,
                           color: slateMuted,
                         ),
@@ -1826,12 +1829,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 children: [
                   Row(
                     children: [
-                      const Text('🥘', style: TextStyle(fontSize: 12)),
+                      const Text('🥘', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
                       const SizedBox(width: 5),
                       Text(
                         outletName,
                         style: GoogleFonts.inter(
-                          fontSize: 11.5,
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFFEA580C),
                         ),
@@ -1840,7 +1843,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       Text(
                         'Fresh Kitchen',
                         style: GoogleFonts.inter(
-                          fontSize: 9.5,
+                          fontSize: Responsive.scaledFontSize(context, 9.5),
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFFEA580C),
                         ),
@@ -1890,7 +1893,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 Text(
                   item.product.name,
                   style: GoogleFonts.inter(
-                    fontSize: 11.5,
+                    fontSize: Responsive.scaledFontSize(context, 11.5),
                     fontWeight: FontWeight.w700,
                     color: slateDark,
                   ),
@@ -1900,7 +1903,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 Text(
                   '${item.product.unit.isNotEmpty ? item.product.unit : "1 unit"} × ${item.quantity}',
                   style: GoogleFonts.inter(
-                    fontSize: 10,
+                    fontSize: Responsive.scaledFontSize(context, 10),
                     fontWeight: FontWeight.w500,
                     color: slateMuted,
                   ),
@@ -1911,7 +1914,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           Text(
             '₹${(item.product.price * item.quantity).toInt()}',
             style: GoogleFonts.inter(
-              fontSize: 12,
+              fontSize: Responsive.scaledFontSize(context, 12),
               fontWeight: FontWeight.w800,
               color: slateDark,
             ),
@@ -1945,11 +1948,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             children: [
               Row(
                 children: [
-                  const Text('🛍️', style: TextStyle(fontSize: 14)),
+                  const Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
                   const SizedBox(width: 6),
                   Text(
                     'Order Items',
-                    style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w900, color: slateDark),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w900, color: slateDark),
                   ),
                 ],
               ),
@@ -1961,7 +1964,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ),
                 child: Text(
                   '${items.length} ${items.length == 1 ? 'item' : 'items'}',
-                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: primaryRed),
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w800, color: primaryRed),
                 ),
               ),
             ],
@@ -2012,20 +2015,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       children: [
                         Text(
                           prod.name,
-                          style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800, color: slateDark),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w800, color: slateDark),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           '${prod.unit.isNotEmpty ? prod.unit : "1 unit"} × $qty',
-                          style: GoogleFonts.inter(fontSize: 11, color: slateMuted, fontWeight: FontWeight.w600),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: slateMuted, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
                   ),
                   Text(
                     '₹${(prod.price * qty).toInt()}',
-                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, color: slateDark),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w900, color: slateDark),
                   ),
                 ],
               ),
@@ -2078,7 +2081,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   Text(
                     'Delivery Address',
                     style: GoogleFonts.inter(
-                      fontSize: 14,
+                      fontSize: Responsive.scaledFontSize(context, 14),
                       fontWeight: FontWeight.w900,
                       color: slateDark,
                     ),
@@ -2107,7 +2110,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       Text(
                         'Change',
                         style: GoogleFonts.inter(
-                          fontSize: 11.5,
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF0F172A),
                         ),
@@ -2163,7 +2166,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                   ? 'Current GPS Location'
                                   : (selectedAddress?.label ?? 'Ghatampur Express Zone'),
                               style: GoogleFonts.inter(
-                                fontSize: 13.5,
+                                fontSize: Responsive.scaledFontSize(context, 13.5),
                                 fontWeight: FontWeight.w900,
                                 color: isGpsActive ? const Color(0xFF14532D) : slateDark,
                               ),
@@ -2178,7 +2181,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             child: Text(
                               isGpsActive ? '⚡ LIVE GPS' : 'SELECTED',
                               style: GoogleFonts.inter(
-                                fontSize: 8.5,
+                                fontSize: Responsive.scaledFontSize(context, 8.5),
                                 fontWeight: FontWeight.w900,
                                 color: isGpsActive ? Colors.white : slateDark,
                                 letterSpacing: 0.3,
@@ -2193,7 +2196,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             ? selectedAddress.fullAddress
                             : (_currentGpsAddress?.fullAddress ?? 'NH34, Ghatampur, Kanpur Nagar - 209206'),
                         style: GoogleFonts.inter(
-                          fontSize: 11.5,
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w500,
                           color: isGpsActive ? const Color(0xFF15803D) : slateMuted,
                           height: 1.35,
@@ -2237,7 +2240,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       Text(
                         'Detecting Exact GPS Location...',
                         style: GoogleFonts.inter(
-                          fontSize: 11.5,
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF15803D),
                         ),
@@ -2248,7 +2251,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       Text(
                         'Auto-Detect Current GPS Location (1-Tap)',
                         style: GoogleFonts.inter(
-                          fontSize: 11.5,
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF15803D),
                         ),
@@ -2298,7 +2301,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           Text(
                             addr.label,
                             style: GoogleFonts.inter(
-                              fontSize: 11,
+                              fontSize: Responsive.scaledFontSize(context, 11),
                               fontWeight: isItemActive ? FontWeight.w900 : FontWeight.w600,
                               color: isItemActive ? const Color(0xFF14532D) : slateDark,
                             ),
@@ -2317,7 +2320,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           // 5. Delivery Instructions
           Text(
             'Delivery Instructions',
-            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: slateMuted),
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w800, color: slateMuted),
           ),
           const SizedBox(height: 6),
           SingleChildScrollView(
@@ -2362,7 +2365,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         child: Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 10,
+            fontSize: Responsive.scaledFontSize(context, 10),
             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
             color: isSelected ? const Color(0xFF047857) : const Color(0xFF475569),
           ),
@@ -2384,18 +2387,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         children: [
           Row(
             children: [
-              const Text('🏬', style: TextStyle(fontSize: 18)),
+              const Text('🏬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18))),
               const SizedBox(width: 8),
               Text(
                 'FastKirana Darkstore Pickup Counter',
-                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, color: const Color(0xFF065F46)),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w900, color: const Color(0xFF065F46)),
               ),
             ],
           ),
           const SizedBox(height: 4),
           Text(
             'Station Road Market, Ghatampur • Ready for pickup in minutes (₹0 fee)',
-            style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF047857)),
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: const Color(0xFF047857)),
           ),
         ],
       ),
@@ -2423,7 +2426,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               const SizedBox(width: 6),
               Text(
                 'Payment Method',
-                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: slateDark),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: slateDark),
               ),
             ],
           ),
@@ -2447,7 +2450,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             subtitle: 'UPI, Google Pay, PhonePe, Cards & NetBanking',
             badge: '⚡ Fast & Secure',
             badgeColor: const Color(0xFF2563EB),
-            iconWidget: const Text('💳', style: TextStyle(fontSize: 16)),
+            iconWidget: const Text('💳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
           ),
         ],
       ),
@@ -2501,7 +2504,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         child: Text(
                           title,
                           style: GoogleFonts.inter(
-                            fontSize: 13,
+                            fontSize: Responsive.scaledFontSize(context, 13),
                             fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
                             color: isSelected ? const Color(0xFF991B1B) : slateDark,
                           ),
@@ -2519,7 +2522,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           child: Text(
                             badge,
                             style: GoogleFonts.inter(
-                              fontSize: 9,
+                              fontSize: Responsive.scaledFontSize(context, 9),
                               fontWeight: FontWeight.w900,
                               color: badgeColor,
                             ),
@@ -2530,7 +2533,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   ),
                   Text(
                     subtitle,
-                    style: GoogleFonts.inter(fontSize: 11, color: slateMuted),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: slateMuted),
                   ),
                 ],
               ),
@@ -2574,11 +2577,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         children: [
           Row(
             children: [
-              const Text('🧾', style: TextStyle(fontSize: 14)),
+              const Text('🧾', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
               const SizedBox(width: 6),
               Text(
                 'Bill Summary',
-                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: slateDark),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: slateDark),
               ),
             ],
           ),
@@ -2611,12 +2614,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             children: [
               Text(
                 'To Pay',
-                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w900, color: slateDark),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w900, color: slateDark),
               ),
               Text(
                 '₹${grandTotal.toInt()}',
                 style: GoogleFonts.inter(
-                  fontSize: 18,
+                  fontSize: Responsive.scaledFontSize(context, 18),
                   fontWeight: FontWeight.w900,
                   color: primaryRed,
                 ),
@@ -2634,12 +2637,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       children: [
         Text(
           label,
-          style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w500, color: const Color(0xFF475569)),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w500, color: const Color(0xFF475569)),
         ),
         Text(
           value,
           style: GoogleFonts.inter(
-            fontSize: 12.5,
+            fontSize: Responsive.scaledFontSize(context, 12.5),
             fontWeight: (isFree || isDiscount) ? FontWeight.w900 : FontWeight.w700,
             color: isFree
                 ? const Color(0xFF16A34A)
@@ -2672,13 +2675,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   color: const Color(0xFFECFDF5),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text('🛍️', style: TextStyle(fontSize: 13)),
+                child: const Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
               ),
               const SizedBox(width: 8),
               Text(
                 'Packaging Preference',
                 style: GoogleFonts.inter(
-                  fontSize: 13.5,
+                  fontSize: Responsive.scaledFontSize(context, 13.5),
                   fontWeight: FontWeight.w900,
                   color: slateDark,
                 ),
@@ -2729,14 +2732,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         Text(
                           'Standard Packaging',
                           style: GoogleFonts.inter(
-                            fontSize: 12.5,
+                            fontSize: Responsive.scaledFontSize(context, 12.5),
                             fontWeight: FontWeight.w800,
                             color: slateDark,
                           ),
                         ),
                         Text(
                           'Eco-friendly containers & tamper-proof bag',
-                          style: GoogleFonts.inter(fontSize: 10.5, color: slateMuted, fontWeight: FontWeight.w500),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), color: slateMuted, fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
@@ -2750,7 +2753,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     child: Text(
                       '₹5',
                       style: GoogleFonts.inter(
-                        fontSize: 11,
+                        fontSize: Responsive.scaledFontSize(context, 11),
                         fontWeight: FontWeight.w900,
                         color: const Color(0xFF059669),
                       ),
@@ -2806,18 +2809,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             Text(
                               'Premium Thermal Packaging',
                               style: GoogleFonts.inter(
-                                fontSize: 12.5,
+                                fontSize: Responsive.scaledFontSize(context, 12.5),
                                 fontWeight: FontWeight.w800,
                                 color: slateDark,
                               ),
                             ),
                             const SizedBox(width: 4),
-                            const Text('✨', style: TextStyle(fontSize: 11)),
+                            const Text('✨', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 11))),
                           ],
                         ),
                         Text(
                           'Insulated thermal pouch + spill-proof packaging',
-                          style: GoogleFonts.inter(fontSize: 10.5, color: slateMuted, fontWeight: FontWeight.w500),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), color: slateMuted, fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
@@ -2831,7 +2834,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     child: Text(
                       '₹15',
                       style: GoogleFonts.inter(
-                        fontSize: 11,
+                        fontSize: Responsive.scaledFontSize(context, 11),
                         fontWeight: FontWeight.w900,
                         color: const Color(0xFFD97706),
                       ),
@@ -2862,7 +2865,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             child: Text(
               '100% Quality & Freshness Guarantee by FastKirana',
               style: GoogleFonts.inter(
-                fontSize: 11,
+                fontSize: Responsive.scaledFontSize(context, 11),
                 fontWeight: FontWeight.w800,
                 color: const Color(0xFF065F46),
               ),
@@ -2889,7 +2892,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               Text(
                 'TOTAL BILL',
                 style: GoogleFonts.inter(
-                  fontSize: 9,
+                  fontSize: Responsive.scaledFontSize(context, 9),
                   fontWeight: FontWeight.w800,
                   color: slateMuted,
                   letterSpacing: 0.5,
@@ -2898,7 +2901,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               Text(
                 '₹${grandTotal.toInt()}',
                 style: GoogleFonts.inter(
-                  fontSize: 19,
+                  fontSize: Responsive.scaledFontSize(context, 19),
                   fontWeight: FontWeight.w900,
                   color: slateDark,
                   letterSpacing: -0.4,
@@ -2940,7 +2943,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             Text(
                               'Proceed to Pay',
                               style: GoogleFonts.inter(
-                                fontSize: 13.5,
+                                fontSize: Responsive.scaledFontSize(context, 13.5),
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
                                 letterSpacing: 0.2,
@@ -3002,7 +3005,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             Text(
                               'Select Payment Method',
                               style: GoogleFonts.inter(
-                                fontSize: 16.5,
+                                fontSize: Responsive.scaledFontSize(context, 16.5),
                                 fontWeight: FontWeight.w900,
                                 color: slateDark,
                                 letterSpacing: -0.3,
@@ -3012,7 +3015,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             Text(
                               'Safe & Encrypted 256-bit Checkout',
                               style: GoogleFonts.inter(
-                                fontSize: 11,
+                                fontSize: Responsive.scaledFontSize(context, 11),
                                 fontWeight: FontWeight.w600,
                                 color: slateMuted,
                               ),
@@ -3070,7 +3073,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                 color: const Color(0xFFDCFCE7),
                                 borderRadius: BorderRadius.circular(14),
                               ),
-                              child: const Text('💵', style: TextStyle(fontSize: 20)),
+                              child: const Text('💵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 20))),
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -3082,7 +3085,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                       Text(
                                         'Cash on Delivery',
                                         style: GoogleFonts.inter(
-                                          fontSize: 14,
+                                          fontSize: Responsive.scaledFontSize(context, 14),
                                           fontWeight: FontWeight.w900,
                                           color: slateDark,
                                         ),
@@ -3097,7 +3100,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                         child: Text(
                                           'Default',
                                           style: GoogleFonts.inter(
-                                            fontSize: 9,
+                                            fontSize: Responsive.scaledFontSize(context, 9),
                                             fontWeight: FontWeight.w900,
                                             color: const Color(0xFF15803D),
                                             letterSpacing: 0.2,
@@ -3109,7 +3112,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                   const SizedBox(height: 3),
                                   Text(
                                     'Pay via cash or UPI QR at your doorstep',
-                                    style: GoogleFonts.inter(fontSize: 11.5, color: slateMuted, fontWeight: FontWeight.w500),
+                                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: slateMuted, fontWeight: FontWeight.w500),
                                   ),
                                 ],
                               ),
@@ -3170,7 +3173,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                 color: const Color(0xFFEFF6FF),
                                 borderRadius: BorderRadius.circular(14),
                               ),
-                              child: const Text('💳', style: TextStyle(fontSize: 20)),
+                              child: const Text('💳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 20))),
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -3182,7 +3185,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                       Text(
                                         'Pay Online',
                                         style: GoogleFonts.inter(
-                                          fontSize: 14,
+                                          fontSize: Responsive.scaledFontSize(context, 14),
                                           fontWeight: FontWeight.w900,
                                           color: slateDark,
                                         ),
@@ -3198,7 +3201,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                         child: Text(
                                           '⚡ INSTANT',
                                           style: GoogleFonts.inter(
-                                            fontSize: 9,
+                                            fontSize: Responsive.scaledFontSize(context, 9),
                                             fontWeight: FontWeight.w900,
                                             color: const Color(0xFF065F46),
                                             letterSpacing: 0.2,
@@ -3210,7 +3213,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                   const SizedBox(height: 3),
                                   Text(
                                     'Google Pay, PhonePe, Paytm, Cards & UPI',
-                                    style: GoogleFonts.inter(fontSize: 11.5, color: slateMuted, fontWeight: FontWeight.w500),
+                                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: slateMuted, fontWeight: FontWeight.w500),
                                   ),
                                 ],
                               ),
@@ -3253,7 +3256,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             child: Text(
                               '100% Safe & Encrypted • Instant Refunds',
                               style: GoogleFonts.inter(
-                                fontSize: 11,
+                                fontSize: Responsive.scaledFontSize(context, 11),
                                 fontWeight: FontWeight.w700,
                                 color: const Color(0xFF475569),
                               ),
@@ -3287,7 +3290,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                   ? 'Pay ₹${grandTotal.toInt()} Online'
                                   : 'Place Order • Pay ₹${grandTotal.toInt()} on Delivery',
                               style: GoogleFonts.inter(
-                                fontSize: 14,
+                                fontSize: Responsive.scaledFontSize(context, 14),
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
                                 letterSpacing: 0.2,

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/design_system.dart';
+import '../../core/theme/responsive.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../data/models/category.dart';
 import '../../providers/product_provider.dart';
@@ -157,7 +158,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                                 Text(
                                   'HOME',
                                   style: GoogleFonts.inter(
-                                    fontSize: 9.5,
+                                    fontSize: Responsive.scaledFontSize(context, 9.5),
                                     fontWeight: FontWeight.w800,
                                     color: const Color(0xFF475569),
                                     letterSpacing: 0.4,
@@ -169,7 +170,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                                 Text(
                                   'CATEGORIES DIRECTORY',
                                   style: GoogleFonts.inter(
-                                    fontSize: 9.5,
+                                    fontSize: Responsive.scaledFontSize(context, 9.5),
                                     fontWeight: FontWeight.w900,
                                     color: const Color(0xFFE11D48),
                                     letterSpacing: 0.4,
@@ -184,7 +185,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                           Text(
                             'Shop by Category',
                             style: GoogleFonts.inter(
-                              fontSize: 23,
+                              fontSize: Responsive.scaledFontSize(context, 23),
                               fontWeight: FontWeight.w900,
                               color: const Color(0xFF0F172A),
                               letterSpacing: -0.5,
@@ -196,7 +197,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                           Text(
                             'Explore our curated catalog of groceries\nand hot café treats',
                             style: GoogleFonts.inter(
-                              fontSize: 11.5,
+                              fontSize: Responsive.scaledFontSize(context, 11.5),
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF64748B),
                               height: 1.3,
@@ -230,7 +231,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                             'assets/categories/fruits_vegetables_category.webp',
                             fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) => const Center(
-                              child: Text('🛍️', style: TextStyle(fontSize: 36)),
+                              child: Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 36))),
                             ),
                           ),
                         ),
@@ -262,11 +263,11 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                   child: TextField(
                     controller: _searchController,
                     onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
-                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w500),
                     decoration: InputDecoration(
                       hintText: 'Search categories...',
                       hintStyle: GoogleFonts.inter(
-                        fontSize: 12.5,
+                        fontSize: Responsive.scaledFontSize(context, 12.5),
                         fontWeight: FontWeight.w500,
                         color: const Color(0xFF94A3B8),
                       ),
@@ -307,12 +308,12 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text('🔍', style: TextStyle(fontSize: 48)),
+                          const Text('🔍', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 48))),
                           const SizedBox(height: 12),
                           Text(
                             'No categories found',
                             style: GoogleFonts.inter(
-                              fontSize: 15,
+                              fontSize: Responsive.scaledFontSize(context, 15),
                               fontWeight: FontWeight.w800,
                               color: const Color(0xFF0F172A),
                             ),
@@ -320,7 +321,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                           const SizedBox(height: 4),
                           Text(
                             'Try searching with another keyword',
-                            style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF64748B)),
                           ),
                         ],
                       ),
@@ -328,14 +329,22 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                   );
                 }
 
+                final columns = Responsive.gridColumns(context, smallMobile: 2, mobile: 2, smallTablet: 3, tablet: 4, desktop: 5);
+                final aspect = Responsive.categoryCardAspectRatio(context);
+
                 return SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 110),
+                  padding: EdgeInsets.fromLTRB(
+                    Responsive.horizontalPadding(context),
+                    0,
+                    Responsive.horizontalPadding(context),
+                    110,
+                  ),
                   sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.68,
-                      crossAxisSpacing: 14,
-                      mainAxisSpacing: 14,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columns,
+                      childAspectRatio: aspect,
+                      crossAxisSpacing: context.isCompact ? 10 : 14,
+                      mainAxisSpacing: context.isCompact ? 10 : 14,
                     ),
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
@@ -361,7 +370,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                       const SizedBox(height: 10),
                       Text(
                         'Failed to load categories',
-                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 10),
                       ElevatedButton(
@@ -428,9 +437,9 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Top Image Box with Items Pill
-            Container(
-              height: 118,
-              width: double.infinity,
+            Expanded(
+              child: Container(
+                width: double.infinity,
               decoration: BoxDecoration(
                 color: const Color(0xFFF8FAFC),
                 borderRadius: BorderRadius.circular(15),
@@ -446,11 +455,15 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                         ? CachedNetworkImage(
                             imageUrl: webUrl,
                             fit: BoxFit.cover,
+                            memCacheWidth: 400,
+                            memCacheHeight: 400,
+                            maxWidthDiskCache: 600,
+                            maxHeightDiskCache: 600,
                             errorWidget: (_, __, ___) => Image.asset(
                               assetPath,
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => const Center(
-                                child: Text('🥬', style: TextStyle(fontSize: 38)),
+                                child: Text('🥬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 38))),
                               ),
                             ),
                           )
@@ -458,7 +471,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                             assetPath,
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => const Center(
-                              child: Text('🥬', style: TextStyle(fontSize: 38)),
+                              child: Text('🥬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 38))),
                             ),
                           ),
                   ),
@@ -488,7 +501,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                           Text(
                             '$itemCount ITEMS',
                             style: GoogleFonts.inter(
-                              fontSize: 8.5,
+                              fontSize: Responsive.scaledFontSize(context, 8.5),
                               fontWeight: FontWeight.w900,
                               color: const Color(0xFFE11D48),
                               letterSpacing: 0.2,
@@ -501,13 +514,14 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                 ],
               ),
             ),
+            ),
             const SizedBox(height: 7),
 
             // Category Name
             Text(
               category.name,
               style: GoogleFonts.inter(
-                fontSize: 13,
+                fontSize: context.isCompact ? 11.5 : 13,
                 fontWeight: FontWeight.w900,
                 color: category.slug.contains('fruit')
                     ? const Color(0xFF059669)
@@ -523,19 +537,19 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
             Text(
               tagline,
               style: GoogleFonts.inter(
-                fontSize: 10,
+                fontSize: context.isCompact ? 9 : 10,
                 fontWeight: FontWeight.w500,
                 color: const Color(0xFF64748B),
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const Spacer(),
+            SizedBox(height: context.isCompact ? 5 : 8),
 
             // Luxury "SHOP NOW" Action Button (Securely Contained Inside Box)
             Container(
-              height: 31,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              height: context.isCompact ? 28 : 31,
+              padding: EdgeInsets.symmetric(horizontal: context.isCompact ? 7 : 10),
               decoration: BoxDecoration(
                 color: btnColor,
                 borderRadius: BorderRadius.circular(16),
@@ -553,15 +567,15 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                   Text(
                     'SHOP NOW',
                     style: GoogleFonts.inter(
-                      fontSize: 10,
+                      fontSize: context.isCompact ? 9 : 10,
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
                       letterSpacing: 0.5,
                     ),
                   ),
                   Container(
-                    width: 17,
-                    height: 17,
+                    width: context.isCompact ? 15 : 17,
+                    height: context.isCompact ? 15 : 17,
                     decoration: const BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,

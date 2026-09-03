@@ -16,7 +16,7 @@ class HelpSupportScreen extends StatelessWidget {
         centerTitle: true,
         title: Text(
           'Help & Support',
-          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
         ),
       ),
       body: SingleChildScrollView(
@@ -49,8 +49,8 @@ class HelpSupportScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Call Us', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppDesignSystem.textPrimary)),
-                            Text('+91 1800-123-4567', style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textSecondary)),
+                            Text('Call Us', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w600, color: AppDesignSystem.textPrimary)),
+                            Text('+91 1800-123-4567', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textSecondary)),
                           ],
                         ),
                       ),
@@ -73,8 +73,8 @@ class HelpSupportScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Email Us', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppDesignSystem.textPrimary)),
-                            Text('support@fastkirana.com', style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textSecondary)),
+                            Text('Email Us', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w600, color: AppDesignSystem.textPrimary)),
+                            Text('support@fastkirana.com', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textSecondary)),
                           ],
                         ),
                       ),
@@ -90,7 +90,7 @@ class HelpSupportScreen extends StatelessWidget {
             // FAQ Section
             Text(
               'Frequently Asked Questions',
-              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
             ),
             const SizedBox(height: 16),
 
@@ -126,11 +126,11 @@ class HelpSupportScreen extends StatelessWidget {
         boxShadow: AppDesignSystem.shadowSm,
       ),
       child: ExpansionTile(
-        title: Text(question, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
+        title: Text(question, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Text(answer, style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textSecondary, height: 1.5)),
+            child: Text(answer, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textSecondary, height: 1.5)),
           ),
         ],
       ),

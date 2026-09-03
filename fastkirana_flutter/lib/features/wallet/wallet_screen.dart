@@ -19,7 +19,7 @@ class WalletScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppDesignSystem.background,
         elevation: 0,
-        title: Text('Wallet', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+        title: Text('Wallet', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -33,9 +33,9 @@ class WalletScreen extends StatelessWidget {
             ),
             child: Column(
               children: [
-                Text('Wallet Balance', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withOpacity(0.9))),
+                Text('Wallet Balance', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: Colors.white.withOpacity(0.9))),
                 const SizedBox(height: 8),
-                Text('₹1,250', style: GoogleFonts.inter(fontSize: 40, fontWeight: FontWeight.w800, color: Colors.white)),
+                Text('₹1,250', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 40), fontWeight: FontWeight.w800, color: Colors.white)),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -49,7 +49,7 @@ class WalletScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          Text('Transaction History', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+          Text('Transaction History', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
           const SizedBox(height: 12),
           ...transactions.map((t) => Container(
             margin: const EdgeInsets.only(bottom: 8),
@@ -68,12 +68,12 @@ class WalletScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(t['title'] as String, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
-                      Text(t['date'] as String, style: GoogleFonts.inter(fontSize: 11, color: AppDesignSystem.textSecondary)),
+                      Text(t['title'] as String, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
+                      Text(t['date'] as String, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: AppDesignSystem.textSecondary)),
                     ],
                   ),
                 ),
-                Text(t['amount'] as String, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: (t['isCredit'] as bool) ? AppDesignSystem.success : AppDesignSystem.danger)),
+                Text(t['amount'] as String, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: (t['isCredit'] as bool) ? AppDesignSystem.success : AppDesignSystem.danger)),
               ],
             ),
           )),
@@ -92,7 +92,7 @@ class WalletScreen extends StatelessWidget {
           children: [
             Icon(icon, color: Colors.white, size: 20),
             const SizedBox(height: 4),
-            Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+            Text(label, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w700, color: Colors.white)),
           ],
         ),
       ),

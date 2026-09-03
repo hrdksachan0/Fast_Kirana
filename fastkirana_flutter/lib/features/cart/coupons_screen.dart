@@ -64,7 +64,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
             Text(
               'Apply Coupons & Vouchers',
               style: GoogleFonts.inter(
-                fontSize: 16,
+                fontSize: Responsive.scaledFontSize(context, 16),
                 fontWeight: FontWeight.w900,
                 color: slateDark,
                 letterSpacing: -0.3,
@@ -73,7 +73,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
             Text(
               'Save extra on your FastKirana order',
               style: GoogleFonts.inter(
-                fontSize: 11,
+                fontSize: Responsive.scaledFontSize(context, 11),
                 fontWeight: FontWeight.w500,
                 color: slateMuted,
               ),
@@ -111,12 +111,12 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                 // 2. Section Header
                 Row(
                   children: [
-                    const Text('🎟️', style: TextStyle(fontSize: 15)),
+                    const Text('🎟️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15))),
                     const SizedBox(width: 8),
                     Text(
                       'Available Coupons for You',
                       style: GoogleFonts.inter(
-                        fontSize: 14.5,
+                        fontSize: Responsive.scaledFontSize(context, 14.5),
                         fontWeight: FontWeight.w900,
                         color: slateDark,
                         letterSpacing: -0.2,
@@ -179,7 +179,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                   focusNode: _focusNode,
                   textCapitalization: TextCapitalization.characters,
                   style: GoogleFonts.inter(
-                    fontSize: 14,
+                    fontSize: Responsive.scaledFontSize(context, 14),
                     fontWeight: FontWeight.w800,
                     color: slateDark,
                     letterSpacing: 1.0,
@@ -190,7 +190,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                     border: InputBorder.none,
                     hintText: 'ENTER COUPON CODE',
                     hintStyle: GoogleFonts.inter(
-                      fontSize: 12.5,
+                      fontSize: Responsive.scaledFontSize(context, 12.5),
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFF94A3B8),
                       letterSpacing: 0.5,
@@ -224,7 +224,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                   child: Text(
                     'APPLY',
                     style: GoogleFonts.inter(
-                      fontSize: 12,
+                      fontSize: Responsive.scaledFontSize(context, 12),
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
                       letterSpacing: 0.8,
@@ -241,7 +241,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
               child: Text(
                 _inlineError!,
                 style: GoogleFonts.inter(
-                  fontSize: 11,
+                  fontSize: Responsive.scaledFontSize(context, 11),
                   fontWeight: FontWeight.w600,
                   color: primaryRed,
                 ),
@@ -317,7 +317,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                             Text(
                               coupon.code,
                               style: GoogleFonts.inter(
-                                fontSize: 13,
+                                fontSize: Responsive.scaledFontSize(context, 13),
                                 fontWeight: FontWeight.w900,
                                 color: primaryRed,
                                 letterSpacing: 0.8,
@@ -332,7 +332,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                       Text(
                         discountTitle,
                         style: GoogleFonts.inter(
-                          fontSize: 16,
+                          fontSize: Responsive.scaledFontSize(context, 16),
                           fontWeight: FontWeight.w900,
                           color: slateDark,
                           letterSpacing: -0.2,
@@ -342,7 +342,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                       Text(
                         conditionText,
                         style: GoogleFonts.inter(
-                          fontSize: 11.5,
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w500,
                           color: slateMuted,
                           height: 1.3,
@@ -364,7 +364,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                     child: Text(
                       'APPLY',
                       style: GoogleFonts.inter(
-                        fontSize: 12,
+                        fontSize: Responsive.scaledFontSize(context, 12),
                         fontWeight: FontWeight.w900,
                         color: isEligible ? Colors.white : const Color(0xFF94A3B8),
                         letterSpacing: 0.5,
@@ -410,7 +410,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                         ? 'Tap APPLY to save with this coupon'
                         : 'Add ₹${diff.toInt()} more items to unlock this coupon',
                     style: GoogleFonts.inter(
-                      fontSize: 11,
+                      fontSize: Responsive.scaledFontSize(context, 11),
                       fontWeight: FontWeight.w600,
                       color: isEligible ? const Color(0xFF9A3412) : slateMuted,
                     ),
@@ -451,7 +451,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
               color: Color(0xFFFFF1F2),
             ),
             child: const Center(
-              child: Text('🎟️', style: TextStyle(fontSize: 32)),
+              child: Text('🎟️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 32))),
             ),
           ),
           const SizedBox(height: 16),
@@ -459,7 +459,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
             'No Public Coupons Right Now',
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
-              fontSize: 16,
+              fontSize: Responsive.scaledFontSize(context, 16),
               fontWeight: FontWeight.w900,
               color: slateDark,
               letterSpacing: -0.3,
@@ -470,7 +470,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
             'If you have a private coupon or promo code, enter it in the box above to apply your discount.',
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
-              fontSize: 12.5,
+              fontSize: Responsive.scaledFontSize(context, 12.5),
               fontWeight: FontWeight.w500,
               color: slateMuted,
               height: 1.35,
@@ -489,7 +489,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
               child: Text(
                 'Back to Cart',
                 style: GoogleFonts.inter(
-                  fontSize: 13,
+                  fontSize: Responsive.scaledFontSize(context, 13),
                   fontWeight: FontWeight.w800,
                   color: slateDark,
                 ),

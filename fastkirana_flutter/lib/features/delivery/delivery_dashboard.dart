@@ -84,6 +84,11 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     _fetchOrders();
     _fetchWallet();
 
+    // Immediately request GPS / Location permission as soon as Rider opens dashboard
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      RiderLocationService.requestPermissions();
+    });
+
     // 30-second calm background refresh (without 1-second full-screen rebuilds)
     _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (!mounted || _isFetchingOrders) return;
@@ -194,7 +199,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text('Network offline! Action saved locally. Will auto-sync when online.',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 12)),
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white, fontSize: Responsive.scaledFontSize(context, 12))),
                 ),
               ],
             ),
@@ -252,7 +257,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                 Expanded(
                   child: Text(
                     '🛵 Naya Order Aaya! #$orderNum',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 13),
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w900, color: Colors.white, fontSize: Responsive.scaledFontSize(context, 13)),
                   ),
                 ),
               ],
@@ -812,9 +817,9 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Doorstep UPI QR Collection',
-                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: slateDark)),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: slateDark)),
                     Text('Order #$orderNum • ₹${total.toInt()}',
-                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: slateMuted)),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: slateMuted)),
                   ],
                 ),
                 IconButton(
@@ -845,7 +850,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                   ),
                   const SizedBox(height: 12),
                   Text('Scan via Google Pay, PhonePe, Paytm or any UPI App',
-                      style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: slateMuted),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w600, color: slateMuted),
                       textAlign: TextAlign.center),
                 ],
               ),
@@ -867,7 +872,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
               ),
               child: Text(
                 'Confirm Customer Paid ₹${total.toInt()} via QR',
-                style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w800, color: Colors.white),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w800, color: Colors.white),
               ),
             ),
           ],
@@ -916,7 +921,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     if (Navigator.canPop(context)) {
       Navigator.pop(context);
     } else {
-      Navigator.pushReplacementNamed(context, '/home');
+      SystemNavigator.pop();
     }
   }
 
@@ -992,6 +997,29 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                   },
                   onToggleDarkMode: _toggleDarkMode,
                   onRefresh: () => _fetchOrders(silent: true),
+                  onLogout: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Logout'),
+                        content: const Text('Are you sure you want to log out from Rider Console?'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: const Text('Logout', style: TextStyle(color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true && mounted) {
+                      await ref.read(authProvider.notifier).logout();
+                      if (mounted) {
+                        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                      }
+                    }
+                  },
                   onTabChanged: (index) => setState(() => _activeTab = index),
                 ),
 
@@ -1051,7 +1079,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
               Text(
                 'OUT FOR DELIVERY',
                 style: GoogleFonts.inter(
-                  fontSize: 13,
+                  fontSize: Responsive.scaledFontSize(context, 13),
                   fontWeight: FontWeight.w900,
                   color: slateDark,
                   letterSpacing: 0.3,
@@ -1089,7 +1117,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                   Text(
                     'READY FOR PICKUP',
                     style: GoogleFonts.inter(
-                      fontSize: 13,
+                      fontSize: Responsive.scaledFontSize(context, 13),
                       fontWeight: FontWeight.w900,
                       color: slateDark,
                       letterSpacing: 0.3,
@@ -1106,7 +1134,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                 child: Text(
                   '${pendingPickups.length} Orders',
                   style: GoogleFonts.inter(
-                    fontSize: 10,
+                    fontSize: Responsive.scaledFontSize(context, 10),
                     fontWeight: FontWeight.w800,
                     color: const Color(0xFF7C3AED),
                   ),
@@ -1143,12 +1171,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       ),
       child: Column(
         children: [
-          const Text('🛵', style: TextStyle(fontSize: 32)),
+          const Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 32))),
           const SizedBox(height: 10),
           Text(
             'No orders out for delivery',
             style: GoogleFonts.inter(
-              fontSize: 14,
+              fontSize: Responsive.scaledFontSize(context, 14),
               fontWeight: FontWeight.w900,
               color: slateDark,
             ),
@@ -1158,7 +1186,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
             'Accept new pickup orders from below to start delivering.',
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
-              fontSize: 11.5,
+              fontSize: Responsive.scaledFontSize(context, 11.5),
               fontWeight: FontWeight.w500,
               color: slateMuted,
             ),
@@ -1180,7 +1208,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       child: Center(
         child: Text(
           'No pickup orders waiting at store right now.',
-          style: GoogleFonts.inter(fontSize: 12, color: slateMuted, fontWeight: FontWeight.w600),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted, fontWeight: FontWeight.w600),
         ),
       ),
     );
@@ -1291,7 +1319,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                         Text(
                           '#$orderNum',
                           style: GoogleFonts.inter(
-                            fontSize: 13,
+                            fontSize: Responsive.scaledFontSize(context, 13),
                             fontWeight: FontWeight.w900,
                             color: slateDark,
                           ),
@@ -1306,12 +1334,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                             ),
                             child: Row(
                               children: [
-                                const Text('🍽️', style: TextStyle(fontSize: 10)),
+                                const Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
                                 const SizedBox(width: 3),
                                 Text(
                                   'FOOD',
                                   style: GoogleFonts.inter(
-                                    fontSize: 9.5,
+                                    fontSize: Responsive.scaledFontSize(context, 9.5),
                                     fontWeight: FontWeight.w900,
                                     color: const Color(0xFFDC2626),
                                   ),
@@ -1339,7 +1367,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                       child: Text(
                         status == 'PACKED' ? 'PACKED • READY' : status,
                         style: GoogleFonts.inter(
-                          fontSize: 9.5,
+                          fontSize: Responsive.scaledFontSize(context, 9.5),
                           fontWeight: FontWeight.w900,
                           color: status == 'PACKED'
                               ? const Color(0xFF15803D)
@@ -1361,7 +1389,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                   ),
                   child: Row(
                     children: [
-                      Text(outlet.isRestaurant ? '🍽️' : '🏪', style: const TextStyle(fontSize: 13)),
+                      Text(outlet.isRestaurant ? '🍽️' : '🏪', style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Column(
@@ -1370,7 +1398,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                             Text(
                               outlet.name,
                               style: GoogleFonts.inter(
-                                fontSize: 11.5,
+                                fontSize: Responsive.scaledFontSize(context, 11.5),
                                 fontWeight: FontWeight.w800,
                                 color: outlet.isRestaurant ? const Color(0xFF6B21A8) : const Color(0xFF166534),
                               ),
@@ -1379,7 +1407,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                             ),
                             Text(
                               outlet.address,
-                              style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF64748B)),
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), color: const Color(0xFF64748B)),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -1406,7 +1434,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                               Text(
                                 'Go Store',
                                 style: GoogleFonts.inter(
-                                  fontSize: 10,
+                                  fontSize: Responsive.scaledFontSize(context, 10),
                                   fontWeight: FontWeight.w800,
                                   color: outlet.isRestaurant ? const Color(0xFF7C3AED) : const Color(0xFF15803D),
                                 ),
@@ -1442,7 +1470,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           child: Text(
                             avatarLetter,
                             style: GoogleFonts.inter(
-                              fontSize: 15,
+                              fontSize: Responsive.scaledFontSize(context, 15),
                               fontWeight: FontWeight.w900,
                               color: Colors.white,
                             ),
@@ -1460,7 +1488,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                   child: Text(
                                     customerName,
                                     style: GoogleFonts.inter(
-                                      fontSize: 13,
+                                      fontSize: Responsive.scaledFontSize(context, 13),
                                       fontWeight: FontWeight.w800,
                                       color: slateDark,
                                     ),
@@ -1484,7 +1512,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                       Text(
                                         orderTimeStr,
                                         style: GoogleFonts.inter(
-                                          fontSize: 9,
+                                          fontSize: Responsive.scaledFontSize(context, 9),
                                           fontWeight: FontWeight.w800,
                                           color: const Color(0xFF1D4ED8),
                                         ),
@@ -1498,7 +1526,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                               Text(
                                 customerPhone.startsWith('+') ? customerPhone : '+91$customerPhone',
                                 style: GoogleFonts.robotoMono(
-                                  fontSize: 10.5,
+                                  fontSize: Responsive.scaledFontSize(context, 10.5),
                                   fontWeight: FontWeight.w600,
                                   color: slateMuted,
                                 ),
@@ -1547,11 +1575,11 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                         children: [
                           Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle)),
                           const SizedBox(width: 6),
-                          Text('PICKUP: ', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: slateMuted)),
+                          Text('PICKUP: ', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w800, color: slateMuted)),
                           Expanded(
                             child: Text(
                               shopName,
-                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: slateDark),
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w800, color: slateDark),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -1562,11 +1590,11 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                         children: [
                           Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFF3B82F6), shape: BoxShape.circle)),
                           const SizedBox(width: 6),
-                          Text('DELIVER: ', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: slateMuted)),
+                          Text('DELIVER: ', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w800, color: slateMuted)),
                           Expanded(
                             child: Text(
                               deliverAddress,
-                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: slateDark),
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w600, color: slateDark),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -1605,7 +1633,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                         Text(
                           'Navigate in Google Maps ➔',
                           style: GoogleFonts.inter(
-                            fontSize: 12.5,
+                            fontSize: Responsive.scaledFontSize(context, 12.5),
                             fontWeight: FontWeight.w900,
                             color: Colors.white,
                             letterSpacing: 0.2,
@@ -1640,7 +1668,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                 Text(
                                   'ITEMS TO PICK UP (${items.length})',
                                   style: GoogleFonts.inter(
-                                    fontSize: 10,
+                                    fontSize: Responsive.scaledFontSize(context, 10),
                                     fontWeight: FontWeight.w900,
                                     color: const Color(0xFF4338CA),
                                     letterSpacing: 0.5,
@@ -1656,7 +1684,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                               ),
                               child: Text(
                                 '${items.fold<int>(0, (sum, it) => sum + ((it['quantity'] as num?)?.toInt() ?? 1))} qty',
-                                style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w800, color: const Color(0xFF4F46E5)),
+                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w800, color: const Color(0xFF4F46E5)),
                               ),
                             ),
                           ],
@@ -1680,7 +1708,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                   child: Text(
                                     '${qty}x',
                                     style: GoogleFonts.inter(
-                                      fontSize: 10.5,
+                                      fontSize: Responsive.scaledFontSize(context, 10.5),
                                       fontWeight: FontWeight.w900,
                                       color: slateDark,
                                     ),
@@ -1691,7 +1719,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                   child: Text(
                                     title,
                                     style: GoogleFonts.inter(
-                                      fontSize: 11.5,
+                                      fontSize: Responsive.scaledFontSize(context, 11.5),
                                       fontWeight: FontWeight.w700,
                                       color: slateDark,
                                     ),
@@ -1701,7 +1729,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                   Text(
                                     '₹${(price * (qty is num ? qty : 1)).toInt()}',
                                     style: GoogleFonts.inter(
-                                      fontSize: 11,
+                                      fontSize: Responsive.scaledFontSize(context, 11),
                                       fontWeight: FontWeight.w800,
                                       color: slateMuted,
                                     ),
@@ -1729,14 +1757,14 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                         children: [
                           Text(
                             'TOTAL ORDER VALUE',
-                            style: GoogleFonts.inter(fontSize: 8.5, fontWeight: FontWeight.w800, color: slateMuted),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 8.5), fontWeight: FontWeight.w800, color: slateMuted),
                           ),
                           const SizedBox(height: 2),
                           Row(
                             children: [
                               Text(
                                 '₹${total.toInt()}',
-                                style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w900, color: slateDark),
+                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 17), fontWeight: FontWeight.w900, color: slateDark),
                               ),
                               const SizedBox(width: 6),
                               Container(
@@ -1751,7 +1779,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                 child: Text(
                                   isCod ? '💵 COD' : '✅ PAID',
                                   style: GoogleFonts.inter(
-                                    fontSize: 9,
+                                    fontSize: Responsive.scaledFontSize(context, 9),
                                     fontWeight: FontWeight.w900,
                                     color: isCod ? const Color(0xFFB45309) : const Color(0xFF15803D),
                                   ),
@@ -1762,13 +1790,13 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           const SizedBox(height: 2),
                           Row(
                             children: [
-                              Text(isCod ? '🔥' : '💳', style: const TextStyle(fontSize: 10)),
+                              Text(isCod ? '🔥' : '💳', style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
                               const SizedBox(width: 3),
                               Expanded(
                                 child: Text(
                                   isCod ? 'Collect ₹${total.toInt()} Cash' : 'Paid Online',
                                   style: GoogleFonts.inter(
-                                    fontSize: 9.5,
+                                    fontSize: Responsive.scaledFontSize(context, 9.5),
                                     fontWeight: FontWeight.w800,
                                     color: isCod ? const Color(0xFFD97706) : const Color(0xFF059669),
                                   ),
@@ -1802,7 +1830,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                 Text(
                                   'Preparing in Kitchen...',
                                   style: GoogleFonts.inter(
-                                    fontSize: 10.5,
+                                    fontSize: Responsive.scaledFontSize(context, 10.5),
                                     fontWeight: FontWeight.w800,
                                     color: const Color(0xFFD97706),
                                   ),
@@ -1816,7 +1844,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                             child: Text(
                               'Food Ready? Pick Up',
                               style: GoogleFonts.inter(
-                                fontSize: 9.5,
+                                fontSize: Responsive.scaledFontSize(context, 9.5),
                                 fontWeight: FontWeight.w800,
                                 color: const Color(0xFF059669),
                               ),
@@ -1855,7 +1883,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                 Text(
                                   'Pick Up Order ➔',
                                   style: GoogleFonts.inter(
-                                    fontSize: 12,
+                                    fontSize: Responsive.scaledFontSize(context, 12),
                                     fontWeight: FontWeight.w900,
                                     color: Colors.white,
                                   ),
@@ -1970,7 +1998,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                       child: Text(
                         'STOP #1 • ACTIVE DROP',
                         style: GoogleFonts.inter(
-                          fontSize: 9.5,
+                          fontSize: Responsive.scaledFontSize(context, 9.5),
                           fontWeight: FontWeight.w900,
                           color: const Color(0xFF15803D),
                         ),
@@ -1978,7 +2006,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                     ),
                     Text(
                       '#$orderNum',
-                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, color: slateDark),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w900, color: slateDark),
                     ),
                   ],
                 ),
@@ -2000,7 +2028,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                         decoration: const BoxDecoration(color: Color(0xFF3B82F6), shape: BoxShape.circle),
                         child: Center(
                           child: Text(avatarLetter,
-                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white)),
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: Colors.white)),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -2013,7 +2041,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                 Flexible(
                                   child: Text(
                                     customerName,
-                                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: slateDark),
+                                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: slateDark),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -2034,7 +2062,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                       Text(
                                         orderTimeStr,
                                         style: GoogleFonts.inter(
-                                          fontSize: 9,
+                                          fontSize: Responsive.scaledFontSize(context, 9),
                                           fontWeight: FontWeight.w800,
                                           color: const Color(0xFF1D4ED8),
                                         ),
@@ -2049,7 +2077,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                               Text(
                                 customerPhone.startsWith('+') ? customerPhone : '+91 $customerPhone',
                                 style: GoogleFonts.robotoMono(
-                                  fontSize: 10.5,
+                                  fontSize: Responsive.scaledFontSize(context, 10.5),
                                   fontWeight: FontWeight.w600,
                                   color: slateMuted,
                                 ),
@@ -2118,7 +2146,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                         Text(
                           'Navigate in Google Maps ➔',
                           style: GoogleFonts.inter(
-                            fontSize: 12.5,
+                            fontSize: Responsive.scaledFontSize(context, 12.5),
                             fontWeight: FontWeight.w900,
                             color: Colors.white,
                             letterSpacing: 0.2,
@@ -2149,7 +2177,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           child: Text(
                             deliverAddress,
                             style: GoogleFonts.inter(
-                              fontSize: 11,
+                              fontSize: Responsive.scaledFontSize(context, 11),
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFF991B1B),
                               height: 1.3,
@@ -2186,7 +2214,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                 Text(
                                   'ITEMS IN THIS DROP (${items.length})',
                                   style: GoogleFonts.inter(
-                                    fontSize: 10,
+                                    fontSize: Responsive.scaledFontSize(context, 10),
                                     fontWeight: FontWeight.w900,
                                     color: const Color(0xFF065F46),
                                     letterSpacing: 0.5,
@@ -2202,7 +2230,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                               ),
                               child: Text(
                                 '${items.fold<int>(0, (sum, it) => sum + ((it['quantity'] as num?)?.toInt() ?? 1))} qty',
-                                style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w800, color: const Color(0xFF15803D)),
+                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w800, color: const Color(0xFF15803D)),
                               ),
                             ),
                           ],
@@ -2226,7 +2254,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                   child: Text(
                                     '${qty}x',
                                     style: GoogleFonts.inter(
-                                      fontSize: 10.5,
+                                      fontSize: Responsive.scaledFontSize(context, 10.5),
                                       fontWeight: FontWeight.w900,
                                       color: slateDark,
                                     ),
@@ -2237,7 +2265,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                   child: Text(
                                     title,
                                     style: GoogleFonts.inter(
-                                      fontSize: 11.5,
+                                      fontSize: Responsive.scaledFontSize(context, 11.5),
                                       fontWeight: FontWeight.w700,
                                       color: slateDark,
                                     ),
@@ -2247,7 +2275,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                   Text(
                                     '₹${(price * (qty is num ? qty : 1)).toInt()}',
                                     style: GoogleFonts.inter(
-                                      fontSize: 11,
+                                      fontSize: Responsive.scaledFontSize(context, 11),
                                       fontWeight: FontWeight.w800,
                                       color: slateMuted,
                                     ),
@@ -2271,7 +2299,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           onPressed: () => _showDoorstepUpiQrModal(order),
                           icon: const Icon(Icons.qr_code_rounded, size: 16, color: Color(0xFF2563EB)),
                           label: Text('Doorstep QR',
-                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: const Color(0xFF2563EB))),
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: const Color(0xFF2563EB))),
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: Color(0xFF93C5FD)),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -2289,7 +2317,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                             : const Icon(Icons.check_circle_rounded, size: 16, color: Colors.white),
                         label: Text(
                           isCod ? 'Collect ₹${total.toInt()} & Deliver' : 'Mark Delivered',
-                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: Colors.white),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF10B981),
@@ -2355,7 +2383,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                       Text(
                         'CASH IN HAND (जेब में नकद)',
                         style: GoogleFonts.inter(
-                          fontSize: 11,
+                          fontSize: Responsive.scaledFontSize(context, 11),
                           fontWeight: FontWeight.w900,
                           color: const Color(0xFFB45309),
                           letterSpacing: 0.3,
@@ -2370,7 +2398,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                 Text(
                   '₹${cashInHand.toInt()}',
                   style: GoogleFonts.inter(
-                    fontSize: 38,
+                    fontSize: Responsive.scaledFontSize(context, 38),
                     fontWeight: FontWeight.w900,
                     color: slateDark,
                     letterSpacing: -1,
@@ -2396,7 +2424,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           Text(
                             '$capacityPercent%',
                             style: GoogleFonts.inter(
-                              fontSize: 24,
+                              fontSize: Responsive.scaledFontSize(context, 24),
                               fontWeight: FontWeight.w900,
                               color: slateDark,
                               letterSpacing: -0.5,
@@ -2405,7 +2433,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           Text(
                             'CAPACITY',
                             style: GoogleFonts.inter(
-                              fontSize: 9.5,
+                              fontSize: Responsive.scaledFontSize(context, 9.5),
                               fontWeight: FontWeight.w800,
                               color: slateMuted,
                               letterSpacing: 0.5,
@@ -2434,7 +2462,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                         child: Text(
                           'Active & Eligible: Full COD order capacity available.',
                           style: GoogleFonts.inter(
-                            fontSize: 11.5,
+                            fontSize: Responsive.scaledFontSize(context, 11.5),
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF065F46),
                           ),
@@ -2495,14 +2523,14 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                             Text(
                               _isOnline ? 'ON DUTY (ड्यूटी चालू)' : 'OFF DUTY (ड्यूटी बंद)',
                               style: GoogleFonts.inter(
-                                fontSize: 13.5,
+                                fontSize: Responsive.scaledFontSize(context, 13.5),
                                 fontWeight: FontWeight.w900,
                                 color: _isOnline ? const Color(0xFF15803D) : const Color(0xFFDC2626),
                               ),
                             ),
                             Text(
                               _isOnline ? 'Receiving live delivery orders' : 'Orders redirected to other riders',
-                              style: GoogleFonts.inter(fontSize: 11, color: slateMuted, fontWeight: FontWeight.w500),
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: slateMuted, fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
@@ -2554,7 +2582,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                               ? 'Aap online hain. Store se new orders aate hi aapko pickup notification milegi.'
                               : 'Off duty hone par new orders doosre active delivery partners ke paas transfer ho jayenge.',
                           style: GoogleFonts.inter(
-                            fontSize: 11,
+                            fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: FontWeight.w600,
                             color: _isOnline ? const Color(0xFF166534) : const Color(0xFF991B1B),
                             height: 1.35,
@@ -2619,7 +2647,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           Text(
                             '$totalCount',
                             style: GoogleFonts.inter(
-                              fontSize: 18,
+                              fontSize: Responsive.scaledFontSize(context, 18),
                               fontWeight: FontWeight.w900,
                               color: slateDark,
                             ),
@@ -2627,7 +2655,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           Text(
                             '/ $dailyTarget',
                             style: GoogleFonts.inter(
-                              fontSize: 9,
+                              fontSize: Responsive.scaledFontSize(context, 9),
                               fontWeight: FontWeight.w700,
                               color: slateMuted,
                             ),
@@ -2645,7 +2673,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                       Text(
                         'DAILY GOAL',
                         style: GoogleFonts.inter(
-                          fontSize: 9.5,
+                          fontSize: Responsive.scaledFontSize(context, 9.5),
                           fontWeight: FontWeight.w900,
                           color: slateMuted,
                           letterSpacing: 0.5,
@@ -2654,12 +2682,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                       const SizedBox(height: 2),
                       Row(
                         children: [
-                          Text(totalCount >= dailyTarget ? '🏆' : '🎯', style: const TextStyle(fontSize: 13)),
+                          Text(totalCount >= dailyTarget ? '🏆' : '🎯', style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                           const SizedBox(width: 4),
                           Text(
                             totalCount >= dailyTarget ? 'Milestone Bonus Achieved!' : '$totalCount of $dailyTarget Completed',
                             style: GoogleFonts.inter(
-                              fontSize: 12.5,
+                              fontSize: Responsive.scaledFontSize(context, 12.5),
                               fontWeight: FontWeight.w900,
                               color: totalCount >= dailyTarget ? const Color(0xFF059669) : slateDark,
                             ),
@@ -2668,7 +2696,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                       ),
                       Text(
                         totalCount >= dailyTarget ? 'Great hustle today! 🎉' : 'Complete ${dailyTarget - totalCount} more for bonus',
-                        style: GoogleFonts.inter(fontSize: 11, color: slateMuted, fontWeight: FontWeight.w500),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: slateMuted, fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
@@ -2684,7 +2712,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
               Text(
                 "TODAY'S COMPLETED DELIVERIES",
                 style: GoogleFonts.inter(
-                  fontSize: 11.5,
+                  fontSize: Responsive.scaledFontSize(context, 11.5),
                   fontWeight: FontWeight.w900,
                   color: slateDark,
                   letterSpacing: 0.4,
@@ -2700,7 +2728,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                 child: Text(
                   '$totalCount',
                   style: GoogleFonts.inter(
-                    fontSize: 10,
+                    fontSize: Responsive.scaledFontSize(context, 10),
                     fontWeight: FontWeight.w900,
                     color: const Color(0xFF15803D),
                   ),
@@ -2722,7 +2750,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
               child: Center(
                 child: Text(
                   'No completed deliveries recorded yet.',
-                  style: GoogleFonts.inter(fontSize: 12, color: slateMuted, fontWeight: FontWeight.w600),
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted, fontWeight: FontWeight.w600),
                 ),
               ),
             )
@@ -2815,7 +2843,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                     Text(
                                       '#$orderNum',
                                       style: GoogleFonts.inter(
-                                        fontSize: 12.5,
+                                        fontSize: Responsive.scaledFontSize(context, 12.5),
                                         fontWeight: FontWeight.w900,
                                         color: slateDark,
                                       ),
@@ -2828,7 +2856,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                         Text(
                                           timeStr,
                                           style: GoogleFonts.inter(
-                                            fontSize: 10.5,
+                                            fontSize: Responsive.scaledFontSize(context, 10.5),
                                             fontWeight: FontWeight.w600,
                                             color: slateMuted,
                                           ),
@@ -2842,7 +2870,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                     Text(
                                       '₹$totalAmt',
                                       style: GoogleFonts.inter(
-                                        fontSize: 13,
+                                        fontSize: Responsive.scaledFontSize(context, 13),
                                         fontWeight: FontWeight.w900,
                                         color: slateDark,
                                       ),
@@ -2857,7 +2885,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                       child: Text(
                                         isCod ? '💵 COD' : '💳 ONLINE',
                                         style: GoogleFonts.inter(
-                                          fontSize: 8.5,
+                                          fontSize: Responsive.scaledFontSize(context, 8.5),
                                           fontWeight: FontWeight.w900,
                                           color: isCod ? const Color(0xFFB45309) : const Color(0xFF15803D),
                                         ),
@@ -2878,14 +2906,14 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                       Text(
                                         userName,
                                         style: GoogleFonts.inter(
-                                          fontSize: 12,
+                                          fontSize: Responsive.scaledFontSize(context, 12),
                                           fontWeight: FontWeight.w800,
                                           color: slateDark,
                                         ),
                                       ),
                                       Text(
                                         addr,
-                                        style: GoogleFonts.inter(fontSize: 10.5, color: slateMuted),
+                                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), color: slateMuted),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -2901,7 +2929,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                   child: Text(
                                     'Delivered ✅',
                                     style: GoogleFonts.inter(
-                                      fontSize: 9.5,
+                                      fontSize: Responsive.scaledFontSize(context, 9.5),
                                       fontWeight: FontWeight.w800,
                                       color: const Color(0xFF15803D),
                                     ),
@@ -3097,13 +3125,13 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
             ],
           ),
           child: const Center(
-            child: Text('📦', style: TextStyle(fontSize: 26)),
+            child: Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 26))),
           ),
         ),
         const SizedBox(height: 14),
         Text(
           'Confirm Parcel Handover',
-          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
         ),
         const SizedBox(height: 4),
         Row(
@@ -3111,11 +3139,11 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
           children: [
             Text(
               'Order #${widget.orderNum} • ',
-              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF059669)),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700, color: const Color(0xFF059669)),
             ),
             Text(
               '₹${widget.total.toInt()}',
-              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, color: const Color(0xFF059669)),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w900, color: const Color(0xFF059669)),
             ),
           ],
         ),
@@ -3131,7 +3159,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
           child: Text(
             'Kya aapne customer ko parcel safely handover kar diya hai?',
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF475569), height: 1.4),
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w600, color: const Color(0xFF475569), height: 1.4),
           ),
         ),
         const SizedBox(height: 24),
@@ -3145,7 +3173,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: Text('Cancel', style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w800, color: const Color(0xFF64748B))),
+                child: Text('Cancel', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w800, color: const Color(0xFF64748B))),
               ),
             ),
             const SizedBox(width: 12),
@@ -3164,7 +3192,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   elevation: 0,
                 ),
-                child: Text('Yes, Delivered ✅', style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w900, color: Colors.white)),
+                child: Text('Yes, Delivered ✅', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w900, color: Colors.white)),
               ),
             ),
           ],
@@ -3216,19 +3244,19 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
             child: const Center(
               child: Text(
                 '₹',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white),
+                style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24), fontWeight: FontWeight.w900, color: Colors.white),
               ),
             ),
           ),
           const SizedBox(height: 12),
           Text(
             'Payment Collection',
-            style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
           ),
           const SizedBox(height: 3),
           Text(
             'Order #${widget.orderNum} • Collect: ₹$orderTotalInt',
-            style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700, color: const Color(0xFF475569)),
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w700, color: const Color(0xFF475569)),
           ),
           const SizedBox(height: 16),
 
@@ -3247,15 +3275,15 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                   const SizedBox(width: 8),
                   Text(
                     'Jeb mein: ₹${widget.cashInHand.toInt()}',
-                    style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: const Color(0xFF334155)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w700, color: const Color(0xFF334155)),
                   ),
                   Text(
                     ' | ',
-                    style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFFCBD5E1)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: const Color(0xFFCBD5E1)),
                   ),
                   Text(
                     'Limit: ₹${widget.cashLimit.toInt()}',
-                    style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: const Color(0xFF64748B)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w700, color: const Color(0xFF64748B)),
                   ),
                 ],
               ),
@@ -3288,7 +3316,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                         color: const Color(0xFFFEF3C7),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: const Center(child: Text('💵', style: TextStyle(fontSize: 22))),
+                      child: const Center(child: Text('💵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -3297,12 +3325,12 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                         children: [
                           Text(
                             'Cash Liya (कैश लिया)',
-                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: const Color(0xFFB45309)),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: const Color(0xFFB45309)),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             'Customer ne cash diya — poora ya kuch',
-                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF78716C)),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w500, color: const Color(0xFF78716C)),
                           ),
                         ],
                       ),
@@ -3334,7 +3362,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                         color: const Color(0xFFDCFCE7),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: const Center(child: Text('📱', style: TextStyle(fontSize: 22))),
+                      child: const Center(child: Text('📱', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -3343,12 +3371,12 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                         children: [
                           Text(
                             'Online Mila (ऑनलाइन मिला)',
-                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: const Color(0xFF15803D)),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: const Color(0xFF15803D)),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             'Poora GPay / PhonePe / UPI se aaya',
-                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF78716C)),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w500, color: const Color(0xFF78716C)),
                           ),
                         ],
                       ),
@@ -3364,7 +3392,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                         children: [
                           const Icon(Icons.check_circle_rounded, color: Colors.white, size: 12),
                           const SizedBox(width: 3),
-                          Text('UPI', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white)),
+                          Text('UPI', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w900, color: Colors.white)),
                         ],
                       ),
                     ),
@@ -3377,7 +3405,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
               onPressed: () => Navigator.pop(context),
               child: Text(
                 'Cancel',
-                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF94A3B8)),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700, color: const Color(0xFF94A3B8)),
               ),
             ),
           ]
@@ -3399,7 +3427,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                   children: [
                     Text(
                       'CUSTOMER NE KITNA DIYA? (₹)',
-                      style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w900, color: const Color(0xFFB45309), letterSpacing: 0.5),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w900, color: const Color(0xFFB45309), letterSpacing: 0.5),
                     ),
                     const SizedBox(height: 10),
                     Container(
@@ -3412,7 +3440,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                       child: Center(
                         child: Text(
                           _cashReceivedController.text.isEmpty ? '0' : _cashReceivedController.text,
-                          style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 24), fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
                         ),
                       ),
                     ),
@@ -3442,7 +3470,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                             child: Text(
                               label,
                               style: GoogleFonts.inter(
-                                fontSize: 11,
+                                fontSize: Responsive.scaledFontSize(context, 11),
                                 fontWeight: FontWeight.w800,
                                 color: isSelected ? Colors.white : const Color(0xFFB45309),
                               ),
@@ -3469,8 +3497,8 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('💵 Cash Received', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF64748B))),
-                        Text('₹${cashReceived.toInt()}', style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A))),
+                        Text('💵 Cash Received', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: const Color(0xFF64748B))),
+                        Text('₹${cashReceived.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w900, color: const Color(0xFF0F172A))),
                       ],
                     ),
                     if (changeToGive > 0) ...[
@@ -3478,8 +3506,8 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('🔄 Change wapas do', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFFE11D48))),
-                          Text('-₹${changeToGive.toInt()}', style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w900, color: const Color(0xFFE11D48))),
+                          Text('🔄 Change wapas do', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: const Color(0xFFE11D48))),
+                          Text('-₹${changeToGive.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w900, color: const Color(0xFFE11D48))),
                         ],
                       ),
                     ],
@@ -3487,8 +3515,8 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('💰 Jeb mein rahega (Net Cash)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: const Color(0xFFB45309))),
-                        Text('₹${netCashInHand.toInt()}', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: const Color(0xFFB45309))),
+                        Text('💰 Jeb mein rahega (Net Cash)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: const Color(0xFFB45309))),
+                        Text('₹${netCashInHand.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: const Color(0xFFB45309))),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -3499,10 +3527,10 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                           children: [
                             const Icon(Icons.account_balance_wallet_outlined, size: 12, color: Color(0xFF94A3B8)),
                             const SizedBox(width: 4),
-                            Text('Wallet after this', style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w600, color: const Color(0xFF94A3B8))),
+                            Text('Wallet after this', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w600, color: const Color(0xFF94A3B8))),
                           ],
                         ),
-                        Text('₹${walletAfter.toInt()} / ₹${widget.cashLimit.toInt()}', style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w700, color: const Color(0xFF64748B))),
+                        Text('₹${walletAfter.toInt()} / ₹${widget.cashLimit.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w700, color: const Color(0xFF64748B))),
                       ],
                     ),
                   ],
@@ -3521,7 +3549,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                 icon: const Icon(Icons.swap_horiz_rounded, size: 16, color: Color(0xFF7C3AED)),
                 label: Text(
                   'Kuch cash + kuch online mila? (Split)',
-                  style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w800, color: const Color(0xFF7C3AED)),
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w800, color: const Color(0xFF7C3AED)),
                 ),
               ),
             ] else ...[
@@ -3539,7 +3567,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                   children: [
                     Text(
                       'CASH MEIN KITNA LIYA? (₹)',
-                      style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w900, color: const Color(0xFF7C3AED), letterSpacing: 0.5),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w900, color: const Color(0xFF7C3AED), letterSpacing: 0.5),
                     ),
                     const SizedBox(height: 10),
                     Container(
@@ -3552,7 +3580,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                       child: Center(
                         child: Text(
                           _cashPortionController.text.isEmpty ? '0' : _cashPortionController.text,
-                          style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 24), fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
                         ),
                       ),
                     ),
@@ -3579,7 +3607,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                             child: Text(
                               '₹$preset cash',
                               style: GoogleFonts.inter(
-                                fontSize: 11,
+                                fontSize: Responsive.scaledFontSize(context, 11),
                                 fontWeight: FontWeight.w800,
                                 color: isSelected ? Colors.white : const Color(0xFF7C3AED),
                               ),
@@ -3606,24 +3634,24 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('💵 Cash Collected', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFFB45309))),
-                        Text('₹${cashPortion.toInt()}', style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w900, color: const Color(0xFFB45309))),
+                        Text('💵 Cash Collected', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: const Color(0xFFB45309))),
+                        Text('₹${cashPortion.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w900, color: const Color(0xFFB45309))),
                       ],
                     ),
                     const SizedBox(height: 6),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('📱 Online Received', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF15803D))),
-                        Text('₹${onlinePortion.toInt()}', style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w900, color: const Color(0xFF15803D))),
+                        Text('📱 Online Received', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: const Color(0xFF15803D))),
+                        Text('₹${onlinePortion.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w900, color: const Color(0xFF15803D))),
                       ],
                     ),
                     const Divider(height: 16, color: Color(0xFFE2E8F0)),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Total', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
-                        Text('₹$orderTotalInt', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A))),
+                        Text('Total', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
+                        Text('₹$orderTotalInt', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: const Color(0xFF0F172A))),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -3634,10 +3662,10 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                           children: [
                             const Icon(Icons.account_balance_wallet_outlined, size: 12, color: Color(0xFF94A3B8)),
                             const SizedBox(width: 4),
-                            Text('Wallet after this', style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w600, color: const Color(0xFF94A3B8))),
+                            Text('Wallet after this', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w600, color: const Color(0xFF94A3B8))),
                           ],
                         ),
-                        Text('₹${walletAfter.toInt()} / ₹${widget.cashLimit.toInt()}', style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w700, color: const Color(0xFF64748B))),
+                        Text('₹${walletAfter.toInt()} / ₹${widget.cashLimit.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w700, color: const Color(0xFF64748B))),
                       ],
                     ),
                   ],
@@ -3655,7 +3683,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                 },
                 child: Text(
                   '← Poora cash mein liya (no split)',
-                  style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: const Color(0xFF64748B)),
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w700, color: const Color(0xFF64748B)),
                 ),
               ),
             ],
@@ -3678,7 +3706,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: Text('← Back', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: const Color(0xFF64748B))),
+                    child: Text('← Back', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: const Color(0xFF64748B))),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -3708,7 +3736,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                       children: [
                         const Icon(Icons.check_circle_rounded, color: Colors.white, size: 16),
                         const SizedBox(width: 6),
-                        Text('Confirm ✅', style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w900, color: Colors.white)),
+                        Text('Confirm ✅', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w900, color: Colors.white)),
                       ],
                     ),
                   ),

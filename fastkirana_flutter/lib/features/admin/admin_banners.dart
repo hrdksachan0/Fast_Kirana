@@ -18,7 +18,7 @@ class AdminBannersScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppDesignSystem.background,
         elevation: 0,
-        title: Text('Banners Management', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+        title: Text('Banners Management', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
         actions: [IconButton(icon: Icon(Icons.add_photo_alternate_rounded, color: AppDesignSystem.primary), onPressed: () {})],
       ),
       body: ListView.builder(
@@ -43,7 +43,7 @@ class AdminBannersScreen extends StatelessWidget {
                     gradient: LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]),
                     borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
                   ),
-                  child: Center(child: Text(b['title'].toString(), style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white))),
+                  child: Center(child: Text(b['title'].toString(), style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w800, color: Colors.white))),
                 ),
                 Expanded(
                   child: Padding(
@@ -51,9 +51,9 @@ class AdminBannersScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(b['title'].toString(), style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
+                        Text(b['title'].toString(), style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
                         const SizedBox(height: 4),
-                        Text('${b['impressions']} views', style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
+                        Text('${b['impressions']} views', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary)),
                         const SizedBox(height: 4),
                         Row(
                           children: [
@@ -63,7 +63,7 @@ class AdminBannersScreen extends StatelessWidget {
                                 color: (b['active'] as bool) ? AppDesignSystem.success.withOpacity(0.1) : AppDesignSystem.danger.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
-                              child: Text((b['active'] as bool) ? 'LIVE' : 'INACTIVE', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: (b['active'] as bool) ? AppDesignSystem.success : AppDesignSystem.danger)),
+                              child: Text((b['active'] as bool) ? 'LIVE' : 'INACTIVE', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9), fontWeight: FontWeight.w800, color: (b['active'] as bool) ? AppDesignSystem.success : AppDesignSystem.danger)),
                             ),
                           ],
                         ),

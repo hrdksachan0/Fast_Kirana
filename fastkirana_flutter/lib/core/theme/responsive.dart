@@ -84,6 +84,62 @@ class Responsive {
     final width = MediaQuery.of(context).size.width;
     return width > maxWidth ? maxWidth : width;
   }
+
+  /// Dynamic Category Card Aspect Ratio (width / height)
+  static double categoryCardAspectRatio(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 360) return 0.64;
+    if (width < 400) return 0.67;
+    if (width < mobileBreakpoint) return 0.69;
+    if (width < tabletBreakpoint) return 0.74;
+    return 0.78;
+  }
+
+  /// Dynamic Product Card Aspect Ratio
+  static double productCardAspectRatio(BuildContext context, {bool isCompact = false}) {
+    final width = MediaQuery.of(context).size.width;
+    if (isCompact) {
+      if (width < 360) return 0.58;
+      if (width < mobileBreakpoint) return 0.62;
+      return 0.66;
+    }
+    if (width < 360) return 0.62;
+    if (width < mobileBreakpoint) return 0.66;
+    return 0.70;
+  }
+
+  /// Responsive scaled font size with safety clamping
+  static double scaledFontSize(BuildContext context, double baseSize) {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 360) return (baseSize * 0.92).clamp(baseSize - 2.0, baseSize);
+    if (width > tabletBreakpoint) return baseSize * 1.1;
+    return baseSize;
+  }
+
+  /// Returns a scale factor (1.0–1.15) for the current screen width relative to a base phone width
+  static double uiScale(BuildContext context, {double baseWidth = 375.0, double maxScale = 1.15}) {
+    final width = MediaQuery.of(context).size.width;
+    return (width / baseWidth).clamp(1.0, maxScale);
+  }
+
+  /// Scales any value proportionally to the screen width
+  static double scale(BuildContext context, double value, {double baseWidth = 375.0, double maxScale = 1.15}) {
+    return value * uiScale(context, baseWidth: baseWidth, maxScale: maxScale);
+  }
+}
+
+/// Handy BuildContext extension for swift responsive checks
+extension ResponsiveExtension on BuildContext {
+  bool get isCompact => Responsive.isSmallMobile(this);
+  bool get isMobile => Responsive.isMobile(this);
+  bool get isTablet => Responsive.isTablet(this);
+  bool get isDesktop => Responsive.isDesktop(this);
+  bool get isWide => Responsive.isWide(this);
+  double get screenWidth => MediaQuery.of(this).size.width;
+  double get screenHeight => MediaQuery.of(this).size.height;
+  double get bottomPadding => MediaQuery.of(this).padding.bottom;
+  double get topPadding => MediaQuery.of(this).padding.top;
+  double get horizontalPadding => Responsive.horizontalPadding(this);
 }
 
 /// A clean, centered container widget that prevents UI elements from stretching

@@ -122,7 +122,7 @@ class AppToast {
                     Text(
                       title,
                       style: GoogleFonts.inter(
-                        fontSize: 13,
+                        fontSize: Responsive.scaledFontSize(context, 13),
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
                         letterSpacing: -0.2,
@@ -133,7 +133,7 @@ class AppToast {
                       Text(
                         subtitle.trim(),
                         style: GoogleFonts.inter(
-                          fontSize: 11,
+                          fontSize: Responsive.scaledFontSize(context, 11),
                           fontWeight: FontWeight.w500,
                           color: const Color(0xFF94A3B8),
                         ),

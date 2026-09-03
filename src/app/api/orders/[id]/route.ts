@@ -377,21 +377,43 @@ export async function PATCH(
       }
     }
 
+    const shouldUpdateAllCombined = Boolean(
+      existingOrder.combinedId && (
+        isAdmin || 
+        body.scope === 'ALL' || 
+        body.updateCombined === true ||
+        status === 'SHIPPED' || 
+        status === 'DELIVERED' ||
+        status === 'CANCELLED' ||
+        (status === 'PACKED' && (isAdmin || body.scope === 'ALL' || body.updateCombined !== false))
+      )
+    )
+
     // Deduct stock if order is being PACKED (picked) and was not PACKED previously
     if (status === 'PACKED' && existingOrder.status !== 'PACKED') {
       try {
+        const orderIds = (shouldUpdateAllCombined && existingOrder.combinedId)
+          ? (await prisma.order.findMany({
+              where: { combinedId: existingOrder.combinedId },
+              select: { id: true }
+            })).map(o => o.id)
+          : [id]
+
         const orderItems = await prisma.orderItem.findMany({
-          where: { orderId: id },
+          where: { orderId: { in: orderIds } },
         })
         
         for (const item of orderItems) {
           if (!item.productId) continue // Product was deleted, skip stock deduction
           const product = await prisma.product.findUnique({
             where: { id: item.productId },
-            select: { stock: true, name: true }
+            select: { stock: true, name: true, category: { select: { slug: true } }, tags: true }
           })
           
           if (product) {
+            if (product.category?.slug === 'cafe' || product.category?.slug === 'restaurant' || product.tags?.includes('cafe') || product.tags?.includes('restaurant')) {
+              continue
+            }
             const newStock = Math.max(0, product.stock - item.quantity)
             await prisma.product.update({
               where: { id: item.productId },
@@ -451,18 +473,33 @@ export async function PATCH(
       const isOwnerOrOnlinePayment = paymentCollectedBy === 'OWNER' || paymentCollectedBy === 'ONLINE' || isRiderCash === false
       const newPaymentMethod = isOwnerOrOnlinePayment ? 'UPI' : (['COD', 'UPI', 'CARD', 'WALLET'].includes(existingOrder.paymentMethod) ? existingOrder.paymentMethod : 'COD')
 
-      await prisma.$executeRaw`
-        UPDATE orders 
-        SET status = ${status}::"OrderStatus", 
-            "paymentStatus" = 'PAID'::"PaymentStatus",
-            "paymentMethod" = ${newPaymentMethod}::"PaymentMethod",
-            "deliveryPhoto" = ${safePhoto}, 
-            "deliveryLat" = ${deliveryLat !== undefined && deliveryLat !== null ? parseFloat(deliveryLat) : null}, 
-            "deliveryLng" = ${deliveryLng !== undefined && deliveryLng !== null ? parseFloat(deliveryLng) : null}, 
-            "deliveredAt" = COALESCE("deliveredAt", NOW()),
-            "updatedAt" = NOW() 
-        WHERE id = ${id}
-      `
+      if (shouldUpdateAllCombined && existingOrder.combinedId) {
+        await prisma.$executeRaw`
+          UPDATE orders 
+          SET status = ${status}::"OrderStatus", 
+              "paymentStatus" = 'PAID'::"PaymentStatus",
+              "paymentMethod" = ${newPaymentMethod}::"PaymentMethod",
+              "deliveryPhoto" = ${safePhoto}, 
+              "deliveryLat" = ${deliveryLat !== undefined && deliveryLat !== null ? parseFloat(deliveryLat) : null}, 
+              "deliveryLng" = ${deliveryLng !== undefined && deliveryLng !== null ? parseFloat(deliveryLng) : null}, 
+              "deliveredAt" = COALESCE("deliveredAt", NOW()),
+              "updatedAt" = NOW() 
+          WHERE "combinedId" = ${existingOrder.combinedId}
+        `
+      } else {
+        await prisma.$executeRaw`
+          UPDATE orders 
+          SET status = ${status}::"OrderStatus", 
+              "paymentStatus" = 'PAID'::"PaymentStatus",
+              "paymentMethod" = ${newPaymentMethod}::"PaymentMethod",
+              "deliveryPhoto" = ${safePhoto}, 
+              "deliveryLat" = ${deliveryLat !== undefined && deliveryLat !== null ? parseFloat(deliveryLat) : null}, 
+              "deliveryLng" = ${deliveryLng !== undefined && deliveryLng !== null ? parseFloat(deliveryLng) : null}, 
+              "deliveredAt" = COALESCE("deliveredAt", NOW()),
+              "updatedAt" = NOW() 
+          WHERE id = ${id}
+        `
+      }
 
       // If order assigned to a delivery rider, update RiderWallet for cash collected or change given (-/+)
       if (existingOrder.status !== 'DELIVERED' && existingOrder.deliveryUserId) {
@@ -513,42 +550,85 @@ export async function PATCH(
       })
       const targetRiderId = session?.user?.id || headerUserId || defaultDeliveryRider?.id || userId
 
-      if (latVal !== null && lngVal !== null) {
+      if (shouldUpdateAllCombined && existingOrder.combinedId) {
+        if (latVal !== null && lngVal !== null) {
+          await prisma.$executeRaw`
+            UPDATE orders 
+            SET status = ${status}::"OrderStatus", 
+                "deliveryUserId" = ${targetRiderId},
+                "deliveryLat" = ${latVal},
+                "deliveryLng" = ${lngVal},
+                "shippedAt" = COALESCE("shippedAt", NOW()),
+                "updatedAt" = NOW() 
+            WHERE "combinedId" = ${existingOrder.combinedId}
+          `
+        } else {
+          await prisma.$executeRaw`
+            UPDATE orders 
+            SET status = ${status}::"OrderStatus", 
+                "deliveryUserId" = ${targetRiderId},
+                "shippedAt" = COALESCE("shippedAt", NOW()),
+                "updatedAt" = NOW() 
+            WHERE "combinedId" = ${existingOrder.combinedId}
+          `
+        }
+      } else {
+        if (latVal !== null && lngVal !== null) {
+          await prisma.$executeRaw`
+            UPDATE orders 
+            SET status = ${status}::"OrderStatus", 
+                "deliveryUserId" = ${targetRiderId},
+                "deliveryLat" = ${latVal},
+                "deliveryLng" = ${lngVal},
+                "shippedAt" = COALESCE("shippedAt", NOW()),
+                "updatedAt" = NOW() 
+            WHERE id = ${id}
+          `
+        } else {
+          await prisma.$executeRaw`
+            UPDATE orders 
+            SET status = ${status}::"OrderStatus", 
+                "deliveryUserId" = ${targetRiderId},
+                "shippedAt" = COALESCE("shippedAt", NOW()),
+                "updatedAt" = NOW() 
+            WHERE id = ${id}
+          `
+        }
+      }
+    } else if (status === 'PACKED') {
+      if (shouldUpdateAllCombined && existingOrder.combinedId) {
         await prisma.$executeRaw`
           UPDATE orders 
           SET status = ${status}::"OrderStatus", 
-              "deliveryUserId" = ${targetRiderId},
-              "deliveryLat" = ${latVal},
-              "deliveryLng" = ${lngVal},
-              "shippedAt" = COALESCE("shippedAt", NOW()),
+              "packedAt" = NOW(),
               "updatedAt" = NOW() 
-          WHERE id = ${id}
+          WHERE "combinedId" = ${existingOrder.combinedId}
         `
       } else {
         await prisma.$executeRaw`
           UPDATE orders 
           SET status = ${status}::"OrderStatus", 
-              "deliveryUserId" = ${targetRiderId},
-              "shippedAt" = COALESCE("shippedAt", NOW()),
+              "packedAt" = NOW(),
               "updatedAt" = NOW() 
           WHERE id = ${id}
         `
       }
-    } else if (status === 'PACKED') {
-      await prisma.$executeRaw`
-        UPDATE orders 
-        SET status = ${status}::"OrderStatus", 
-            "packedAt" = NOW(),
-            "updatedAt" = NOW() 
-        WHERE id = ${id}
-      `
     } else if (status === 'CONFIRMED') {
       let estimatedDeliveryVal: Date | null = null
       if (prepTime && !isNaN(parseInt(prepTime))) {
         estimatedDeliveryVal = new Date(Date.now() + parseInt(prepTime) * 60 * 1000)
       }
 
-      if (userRole === 'CHEF' || existingOrder.orderType === 'RESTAURANT' || !!existingOrder.restaurantId) {
+      if (shouldUpdateAllCombined && existingOrder.combinedId) {
+        await prisma.$executeRaw`
+          UPDATE orders 
+          SET status = ${status}::"OrderStatus", 
+              "confirmedAt" = NOW(),
+              "estimatedDelivery" = ${estimatedDeliveryVal},
+              "updatedAt" = NOW() 
+          WHERE "combinedId" = ${existingOrder.combinedId}
+        `
+      } else if (userRole === 'CHEF' || existingOrder.orderType === 'RESTAURANT' || !!existingOrder.restaurantId) {
         await prisma.$executeRaw`
           UPDATE orders 
           SET status = ${status}::"OrderStatus", 
@@ -682,9 +762,15 @@ export async function PATCH(
         }
       }
 
-      await prisma.$executeRaw`
-        UPDATE orders SET status = ${status}::"OrderStatus", "updatedAt" = NOW() WHERE id = ${id}
-      `
+      if (shouldUpdateAllCombined && existingOrder.combinedId) {
+        await prisma.$executeRaw`
+          UPDATE orders SET status = ${status}::"OrderStatus", "updatedAt" = NOW() WHERE "combinedId" = ${existingOrder.combinedId}
+        `
+      } else {
+        await prisma.$executeRaw`
+          UPDATE orders SET status = ${status}::"OrderStatus", "updatedAt" = NOW() WHERE id = ${id}
+        `
+      }
     }
 
     // Trigger PWA Push Notification for customer and staff

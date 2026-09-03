@@ -12,7 +12,7 @@ class AdminReportsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppDesignSystem.background,
         elevation: 0,
-        title: Text('Reports & Analytics', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+        title: Text('Reports & Analytics', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -29,7 +29,7 @@ class AdminReportsScreen extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Today • Aug 7, 2026', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
+                Text('Today • Aug 7, 2026', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
                 Icon(Icons.calendar_today_rounded, color: AppDesignSystem.primary),
               ],
             ),
@@ -49,9 +49,9 @@ class AdminReportsScreen extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Today\'s Revenue', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withOpacity(0.9))),
+                    Text('Today\'s Revenue', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: Colors.white.withOpacity(0.9))),
                     const SizedBox(height: 4),
-                    Text('₹24,580', style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.white)),
+                    Text('₹24,580', style: GoogleFonts.poppins(fontSize: Responsive.scaledFontSize(context, 28), fontWeight: FontWeight.w800, color: Colors.white)),
                   ],
                 ),
                 Row(
@@ -77,7 +77,7 @@ class AdminReportsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Order Breakdown', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+                Text('Order Breakdown', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
                 const SizedBox(height: 12),
                 _breakdownRow('Grocery Orders', '98', '₹18,200', 0.65),
                 const SizedBox(height: 10),
@@ -98,7 +98,7 @@ class AdminReportsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Top Products', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+                Text('Top Products', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
                 const SizedBox(height: 12),
                 _topRow('Amul Milk 1L', 340),
                 _topRow('Fresh Tomatoes 1kg', 290),
@@ -118,10 +118,10 @@ class AdminReportsScreen extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
-          child: Text(value, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)),
+          child: Text(value, style: GoogleFonts.poppins(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: Colors.white)),
         ),
         const SizedBox(height: 4),
-        Text(label, style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withOpacity(0.9))),
+        Text(label, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: Colors.white.withOpacity(0.9))),
       ],
     );
   }
@@ -132,8 +132,8 @@ class AdminReportsScreen extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textPrimary)),
-            Text('$count orders • $amount', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
+            Text(label, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textPrimary)),
+            Text('$count orders • $amount', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
           ],
         ),
         const SizedBox(height: 6),
@@ -155,11 +155,11 @@ class AdminReportsScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(name, style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textPrimary)),
+          Text(name, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textPrimary)),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(color: AppDesignSystem.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-            child: Text('$count sold', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppDesignSystem.primary)),
+            child: Text('$count sold', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w700, color: AppDesignSystem.primary)),
           ),
         ],
       ),

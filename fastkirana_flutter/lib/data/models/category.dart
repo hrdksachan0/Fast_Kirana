@@ -1,41 +1,34 @@
-import 'package:json_annotation/json_annotation.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
+part 'category.freezed.dart';
 part 'category.g.dart';
 
-@JsonSerializable()
-class Category {
-  final String id;
-  final String name;
-  final String slug;
-  final String? imageUrl;
-  final String? parentId;
-  final int sortOrder;
-  @JsonKey(name: '_count')
-  final CategoryCount? count;
+@freezed
+class Category with _$Category {
+  const Category._();
 
-  Category({
-    required this.id,
-    required this.name,
-    required this.slug,
-    this.imageUrl,
-    this.parentId,
-    required this.sortOrder,
-    this.count,
-  });
+  const factory Category({
+    required String id,
+    required String name,
+    required String slug,
+    String? imageUrl,
+    String? parentId,
+    @Default(0) int sortOrder,
+    @JsonKey(name: '_count') CategoryCount? count,
+  }) = _Category;
 
   factory Category.fromJson(Map<String, dynamic> json) =>
       _$CategoryFromJson(json);
-  Map<String, dynamic> toJson() => _$CategoryToJson(this);
 
   int? get productCount => count?.products;
 }
 
-@JsonSerializable()
-class CategoryCount {
-  final int products;
-  CategoryCount({required this.products});
+@freezed
+class CategoryCount with _$CategoryCount {
+  const factory CategoryCount({
+    required int products,
+  }) = _CategoryCount;
 
   factory CategoryCount.fromJson(Map<String, dynamic> json) =>
       _$CategoryCountFromJson(json);
-  Map<String, dynamic> toJson() => _$CategoryCountToJson(this);
 }

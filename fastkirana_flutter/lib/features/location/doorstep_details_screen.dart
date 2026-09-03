@@ -181,7 +181,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
             Text(
               widget.areaName,
               style: GoogleFonts.inter(
-                fontSize: 15,
+                fontSize: Responsive.scaledFontSize(context, 15),
                 fontWeight: FontWeight.w800,
                 color: slateDark,
               ),
@@ -189,7 +189,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
             Text(
               widget.fullAddress,
               style: GoogleFonts.inter(
-                fontSize: 11,
+                fontSize: Responsive.scaledFontSize(context, 11),
                 fontWeight: FontWeight.w500,
                 color: slateMuted,
               ),
@@ -220,7 +220,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                     Text(
                       'Receiver Details',
                       style: GoogleFonts.inter(
-                        fontSize: 14,
+                        fontSize: Responsive.scaledFontSize(context, 14),
                         fontWeight: FontWeight.w800,
                         color: slateDark,
                       ),
@@ -234,7 +234,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                         child: Text(
                           '+ Order for someone else',
                           style: GoogleFonts.inter(
-                            fontSize: 12,
+                            fontSize: Responsive.scaledFontSize(context, 12),
                             fontWeight: FontWeight.w700,
                             color: primaryOrange,
                           ),
@@ -279,7 +279,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                       Text(
                                         accountName,
                                         style: GoogleFonts.inter(
-                                          fontSize: 13.5,
+                                          fontSize: Responsive.scaledFontSize(context, 13.5),
                                           fontWeight: FontWeight.w800,
                                           color: const Color(0xFF0F172A),
                                         ),
@@ -294,7 +294,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                         child: Text(
                                           'YOU',
                                           style: GoogleFonts.inter(
-                                            fontSize: 9,
+                                            fontSize: Responsive.scaledFontSize(context, 9),
                                             fontWeight: FontWeight.w900,
                                             color: const Color(0xFF16A34A),
                                           ),
@@ -306,7 +306,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                   Text(
                                     '📞 $accountPhone • Delivery updates sent here',
                                     style: GoogleFonts.inter(
-                                      fontSize: 11.5,
+                                      fontSize: Responsive.scaledFontSize(context, 11.5),
                                       fontWeight: FontWeight.w600,
                                       color: const Color(0xFF15803D),
                                     ),
@@ -329,7 +329,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                 child: Text(
                                   'Edit',
                                   style: GoogleFonts.inter(
-                                    fontSize: 11.5,
+                                    fontSize: Responsive.scaledFontSize(context, 11.5),
                                     fontWeight: FontWeight.w800,
                                     color: const Color(0xFF16A34A),
                                   ),
@@ -362,7 +362,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                 Text(
                                   'Enter Receiver Info',
                                   style: GoogleFonts.inter(
-                                    fontSize: 13,
+                                    fontSize: Responsive.scaledFontSize(context, 13),
                                     fontWeight: FontWeight.w800,
                                     color: slateDark,
                                   ),
@@ -379,7 +379,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                   child: Text(
                                     'Use my details instead',
                                     style: GoogleFonts.inter(
-                                      fontSize: 11.5,
+                                      fontSize: Responsive.scaledFontSize(context, 11.5),
                                       fontWeight: FontWeight.w700,
                                       color: const Color(0xFF16A34A),
                                     ),
@@ -408,7 +408,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                     Text(
                                       'Receiver Mobile Number *',
                                       style: GoogleFonts.inter(
-                                        fontSize: 12,
+                                        fontSize: Responsive.scaledFontSize(context, 12),
                                         fontWeight: FontWeight.w700,
                                         color: slateDark,
                                       ),
@@ -443,7 +443,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                             Text(
                                               'Paste number',
                                               style: GoogleFonts.inter(
-                                                fontSize: 10.5,
+                                                fontSize: Responsive.scaledFontSize(context, 10.5),
                                                 fontWeight: FontWeight.w800,
                                                 color: primaryOrange,
                                               ),
@@ -472,12 +472,12 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                         ),
                                         child: Row(
                                           children: [
-                                            const Text('🇮🇳', style: TextStyle(fontSize: 14)),
+                                            const Text('🇮🇳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
                                             const SizedBox(width: 5),
                                             Text(
                                               '+91',
                                               style: GoogleFonts.inter(
-                                                fontSize: 13,
+                                                fontSize: Responsive.scaledFontSize(context, 13),
                                                 fontWeight: FontWeight.w800,
                                                 color: slateDark,
                                               ),
@@ -496,7 +496,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                             LengthLimitingTextInputFormatter(10),
                                           ],
                                           style: GoogleFonts.inter(
-                                            fontSize: 14,
+                                            fontSize: Responsive.scaledFontSize(context, 14),
                                             fontWeight: FontWeight.w700,
                                             color: slateDark,
                                             letterSpacing: 1.0,
@@ -504,7 +504,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                           decoration: InputDecoration(
                                             hintText: '98765 43210',
                                             hintStyle: GoogleFonts.inter(
-                                              fontSize: 13,
+                                              fontSize: Responsive.scaledFontSize(context, 13),
                                               fontWeight: FontWeight.w500,
                                               color: const Color(0xFF94A3B8),
                                               letterSpacing: 0,
@@ -529,7 +529,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                 Text(
                   'Location Details',
                   style: GoogleFonts.inter(
-                    fontSize: 14,
+                    fontSize: Responsive.scaledFontSize(context, 14),
                     fontWeight: FontWeight.w800,
                     color: slateDark,
                   ),
@@ -606,7 +606,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                   Text(
                                     'Area / Locality',
                                     style: GoogleFonts.inter(
-                                      fontSize: 11,
+                                      fontSize: Responsive.scaledFontSize(context, 11),
                                       fontWeight: FontWeight.w600,
                                       color: slateMuted,
                                     ),
@@ -615,7 +615,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                   Text(
                                     widget.fullAddress,
                                     style: GoogleFonts.inter(
-                                      fontSize: 12,
+                                      fontSize: Responsive.scaledFontSize(context, 12),
                                       fontWeight: FontWeight.w700,
                                       color: slateDark,
                                     ),
@@ -643,7 +643,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                     Text(
                                       'Change',
                                       style: GoogleFonts.inter(
-                                        fontSize: 10,
+                                        fontSize: Responsive.scaledFontSize(context, 10),
                                         fontWeight: FontWeight.w800,
                                         color: primaryOrange,
                                       ),
@@ -676,7 +676,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                     Text(
                       'Delivery Instructions',
                       style: GoogleFonts.inter(
-                        fontSize: 14,
+                        fontSize: Responsive.scaledFontSize(context, 14),
                         fontWeight: FontWeight.w800,
                         color: slateDark,
                       ),
@@ -684,7 +684,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                     const SizedBox(width: 6),
                     Text(
                       '(Recommended)',
-                      style: GoogleFonts.inter(fontSize: 12, color: slateMuted),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted),
                     ),
                   ],
                 ),
@@ -754,7 +754,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                     : Text(
                         'Save Address & Deliver Here ➔',
                         style: GoogleFonts.inter(
-                          fontSize: 15.5,
+                          fontSize: Responsive.scaledFontSize(context, 15.5),
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
                           letterSpacing: 0.3,
@@ -793,7 +793,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
               Text(
                 category,
                 style: GoogleFonts.inter(
-                  fontSize: 12.5,
+                  fontSize: Responsive.scaledFontSize(context, 12.5),
                   fontWeight: FontWeight.w800,
                   color: isSelected ? Colors.white : const Color(0xFF64748B),
                 ),
@@ -826,7 +826,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
           Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 11,
+              fontSize: Responsive.scaledFontSize(context, 11),
               fontWeight: FontWeight.w600,
               color: slateMuted,
             ),
@@ -835,7 +835,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
             controller: controller,
             keyboardType: keyboardType,
             style: GoogleFonts.inter(
-              fontSize: 13.5,
+              fontSize: Responsive.scaledFontSize(context, 13.5),
               fontWeight: FontWeight.w700,
               color: slateDark,
             ),
@@ -843,7 +843,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
               icon: icon != null ? Icon(icon, size: 18, color: slateMuted) : null,
               hintText: hint,
               hintStyle: GoogleFonts.inter(
-                fontSize: 12.5,
+                fontSize: Responsive.scaledFontSize(context, 12.5),
                 fontWeight: FontWeight.w400,
                 color: const Color(0xFF94A3B8),
               ),
@@ -885,7 +885,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
         child: Text(
           text,
           style: GoogleFonts.inter(
-            fontSize: 11.5,
+            fontSize: Responsive.scaledFontSize(context, 11.5),
             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
             color: isSelected ? primaryOrange : slateDark,
           ),

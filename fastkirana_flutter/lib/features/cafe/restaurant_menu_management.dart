@@ -19,7 +19,7 @@ class RestaurantMenuManagementScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppDesignSystem.background,
         elevation: 0,
-        title: Text('Menu Management', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+        title: Text('Menu Management', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
         actions: [IconButton(icon: Icon(Icons.add_rounded, color: AppDesignSystem.primary), onPressed: () {})],
       ),
       body: Column(
@@ -36,7 +36,7 @@ class RestaurantMenuManagementScreen extends StatelessWidget {
                       children: [
                         Icon(Icons.search_rounded, size: 18, color: AppDesignSystem.textMuted),
                         const SizedBox(width: 8),
-                        Text('Search items...', style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textMuted)),
+                        Text('Search items...', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textMuted)),
                       ],
                     ),
                   ),
@@ -65,19 +65,19 @@ class RestaurantMenuManagementScreen extends StatelessWidget {
                         width: 50,
                         height: 50,
                         decoration: BoxDecoration(color: AppDesignSystem.background, borderRadius: BorderRadius.circular(10)),
-                        child: Center(child: Text(['☕', '🍵', '🍔', '🍟', '🥤', '🍰', '🌯', '🍫', '🥟', '🍝'][index], style: const TextStyle(fontSize: 24))),
+                        child: Center(child: Text(['☕', '🍵', '🍔', '🍟', '🥤', '🍰', '🌯', '🍫', '🥟', '🍝'][index], style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(item['name']?.toString() ?? '', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
-                            Text(item['category']?.toString() ?? '', style: GoogleFonts.inter(fontSize: 11, color: AppDesignSystem.textSecondary)),
+                            Text(item['name']?.toString() ?? '', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
+                            Text(item['category']?.toString() ?? '', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: AppDesignSystem.textSecondary)),
                           ],
                         ),
                       ),
-                      Text('₹${item['price']}', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+                      Text('₹${item['price']}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
                       const SizedBox(width: 12),
                       Switch(
                         value: item['available'] as bool? ?? true,

@@ -33,16 +33,19 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
   String _historySubFilter = 'ALL';
   String _searchQuery = '';
 
-  List<Order> _allOrders = [];
-  bool _isLoading = true;
+  static List<Order> _cachedOrders = [];
+  List<Order> _allOrders = _cachedOrders;
+  bool _isLoading = _cachedOrders.isEmpty;
   String? _error;
   Timer? _liveSyncTimer;
+  Timer? _searchDebounce;
   RealtimeChannel? _realtimeOrdersChannel;
   bool _isFetchingAdmin = false;
 
   static const Color primaryRed = Color(0xFFE20A22);
 
   final Set<String> _printedKOTOrders = {};
+  final Set<String> _sendingKOTOrderIds = {};
 
   final List<String> _liveStatusFilters = [
     'ALL',
@@ -61,7 +64,13 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchAdminOrders();
+    if (_cachedOrders.isNotEmpty) {
+      _allOrders = _cachedOrders;
+      _isLoading = false;
+      _silentFetchAdminOrders();
+    } else {
+      _fetchAdminOrders();
+    }
 
     // 1. Ultra-fast WebSocket Realtime Connection (0ms instant sync)
     _realtimeOrdersChannel = SupabaseService.subscribeToAllOrdersRealtime(
@@ -80,6 +89,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
   @override
   void dispose() {
     _liveSyncTimer?.cancel();
+    _searchDebounce?.cancel();
     SupabaseService.unsubscribe(_realtimeOrdersChannel);
     super.dispose();
   }
@@ -159,6 +169,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
       ]);
 
       final mergedOrders = _mergeCombinedOrders(loaded);
+      _cachedOrders = mergedOrders;
 
       if (mounted) {
         setState(() {
@@ -268,71 +279,75 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
     try {
       final dio = ref.read(dioProvider);
       final List<Order> loaded = [];
+      final Set<String> seenIds = {};
 
-      // 1. Direct Supabase Query
-      final sb = SupabaseService.client;
-      if (sb != null) {
-        try {
-          final res = await sb
-              .from('orders')
-              .select('*, order_items(*), customer:users!orders_userId_fkey(name,phone)')
-              .order('createdAt', ascending: false)
-              .limit(100);
-
-          if (res is List) {
-            for (final j in res) {
-              if (j is Map<String, dynamic>) {
-                try {
-                  loaded.add(Order.fromJson(j));
-                } catch (_) {}
-              }
-            }
-          }
-        } catch (_) {}
+      void addUnique(Order o) {
+        if (seenIds.add(o.id)) {
+          loaded.add(o);
+        }
       }
 
-      // 2. Fetch from /api/admin/orders
-      try {
-        final response = await dio.get(
-          '/api/admin/orders',
-          queryParameters: {'limit': 100},
-          options: Options(headers: {
-            'x-user-role': 'ADMIN',
-            'x-user-phone': '7054470303',
-          }),
-        );
-        final data = response.data;
-        List rawList = [];
-        if (data is Map && data['orders'] is List) {
-          rawList = data['orders'];
-        } else if (data is List) {
-          rawList = data;
-        }
-        for (final j in rawList) {
-          if (j is Map<String, dynamic>) {
-            try {
-              final o = Order.fromJson(j);
-              if (!loaded.any((x) => x.id == o.id || (x.readableId != null && x.readableId == o.readableId))) {
-                loaded.add(o);
+      // Run ALL 3 sources in PARALLEL (not sequential waterfall)
+      await Future.wait([
+        // 1. Direct Supabase Query
+        () async {
+          final sb = SupabaseService.client;
+          if (sb == null) return;
+          try {
+            final res = await sb
+                .from('orders')
+                .select('*, order_items(*), customer:users!orders_userId_fkey(name,phone)')
+                .order('createdAt', ascending: false)
+                .limit(100);
+            if (res is List) {
+              for (final j in res) {
+                if (j is Map<String, dynamic>) {
+                  try { addUnique(Order.fromJson(j)); } catch (_) {}
+                }
               }
-            } catch (_) {}
-          }
-        }
-      } catch (_) {}
-
-      // 3. Merge locally cached orders
-      try {
-        final repo = OrderRepository(dio);
-        final local = await repo.getOrders('');
-        for (final o in local) {
-          if (!loaded.any((x) => x.id == o.id || (x.readableId != null && x.readableId == o.readableId))) {
-            loaded.add(o);
-          }
-        }
-      } catch (_) {}
+            }
+          } catch (_) {}
+        }(),
+        // 2. REST API
+        () async {
+          try {
+            final response = await dio.get(
+              '/api/admin/orders',
+              queryParameters: {'limit': 100},
+              options: Options(headers: {
+                'x-user-role': 'ADMIN',
+                'x-user-phone': '7054470303',
+              }),
+            );
+            final data = response.data;
+            List rawList = [];
+            if (data is Map && data['orders'] is List) {
+              rawList = data['orders'];
+            } else if (data is List) {
+              rawList = data;
+            }
+            for (final j in rawList) {
+              if (j is Map<String, dynamic>) {
+                try { addUnique(Order.fromJson(j)); } catch (_) {}
+              }
+            }
+          } catch (_) {}
+        }(),
+        // 3. Local cached orders
+        () async {
+          try {
+            final repo = OrderRepository(dio);
+            final local = await repo.getOrders('');
+            for (final o in local) {
+              addUnique(o);
+            }
+          } catch (_) {}
+        }(),
+      ]);
 
       if (loaded.isNotEmpty) {
         final mergedOrders = _mergeCombinedOrders(loaded);
+        _cachedOrders = mergedOrders;
         if (mounted) {
           setState(() {
             _allOrders = mergedOrders;
@@ -400,29 +415,19 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
         }
       }
 
-      // 1. Direct update to Supabase (all sub-orders if combined)
+      // 1. Instant Optimistic UI Update (0ms)
       final List<String> idsToUpdate = (order.isCombined && order.subOrders != null && order.subOrders!.isNotEmpty)
           ? order.subOrders!.map((s) => s.id).toList()
           : [order.id];
 
-      final sb = SupabaseService.client;
-      if (sb != null) {
-        for (final id in idsToUpdate) {
-          try {
-            await sb.from('orders').update({
-              'status': statusUpper,
-              'updatedAt': DateTime.now().toIso8601String(),
-            }).eq('id', id);
-          } catch (_) {}
-        }
-      }
-
-      // 2. Update via REST API
-      for (final id in idsToUpdate) {
-        try {
-          await OrderRepository(ref.read(dioProvider)).updateOrderStatus(id, newStatus);
-        } catch (_) {}
-      }
+      setState(() {
+        _allOrders = _allOrders.map((o) {
+          if (o.id == order.id || idsToUpdate.contains(o.id) || (order.combinedId != null && o.combinedId == order.combinedId)) {
+            return o.copyWith(status: newStatus);
+          }
+          return o;
+        }).toList();
+      });
 
       if (mounted) {
         AppToast.showSuccess(
@@ -430,16 +435,77 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
           'Order #${order.readableId ?? order.id} Updated!',
           subtitle: 'Status changed to ${newStatus.displayName}',
         );
-        _fetchAdminOrders();
       }
+
+      // 2. Concurrent Background Network Sync (Supabase + REST API)
+      final futures = <Future>[];
+      final sb = SupabaseService.client;
+      if (sb != null) {
+        for (final id in idsToUpdate) {
+          futures.add(sb.from('orders').update({
+            'status': statusUpper,
+            'updatedAt': DateTime.now().toIso8601String(),
+          }).eq('id', id).catchError((_) {}));
+        }
+        if (order.combinedId != null && order.combinedId!.trim().isNotEmpty) {
+          futures.add(sb.from('orders').update({
+            'status': statusUpper,
+            'updatedAt': DateTime.now().toIso8601String(),
+          }).eq('combinedId', order.combinedId!.trim()).catchError((_) {}));
+        }
+      }
+
+      for (final id in idsToUpdate) {
+        futures.add(OrderRepository(ref.read(dioProvider)).updateOrderStatus(id, newStatus).catchError((_) => false));
+      }
+
+      await Future.wait(futures);
     } catch (e) {
+      debugPrint('[Admin status update error]: $e');
+    }
+  }
+
+  Future<void> _updateSubOrderStatus(Order parentOrder, Order subOrder, OrderStatus newStatus) async {
+    HapticFeedback.heavyImpact();
+    try {
+      final statusUpper = newStatus.name.toUpperCase();
+
+      // 1. Instant Optimistic UI Update (0ms)
+      setState(() {
+        _allOrders = _allOrders.map((o) {
+          if (o.id == subOrder.id) {
+            return o.copyWith(status: newStatus);
+          }
+          if (o.id == parentOrder.id && o.subOrders != null) {
+            final updatedSubs = o.subOrders!.map((s) => s.id == subOrder.id ? s.copyWith(status: newStatus) : s).toList();
+            return o.copyWith(subOrders: updatedSubs);
+          }
+          return o;
+        }).toList();
+      });
+
       if (mounted) {
-        AppToast.showError(
+        AppToast.showSuccess(
           context,
-          'Failed to update status',
-          subtitle: e.toString(),
+          '${subOrder.shopName ?? "Outlet"} #${subOrder.readableId ?? subOrder.id} Updated!',
+          subtitle: 'Status set to ${newStatus.displayName}',
         );
       }
+
+      // 2. Concurrent Background Sync
+      final futures = <Future>[];
+      final sb = SupabaseService.client;
+      if (sb != null) {
+        futures.add(sb.from('orders').update({
+          'status': statusUpper,
+          'updatedAt': DateTime.now().toIso8601String(),
+        }).eq('id', subOrder.id).catchError((_) {}));
+      }
+
+      futures.add(OrderRepository(ref.read(dioProvider)).updateOrderStatus(subOrder.id, newStatus).catchError((_) => false));
+      await Future.wait(futures);
+    } catch (e) {
+      debugPrint('[SubOrder status update error]: $e');
     }
   }
 
@@ -464,33 +530,19 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
         ? order.subOrders!.map((s) => s.id).toList()
         : [order.id];
 
-    final sb = SupabaseService.client;
-    if (sb != null) {
-      for (final id in idsToAssign) {
-        var cleanId = id.trim();
-        if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
-        try {
-          await sb.from('orders').update({
-            'deliveryUserId': riderId,
-            'status': 'SHIPPED',
-            'updatedAt': DateTime.now().toIso8601String(),
-          }).eq('id', cleanId);
-        } catch (_) {}
-      }
-    }
-
-    for (final id in idsToAssign) {
-      var cleanId = id.trim();
-      if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
-      try {
-        await ref.read(dioProvider).patch('/api/orders/$cleanId', data: {
-          'deliveryUserId': riderId,
-          'status': 'SHIPPED',
-        });
-      } catch (_) {}
-    }
-
-    _fetchAdminOrders();
+    // 1. Instant Optimistic UI Update (0ms)
+    setState(() {
+      _allOrders = _allOrders.map((o) {
+        if (o.id == order.id || idsToAssign.contains(o.id) || (order.combinedId != null && o.combinedId == order.combinedId)) {
+          return o.copyWith(
+            status: OrderStatus.shipped,
+            deliveryBoyName: riderName,
+            deliveryBoyPhone: riderPhone,
+          );
+        }
+        return o;
+      }).toList();
+    });
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -510,6 +562,32 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
         ),
       );
     }
+
+    // 2. Concurrent Network Sync
+    final futures = <Future>[];
+    final sb = SupabaseService.client;
+    if (sb != null) {
+      for (final id in idsToAssign) {
+        var cleanId = id.trim();
+        if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
+        futures.add(sb.from('orders').update({
+          'deliveryUserId': riderId,
+          'status': 'SHIPPED',
+          'updatedAt': DateTime.now().toIso8601String(),
+        }).eq('id', cleanId).catchError((_) {}));
+      }
+    }
+
+    for (final id in idsToAssign) {
+      var cleanId = id.trim();
+      if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
+      futures.add(ref.read(dioProvider).patch('/api/orders/$cleanId', data: {
+        'deliveryUserId': riderId,
+        'status': 'SHIPPED',
+      }).catchError((_) => Response(requestOptions: RequestOptions())));
+    }
+
+    await Future.wait(futures);
   }
 
   void _showSubstitutionModal(Order order, OrderItem item) {
@@ -556,11 +634,11 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
                     children: [
                       Text(
                         'Out-of-Stock Replacement',
-                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
                       ),
                       Text(
                         'Order #$orderId • Customer: $custName',
-                        style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
                       ),
                     ],
                   ),
@@ -578,12 +656,12 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
               ),
               child: Row(
                 children: [
-                  const Text('❌', style: TextStyle(fontSize: 14)),
+                  const Text('❌', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Unavailable Item: ${item.name} (${item.quantity}x)',
-                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: const Color(0xFF9F1239)),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: const Color(0xFF9F1239)),
                     ),
                   ),
                 ],
@@ -592,16 +670,16 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
             const SizedBox(height: 14),
             Text(
               'SUGGESTED REPLACEMENT:',
-              style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w800, color: const Color(0xFF475569), letterSpacing: 0.5),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w800, color: const Color(0xFF475569), letterSpacing: 0.5),
             ),
             const SizedBox(height: 6),
             TextField(
               controller: repController,
               autofocus: true,
-              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700),
               decoration: InputDecoration(
                 hintText: 'e.g. Britannia Brown Bread 400g / Taaza 500ml',
-                hintStyle: GoogleFonts.inter(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: const Color(0xFF94A3B8)),
                 filled: true,
                 fillColor: const Color(0xFFF8FAFC),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
@@ -640,7 +718,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
                   const SizedBox(width: 8),
                   Text(
                     'Send Substitution via WhatsApp ➔',
-                    style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w900, color: Colors.white),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w900, color: Colors.white),
                   ),
                 ],
               ),
@@ -656,18 +734,40 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
     return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
   }
 
+  bool _isDeliveryOnlyInstruction(String? note) {
+    if (note == null || note.trim().isEmpty) return true;
+    final lower = note.toLowerCase().trim();
+    final deliveryKeywords = [
+      'ring bell', 'don\'t ring', 'dont ring', 'leave at door', 'leave at gate',
+      'call before', 'avoid calling', 'drop at door', 'keep at door', 'deliver to',
+      'call when reach', 'call upon arrival', 'gate pe', 'bell bajana', 'doorbell'
+    ];
+    return deliveryKeywords.any((k) => lower.contains(k));
+  }
+
   String _generateKOTText(Order order) {
-    final itemsList = order.items ?? [];
+    final itemsList = (order.items ?? []).where((i) {
+      final name = i.name.toLowerCase();
+      const groceryKeywords = [
+        'atta', 'rice', 'dal', 'oil', 'ghee', 'flour', 'sugar', 'salt', 'spice', 'masala',
+        'soap', 'shampoo', 'paste', 'brush', 'detergent', 'surf', 'cleaning', 'biscuit',
+        'namkeen', 'chips', 'munchies', 'red bull', 'dairy', 'milk', 'bread', 'butter',
+        'personal care', 'household'
+      ];
+      // If it's pure grocery, exclude from kitchen ticket
+      return !groceryKeywords.any((k) => name == k || name.startsWith('$k '));
+    }).toList();
+
     final formattedItems = itemsList.isNotEmpty
         ? itemsList.map((i) {
             final variant = (i.selectedVariant != null && i.selectedVariant!.isNotEmpty)
                 ? ' (${i.selectedVariant})'
                 : '';
-            final note = (order.notes?.trim().isNotEmpty == true)
+            final dishNote = (!_isDeliveryOnlyInstruction(order.notes))
                 ? '\n      * Note: ${order.notes!.trim()}'
                 : '';
             final qtyStr = '${i.quantity}'.padRight(2);
-            return '$qtyStr x  ${i.name}$variant$note';
+            return '$qtyStr x  ${i.name}$variant$dishNote';
           }).join('\n')
         : '1  x  Food Items';
 
@@ -695,41 +795,111 @@ $formattedItems
   }
 
   Future<void> _sendRemoteKOT(Order order) async {
-    HapticFeedback.heavyImpact();
+    // 1. Guard: Check if it's purely a grocery order
+    final readable = (order.readableId ?? '').toUpperCase();
+    if (readable.endsWith('-G')) {
+      if (mounted) {
+        AppToast.showInfo(
+          context,
+          'Grocery Order — No Kitchen KOT Needed 🛒',
+          subtitle: 'KOT is only for Restaurant / Fresh Kitchen orders.',
+        );
+      }
+      return;
+    }
+
+    // 2. Combined Order: Target ONLY the Restaurant Sub-Order (Never send grocery -G)
+    Order targetOrder = order;
+    if (order.isCombined && order.subOrders != null && order.subOrders!.isNotEmpty) {
+      Order? restSub;
+      for (final s in order.subOrders!) {
+        final rid = (s.readableId ?? '').toUpperCase();
+        if (rid.endsWith('-R') ||
+            s.restaurantId != null ||
+            (s.shopName != null && s.shopName!.toLowerCase().contains('restaurant')) ||
+            (s.shopName != null && s.shopName!.toLowerCase().contains('wedson')) ||
+            (s.shopName != null && s.shopName!.toLowerCase().contains('as '))) {
+          restSub = s;
+          break;
+        }
+      }
+
+      if (restSub != null) {
+        targetOrder = restSub;
+      } else {
+        // No restaurant sub-order found in combined order
+        if (mounted) {
+          AppToast.showInfo(
+            context,
+            'No Kitchen Items in Order 🛒',
+            subtitle: 'This order only contains Darkstore Grocery items.',
+          );
+        }
+        return;
+      }
+    }
+
+    // Prevent multi-click while print request is in-flight
+    if (_sendingKOTOrderIds.contains(order.id) || _sendingKOTOrderIds.contains(targetOrder.id)) {
+      return;
+    }
+
     setState(() {
-      _printedKOTOrders.add(order.id);
-      if (order.readableId != null) _printedKOTOrders.add(order.readableId!);
+      _sendingKOTOrderIds.add(order.id);
+      _sendingKOTOrderIds.add(targetOrder.id);
     });
 
-    var cleanId = order.id.trim();
+    HapticFeedback.heavyImpact();
+
+    var cleanId = targetOrder.id.trim();
     if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
 
     // Dual-Path Remote Broadcast to Web Kitchen Console
-    final itemsList = (order.items ?? []).map((i) => {
+    final kitchenNotes = !_isDeliveryOnlyInstruction(targetOrder.notes) ? targetOrder.notes : null;
+    final itemsList = (targetOrder.items ?? []).map((i) => {
       'name': i.name,
       'quantity': i.quantity,
       'selectedVariant': i.selectedVariant,
-      'notes': order.notes,
+      'notes': kitchenNotes,
     }).toList();
 
-    KotPrintService.sendRemoteKOTToKitchen(
-      orderId: order.id,
-      readableId: order.readableId ?? order.id,
-      shopName: order.shopName ?? 'Kitchen',
-      customerName: order.customerName ?? 'Customer',
-      items: itemsList,
-      deliveryMethod: order.deliveryMethod?.toString() ?? 'DELIVERY',
-      notes: order.notes,
-      kotText: _generateKOTText(order),
-      dioClient: ref.read(dioProvider),
-    );
-
-    if (mounted) {
-      AppToast.showSuccess(
-        context,
-        'KOT Sent to Kitchen! 👨‍🍳',
-        subtitle: 'Order #${order.readableId ?? order.id} sent to kitchen printer',
+    try {
+      await KotPrintService.sendRemoteKOTToKitchen(
+        orderId: targetOrder.id,
+        readableId: targetOrder.readableId ?? targetOrder.id,
+        shopName: targetOrder.shopName ?? 'Kitchen',
+        customerName: targetOrder.customerName ?? order.customerName ?? 'Customer',
+        items: itemsList,
+        deliveryMethod: targetOrder.deliveryMethod?.toString() ?? order.deliveryMethod?.toString() ?? 'DELIVERY',
+        notes: kitchenNotes,
+        kotText: _generateKOTText(targetOrder),
+        dioClient: ref.read(dioProvider),
       );
+
+      if (mounted) {
+        setState(() {
+          _printedKOTOrders.add(order.id);
+          if (order.readableId != null) _printedKOTOrders.add(order.readableId!);
+          _printedKOTOrders.add(targetOrder.id);
+          if (targetOrder.readableId != null) _printedKOTOrders.add(targetOrder.readableId!);
+        });
+
+        AppToast.showSuccess(
+          context,
+          'KOT Sent to Kitchen! 👨‍🍳',
+          subtitle: 'Order #${targetOrder.readableId ?? targetOrder.id} sent to kitchen printer',
+        );
+      }
+    } finally {
+      // Cooldown of 4 seconds before unlocking button to prevent accidental multi-tap
+      Future.delayed(const Duration(seconds: 4), () {
+        if (mounted) {
+          setState(() {
+            _sendingKOTOrderIds.remove(order.id);
+            _sendingKOTOrderIds.remove(targetOrder.id);
+          });
+        }
+      });
     }
   }
 
@@ -823,7 +993,7 @@ $formattedItems
                   Text(
                     'Manage Orders',
                     style: GoogleFonts.inter(
-                      fontSize: 16.5,
+                      fontSize: Responsive.scaledFontSize(context, 16.5),
                       fontWeight: FontWeight.w900,
                       color: const Color(0xFF0F172A),
                       letterSpacing: -0.3,
@@ -843,7 +1013,7 @@ $formattedItems
                       Text(
                         'Live Auto-Sync (Every 3s)',
                         style: GoogleFonts.inter(
-                          fontSize: 10.5,
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFF10B981),
                         ),
@@ -1025,16 +1195,21 @@ $formattedItems
                   const SizedBox(width: 10),
                   Expanded(
                     child: TextField(
-                      onChanged: (val) => setState(() => _searchQuery = val.toLowerCase().trim()),
+                      onChanged: (val) {
+                        _searchDebounce?.cancel();
+                        _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+                          if (mounted) setState(() => _searchQuery = val.toLowerCase().trim());
+                        });
+                      },
                       style: GoogleFonts.inter(
-                        fontSize: 13.5,
+                        fontSize: Responsive.scaledFontSize(context, 13.5),
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF0F172A),
                       ),
                       decoration: InputDecoration(
                         hintText: 'Search by Order ID, customer, phone...',
                         hintStyle: GoogleFonts.inter(
-                          fontSize: 12.5,
+                          fontSize: Responsive.scaledFontSize(context, 12.5),
                           fontWeight: FontWeight.w500,
                           color: const Color(0xFF94A3B8),
                         ),
@@ -1091,7 +1266,7 @@ $formattedItems
                       label: Text(
                         status == 'ALL' ? (_selectedTab == 0 ? 'All Live' : 'All History') : status,
                         style: GoogleFonts.inter(
-                          fontSize: 11.5,
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
                           color: isSelected ? Colors.white : const Color(0xFF475569),
                         ),
@@ -1126,7 +1301,7 @@ $formattedItems
                           children: [
                             const Icon(Icons.error_outline_rounded, size: 40, color: Color(0xFFEF4444)),
                             const SizedBox(height: 10),
-                            Text(_error!, style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B))),
+                            Text(_error!, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: const Color(0xFF64748B))),
                             const SizedBox(height: 12),
                             ElevatedButton(
                               onPressed: _fetchAdminOrders,
@@ -1203,7 +1378,7 @@ $formattedItems
             Text(
               label,
               style: GoogleFonts.inter(
-                fontSize: 12.5,
+                fontSize: Responsive.scaledFontSize(context, 12.5),
                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
                 color: isSelected
                     ? (index == 0 ? primaryRed : const Color(0xFF0F172A))
@@ -1222,7 +1397,7 @@ $formattedItems
               child: Text(
                 '$count',
                 style: GoogleFonts.inter(
-                  fontSize: 10,
+                  fontSize: Responsive.scaledFontSize(context, 10),
                   fontWeight: FontWeight.w900,
                   color: isSelected
                       ? (index == 0 ? primaryRed : const Color(0xFF0F172A))
@@ -1267,7 +1442,7 @@ $formattedItems
             Text(
               isLive ? 'No Active Live Orders' : 'No Order History Yet',
               style: GoogleFonts.inter(
-                fontSize: 15.5,
+                fontSize: Responsive.scaledFontSize(context, 15.5),
                 fontWeight: FontWeight.w900,
                 color: const Color(0xFF0F172A),
               ),
@@ -1279,7 +1454,7 @@ $formattedItems
                   : 'Delivered and past completed orders will be archived here.',
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
-                fontSize: 12,
+                fontSize: Responsive.scaledFontSize(context, 12),
                 color: const Color(0xFF64748B),
                 height: 1.4,
               ),
@@ -1293,7 +1468,7 @@ $formattedItems
               icon: const Icon(Icons.sync_rounded, size: 16, color: Colors.white),
               label: Text(
                 'Check Database / Refresh',
-                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: Colors.white),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: isLive ? primaryRed : const Color(0xFF0F172A),
@@ -1311,7 +1486,11 @@ $formattedItems
   Widget _buildAdminOrderCard(Order order) {
     final statusColor = _getStatusColor(order.status);
     final custName = order.customerName?.isNotEmpty == true ? order.customerName! : 'Customer';
-    final custPhone = order.customerPhone?.isNotEmpty == true ? order.customerPhone! : '7054470303';
+    final custPhone = (order.customerPhone != null && order.customerPhone!.trim().isNotEmpty && order.customerPhone != '7054470303')
+        ? order.customerPhone!.trim()
+        : (order.addressRaw?['phone']?.toString().isNotEmpty == true
+            ? order.addressRaw!['phone'].toString().trim()
+            : (order.customerPhone?.isNotEmpty == true ? order.customerPhone! : 'Not Available'));
     final custAddr = order.customerAddress?.isNotEmpty == true
         ? order.customerAddress!
         : 'Ghatampur Market, UP 209206';
@@ -1319,6 +1498,10 @@ $formattedItems
     final isLive = _isLiveOrder(order);
     final isKOTPrinted = _printedKOTOrders.contains(order.id) ||
         (order.readableId != null && _printedKOTOrders.contains(order.readableId));
+    final isKOTSending = _sendingKOTOrderIds.contains(order.id) ||
+        (order.readableId != null && _sendingKOTOrderIds.contains(order.readableId));
+    final isPickup = (order.deliveryMethod ?? '').toUpperCase().contains('PICKUP') ||
+        (order.deliveryMethod ?? '').toUpperCase().contains('TAKEAWAY');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -1374,47 +1557,75 @@ $formattedItems
                                 children: [
                                   Text(
                                     '#${order.readableId ?? order.id}',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w900,
-                                      color: const Color(0xFF0F172A),
-                                    ),
-                                  ),
-                                  if (order.isCombined) ...[
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        gradient: const LinearGradient(
-                                          colors: [Color(0xFF7C3AED), Color(0xFF9333EA)],
+                                        style: GoogleFonts.inter(
+                                          fontSize: Responsive.scaledFontSize(context, 15),
+                                          fontWeight: FontWeight.w900,
+                                          color: const Color(0xFF0F172A),
                                         ),
-                                        borderRadius: BorderRadius.circular(6),
                                       ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(Icons.auto_awesome, size: 10, color: Colors.white),
-                                          const SizedBox(width: 3),
-                                          Text(
-                                            'COMBINED',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.w900,
-                                              color: Colors.white,
-                                              letterSpacing: 0.3,
-                                            ),
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: isPickup ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7),
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(
+                                            color: isPickup ? const Color(0xFFF59E0B) : const Color(0xFF86EFAC),
+                                            width: 1.1,
                                           ),
-                                        ],
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(isPickup ? '🚶‍♂️' : '🛵', style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
+                                            const SizedBox(width: 3),
+                                            Text(
+                                              isPickup ? 'SELF PICKUP' : 'DELIVERY',
+                                              style: GoogleFonts.inter(
+                                                fontSize: Responsive.scaledFontSize(context, 9.5),
+                                                fontWeight: FontWeight.w900,
+                                                color: isPickup ? const Color(0xFFB45309) : const Color(0xFF15803D),
+                                                letterSpacing: 0.3,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ],
-                              ),
+                                      if (order.isCombined) ...[
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            gradient: const LinearGradient(
+                                              colors: [Color(0xFF7C3AED), Color(0xFF9333EA)],
+                                            ),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.auto_awesome, size: 10, color: Colors.white),
+                                              const SizedBox(width: 3),
+                                              Text(
+                                                'COMBINED',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: Responsive.scaledFontSize(context, 9),
+                                                  fontWeight: FontWeight.w900,
+                                                  color: Colors.white,
+                                                  letterSpacing: 0.3,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
                               const SizedBox(height: 2),
                               Text(
                                 '${order.paymentMethod.displayName} · ${_formatOrderTime(order.createdAt)}',
                                 style: GoogleFonts.inter(
-                                  fontSize: 11,
+                                  fontSize: Responsive.scaledFontSize(context, 11),
                                   fontWeight: FontWeight.w600,
                                   color: const Color(0xFF64748B),
                                 ),
@@ -1445,12 +1656,12 @@ $formattedItems
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Text(isRest ? '🍽️' : '🛒', style: const TextStyle(fontSize: 10)),
+                                          Text(isRest ? '🍽️' : '🛒', style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
                                           const SizedBox(width: 4),
                                           Text(
                                             outletName,
                                             style: GoogleFonts.inter(
-                                              fontSize: 10.5,
+                                              fontSize: Responsive.scaledFontSize(context, 10.5),
                                               fontWeight: FontWeight.w800,
                                               color: isRest ? const Color(0xFF6B21A8) : const Color(0xFF166534),
                                             ),
@@ -1474,7 +1685,7 @@ $formattedItems
                       Text(
                         '₹${order.total.toInt()}',
                         style: GoogleFonts.inter(
-                          fontSize: 16.5,
+                          fontSize: Responsive.scaledFontSize(context, 16.5),
                           fontWeight: FontWeight.w900,
                           color: primaryRed,
                         ),
@@ -1490,7 +1701,7 @@ $formattedItems
                         child: Text(
                           order.status.displayName.toUpperCase(),
                           style: GoogleFonts.inter(
-                            fontSize: 9.5,
+                            fontSize: Responsive.scaledFontSize(context, 9.5),
                             fontWeight: FontWeight.w900,
                             color: statusColor,
                           ),
@@ -1506,34 +1717,86 @@ $formattedItems
           // Sub-outlets Breakdown Strip for Combined Orders
           if (order.isCombined && order.subOrders != null && order.subOrders!.length > 1) ...[
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               color: const Color(0xFFFAF5FF),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('📦 Outlets: ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF6B21A8))),
-                  Expanded(
-                    child: Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: order.subOrders!.map((sub) {
-                        final rid = sub.readableId ?? '';
-                        final isRest = rid.toUpperCase().endsWith('-R') || sub.restaurantId != null;
-                        final outletIcon = isRest ? '🍽️' : '🛒';
-                        final outletTitle = isRest ? (sub.shopName ?? 'Restaurant') : 'Dark Store';
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '📦 OUTLET STATUSES (Tap to toggle):',
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w900, color: const Color(0xFF6B21A8), letterSpacing: 0.3),
+                      ),
+                      if (order.status != OrderStatus.packed)
+                        GestureDetector(
+                          onTap: () => _updateOrderStatus(order, OrderStatus.packed),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF7C3AED),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '⚡ Pack All',
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w900, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: order.subOrders!.map((sub) {
+                      final rid = sub.readableId ?? '';
+                      final isRest = rid.toUpperCase().endsWith('-R') || sub.restaurantId != null;
+                      final outletIcon = isRest ? '🍽️' : '🛒';
+                      final outletTitle = isRest ? (sub.shopName ?? 'Restaurant') : 'Dark Store (Grocery)';
+                      final isPacked = sub.status == OrderStatus.packed || sub.status == OrderStatus.shipped || sub.status == OrderStatus.delivered;
+
+                      return GestureDetector(
+                        onTap: () {
+                          final nextStatus = isPacked ? OrderStatus.confirmed : OrderStatus.packed;
+                          _updateSubOrderStatus(order, sub, nextStatus);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFFD8B4FE)),
+                            color: isPacked ? const Color(0xFFDCFCE7) : Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: isPacked ? const Color(0xFF86EFAC) : const Color(0xFFD8B4FE), width: 1.2),
                           ),
-                          child: Text(
-                            '$outletIcon $outletTitle: ${sub.status.displayName}',
-                            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: const Color(0xFF6B21A8)),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(outletIcon, style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
+                              const SizedBox(width: 5),
+                              Text(
+                                '$outletTitle: ',
+                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w800, color: const Color(0xFF1E1B4B)),
+                              ),
+                              Text(
+                                sub.status.displayName.toUpperCase(),
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 9.5),
+                                  fontWeight: FontWeight.w900,
+                                  color: isPacked ? const Color(0xFF16A34A) : const Color(0xFF9333EA),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                isPacked ? Icons.check_circle_rounded : Icons.pending_actions_rounded,
+                                size: 12,
+                                color: isPacked ? const Color(0xFF16A34A) : const Color(0xFF9333EA),
+                              ),
+                            ],
                           ),
-                        );
-                      }).toList(),
-                    ),
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ],
               ),
@@ -1560,7 +1823,7 @@ $formattedItems
                             child: Text(
                               custName,
                               style: GoogleFonts.inter(
-                                fontSize: 13,
+                                fontSize: Responsive.scaledFontSize(context, 13),
                                 fontWeight: FontWeight.w800,
                                 color: const Color(0xFF0F172A),
                               ),
@@ -1578,32 +1841,60 @@ $formattedItems
                           Text(
                             custPhone,
                             style: GoogleFonts.inter(
-                              fontSize: 11.5,
+                              fontSize: Responsive.scaledFontSize(context, 11.5),
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFF475569),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 3),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.only(top: 1.0),
-                            child: Icon(Icons.location_on_outlined, size: 13, color: Color(0xFF64748B)),
+                      if (isPickup) ...[
+                        const SizedBox(height: 5),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFFDE68A)),
                           ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              custAddr,
-                              style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF64748B), height: 1.3),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                          child: Row(
+                            children: [
+                              const Text('🚶‍♂️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
+                              const SizedBox(width: 5),
+                              Expanded(
+                                child: Text(
+                                  'STORE PICKUP — Customer will collect at counter',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 10.5),
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFFB45309),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else ...[
+                        const SizedBox(height: 3),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.only(top: 1.0),
+                              child: Icon(Icons.location_on_outlined, size: 13, color: Color(0xFF64748B)),
                             ),
-                          ),
-                        ],
-                      ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                custAddr,
+                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: const Color(0xFF64748B), height: 1.3),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -1645,7 +1936,7 @@ $formattedItems
                   Text(
                     'ITEMS (${itemsList.length}):',
                     style: GoogleFonts.inter(
-                      fontSize: 10,
+                      fontSize: Responsive.scaledFontSize(context, 10),
                       fontWeight: FontWeight.w800,
                       color: const Color(0xFF64748B),
                       letterSpacing: 0.5,
@@ -1671,7 +1962,7 @@ $formattedItems
                               Text(
                                 '${item.quantity}x ${item.name}',
                                 style: GoogleFonts.inter(
-                                  fontSize: 11,
+                                  fontSize: Responsive.scaledFontSize(context, 11),
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFF334155),
                                 ),
@@ -1694,7 +1985,7 @@ $formattedItems
               child: Text(
                 'Note: ${order.notes}',
                 style: GoogleFonts.inter(
-                  fontSize: 11,
+                  fontSize: Responsive.scaledFontSize(context, 11),
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFFEA580C),
                 ),
@@ -1703,97 +1994,119 @@ $formattedItems
 
           const Divider(height: 1, color: Color(0xFFF1F5F9)),
 
-          // 3.4 Rider Assignment Dropdown / Selector
-          Container(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-            color: const Color(0xFFFAFAFA),
-            child: Row(
-              children: [
-                Text(
-                  'RIDER:',
-                  style: GoogleFonts.inter(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF64748B),
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Container(
-                    height: 38,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFCBD5E1)),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: (order.deliveryBoyName?.toLowerCase().contains('aryan') == true)
-                            ? 'ARYAN'
-                            : ((order.deliveryBoyName?.isNotEmpty == true) ? 'STORE_PARTNER' : 'UNASSIGNED'),
-                        isExpanded: true,
-                        icon: const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF475569), size: 20),
-                        borderRadius: BorderRadius.circular(12),
-                        dropdownColor: Colors.white,
-                        items: [
-                          DropdownMenuItem(
-                            value: 'UNASSIGNED',
-                            child: Row(
-                              children: [
-                                const Icon(Icons.person_outline_rounded, size: 15, color: Color(0xFF94A3B8)),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Unassigned · Tap to assign',
-                                  style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
-                                ),
-                              ],
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: 'ARYAN',
-                            child: Row(
-                              children: [
-                                const Icon(Icons.two_wheeler_rounded, size: 16, color: Color(0xFF0284C7)),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Aryan (+91 8112849854)',
-                                  style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w800, color: const Color(0xFF0284C7)),
-                                ),
-                              ],
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: 'STORE_PARTNER',
-                            child: Row(
-                              children: [
-                                const Icon(Icons.storefront_rounded, size: 15, color: Color(0xFF16A34A)),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Store Partner (Self Delivery)',
-                                  style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w800, color: const Color(0xFF15803D)),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) {
-                            if (val == 'ARYAN') {
-                              _assignRider(order, 'rider_aryan_1', 'Aryan', '+918112849854');
-                            } else if (val == 'STORE_PARTNER') {
-                              _assignRider(order, 'store_admin_self', 'Store Partner', '+917054470303');
-                            }
-                          }
-                        },
+          if (isPickup)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+              color: const Color(0xFFFFFBEB),
+              child: Row(
+                children: [
+                  const Icon(Icons.storefront_rounded, size: 16, color: Color(0xFFB45309)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Store Self-Pickup Order — No Delivery Partner Required',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 11.5),
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFFB45309),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
+            )
+          else
+            // 3.4 Rider Assignment Dropdown / Selector
+            Container(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+              color: const Color(0xFFFAFAFA),
+              child: Row(
+                children: [
+                  Text(
+                    'RIDER:',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 10.5),
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF64748B),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Container(
+                      height: 38,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: (order.deliveryBoyName?.toLowerCase().contains('aryan') == true)
+                              ? 'ARYAN'
+                              : ((order.deliveryBoyName?.isNotEmpty == true) ? 'STORE_PARTNER' : 'UNASSIGNED'),
+                          isExpanded: true,
+                          icon: const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF475569), size: 20),
+                          borderRadius: BorderRadius.circular(12),
+                          dropdownColor: Colors.white,
+                          items: [
+                            DropdownMenuItem(
+                              value: 'UNASSIGNED',
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.person_outline_rounded, size: 15, color: Color(0xFF94A3B8)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Unassigned · Tap to assign',
+                                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: 'ARYAN',
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.two_wheeler_rounded, size: 16, color: Color(0xFF0284C7)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Aryan (+91 8112849854)',
+                                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w800, color: const Color(0xFF0284C7)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: 'STORE_PARTNER',
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.storefront_rounded, size: 15, color: Color(0xFF16A34A)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Store Partner (Self Delivery)',
+                                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w800, color: const Color(0xFF15803D)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) {
+                              if (val == 'ARYAN') {
+                                _assignRider(order, 'rider_aryan_1', 'Aryan', '+918112849854');
+                              } else if (val == 'STORE_PARTNER') {
+                                _assignRider(order, 'store_admin_self', 'Store Partner', '+917054470303');
+                              }
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
 
           // 3.5 Order Status Dropdown Selector
           Container(
@@ -1804,7 +2117,7 @@ $formattedItems
                 Text(
                   'STATUS:',
                   style: GoogleFonts.inter(
-                    fontSize: 10.5,
+                    fontSize: Responsive.scaledFontSize(context, 10.5),
                     fontWeight: FontWeight.w800,
                     color: const Color(0xFF64748B),
                     letterSpacing: 0.5,
@@ -1905,39 +2218,63 @@ $formattedItems
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
             child: Row(
               children: [
-                // Option 1: 🖨️ Send KOT / 🖨️ KOT ✓
+                // Option 1: 🖨️ Send KOT / ⏳ Printing... / 🖨️ KOT ✓
                 Expanded(
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
-                    onTap: () => _sendRemoteKOT(order),
+                    onTap: isKOTSending ? null : () => _sendRemoteKOT(order),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                       decoration: BoxDecoration(
-                        color: isKOTPrinted ? const Color(0xFFDCFCE7) : const Color(0xFFF0FDF4),
+                        color: isKOTSending
+                            ? const Color(0xFFFEF3C7) // Yellow amber loading
+                            : (isKOTPrinted ? const Color(0xFFDCFCE7) : const Color(0xFFF0FDF4)),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isKOTPrinted ? const Color(0xFF86EFAC) : const Color(0xFFBBF7D0),
+                          color: isKOTSending
+                              ? const Color(0xFFFDE68A)
+                              : (isKOTPrinted ? const Color(0xFF86EFAC) : const Color(0xFFBBF7D0)),
                           width: 1.2,
                         ),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            isKOTPrinted ? Icons.check_circle_rounded : Icons.print_rounded,
-                            size: 16,
-                            color: const Color(0xFF16A34A),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            isKOTPrinted ? 'KOT ✓' : 'Send KOT',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w900,
-                              color: const Color(0xFF15803D),
+                          if (isKOTSending) ...[
+                            const SizedBox(
+                              width: 13,
+                              height: 13,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD97706)),
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Sending KOT...',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 11.5),
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFFB45309),
+                              ),
+                            ),
+                          ] else ...[
+                            Icon(
+                              isKOTPrinted ? Icons.check_circle_rounded : Icons.print_rounded,
+                              size: 16,
+                              color: const Color(0xFF16A34A),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              isKOTPrinted ? 'KOT Sent ✓' : 'Send KOT',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 12),
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF15803D),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -1964,7 +2301,7 @@ $formattedItems
                           Text(
                             'WhatsApp KOT',
                             style: GoogleFonts.inter(
-                              fontSize: 12,
+                              fontSize: Responsive.scaledFontSize(context, 12),
                               fontWeight: FontWeight.w800,
                               color: const Color(0xFF0F172A),
                             ),
@@ -2015,7 +2352,7 @@ $formattedItems
                 Text(
                   title,
                   style: GoogleFonts.inter(
-                    fontSize: 11,
+                    fontSize: Responsive.scaledFontSize(context, 11),
                     fontWeight: FontWeight.w800,
                     color: const Color(0xFF64748B),
                     letterSpacing: -0.1,
@@ -2027,7 +2364,7 @@ $formattedItems
                 Text(
                   value,
                   style: GoogleFonts.inter(
-                    fontSize: 17,
+                    fontSize: Responsive.scaledFontSize(context, 17),
                     fontWeight: FontWeight.w900,
                     color: const Color(0xFF0F172A),
                     letterSpacing: -0.4,
@@ -2090,7 +2427,7 @@ class _StatusDropdownItem extends StatelessWidget {
         Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 12.5,
+            fontSize: Responsive.scaledFontSize(context, 12.5),
             fontWeight: FontWeight.w800,
             color: color,
           ),

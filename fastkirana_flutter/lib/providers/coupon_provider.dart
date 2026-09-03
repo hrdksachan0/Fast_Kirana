@@ -8,6 +8,7 @@ final couponRepositoryProvider = Provider<CouponRepository>((ref) {
 });
 
 final couponsProvider = FutureProvider<List<Coupon>>((ref) async {
+  ref.keepAlive();
   final repo = ref.watch(couponRepositoryProvider);
   return repo.getCoupons();
 });

@@ -346,12 +346,48 @@ class Order {
       addressRaw: json['address'] is Map ? Map<String, dynamic>.from(json['address']) : null,
       notes: json['notes']?.toString(),
       couponCode: json['couponCode']?.toString(),
-      customerName: json['customer'] is Map
-          ? (json['customer']['name']?.toString() ?? json['customerName']?.toString())
-          : (json['customerName']?.toString() ?? json['userName']?.toString()),
-      customerPhone: json['customer'] is Map
-          ? (json['customer']['phone']?.toString() ?? json['customerPhone']?.toString())
-          : (json['customerPhone']?.toString() ?? json['phone']?.toString()),
+      customerName: () {
+        if (json['receiverName'] != null && json['receiverName'].toString().trim().isNotEmpty) {
+          return json['receiverName'].toString().trim();
+        }
+        if (json['customerName'] != null && json['customerName'].toString().trim().isNotEmpty) {
+          return json['customerName'].toString().trim();
+        }
+        if (json['customer'] is Map && json['customer']['name'] != null && json['customer']['name'].toString().trim().isNotEmpty) {
+          return json['customer']['name'].toString().trim();
+        }
+        if (json['user'] is Map && json['user']['name'] != null && json['user']['name'].toString().trim().isNotEmpty) {
+          return json['user']['name'].toString().trim();
+        }
+        if (json['userName'] != null && json['userName'].toString().trim().isNotEmpty) {
+          return json['userName'].toString().trim();
+        }
+        return null;
+      }(),
+      customerPhone: () {
+        if (json['receiverPhone'] != null && json['receiverPhone'].toString().trim().isNotEmpty) {
+          return json['receiverPhone'].toString().trim();
+        }
+        if (json['customerPhone'] != null && json['customerPhone'].toString().trim().isNotEmpty) {
+          return json['customerPhone'].toString().trim();
+        }
+        if (json['customer'] is Map && json['customer']['phone'] != null && json['customer']['phone'].toString().trim().isNotEmpty) {
+          return json['customer']['phone'].toString().trim();
+        }
+        if (json['user'] is Map && json['user']['phone'] != null && json['user']['phone'].toString().trim().isNotEmpty) {
+          return json['user']['phone'].toString().trim();
+        }
+        if (json['address'] is Map) {
+          final addr = json['address'] as Map;
+          if (addr['phone'] != null && addr['phone'].toString().trim().isNotEmpty) return addr['phone'].toString().trim();
+          if (addr['contactPhone'] != null && addr['contactPhone'].toString().trim().isNotEmpty) return addr['contactPhone'].toString().trim();
+          if (addr['receiverPhone'] != null && addr['receiverPhone'].toString().trim().isNotEmpty) return addr['receiverPhone'].toString().trim();
+        }
+        if (json['phone'] != null && json['phone'].toString().trim().isNotEmpty) {
+          return json['phone'].toString().trim();
+        }
+        return null;
+      }(),
       customerAddress: parseCustomerAddress(),
       createdAt: parseDate(json['createdAt']),
       confirmedAt: parseNullableDate(json['confirmedAt']),

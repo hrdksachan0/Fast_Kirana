@@ -16,7 +16,7 @@ class SettingsScreen extends StatelessWidget {
         centerTitle: true,
         title: Text(
           'Settings',
-          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
         ),
       ),
       body: SingleChildScrollView(
@@ -128,7 +128,7 @@ class SettingsScreen extends StatelessWidget {
               child: TextButton.icon(
                 onPressed: () {},
                 icon: Icon(Icons.logout_rounded, color: AppDesignSystem.danger),
-                label: Text('Logout', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: AppDesignSystem.danger)),
+                label: Text('Logout', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w700, color: AppDesignSystem.danger)),
               ),
             ),
           ],
@@ -138,13 +138,13 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Widget _sectionHeader(String title) {
-    return Text(title, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppDesignSystem.textSecondary));
+    return Text(title, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: AppDesignSystem.textSecondary));
   }
 
   Widget _switchTile(String title, String subtitle, bool value, Function(bool) onChanged) {
     return SwitchListTile(
-      title: Text(title, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppDesignSystem.textPrimary)),
-      subtitle: Text(subtitle, style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
+      title: Text(title, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w600, color: AppDesignSystem.textPrimary)),
+      subtitle: Text(subtitle, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary)),
       value: value,
       onChanged: (v) => onChanged(v),
       activeColor: AppDesignSystem.primary,
@@ -154,8 +154,8 @@ class SettingsScreen extends StatelessWidget {
   Widget _navTile(IconData icon, String title, String subtitle, VoidCallback onTap, {bool isDanger = false}) {
     return ListTile(
       leading: Icon(icon, size: 22, color: isDanger ? AppDesignSystem.danger : AppDesignSystem.primary),
-      title: Text(title, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: isDanger ? AppDesignSystem.danger : AppDesignSystem.textPrimary)),
-      subtitle: subtitle.isNotEmpty ? Text(subtitle, style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)) : null,
+      title: Text(title, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w600, color: isDanger ? AppDesignSystem.danger : AppDesignSystem.textPrimary)),
+      subtitle: subtitle.isNotEmpty ? Text(subtitle, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary)) : null,
       trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppDesignSystem.textMuted),
       onTap: onTap,
     );

@@ -1,36 +1,25 @@
-import 'package:json_annotation/json_annotation.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-part 'address.g.dart';
+part 'address.freezed.dart';
 
-@JsonSerializable()
-class Address {
-  final String id;
-  final String userId;
-  final String label;
-  final String houseNo;
-  final String street;
-  final String area;
-  final String city;
-  final String pincode;
-  final String phone;
-  final double? latitude;
-  final double? longitude;
-  final bool isDefault;
+@freezed
+class Address with _$Address {
+  const Address._();
 
-  Address({
-    required this.id,
-    this.userId = '',
-    required this.label,
-    this.houseNo = '',
-    this.street = '',
-    this.area = '',
-    this.city = '',
-    required this.pincode,
-    this.phone = '',
-    this.latitude,
-    this.longitude,
-    this.isDefault = false,
-  });
+  const factory Address({
+    required String id,
+    @Default('') String userId,
+    required String label,
+    @Default('') String houseNo,
+    @Default('') String street,
+    @Default('') String area,
+    @Default('') String city,
+    required String pincode,
+    @Default('') String phone,
+    double? latitude,
+    double? longitude,
+    @Default(false) bool isDefault,
+  }) = _Address;
 
   factory Address.fromJson(Map<String, dynamic> json) {
     final rawLat = json['latitude'] ?? json['lat'];

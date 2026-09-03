@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/theme/responsive.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../widgets/floating_cart_bar.dart';
 import '../../widgets/floating_order_tracking_bar.dart';
@@ -18,6 +19,9 @@ import 'home_screen.dart';
 import '../search/search_screen.dart';
 import '../categories/categories_screen.dart';
 import '../profile/profile_screen.dart';
+import '../delivery/delivery_dashboard.dart';
+import '../delivery/picker_dashboard.dart';
+import '../cafe/restaurant_dashboard.dart';
 
 final selectedTabProvider = StateProvider<int>((ref) => 0);
 
@@ -118,6 +122,34 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(authProvider).valueOrNull;
+    final role = (user?.role ?? 'USER').toUpperCase();
+
+    final isAdmin = role == 'ADMIN';
+    final isRiderOnly = !isAdmin && (
+      role == 'RIDER' ||
+      role == 'DELIVERY' ||
+      role == 'DELIVERY_PARTNER'
+    );
+    final isChefOrOwnerOnly = !isAdmin && (
+      role == 'CHEF' ||
+      role == 'RESTAURANT_OWNER' ||
+      role == 'RESTAURANT'
+    );
+    final isPickerOnly = !isAdmin && (role == 'PICKER');
+
+    // ─── STAFF DEDICATED CONSOLES ───────────────────────────
+    // Riders, Restaurant Chefs/Owners, and Pickers only see their respected console
+    if (isRiderOnly) {
+      return const DeliveryDashboard();
+    }
+    if (isChefOrOwnerOnly) {
+      return const RestaurantDashboard();
+    }
+    if (isPickerOnly) {
+      return const PickerDashboard();
+    }
+
     final selectedIndex = ref.watch(selectedTabProvider);
 
     // 4 Standard Tabs matching Web: Home · Search · Category · Account
@@ -128,8 +160,8 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
       ProfileScreen(),
     ];
 
-    final cartAsync = ref.watch(cartProvider);
-    final cartCount = cartAsync.value?.items.fold<int>(0, (s, item) => s + item.quantity) ?? 0;
+    final cart = ref.watch(cartProvider).valueOrNull;
+    final cartCount = cart?.items.fold<int>(0, (s, item) => s + item.quantity) ?? 0;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     final cartBottomOffset = _isBottomNavVisible ? (bottomPadding + 76) : (bottomPadding + 16);
@@ -320,7 +352,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
                             Text(
                               item['label'] as String,
                               style: GoogleFonts.inter(
-                                fontSize: 9.5,
+                                fontSize: Responsive.scaledFontSize(context, 9.5),
                                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
                                 color: isSelected ? const Color(0xFFDC2626) : const Color(0xFF94A3B8),
                                 letterSpacing: -0.2,

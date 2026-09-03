@@ -233,7 +233,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                               ? 'Order will be delivered here'
                               : 'Outside 5.0 km Delivery Zone',
                           style: GoogleFonts.inter(
-                            fontSize: 11,
+                            fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: FontWeight.w800,
                             color: Colors.white,
                           ),
@@ -345,7 +345,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                             child: Text(
                               _areaName.isNotEmpty ? _areaName : 'Search area or address...',
                               style: GoogleFonts.inter(
-                                fontSize: 13.5,
+                                fontSize: Responsive.scaledFontSize(context, 13.5),
                                 fontWeight: FontWeight.w700,
                                 color: slateDark,
                               ),
@@ -395,7 +395,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                     Text(
                       'Current location',
                       style: GoogleFonts.inter(
-                        fontSize: 12.5,
+                        fontSize: Responsive.scaledFontSize(context, 12.5),
                         fontWeight: FontWeight.w800,
                         color: const Color(0xFFEA580C),
                       ),
@@ -434,7 +434,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                     Text(
                       'Order will be delivered here',
                       style: GoogleFonts.inter(
-                        fontSize: 12,
+                        fontSize: Responsive.scaledFontSize(context, 12),
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF64748B),
                       ),
@@ -465,7 +465,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                               Text(
                                 _areaName,
                                 style: GoogleFonts.inter(
-                                  fontSize: 17,
+                                  fontSize: Responsive.scaledFontSize(context, 17),
                                   fontWeight: FontWeight.w900,
                                   color: const Color(0xFF0F172A),
                                   letterSpacing: -0.3,
@@ -475,7 +475,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                               Text(
                                 _fullAddress,
                                 style: GoogleFonts.inter(
-                                  fontSize: 12.5,
+                                  fontSize: Responsive.scaledFontSize(context, 12.5),
                                   fontWeight: FontWeight.w500,
                                   color: const Color(0xFF64748B),
                                   height: 1.35,
@@ -547,7 +547,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                               Text(
                                 'Confirm & proceed',
                                 style: GoogleFonts.inter(
-                                  fontSize: 15.5,
+                                  fontSize: Responsive.scaledFontSize(context, 15.5),
                                   fontWeight: FontWeight.w900,
                                   color: Colors.white,
                                   letterSpacing: 0.3,

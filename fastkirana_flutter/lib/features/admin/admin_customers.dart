@@ -20,7 +20,7 @@ class AdminCustomersScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppDesignSystem.background,
         elevation: 0,
-        title: Text('Customers', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+        title: Text('Customers', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
@@ -45,23 +45,23 @@ class AdminCustomersScreen extends StatelessWidget {
                     gradient: const LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]),
                     borderRadius: BorderRadius.circular(22),
                   ),
-                  child: Center(child: Text((c['name'] as String).split(' ').map((w) => w[0]).join(), style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white))),
+                  child: Center(child: Text((c['name'] as String).split(' ').map((w) => w[0]).join(), style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: Colors.white))),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(c['name'] as String, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
-                      Text(c['phone'] as String, style: GoogleFonts.inter(fontSize: 11, color: AppDesignSystem.textSecondary)),
+                      Text(c['name'] as String, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
+                      Text(c['phone'] as String, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: AppDesignSystem.textSecondary)),
                     ],
                   ),
                 ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(c['spent'] as String, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
-                    Text('${c['orders']} orders', style: GoogleFonts.inter(fontSize: 11, color: AppDesignSystem.textSecondary)),
+                    Text(c['spent'] as String, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+                    Text('${c['orders']} orders', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: AppDesignSystem.textSecondary)),
                   ],
                 ),
               ],

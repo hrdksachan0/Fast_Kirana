@@ -68,17 +68,35 @@ class OrderRepository {
 
       if (remoteOrders.isNotEmpty) {
         final Map<String, Order> merged = {};
+        // Remote orders from backend are source of truth for statuses
         for (final o in remoteOrders) {
           merged[o.id] = o;
-        }
-        for (final o in localOrders) {
-          final isMatched = merged.containsKey(o.id) ||
-              (o.readableId != null && merged.values.any((m) => m.readableId == o.readableId));
-          if (!isMatched) {
-            merged[o.id] = o;
+          if (o.readableId != null && o.readableId!.isNotEmpty) {
+            merged[o.readableId!] = o;
           }
         }
-        final combined = merged.values.toList()
+        
+        final List<Order> finalOrders = [...remoteOrders];
+
+        // For local orders not present in remote API response:
+        for (final local in localOrders) {
+          final isPresentInRemote = merged.containsKey(local.id) ||
+              (local.readableId != null && merged.containsKey(local.readableId!)) ||
+              (local.readableId != null && merged.values.any((m) {
+                final mBase = (m.readableId ?? '').replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
+                final lBase = (local.readableId ?? '').replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
+                return (mBase.isNotEmpty && mBase == lBase) || (m.readableId == local.readableId);
+              }));
+
+          if (!isPresentInRemote) {
+            // Keep strictly recent placed orders (less than 48 hours old)
+            if (DateTime.now().difference(local.createdAt).inHours < 48) {
+              finalOrders.add(local);
+            }
+          }
+        }
+
+        final combined = finalOrders
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
         await _saveToCache(combined);
         return combined;
@@ -94,28 +112,40 @@ class OrderRepository {
         final last10 = cleanPhone.length >= 10 ? cleanPhone.substring(cleanPhone.length - 10) : cleanPhone;
         final effectiveUserId = userId.isNotEmpty ? userId : (prefs.getString('user_id') ?? '');
 
+        List<dynamic> sbData = [];
         if (effectiveUserId.isNotEmpty) {
-          final List<dynamic> sbData = await sb
+          sbData = await sb
               .from('orders')
               .select('*, order_items(*), addresses(*)')
               .eq('userId', effectiveUserId)
               .order('createdAt', ascending: false)
               .limit(30);
+        }
 
-          if (sbData.isNotEmpty) {
-            final sbOrders = sbData
-                .whereType<Map<String, dynamic>>()
-                .map((json) {
-                  final map = Map<String, dynamic>.from(json);
-                  map['items'] = map['order_items'];
-                  map['address'] = map['addresses'];
-                  return Order.fromJson(map);
-                })
-                .toList();
-            if (sbOrders.isNotEmpty) {
-              await _saveToCache(sbOrders);
-              return sbOrders;
-            }
+        if (sbData.isEmpty && last10.isNotEmpty) {
+          try {
+            sbData = await sb
+                .from('orders')
+                .select('*, order_items(*), addresses(*)')
+                .ilike('shopPhone', '%$last10%')
+                .order('createdAt', ascending: false)
+                .limit(30);
+          } catch (_) {}
+        }
+
+        if (sbData.isNotEmpty) {
+          final sbOrders = sbData
+              .whereType<Map<String, dynamic>>()
+              .map((json) {
+                final map = Map<String, dynamic>.from(json);
+                map['items'] = map['order_items'];
+                map['address'] = map['addresses'];
+                return Order.fromJson(map);
+              })
+              .toList();
+          if (sbOrders.isNotEmpty) {
+            await _saveToCache(sbOrders);
+            return sbOrders;
           }
         }
       }
@@ -207,47 +237,63 @@ class OrderRepository {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final rawJson = prefs.getString(_cacheKey);
-      if (rawJson != null && rawJson.isNotEmpty) {
-        final List<dynamic> decoded = jsonDecode(rawJson) as List<dynamic>;
-        final List<Order> localOrders = decoded
-            .whereType<Map<String, dynamic>>()
-            .map((j) => Order.fromJson(j))
-            .toList();
+      final keys = [_cacheKey, await _getCacheKey()];
+      for (final key in keys) {
+        final rawJson = prefs.getString(key);
+        if (rawJson != null && rawJson.isNotEmpty) {
+          final List<dynamic> decoded = jsonDecode(rawJson) as List<dynamic>;
+          final List<Order> localOrders = decoded
+              .whereType<Map<String, dynamic>>()
+              .map((j) => Order.fromJson(j))
+              .toList();
 
-        final idx = localOrders.indexWhere((o) => o.id == orderId || o.readableId == orderId);
-        if (idx != -1) {
-          final old = localOrders[idx];
-          localOrders[idx] = Order(
-            id: old.id,
-            readableId: old.readableId,
-            userId: old.userId,
-            addressId: old.addressId,
-            restaurantId: old.restaurantId,
-            shopName: old.shopName,
-            shopPhone: old.shopPhone,
-            notes: old.notes,
-            customerName: old.customerName,
-            customerPhone: old.customerPhone,
-            customerAddress: old.customerAddress,
-            status: newStatus,
-            subtotal: old.subtotal,
-            discount: old.discount,
-            deliveryFee: old.deliveryFee,
-            taxes: old.taxes,
-            miscFee: old.miscFee,
-            total: old.total,
-            paymentMethod: old.paymentMethod,
-            paymentStatus: newStatus == OrderStatus.delivered ? 'PAID' : old.paymentStatus,
-            deliveryMethod: old.deliveryMethod,
-            createdAt: old.createdAt,
-            confirmedAt: newStatus == OrderStatus.confirmed ? DateTime.now() : old.confirmedAt,
-            packedAt: newStatus == OrderStatus.packed ? DateTime.now() : old.packedAt,
-            shippedAt: newStatus == OrderStatus.shipped ? DateTime.now() : old.shippedAt,
-            deliveredAt: newStatus == OrderStatus.delivered ? DateTime.now() : old.deliveredAt,
-            items: old.items,
-          );
-          await _saveToCache(localOrders);
+          final cleanId = orderId.replaceAll('#', '').trim();
+          bool modified = false;
+          for (int i = 0; i < localOrders.length; i++) {
+            final old = localOrders[i];
+            final oBase = (old.readableId ?? '').replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
+            final targetBase = cleanId.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
+
+            if (old.id == cleanId ||
+                old.readableId == cleanId ||
+                old.id.endsWith(cleanId) ||
+                (oBase.isNotEmpty && oBase == targetBase)) {
+              localOrders[i] = Order(
+                id: old.id,
+                readableId: old.readableId,
+                userId: old.userId,
+                addressId: old.addressId,
+                restaurantId: old.restaurantId,
+                shopName: old.shopName,
+                shopPhone: old.shopPhone,
+                notes: old.notes,
+                customerName: old.customerName,
+                customerPhone: old.customerPhone,
+                customerAddress: old.customerAddress,
+                status: newStatus,
+                subtotal: old.subtotal,
+                discount: old.discount,
+                deliveryFee: old.deliveryFee,
+                taxes: old.taxes,
+                miscFee: old.miscFee,
+                total: old.total,
+                paymentMethod: old.paymentMethod,
+                paymentStatus: newStatus == OrderStatus.delivered ? 'PAID' : old.paymentStatus,
+                deliveryMethod: old.deliveryMethod,
+                createdAt: old.createdAt,
+                confirmedAt: newStatus == OrderStatus.confirmed ? DateTime.now() : old.confirmedAt,
+                packedAt: newStatus == OrderStatus.packed ? DateTime.now() : old.packedAt,
+                shippedAt: newStatus == OrderStatus.shipped ? DateTime.now() : old.shippedAt,
+                deliveredAt: newStatus == OrderStatus.delivered ? DateTime.now() : old.deliveredAt,
+                items: old.items,
+              );
+              modified = true;
+            }
+          }
+          if (modified) {
+            final jsonList = localOrders.map((o) => o.toJson()).toList();
+            await prefs.setString(key, jsonEncode(jsonList));
+          }
         }
       }
     } catch (_) {}
@@ -256,37 +302,54 @@ class OrderRepository {
   }
 
   Future<void> cancelOrder(String orderId, String reason) async {
+    final cleanId = orderId.replaceAll('#', '').trim();
+    final targetBase = cleanId.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
+
+    final prefs = await SharedPreferences.getInstance();
+    final keys = [_cacheKey, await _getCacheKey()];
+    for (final key in keys) {
+      final rawJson = prefs.getString(key);
+      if (rawJson != null && rawJson.isNotEmpty) {
+        try {
+          final List<dynamic> decoded = jsonDecode(rawJson) as List<dynamic>;
+          final List<Order> localOrders = decoded
+              .whereType<Map<String, dynamic>>()
+              .map((j) => Order.fromJson(j))
+              .toList();
+
+          bool modified = false;
+          for (int i = 0; i < localOrders.length; i++) {
+            final o = localOrders[i];
+            final oBase = (o.readableId ?? '').replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
+            if (o.id == cleanId ||
+                o.readableId == cleanId ||
+                o.id.endsWith(cleanId) ||
+                (targetBase.isNotEmpty && oBase == targetBase)) {
+              localOrders[i] = o.copyWith(
+                status: OrderStatus.cancelled,
+                notes: reason,
+              );
+              modified = true;
+            }
+          }
+          if (modified) {
+            final jsonList = localOrders.map((o) => o.toJson()).toList();
+            await prefs.setString(key, jsonEncode(jsonList));
+          }
+        } catch (_) {}
+      }
+    }
+
     final orders = await getOrders('');
     final updated = orders.map((o) {
-      if (o.id == orderId || o.readableId == orderId) {
-        return Order(
-          id: o.id,
-          readableId: o.readableId,
-          userId: o.userId,
-          addressId: o.addressId,
-          restaurantId: o.restaurantId,
+      final oBase = (o.readableId ?? '').replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
+      if (o.id == cleanId ||
+          o.readableId == cleanId ||
+          o.id.endsWith(cleanId) ||
+          (targetBase.isNotEmpty && oBase == targetBase)) {
+        return o.copyWith(
           status: OrderStatus.cancelled,
-          subtotal: o.subtotal,
-          discount: o.discount,
-          deliveryFee: o.deliveryFee,
-          taxes: o.taxes,
-          miscFee: o.miscFee,
-          total: o.total,
-          paymentMethod: o.paymentMethod,
-          paymentStatus: o.paymentStatus,
-          estimatedDelivery: o.estimatedDelivery,
-          deliveryPhoto: o.deliveryPhoto,
-          deliveryMethod: o.deliveryMethod,
-          shopName: o.shopName,
-          shopPhone: o.shopPhone,
           notes: reason,
-          couponCode: o.couponCode,
-          createdAt: o.createdAt,
-          confirmedAt: o.confirmedAt,
-          packedAt: o.packedAt,
-          shippedAt: o.shippedAt,
-          deliveredAt: o.deliveredAt,
-          items: o.items,
         );
       }
       return o;
@@ -295,7 +358,8 @@ class OrderRepository {
 
     Order? cancelledOrder;
     for (final o in orders) {
-      if (o.id == orderId || o.readableId == orderId) {
+      final oBase = (o.readableId ?? '').replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
+      if (o.id == cleanId || o.readableId == cleanId || (targetBase.isNotEmpty && oBase == targetBase)) {
         cancelledOrder = o;
         break;
       }
@@ -361,9 +425,12 @@ class OrderRepository {
 
   Future<void> _saveToCache(List<Order> orders) async {
     final prefs = await SharedPreferences.getInstance();
-    final cacheKey = await _getCacheKey();
     final jsonList = orders.map((o) => o.toJson()).toList();
-    await prefs.setString(cacheKey, jsonEncode(jsonList));
+    final encoded = jsonEncode(jsonList);
+    final keys = {_cacheKey, await _getCacheKey()};
+    for (final key in keys) {
+      await prefs.setString(key, encoded);
+    }
   }
 
   Exception _handleError(DioException e) {

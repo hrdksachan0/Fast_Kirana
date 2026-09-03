@@ -37,7 +37,7 @@ class _SubcategoryScreenState extends ConsumerState<SubcategoryScreen> {
         elevation: 0,
         title: Text(
           widget.category.name,
-          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
         ),
       ),
       body: Column(
@@ -66,7 +66,7 @@ class _SubcategoryScreenState extends ConsumerState<SubcategoryScreen> {
                     child: Text(
                       _subcategories[index],
                       style: GoogleFonts.inter(
-                        fontSize: 12,
+                        fontSize: Responsive.scaledFontSize(context, 12),
                         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                         color: isSelected ? Colors.white : AppDesignSystem.textSecondary,
                       ),

@@ -83,7 +83,7 @@ class Restaurant {
     }
 
     String parseAddress() {
-      final addr = json['address']?.toString()?.trim();
+      final addr = json['address']?.toString().trim();
       if (addr != null && addr.isNotEmpty && addr != 'null') return addr;
       if (lower.contains('bal udyan') || lower.contains('birshibpur')) {
         return 'Near Tehsil / Railway Fatak, Birshibpur, Ghatampur';

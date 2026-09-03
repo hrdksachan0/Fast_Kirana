@@ -108,8 +108,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     _fetchLiveOrder();
     _initSupabaseRealtime();
 
-    // Fast fallback polling every 3 seconds to guarantee zero-lag live tracking
-    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+    // Fallback polling every 8 seconds to back up Supabase Realtime WebSocket
+    _pollTimer = Timer.periodic(const Duration(seconds: 8), (_) {
       _silentPollOrder();
     });
   }
@@ -508,7 +508,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     final emojiPainter = TextPainter(
       text: TextSpan(
         text: emoji,
-        style: const TextStyle(fontSize: 26),
+        style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 26)),
       ),
       textDirection: TextDirection.ltr,
       textAlign: TextAlign.center,
@@ -529,7 +529,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       text: TextSpan(
         text: label,
         style: const TextStyle(
-          fontSize: 9.5,
+          fontSize: Responsive.scaledFontSize(context, 9.5),
           fontWeight: FontWeight.w900,
           color: Colors.white,
           letterSpacing: 0.6,
@@ -832,7 +832,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
             Text(
               'Order Tracking',
               style: GoogleFonts.inter(
-                fontSize: 16,
+                fontSize: Responsive.scaledFontSize(context, 16),
                 fontWeight: FontWeight.w900,
                 color: slateDark,
                 letterSpacing: -0.3,
@@ -840,7 +840,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
             ),
             Text(
               cleanDisplayId,
-              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: slateMuted),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w700, color: slateMuted),
             ),
           ],
         ),
@@ -870,7 +870,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                 Text(
                   _isRealtimeConnected ? 'LIVE GPS' : 'SYNC',
                   style: GoogleFonts.inter(
-                    fontSize: 8.5,
+                    fontSize: Responsive.scaledFontSize(context, 8.5),
                     fontWeight: FontWeight.w900,
                     color: _isRealtimeConnected ? const Color(0xFF059669) : const Color(0xFFB45309),
                     letterSpacing: 0.5,
@@ -1062,7 +1062,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
               border: Border.all(color: const Color(0xFFFCD34D), width: 1.5),
             ),
             child: const Center(
-              child: Text('👨‍🍳', style: TextStyle(fontSize: 24)),
+              child: Text('👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24))),
             ),
           ),
           const SizedBox(width: 14),
@@ -1079,7 +1079,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                   child: Text(
                     'STORE ACCEPTED & PREPARING',
                     style: GoogleFonts.inter(
-                      fontSize: 9,
+                      fontSize: Responsive.scaledFontSize(context, 9),
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
                       letterSpacing: 0.5,
@@ -1090,7 +1090,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                 Text(
                   'Packing Fresh at $shopName',
                   style: GoogleFonts.inter(
-                    fontSize: 13.5,
+                    fontSize: Responsive.scaledFontSize(context, 13.5),
                     fontWeight: FontWeight.w900,
                     color: const Color(0xFF78350F),
                   ),
@@ -1099,7 +1099,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                 Text(
                   'Live GPS tracking map will automatically open as soon as your rider picks up the order.',
                   style: GoogleFonts.inter(
-                    fontSize: 11,
+                    fontSize: Responsive.scaledFontSize(context, 11),
                     fontWeight: FontWeight.w500,
                     color: const Color(0xFF92400E),
                     height: 1.25,
@@ -1195,7 +1195,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                       Text(
                         'Live GPS Active',
                         style: GoogleFonts.inter(
-                          fontSize: 11,
+                          fontSize: Responsive.scaledFontSize(context, 11),
                           fontWeight: FontWeight.w800,
                           color: slateDark,
                         ),
@@ -1263,101 +1263,91 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
             ],
           ),
           child: _order?.isCombined == true
-              ? Row(
-                  children: [
-                    // 1. Dark Store
-                    Expanded(
-                      child: Row(
+              ? SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 1. Dark Store
+                      Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('🛒', style: TextStyle(fontSize: 13)),
-                          const SizedBox(width: 3),
-                          Flexible(
-                            child: Text(
-                              'Darkstore',
-                              style: GoogleFonts.inter(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xFF15803D),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          const Text('🛒', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Darkstore',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 11),
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF15803D),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const Icon(Icons.arrow_forward_rounded, size: 11, color: Color(0xFF94A3B8)),
-                    // 2. Restaurant
-                    Expanded(
-                      child: Row(
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 6),
+                        child: Icon(Icons.arrow_forward_rounded, size: 12, color: Color(0xFF94A3B8)),
+                      ),
+                      // 2. Restaurant
+                      Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('🍽️', style: TextStyle(fontSize: 13)),
-                          const SizedBox(width: 3),
-                          Flexible(
-                            child: Text(
-                              _restaurantOutlet?.name ?? 'Kitchen',
-                              style: GoogleFonts.inter(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xFF7C3AED),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          const Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                          const SizedBox(width: 4),
+                          Text(
+                            _restaurantOutlet?.name ?? 'Kitchen',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 11),
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF7C3AED),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const Icon(Icons.arrow_forward_rounded, size: 11, color: Color(0xFF94A3B8)),
-                    // 3. Rider
-                    Expanded(
-                      child: Row(
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 6),
+                        child: Icon(Icons.arrow_forward_rounded, size: 12, color: Color(0xFF94A3B8)),
+                      ),
+                      // 3. Rider
+                      Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('🛵', style: TextStyle(fontSize: 13)),
-                          const SizedBox(width: 3),
-                          Flexible(
-                            child: Text(
-                              '1 Rider',
-                              style: GoogleFonts.inter(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xFFEA580C),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          const Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                          const SizedBox(width: 4),
+                          Text(
+                            '1 Rider',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 11),
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFFEA580C),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const Icon(Icons.arrow_forward_rounded, size: 11, color: Color(0xFF94A3B8)),
-                    // 4. Home
-                    Expanded(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 6),
+                        child: Icon(Icons.arrow_forward_rounded, size: 12, color: Color(0xFF94A3B8)),
+                      ),
+                      // 4. Home
+                      Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('🏠', style: TextStyle(fontSize: 13)),
-                          const SizedBox(width: 3),
-                          Flexible(
-                            child: Text(
-                              'Home',
-                              style: GoogleFonts.inter(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xFFDC2626),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          const Text('🏠', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Home',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 11),
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFFDC2626),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 )
               : Builder(
                   builder: (context) {
@@ -1383,12 +1373,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(isRest ? '🍽️' : '🏪', style: const TextStyle(fontSize: 13)),
+                            Text(isRest ? '🍽️' : '🏪', style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                             const SizedBox(width: 4),
                             Text(
                               displayStoreName,
                               style: GoogleFonts.inter(
-                                fontSize: 11,
+                                fontSize: Responsive.scaledFontSize(context, 11),
                                 fontWeight: FontWeight.w800,
                                 color: isRest ? const Color(0xFF7C3AED) : const Color(0xFF15803D),
                               ),
@@ -1400,12 +1390,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('🛵', style: TextStyle(fontSize: 13)),
+                            const Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                             const SizedBox(width: 4),
                             Text(
                               'On the Way',
                               style: GoogleFonts.inter(
-                                fontSize: 11,
+                                fontSize: Responsive.scaledFontSize(context, 11),
                                 fontWeight: FontWeight.w800,
                                 color: const Color(0xFFEA580C),
                               ),
@@ -1417,12 +1407,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('🏠', style: TextStyle(fontSize: 13)),
+                            const Text('🏠', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                             const SizedBox(width: 4),
                             Text(
                               'Your Home',
                               style: GoogleFonts.inter(
-                                fontSize: 11,
+                                fontSize: Responsive.scaledFontSize(context, 11),
                                 fontWeight: FontWeight.w800,
                                 color: const Color(0xFFDC2626),
                               ),
@@ -1516,7 +1506,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                     Text(
                       'DELIVERY PARTNER ASSIGNED',
                       style: GoogleFonts.inter(
-                        fontSize: 9.5,
+                        fontSize: Responsive.scaledFontSize(context, 9.5),
                         fontWeight: FontWeight.w900,
                         color: const Color(0xFF475569),
                         letterSpacing: 0.5,
@@ -1537,7 +1527,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                       Text(
                         'Verified',
                         style: GoogleFonts.inter(
-                          fontSize: 9.5,
+                          fontSize: Responsive.scaledFontSize(context, 9.5),
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF15803D),
                         ),
@@ -1575,7 +1565,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                         ],
                       ),
                       child: const Center(
-                        child: Text('🛵', style: TextStyle(fontSize: 22)),
+                        child: Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22))),
                       ),
                     ),
                     Positioned(
@@ -1607,7 +1597,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                             child: Text(
                               riderName,
                               style: GoogleFonts.inter(
-                                fontSize: 14.5,
+                                fontSize: Responsive.scaledFontSize(context, 14.5),
                                 fontWeight: FontWeight.w900,
                                 color: const Color(0xFF0F172A),
                               ),
@@ -1636,7 +1626,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                 Text(
                                   '4.9',
                                   style: GoogleFonts.inter(
-                                    fontSize: 10,
+                                    fontSize: Responsive.scaledFontSize(context, 10),
                                     fontWeight: FontWeight.w900,
                                     color: const Color(0xFFB45309),
                                   ),
@@ -1649,7 +1639,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                             child: Text(
                               '500+ orders',
                               style: GoogleFonts.inter(
-                                fontSize: 10.5,
+                                fontSize: Responsive.scaledFontSize(context, 10.5),
                                 fontWeight: FontWeight.w600,
                                 color: const Color(0xFF64748B),
                               ),
@@ -1687,7 +1677,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                           border: Border.all(color: const Color(0xFFBBF7D0)),
                         ),
                         child: const Center(
-                          child: Text('💬', style: TextStyle(fontSize: 17)),
+                          child: Text('💬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 17))),
                         ),
                       ),
                     ),
@@ -1703,7 +1693,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                       label: Text(
                         'Call',
                         style: GoogleFonts.inter(
-                          fontSize: 12,
+                          fontSize: Responsive.scaledFontSize(context, 12),
                           fontWeight: FontWeight.w800,
                           color: Colors.white,
                         ),
@@ -1771,7 +1761,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                   child: Text(
                     'ORDER CANCELLED',
                     style: GoogleFonts.inter(
-                      fontSize: 9,
+                      fontSize: Responsive.scaledFontSize(context, 9),
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
                       letterSpacing: 0.5,
@@ -1782,7 +1772,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                 Text(
                   'This order has been cancelled',
                   style: GoogleFonts.inter(
-                    fontSize: 14,
+                    fontSize: Responsive.scaledFontSize(context, 14),
                     fontWeight: FontWeight.w900,
                     color: const Color(0xFF991B1B),
                   ),
@@ -1791,7 +1781,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                 Text(
                   'If you have already paid online via UPI/Card, a full refund has been initiated to your original payment method within 2-4 business days.',
                   style: GoogleFonts.inter(
-                    fontSize: 11.5,
+                    fontSize: Responsive.scaledFontSize(context, 11.5),
                     fontWeight: FontWeight.w500,
                     color: const Color(0xFFB91C1C),
                     height: 1.3,
@@ -1830,7 +1820,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
               children: [
                 Text(
                   'Live Order Status',
-                  style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w900, color: slateDark),
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w900, color: slateDark),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -1842,7 +1832,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                   child: Text(
                     'CANCELLED',
                     style: GoogleFonts.inter(
-                      fontSize: 10,
+                      fontSize: Responsive.scaledFontSize(context, 10),
                       fontWeight: FontWeight.w900,
                       color: const Color(0xFFDC2626),
                       letterSpacing: 0.5,
@@ -1872,11 +1862,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                     children: [
                       Text(
                         'Order Closed & Cancelled',
-                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, color: const Color(0xFF991B1B)),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w900, color: const Color(0xFF991B1B)),
                       ),
                       Text(
                         'Items were returned to stock. You can place a new order anytime.',
-                        style: GoogleFonts.inter(fontSize: 11, color: slateMuted),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: slateMuted),
                       ),
                     ],
                   ),
@@ -1918,7 +1908,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
             children: [
               Text(
                 'Live Order Status',
-                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w900, color: slateDark),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w900, color: slateDark),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -1929,7 +1919,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                 child: Text(
                   isDelivered ? 'COMPLETED' : 'IN TRANSIT',
                   style: GoogleFonts.inter(
-                    fontSize: 10,
+                    fontSize: Responsive.scaledFontSize(context, 10),
                     fontWeight: FontWeight.w900,
                     color: isDelivered ? const Color(0xFF15803D) : const Color(0xFF1D4ED8),
                     letterSpacing: 0.5,
@@ -1960,7 +1950,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                       Text(
                         'COMBINED ORDER FULFILLMENT',
                         style: GoogleFonts.inter(
-                          fontSize: 11,
+                          fontSize: Responsive.scaledFontSize(context, 11),
                           fontWeight: FontWeight.w900,
                           color: const Color(0xFF7C3AED),
                           letterSpacing: 0.5,
@@ -1986,7 +1976,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                       ),
                       child: Row(
                         children: [
-                          Text(subIcon, style: const TextStyle(fontSize: 16)),
+                          Text(subIcon, style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Column(
@@ -1994,11 +1984,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                               children: [
                                 Text(
                                   subOutletName,
-                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: const Color(0xFF1E1B4B)),
+                                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: const Color(0xFF1E1B4B)),
                                 ),
                                 Text(
                                   isSubDone ? 'Ready for pickup' : 'Preparing items...',
-                                  style: GoogleFonts.inter(fontSize: 10.5, color: const Color(0xFF6B7280)),
+                                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), color: const Color(0xFF6B7280)),
                                 ),
                               ],
                             ),
@@ -2012,7 +2002,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                             child: Text(
                               subStatusText.toUpperCase(),
                               style: GoogleFonts.inter(
-                                fontSize: 9,
+                                fontSize: Responsive.scaledFontSize(context, 9),
                                 fontWeight: FontWeight.w900,
                                 color: isSubDone ? const Color(0xFF15803D) : const Color(0xFFB45309),
                               ),
@@ -2025,7 +2015,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                   const SizedBox(height: 4),
                   Text(
                     '🛵 1 delivery partner is collecting both outlet packages for a single doorstep drop.',
-                    style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w600, color: const Color(0xFF6B21A8)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w600, color: const Color(0xFF6B21A8)),
                   ),
                 ],
               ),
@@ -2081,7 +2071,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                         Text(
                           item['title'] as String,
                           style: GoogleFonts.inter(
-                            fontSize: 13,
+                            fontSize: Responsive.scaledFontSize(context, 13),
                             fontWeight: isCurrent ? FontWeight.w900 : FontWeight.w700,
                             color: isCurrent ? slateDark : (isCompleted ? const Color(0xFF1E293B) : slateMuted),
                           ),
@@ -2089,7 +2079,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                         Text(
                           item['subtitle'] as String,
                           style: GoogleFonts.inter(
-                            fontSize: 11,
+                            fontSize: Responsive.scaledFontSize(context, 11),
                             color: slateMuted,
                           ),
                         ),
@@ -2133,7 +2123,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                 child: Text(
                   'PAY ONLINE',
                   style: GoogleFonts.inter(
-                    fontSize: 9.5,
+                    fontSize: Responsive.scaledFontSize(context, 9.5),
                     fontWeight: FontWeight.w900,
                     color: const Color(0xFF00A344),
                     letterSpacing: 0.5,
@@ -2147,7 +2137,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                   children: [
                     const Icon(Icons.shield_outlined, size: 11, color: Color(0xFF16A34A)),
                     const SizedBox(width: 3),
-                    Text('Instant & Secure', style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w800, color: const Color(0xFF15803D))),
+                    Text('Instant & Secure', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w800, color: const Color(0xFF15803D))),
                   ],
                 ),
               ),
@@ -2155,11 +2145,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           ),
           const SizedBox(height: 10),
           Text('Pay ₹${grandTotal.toInt()} Online',
-              style: GoogleFonts.inter(fontSize: 14.5, fontWeight: FontWeight.w900, color: slateDark)),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14.5), fontWeight: FontWeight.w900, color: slateDark)),
           const SizedBox(height: 3),
           Text(
             'Order is currently set to Cash on Delivery. You can pay online using Google Pay, PhonePe, Paytm, BHIM, UPI or Cards.',
-            style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF475569), height: 1.3),
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: const Color(0xFF475569), height: 1.3),
           ),
           const SizedBox(height: 12),
           GestureDetector(
@@ -2185,7 +2175,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                         const Icon(Icons.payment_rounded, color: Colors.white, size: 15),
                         const SizedBox(width: 6),
                         Text('Pay ₹${grandTotal.toInt()} Online Now',
-                            style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.2)),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.2)),
                         const SizedBox(width: 4),
                         const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 14),
                       ],
@@ -2261,12 +2251,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
               children: [
                 Text(
                   labelText,
-                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: slateDark),
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: slateDark),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   fullAddress,
-                  style: GoogleFonts.inter(fontSize: 11.5, color: slateMuted, height: 1.4),
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: slateMuted, height: 1.4),
                 ),
               ],
             ),
@@ -2310,7 +2300,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
             children: [
               Text(
                 'Bill Details',
-                style: GoogleFonts.inter(fontSize: 14.5, fontWeight: FontWeight.w900, color: slateDark),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14.5), fontWeight: FontWeight.w900, color: slateDark),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -2320,7 +2310,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                 ),
                 child: Text(
                   '${items.length} ITEMS',
-                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: slateMuted, letterSpacing: 0.5),
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w800, color: slateMuted, letterSpacing: 0.5),
                 ),
               ),
             ],
@@ -2342,7 +2332,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                       child: Center(
                         child: Text(
                           '${item.quantity}x',
-                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: slateDark),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w800, color: slateDark),
                         ),
                       ),
                     ),
@@ -2350,12 +2340,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                     Expanded(
                       child: Text(
                         item.name,
-                        style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: slateDark),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w600, color: slateDark),
                       ),
                     ),
                     Text(
                       '₹${(item.price * item.quantity).toInt()}',
-                      style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700, color: slateDark),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w700, color: slateDark),
                     ),
                   ],
                 ),
@@ -2366,19 +2356,19 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Item Total', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
-              Text('₹${subtotal.toInt()}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: slateDark)),
+              Text('Item Total', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
+              Text('₹${subtotal.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: slateDark)),
             ],
           ),
           const SizedBox(height: 5),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Delivery Fee', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
+              Text('Delivery Fee', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
               Text(
                 deliveryFee > 0 ? '₹${deliveryFee.toInt()}' : 'FREE',
                 style: GoogleFonts.inter(
-                  fontSize: 12,
+                  fontSize: Responsive.scaledFontSize(context, 12),
                   fontWeight: deliveryFee > 0 ? FontWeight.w600 : FontWeight.w800,
                   color: deliveryFee > 0 ? slateDark : brandGreen,
                 ),
@@ -2390,8 +2380,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Packaging Charge', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
-                Text('₹${miscFee.toInt()}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: slateDark)),
+                Text('Packaging Charge', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
+                Text('₹${miscFee.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: slateDark)),
               ],
             ),
           ],
@@ -2400,8 +2390,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Handling & Taxes', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
-                Text('₹${taxes.toInt()}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: slateDark)),
+                Text('Handling & Taxes', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
+                Text('₹${taxes.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: slateDark)),
               ],
             ),
           ],
@@ -2410,8 +2400,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Discount Savings', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: brandGreen)),
-                Text('-₹${discount.toInt()}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: brandGreen)),
+                Text('Discount Savings', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: brandGreen)),
+                Text('-₹${discount.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: brandGreen)),
               ],
             ),
           ],
@@ -2424,16 +2414,16 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Total Paid', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: slateDark)),
+                  Text('Total Paid', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: slateDark)),
                   Text(
                     _order?.paymentMethod.displayName ?? 'COD',
-                    style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: slateMuted),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w600, color: slateMuted),
                   ),
                 ],
               ),
               Text(
                 '₹${total.toInt()}',
-                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: primaryRed),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: primaryRed),
               ),
             ],
           ),
@@ -2483,7 +2473,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                     Text(
                       'DELIVERED SAFELY',
                       style: GoogleFonts.inter(
-                        fontSize: 9.5,
+                        fontSize: Responsive.scaledFontSize(context, 9.5),
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                         letterSpacing: 0.5,
@@ -2498,7 +2488,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           Text(
             'How was your delivery with $riderName?',
             style: GoogleFonts.inter(
-              fontSize: 14.5,
+              fontSize: Responsive.scaledFontSize(context, 14.5),
               fontWeight: FontWeight.w900,
               color: const Color(0xFF0F172A),
             ),
@@ -2507,7 +2497,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           const SizedBox(height: 3),
           Text(
             'Rate your experience to help us reward top delivery partners.',
-            style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF64748B)),
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: const Color(0xFF64748B)),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 14),
@@ -2579,7 +2569,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
               icon: const Icon(Icons.rate_review_rounded, size: 16, color: Colors.white),
               label: Text(
                 'Write Detailed Review',
-                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: Colors.white),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF16A34A),
@@ -2604,7 +2594,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
             const SizedBox(width: 6),
             Text(
               'Need assistance with this order?',
-              style: GoogleFonts.inter(fontSize: 12, color: slateMuted, fontWeight: FontWeight.w500),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted, fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -2613,7 +2603,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           onTap: () => launchUrl(Uri.parse('tel:${AppConfig.supportPhone}')),
           child: Text(
             'Call FastKirana Support (${AppConfig.supportPhone})',
-            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: primaryRed),
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: primaryRed),
           ),
         ),
       ],

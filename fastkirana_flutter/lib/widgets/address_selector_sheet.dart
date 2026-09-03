@@ -60,7 +60,7 @@ class AddressSelectorSheet extends ConsumerWidget {
                 Text(
                   'Choose a delivery address',
                   style: GoogleFonts.inter(
-                    fontSize: 17,
+                    fontSize: Responsive.scaledFontSize(context, 17),
                     fontWeight: FontWeight.w800,
                     color: const Color(0xFF0F172A),
                     letterSpacing: -0.3,
@@ -130,7 +130,7 @@ class AddressSelectorSheet extends ConsumerWidget {
                     Text(
                       'Add new Address',
                       style: GoogleFonts.inter(
-                        fontSize: 14.5,
+                        fontSize: Responsive.scaledFontSize(context, 14.5),
                         fontWeight: FontWeight.w800,
                         color: const Color(0xFFEA580C),
                       ),
@@ -159,7 +159,7 @@ class AddressSelectorSheet extends ConsumerWidget {
                           Text(
                             'No saved addresses yet',
                             style: GoogleFonts.inter(
-                              fontSize: 14,
+                              fontSize: Responsive.scaledFontSize(context, 14),
                               fontWeight: FontWeight.w700,
                               color: const Color(0xFF64748B),
                             ),
@@ -168,7 +168,7 @@ class AddressSelectorSheet extends ConsumerWidget {
                           Text(
                             'Add your delivery address to proceed with order',
                             style: GoogleFonts.inter(
-                              fontSize: 12,
+                              fontSize: Responsive.scaledFontSize(context, 12),
                               color: const Color(0xFF94A3B8),
                             ),
                             textAlign: TextAlign.center,
@@ -235,7 +235,7 @@ class AddressSelectorSheet extends ConsumerWidget {
                                       Text(
                                         addr.label.isNotEmpty ? addr.label : 'Saved Address',
                                         style: GoogleFonts.inter(
-                                          fontSize: 14.5,
+                                          fontSize: Responsive.scaledFontSize(context, 14.5),
                                           fontWeight: FontWeight.w800,
                                           color: const Color(0xFF0F172A),
                                         ),
@@ -252,7 +252,7 @@ class AddressSelectorSheet extends ConsumerWidget {
                                           child: Text(
                                             'SELECTED',
                                             style: GoogleFonts.inter(
-                                              fontSize: 9.5,
+                                              fontSize: Responsive.scaledFontSize(context, 9.5),
                                               fontWeight: FontWeight.w900,
                                               color: const Color(0xFF16A34A),
                                               letterSpacing: 0.4,
@@ -268,7 +268,7 @@ class AddressSelectorSheet extends ConsumerWidget {
                                         ? addr.fullAddress
                                         : '${addr.houseNo}, ${addr.street}, ${addr.area}, ${addr.city}',
                                     style: GoogleFonts.inter(
-                                      fontSize: 12,
+                                      fontSize: Responsive.scaledFontSize(context, 12),
                                       fontWeight: FontWeight.w500,
                                       color: const Color(0xFF64748B),
                                       height: 1.35,

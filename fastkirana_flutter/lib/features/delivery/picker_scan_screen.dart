@@ -12,7 +12,7 @@ class PickerScanScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppDesignSystem.background,
         elevation: 0,
-        title: Text('Scan Barcode', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+        title: Text('Scan Barcode', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
       ),
       body: Center(
         child: Padding(
@@ -39,7 +39,7 @@ class PickerScanScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              Text('Position barcode within frame', style: GoogleFonts.inter(fontSize: 14, color: AppDesignSystem.textSecondary)),
+              Text('Position barcode within frame', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: AppDesignSystem.textSecondary)),
               const SizedBox(height: 32),
               Container(
                 padding: const EdgeInsets.all(16),
@@ -48,7 +48,7 @@ class PickerScanScreen extends StatelessWidget {
                   children: [
                     Icon(Icons.check_circle_rounded, color: AppDesignSystem.success),
                     const SizedBox(width: 12),
-                    Expanded(child: Text('Last scanned: Amul Milk 1L', style: GoogleFonts.inter(fontSize: 14, color: AppDesignSystem.textPrimary))),
+                    Expanded(child: Text('Last scanned: Amul Milk 1L', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: AppDesignSystem.textPrimary))),
                   ],
                 ),
               ),

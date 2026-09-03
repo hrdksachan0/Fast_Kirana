@@ -47,6 +47,7 @@ let supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Load already printed orders to prevent double printing on restart
 const logPath = path.join(__dirname, 'printed_orders.json');
 let printedOrderIds = new Set();
+const recentPrintTimestamps = new Map(); // orderId -> timestamp (for multi-click deduplication)
 try {
   if (fs.existsSync(logPath)) {
     const arr = JSON.parse(fs.readFileSync(logPath, 'utf8'));
@@ -119,7 +120,16 @@ function printKOT(order, items, user) {
     lines.push(`Print : ${printDateStr}`);
 
     if (order.notes && order.notes.trim()) {
-      lines.push(`Note  : ${order.notes.trim()}`);
+      const deliveryInstructions = [
+        'ring bell', 'don\'t ring', 'dont ring', 'leave at door', 'leave at gate',
+        'call before', 'avoid calling', 'drop at door', 'keep at door', 'deliver to',
+        'call when reach', 'call upon arrival', 'gate pe', 'bell bajana', 'doorbell'
+      ];
+      const lowerNote = order.notes.toLowerCase().trim();
+      const isDeliveryNote = deliveryInstructions.some(d => lowerNote.includes(d));
+      if (!isDeliveryNote) {
+        lines.push(`Note  : ${order.notes.trim()}`);
+      }
     }
 
     lines.push(thinDivider);
@@ -161,8 +171,9 @@ function printKOT(order, items, user) {
     fs.writeFileSync(tempFilePath, receiptText, 'utf8');
 
     // Calculate dynamic paper height in hundredths of an inch (1 inch = 100 units)
-    // 220 units base height for header/meta/footer + 40 units per item
-    const calculatedHeight = Math.max(300, 220 + (items.length * 40));
+    // Dynamic height based on actual formatted lines count:
+    // 16 units per printed text line + 150 units buffer for headers, margins & teardown
+    const calculatedHeight = Math.max(350, (lines.length * 18) + 160);
 
     // Create a temporary PowerShell script using .NET PrintDocument to set minimal margins, custom PaperSize, and Consolas font
     const psScript = `
@@ -214,10 +225,21 @@ $doc.Print()
 // 4. Fetch Details & Execute
 async function handlePrintRequest(orderId, isForceReprint = false, broadcastPayload = {}) {
   try {
-    if (!isForceReprint && printedOrderIds.has(orderId)) {
-      // Avoid duplicate prints
+    // 1. Guard: Skip Grocery sub-orders (-G) completely
+    const cleanId = (orderId || '').toString().trim().toUpperCase();
+    if (cleanId.endsWith('-G')) {
+      console.log(`[Bridge] Skipping Grocery Sub-Order #${cleanId} (No Kitchen KOT required)`);
       return;
     }
+
+    // 2. Multi-click & Duplicate Broadcast Lock: If this order was printed within last 8 seconds, ignore!
+    const now = Date.now();
+    const lastPrintTime = recentPrintTimestamps.get(cleanId);
+    if (lastPrintTime && (now - lastPrintTime) < 8000) {
+      console.log(`[Bridge] ⚠️ Ignored duplicate multi-click print request for #${cleanId} (Cooldown active: ${Math.round((8000 - (now - lastPrintTime))/1000)}s remaining)`);
+      return;
+    }
+    recentPrintTimestamps.set(cleanId, now);
 
     console.log(`[Database] Fetching details for Order ID: ${orderId}...`);
     
@@ -242,6 +264,11 @@ async function handlePrintRequest(orderId, isForceReprint = false, broadcastPayl
       if (orderByReadable) {
         order = orderByReadable;
       }
+    }
+
+    if (order && order.readableId && order.readableId.toString().trim().toUpperCase().endsWith('-G')) {
+      console.log(`[Bridge] Skipping Grocery Sub-Order #${order.readableId} (No Kitchen KOT required)`);
+      return;
     }
 
     if (!order) {
@@ -293,24 +320,41 @@ async function handlePrintRequest(orderId, isForceReprint = false, broadcastPayl
       } catch (_) {}
     }
 
-    // Filter restaurant items if combined order
+    // Filter out grocery items only if the order is mixed/combined and has explicit packaged groceries
     let targetItems = items || [];
-    const isCombined = order.isCombined === true ||
-        (order.shopName && (order.shopName.includes('Combined') || order.shopName.includes('+')));
+    
+    // 1. Primary: Strict ID-wise check (item has restaurantId or type === 'RESTAURANT')
+    const idFiltered = targetItems.filter((it) => {
+      return Boolean(it.restaurantId) || it.type === 'RESTAURANT' || it.isRestaurantItem === true || Boolean(it.product?.restaurantId);
+    });
 
-    if (isCombined) {
-      const groceryKeywords = [
-        'atta', 'rice', 'dal', 'oil', 'ghee', 'flour', 'sugar', 'salt', 'spice', 'masala',
-        'soap', 'shampoo', 'paste', 'brush', 'detergent', 'surf', 'cleaning', 'biscuit',
-        'namkeen', 'chips', 'munchies', 'dairy', 'milk', 'bread', 'butter', 'paneer',
-        'personal care', 'household', 'grocery'
+    if (idFiltered.length > 0) {
+      targetItems = idFiltered;
+    } else {
+      // 2. Fallback: Cooked food items (dosa, burger, pizza, rice, roll, chowmein, etc.) should NEVER be blocked!
+      const cookedFoodWhitelists = [
+        'dosa', 'burger', 'pizza', 'sandwich', 'roll', 'frankie', 'chowmein', 'noodles',
+        'fried rice', 'paneer', 'manchurian', 'shake', 'cold coffee', 'tea', 'chai', 'coffee',
+        'pasta', 'thali', 'roti', 'naan', 'gravy', 'curry', 'biryani', 'pav bhaji', 'fries',
+        'momos', 'samosa', 'maggi', 'soup'
       ];
-      const filtered = targetItems.filter((it) => {
+
+      const pureGroceryOnlyKeywords = [
+        'atta', 'raw rice', 'dal', 'mustard oil', 'refined oil', 'ghee', 'washing powder',
+        'soap', 'shampoo', 'toothpaste', 'brush', 'detergent', 'surf excel', 'toilet cleaner',
+        'harpic', 'vim bar', 'rin', 'tide', 'surf', 'namkeen packet', 'chips packet'
+      ];
+
+      const filteredRestaurantItems = targetItems.filter((it) => {
         const name = (it.name || '').toLowerCase();
-        return !groceryKeywords.some((k) => name.includes(k));
+        if (cookedFoodWhitelists.some((cw) => name.includes(cw))) {
+          return true;
+        }
+        return !pureGroceryOnlyKeywords.some((k) => name === k || name.startsWith(k + ' '));
       });
-      if (filtered.length > 0) {
-        targetItems = filtered;
+
+      if (filteredRestaurantItems.length > 0) {
+        targetItems = filteredRestaurantItems;
       }
     }
 

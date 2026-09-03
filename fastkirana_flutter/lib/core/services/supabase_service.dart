@@ -185,7 +185,9 @@ class SupabaseService {
     }
   }
 
-  /// Broadcast live rider position to all listeners of an order (sub-100ms websocket)
+  static final Map<String, RealtimeChannel> _activeBroadcastChannels = {};
+
+  /// Broadcast rider GPS location to customer order tracking screen (called by delivery app/rider flow)
   static Future<void> broadcastRiderLocation({
     required String orderId,
     required double lat,
@@ -197,7 +199,10 @@ class SupabaseService {
     if (sb == null) return;
     try {
       final channelName = 'order-live-tracking-$orderId';
-      final channel = sb.channel(channelName);
+      final channel = _activeBroadcastChannels.putIfAbsent(
+        channelName,
+        () => sb.channel(channelName)..subscribe(),
+      );
       await channel.sendBroadcastMessage(
         event: 'location_update',
         payload: {

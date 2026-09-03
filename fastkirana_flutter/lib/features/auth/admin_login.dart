@@ -205,7 +205,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                     'Admin Portal',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
-                      fontSize: 22,
+                      fontSize: Responsive.scaledFontSize(context, 22),
                       fontWeight: FontWeight.w900,
                       color: const Color(0xFF111827),
                       letterSpacing: -0.4,
@@ -216,7 +216,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                     'FastKirana Management & Store Operations',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
-                      fontSize: 12,
+                      fontSize: Responsive.scaledFontSize(context, 12),
                       fontWeight: FontWeight.w500,
                       color: const Color(0xFF6B7280),
                     ),
@@ -239,7 +239,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                             child: Text(
                               _errorMessage!,
                               style: GoogleFonts.inter(
-                                fontSize: 11.5,
+                                fontSize: Responsive.scaledFontSize(context, 11.5),
                                 fontWeight: FontWeight.w600,
                                 color: const Color(0xFF991B1B),
                               ),
@@ -255,7 +255,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                   Text(
                     'Admin Email or Phone',
                     style: GoogleFonts.inter(
-                      fontSize: 12,
+                      fontSize: Responsive.scaledFontSize(context, 12),
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF374151),
                     ),
@@ -272,7 +272,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                     child: TextField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w600),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w600),
                       decoration: const InputDecoration(
                         icon: Icon(Icons.person_outline_rounded, size: 18, color: Color(0xFF9CA3AF)),
                         border: InputBorder.none,
@@ -286,7 +286,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                   Text(
                     'Password',
                     style: GoogleFonts.inter(
-                      fontSize: 12,
+                      fontSize: Responsive.scaledFontSize(context, 12),
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF374151),
                     ),
@@ -303,7 +303,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                     child: TextField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
-                      style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w600),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w600),
                       decoration: InputDecoration(
                         icon: const Icon(Icons.lock_outline_rounded, size: 18, color: Color(0xFF9CA3AF)),
                         border: InputBorder.none,
@@ -351,7 +351,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                             : Text(
                                 'Login to Admin Dashboard',
                                 style: GoogleFonts.inter(
-                                  fontSize: 13.5,
+                                  fontSize: Responsive.scaledFontSize(context, 13.5),
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white,
                                 ),

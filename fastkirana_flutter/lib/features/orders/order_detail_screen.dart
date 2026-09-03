@@ -92,7 +92,7 @@ class OrderDetailScreen extends StatelessWidget {
             Text(
               isPickupOrder ? 'Store Pickup Tracking' : 'Live Order Tracking',
               style: GoogleFonts.inter(
-                fontSize: 16,
+                fontSize: Responsive.scaledFontSize(context, 16),
                 fontWeight: FontWeight.w900,
                 color: textDark,
                 letterSpacing: -0.3,
@@ -115,7 +115,7 @@ class OrderDetailScreen extends StatelessWidget {
                   Text(
                     'ID: #$orderIdDisplay',
                     style: GoogleFonts.inter(
-                      fontSize: 11,
+                      fontSize: Responsive.scaledFontSize(context, 11),
                       fontWeight: FontWeight.w700,
                       color: textMuted,
                     ),
@@ -181,12 +181,12 @@ class OrderDetailScreen extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          const Text('⚡', style: TextStyle(fontSize: 14)),
+                          const Text('⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
                           const SizedBox(width: 6),
                           Text(
                             isPickupOrder ? 'Store Pickup Status' : 'Live Order Tracker',
                             style: GoogleFonts.inter(
-                              fontSize: 14.5,
+                              fontSize: Responsive.scaledFontSize(context, 14.5),
                               fontWeight: FontWeight.w900,
                               color: textDark,
                             ),
@@ -203,7 +203,7 @@ class OrderDetailScreen extends StatelessWidget {
                         child: Text(
                           order.status.displayName.toUpperCase(),
                           style: GoogleFonts.inter(
-                            fontSize: 10,
+                            fontSize: Responsive.scaledFontSize(context, 10),
                             fontWeight: FontWeight.w900,
                             color: _getStatusColor(order.status),
                             letterSpacing: 0.3,
@@ -314,7 +314,7 @@ class OrderDetailScreen extends StatelessWidget {
                       Text(
                         isPickupOrder ? 'Pickup Hub Point' : 'Delivery Address',
                         style: GoogleFonts.inter(
-                          fontSize: 14,
+                          fontSize: Responsive.scaledFontSize(context, 14),
                           fontWeight: FontWeight.w800,
                           color: textDark,
                         ),
@@ -327,7 +327,7 @@ class OrderDetailScreen extends StatelessWidget {
                         ? 'FastKirana Express Darkstore Hub'
                         : (order.customerAddress ?? 'Express Delivery Address'),
                     style: GoogleFonts.inter(
-                      fontSize: 12.5,
+                      fontSize: Responsive.scaledFontSize(context, 12.5),
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFF475569),
                       height: 1.4,
@@ -345,7 +345,7 @@ class OrderDetailScreen extends StatelessWidget {
                           Text(
                             'Need Help with Order?',
                             style: GoogleFonts.inter(
-                              fontSize: 11,
+                              fontSize: Responsive.scaledFontSize(context, 11),
                               fontWeight: FontWeight.w600,
                               color: textMuted,
                             ),
@@ -354,7 +354,7 @@ class OrderDetailScreen extends StatelessWidget {
                           Text(
                             '+91 81128 49854',
                             style: GoogleFonts.inter(
-                              fontSize: 13,
+                              fontSize: Responsive.scaledFontSize(context, 13),
                               fontWeight: FontWeight.w800,
                               color: textDark,
                             ),
@@ -382,7 +382,7 @@ class OrderDetailScreen extends StatelessWidget {
                               elevation: 0,
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              textStyle: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w800),
+                              textStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w800),
                             ),
                           ),
                         ],
@@ -418,7 +418,7 @@ class OrderDetailScreen extends StatelessWidget {
                       Text(
                         'Bill Details',
                         style: GoogleFonts.inter(
-                          fontSize: 14,
+                          fontSize: Responsive.scaledFontSize(context, 14),
                           fontWeight: FontWeight.w800,
                           color: textDark,
                         ),
@@ -431,7 +431,7 @@ class OrderDetailScreen extends StatelessWidget {
                         ),
                         child: Text(
                           '${itemsList.length} ${itemsList.length == 1 ? 'ITEM' : 'ITEMS'}',
-                          style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w800, color: const Color(0xFF64748B)),
                         ),
                       ),
                     ],
@@ -442,7 +442,7 @@ class OrderDetailScreen extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 6),
                       child: Text(
                         'Items processed by darkstore',
-                        style: GoogleFonts.inter(fontSize: 12, color: textMuted),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: textMuted),
                       ),
                     )
                   else
@@ -459,7 +459,7 @@ class OrderDetailScreen extends StatelessWidget {
                                 child: Text(
                                   '${item.quantity}x',
                                   style: GoogleFonts.inter(
-                                    fontSize: 11,
+                                    fontSize: Responsive.scaledFontSize(context, 11),
                                     fontWeight: FontWeight.w800,
                                     color: const Color(0xFF334155),
                                   ),
@@ -470,7 +470,7 @@ class OrderDetailScreen extends StatelessWidget {
                                 child: Text(
                                   item.name,
                                   style: GoogleFonts.inter(
-                                    fontSize: 12.5,
+                                    fontSize: Responsive.scaledFontSize(context, 12.5),
                                     fontWeight: FontWeight.w600,
                                     color: textDark,
                                   ),
@@ -479,7 +479,7 @@ class OrderDetailScreen extends StatelessWidget {
                               Text(
                                 '₹${(item.price * item.quantity).toInt()}',
                                 style: GoogleFonts.inter(
-                                  fontSize: 12.5,
+                                  fontSize: Responsive.scaledFontSize(context, 12.5),
                                   fontWeight: FontWeight.w700,
                                   color: textDark,
                                 ),
@@ -515,21 +515,21 @@ class OrderDetailScreen extends StatelessWidget {
                           Text(
                             'Total Paid',
                             style: GoogleFonts.inter(
-                              fontSize: 14.5,
+                              fontSize: Responsive.scaledFontSize(context, 14.5),
                               fontWeight: FontWeight.w900,
                               color: textDark,
                             ),
                           ),
                           Text(
                             order.paymentMethod.displayName,
-                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: textMuted),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w600, color: textMuted),
                           ),
                         ],
                       ),
                       Text(
                         '₹${order.total.toInt()}',
                         style: GoogleFonts.inter(
-                          fontSize: 18,
+                          fontSize: Responsive.scaledFontSize(context, 18),
                           fontWeight: FontWeight.w900,
                           color: primaryRed,
                         ),
@@ -577,12 +577,12 @@ class OrderDetailScreen extends StatelessWidget {
                 children: [
                   Text(
                     isPickupOrder ? 'Order Picked Up Successfully!' : 'Order Delivered Successfully!',
-                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: const Color(0xFF065F46)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: const Color(0xFF065F46)),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     isPickupOrder ? 'Collected from Ghatampur Store counter' : 'Delivered fresh to your doorstep',
-                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF047857)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w500, color: const Color(0xFF047857)),
                   ),
                 ],
               ),
@@ -618,12 +618,12 @@ class OrderDetailScreen extends StatelessWidget {
                 children: [
                   Text(
                     'This Order was Cancelled',
-                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: const Color(0xFF991B1B)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: const Color(0xFF991B1B)),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     'Contact store support for refund or reorder assistance',
-                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFFB91C1C)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w500, color: const Color(0xFFB91C1C)),
                   ),
                 ],
               ),
@@ -670,7 +670,7 @@ class OrderDetailScreen extends StatelessWidget {
             child: Center(
               child: Text(
                 isPickupOrder ? '🏬' : '🛵',
-                style: const TextStyle(fontSize: 22),
+                style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 22)),
               ),
             ),
           ),
@@ -684,7 +684,7 @@ class OrderDetailScreen extends StatelessWidget {
                     Text(
                       isPickupOrder ? 'Ready for Store Pickup' : 'Express Delivery In Progress',
                       style: GoogleFonts.inter(
-                        fontSize: 14,
+                        fontSize: Responsive.scaledFontSize(context, 14),
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                         letterSpacing: -0.2,
@@ -698,7 +698,7 @@ class OrderDetailScreen extends StatelessWidget {
                       ? 'Collect at Ghatampur Darkstore Counter'
                       : 'Live tracking from Ghatampur Hub Store',
                   style: GoogleFonts.inter(
-                    fontSize: 11,
+                    fontSize: Responsive.scaledFontSize(context, 11),
                     fontWeight: FontWeight.w500,
                     color: const Color(0xFF94A3B8),
                   ),
@@ -728,7 +728,7 @@ class OrderDetailScreen extends StatelessWidget {
                 Text(
                   'LIVE',
                   style: GoogleFonts.inter(
-                    fontSize: 9.5,
+                    fontSize: Responsive.scaledFontSize(context, 9.5),
                     fontWeight: FontWeight.w900,
                     color: const Color(0xFF10B981),
                   ),
@@ -769,30 +769,30 @@ class OrderDetailScreen extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('⚡', style: TextStyle(fontSize: 10)),
+                    const Text('⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
                     const SizedBox(width: 4),
                     Text(
                       'PAY ONLINE NOW',
-                      style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w900, color: const Color(0xFF16A34A)),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w900, color: const Color(0xFF16A34A)),
                     ),
                   ],
                 ),
               ),
               Text(
                 '100% Safe & Instant',
-                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: const Color(0xFF16A34A)),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w700, color: const Color(0xFF16A34A)),
               ),
             ],
           ),
           const SizedBox(height: 10),
           Text(
             'Avoid Cash Hassle at Doorstep 💳',
-            style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
           ),
           const SizedBox(height: 3),
           Text(
             'Order is currently set to Cash on Delivery. Switch to Online Payment via UPI, GPay, PhonePe or Cards.',
-            style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF475569), height: 1.35),
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: const Color(0xFF475569), height: 1.35),
           ),
           const SizedBox(height: 12),
           GestureDetector(
@@ -826,7 +826,7 @@ class OrderDetailScreen extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       'Pay ₹${order.total.toInt()} Online Now',
-                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w900, color: Colors.white),
                     ),
                   ],
                 ),
@@ -885,7 +885,7 @@ class OrderDetailScreen extends StatelessWidget {
                 Text(
                   title,
                   style: GoogleFonts.inter(
-                    fontSize: 13.5,
+                    fontSize: Responsive.scaledFontSize(context, 13.5),
                     fontWeight: isDone ? FontWeight.w800 : FontWeight.w600,
                     color: isDone ? textDark : const Color(0xFF94A3B8),
                   ),
@@ -894,7 +894,7 @@ class OrderDetailScreen extends StatelessWidget {
                 Text(
                   desc,
                   style: GoogleFonts.inter(
-                    fontSize: 11.5,
+                    fontSize: Responsive.scaledFontSize(context, 11.5),
                     fontWeight: FontWeight.w500,
                     color: isDone ? const Color(0xFF64748B) : const Color(0xFFCBD5E1),
                   ),
@@ -916,7 +916,7 @@ class OrderDetailScreen extends StatelessWidget {
           Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 12.5,
+              fontSize: Responsive.scaledFontSize(context, 12.5),
               fontWeight: FontWeight.w500,
               color: textMuted,
             ),
@@ -924,7 +924,7 @@ class OrderDetailScreen extends StatelessWidget {
           Text(
             value,
             style: GoogleFonts.inter(
-              fontSize: 12.5,
+              fontSize: Responsive.scaledFontSize(context, 12.5),
               fontWeight: isGreen ? FontWeight.w800 : FontWeight.w600,
               color: isGreen ? const Color(0xFF16A34A) : textDark,
             ),

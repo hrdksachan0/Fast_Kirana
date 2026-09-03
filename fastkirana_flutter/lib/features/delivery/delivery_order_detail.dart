@@ -14,7 +14,7 @@ class DeliveryOrderDetailScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppDesignSystem.background,
         elevation: 0,
-        title: Text('Order $orderId', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+        title: Text('Order $orderId', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -35,8 +35,8 @@ class DeliveryOrderDetailScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Order Ready for Pickup', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
-                      Text('Warehouse: Ghatampur Market', style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
+                      Text('Order Ready for Pickup', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
+                      Text('Warehouse: Ghatampur Market', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary)),
                     ],
                   ),
                 ),
@@ -59,15 +59,15 @@ class DeliveryOrderDetailScreen extends StatelessWidget {
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(gradient: LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]), borderRadius: BorderRadius.circular(25)),
-                  child: Center(child: Text('AK', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white))),
+                  child: Center(child: Text('AK', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: Colors.white))),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Aman Kumar', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
-                      Text('+91 98xxx xxx00', style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
+                      Text('Aman Kumar', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
+                      Text('+91 98xxx xxx00', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary)),
                     ],
                   ),
                 ),
@@ -77,7 +77,7 @@ class DeliveryOrderDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           // Items
-          Text('Items (4)', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+          Text('Items (4)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
           const SizedBox(height: 8),
           ...['Tomatoes 1kg', 'Milk 1L', 'Bread', 'Eggs 6pc'].asMap().entries.map((e) {
             final qty = [2, 1, 1, 1][e.key];
@@ -88,11 +88,11 @@ class DeliveryOrderDetailScreen extends StatelessWidget {
               decoration: BoxDecoration(color: AppDesignSystem.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppDesignSystem.borderLight)),
               child: Row(
                 children: [
-                  Text(e.value, style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textPrimary)),
+                  Text(e.value, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textPrimary)),
                   const Spacer(),
-                  Text('x$qty', style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
+                  Text('x$qty', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary)),
                   const SizedBox(width: 12),
-                  Text('₹${price * qty}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+                  Text('₹${price * qty}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
                 ],
               ),
             );
@@ -109,11 +109,11 @@ class DeliveryOrderDetailScreen extends StatelessWidget {
               children: [
                 Icon(Icons.navigation_rounded, color: AppDesignSystem.primary, size: 20),
                 const SizedBox(width: 12),
-                Expanded(child: Text('123, Green Park, Ghatampur', style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textPrimary))),
+                Expanded(child: Text('123, Green Park, Ghatampur', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textPrimary))),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(color: AppDesignSystem.primary, borderRadius: BorderRadius.circular(10)),
-                  child: Text('NAVIGATE', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white)),
+                  child: Text('NAVIGATE', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: Colors.white)),
                 ),
               ],
             ),

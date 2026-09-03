@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/routes/page_transitions.dart';
+import '../core/network/api_client.dart';
 import '../data/models/order.dart';
+import '../data/repositories/order_repository.dart';
 import '../providers/cart_provider.dart';
 import '../features/orders/order_tracking_screen.dart';
 import '../features/orders/orders_screen.dart';
@@ -34,10 +36,26 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
   }
 
   void _setupRealtimeAndPolling() {
-    // 1. Periodic 6-second auto-poll to guarantee live sync
-    _refreshTimer = Timer.periodic(const Duration(seconds: 6), (_) {
-      if (mounted) {
+    // 1. Calm auto-poll and live order verification (runs every 12 seconds only when active orders exist)
+    _refreshTimer = Timer.periodic(const Duration(seconds: 12), (_) async {
+      if (!mounted) return;
+
+      final currentOrders = ref.read(ordersProvider('')).valueOrNull ?? [];
+      final active = currentOrders.where((o) => o.status != OrderStatus.cancelled && o.status != OrderStatus.delivered).toList();
+      
+      // Only make network calls if there is actually an active order to track
+      if (active.isNotEmpty) {
         ref.invalidate(ordersProvider(''));
+        final topOrder = active.first;
+        try {
+          final repo = OrderRepository(ref.read(dioProvider));
+          final cleanId = (topOrder.readableId ?? topOrder.id).replaceAll('#', '').trim();
+          final liveOrder = await repo.getOrder(cleanId);
+          if (liveOrder.status == OrderStatus.cancelled || liveOrder.status == OrderStatus.delivered) {
+            await repo.updateOrderStatus(cleanId, liveOrder.status);
+            if (mounted) ref.invalidate(ordersProvider(''));
+          }
+        } catch (_) {}
       }
     });
 
@@ -164,7 +182,7 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                           latestOrder.status == OrderStatus.shipped
                               ? '🛵'
                               : (latestOrder.status == OrderStatus.packed ? '📦' : '⚡'),
-                          style: const TextStyle(fontSize: 17),
+                          style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 17)),
                         ),
                       ),
                     ),
@@ -190,7 +208,7 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                                   return Text(
                                     formattedId,
                                     style: GoogleFonts.inter(
-                                      fontSize: 12.5,
+                                      fontSize: Responsive.scaledFontSize(context, 12.5),
                                       fontWeight: FontWeight.w900,
                                       color: const Color(0xFF0F172A),
                                       letterSpacing: -0.2,
@@ -227,7 +245,7 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                                     Text(
                                       latestOrder.status.displayName,
                                       style: GoogleFonts.inter(
-                                        fontSize: 9.5,
+                                        fontSize: Responsive.scaledFontSize(context, 9.5),
                                         fontWeight: FontWeight.w800,
                                         color: const Color(0xFF059669),
                                       ),
@@ -246,7 +264,7 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                                 child: Text(
                                   '🏪 ${latestOrder.shopName != null && latestOrder.shopName!.isNotEmpty ? (latestOrder.shopName!.toLowerCase().contains('dark') ? 'FastKirana Dark Store' : latestOrder.shopName!) : (latestOrder.restaurantId != null ? 'Restaurant' : 'FastKirana Dark Store')}',
                                   style: GoogleFonts.inter(
-                                    fontSize: 10,
+                                    fontSize: Responsive.scaledFontSize(context, 10),
                                     fontWeight: FontWeight.w600,
                                     color: const Color(0xFF64748B),
                                   ),
@@ -285,7 +303,7 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                           Text(
                             'Track',
                             style: GoogleFonts.inter(
-                              fontSize: 11,
+                              fontSize: Responsive.scaledFontSize(context, 11),
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
                               letterSpacing: 0.2,

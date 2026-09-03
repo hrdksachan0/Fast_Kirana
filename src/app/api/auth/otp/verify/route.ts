@@ -98,12 +98,14 @@ export async function POST(request: NextRequest) {
       email: cleanEmail,
       phone: user.phone || trimmed,
       role: user.role || 'USER',
+      assignedRestaurantId: user.assignedRestaurantId || null,
       user: {
         id: user.id,
         name: user.name || '',
         email: cleanEmail,
         phone: user.phone || trimmed,
         role: user.role || 'USER',
+        assignedRestaurantId: user.assignedRestaurantId || null,
         isBlocked: user.isBlocked || false,
       }
     })

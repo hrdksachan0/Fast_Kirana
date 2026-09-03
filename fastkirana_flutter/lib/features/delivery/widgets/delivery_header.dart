@@ -22,6 +22,7 @@ class DeliveryHeader extends StatelessWidget {
   final VoidCallback onToggleOnline;
   final VoidCallback onToggleDarkMode;
   final VoidCallback onRefresh;
+  final VoidCallback? onLogout;
   final ValueChanged<int> onTabChanged;
 
   const DeliveryHeader({
@@ -35,6 +36,7 @@ class DeliveryHeader extends StatelessWidget {
     required this.onToggleOnline,
     required this.onToggleDarkMode,
     required this.onRefresh,
+    this.onLogout,
     required this.onTabChanged,
   });
 
@@ -117,7 +119,7 @@ class DeliveryHeader extends StatelessWidget {
                 Text(
                   isOnline ? 'ONLINE' : 'OFFLINE',
                   style: GoogleFonts.inter(
-                    fontSize: 10,
+                    fontSize: Responsive.scaledFontSize(context, 10),
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
                   ),
@@ -163,7 +165,21 @@ class DeliveryHeader extends StatelessWidget {
             ),
             child: const Icon(Icons.refresh_rounded, size: 14, color: Colors.white),
           ),
-        ),
+        if (onLogout != null) ...[
+          const SizedBox(width: 6),
+          Bounceable(
+            onTap: onLogout,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.18),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+              ),
+              child: const Icon(Icons.logout_rounded, size: 14, color: Colors.white),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -185,7 +201,7 @@ class DeliveryHeader extends StatelessWidget {
                 child: Text(
                   userName.isNotEmpty ? userName[0].toUpperCase() : 'P',
                   style: GoogleFonts.inter(
-                    fontSize: 17,
+                    fontSize: Responsive.scaledFontSize(context, 17),
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
                   ),
@@ -214,7 +230,7 @@ class DeliveryHeader extends StatelessWidget {
               Text(
                 '${_greetingText().toUpperCase()} · DELIVERY PARTNER',
                 style: GoogleFonts.inter(
-                  fontSize: 9.5,
+                  fontSize: Responsive.scaledFontSize(context, 9.5),
                   fontWeight: FontWeight.w800,
                   color: Colors.white.withValues(alpha: 0.82),
                   letterSpacing: 0.4,
@@ -229,7 +245,7 @@ class DeliveryHeader extends StatelessWidget {
                     child: Text(
                       userName,
                       style: GoogleFonts.inter(
-                        fontSize: 16.5,
+                        fontSize: Responsive.scaledFontSize(context, 16.5),
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                         letterSpacing: -0.3,
@@ -239,7 +255,7 @@ class DeliveryHeader extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 5),
-                  const Text('👋', style: TextStyle(fontSize: 14)),
+                  const Text('👋', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
                 ],
               ),
             ],
@@ -268,7 +284,7 @@ class DeliveryHeader extends StatelessWidget {
               Text(
                 '${refreshCountdown}s',
                 style: GoogleFonts.robotoMono(
-                  fontSize: 10,
+                  fontSize: Responsive.scaledFontSize(context, 10),
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
                 ),
@@ -333,7 +349,7 @@ class DeliveryHeader extends StatelessWidget {
               Text(
                 label,
                 style: GoogleFonts.inter(
-                  fontSize: 11.5,
+                  fontSize: Responsive.scaledFontSize(context, 11.5),
                   fontWeight: FontWeight.w800,
                   color: isSelected ? const Color(0xFF007A48) : Colors.white.withValues(alpha: 0.9),
                 ),

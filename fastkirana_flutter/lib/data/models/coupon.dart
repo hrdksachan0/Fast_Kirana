@@ -1,34 +1,25 @@
-import 'package:json_annotation/json_annotation.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-part 'coupon.g.dart';
+part 'coupon.freezed.dart';
 
 enum DiscountType { flat, percent }
 
-@JsonSerializable()
-class Coupon {
-  final String id;
-  final String code;
-  final DiscountType discountType;
-  final double value;
-  final double minOrder;
-  final double maxDiscount;
-  final String? categoryId;
-  final String? restaurantId;
-  final bool isActive;
-  final DateTime expiresAt;
+@freezed
+class Coupon with _$Coupon {
+  const Coupon._();
 
-  Coupon({
-    required this.id,
-    required this.code,
-    required this.discountType,
-    required this.value,
-    required this.minOrder,
-    required this.maxDiscount,
-    this.categoryId,
-    this.restaurantId,
-    required this.isActive,
-    required this.expiresAt,
-  });
+  const factory Coupon({
+    required String id,
+    required String code,
+    required DiscountType discountType,
+    @Default(0.0) double value,
+    @Default(0.0) double minOrder,
+    @Default(0.0) double maxDiscount,
+    String? categoryId,
+    String? restaurantId,
+    @Default(true) bool isActive,
+    required DateTime expiresAt,
+  }) = _Coupon;
 
   factory Coupon.fromJson(Map<String, dynamic> json) {
     DiscountType parseDiscountType(dynamic val) {
@@ -57,19 +48,6 @@ class Coupon {
       expiresAt: parseDate(json['expiresAt']),
     );
   }
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'code': code,
-    'discountType': discountType == DiscountType.percent ? 'PERCENT' : 'FLAT',
-    'value': value,
-    'minOrder': minOrder,
-    'maxDiscount': maxDiscount,
-    'categoryId': categoryId,
-    'restaurantId': restaurantId,
-    'isActive': isActive,
-    'expiresAt': expiresAt.toIso8601String(),
-  };
 
   bool get isValid {
     final now = DateTime.now();

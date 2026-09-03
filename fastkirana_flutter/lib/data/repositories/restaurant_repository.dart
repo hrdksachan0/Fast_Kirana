@@ -4,62 +4,181 @@ import '../models/product.dart';
 
 class RestaurantRepository {
   final Dio _dio;
+  static List<Restaurant>? _cachedRestaurants;
+  static DateTime? _lastRestaurantsFetch;
+  static Future<List<Restaurant>>? _inFlightRestaurantsFetch;
+  static final Map<String, List<Product>> _cachedMenus = {};
+  static final Map<String, DateTime> _menuCacheTimes = {};
+  static final Map<String, Future<List<Product>>> _inFlightMenuFetches = {};
 
   RestaurantRepository(this._dio);
 
-  Future<List<Restaurant>> getRestaurants({String? cuisine, String? search}) async {
+  Future<List<Restaurant>> getRestaurants({String? cuisine, String? search, bool forceRefresh = false}) async {
     try {
-      final response = await _dio.get('/api/restaurants');
-      if (response.statusCode == 200 && response.data != null) {
-        final data = response.data;
-        if (data is List) {
-          return data.map((json) => Restaurant.fromJson(json as Map<String, dynamic>)).toList();
-        } else if (data is Map && data['restaurants'] is List) {
-          return (data['restaurants'] as List)
-              .map((json) => Restaurant.fromJson(json as Map<String, dynamic>))
-              .toList();
-        }
+      final now = DateTime.now();
+      if (!forceRefresh &&
+          _cachedRestaurants != null &&
+          _cachedRestaurants!.isNotEmpty &&
+          _lastRestaurantsFetch != null &&
+          now.difference(_lastRestaurantsFetch!).inMinutes < 5) {
+        return _cachedRestaurants!;
       }
-    } catch (_) {}
-    return [];
+
+      if (_inFlightRestaurantsFetch != null && !forceRefresh) {
+        return await _inFlightRestaurantsFetch!;
+      }
+
+      _inFlightRestaurantsFetch = _fetchRestaurants();
+      final list = await _inFlightRestaurantsFetch!;
+      _inFlightRestaurantsFetch = null;
+      return list;
+    } catch (_) {
+      _inFlightRestaurantsFetch = null;
+      if (_cachedRestaurants != null && _cachedRestaurants!.isNotEmpty) {
+        return _cachedRestaurants!;
+      }
+      return _getStaticFallbackRestaurants();
+    }
   }
 
-  Future<List<Product>> getRestaurantMenu(String restaurantId) async {
-    try {
-      String canonicalId = restaurantId;
-      String? canonicalSlug;
-
-      if (restaurantId.contains('bal-udyan') || restaurantId.contains('cmsbhxb6a')) {
-        canonicalId = 'cmsbhxb6a000304if8kf1cwji';
-        canonicalSlug = 'bal-udyan-restaurant';
-      } else if (restaurantId.contains('wedson') || restaurantId.contains('cms2p1lyx')) {
-        canonicalId = 'cms2p1lyx0001n0idod904lfu';
-        canonicalSlug = 'wedson-restaurant';
-      } else if (restaurantId.contains('as') || restaurantId.contains('cms2p1lap')) {
-        canonicalId = 'cms2p1lap0000n0id8alldboy';
-        canonicalSlug = 'as-restaurant';
-      }
-
-      final queryParams = <String, dynamic>{
-        'restaurantId': canonicalId,
-        'limit': 500,
-      };
-      if (canonicalSlug != null) {
-        queryParams['restaurantSlug'] = canonicalSlug;
-      }
-
-      final response = await _dio.get('/api/products', queryParameters: queryParams);
+  Future<List<Restaurant>> _fetchRestaurants() async {
+    final response = await _dio.get('/api/restaurants');
+    if (response.statusCode == 200 && response.data != null) {
       final data = response.data;
-      List productsJson = [];
+      List rawList = [];
       if (data is List) {
-        productsJson = data;
-      } else if (data is Map && data['products'] is List) {
-        productsJson = data['products'];
+        rawList = data;
+      } else if (data is Map && data['restaurants'] is List) {
+        rawList = data['restaurants'] as List;
       }
-      return productsJson
-          .map((json) => Product.fromJson(json as Map<String, dynamic>))
+      final parsed = rawList
+          .map((json) => Restaurant.fromJson(json as Map<String, dynamic>))
           .toList();
+      _cachedRestaurants = parsed;
+      _lastRestaurantsFetch = DateTime.now();
+      return parsed;
+    }
+    return _getStaticFallbackRestaurants();
+  }
+
+  List<Restaurant> _getStaticFallbackRestaurants() {
+    return [
+      Restaurant(
+        id: 'cms2p1lap0000n0id8alldboy',
+        name: 'A.S. Restaurant & Cafe',
+        slug: 'as-restaurant',
+        description: 'Authentic Burgers, Shakes, Pizzas & Rolls in Ghatampur',
+        address: 'Main Market, Ghatampur',
+        isPureVeg: true,
+        rating: 4.8,
+        totalRatings: 120,
+        deliveryTime: '15-20 mins',
+        cuisineTags: ['BURGERS', 'SHAKES', 'PIZZA', 'FAST FOOD'],
+        isOpen: true,
+        logoUrl: '/cafe_all_menu_category.webp',
+        bannerUrl: '/cafe_banner.webp',
+      ),
+      Restaurant(
+        id: 'cms2p1lyx0001n0idod904lfu',
+        name: 'Wedson Restaurant',
+        slug: 'wedson-restaurant',
+        description: 'Premium North Indian, Curries & Family Dining',
+        address: 'Hamirpur Road, Ghatampur',
+        isPureVeg: true,
+        rating: 4.7,
+        totalRatings: 95,
+        deliveryTime: '20-25 mins',
+        cuisineTags: ['NORTH INDIAN', 'PANEER', 'TANDOORI', 'DAL MAKHANI'],
+        isOpen: true,
+        logoUrl: '/wedson_restaurant_bg.webp',
+        bannerUrl: '/wedson_restaurant_banner.webp',
+      ),
+      Restaurant(
+        id: 'cmsbhxb6a000304if8kf1cwji',
+        name: 'Bal Udyan Restaurant',
+        slug: 'bal-udyan-restaurant',
+        description: 'Authentic Indian Food, Chinese & Quick Bites',
+        address: 'Near Bal Udyan, Ghatampur',
+        isPureVeg: true,
+        rating: 4.6,
+        totalRatings: 80,
+        deliveryTime: '20-25 mins',
+        cuisineTags: ['NORTH INDIAN', 'CHINESE', 'SNACKS'],
+        isOpen: true,
+        logoUrl: '/cafe_category.webp',
+        bannerUrl: '/cafe_banner.webp',
+      ),
+    ];
+  }
+
+  Future<List<Product>> getRestaurantMenu(String restaurantId, {bool forceRefresh = false}) async {
+    try {
+      final now = DateTime.now();
+      final lastFetch = _menuCacheTimes[restaurantId];
+      if (!forceRefresh &&
+          _cachedMenus.containsKey(restaurantId) &&
+          _cachedMenus[restaurantId]!.isNotEmpty &&
+          lastFetch != null &&
+          now.difference(lastFetch).inMinutes < 3) {
+        return _cachedMenus[restaurantId]!;
+      }
+
+      if (_inFlightMenuFetches.containsKey(restaurantId) && !forceRefresh) {
+        return await _inFlightMenuFetches[restaurantId]!;
+      }
+
+      Future<List<Product>> fetchCall() async {
+        String canonicalId = restaurantId;
+        String? canonicalSlug;
+
+        if (restaurantId.contains('bal-udyan') || restaurantId.contains('cmsbhxb6a')) {
+          canonicalId = 'cmsbhxb6a000304if8kf1cwji';
+          canonicalSlug = 'bal-udyan-restaurant';
+        } else if (restaurantId.contains('wedson') || restaurantId.contains('cms2p1lyx')) {
+          canonicalId = 'cms2p1lyx0001n0idod904lfu';
+          canonicalSlug = 'wedson-restaurant';
+        } else if (restaurantId.contains('as') || restaurantId.contains('cms2p1lap')) {
+          canonicalId = 'cms2p1lap0000n0id8alldboy';
+          canonicalSlug = 'as-restaurant';
+        }
+
+        final queryParams = <String, dynamic>{
+          'restaurantId': canonicalId,
+          'limit': 500,
+        };
+        if (canonicalSlug != null) {
+          queryParams['restaurantSlug'] = canonicalSlug;
+        }
+
+        final response = await _dio.get('/api/products', queryParameters: queryParams);
+        final data = response.data;
+        List productsJson = [];
+        if (data is List) {
+          productsJson = data;
+        } else if (data is Map && data['products'] is List) {
+          productsJson = data['products'];
+        }
+        final menu = productsJson
+            .map((json) => Product.fromJson(json as Map<String, dynamic>))
+            .toList();
+
+        if (menu.isNotEmpty) {
+          _cachedMenus[restaurantId] = menu;
+          _menuCacheTimes[restaurantId] = DateTime.now();
+        }
+        return menu;
+      }
+
+      final future = fetchCall();
+      _inFlightMenuFetches[restaurantId] = future;
+      final result = await future;
+      _inFlightMenuFetches.remove(restaurantId);
+      return result;
     } catch (_) {
+      _inFlightMenuFetches.remove(restaurantId);
+      if (_cachedMenus.containsKey(restaurantId)) {
+        return _cachedMenus[restaurantId]!;
+      }
       return [];
     }
   }

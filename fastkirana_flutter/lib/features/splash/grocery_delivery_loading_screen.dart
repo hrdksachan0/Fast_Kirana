@@ -127,7 +127,7 @@ class _GroceryDeliveryLoadingScreenState extends State<GroceryDeliveryLoadingScr
                           'Fresh groceries,\ndelivered to your doorstep!',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 22,
+                            fontSize: Responsive.scaledFontSize(context, 22),
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF94A3B8), // Rounded modern light-gray
                             height: 1.35,
@@ -155,7 +155,7 @@ class _GroceryDeliveryLoadingScreenState extends State<GroceryDeliveryLoadingScr
                           Text(
                             'FASTKIRANA GROCERY EXPRESS',
                             style: GoogleFonts.inter(
-                              fontSize: 10,
+                              fontSize: Responsive.scaledFontSize(context, 10),
                               fontWeight: FontWeight.w800,
                               color: const Color(0xFFCBD5E1), // Very subtle & minimal
                               letterSpacing: 1.8,

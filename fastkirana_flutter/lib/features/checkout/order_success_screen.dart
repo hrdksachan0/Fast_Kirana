@@ -233,7 +233,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
             child: Text(
               label,
               style: GoogleFonts.inter(
-                fontSize: 12.5,
+                fontSize: Responsive.scaledFontSize(context, 12.5),
                 fontWeight: FontWeight.w500,
                 color: slateMuted,
               ),
@@ -248,7 +248,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                     value,
                     textAlign: TextAlign.end,
                     style: GoogleFonts.inter(
-                      fontSize: 13,
+                      fontSize: Responsive.scaledFontSize(context, 13),
                       fontWeight: isBold || isHighlight ? FontWeight.w800 : FontWeight.w600,
                       color: isHighlight ? successGreen : slateDark,
                       height: 1.3,
@@ -354,7 +354,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                             isCancelled ? 'Order Cancelled' : 'Order Placed Successfully! 🎉',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.inter(
-                              fontSize: 21,
+                              fontSize: Responsive.scaledFontSize(context, 21),
                               fontWeight: FontWeight.w900,
                               color: isCancelled ? const Color(0xFFDC2626) : slateDark,
                               letterSpacing: -0.5,
@@ -367,7 +367,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                                 : 'Your order has been received & is being synced with store.',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.inter(
-                              fontSize: 12.5,
+                              fontSize: Responsive.scaledFontSize(context, 12.5),
                               fontWeight: FontWeight.w500,
                               color: slateMuted,
                             ),
@@ -402,7 +402,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                                         child: Text(
                                           'Order Status: Cancelled',
                                           style: GoogleFonts.inter(
-                                            fontSize: 13,
+                                            fontSize: Responsive.scaledFontSize(context, 13),
                                             fontWeight: FontWeight.w900,
                                             color: const Color(0xFF991B1B),
                                           ),
@@ -418,7 +418,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                                         child: Text(
                                           'CANCELLED',
                                           style: GoogleFonts.inter(
-                                            fontSize: 9.5,
+                                            fontSize: Responsive.scaledFontSize(context, 9.5),
                                             fontWeight: FontWeight.w900,
                                             color: const Color(0xFFDC2626),
                                             letterSpacing: 0.3,
@@ -431,7 +431,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                                   Text(
                                     'No amount was charged for this order. If you paid online, your refund will be credited back in 2-4 business days.',
                                     style: GoogleFonts.inter(
-                                      fontSize: 11.5,
+                                      fontSize: Responsive.scaledFontSize(context, 11.5),
                                       fontWeight: FontWeight.w500,
                                       color: const Color(0xFF7F1D1D),
                                       height: 1.35,
@@ -459,13 +459,13 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                                 children: [
                                   Row(
                                     children: [
-                                      const Text('⚡', style: TextStyle(fontSize: 15)),
+                                      const Text('⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15))),
                                       const SizedBox(width: 6),
                                       Expanded(
                                         child: Text(
                                           _getStatusTitle(stageIndex),
                                           style: GoogleFonts.inter(
-                                            fontSize: 13,
+                                            fontSize: Responsive.scaledFontSize(context, 13),
                                             fontWeight: FontWeight.w800,
                                             color: slateDark,
                                           ),
@@ -493,7 +493,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                                             Text(
                                               _getBadgeText(stageIndex),
                                               style: GoogleFonts.inter(
-                                                fontSize: 9.5,
+                                                fontSize: Responsive.scaledFontSize(context, 9.5),
                                                 fontWeight: FontWeight.w900,
                                                 color: badgeColor,
                                                 letterSpacing: 0.3,
@@ -556,7 +556,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                                 children: [
                                   Text(
                                     displayId.length > 20 ? '${displayId.substring(0, 20)}...' : displayId,
-                                    style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800, color: slateDark),
+                                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w800, color: slateDark),
                                   ),
                                   const SizedBox(width: 6),
                                   GestureDetector(
@@ -597,7 +597,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                                 ),
                                 child: Text(
                                   widget.paymentMethod,
-                                  style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w800, color: primaryRed),
+                                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w800, color: primaryRed),
                                 ),
                               ),
                             ),
@@ -663,7 +663,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                                     Text(
                                       'Track Live Order Status',
                                       style: GoogleFonts.inter(
-                                        fontSize: 14.5,
+                                        fontSize: Responsive.scaledFontSize(context, 14.5),
                                         fontWeight: FontWeight.w900,
                                         color: Colors.white,
                                         letterSpacing: -0.2,
@@ -692,7 +692,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                                 child: Text(
                                   isCancelled ? 'Continue Shopping 🛍️' : 'Continue Shopping 🛍️',
                                   style: GoogleFonts.inter(
-                                    fontSize: 13.5,
+                                    fontSize: Responsive.scaledFontSize(context, 13.5),
                                     fontWeight: FontWeight.w800,
                                     color: isCancelled ? Colors.white : const Color(0xFF334155),
                                   ),
@@ -741,7 +741,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
         Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 8.5,
+            fontSize: Responsive.scaledFontSize(context, 8.5),
             fontWeight: isDone ? FontWeight.w900 : FontWeight.w500,
             color: isDone ? slateDark : const Color(0xFF94A3B8),
           ),

@@ -1,45 +1,32 @@
-class StoreSettings {
-  final double miscFee;
-  final String miscFeeLabel;
-  final double deliveryFee;
-  final double groceryFreeDeliveryThreshold;
-  final double cafeFreeDeliveryThreshold;
-  final double combinedFreeDeliveryThreshold;
-  final double freeDeliveryThreshold;
-  final double surgeCharge;
-  final double minOrderValue;
-  final double deliveryRadiusKm;
-  final String serviceablePincode;
-  final bool groceryMartOpen;
-  final bool cafeOpen;
-  final bool restaurantOpen;
-  final String avgDeliveryTime;
-  final String adminWhatsappPhone;
-  final String contactPhone;
-  final String supportPhone;
-  final Map<String, dynamic> raw;
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-  StoreSettings({
-    this.miscFee = 5.0,
-    this.miscFeeLabel = 'Packaging charge',
-    this.deliveryFee = 25.0,
-    this.groceryFreeDeliveryThreshold = 199.0,
-    this.cafeFreeDeliveryThreshold = 199.0,
-    this.combinedFreeDeliveryThreshold = 199.0,
-    this.freeDeliveryThreshold = 199.0,
-    this.surgeCharge = 0.0,
-    this.minOrderValue = 0.0,
-    this.deliveryRadiusKm = 5.0,
-    this.serviceablePincode = '209206',
-    this.groceryMartOpen = true,
-    this.cafeOpen = true,
-    this.restaurantOpen = true,
-    this.avgDeliveryTime = 'Fast',
-    this.adminWhatsappPhone = '7054470303',
-    this.contactPhone = '+917054470303',
-    this.supportPhone = '8112849854',
-    this.raw = const {},
-  });
+part 'store_settings.freezed.dart';
+
+@freezed
+class StoreSettings with _$StoreSettings {
+  const StoreSettings._();
+
+  const factory StoreSettings({
+    @Default(5.0) double miscFee,
+    @Default('Packaging charge') String miscFeeLabel,
+    @Default(25.0) double deliveryFee,
+    @Default(199.0) double groceryFreeDeliveryThreshold,
+    @Default(199.0) double cafeFreeDeliveryThreshold,
+    @Default(199.0) double combinedFreeDeliveryThreshold,
+    @Default(199.0) double freeDeliveryThreshold,
+    @Default(0.0) double surgeCharge,
+    @Default(0.0) double minOrderValue,
+    @Default(5.0) double deliveryRadiusKm,
+    @Default('209206') String serviceablePincode,
+    @Default(true) bool groceryMartOpen,
+    @Default(true) bool cafeOpen,
+    @Default(true) bool restaurantOpen,
+    @Default('Fast') String avgDeliveryTime,
+    @Default('7054470303') String adminWhatsappPhone,
+    @Default('+917054470303') String contactPhone,
+    @Default('8112849854') String supportPhone,
+    @Default({}) Map<String, dynamic> raw,
+  }) = _StoreSettings;
 
   factory StoreSettings.fromJson(Map<String, dynamic> json) {
     double parseDouble(dynamic val, double fallback) {

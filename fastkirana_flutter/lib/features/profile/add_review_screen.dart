@@ -102,7 +102,7 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
         title: Text(
           'Rate & Review',
           style: GoogleFonts.inter(
-            fontSize: 17,
+            fontSize: Responsive.scaledFontSize(context, 17),
             fontWeight: FontWeight.w900,
             color: const Color(0xFF0F172A),
             letterSpacing: -0.3,
@@ -126,12 +126,12 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
                 children: [
                   Text(
                     'How was your experience with',
-                    style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textSecondary),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textSecondary),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     widget.productName,
-                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -155,7 +155,7 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
                   const SizedBox(height: 8),
                   Text(
                     ['⭐ Needs Improvement', '⭐⭐ Fair', '⭐⭐⭐ Good', '⭐⭐⭐⭐ Very Good', '⭐⭐⭐⭐⭐ Outstanding Experience'][_rating - 1],
-                    style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppDesignSystem.primary),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w700, color: AppDesignSystem.primary),
                   ),
                 ],
               ),
@@ -174,15 +174,15 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Detailed Feedback (Optional)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+                  Text('Detailed Feedback (Optional)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
                   const SizedBox(height: 10),
                   TextField(
                     controller: _reviewController,
                     maxLines: 4,
-                    style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF0F172A)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: const Color(0xFF0F172A)),
                     decoration: InputDecoration(
                       hintText: 'Tell us about the taste, packaging, delivery speed...',
-                      hintStyle: GoogleFonts.inter(fontSize: 12.5, color: AppDesignSystem.textMuted),
+                      hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: AppDesignSystem.textMuted),
                       filled: true,
                       fillColor: const Color(0xFFF8FAFC),
                       border: OutlineInputBorder(
@@ -215,7 +215,7 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                     : Text(
                         'Submit Real Review',
-                        style: GoogleFonts.inter(fontSize: 14.5, fontWeight: FontWeight.w900, color: Colors.white),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14.5), fontWeight: FontWeight.w900, color: Colors.white),
                       ),
               ),
             ),

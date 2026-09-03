@@ -75,7 +75,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         title: Text(
           'Notifications',
           style: GoogleFonts.inter(
-            fontSize: 18,
+            fontSize: Responsive.scaledFontSize(context, 18),
             fontWeight: FontWeight.w800,
             color: AppDesignSystem.textPrimary,
           ),
@@ -112,7 +112,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                             Text(
                               'No Notifications Yet',
                               style: GoogleFonts.inter(
-                                fontSize: 16,
+                                fontSize: Responsive.scaledFontSize(context, 16),
                                 fontWeight: FontWeight.w800,
                                 color: AppDesignSystem.textPrimary,
                               ),
@@ -122,7 +122,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                               'Live updates on your orders and delivery alerts will appear here automatically.',
                               textAlign: TextAlign.center,
                               style: GoogleFonts.inter(
-                                fontSize: 12.5,
+                                fontSize: Responsive.scaledFontSize(context, 12.5),
                                 color: AppDesignSystem.textSecondary,
                                 height: 1.4,
                               ),
@@ -225,7 +225,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               border: Border.all(color: const Color(0xFFF1F5F9)),
             ),
             child: Center(
-              child: Text(icon, style: const TextStyle(fontSize: 20)),
+              child: Text(icon, style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 20))),
             ),
           ),
           const SizedBox(width: 12),
@@ -239,7 +239,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       child: Text(
                         title,
                         style: GoogleFonts.inter(
-                          fontSize: 13.5,
+                          fontSize: Responsive.scaledFontSize(context, 13.5),
                           fontWeight: isUnread ? FontWeight.w900 : FontWeight.w700,
                           color: AppDesignSystem.textPrimary,
                         ),
@@ -260,7 +260,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 Text(
                   body,
                   style: GoogleFonts.inter(
-                    fontSize: 12,
+                    fontSize: Responsive.scaledFontSize(context, 12),
                     color: AppDesignSystem.textSecondary,
                     height: 1.35,
                   ),
@@ -269,7 +269,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 Text(
                   time,
                   style: GoogleFonts.inter(
-                    fontSize: 10.5,
+                    fontSize: Responsive.scaledFontSize(context, 10.5),
                     color: AppDesignSystem.textMuted,
                     fontWeight: FontWeight.w600,
                   ),

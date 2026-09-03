@@ -167,7 +167,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                           color: const Color(0xFFF1F5F9),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Center(child: Text(item['icon'], style: const TextStyle(fontSize: 24))),
+                        child: Center(child: Text(item['icon'], style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -177,14 +177,14 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                             Text(
                               item['name'],
                               style: GoogleFonts.inter(
-                                fontSize: 15,
+                                fontSize: Responsive.scaledFontSize(context, 15),
                                 fontWeight: FontWeight.w800,
                                 color: slateDark,
                               ),
                             ),
                             Text(
                               '${item['unit']} • ₹${item['price']}/day',
-                              style: GoogleFonts.inter(fontSize: 12, color: slateMuted),
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted),
                             ),
                           ],
                         ),
@@ -194,7 +194,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                   const SizedBox(height: 20),
                   Text(
                     'Select Frequency',
-                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: slateDark),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: slateDark),
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -218,7 +218,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                               child: Text(
                                 f,
                                 style: GoogleFonts.inter(
-                                  fontSize: 11,
+                                  fontSize: Responsive.scaledFontSize(context, 11),
                                   fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                                   color: isSelected ? primaryRed : slateDark,
                                 ),
@@ -232,7 +232,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                   const SizedBox(height: 18),
                   Text(
                     'Morning Delivery Slot',
-                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: slateDark),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: slateDark),
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -256,7 +256,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                               child: Text(
                                 s,
                                 style: GoogleFonts.inter(
-                                  fontSize: 11,
+                                  fontSize: Responsive.scaledFontSize(context, 11),
                                   fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                                   color: isSelected ? brandGreen : slateDark,
                                 ),
@@ -301,7 +301,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                       ),
                       child: Text(
                         'Confirm Subscription • ₹${item['price']}/day',
-                        style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w800, color: Colors.white),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w800, color: Colors.white),
                       ),
                     ),
                   ),
@@ -329,7 +329,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
         ),
         title: Text(
           'Daily Subscriptions',
-          style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w900, color: slateDark),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 17), fontWeight: FontWeight.w900, color: slateDark),
         ),
       ),
       body: ListView(
@@ -371,12 +371,12 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                     children: [
                       Text(
                         '$activeCount Active Subscriptions',
-                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: Colors.white),
                       ),
                       const SizedBox(height: 3),
                       Text(
                         'Fresh milk & bread delivered daily by 6:30 AM',
-                        style: GoogleFonts.inter(fontSize: 11.5, color: Colors.white.withOpacity(0.9)),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: Colors.white.withOpacity(0.9)),
                       ),
                     ],
                   ),
@@ -392,11 +392,11 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
             children: [
               Text(
                 'My Active Plans',
-                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: slateDark),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: slateDark),
               ),
               Text(
                 'Auto-Deliver 6:30 AM',
-                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: brandGreen),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w700, color: brandGreen),
               ),
             ],
           ),
@@ -435,7 +435,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
-                        child: Center(child: Text(sub['icon'], style: const TextStyle(fontSize: 22))),
+                        child: Center(child: Text(sub['icon'], style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -444,14 +444,14 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                           children: [
                             Text(
                               sub['name'],
-                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: slateDark),
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: slateDark),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
                             Text(
                               '${sub['frequency']} • ₹${sub['price']}/day',
-                              style: GoogleFonts.inter(fontSize: 11, color: slateMuted),
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: slateMuted),
                             ),
                           ],
                         ),
@@ -465,7 +465,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                         child: Text(
                           sub['status'].toString().toUpperCase(),
                           style: GoogleFonts.inter(
-                            fontSize: 9.5,
+                            fontSize: Responsive.scaledFontSize(context, 9.5),
                             fontWeight: FontWeight.w900,
                             color: isActive ? const Color(0xFF059669) : const Color(0xFFD97706),
                           ),
@@ -483,7 +483,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                           const SizedBox(width: 4),
                           Text(
                             sub['nextDelivery'],
-                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: slateMuted),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w600, color: slateMuted),
                           ),
                         ],
                       ),
@@ -499,7 +499,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                               ),
                               child: Text(
                                 'Skip Next',
-                                style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w700, color: slateDark),
+                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w700, color: slateDark),
                               ),
                             ),
                           ),
@@ -515,7 +515,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                               child: Text(
                                 isActive ? 'Pause' : 'Resume',
                                 style: GoogleFonts.inter(
-                                  fontSize: 10.5,
+                                  fontSize: Responsive.scaledFontSize(context, 10.5),
                                   fontWeight: FontWeight.w800,
                                   color: isActive ? primaryRed : brandGreen,
                                 ),
@@ -536,11 +536,11 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
           // 3. Daily Essentials Catalog (Add to subscription)
           Row(
             children: [
-              const Text('🥛', style: TextStyle(fontSize: 14)),
+              const Text('🥛', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
               const SizedBox(width: 6),
               Text(
                 'Subscribe to Daily Essentials',
-                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: slateDark),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: slateDark),
               ),
             ],
           ),
@@ -564,7 +564,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                       color: const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Center(child: Text(item['icon'], style: const TextStyle(fontSize: 20))),
+                    child: Center(child: Text(item['icon'], style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 20)))),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -573,11 +573,11 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                       children: [
                         Text(
                           item['name'],
-                          style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800, color: slateDark),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w800, color: slateDark),
                         ),
                         Text(
                           '${item['unit']} • ₹${item['price']}/day',
-                          style: GoogleFonts.inter(fontSize: 11, color: slateMuted),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: slateMuted),
                         ),
                       ],
                     ),
@@ -593,7 +593,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                     ),
                     child: Text(
                       '+ Subscribe',
-                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w900),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w900),
                     ),
                   ),
                 ],

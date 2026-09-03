@@ -20,6 +20,9 @@ import '../../core/services/supabase_service.dart';
 import '../../core/services/kot_print_service.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../../core/utils/app_toast.dart';
+import '../../core/theme/responsive.dart';
+import '../../data/models/order.dart';
+import '../../data/repositories/order_repository.dart';
 import '../../widgets/brand_logo.dart';
 import '../../widgets/live_clock_badge.dart';
 import '../../providers/auth_provider.dart';
@@ -40,18 +43,20 @@ class RestaurantDashboard extends ConsumerStatefulWidget {
 
 class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
   int _activeTab = 0; // 0: Live Orders, 1: Quick 86 Menu, 2: Sales Report, 3: Settings
-  bool _isLoading = true;
+  static List<Map<String, dynamic>> _cachedOrders = [];
+  bool _isLoading = _cachedOrders.isEmpty;
   bool _isRefreshing = false;
   bool _isStoreOpen = true;
   bool _isBusyMode = false;
   int _refreshCountdown = 20;
 
-  List<Map<String, dynamic>> _orders = [];
+  List<Map<String, dynamic>> _orders = _cachedOrders;
   List<Map<String, dynamic>> _menuItems = [];
   List<Map<String, dynamic>> _salesOrders = []; // All orders (incl. delivered) for Sales tab
   Map<String, dynamic> _salesSummary = {};
   
   Timer? _autoRefreshTimer;
+  Timer? _menuSearchDebounce;
   bool _isFetchingOrders = false;
   String _restaurantName = 'Restaurant Console';
   String? _assignedRestaurantId;
@@ -104,8 +109,10 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
     super.initState();
     _initOutletDetails();
 
-    // 25-second calm background refresh (without 1-second full-screen rebuilds)
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 25), (_) {
+    // 60-second background refresh.
+    // Supabase Realtime (below) handles instant pushes — this is just a safety net.
+    // Guard inside _fetchOrders prevents overlap with Realtime-triggered fetches.
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
       if (!mounted || _isFetchingOrders) return;
       _fetchOrders(silent: true);
     });
@@ -114,6 +121,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
+    _menuSearchDebounce?.cancel();
     _audioPlayer.dispose();
     _menuSearchController.dispose();
     super.dispose();
@@ -166,7 +174,11 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
     if (mounted) setState(() {});
 
     // Only fetch live orders on init (the active tab). Menu and Sales load lazily.
-    _fetchOrders();
+    if (_cachedOrders.isNotEmpty) {
+      _fetchOrders(silent: true);
+    } else {
+      _fetchOrders();
+    }
     _initSupabaseRealtime();
   }
 
@@ -239,15 +251,37 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
 
     try {
       final dio = ref.read(dioProvider);
-      final url = _assignedRestaurantId != null
-          ? '/api/picker/orders?type=restaurant&restaurantId=$_assignedRestaurantId&t=${DateTime.now().millisecondsSinceEpoch}'
-          : '/api/picker/orders?type=restaurant&t=${DateTime.now().millisecondsSinceEpoch}';
+      final primaryUrl = _assignedRestaurantId != null
+          ? '/api/restaurant-dashboard/orders?restaurantId=$_assignedRestaurantId&status=live&limit=100'
+          : '/api/restaurant-dashboard/orders?status=live&limit=100';
 
-      final response = await dio.get(url);
+      Response response;
+      try {
+        response = await dio.get(primaryUrl);
+      } catch (_) {
+        // Fallback: Use picker/orders endpoint (which already only returns PENDING/CONFIRMED)
+        final fallbackUrl = _assignedRestaurantId != null
+            ? '/api/picker/orders?type=restaurant&restaurantId=$_assignedRestaurantId'
+            : '/api/picker/orders?type=restaurant';
+        response = await dio.get(fallbackUrl);
+      }
       
       if (response.statusCode == 200 && response.data != null) {
         final List list = response.data is List ? response.data : (response.data['orders'] ?? []);
         List<Map<String, dynamic>> parsed = list.map((e) => Map<String, dynamic>.from(e)).toList();
+
+        // If picker API was empty, try fallback
+        if (parsed.isEmpty && _assignedRestaurantId != null) {
+          try {
+            final fbRes = await dio.get('/api/restaurant-dashboard/orders?restaurantId=$_assignedRestaurantId&limit=100');
+            if (fbRes.statusCode == 200 && fbRes.data != null) {
+              final fbList = fbRes.data is List ? fbRes.data : (fbRes.data['orders'] ?? []);
+              if (fbList.isNotEmpty) {
+                parsed = fbList.map((e) => Map<String, dynamic>.from(e)).toList();
+              }
+            }
+          } catch (_) {}
+        }
 
         // Ensure ID-wise outlet filtering
         if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty && _assignedRestaurantId != 'ALL') {
@@ -278,6 +312,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
         }
         _knownPendingOrderIds.addAll(newPending);
 
+        _cachedOrders = parsed;
         if (mounted) {
           setState(() {
             _orders = parsed;
@@ -394,8 +429,37 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
   }
 
   Future<void> _updateOrderStatus(String orderId, String nextStatus, {int? prepTime}) async {
-    setState(() => _updatingOrderId = orderId);
     HapticFeedback.selectionClick();
+
+    // 1. Instant Optimistic UI Update (0ms)
+    setState(() {
+      final index = _orders.indexWhere((o) => (o['id'] ?? '').toString() == orderId || (o['readableId'] ?? '').toString() == orderId);
+      if (index != -1) {
+        _orders[index]['status'] = nextStatus;
+      }
+      _updatingOrderId = orderId;
+    });
+
+    if (mounted) {
+      if (nextStatus == 'CONFIRMED') {
+        AppToast.showSuccess(
+          context,
+          'Order Accepted! 👨‍🍳',
+          subtitle: 'Kitchen timer set and cooking started.',
+        );
+      } else if (nextStatus == 'PACKED') {
+        AppToast.showSuccess(
+          context,
+          'Food Ready for Pickup! 🥡',
+          subtitle: 'Rider notified to collect the package.',
+        );
+      } else {
+        AppToast.showSuccess(
+          context,
+          'Order status updated to $nextStatus',
+        );
+      }
+    }
 
     try {
       final dio = ref.read(dioProvider);
@@ -404,38 +468,28 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
         body['prepTime'] = prepTime;
       }
 
-      final res = await dio.patch('/api/orders/$orderId', data: body);
-      if (res.statusCode == 200) {
-        if (mounted) {
-          if (nextStatus == 'CONFIRMED') {
-            AppToast.showSuccess(
-              context,
-              'Order Accepted! 👨‍🍳',
-              subtitle: 'Kitchen timer set and cooking started.',
-            );
-          } else if (nextStatus == 'PACKED') {
-            AppToast.showSuccess(
-              context,
-              'Food Ready for Pickup! 🥡',
-              subtitle: 'Rider notified to collect the package.',
-            );
-          } else {
-            AppToast.showSuccess(
-              context,
-              'Order status updated to $nextStatus',
-            );
-          }
+      await dio.patch('/api/orders/$orderId', data: body);
+
+      // Background sync to Supabase and OrderRepository cache
+      try {
+        final sb = SupabaseService.client;
+        if (sb != null) {
+          await sb.from('orders').update({
+            'status': nextStatus,
+            'updatedAt': DateTime.now().toIso8601String(),
+          }).eq('id', orderId);
         }
-        _fetchOrders(silent: true);
-      }
-    } catch (e) {
-      if (mounted) {
-        AppToast.showError(
-          context,
-          'Failed to update order status',
-          subtitle: 'Please check your connection and try again',
+      } catch (_) {}
+
+      try {
+        final parsed = OrderStatus.values.firstWhere(
+          (s) => s.name.toUpperCase() == nextStatus.toUpperCase(),
+          orElse: () => OrderStatus.pending,
         );
-      }
+        await OrderRepository(dio).updateOrderStatus(orderId, parsed);
+      } catch (_) {}
+    } catch (e) {
+      debugPrint('[Restaurant status update error]: $e');
     } finally {
       if (mounted) setState(() => _updatingOrderId = null);
     }
@@ -507,7 +561,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
                     children: [
                       Text(
                         'Accept Order & Cooking Time',
-                        style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w900, color: slateDark),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 17), fontWeight: FontWeight.w900, color: slateDark),
                       ),
                       IconButton(
                         icon: const Icon(Icons.close, color: slateMuted),
@@ -518,7 +572,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
                   const SizedBox(height: 6),
                   Text(
                     'Select estimated cooking time to notify customer & rider:',
-                    style: GoogleFonts.inter(fontSize: 12.5, color: slateMuted),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: slateMuted),
                   ),
                   const SizedBox(height: 18),
                   Row(
@@ -545,7 +599,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
                                   Text(
                                     '$time',
                                     style: GoogleFonts.inter(
-                                      fontSize: 18,
+                                      fontSize: Responsive.scaledFontSize(context, 18),
                                       fontWeight: FontWeight.w900,
                                       color: isSelected ? Colors.white : slateDark,
                                     ),
@@ -553,7 +607,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
                                   Text(
                                     'MINS',
                                     style: GoogleFonts.inter(
-                                      fontSize: 9.5,
+                                      fontSize: Responsive.scaledFontSize(context, 9.5),
                                       fontWeight: FontWeight.w800,
                                       color: isSelected ? Colors.white : slateMuted,
                                     ),
@@ -582,7 +636,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
                       },
                       child: Text(
                         'Confirm & Start Cooking ($selectedTime Mins) ➔',
-                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: Colors.white),
                       ),
                     ),
                   ),
@@ -772,8 +826,8 @@ $formattedItems
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Kitchen Order Ticket (KOT)', style: GoogleFonts.inter(fontSize: 15.5, fontWeight: FontWeight.w900, color: slateDark)),
-                          Text('Order #$readableId-R · Bluetooth / POS Print', style: GoogleFonts.inter(fontSize: 11.5, color: slateMuted)),
+                          Text('Kitchen Order Ticket (KOT)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15.5), fontWeight: FontWeight.w900, color: slateDark)),
+                          Text('Order #$readableId-R · Bluetooth / POS Print', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: slateMuted)),
                         ],
                       ),
                     ],
@@ -798,7 +852,7 @@ $formattedItems
                 child: Text(
                   kotText,
                   style: GoogleFonts.robotoMono(
-                    fontSize: 11.5,
+                    fontSize: Responsive.scaledFontSize(context, 11.5),
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF1E293B),
                     height: 1.35,
@@ -819,7 +873,7 @@ $formattedItems
                         KotPrintService.printKOTReceipt(context, order);
                       },
                       icon: const Icon(Icons.print_rounded, size: 17, color: Colors.white),
-                      label: Text('Print KOT (Thermal POS)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white)),
+                      label: Text('Print KOT (Thermal POS)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: Colors.white)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2563EB),
                         padding: const EdgeInsets.symmetric(vertical: 13),
@@ -865,12 +919,12 @@ $formattedItems
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: const Color(0xFF86EFAC)),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('👨‍🍳', style: TextStyle(fontSize: 15)),
-                            SizedBox(width: 4),
-                            Text('Kitchen', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF15803D))),
+                            const Text('👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15))),
+                            const SizedBox(width: 4),
+                            Text('Kitchen', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: const Color(0xFF15803D))),
                           ],
                         ),
                       ),
@@ -906,7 +960,7 @@ $formattedItems
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('💬', style: TextStyle(fontSize: 15)),
+                          Text('💬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15))),
                         ],
                       ),
                     ),
@@ -942,11 +996,11 @@ $formattedItems
               const SizedBox(height: 16),
               Text(
                 'Switch Restaurant Console',
-                style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w900, color: slateDark),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 17), fontWeight: FontWeight.w900, color: slateDark),
               ),
               Text(
                 'View orders and menu catalog for selected food outlet:',
-                style: GoogleFonts.inter(fontSize: 12, color: slateMuted),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted),
               ),
               const SizedBox(height: 16),
               ..._availableOutlets.map((outlet) {
@@ -966,19 +1020,19 @@ $formattedItems
                         color: isSelected ? primaryRed : const Color(0xFFE2E8F0),
                         shape: BoxShape.circle,
                       ),
-                      child: const Text('👨‍🍳', style: TextStyle(fontSize: 16)),
+                      child: const Text('👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
                     ),
                     title: Text(
                       outlet['name'] ?? '',
                       style: GoogleFonts.inter(
-                        fontSize: 14,
+                        fontSize: Responsive.scaledFontSize(context, 14),
                         fontWeight: FontWeight.w800,
                         color: isSelected ? primaryRed : slateDark,
                       ),
                     ),
                     subtitle: Text(
                       'FastKirana Food Kitchen · Live Outlet',
-                      style: GoogleFonts.inter(fontSize: 11, color: slateMuted),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: slateMuted),
                     ),
                     trailing: isSelected ? const Icon(Icons.check_circle_rounded, color: primaryRed) : null,
                     onTap: () {
@@ -1046,11 +1100,11 @@ $formattedItems
                             children: [
                               Text(
                                 'Quick 86 / Stock Controls',
-                                style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w900, color: slateDark),
+                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 17), fontWeight: FontWeight.w900, color: slateDark),
                               ),
                               Text(
                                 'Toggle sold-out dishes instantly',
-                                style: GoogleFonts.inter(fontSize: 11.5, color: slateMuted),
+                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: slateMuted),
                               ),
                             ],
                           ),
@@ -1076,8 +1130,8 @@ $formattedItems
                               ),
                               child: Column(
                                 children: [
-                                  Text('$inStockCount', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w900, color: brandGreen)),
-                                  Text('In Stock', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: brandGreen)),
+                                  Text('$inStockCount', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w900, color: brandGreen)),
+                                  Text('In Stock', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w700, color: brandGreen)),
                                 ],
                               ),
                             ),
@@ -1093,8 +1147,8 @@ $formattedItems
                               ),
                               child: Column(
                                 children: [
-                                  Text('$outStockCount', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w900, color: primaryRed)),
-                                  Text('Out of Stock (86)', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: primaryRed)),
+                                  Text('$outStockCount', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w900, color: primaryRed)),
+                                  Text('Out of Stock (86)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w700, color: primaryRed)),
                                 ],
                               ),
                             ),
@@ -1112,10 +1166,10 @@ $formattedItems
                         ),
                         child: TextField(
                           onChanged: (v) => setModalState(() => searchQuery = v),
-                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w600),
                           decoration: InputDecoration(
                             hintText: 'Search menu dishes...',
-                            hintStyle: GoogleFonts.inter(fontSize: 13, color: slateMuted),
+                            hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: slateMuted),
                             prefixIcon: const Icon(Icons.search, size: 18, color: slateMuted),
                             border: InputBorder.none,
                             contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -1146,7 +1200,7 @@ $formattedItems
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(color: slateBorder),
                                   ),
-                                  child: const Center(child: Text('🍲', style: TextStyle(fontSize: 18))),
+                                  child: const Center(child: Text('🍲', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18)))),
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
@@ -1155,11 +1209,11 @@ $formattedItems
                                     children: [
                                       Text(
                                         item['name'] ?? '',
-                                        style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w800, color: slateDark),
+                                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w800, color: slateDark),
                                       ),
                                       Text(
                                         '₹${item['price'] ?? 0}',
-                                        style: GoogleFonts.inter(fontSize: 11.5, color: slateMuted, fontWeight: FontWeight.w600),
+                                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: slateMuted, fontWeight: FontWeight.w600),
                                       ),
                                     ],
                                   ),
@@ -1195,7 +1249,7 @@ $formattedItems
     if (Navigator.canPop(context)) {
       Navigator.pop(context);
     } else {
-      Navigator.pushReplacementNamed(context, '/home');
+      SystemNavigator.pop();
     }
   }
 
@@ -1241,7 +1295,7 @@ $formattedItems
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: const Color(0xFFFECDD3)),
                     ),
-                    child: const Center(child: Text('👨‍🍳', style: TextStyle(fontSize: 15))),
+                    child: const Center(child: Text('👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15)))),
                   ),
                   const SizedBox(width: 7),
                   Column(
@@ -1254,7 +1308,7 @@ $formattedItems
                           Text(
                             _restaurantName,
                             style: GoogleFonts.inter(
-                              fontSize: 14.5,
+                              fontSize: Responsive.scaledFontSize(context, 14.5),
                               fontWeight: FontWeight.w900,
                               color: slateDark,
                               letterSpacing: -0.2,
@@ -1282,7 +1336,7 @@ $formattedItems
                           Text(
                             _isStoreOpen ? 'STORE OPEN' : 'STORE CLOSED',
                             style: GoogleFonts.inter(
-                              fontSize: 8.5,
+                              fontSize: Responsive.scaledFontSize(context, 8.5),
                               fontWeight: FontWeight.w900,
                               color: _isStoreOpen ? brandGreen : primaryRed,
                               letterSpacing: 0.3,
@@ -1321,7 +1375,42 @@ $formattedItems
               ),
               child: Text(
                 '${_refreshCountdown}s',
-                style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w800, color: slateMuted),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w800, color: slateMuted),
+              ),
+            ),
+            // Logout Button
+            Bounceable(
+              onTap: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Logout'),
+                    content: const Text('Are you sure you want to log out from Kitchen Console?'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Logout', style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm == true && mounted) {
+                  await ref.read(authProvider.notifier).logout();
+                  if (mounted) {
+                    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                  }
+                }
+              },
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.logout_rounded, size: 15, color: slateMuted),
               ),
             ),
             const SizedBox(width: 4),
@@ -1394,15 +1483,15 @@ $formattedItems
         ),
         child: Column(
           children: [
-            const LiveDigitalClockBadge(
+            LiveDigitalClockBadge(
               backgroundColor: Colors.transparent,
               borderColor: Colors.transparent,
               textColor: slateDark,
               iconColor: slateMuted,
-              fontSize: 12,
+              fontSize: Responsive.scaledFontSize(context, 12),
               showSeconds: false,
             ),
-            Text('Live Time', style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w700, color: slateMuted)),
+            Text('Live Time', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w700, color: slateMuted)),
           ],
         ),
       ),
@@ -1420,8 +1509,8 @@ $formattedItems
         ),
         child: Column(
           children: [
-            Text(value, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, color: col), maxLines: 1),
-            Text(label, style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w700, color: slateMuted)),
+            Text(value, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w900, color: col), maxLines: 1),
+            Text(label, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w700, color: slateMuted)),
           ],
         ),
       ),
@@ -1451,7 +1540,7 @@ $formattedItems
             const SizedBox(width: 6),
             Text(
               label,
-              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: isSelected ? Colors.white : slateDark),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: isSelected ? Colors.white : slateDark),
             ),
           ],
         ),
@@ -1460,9 +1549,13 @@ $formattedItems
   }
 
   Widget _buildLiveOrdersTab() {
+    const liveStatuses = {'PENDING', 'CONFIRMED', 'PREPARING', 'PACKED', 'READY', 'OUT_FOR_DELIVERY'};
     final filtered = _orders.where((o) {
+      final status = (o['status'] ?? '').toString().toUpperCase();
+      // Only show live orders (exclude DELIVERED, CANCELLED, COMPLETED)
+      if (!liveStatuses.contains(status)) return false;
       if (_selectedStatusFilter == 'ALL') return true;
-      return o['status'] == _selectedStatusFilter;
+      return status == _selectedStatusFilter;
     }).toList();
 
     if (filtered.isEmpty) {
@@ -1478,12 +1571,12 @@ $formattedItems
                 child: const Icon(Icons.check_circle_outline, size: 44, color: slateMuted),
               ),
               const SizedBox(height: 14),
-              Text('No active orders right now', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: slateDark)),
+              Text('No active orders right now', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: slateDark)),
               const SizedBox(height: 6),
               Text(
                 'New incoming orders for $_restaurantName will appear here',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(fontSize: 12.5, color: slateMuted, height: 1.35),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: slateMuted, height: 1.35),
               ),
             ],
           ),
@@ -1561,35 +1654,96 @@ $formattedItems
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Order Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
+            Builder(
+              builder: (context) {
+                final isPickup = (order['deliveryMethod'] ?? '').toString().toUpperCase().contains('PICKUP') ||
+                    (order['deliveryMethod'] ?? '').toString().toUpperCase().contains('TAKEAWAY');
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '#$readableId',
-                      style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: slateDark),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              '#$readableId',
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: slateDark),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isPickup ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: isPickup ? const Color(0xFFF59E0B) : const Color(0xFF86EFAC),
+                                  width: 1.0,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(isPickup ? '🚶‍♂️' : '🛵', style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 9.5))),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    isPickup ? 'SELF PICKUP' : 'DELIVERY',
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 9),
+                                      fontWeight: FontWeight.w900,
+                                      color: isPickup ? const Color(0xFFB45309) : const Color(0xFF15803D),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: statusBadgeColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: statusBadgeColor.withValues(alpha: 0.3)),
+                              ),
+                              child: Text(
+                                statusLabel,
+                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w900, color: statusBadgeColor),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          '₹${total.toInt()}',
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: slateDark),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: statusBadgeColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: statusBadgeColor.withValues(alpha: 0.3)),
+                    if (isPickup) ...[
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFFBEB),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFFFDE68A)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('📍', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
+                            const SizedBox(width: 3),
+                            Text(
+                              'Customer will collect takeaway at counter (No Rider)',
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w800, color: const Color(0xFF92400E)),
+                            ),
+                          ],
+                        ),
                       ),
-                      child: Text(
-                        statusLabel,
-                        style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w900, color: statusBadgeColor),
-                      ),
-                    ),
+                    ],
                   ],
-                ),
-                Text(
-                  '₹${total.toInt()}',
-                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: slateDark),
-                ),
-              ],
+                );
+              },
             ),
             const SizedBox(height: 6),
 
@@ -1605,7 +1759,7 @@ $formattedItems
                       Expanded(
                         child: Text(
                           customerName,
-                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: slateDark),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: slateDark),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1631,7 +1785,7 @@ $formattedItems
                           children: [
                             const Icon(Icons.print_rounded, size: 12, color: Color(0xFF2563EB)),
                             const SizedBox(width: 4),
-                            Text('KOT', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w900, color: const Color(0xFF2563EB))),
+                            Text('KOT', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w900, color: const Color(0xFF2563EB))),
                           ],
                         ),
                       ),
@@ -1659,7 +1813,7 @@ $formattedItems
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(color: primaryRed, borderRadius: BorderRadius.circular(4)),
-                      child: Text('${qty}x', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white)),
+                      child: Text('${qty}x', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w900, color: Colors.white)),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -1668,17 +1822,17 @@ $formattedItems
                         children: [
                           Text(
                             name,
-                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: slateDark),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: slateDark),
                           ),
                           if (variant != null && variant.isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(top: 2),
-                              child: Text(variant, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: brandAmber)),
+                              child: Text(variant, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w600, color: brandAmber)),
                             ),
                           if (notes != null && notes.isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(top: 2),
-                              child: Text('📝 $notes', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, fontStyle: FontStyle.italic, color: brandAmber)),
+                              child: Text('📝 $notes', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w500, fontStyle: FontStyle.italic, color: brandAmber)),
                             ),
                         ],
                       ),
@@ -1700,12 +1854,12 @@ $formattedItems
                 ),
                 child: Row(
                   children: [
-                    const Text('🛵', style: TextStyle(fontSize: 14)),
+                    const Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         'Rider: ${assignedRider['name'] ?? 'Assigned'}',
-                        style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w800, color: const Color(0xFF166534)),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w800, color: const Color(0xFF166534)),
                       ),
                     ),
                   ],
@@ -1730,7 +1884,7 @@ $formattedItems
                           border: Border.all(color: const Color(0xFFFECDD3)),
                         ),
                         child: Center(
-                          child: Text('Reject', style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800, color: primaryRed)),
+                          child: Text('Reject', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w800, color: primaryRed)),
                         ),
                       ),
                     ),
@@ -1749,7 +1903,7 @@ $formattedItems
                         child: Center(
                           child: isUpdating
                               ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                              : Text('Accept & Cook ⏱️', style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800, color: Colors.white)),
+                              : Text('Accept & Cook ⏱️', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w800, color: Colors.white)),
                         ),
                       ),
                     ),
@@ -1771,7 +1925,7 @@ $formattedItems
                         child: Center(
                           child: isUpdating
                               ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                              : Text('Mark Food as Ready 🥡', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white)),
+                              : Text('Mark Food as Ready 🥡', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: Colors.white)),
                         ),
                       ),
                     ),
@@ -1803,7 +1957,7 @@ $formattedItems
                         border: Border.all(color: const Color(0xFFA7F3D0)),
                       ),
                       child: Center(
-                        child: Text('Waiting for Rider Pickup 🛵', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: brandGreen)),
+                        child: Text('Waiting for Rider Pickup 🛵', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: brandGreen)),
                       ),
                     ),
                   ),
@@ -1836,9 +1990,9 @@ $formattedItems
           children: [
             const Icon(Icons.menu_book_rounded, size: 48, color: slateMuted),
             const SizedBox(height: 12),
-            Text('No menu items loaded', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: slateDark)),
+            Text('No menu items loaded', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w800, color: slateDark)),
             const SizedBox(height: 4),
-            Text('Dishes for $_restaurantName will appear here', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
+            Text('Dishes for $_restaurantName will appear here', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
           ],
         ),
       );
@@ -1895,14 +2049,15 @@ $formattedItems
                 child: TextField(
                   controller: _menuSearchController,
                   onChanged: (val) {
-                    setState(() {
-                      _menuSearchQuery = val;
+                    _menuSearchDebounce?.cancel();
+                    _menuSearchDebounce = Timer(const Duration(milliseconds: 300), () {
+                      if (mounted) setState(() => _menuSearchQuery = val);
                     });
                   },
-                  style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w600, color: slateDark),
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w600, color: slateDark),
                   decoration: InputDecoration(
                     hintText: 'Search dish name, price or category...',
-                    hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w500),
+                    hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: const Color(0xFF94A3B8), fontWeight: FontWeight.w500),
                     prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF64748B)),
                     suffixIcon: _menuSearchQuery.isNotEmpty
                         ? IconButton(
@@ -1978,14 +2133,14 @@ $formattedItems
                         const SizedBox(height: 14),
                         Text(
                           'No dishes found',
-                          style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: slateDark),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: slateDark),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           _menuSearchQuery.isNotEmpty
                               ? 'No items match "$_menuSearchQuery"'
                               : 'No dishes match selected stock filter',
-                          style: GoogleFonts.inter(fontSize: 12.5, color: slateMuted),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: slateMuted),
                           textAlign: TextAlign.center,
                         ),
                         if (_menuSearchQuery.isNotEmpty) ...[
@@ -2004,7 +2159,7 @@ $formattedItems
                             ),
                             child: Text(
                               'Clear Search',
-                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white),
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: Colors.white),
                             ),
                           ),
                         ],
@@ -2065,11 +2220,11 @@ $formattedItems
                                       imageUrl: imageUrl,
                                       fit: BoxFit.cover,
                                       errorWidget: (_, __, ___) => const Center(
-                                        child: Text('🍲', style: TextStyle(fontSize: 20)),
+                                        child: Text('🍲', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 20))),
                                       ),
                                     )
                                   : const Center(
-                                      child: Text('🍲', style: TextStyle(fontSize: 20)),
+                                      child: Text('🍲', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 20))),
                                     ),
                             ),
                           ),
@@ -2083,7 +2238,7 @@ $formattedItems
                                 Text(
                                   name,
                                   style: GoogleFonts.inter(
-                                    fontSize: 14,
+                                    fontSize: Responsive.scaledFontSize(context, 14),
                                     fontWeight: FontWeight.w800,
                                     color: isAvailable ? slateDark : const Color(0xFF94A3B8),
                                   ),
@@ -2096,7 +2251,7 @@ $formattedItems
                                     Text(
                                       '₹${price.toInt()}',
                                       style: GoogleFonts.inter(
-                                        fontSize: 13,
+                                        fontSize: Responsive.scaledFontSize(context, 13),
                                         fontWeight: FontWeight.w900,
                                         color: isAvailable ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
                                       ),
@@ -2111,7 +2266,7 @@ $formattedItems
                                       child: Text(
                                         isAvailable ? 'LIVE' : '86 • OFF',
                                         style: GoogleFonts.inter(
-                                          fontSize: 9.5,
+                                          fontSize: Responsive.scaledFontSize(context, 9.5),
                                           fontWeight: FontWeight.w900,
                                           color: isAvailable ? const Color(0xFF15803D) : const Color(0xFFDC2626),
                                           letterSpacing: 0.3,
@@ -2177,7 +2332,7 @@ $formattedItems
         child: Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 11.5,
+            fontSize: Responsive.scaledFontSize(context, 11.5),
             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
             color: isSelected ? Colors.white : const Color(0xFF64748B),
           ),
@@ -2304,7 +2459,7 @@ $formattedItems
                       child: Text(
                         p['label']!,
                         style: GoogleFonts.inter(
-                          fontSize: 12,
+                          fontSize: Responsive.scaledFontSize(context, 12),
                           fontWeight: FontWeight.w800,
                           color: isSel ? Colors.white : slateDark,
                         ),
@@ -2334,15 +2489,15 @@ $formattedItems
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(periodTitle, style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.9), fontWeight: FontWeight.w700)),
+                Text(periodTitle, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: Colors.white.withValues(alpha: 0.9), fontWeight: FontWeight.w700)),
                 const SizedBox(height: 6),
-                Text('₹${netProfit.toStringAsFixed(2)}', style: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white)),
+                Text('₹${netProfit.toStringAsFixed(2)}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 28), fontWeight: FontWeight.w900, color: Colors.white)),
                 const SizedBox(height: 14),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Food Sales: ₹${totalSales.toStringAsFixed(0)}', style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white, fontWeight: FontWeight.w700)),
-                    Text('Orders: $ordersCount', style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white, fontWeight: FontWeight.w700)),
+                    Text('Food Sales: ₹${totalSales.toStringAsFixed(0)}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: Colors.white, fontWeight: FontWeight.w700)),
+                    Text('Orders: $ordersCount', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: Colors.white, fontWeight: FontWeight.w700)),
                   ],
                 ),
               ],
@@ -2351,7 +2506,7 @@ $formattedItems
           const SizedBox(height: 20),
 
           // 3. Settlement Breakdown
-          Text('Settlement Breakdown', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w900, color: slateDark)),
+          Text('Settlement Breakdown', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w900, color: slateDark)),
           const SizedBox(height: 10),
           _buildSummaryRow(
             'Food Item Sales (Gross)',
@@ -2372,7 +2527,7 @@ $formattedItems
 
           // 4. Settled Orders for this period
           if (filteredOrdersList.isNotEmpty) ...[
-            Text('Orders in this Period ($ordersCount)', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: slateDark)),
+            Text('Orders in this Period ($ordersCount)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: slateDark)),
             const SizedBox(height: 10),
             ...filteredOrdersList.map((o) {
               final String id = (o['id'] ?? '').toString();
@@ -2426,12 +2581,12 @@ $formattedItems
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(displayId, style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w900, color: slateDark)),
-                              Text('₹${orderFoodSum.toStringAsFixed(0)}', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: brandGreen)),
+                              Text(displayId, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w900, color: slateDark)),
+                              Text('₹${orderFoodSum.toStringAsFixed(0)}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: brandGreen)),
                             ],
                           ),
                           const SizedBox(height: 3),
-                          Text(itemsDesc, style: GoogleFonts.inter(fontSize: 11.5, color: slateMuted, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          Text(itemsDesc, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: slateMuted, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
                         ],
                       ),
                     ),
@@ -2447,9 +2602,9 @@ $formattedItems
                 children: [
                   Icon(Icons.receipt_outlined, size: 44, color: slateMuted.withValues(alpha: 0.5)),
                   const SizedBox(height: 10),
-                  Text('No Settled Orders Found', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: slateDark)),
+                  Text('No Settled Orders Found', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: slateDark)),
                   const SizedBox(height: 4),
-                  Text('Delivered restaurant orders will appear here.', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
+                  Text('Delivered restaurant orders will appear here.', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
                 ],
               ),
             ),
@@ -2467,8 +2622,8 @@ $formattedItems
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: slateDark)),
-          Text(val, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: valColor)),
+          Text(title, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700, color: slateDark)),
+          Text(val, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: valColor)),
         ],
       ),
     );
@@ -2480,7 +2635,7 @@ $formattedItems
       children: [
         SwitchListTile.adaptive(
           title: Text('Store Open Status', style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: slateDark)),
-          subtitle: Text(_isStoreOpen ? 'Accepting online orders' : 'Closed for online orders', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
+          subtitle: Text(_isStoreOpen ? 'Accepting online orders' : 'Closed for online orders', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
           value: _isStoreOpen,
           activeColor: brandGreen,
           onChanged: (val) {
@@ -2491,7 +2646,7 @@ $formattedItems
         const Divider(height: 1, color: slateBorder),
         SwitchListTile.adaptive(
           title: Text('Busy Mode (+15m prep delay)', style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: slateDark)),
-          subtitle: Text('Adds extra cooking time during rush', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
+          subtitle: Text('Adds extra cooking time during rush', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
           value: _isBusyMode,
           activeColor: brandAmber,
           onChanged: (val) {

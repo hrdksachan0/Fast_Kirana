@@ -12,14 +12,14 @@ class AdminSettingsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppDesignSystem.background,
         elevation: 0,
-        title: Text('Settings', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+        title: Text('Settings', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             // Delivery Settings
-            Text('Delivery Settings', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: AppDesignSystem.textSecondary, letterSpacing: 0.5)),
+            Text('Delivery Settings', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: AppDesignSystem.textSecondary, letterSpacing: 0.5)),
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(color: AppDesignSystem.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppDesignSystem.borderLight), boxShadow: AppDesignSystem.shadowSm),
@@ -34,7 +34,7 @@ class AdminSettingsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Text('Notifications', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: AppDesignSystem.textSecondary, letterSpacing: 0.5)),
+            Text('Notifications', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: AppDesignSystem.textSecondary, letterSpacing: 0.5)),
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(color: AppDesignSystem.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppDesignSystem.borderLight), boxShadow: AppDesignSystem.shadowSm),
@@ -60,7 +60,7 @@ class AdminSettingsScreen extends StatelessWidget {
               child: TextButton.icon(
                 onPressed: () {},
                 icon: Icon(Icons.logout_rounded, color: AppDesignSystem.danger),
-                label: Text('Logout Admin', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: AppDesignSystem.danger)),
+                label: Text('Logout Admin', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w700, color: AppDesignSystem.danger)),
               ),
             ),
           ],
@@ -74,8 +74,8 @@ class AdminSettingsScreen extends StatelessWidget {
       value: value,
       onChanged: (v) => onChanged(v),
       activeColor: AppDesignSystem.primary,
-      title: Text(title, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
-      subtitle: Text(subtitle, style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
+      title: Text(title, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
+      subtitle: Text(subtitle, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary)),
     );
   }
 

@@ -177,12 +177,12 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('🎙️', style: TextStyle(fontSize: 22)),
+              const Text('🎙️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22))),
               const SizedBox(width: 8),
               Text(
                 'Voice Search',
                 style: GoogleFonts.inter(
-                  fontSize: 18,
+                  fontSize: Responsive.scaledFontSize(context, 18),
                   fontWeight: FontWeight.w900,
                   color: const Color(0xFF0F172A),
                 ),
@@ -193,7 +193,7 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
           Text(
             'Speak product or grocery name in Hindi or English',
             style: GoogleFonts.inter(
-              fontSize: 12.5,
+              fontSize: Responsive.scaledFontSize(context, 12.5),
               color: const Color(0xFF64748B),
               fontWeight: FontWeight.w500,
             ),
@@ -280,7 +280,7 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
               _liveTranscript,
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
-                fontSize: 14.5,
+                fontSize: Responsive.scaledFontSize(context, 14.5),
                 fontWeight: FontWeight.w700,
                 color: _isListening ? const Color(0xFFBE123C) : const Color(0xFF0F172A),
               ),

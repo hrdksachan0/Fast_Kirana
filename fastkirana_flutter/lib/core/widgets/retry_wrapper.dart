@@ -51,7 +51,7 @@ class RetryWrapper extends StatelessWidget {
                 error is String ? error as String : 'Something went wrong',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: Responsive.scaledFontSize(context, 14),
                   fontWeight: FontWeight.w500,
                   color: AppDesignSystem.textSecondary,
                 ),

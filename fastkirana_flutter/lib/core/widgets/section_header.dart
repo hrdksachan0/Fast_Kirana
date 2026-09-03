@@ -24,7 +24,7 @@ class SectionHeader extends StatelessWidget {
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 17,
+                    fontSize: Responsive.scaledFontSize(context, 17),
                     fontWeight: FontWeight.w800,
                     color: AppDesignSystem.textPrimary,
                     letterSpacing: -0.3,
@@ -35,7 +35,7 @@ class SectionHeader extends StatelessWidget {
                   Text(
                     subtitle!,
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: Responsive.scaledFontSize(context, 12),
                       fontWeight: FontWeight.w500,
                       color: AppDesignSystem.textSecondary,
                     ),
@@ -55,7 +55,7 @@ class SectionHeader extends StatelessWidget {
               child: const Text(
                 'See All',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: Responsive.scaledFontSize(context, 12),
                   fontWeight: FontWeight.w700,
                   color: AppDesignSystem.primary,
                 ),

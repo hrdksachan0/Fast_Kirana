@@ -42,7 +42,13 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_data', jsonEncode(user.toJson()));
     await SecureStorage.write('user_data', jsonEncode(user.toJson()));
-    await SecureStorage.write('auth_token', await prefs.getString('auth_token') ?? '');
+    await SecureStorage.write('auth_token', prefs.getString('auth_token') ?? '');
+    await SecureStorage.write('user_id', user.id);
+    if (user.phone != null && user.phone!.isNotEmpty) await SecureStorage.write('user_phone', user.phone!);
+    if (user.email.isNotEmpty) await SecureStorage.write('user_email', user.email);
+    if (user.name != null && user.name!.isNotEmpty) await SecureStorage.write('user_name', user.name!);
+    if (user.role.isNotEmpty) await SecureStorage.write('user_role', user.role);
+    await SecureStorage.loadCache();
     state = AsyncValue.data(user);
 
     // Register device FCM push token on login
@@ -83,8 +89,12 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     await SecureStorage.delete('user_role');
     await SecureStorage.delete('user_name');
     await SecureStorage.delete('user_email');
+    SecureStorage.invalidateCache();
     state = const AsyncValue.data(null);
   }
+
+  /// Alias for clear() to maintain standard naming across dashboards
+  Future<void> logout() => clear();
 }
 
 final authProvider =

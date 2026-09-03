@@ -53,7 +53,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 child: Text(
                   'Skip',
                   style: GoogleFonts.inter(
-                    fontSize: 14,
+                    fontSize: Responsive.scaledFontSize(context, 14),
                     fontWeight: FontWeight.w600,
                     color: AppDesignSystem.textSecondary,
                   ),
@@ -83,7 +83,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           child: Center(
                             child: Text(
                               item['emoji']!,
-                              style: const TextStyle(fontSize: 64),
+                              style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 64)),
                             ),
                           ),
                         ),
@@ -92,7 +92,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           item['title']!,
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(
-                            fontSize: 22,
+                            fontSize: Responsive.scaledFontSize(context, 22),
                             fontWeight: FontWeight.w800,
                             color: AppDesignSystem.textPrimary,
                           ),
@@ -102,7 +102,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           item['subtitle']!,
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(
-                            fontSize: 14,
+                            fontSize: Responsive.scaledFontSize(context, 14),
                             color: AppDesignSystem.textSecondary,
                             height: 1.5,
                           ),
@@ -152,7 +152,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   child: Text(
                     _currentPage == _pages.length - 1 ? 'Get Started' : 'Next',
-                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: Colors.white),
                   ),
                 ),
               ),

@@ -92,11 +92,11 @@ class VariantSelectorSheet extends ConsumerWidget {
                                 : product.imageUrl!,
                             fit: BoxFit.contain,
                             errorWidget: (_, __, ___) => const Center(
-                              child: Text('🛒', style: TextStyle(fontSize: 24)),
+                              child: Text('🛒', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24))),
                             ),
                           )
                         : const Center(
-                            child: Text('🛒', style: TextStyle(fontSize: 24)),
+                            child: Text('🛒', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24))),
                           ),
                   ),
                 ),
@@ -110,7 +110,7 @@ class VariantSelectorSheet extends ConsumerWidget {
                       Text(
                         product.name,
                         style: GoogleFonts.inter(
-                          fontSize: 15,
+                          fontSize: Responsive.scaledFontSize(context, 15),
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF0F172A),
                           height: 1.25,
@@ -122,7 +122,7 @@ class VariantSelectorSheet extends ConsumerWidget {
                       Text(
                         product.unit.isNotEmpty ? product.unit : (isFood ? 'Freshly Prepared' : 'Options available'),
                         style: GoogleFonts.inter(
-                          fontSize: 11.5,
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF64748B),
                         ),
@@ -151,7 +151,7 @@ class VariantSelectorSheet extends ConsumerWidget {
             child: Text(
               'SELECT OPTION / PACK SIZE',
               style: GoogleFonts.inter(
-                fontSize: 11,
+                fontSize: Responsive.scaledFontSize(context, 11),
                 fontWeight: FontWeight.w900,
                 color: const Color(0xFF94A3B8),
                 letterSpacing: 0.8,
@@ -253,7 +253,7 @@ class VariantSelectorSheet extends ConsumerWidget {
                 Text(
                   variant.name,
                   style: GoogleFonts.inter(
-                    fontSize: 13.5,
+                    fontSize: Responsive.scaledFontSize(context, 13.5),
                     fontWeight: FontWeight.w800,
                     color: const Color(0xFF0F172A),
                   ),
@@ -264,7 +264,7 @@ class VariantSelectorSheet extends ConsumerWidget {
                     Text(
                       '₹${variant.price.toInt()}',
                       style: GoogleFonts.inter(
-                        fontSize: 14.5,
+                        fontSize: Responsive.scaledFontSize(context, 14.5),
                         fontWeight: FontWeight.w900,
                         color: const Color(0xFF0F172A),
                       ),
@@ -274,7 +274,7 @@ class VariantSelectorSheet extends ConsumerWidget {
                       Text(
                         '₹${variant.mrp.toInt()}',
                         style: GoogleFonts.inter(
-                          fontSize: 11,
+                          fontSize: Responsive.scaledFontSize(context, 11),
                           fontWeight: FontWeight.w500,
                           decoration: TextDecoration.lineThrough,
                           color: const Color(0xFF94A3B8),
@@ -290,7 +290,7 @@ class VariantSelectorSheet extends ConsumerWidget {
                         child: Text(
                           '$discount% OFF',
                           style: GoogleFonts.inter(
-                            fontSize: 9.5,
+                            fontSize: Responsive.scaledFontSize(context, 9.5),
                             fontWeight: FontWeight.w800,
                             color: const Color(0xFFE11D48),
                           ),
@@ -314,7 +314,7 @@ class VariantSelectorSheet extends ConsumerWidget {
               child: Text(
                 'Sold Out',
                 style: GoogleFonts.inter(
-                  fontSize: 11,
+                  fontSize: Responsive.scaledFontSize(context, 11),
                   fontWeight: FontWeight.w800,
                   color: const Color(0xFF94A3B8),
                 ),
@@ -330,7 +330,7 @@ class VariantSelectorSheet extends ConsumerWidget {
               child: Text(
                 'Closed',
                 style: GoogleFonts.inter(
-                  fontSize: 11,
+                  fontSize: Responsive.scaledFontSize(context, 11),
                   fontWeight: FontWeight.w800,
                   color: const Color(0xFF94A3B8),
                 ),
@@ -367,7 +367,7 @@ class VariantSelectorSheet extends ConsumerWidget {
               child: Text(
                 'ADD',
                 style: GoogleFonts.inter(
-                  fontSize: 12,
+                  fontSize: Responsive.scaledFontSize(context, 12),
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0.5,
                 ),
@@ -400,7 +400,7 @@ class VariantSelectorSheet extends ConsumerWidget {
                       style: GoogleFonts.inter(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
-                        fontSize: 13,
+                        fontSize: Responsive.scaledFontSize(context, 13),
                       ),
                     ),
                   ),

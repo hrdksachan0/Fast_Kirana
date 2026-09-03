@@ -10,6 +10,7 @@ import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/supabase_service.dart';
+import 'core/services/secure_storage_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'firebase_options.dart';
 
@@ -54,7 +55,7 @@ void main() async {
                   const SizedBox(height: 16),
                   Text(
                     'Oops! Something went wrong',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppDesignSystem.textPrimary),
+                    style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.bold, color: AppDesignSystem.textPrimary),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
@@ -63,7 +64,7 @@ void main() async {
                     textAlign: TextAlign.center,
                     maxLines: 4,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: AppDesignSystem.textSecondary, height: 1.4),
+                    style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary, height: 1.4),
                   ),
                   const SizedBox(height: 20),
                   Row(
@@ -132,6 +133,13 @@ void main() async {
     debugPrint("Supabase initialization error: $e");
   }
 
+  // ─── Auth Cache Warm-up (zero I/O on subsequent API calls) ───────
+  try {
+    await SecureStorage.loadCache();
+  } catch (e) {
+    debugPrint("Auth cache load error: $e");
+  }
+
   // ─── Launch App ─────────────────────────────────────────────────
   runApp(const ProviderScope(child: FastKiranaApp()));
 }
@@ -151,7 +159,15 @@ class FastKiranaApp extends StatelessWidget {
       onGenerateRoute: AppRouter.generateRoute,
       initialRoute: '/splash',
       builder: (context, child) {
-        return child ?? const SizedBox.shrink();
+        final mediaQuery = MediaQuery.of(context);
+        final clampedTextScaler = mediaQuery.textScaler.clamp(
+          minScaleFactor: 0.85,
+          maxScaleFactor: 1.15,
+        );
+        return MediaQuery(
+          data: mediaQuery.copyWith(textScaler: clampedTextScaler),
+          child: child ?? const SizedBox.shrink(),
+        );
       },
     );
   }

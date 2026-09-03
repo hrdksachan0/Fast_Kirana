@@ -196,11 +196,17 @@ OutletLocation getOutletLocation({
   // 1. If order has sub-orders, check for restaurant suborder
   if (rawOrder is Map && rawOrder['subOrders'] is List) {
     final subOrders = rawOrder['subOrders'] as List;
-    final restSub = subOrders.firstWhere(
-      (s) => s is Map && (s['type'] == 'RESTAURANT' || s['restaurantId'] != null || (s['readableId']?.toString().toUpperCase().endsWith('-R') ?? false)),
-      orElse: () => null,
-    );
-    if (restSub != null) {
+    dynamic restSub;
+    for (final s in subOrders) {
+      if (s is Map &&
+          (s['type'] == 'RESTAURANT' ||
+              s['restaurantId'] != null ||
+              (s['readableId']?.toString().toUpperCase().endsWith('-R') ?? false))) {
+        restSub = s;
+        break;
+      }
+    }
+    if (restSub != null && restSub is Map) {
       final subRestId = restSub['restaurantId']?.toString();
       final subShopName = (restSub['shopName'] ?? restSub['restaurantName'])?.toString();
       final subItems = restSub['items'] as List<dynamic>?;

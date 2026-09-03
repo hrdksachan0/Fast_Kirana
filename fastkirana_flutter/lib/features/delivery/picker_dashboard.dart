@@ -185,7 +185,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: const Color(0xFFFED7AA)),
               ),
-              child: const Text('📦', style: TextStyle(fontSize: 18)),
+              child: const Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18))),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -194,13 +194,13 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                 children: [
                   Text(
                     'Picker Dashboard',
-                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: slateDark),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: slateDark),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
                     'Warehouse Item Packing',
-                    style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w600, color: slateMuted),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w600, color: slateMuted),
                   ),
                 ],
               ),
@@ -211,10 +211,37 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
           IconButton(
             icon: _isRefreshing
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: brandOrange))
-                : Text('$_refreshCountdown' 's', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: slateMuted)),
+                : Text('$_refreshCountdown' 's', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w800, color: slateMuted)),
             onPressed: () => _fetchPickerOrders(),
           ),
-          const SizedBox(width: 6),
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, size: 20, color: slateMuted),
+            tooltip: 'Logout',
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Logout'),
+                  content: const Text('Are you sure you want to log out from Picker Console?'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Logout', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              );
+              if (confirm == true && mounted) {
+                await ref.read(authProvider.notifier).logout();
+                if (mounted) {
+                  Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                }
+              }
+            },
+          ),
+          const SizedBox(width: 4),
         ],
       ),
       body: Column(
@@ -248,9 +275,9 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                               child: const Icon(Icons.check_circle_outline, size: 48, color: slateMuted),
                             ),
                             const SizedBox(height: 16),
-                            Text('All Orders Packed! 🎉', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: slateDark)),
+                            Text('All Orders Packed! 🎉', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: slateDark)),
                             const SizedBox(height: 4),
-                            Text('New orders to pick will appear here automatically', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
+                            Text('New orders to pick will appear here automatically', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
                           ],
                         ),
                       )
@@ -288,10 +315,10 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
               borderColor: Colors.transparent,
               textColor: slateDark,
               iconColor: slateMuted,
-              fontSize: 13,
+              fontSize: Responsive.scaledFontSize(context, 13),
               showSeconds: false,
             ),
-            Text('Live Clock', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: slateMuted)),
+            Text('Live Clock', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w700, color: slateMuted)),
           ],
         ),
       ),
@@ -309,8 +336,8 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
         ),
         child: Column(
           children: [
-            Text(value, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: col), maxLines: 1),
-            Text(label, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: slateMuted)),
+            Text(value, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: col), maxLines: 1),
+            Text(label, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w700, color: slateMuted)),
           ],
         ),
       ),
@@ -362,7 +389,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                   children: [
                     Text(
                       '#$readableId',
-                      style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: slateDark),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: slateDark),
                     ),
                     const SizedBox(width: 8),
                     Container(
@@ -373,16 +400,16 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                       ),
                       child: Text(
                         allItemsPicked ? 'ALL ITEMS READY' : '${pickedSet.length}/${items.length} PICKED',
-                        style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w900, color: allItemsPicked ? brandGreen : brandOrange),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w900, color: allItemsPicked ? brandGreen : brandOrange),
                       ),
                     ),
                   ],
                 ),
-                Text('₹${total.toInt()}', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w900, color: slateDark)),
+                Text('₹${total.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w900, color: slateDark)),
               ],
             ),
             const SizedBox(height: 4),
-            Text('👤 Customer: $customerName', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: slateMuted)),
+            Text('👤 Customer: $customerName', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: slateMuted)),
             const Divider(height: 16, color: slateBorder),
 
             // Picking Items Checklist
@@ -415,14 +442,14 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(5), border: Border.all(color: slateBorder)),
-                        child: Text('${qty}x', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w900, color: brandOrange)),
+                        child: Text('${qty}x', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w900, color: brandOrange)),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           name,
                           style: GoogleFonts.inter(
-                            fontSize: 13,
+                            fontSize: Responsive.scaledFontSize(context, 13),
                             fontWeight: FontWeight.w700,
                             color: isPicked ? slateMuted : slateDark,
                             decoration: isPicked ? TextDecoration.lineThrough : null,
@@ -457,7 +484,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                           const SizedBox(width: 6),
                           Text(
                             'Mark as Packed & Notify Rider 🛵',
-                            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: Colors.white),
                           ),
                         ],
                       ),

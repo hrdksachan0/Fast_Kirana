@@ -1,20 +1,15 @@
+import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Secure storage wrapper for sensitive data (auth tokens, user credentials).
 ///
 /// Falls back to SharedPreferences for one-time migration of legacy auth keys
-/// (`auth_token`, `user_data`, `user_id`, `user_phone`, `user_email`, `user_name`,
-/// `user_role`) that may have been written before secure storage was wired.
-/// On read, if the value is found in prefs but not in secure storage, it is
-/// migrated and removed from prefs.
 class SecureStorage {
   static const FlutterSecureStorage _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
 
-  /// Keys that used to live in SharedPreferences. Read fallback checks these
-  /// so existing logged-in users aren't silently logged out after upgrade.
   static const _legacyPrefsKeys = <String>{
     'auth_token',
     'user_data',
@@ -22,12 +17,86 @@ class SecureStorage {
     'user_phone',
   };
 
+  // ─── In-memory auth cache (avoids repeated I/O on every API call) ───
+  static String? _cachedToken;
+  static String? _cachedUserId;
+  static String? _cachedUserPhone;
+  static String? _cachedUserEmail;
+  static String? _cachedUserName;
+  static String? _cachedUserRole;
+  static Map<String, String>? _cachedUserData;
+  static bool _isCacheLoaded = false;
+
+  /// Returns true if the in-memory cache has been populated.
+  static bool get isCacheLoaded => _isCacheLoaded;
+
+  /// Load all auth fields into the in-memory cache once.
+  /// Call this on app startup and after any auth mutation (login/logout).
+  static Future<void> loadCache() async {
+    if (_isCacheLoaded) return;
+    try {
+      _cachedToken = await read('auth_token');
+      _cachedUserId = await read('user_id');
+      _cachedUserPhone = await read('user_phone');
+      _cachedUserEmail = await read('user_email');
+      _cachedUserName = await read('user_name');
+      _cachedUserRole = await read('user_role');
+
+      final raw = await read('user_data');
+      if (raw != null && raw.isNotEmpty) {
+        try {
+          _cachedUserData = Map<String, String>.from(
+            (jsonDecode(raw) as Map<String, dynamic>).map(
+              (k, v) => MapEntry(k, v.toString()),
+            ),
+          );
+        } catch (_) {
+          _cachedUserData = null;
+        }
+      }
+
+      _isCacheLoaded = true;
+    } catch (_) {}
+  }
+
+  /// Invalidate the cache. Call on logout or when user data changes.
+  static void invalidateCache() {
+    _cachedToken = null;
+    _cachedUserId = null;
+    _cachedUserPhone = null;
+    _cachedUserEmail = null;
+    _cachedUserName = null;
+    _cachedUserRole = null;
+    _cachedUserData = null;
+    _isCacheLoaded = false;
+  }
+
+  // ─── Synchronous cache reads (used by the auth interceptor) ───
+  static String? get cachedToken => _cachedToken;
+  static String? get cachedUserId => _cachedUserId;
+  static String? get cachedUserPhone => _cachedUserPhone;
+  static String? get cachedUserEmail => _cachedUserEmail;
+  static String? get cachedUserName => _cachedUserName;
+  static String? get cachedUserRole => _cachedUserRole;
+  static Map<String, String>? get cachedUserData => _cachedUserData;
+
+  /// Parse user_data JSON once from cache and extract fields.
+  /// Returns a map with keys: id, email, name, role, phone
+  static Map<String, String>? getParsedUserData() {
+    if (_cachedUserData == null) return null;
+    final result = <String, String>{};
+    for (final entry in _cachedUserData!.entries) {
+      result[entry.key] = entry.value;
+    }
+    return result;
+  }
+
+  // ─── Async reads (still used for initial load, migrations, etc.) ───
   static Future<String?> read(String key) async {
     try {
       final value = await _storage.read(key: key);
       if (value != null && value.isNotEmpty) return value;
 
-      // One-time migration fallback for legacy keys
       if (_legacyPrefsKeys.contains(key)) {
         final prefs = await SharedPreferences.getInstance();
         final legacy = prefs.getString(key);
@@ -37,23 +106,19 @@ class SecureStorage {
           return legacy;
         }
       }
-      return null;
     } catch (_) {
-      // Secure storage unavailable (eg. locked device). Fall back to prefs.
       try {
         final prefs = await SharedPreferences.getInstance();
         return prefs.getString(key);
-      } catch (_) {
-        return null;
-      }
+      } catch (_) {}
     }
+    return null;
   }
 
   static Future<void> write(String key, String value) async {
     try {
       await _storage.write(key: key, value: value);
     } catch (_) {
-      // Best-effort fallback to prefs if secure storage fails.
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(key, value);
@@ -71,15 +136,12 @@ class SecureStorage {
     } catch (_) {}
   }
 
-  /// Wipes ALL keys from secure storage. Used on logout.
   static Future<void> deleteAll() async {
     try {
       await _storage.deleteAll();
     } catch (_) {}
   }
 
-  /// Bulk read — useful for the auth interceptor which previously read
-  /// several keys at once from SharedPreferences.
   static Future<Map<String, String>> readMany(Iterable<String> keys) async {
     final result = <String, String>{};
     for (final key in keys) {

@@ -89,7 +89,7 @@ class CartConflictDialog extends StatelessWidget {
             Text(
               'Switch Restaurant?',
               style: GoogleFonts.inter(
-                fontSize: 18,
+                fontSize: Responsive.scaledFontSize(context, 18),
                 fontWeight: FontWeight.w900,
                 color: const Color(0xFF0F172A),
                 letterSpacing: -0.3,
@@ -103,7 +103,7 @@ class CartConflictDialog extends StatelessWidget {
               textAlign: TextAlign.center,
               text: TextSpan(
                 style: GoogleFonts.inter(
-                  fontSize: 12.5,
+                  fontSize: Responsive.scaledFontSize(context, 12.5),
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFF64748B),
                   height: 1.45,
@@ -153,11 +153,11 @@ class CartConflictDialog extends StatelessWidget {
                                   : product.imageUrl!,
                               fit: BoxFit.cover,
                               errorWidget: (_, __, ___) => const Center(
-                                child: Text('🍽️', style: TextStyle(fontSize: 22)),
+                                child: Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22))),
                               ),
                             )
                           : const Center(
-                              child: Text('🍽️', style: TextStyle(fontSize: 22)),
+                              child: Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22))),
                             ),
                     ),
                   ),
@@ -178,7 +178,7 @@ class CartConflictDialog extends StatelessWidget {
                           child: Text(
                             newOutletName.toUpperCase(),
                             style: GoogleFonts.inter(
-                              fontSize: 9,
+                              fontSize: Responsive.scaledFontSize(context, 9),
                               fontWeight: FontWeight.w900,
                               color: const Color(0xFF047857),
                               letterSpacing: 0.3,
@@ -189,7 +189,7 @@ class CartConflictDialog extends StatelessWidget {
                         Text(
                           product.name,
                           style: GoogleFonts.inter(
-                            fontSize: 13,
+                            fontSize: Responsive.scaledFontSize(context, 13),
                             fontWeight: FontWeight.w800,
                             color: const Color(0xFF0F172A),
                           ),
@@ -200,7 +200,7 @@ class CartConflictDialog extends StatelessWidget {
                         Text(
                           '₹${product.price.toInt()} • ${product.unit}',
                           style: GoogleFonts.inter(
-                            fontSize: 11,
+                            fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF64748B),
                           ),
@@ -231,7 +231,7 @@ class CartConflictDialog extends StatelessWidget {
                           ? 'Your $groceryItemsCount Grocery item(s) will stay safe in your cart!'
                           : 'Grocery items can always be combined with any restaurant!',
                       style: GoogleFonts.inter(
-                        fontSize: 11,
+                        fontSize: Responsive.scaledFontSize(context, 11),
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF15803D),
                       ),
@@ -260,7 +260,7 @@ class CartConflictDialog extends StatelessWidget {
                     child: Text(
                       'Cancel',
                       style: GoogleFonts.inter(
-                        fontSize: 13,
+                        fontSize: Responsive.scaledFontSize(context, 13),
                         fontWeight: FontWeight.w800,
                         color: const Color(0xFF475569),
                       ),
@@ -285,7 +285,7 @@ class CartConflictDialog extends StatelessWidget {
                     child: Text(
                       'Switch to $newOutletShortName',
                       style: GoogleFonts.inter(
-                        fontSize: 13,
+                        fontSize: Responsive.scaledFontSize(context, 13),
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                       ),

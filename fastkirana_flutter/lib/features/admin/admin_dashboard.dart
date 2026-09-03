@@ -49,13 +49,13 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
             const SizedBox(width: 12),
             Text(
               'Logout Admin?',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w900, fontSize: 17, color: const Color(0xFF0F172A)),
+              style: GoogleFonts.inter(fontWeight: FontWeight.w900, fontSize: Responsive.scaledFontSize(context, 17), color: const Color(0xFF0F172A)),
             ),
           ],
         ),
         content: Text(
           'You will be signed out from the Ghatampur Store Operations portal.',
-          style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B), height: 1.4),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: const Color(0xFF64748B), height: 1.4),
         ),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
@@ -161,7 +161,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                             Text(
                               'FastKirana',
                               style: GoogleFonts.inter(
-                                fontSize: 15,
+                                fontSize: Responsive.scaledFontSize(context, 15),
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
                                 letterSpacing: -0.3,
@@ -177,7 +177,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                               child: Text(
                                 'OPS',
                                 style: GoogleFonts.inter(
-                                  fontSize: 8,
+                                  fontSize: Responsive.scaledFontSize(context, 8),
                                   fontWeight: FontWeight.w900,
                                   color: Colors.white,
                                   letterSpacing: 0.5,
@@ -204,7 +204,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                             Text(
                               'Ghatampur · Live',
                               style: GoogleFonts.inter(
-                                fontSize: 10,
+                                fontSize: Responsive.scaledFontSize(context, 10),
                                 fontWeight: FontWeight.w600,
                                 color: const Color(0xFF94A3B8),
                               ),
@@ -244,7 +244,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                           Text(
                             _isStoreOpen ? 'OPEN' : 'CLOSED',
                             style: GoogleFonts.inter(
-                              fontSize: 10,
+                              fontSize: Responsive.scaledFontSize(context, 10),
                               fontWeight: FontWeight.w900,
                               color: _isStoreOpen ? const Color(0xFF34D399) : const Color(0xFFFCA5A5),
                               letterSpacing: 0.3,
@@ -295,7 +295,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                     Text(
                       'Store is CLOSED. Customers will see Store Closed banner.',
                       style: GoogleFonts.inter(
-                        fontSize: 11.5,
+                        fontSize: Responsive.scaledFontSize(context, 11.5),
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
                       ),
@@ -405,7 +405,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                 Text(
                   label,
                   style: GoogleFonts.inter(
-                    fontSize: 12.5,
+                    fontSize: Responsive.scaledFontSize(context, 12.5),
                     fontWeight: FontWeight.w900,
                     color: isSelected ? Colors.white : const Color(0xFF0F172A),
                     height: 1.1,
@@ -414,7 +414,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                 Text(
                   sub,
                   style: GoogleFonts.inter(
-                    fontSize: 9,
+                    fontSize: Responsive.scaledFontSize(context, 9),
                     fontWeight: FontWeight.w600,
                     color: isSelected ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                     height: 1.1,
@@ -585,14 +585,14 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
                         Text(
                           'Store & Outlet Operations',
                           style: GoogleFonts.inter(
-                            fontSize: 16,
+                            fontSize: Responsive.scaledFontSize(context, 16),
                             fontWeight: FontWeight.w900,
                             color: const Color(0xFF0F172A),
                           ),
                         ),
                         Text(
                           'Control live ordering for Mart & Restaurants',
-                          style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF64748B)),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: const Color(0xFF64748B)),
                         ),
                       ],
                     ),
@@ -647,7 +647,7 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
                               Text(
                                 '🚨 Master Hub Switch',
                                 style: GoogleFonts.inter(
-                                  fontSize: 14,
+                                  fontSize: Responsive.scaledFontSize(context, 14),
                                   fontWeight: FontWeight.w900,
                                   color: const Color(0xFF0F172A),
                                 ),
@@ -658,7 +658,7 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
                                     ? 'All customer ordering is active'
                                     : 'Emergency: Entire store & all outlets paused',
                                 style: GoogleFonts.inter(
-                                  fontSize: 11,
+                                  fontSize: Responsive.scaledFontSize(context, 11),
                                   fontWeight: FontWeight.w600,
                                   color: _masterOpen ? const Color(0xFF15803D) : const Color(0xFFB91C1C),
                                 ),
@@ -682,7 +682,7 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
                   Text(
                     'GROCERY MART & DARKSTORE',
                     style: GoogleFonts.inter(
-                      fontSize: 11,
+                      fontSize: Responsive.scaledFontSize(context, 11),
                       fontWeight: FontWeight.w900,
                       color: const Color(0xFF94A3B8),
                       letterSpacing: 0.8,
@@ -707,7 +707,7 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
                   Text(
                     'RESTAURANT FOOD OUTLETS',
                     style: GoogleFonts.inter(
-                      fontSize: 11,
+                      fontSize: Responsive.scaledFontSize(context, 11),
                       fontWeight: FontWeight.w900,
                       color: const Color(0xFF94A3B8),
                       letterSpacing: 0.8,
@@ -723,7 +723,7 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           child: Text(
                             'No restaurants configured',
-                            style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8)),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF94A3B8)),
                           ),
                         );
                       }
@@ -803,7 +803,7 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
                     Text(
                       title,
                       style: GoogleFonts.inter(
-                        fontSize: 13.5,
+                        fontSize: Responsive.scaledFontSize(context, 13.5),
                         fontWeight: FontWeight.w800,
                         color: const Color(0xFF0F172A),
                       ),
@@ -818,7 +818,7 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
                       child: Text(
                         isOpen ? 'OPEN' : 'CLOSED',
                         style: GoogleFonts.inter(
-                          fontSize: 9,
+                          fontSize: Responsive.scaledFontSize(context, 9),
                           fontWeight: FontWeight.w900,
                           color: isOpen ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
                         ),
@@ -830,7 +830,7 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
                 Text(
                   subtitle,
                   style: GoogleFonts.inter(
-                    fontSize: 11,
+                    fontSize: Responsive.scaledFontSize(context, 11),
                     color: const Color(0xFF64748B),
                   ),
                   maxLines: 1,

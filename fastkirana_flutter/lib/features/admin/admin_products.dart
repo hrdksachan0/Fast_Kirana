@@ -64,7 +64,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
               title: Text(
                 'Manage Catalog',
                 style: GoogleFonts.inter(
-                  fontSize: 17,
+                  fontSize: Responsive.scaledFontSize(context, 17),
                   fontWeight: FontWeight.w900,
                   color: const Color(0xFF0F172A),
                 ),
@@ -138,12 +138,12 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                     child: TextField(
                       controller: _searchController,
                       onChanged: (val) => setState(() => _searchQuery = val.toLowerCase().trim()),
-                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w600),
                       decoration: InputDecoration(
                         hintText: _selectedCatalogType == 0
                             ? 'Search grocery items or barcode...'
                             : 'Search restaurant dishes & outlets...',
-                        hintStyle: GoogleFonts.inter(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                        hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: const Color(0xFF94A3B8)),
                         border: InputBorder.none,
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
@@ -264,7 +264,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                               ? 'No grocery items found'
                               : 'No restaurant dishes found',
                           style: GoogleFonts.inter(
-                            fontSize: 14,
+                            fontSize: Responsive.scaledFontSize(context, 14),
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF64748B),
                           ),
@@ -299,7 +299,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                     const Icon(Icons.error_outline_rounded, size: 40, color: Color(0xFFEF4444)),
                     const SizedBox(height: 10),
                     Text('Failed to load items: $err',
-                        style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B))),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: const Color(0xFF64748B))),
                   ],
                 ),
               ),
@@ -352,7 +352,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
             Text(
               label,
               style: GoogleFonts.inter(
-                fontSize: 12.5,
+                fontSize: Responsive.scaledFontSize(context, 12.5),
                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
                 color: isSelected ? primaryRed : const Color(0xFF64748B),
               ),
@@ -469,7 +469,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
       label: Text(
         label,
         style: GoogleFonts.inter(
-          fontSize: 11.5,
+          fontSize: Responsive.scaledFontSize(context, 11.5),
           fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
           color: isSelected ? Colors.white : (badgeColor ?? const Color(0xFF475569)),
         ),
@@ -520,7 +520,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: Text(
           'Quick Stock: ${p.name}',
-          style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w900),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w900),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -530,14 +530,14 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
           children: [
             Text(
               'Enter available inventory quantity for this product:',
-              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF64748B)),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: controller,
               keyboardType: TextInputType.number,
               autofocus: true,
-              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900),
               decoration: InputDecoration(
                 labelText: 'Stock Units',
                 hintText: 'e.g. 50',
@@ -586,7 +586,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
             const SizedBox(width: 8),
             Text(
               'Barcode Search',
-              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900),
             ),
           ],
         ),
@@ -596,14 +596,14 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
           children: [
             Text(
               'Enter or paste product barcode number to instantly locate item:',
-              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF64748B)),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
               autofocus: true,
               keyboardType: TextInputType.number,
-              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800),
               decoration: InputDecoration(
                 hintText: 'e.g. 8901234567890',
                 filled: true,
@@ -734,7 +734,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                       Text(
                         p.name,
                         style: GoogleFonts.inter(
-                          fontSize: 13.5,
+                          fontSize: Responsive.scaledFontSize(context, 13.5),
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF0F172A),
                         ),
@@ -756,7 +756,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                               child: Text(
                                 outletName,
                                 style: GoogleFonts.inter(
-                                  fontSize: 10,
+                                  fontSize: Responsive.scaledFontSize(context, 10),
                                   fontWeight: FontWeight.w800,
                                   color: const Color(0xFFD97706),
                                 ),
@@ -772,7 +772,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                               child: Text(
                                 p.category!.name,
                                 style: GoogleFonts.inter(
-                                  fontSize: 10,
+                                  fontSize: Responsive.scaledFontSize(context, 10),
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFF475569),
                                 ),
@@ -784,7 +784,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                             Text(
                               '(${p.unit})',
                               style: GoogleFonts.inter(
-                                fontSize: 11,
+                                fontSize: Responsive.scaledFontSize(context, 11),
                                 fontWeight: FontWeight.w500,
                                 color: const Color(0xFF64748B),
                               ),
@@ -800,7 +800,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                           Text(
                             '₹${p.price.toInt()}',
                             style: GoogleFonts.inter(
-                              fontSize: 14,
+                              fontSize: Responsive.scaledFontSize(context, 14),
                               fontWeight: FontWeight.w900,
                               color: const Color(0xFF0F172A),
                             ),
@@ -810,7 +810,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                             Text(
                               '₹${p.mrp.toInt()}',
                               style: GoogleFonts.inter(
-                                fontSize: 11,
+                                fontSize: Responsive.scaledFontSize(context, 11),
                                 color: const Color(0xFF94A3B8),
                                 decoration: TextDecoration.lineThrough,
                               ),
@@ -857,7 +857,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                       child: Text(
                                         '$currentStock',
                                         style: GoogleFonts.inter(
-                                          fontSize: 11.5,
+                                          fontSize: Responsive.scaledFontSize(context, 11.5),
                                           fontWeight: FontWeight.w900,
                                           color: isLowStock ? const Color(0xFFD97706) : const Color(0xFF0F172A),
                                         ),
@@ -919,7 +919,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                             SnackBar(
                               content: Text(
                                 '${p.name} marked as ${val ? "IN STOCK / AVAILABLE" : "OUT OF STOCK / HIDDEN"}',
-                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600),
                               ),
                               backgroundColor: val ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
                               duration: const Duration(seconds: 1),
@@ -932,7 +932,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                     Text(
                       isAvailable ? 'Active' : 'Hidden',
                       style: GoogleFonts.inter(
-                        fontSize: 9,
+                        fontSize: Responsive.scaledFontSize(context, 9),
                         fontWeight: FontWeight.w800,
                         color: isAvailable ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
                       ),
@@ -963,7 +963,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                   Text(
                     'Edit Price, Stock & Variants',
                     style: GoogleFonts.inter(
-                      fontSize: 12,
+                      fontSize: Responsive.scaledFontSize(context, 12),
                       fontWeight: FontWeight.w800,
                       color: const Color(0xFF0F172A),
                     ),
@@ -980,7 +980,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                       child: Text(
                         '${variants.length} Variants ⚡',
                         style: GoogleFonts.inter(
-                          fontSize: 10,
+                          fontSize: Responsive.scaledFontSize(context, 10),
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF1D4ED8),
                         ),
@@ -1240,7 +1240,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                       Text(
                         'Edit Product & Variants',
                         style: GoogleFonts.inter(
-                          fontSize: 16,
+                          fontSize: Responsive.scaledFontSize(context, 16),
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
                         ),
@@ -1248,7 +1248,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                       Text(
                         widget.product.name,
                         style: GoogleFonts.inter(
-                          fontSize: 11.5,
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w500,
                           color: const Color(0xFF94A3B8),
                         ),
@@ -1311,7 +1311,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                               Text(
                                 'In-Stock Status',
                                 style: GoogleFonts.inter(
-                                  fontSize: 11,
+                                  fontSize: Responsive.scaledFontSize(context, 11),
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFF64748B),
                                 ),
@@ -1322,7 +1322,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                                   Text(
                                     _isAvailable ? 'Active' : 'Hidden',
                                     style: GoogleFonts.inter(
-                                      fontSize: 12,
+                                      fontSize: Responsive.scaledFontSize(context, 12),
                                       fontWeight: FontWeight.w800,
                                       color: _isAvailable ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
                                     ),
@@ -1408,7 +1408,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                               Text(
                                 '+ Add Variant',
                                 style: GoogleFonts.inter(
-                                  fontSize: 11.5,
+                                  fontSize: Responsive.scaledFontSize(context, 11.5),
                                   fontWeight: FontWeight.w800,
                                   color: const Color(0xFF1D4ED8),
                                 ),
@@ -1422,7 +1422,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                   const SizedBox(height: 6),
                   Text(
                     'Add multiple weight/pack options (e.g. 250g, 500g, 1kg) with custom price & stock.',
-                    style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: const Color(0xFF64748B)),
                   ),
                   const SizedBox(height: 10),
 
@@ -1438,7 +1438,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                       child: Center(
                         child: Text(
                           'No variants added yet. Tap "+ Add Variant" to create weight/size options.',
-                          style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w600),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: const Color(0xFF94A3B8), fontWeight: FontWeight.w600),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -1472,7 +1472,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                                     child: Text(
                                       'Variant #${idx + 1}',
                                       style: GoogleFonts.inter(
-                                        fontSize: 10,
+                                        fontSize: Responsive.scaledFontSize(context, 10),
                                         fontWeight: FontWeight.w800,
                                         color: Colors.white,
                                       ),
@@ -1482,10 +1482,10 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                                   Expanded(
                                     child: TextField(
                                       controller: v.nameController,
-                                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800),
+                                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800),
                                       decoration: InputDecoration(
                                         hintText: 'Variant Name (e.g. 500 g, 1 kg)',
-                                        hintStyle: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8)),
+                                        hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF94A3B8)),
                                         isDense: true,
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                         filled: true,
@@ -1579,7 +1579,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                           Text(
                             'Save & Update Catalog',
                             style: GoogleFonts.inter(
-                              fontSize: 14,
+                              fontSize: Responsive.scaledFontSize(context, 14),
                               fontWeight: FontWeight.w900,
                               color: Colors.white,
                             ),
@@ -1598,7 +1598,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
     return Text(
       title,
       style: GoogleFonts.inter(
-        fontSize: 11,
+        fontSize: Responsive.scaledFontSize(context, 11),
         fontWeight: FontWeight.w800,
         color: const Color(0xFF64748B),
         letterSpacing: 0.5,
@@ -1619,7 +1619,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
         Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 11,
+            fontSize: Responsive.scaledFontSize(context, 11),
             fontWeight: FontWeight.w700,
             color: const Color(0xFF475569),
           ),
@@ -1634,10 +1634,10 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
-            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8)),
+              hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF94A3B8)),
               prefixIcon: icon != null ? Icon(icon, size: 18, color: const Color(0xFF64748B)) : null,
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1660,7 +1660,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
         Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 10,
+            fontSize: Responsive.scaledFontSize(context, 10),
             fontWeight: FontWeight.w700,
             color: const Color(0xFF64748B),
           ),
@@ -1669,10 +1669,10 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
         TextField(
           controller: controller,
           keyboardType: TextInputType.number,
-          style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w800),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF94A3B8)),
+            hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: const Color(0xFF94A3B8)),
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             filled: true,

@@ -20,7 +20,7 @@ class ConnectivityBanner extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             'No Internet • Offline Mode (Actions will auto-sync)',
-            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white),
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w800, color: Colors.white),
           ),
         ],
       ),

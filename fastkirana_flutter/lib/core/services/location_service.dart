@@ -226,7 +226,7 @@ class LocationService {
 /// Provider that calculates the dynamic distance tier for the currently selected address & cart
 final deliveryTierProvider = Provider<DeliveryTierInfo>((ref) {
   final address = ref.watch(selectedAddressProvider);
-  final cart = ref.watch(cartProvider).value;
-  final subtotal = cart?.subtotal ?? 0.0;
+  final cart = ref.watch(cartProvider);
+  final subtotal = cart.valueOrNull?.subtotal ?? 0.0;
   return LocationService.getTierForAddress(address, subtotal);
 });

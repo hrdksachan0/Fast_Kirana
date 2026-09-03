@@ -19,7 +19,7 @@ class AdminCouponsScreen extends ConsumerWidget {
         elevation: 0,
         title: Text(
           'Coupons Management',
-          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
         ),
         actions: [
           IconButton(
@@ -44,18 +44,18 @@ class AdminCouponsScreen extends ConsumerWidget {
                         color: AppDesignSystem.primary.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: const Center(child: Text('🎟️', style: TextStyle(fontSize: 28))),
+                      child: const Center(child: Text('🎟️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 28)))),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'No Coupons Created Yet',
-                      style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       'Create coupons in Web Admin Portal to offer discounts to customers.',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textSecondary),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textSecondary),
                     ),
                   ],
                 ),
@@ -89,7 +89,7 @@ class AdminCouponsScreen extends ConsumerWidget {
                         children: [
                           Row(
                             children: [
-                              Text(c.code, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+                              Text(c.code, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
                               const SizedBox(width: 6),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -99,13 +99,13 @@ class AdminCouponsScreen extends ConsumerWidget {
                                 ),
                                 child: Text(
                                   c.isActive ? 'ACTIVE' : 'INACTIVE',
-                                  style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: c.isActive ? AppDesignSystem.success : AppDesignSystem.danger),
+                                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9), fontWeight: FontWeight.w800, color: c.isActive ? AppDesignSystem.success : AppDesignSystem.danger),
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 4),
-                          Text('$discountText • Min: ₹${c.minOrder.toInt()}', style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
+                          Text('$discountText • Min: ₹${c.minOrder.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary)),
                         ],
                       ),
                     ),

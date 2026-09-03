@@ -44,7 +44,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
         title: Text(
           'My Saved Addresses',
           style: GoogleFonts.inter(
-            fontSize: 17,
+            fontSize: Responsive.scaledFontSize(context, 17),
             fontWeight: FontWeight.w900,
             color: const Color(0xFF0F172A),
             letterSpacing: -0.3,
@@ -141,7 +141,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                           addr.label,
                                           style: GoogleFonts.inter(
                                             fontWeight: FontWeight.w900,
-                                            fontSize: 14.5,
+                                            fontSize: Responsive.scaledFontSize(context, 14.5),
                                             color: const Color(0xFF0F172A),
                                           ),
                                         ),
@@ -156,7 +156,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                             child: Text(
                                               isSelected ? 'ACTIVE' : 'DEFAULT',
                                               style: GoogleFonts.inter(
-                                                fontSize: 9,
+                                                fontSize: Responsive.scaledFontSize(context, 9),
                                                 fontWeight: FontWeight.w800,
                                                 color: isSelected ? primaryRed : const Color(0xFF64748B),
                                               ),
@@ -169,7 +169,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                     Text(
                                       addr.fullAddress,
                                       style: GoogleFonts.inter(
-                                        fontSize: 12,
+                                        fontSize: Responsive.scaledFontSize(context, 12),
                                         fontWeight: FontWeight.w500,
                                         color: const Color(0xFF475569),
                                         height: 1.3,
@@ -184,7 +184,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                           Text(
                                             addr.phone,
                                             style: GoogleFonts.inter(
-                                              fontSize: 11,
+                                              fontSize: Responsive.scaledFontSize(context, 11),
                                               fontWeight: FontWeight.w600,
                                               color: const Color(0xFF64748B),
                                             ),
@@ -194,7 +194,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                         Text(
                                           '•  Pincode: ${addr.pincode}',
                                           style: GoogleFonts.inter(
-                                            fontSize: 11,
+                                            fontSize: Responsive.scaledFontSize(context, 11),
                                             fontWeight: FontWeight.w600,
                                             color: const Color(0xFF0284C7),
                                           ),
@@ -280,13 +280,13 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                       const SizedBox(height: 12),
                       Text(
                         'Failed to load saved addresses',
-                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         err.toString().replaceAll('Exception: ', ''),
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF64748B)),
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
@@ -344,7 +344,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                     Text(
                       'Add New Delivery Address',
                       style: GoogleFonts.inter(
-                        fontSize: 13.5,
+                        fontSize: Responsive.scaledFontSize(context, 13.5),
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                         letterSpacing: 0.2,

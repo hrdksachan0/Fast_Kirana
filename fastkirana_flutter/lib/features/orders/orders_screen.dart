@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/theme/responsive.dart';
 import '../../core/routes/page_transitions.dart';
@@ -17,6 +19,7 @@ import '../../data/models/product.dart';
 import '../../data/repositories/order_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../widgets/shimmer_box.dart';
 import '../cart/cart_screen.dart';
 import 'order_tracking_screen.dart';
 import 'order_detail_screen.dart';
@@ -113,7 +116,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
         title: Text(
           'My Orders',
           style: GoogleFonts.inter(
-            fontSize: 18,
+            fontSize: Responsive.scaledFontSize(context, 18),
             fontWeight: FontWeight.w900,
             color: slateDark,
             letterSpacing: -0.4,
@@ -147,7 +150,9 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
 
             // Default to HISTORY tab if there are no active orders
             if (_selectedTab == 'ACTIVE' && activeOrders.isEmpty && pastOrders.isNotEmpty) {
-              _selectedTab = 'HISTORY';
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) setState(() => _selectedTab = 'HISTORY');
+              });
             }
 
             List<Order> currentList = _selectedTab == 'ACTIVE' ? activeOrders : pastOrders;
@@ -174,7 +179,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
               },
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
+                padding: EdgeInsets.fromLTRB(Responsive.horizontalPadding(context), Responsive.scale(context, 12), Responsive.horizontalPadding(context), 40),
                 children: [
                   // 1. Premium Segmented Tab Switcher
                   _buildSegmentedTabs(activeOrders.length, pastOrders.length),
@@ -215,8 +220,13 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
               ),
             );
           },
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: primaryRed),
+          loading: () => ListView.builder(
+            padding: EdgeInsets.fromLTRB(Responsive.horizontalPadding(context), Responsive.scale(context, 12), Responsive.horizontalPadding(context), 40),
+            itemCount: 4,
+            itemBuilder: (_, __) => const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: OrderCardSkeleton(),
+            ),
           ),
           error: (err, _) => Center(
             child: Padding(
@@ -227,7 +237,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                   const Icon(Icons.error_outline_rounded, size: 48, color: Color(0xFFEF4444)),
                   const SizedBox(height: 12),
                   Text('Failed to load orders',
-                      style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: slateDark)),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: slateDark)),
                   const SizedBox(height: 8),
                   ElevatedButton(
                     onPressed: () => ref.invalidate(ordersProvider(userId)),
@@ -291,7 +301,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                     Text(
                       'Live Orders',
                       style: GoogleFonts.inter(
-                        fontSize: 12.5,
+                        fontSize: Responsive.scaledFontSize(context, 12.5),
                         fontWeight: _selectedTab == 'ACTIVE' ? FontWeight.w900 : FontWeight.w600,
                         color: _selectedTab == 'ACTIVE' ? slateDark : slateMuted,
                       ),
@@ -307,7 +317,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                         child: Text(
                           '$activeCount',
                           style: GoogleFonts.inter(
-                            fontSize: 10,
+                            fontSize: Responsive.scaledFontSize(context, 10),
                             fontWeight: FontWeight.w800,
                             color: const Color(0xFF15803D),
                           ),
@@ -348,7 +358,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                     Text(
                       'Order History',
                       style: GoogleFonts.inter(
-                        fontSize: 12.5,
+                        fontSize: Responsive.scaledFontSize(context, 12.5),
                         fontWeight: _selectedTab == 'HISTORY' ? FontWeight.w900 : FontWeight.w600,
                         color: _selectedTab == 'HISTORY' ? slateDark : slateMuted,
                       ),
@@ -364,7 +374,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                         child: Text(
                           '$historyCount',
                           style: GoogleFonts.inter(
-                            fontSize: 10,
+                            fontSize: Responsive.scaledFontSize(context, 10),
                             fontWeight: FontWeight.w800,
                             color: slateDark,
                           ),
@@ -393,10 +403,10 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
       child: TextField(
         controller: _searchController,
         onChanged: (val) => setState(() => _searchQuery = val),
-        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: slateDark),
+        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w600, color: slateDark),
         decoration: InputDecoration(
           hintText: 'Search items or order ID...',
-          hintStyle: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8)),
+          hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF94A3B8)),
           prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF94A3B8)),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
@@ -441,7 +451,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                 child: Text(
                   f,
                   style: GoogleFonts.inter(
-                    fontSize: 11,
+                    fontSize: Responsive.scaledFontSize(context, 11),
                     fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                     color: isSelected ? Colors.white : const Color(0xFF475569),
                     letterSpacing: 0.2,
@@ -508,7 +518,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                     Text(
                       '#${order.displayId}',
                       style: GoogleFonts.inter(
-                        fontSize: 15.5,
+                        fontSize: Responsive.scaledFontSize(context, 15.5),
                         fontWeight: FontWeight.w900,
                         color: slateDark,
                         letterSpacing: -0.2,
@@ -536,7 +546,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                           Text(
                             statusText,
                             style: GoogleFonts.inter(
-                              fontSize: 10,
+                              fontSize: Responsive.scaledFontSize(context, 10),
                               fontWeight: FontWeight.w900,
                               color: statusColor,
                               letterSpacing: 0.3,
@@ -573,13 +583,13 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                           children: [
                             Text(
                               shopName.contains('Restaurant') || shopName.contains('Cafe') ? '🍽️ ' : '🏪 ',
-                              style: const TextStyle(fontSize: 10),
+                              style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 10)),
                             ),
                             Flexible(
                               child: Text(
                                 shopName,
                                 style: GoogleFonts.inter(
-                                  fontSize: 11,
+                                  fontSize: Responsive.scaledFontSize(context, 11),
                                   fontWeight: FontWeight.w800,
                                   color: shopName.contains('Restaurant') || shopName.contains('Cafe')
                                       ? const Color(0xFFC2410C)
@@ -597,7 +607,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                     Text(
                       DateFormat('dd MMM, hh:mm a').format(order.createdAt),
                       style: GoogleFonts.inter(
-                        fontSize: 11,
+                        fontSize: Responsive.scaledFontSize(context, 11),
                         fontWeight: FontWeight.w600,
                         color: slateMuted,
                       ),
@@ -614,7 +624,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
             child: items.isEmpty
-                ? Text('1 order batch', style: GoogleFonts.inter(fontSize: 12, color: slateMuted))
+                ? Text('1 order batch', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted))
                 : Column(
                     children: items.take(2).map((item) => Padding(
                           padding: const EdgeInsets.symmetric(vertical: 3),
@@ -629,7 +639,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                                 child: Text(
                                   '${item.quantity}x',
                                   style: GoogleFonts.inter(
-                                    fontSize: 11,
+                                    fontSize: Responsive.scaledFontSize(context, 11),
                                     fontWeight: FontWeight.w800,
                                     color: const Color(0xFF475569),
                                   ),
@@ -640,7 +650,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                                 child: Text(
                                   item.name,
                                   style: GoogleFonts.inter(
-                                    fontSize: 12,
+                                    fontSize: Responsive.scaledFontSize(context, 12),
                                     fontWeight: FontWeight.w600,
                                     color: slateDark,
                                   ),
@@ -651,7 +661,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                               Text(
                                 '₹${(item.price * item.quantity).toInt()}',
                                 style: GoogleFonts.inter(
-                                  fontSize: 12,
+                                  fontSize: Responsive.scaledFontSize(context, 12),
                                   fontWeight: FontWeight.w800,
                                   color: slateDark,
                                 ),
@@ -667,7 +677,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
               padding: const EdgeInsets.only(left: 16, bottom: 8),
               child: Text(
                 '+${items.length - 2} more items',
-                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: slateMuted),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w600, color: slateMuted),
               ),
             ),
 
@@ -682,10 +692,10 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Total Bill', style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w500, color: slateMuted)),
+                    Text('Total Bill', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w500, color: slateMuted)),
                     Text(
                       '₹${order.total.toInt()}',
-                      style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: slateDark),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: slateDark),
                     ),
                   ],
                 ),
@@ -708,7 +718,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                             const SizedBox(width: 4),
                             Text(
                               'Reorder',
-                              style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w800, color: const Color(0xFF334155)),
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w800, color: const Color(0xFF334155)),
                             ),
                           ],
                         ),
@@ -757,7 +767,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                             const SizedBox(width: 4),
                             Text(
                               isActive ? 'Track Live' : 'Details',
-                              style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w900, color: Colors.white),
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w900, color: Colors.white),
                             ),
                           ],
                         ),
@@ -796,6 +806,69 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
             }
           },
         ),
+      ),
+    );
+  }
+}
+
+// ─── Skeleton Loading for Order Cards ───────────────────────────────────────
+class OrderCardSkeleton extends StatelessWidget {
+  const OrderCardSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: const Color(0xFFF1F5F9),
+      highlightColor: const Color(0xFFFAFAFA),
+      period: const Duration(milliseconds: 1200),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFF1F5F9)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header row skeleton
+            Row(
+              children: [
+                _shimmerBox(80, 14),
+                const Spacer(),
+                _shimmerBox(60, 12),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Items row skeleton
+            Row(
+              children: [
+                _shimmerBox(44, 44, radius: 8),
+                const SizedBox(width: 10),
+                Expanded(child: _shimmerBox(double.infinity, 14)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            // Bottom row skeleton
+            Row(
+              children: [
+                Expanded(child: _shimmerBox(120, 12)),
+                _shimmerBox(70, 28, radius: 8),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _shimmerBox(double width, double height, {double radius = 6}) {
+    return Container(
+      width: width == double.infinity ? double.infinity : width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(radius),
       ),
     );
   }

@@ -245,7 +245,7 @@ class _ContextualBrandTransitionScreenState extends State<ContextualBrandTransit
                               widget.customTitle ?? _defaultTitle,
                               textAlign: TextAlign.center,
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 21,
+                                fontSize: Responsive.scaledFontSize(context, 21),
                                 fontWeight: FontWeight.w700,
                                 color: const Color(0xFF64748B),
                                 height: 1.38,
@@ -262,7 +262,7 @@ class _ContextualBrandTransitionScreenState extends State<ContextualBrandTransit
                                 widget.customSubtitle!,
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.inter(
-                                  fontSize: 13,
+                                  fontSize: Responsive.scaledFontSize(context, 13),
                                   fontWeight: FontWeight.w500,
                                   color: const Color(0xFF94A3B8),
                                   height: 1.4,
@@ -289,7 +289,7 @@ class _ContextualBrandTransitionScreenState extends State<ContextualBrandTransit
                               Text(
                                 _subBrandTag,
                                 style: GoogleFonts.inter(
-                                  fontSize: 10,
+                                  fontSize: Responsive.scaledFontSize(context, 10),
                                   fontWeight: FontWeight.w800,
                                   color: const Color(0xFFCBD5E1),
                                   letterSpacing: 1.8,

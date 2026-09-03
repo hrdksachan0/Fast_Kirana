@@ -20,7 +20,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
         centerTitle: true,
         title: Text(
           'Privacy Policy',
-          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
         ),
       ),
       body: SingleChildScrollView(
@@ -35,12 +35,12 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 children: [
                   Text(
                     'FastKirana — Privacy Policy',
-                    style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 20), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Effective Date: $_effectiveDate',
-                    style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textSecondary),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textSecondary),
                   ),
                 ],
               ),
@@ -118,7 +118,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 icon: Icon(Icons.email_outlined, size: 18, color: AppDesignSystem.primary),
                 label: Text(
                   'Contact us: $_supportEmail',
-                  style: GoogleFonts.inter(fontSize: 14, color: AppDesignSystem.primary, fontWeight: FontWeight.w600),
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: AppDesignSystem.primary, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -132,7 +132,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
   Widget _buildSection(String title) {
     return Text(
       title,
-      style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary),
+      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary),
     );
   }
 
@@ -141,7 +141,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
       padding: const EdgeInsets.only(top: 8),
       child: Text(
         text,
-        style: GoogleFonts.inter(fontSize: 14, color: AppDesignSystem.textSecondary, height: 1.7),
+        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: AppDesignSystem.textSecondary, height: 1.7),
       ),
     );
   }
@@ -152,9 +152,9 @@ class PrivacyPolicyScreen extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('• ', style: GoogleFonts.inter(fontSize: 14, color: AppDesignSystem.textSecondary, height: 1.7)),
+          Text('• ', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: AppDesignSystem.textSecondary, height: 1.7)),
           Expanded(
-            child: Text(text, style: GoogleFonts.inter(fontSize: 14, color: AppDesignSystem.textSecondary, height: 1.7)),
+            child: Text(text, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: AppDesignSystem.textSecondary, height: 1.7)),
           ),
         ],
       ),

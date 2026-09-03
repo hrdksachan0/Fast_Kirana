@@ -161,7 +161,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     Text(
                       'FastKirana',
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 36,
+                        fontSize: Responsive.scaledFontSize(context, 36),
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                         letterSpacing: -0.8,
@@ -183,7 +183,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       child: Text(
                         'GROCERY • FOOD • ESSENTIALS',
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 10,
+                          fontSize: Responsive.scaledFontSize(context, 10),
                           fontWeight: FontWeight.w800,
                           color: Colors.white,
                           letterSpacing: 1.4,
@@ -196,7 +196,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     Text(
                       'Delivering Freshness to Your Doorstep',
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13.5,
+                        fontSize: Responsive.scaledFontSize(context, 13.5),
                         fontWeight: FontWeight.w500,
                         color: Colors.white.withOpacity(0.92),
                         letterSpacing: 0.1,
@@ -225,7 +225,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     Text(
                       'FASTKIRANA EXPRESS STORE',
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 10,
+                        fontSize: Responsive.scaledFontSize(context, 10),
                         fontWeight: FontWeight.w700,
                         color: Colors.white.withOpacity(0.65),
                         letterSpacing: 1.8,

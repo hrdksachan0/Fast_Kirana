@@ -360,22 +360,9 @@ export function RestaurantOrdersConsole() {
         const data = await res.json()
         setOrders(data)
 
-        // Auto-print KOT for new incoming orders (CONFIRMED or PENDING)
+        // Orders loaded cleanly
         if (isFirstFetchRef.current) {
-          // On initial load, mark all current active orders as "already printed"
-          const existingIds = data.filter((o: Order) => o.status === 'CONFIRMED' || o.status === 'PENDING').map((o: Order) => o.id)
-          printedOrderIdsRef.current = new Set(existingIds)
           isFirstFetchRef.current = false
-        } else {
-          data.forEach((order: Order) => {
-            if ((order.status === 'CONFIRMED' || order.status === 'PENDING') && !printedOrderIdsRef.current.has(order.id)) {
-              printedOrderIdsRef.current.add(order.id)
-              // Trigger automatic print
-              if (autoPrintEnabledRef.current) {
-                printKOTReceiptRef.current?.(order)
-              }
-            }
-          })
         }
         
         // If we have an active order, update its details from the list
@@ -493,28 +480,6 @@ export function RestaurantOrdersConsole() {
           }
         }
       )
-      .on(
-        'broadcast',
-        { event: 'print_kot' },
-        async (payload) => {
-          const { orderId } = payload.payload || {}
-          if (orderId) {
-            let orderToPrint = ordersRef.current.find((o) => o.id === orderId || o.readableId === orderId)
-            if (!orderToPrint) {
-              try {
-                const res = await fetch(`/api/orders/${orderId}`)
-                if (res.ok) {
-                  const data = await res.json()
-                  orderToPrint = data.order || data
-                }
-              } catch (e) {}
-            }
-            if (orderToPrint) {
-              printKOTReceiptRef.current?.(orderToPrint)
-            }
-          }
-        }
-      )
       .subscribe((status) => {
         console.log('[Kitchen KOT Channel] Subscription status:', status)
         if (status === 'CHANNEL_ERROR') {
@@ -603,10 +568,6 @@ export function RestaurantOrdersConsole() {
         })
         setPickedItemIds(initialPicked)
         fetchOrders(true)
-        // Automatically print KOT receipt on acceptance if enabled
-        if (autoPrintEnabledRef.current) {
-          printKOTReceipt(order)
-        }
       } else {
         toast.error('Failed to accept order')
       }
@@ -635,9 +596,6 @@ export function RestaurantOrdersConsole() {
         })
         setPickedItemIds(initialPicked)
         fetchOrders(true)
-        if (autoPrintEnabledRef.current) {
-          printKOTReceipt(order)
-        }
       } else {
         toast.error('Failed to accept order')
       }
@@ -672,9 +630,6 @@ export function RestaurantOrdersConsole() {
       toast.success('🍲 Order accepted, prepared, and packed in one click!', { duration: 4000 })
       setPreparedToday(prev => prev + 1)
       fetchOrders(true)
-      if (autoPrintEnabledRef.current) {
-        printKOTReceipt(order)
-      }
     } catch (err: any) {
       toast.dismiss(toastId)
       toast.error(err.message || 'Error quick packing order')

@@ -12,7 +12,7 @@ class DeliveryEarningsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppDesignSystem.background,
         elevation: 0,
-        title: Text('Earnings', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+        title: Text('Earnings', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -27,9 +27,9 @@ class DeliveryEarningsScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  Text('Today\'s Earnings', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withOpacity(0.9))),
+                  Text('Today\'s Earnings', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: Colors.white.withOpacity(0.9))),
                   const SizedBox(height: 8),
-                  Text('₹480', style: GoogleFonts.poppins(fontSize: 36, fontWeight: FontWeight.w800, color: Colors.white)),
+                  Text('₹480', style: GoogleFonts.poppins(fontSize: Responsive.scaledFontSize(context, 36), fontWeight: FontWeight.w800, color: Colors.white)),
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -43,7 +43,7 @@ class DeliveryEarningsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            Text('Weekly Breakdown', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+            Text('Weekly Breakdown', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
             const SizedBox(height: 12),
             ...['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) {
               return Container(
@@ -52,11 +52,11 @@ class DeliveryEarningsScreen extends StatelessWidget {
                 decoration: BoxDecoration(color: AppDesignSystem.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppDesignSystem.borderLight), boxShadow: AppDesignSystem.shadowSm),
                 child: Row(
                   children: [
-                    Text(d, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
+                    Text(d, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
                     const Spacer(),
-                    Text('8 orders', style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
+                    Text('8 orders', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary)),
                     const SizedBox(width: 12),
-                    Text('₹320', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+                    Text('₹320', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
                   ],
                 ),
               );
@@ -73,10 +73,10 @@ class DeliveryEarningsScreen extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
-          child: Text(value, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white)),
+          child: Text(value, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: Colors.white)),
         ),
         const SizedBox(height: 4),
-        Text(label, style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withOpacity(0.9))),
+        Text(label, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: Colors.white.withOpacity(0.9))),
       ],
     );
   }

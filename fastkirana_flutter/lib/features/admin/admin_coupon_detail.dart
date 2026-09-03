@@ -21,7 +21,7 @@ class _AdminCouponsDetailScreenState extends State<AdminCouponsDetailScreen> {
       appBar: AppBar(
         backgroundColor: AppDesignSystem.background,
         elevation: 0,
-        title: Text('Coupon Details', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+        title: Text('Coupon Details', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -36,11 +36,11 @@ class _AdminCouponsDetailScreenState extends State<AdminCouponsDetailScreen> {
               ),
               child: Column(
                 children: [
-                  Text(widget.couponId, style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 2)),
+                  Text(widget.couponId, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 24), fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 2)),
                   const SizedBox(height: 8),
-                  Text('FLAT ₹50 OFF', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white)),
+                  Text('FLAT ₹50 OFF', style: GoogleFonts.poppins(fontSize: Responsive.scaledFontSize(context, 20), fontWeight: FontWeight.w800, color: Colors.white)),
                   const SizedBox(height: 8),
-                  Text('Min order: ₹199', style: GoogleFonts.inter(fontSize: 14, color: Colors.white.withOpacity(0.9))),
+                  Text('Min order: ₹199', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: Colors.white.withOpacity(0.9))),
                 ],
               ),
             ),
@@ -57,7 +57,7 @@ class _AdminCouponsDetailScreenState extends State<AdminCouponsDetailScreen> {
               child: Column(
                 children: [
                   SwitchListTile(
-                    title: Text('Active', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
+                    title: Text('Active', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
                     value: _isActive,
                     onChanged: (v) => setState(() => _isActive = v),
                     activeColor: AppDesignSystem.primary,
@@ -92,8 +92,8 @@ class _AdminCouponsDetailScreenState extends State<AdminCouponsDetailScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textSecondary)),
-          Text(value, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
+          Text(label, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textSecondary)),
+          Text(value, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
         ],
       ),
     );

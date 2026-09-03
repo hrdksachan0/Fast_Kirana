@@ -17,7 +17,7 @@ class RecentlyViewedScreen extends StatelessWidget {
         centerTitle: true,
         title: Text(
           'Recently Viewed',
-          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
         ),
       ),
       body: GridView.builder(

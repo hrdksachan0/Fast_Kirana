@@ -8,6 +8,7 @@ import 'package:shimmer/shimmer.dart';
 import '../core/routes/page_transitions.dart';
 import '../core/utils/restaurant_utils.dart';
 import '../core/utils/dish_timing.dart';
+import '../core/theme/responsive.dart';
 import '../data/models/product.dart';
 import '../providers/cart_provider.dart';
 import '../providers/wishlist_provider.dart';
@@ -65,6 +66,22 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     final product = widget.product;
     final isFood = isRestaurantProduct(product);
     final isVeg = _isVeg(product);
+
+    // Responsive scale: scales all internal sizes proportionally based on card width
+    final cardWidth = widget.width ??
+        (context.screenWidth - Responsive.horizontalPadding(context) * 2 - 12) / 2;
+    final baseWidth = 155.0;
+    final uiScale = (cardWidth / baseWidth).clamp(1.0, 1.15);
+
+    // Scale helpers
+    double s(double v) => (v * uiScale);
+    EdgeInsets geo(double all) => EdgeInsets.all(s(all));
+    EdgeInsets only({double? top, double? bottom, double? left, double? right}) =>
+        EdgeInsets.only(top: s(top ?? 0), bottom: s(bottom ?? 0), left: s(left ?? 0), right: s(right ?? 0));
+    EdgeInsets sym({double h = 0, double v = 0}) => EdgeInsets.symmetric(horizontal: s(h), vertical: s(v));
+    Radius r(double v) => Radius.circular(s(v));
+    double blur(double v) => s(v);
+    Offset off(double x, double y) => Offset(s(x), s(y));
 
     // Variants handling
     final variants = product.parsedVariants;
@@ -140,20 +157,20 @@ class _ProductCardState extends ConsumerState<ProductCard> {
           duration: const Duration(milliseconds: 140),
           curve: Curves.easeOutCubic,
           child: Container(
-          width: widget.width,
-          padding: const EdgeInsets.all(8),
+          width: cardWidth,
+          padding: geo(8),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(s(18)),
             border: Border.all(
               color: isFood ? const Color(0xFFFED7AA).withValues(alpha: 0.5) : const Color(0xFFF1F5F9),
-              width: 1.2,
+              width: s(1.2),
             ),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
+                blurRadius: s(10),
+                offset: off(0, 3),
               ),
             ],
           ),
@@ -163,14 +180,18 @@ class _ProductCardState extends ConsumerState<ProductCard> {
             children: [
               // 1. PRODUCT IMAGE SHOWCASE BOX WITH ALL WEB APP BADGES
               Container(
-                height: widget.isCompact ? 110 : (isFood ? 132 : 116),
+                height: widget.isCompact
+                    ? s(100)
+                    : Responsive.isSmallMobile(context)
+                        ? s(100)
+                        : (isFood ? 132 : 116) * uiScale,
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: isFood ? const Color(0xFFFFF7ED) : const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(s(14)),
                   border: Border.all(
                     color: isFood ? const Color(0xFFFFEDD5) : const Color(0xFFF1F5F9),
-                    width: 0.8,
+                    width: s(0.8),
                   ),
                 ),
                 child: Stack(
@@ -185,40 +206,35 @@ class _ProductCardState extends ConsumerState<ProductCard> {
 
                     // Top Left: Stacked Badges (Discount + Bestseller / Trending / Flash Deal)
                     Positioned(
-                      top: 5,
-                      left: 5,
+                      top: s(5),
+                      left: s(5),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (product.isBestsellerProduct)
-                            Container(
-                              margin: const EdgeInsets.only(bottom: 3),
-                              padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 2),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFFD97706), Color(0xFFF59E0B)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(5),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFFD97706).withValues(alpha: 0.35),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 1),
-                                  ),
-                                ],
+                            _badge(
+                              margin: only(bottom: 3),
+                              padding: sym(h: 5.5, v: 2),
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFD97706), Color(0xFFF59E0B)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
+                              radius: 5,
+                              shadowColor: const Color(0xFFD97706),
+                              shadowAlpha: 0.35,
+                              shadowBlur: 4,
+                              shadowOffset: off(0, 1),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Text('🔥', style: TextStyle(fontSize: 8)),
-                                  const SizedBox(width: 2.5),
+                                  Text('🔥', style: TextStyle(fontSize: s(8))),
+                                  SizedBox(width: s(2.5)),
                                   Text(
                                     'BESTSELLER',
                                     style: GoogleFonts.inter(
-                                      fontSize: 7.5,
+                                      fontSize: s(7.5),
                                       fontWeight: FontWeight.w900,
                                       color: Colors.white,
                                       letterSpacing: 0.3,
@@ -228,33 +244,28 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                               ),
                             )
                           else if (product.isTrending)
-                            Container(
-                              margin: const EdgeInsets.only(bottom: 3),
-                              padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 2),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF7C3AED), Color(0xFF4F46E5)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(5),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF7C3AED).withValues(alpha: 0.35),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 1),
-                                  ),
-                                ],
+                            _badge(
+                              margin: only(bottom: 3),
+                              padding: sym(h: 5.5, v: 2),
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF7C3AED), Color(0xFF4F46E5)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
+                              radius: 5,
+                              shadowColor: const Color(0xFF7C3AED),
+                              shadowAlpha: 0.35,
+                              shadowBlur: 4,
+                              shadowOffset: off(0, 1),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Text('⚡', style: TextStyle(fontSize: 8)),
-                                  const SizedBox(width: 2.5),
+                                  Text('⚡', style: TextStyle(fontSize: s(8))),
+                                  SizedBox(width: s(2.5)),
                                   Text(
                                     'TRENDING',
                                     style: GoogleFonts.inter(
-                                      fontSize: 7.5,
+                                      fontSize: s(7.5),
                                       fontWeight: FontWeight.w900,
                                       color: Colors.white,
                                       letterSpacing: 0.3,
@@ -264,28 +275,23 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                               ),
                             )
                           else if (product.isFlashDealProduct)
-                            Container(
-                              margin: const EdgeInsets.only(bottom: 3),
-                              padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 2),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFFDC2626), Color(0xFFEA580C)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(5),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFFDC2626).withValues(alpha: 0.35),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 1),
-                                  ),
-                                ],
+                            _badge(
+                              margin: only(bottom: 3),
+                              padding: sym(h: 5.5, v: 2),
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFDC2626), Color(0xFFEA580C)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
+                              radius: 5,
+                              shadowColor: const Color(0xFFDC2626),
+                              shadowAlpha: 0.35,
+                              shadowBlur: 4,
+                              shadowOffset: off(0, 1),
                               child: Text(
                                 '⚡ DEAL',
                                 style: GoogleFonts.inter(
-                                  fontSize: 7.5,
+                                  fontSize: s(7.5),
                                   fontWeight: FontWeight.w900,
                                   color: Colors.white,
                                   letterSpacing: 0.3,
@@ -295,27 +301,22 @@ class _ProductCardState extends ConsumerState<ProductCard> {
 
                           // Discount Badge
                           if (resolvedDiscount > 0)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 2),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFFE11D48), Color(0xFFF97316)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(5),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFFE11D48).withValues(alpha: 0.3),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 1),
-                                  ),
-                                ],
+                            _badge(
+                              padding: sym(h: 5.5, v: 2),
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFE11D48), Color(0xFFF97316)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
+                              radius: 5,
+                              shadowColor: const Color(0xFFE11D48),
+                              shadowAlpha: 0.3,
+                              shadowBlur: 4,
+                              shadowOffset: off(0, 1),
                               child: Text(
                                 '$resolvedDiscount% OFF',
                                 style: GoogleFonts.inter(
-                                  fontSize: 8.5,
+                                  fontSize: s(8.5),
                                   fontWeight: FontWeight.w900,
                                   color: Colors.white,
                                   letterSpacing: 0.3,
@@ -329,25 +330,25 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                     // Top Left Time Slot Badge (if outside active timing)
                     if (!timingStatus.isAvailableNow && timingStatus.formattedTimeSlot != null)
                       Positioned(
-                        top: resolvedDiscount > 0 ? 24 : 5,
-                        left: 5,
+                        top: resolvedDiscount > 0 ? s(24) : s(5),
+                        left: s(5),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                          padding: sym(h: 5, v: 2),
                           decoration: BoxDecoration(
                             color: const Color(0xFFF59E0B),
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(s(6)),
                             boxShadow: [
                               BoxShadow(
                                 color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
-                                blurRadius: 4,
-                                offset: const Offset(0, 1),
+                                blurRadius: s(4),
+                                offset: off(0, 1),
                               ),
                             ],
                           ),
                           child: Text(
                             '⏰ ${timingStatus.formattedTimeSlot}',
                             style: GoogleFonts.inter(
-                              fontSize: 8,
+                              fontSize: s(8),
                               fontWeight: FontWeight.w900,
                               color: Colors.white,
                             ),
@@ -357,8 +358,8 @@ class _ProductCardState extends ConsumerState<ProductCard> {
 
                     // Top Right: Wishlist Heart Button
                     Positioned(
-                      top: 5,
-                      right: 5,
+                      top: s(5),
+                      right: s(5),
                       child: Consumer(
                         builder: (context, ref, _) {
                           final isFav =
@@ -369,21 +370,21 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                               ref.read(wishlistProvider.notifier).toggleWishlist(product);
                             },
                             child: Container(
-                              padding: const EdgeInsets.all(5),
+                              padding: geo(5),
                               decoration: BoxDecoration(
                                 color: Colors.white.withValues(alpha: 0.94),
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withValues(alpha: 0.08),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
+                                    blurRadius: s(6),
+                                    offset: off(0, 2),
                                   ),
                                 ],
                               ),
                               child: Icon(
                                 isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                                size: 14,
+                                size: s(14),
                                 color: isFav ? const Color(0xFFEF4444) : const Color(0xFF94A3B8),
                               ),
                             ),
@@ -395,29 +396,29 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                     // Respected Restaurant Tag Pinned on Photo (for Food items)
                     if (isFood && widget.showOutlet && outletName.isNotEmpty)
                       Positioned(
-                        bottom: 5,
-                        left: 5,
-                        right: isLowStock ? 60 : 5,
+                        bottom: s(5),
+                        left: s(5),
+                        right: isLowStock ? s(60) : s(5),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                          padding: sym(h: 6, v: 2.5),
                           decoration: BoxDecoration(
                             color: Colors.black.withValues(alpha: 0.72),
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(s(6)),
                             border: Border.all(
                               color: Colors.white.withValues(alpha: 0.2),
-                              width: 0.6,
+                              width: s(0.6),
                             ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('👨‍🍳', style: TextStyle(fontSize: 9.5)),
-                              const SizedBox(width: 3.5),
+                              Text('👨‍🍳', style: TextStyle(fontSize: s(9.5))),
+                              SizedBox(width: s(3.5)),
                               Flexible(
                                 child: Text(
                                   outletName,
                                   style: GoogleFonts.inter(
-                                    fontSize: 8.5,
+                                    fontSize: s(8.5),
                                     fontWeight: FontWeight.w800,
                                     color: Colors.white,
                                     letterSpacing: -0.1,
@@ -432,26 +433,26 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                       )
                     else if (product.isBestSeller || product.tags.contains('popular'))
                       Positioned(
-                        bottom: 5,
-                        left: 5,
+                        bottom: s(5),
+                        left: s(5),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 2),
+                          padding: sym(h: 5.5, v: 2),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFFBEB),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFFFDE68A), width: 0.8),
+                            borderRadius: BorderRadius.circular(s(6)),
+                            border: Border.all(color: const Color(0xFFFDE68A), width: s(0.8)),
                             boxShadow: [
                               BoxShadow(
                                 color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
-                                blurRadius: 4,
-                                offset: const Offset(0, 1),
+                                blurRadius: s(4),
+                                offset: off(0, 1),
                               ),
                             ],
                           ),
                           child: Text(
                             '⭐ Bestseller',
                             style: GoogleFonts.inter(
-                              fontSize: 8,
+                              fontSize: s(8),
                               fontWeight: FontWeight.w900,
                               color: const Color(0xFFB45309),
                             ),
@@ -462,25 +463,25 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                     // Low Stock Alert Badge
                     if (isLowStock)
                       Positioned(
-                        bottom: 5,
-                        right: 5,
+                        bottom: s(5),
+                        right: s(5),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                          padding: sym(h: 5, v: 2),
                           decoration: BoxDecoration(
                             color: const Color(0xFFEF4444),
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(s(6)),
                             boxShadow: [
                               BoxShadow(
                                 color: const Color(0xFFEF4444).withValues(alpha: 0.3),
-                                blurRadius: 4,
-                                offset: const Offset(0, 1),
+                                blurRadius: s(4),
+                                offset: off(0, 1),
                               ),
                             ],
                           ),
                           child: Text(
                             'Only ${product.stock} left',
                             style: GoogleFonts.inter(
-                              fontSize: 8,
+                              fontSize: s(8),
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
                             ),
@@ -494,20 +495,20 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                         child: Container(
                           decoration: BoxDecoration(
                             color: Colors.black.withValues(alpha: 0.52),
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(s(14)),
                           ),
                           child: Center(
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: sym(h: 8, v: 3),
                               decoration: BoxDecoration(
                                 color: const Color(0xFF09090B).withValues(alpha: 0.95),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: const Color(0xFFF43F5E), width: 1),
+                                borderRadius: BorderRadius.circular(s(20)),
+                                border: Border.all(color: const Color(0xFFF43F5E), width: s(1)),
                               ),
                               child: Text(
                                 'OUT OF STOCK',
                                 style: GoogleFonts.inter(
-                                  fontSize: 8.5,
+                                  fontSize: s(8.5),
                                   fontWeight: FontWeight.w900,
                                   color: const Color(0xFFFDA4AF),
                                   letterSpacing: 0.6,
@@ -524,17 +525,17 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                         child: Container(
                           decoration: BoxDecoration(
                             color: const Color(0xFF16A34A).withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(s(14)),
                           ),
                           child: Center(
                             child: Container(
-                              width: 32,
-                              height: 32,
+                              width: s(32),
+                              height: s(32),
                               decoration: const BoxDecoration(
                                 color: Color(0xFF16A34A),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.check_rounded, color: Colors.white, size: 20),
+                              child: Icon(Icons.check_rounded, color: Colors.white, size: s(20)),
                             ),
                           ),
                         ),
@@ -542,30 +543,30 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                   ],
                 ),
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: s(6)),
 
               // 2. VEG / NON-VEG + PRODUCT TITLE
               SizedBox(
-                height: 32,
+                height: s(32),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (isFood) ...[
                       Container(
-                        margin: const EdgeInsets.only(top: 2.5, right: 4.5),
-                        width: 12,
-                        height: 12,
+                        margin: only(top: 2.5, right: 4.5),
+                        width: s(12),
+                        height: s(12),
                         decoration: BoxDecoration(
                           border: Border.all(
                             color: isVeg ? const Color(0xFF15803D) : const Color(0xFFDC2626),
-                            width: 1.3,
+                            width: s(1.3),
                           ),
-                          borderRadius: BorderRadius.circular(2.5),
+                          borderRadius: BorderRadius.circular(s(2.5)),
                         ),
                         child: Center(
                           child: Container(
-                            width: 5,
-                            height: 5,
+                            width: s(5),
+                            height: s(5),
                             decoration: BoxDecoration(
                               shape: isVeg ? BoxShape.circle : BoxShape.rectangle,
                               color: isVeg ? const Color(0xFF15803D) : const Color(0xFFDC2626),
@@ -578,7 +579,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                       child: Text(
                         product.name,
                         style: GoogleFonts.inter(
-                          fontSize: 11.5,
+                          fontSize: s(11.5),
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF0F172A),
                           height: 1.22,
@@ -591,7 +592,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                   ],
                 ),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: s(4)),
 
               // 3. PACK SIZE / UNIT / VARIANT PILL
               if (hasVariants)
@@ -602,11 +603,11 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                     }
                   },
                   child: Container(
-                    margin: const EdgeInsets.only(bottom: 5),
-                    padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 2),
+                    margin: only(bottom: 5),
+                    padding: sym(h: 5.5, v: 2),
                     decoration: BoxDecoration(
                       color: const Color(0xFFECFDF5),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(s(6)),
                       border: Border.all(color: const Color(0xFFA7F3D0)),
                     ),
                     child: Row(
@@ -615,26 +616,26 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                         Text(
                           '${variants.length} Options',
                           style: GoogleFonts.inter(
-                            fontSize: 8.5,
+                            fontSize: s(8.5),
                             fontWeight: FontWeight.w800,
                             color: const Color(0xFF059669),
                           ),
                         ),
-                        const SizedBox(width: 1.5),
-                        const Icon(Icons.keyboard_arrow_down_rounded, size: 11, color: Color(0xFF059669)),
+                        SizedBox(width: s(1.5)),
+                        Icon(Icons.keyboard_arrow_down_rounded, size: s(11), color: const Color(0xFF059669)),
                       ],
                     ),
                   ),
                 )
               else
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
+                  padding: only(bottom: 4),
                   child: Text(
                     product.unit.isNotEmpty && product.unit != '1 unit'
                         ? product.unit
                         : (isFood ? 'Serves 1' : '1 pc'),
                     style: GoogleFonts.inter(
-                      fontSize: 9.5,
+                      fontSize: s(9.5),
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFF94A3B8),
                     ),
@@ -657,7 +658,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                         Text(
                           '₹${startingPrice.toInt()}',
                           style: GoogleFonts.inter(
-                            fontSize: 14,
+                            fontSize: s(14),
                             fontWeight: FontWeight.w900,
                             color: const Color(0xFF0F172A),
                             letterSpacing: -0.3,
@@ -667,7 +668,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                           Text(
                             '₹${startingMrp.toInt()}',
                             style: GoogleFonts.inter(
-                              fontSize: 9.5,
+                              fontSize: s(9.5),
                               fontWeight: FontWeight.w500,
                               decoration: TextDecoration.lineThrough,
                               color: const Color(0xFF94A3B8),
@@ -676,7 +677,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  SizedBox(width: s(4)),
                   // Right Side: Compact ADD Button / Stepper
                   _buildAddButton(
                     context,
@@ -690,6 +691,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                     isFood,
                     gradientColors,
                     primaryColor,
+                    uiScale,
                   ),
                 ],
               ),
@@ -701,6 +703,35 @@ class _ProductCardState extends ConsumerState<ProductCard> {
   );
 }
 
+  Widget _badge({
+    required EdgeInsetsGeometry margin,
+    required EdgeInsetsGeometry padding,
+    required Gradient gradient,
+    required double radius,
+    required Color shadowColor,
+    required double shadowAlpha,
+    required double shadowBlur,
+    required Offset shadowOffset,
+    required Widget child,
+  }) {
+    return Container(
+      margin: margin,
+      padding: padding as EdgeInsets,
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(radius),
+        boxShadow: [
+          BoxShadow(
+            color: shadowColor.withValues(alpha: shadowAlpha),
+            blurRadius: shadowBlur,
+            offset: shadowOffset,
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
   Widget _buildProductImage(Product product, bool isFood) {
     var imgUrl = product.imageUrl?.trim() ?? '';
     if (imgUrl.isNotEmpty) {
@@ -708,13 +739,13 @@ class _ProductCardState extends ConsumerState<ProductCard> {
         imgUrl = 'https://www.fastkirana.in$imgUrl';
       }
       return ClipRRect(
-        borderRadius: BorderRadius.circular(13),
+        borderRadius: BorderRadius.circular(s(13)),
         child: Container(
           color: isFood ? const Color(0xFFFFF7ED) : Colors.transparent,
-          padding: isFood ? const EdgeInsets.all(6) : EdgeInsets.zero,
+          padding: isFood ? EdgeInsets.all(s(6)) : EdgeInsets.zero,
           child: CachedNetworkImage(
             imageUrl: imgUrl,
-            fit: isFood ? BoxFit.contain : BoxFit.contain,
+            fit: BoxFit.contain,
             width: double.infinity,
             height: double.infinity,
             memCacheWidth: 400,
@@ -725,7 +756,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
             errorWidget: (context, url, error) => Center(
               child: Text(
                 _getEmojiForProduct(product.name),
-                style: const TextStyle(fontSize: 36),
+                style: TextStyle(fontSize: s(36)),
               ),
             ),
             placeholder: (context, url) => Shimmer.fromColors(
@@ -734,7 +765,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(13),
+                  borderRadius: BorderRadius.circular(s(13)),
                 ),
               ),
             ),
@@ -745,7 +776,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     return Center(
       child: Text(
         _getEmojiForProduct(product.name),
-        style: const TextStyle(fontSize: 36),
+        style: TextStyle(fontSize: s(36)),
       ),
     );
   }
@@ -765,7 +796,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
           content: Text('${product.name} is currently out of stock.'),
           backgroundColor: const Color(0xFFDC2626),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(s(10))),
         ),
       );
       return;
@@ -800,18 +831,18 @@ class _ProductCardState extends ConsumerState<ProductCard> {
           content: Row(
             children: [
               const Icon(Icons.info_outline_rounded, color: Colors.white, size: 16),
-              const SizedBox(width: 8),
+              SizedBox(width: s(8)),
               Expanded(
                 child: Text(
                   'Cannot add more! Only ${product.stock} units available in stock.',
-                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                  style: GoogleFonts.inter(fontSize: s(12), fontWeight: FontWeight.w700, color: Colors.white),
                 ),
               ),
             ],
           ),
           backgroundColor: const Color(0xFFDC2626),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(s(10))),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -830,22 +861,26 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     bool isFood,
     List<Color> gradientColors,
     Color primaryColor,
+    double uiScale,
   ) {
+    final btnScale = uiScale;
+    double bs(double v) => (v * btnScale).toDouble();
+
     // 1. Out of Stock
     if (isOutOfStock) {
       return Container(
-        height: 26,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        height: bs(26),
+        padding: EdgeInsets.symmetric(horizontal: bs(8)),
         decoration: BoxDecoration(
           color: const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(s(7)),
           border: Border.all(color: const Color(0xFFE2E8F0)),
         ),
         alignment: Alignment.center,
         child: Text(
           'Sold Out',
           style: GoogleFonts.inter(
-            fontSize: 9.5,
+            fontSize: s(9.5),
             fontWeight: FontWeight.w800,
             color: const Color(0xFF94A3B8),
           ),
@@ -856,18 +891,18 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     // 2. Dish Timing Closed
     if (isTimingClosed) {
       return Container(
-        height: 26,
-        padding: const EdgeInsets.symmetric(horizontal: 6),
+        height: bs(26),
+        padding: EdgeInsets.symmetric(horizontal: bs(6)),
         decoration: BoxDecoration(
           color: const Color(0xFFFFFBEB),
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(s(7)),
           border: Border.all(color: const Color(0xFFFDE68A)),
         ),
         alignment: Alignment.center,
         child: Text(
           nextSlot != null ? 'Next @ $nextSlot' : 'Closed',
           style: GoogleFonts.inter(
-            fontSize: 8.5,
+            fontSize: s(8.5),
             fontWeight: FontWeight.w800,
             color: const Color(0xFFD97706),
           ),
@@ -886,37 +921,37 @@ class _ProductCardState extends ConsumerState<ProductCard> {
               content: Row(
                 children: [
                   const Icon(Icons.info_outline_rounded, color: Colors.white, size: 16),
-                  const SizedBox(width: 8),
+                  SizedBox(width: s(8)),
                   Expanded(
                     child: Text(
                       isFood
                           ? '${product.restaurant?.name ?? "This Restaurant"} is currently closed.'
                           : 'FastKirana Grocery Darkstore is currently closed.',
-                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                      style: GoogleFonts.inter(fontSize: s(12), fontWeight: FontWeight.w700, color: Colors.white),
                     ),
                   ),
                 ],
               ),
               backgroundColor: const Color(0xFF0F172A),
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(s(10))),
               duration: const Duration(seconds: 2),
             ),
           );
         },
         child: Container(
-          height: 27,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          height: bs(27),
+          padding: EdgeInsets.symmetric(horizontal: bs(8)),
           decoration: BoxDecoration(
             color: const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(s(8)),
             border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
           alignment: Alignment.center,
           child: Text(
             'Closed',
             style: GoogleFonts.inter(
-              fontSize: 9.5,
+              fontSize: s(9.5),
               fontWeight: FontWeight.w800,
               color: const Color(0xFF94A3B8),
             ),
@@ -928,19 +963,19 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     // 4. In Cart Stepper (Compact Gradient Stepper)
     if (inCartQty > 0) {
       return Container(
-        height: 27,
+        height: bs(27),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: gradientColors,
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(s(8)),
           boxShadow: [
             BoxShadow(
               color: primaryColor.withValues(alpha: 0.28),
-              blurRadius: 5,
-              offset: const Offset(0, 1.5),
+              blurRadius: s(5),
+              offset: off(0, 1.5),
             ),
           ],
         ),
@@ -957,20 +992,20 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                   ref.read(cartProvider.notifier).decrement(product.id);
                 }
               },
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                child: Icon(Icons.remove_rounded, size: 14, color: Colors.white),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: bs(6), vertical: bs(4)),
+                child: Icon(Icons.remove_rounded, size: bs(14), color: Colors.white),
               ),
             ),
             // Quantity Number
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
+              padding: EdgeInsets.symmetric(horizontal: s(3)),
               child: Text(
                 '$inCartQty',
                 style: GoogleFonts.inter(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
-                  fontSize: 12,
+                  fontSize: s(12),
                 ),
               ),
             ),
@@ -988,18 +1023,18 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                         content: Row(
                           children: [
                             const Icon(Icons.info_outline_rounded, color: Colors.white, size: 16),
-                            const SizedBox(width: 8),
+                            SizedBox(width: s(8)),
                             Expanded(
                               child: Text(
                                 'Only ${product.stock} units available in stock!',
-                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                                style: GoogleFonts.inter(fontSize: s(12), fontWeight: FontWeight.w700, color: Colors.white),
                               ),
                             ),
                           ],
                         ),
                         backgroundColor: const Color(0xFFDC2626),
                         behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(s(10))),
                         duration: const Duration(seconds: 2),
                       ),
                     );
@@ -1014,9 +1049,9 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                   }
                 }
               },
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                child: Icon(Icons.add_rounded, size: 14, color: Colors.white),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: bs(6), vertical: bs(4)),
+                child: Icon(Icons.add_rounded, size: bs(14), color: Colors.white),
               ),
             ),
           ],
@@ -1034,17 +1069,17 @@ class _ProductCardState extends ConsumerState<ProductCard> {
         }
       },
       child: Container(
-        height: 27,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        height: bs(27),
+        padding: EdgeInsets.symmetric(horizontal: bs(10)),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: primaryColor, width: 1.2),
+          borderRadius: BorderRadius.circular(s(8)),
+          border: Border.all(color: primaryColor, width: s(1.2)),
           boxShadow: [
             BoxShadow(
               color: primaryColor.withValues(alpha: 0.12),
-              blurRadius: 4,
-              offset: const Offset(0, 1.5),
+              blurRadius: s(4),
+              offset: off(0, 1.5),
             ),
           ],
         ),
@@ -1054,14 +1089,14 @@ class _ProductCardState extends ConsumerState<ProductCard> {
             Text(
               'ADD',
               style: GoogleFonts.inter(
-                fontSize: 10.5,
+                fontSize: s(10.5),
                 fontWeight: FontWeight.w900,
                 color: primaryColor,
                 letterSpacing: 0.4,
               ),
             ),
-            const SizedBox(width: 2.5),
-            Icon(Icons.add_rounded, size: 13, color: primaryColor),
+            SizedBox(width: s(2.5)),
+            Icon(Icons.add_rounded, size: s(13), color: primaryColor),
           ],
         ),
       ),
@@ -1110,71 +1145,77 @@ class ProductCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cardWidth = width ??
+        (context.screenWidth - Responsive.horizontalPadding(context) * 2 - 12) / 2;
+    final baseWidth = 155.0;
+    final uiScale = (cardWidth / baseWidth).clamp(1.0, 1.15);
+    double s(double v) => (v * uiScale);
+
     return Container(
-      width: width,
-      padding: const EdgeInsets.all(8),
+      width: cardWidth,
+      padding: EdgeInsets.all(s(8)),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+        borderRadius: BorderRadius.circular(s(18)),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: s(1.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            height: isCompact ? 100 : 118,
+            height: isCompact ? s(100) : s(118),
             width: double.infinity,
             decoration: BoxDecoration(
               color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(s(14)),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: s(8)),
           Container(
-            width: 80,
-            height: 10,
+            width: s(80),
+            height: s(10),
             decoration: BoxDecoration(
               color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(s(4)),
             ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: s(6)),
           Container(
             width: double.infinity,
-            height: 14,
+            height: s(14),
             decoration: BoxDecoration(
               color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(s(4)),
             ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: s(6)),
           Container(
-            width: 45,
-            height: 12,
+            width: s(45),
+            height: s(12),
             decoration: BoxDecoration(
               color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(s(4)),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: s(8)),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                width: 40,
-                height: 14,
+                width: s(40),
+                height: s(14),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(s(4)),
                 ),
               ),
               Container(
-                width: 58,
-                height: 27,
+                width: s(58),
+                height: s(27),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(s(8)),
                 ),
               ),
             ],
@@ -1184,4 +1225,3 @@ class ProductCardSkeleton extends StatelessWidget {
     );
   }
 }
-

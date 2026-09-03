@@ -107,7 +107,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
             Text(
               widget.category.name,
               style: GoogleFonts.inter(
-                fontSize: 16,
+                fontSize: Responsive.scaledFontSize(context, 16),
                 fontWeight: FontWeight.w900,
                 color: const Color(0xFF111827),
                 letterSpacing: -0.3,
@@ -120,7 +120,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                 Text(
                   'FAST DELIVERY',
                   style: GoogleFonts.inter(
-                    fontSize: 9.5,
+                    fontSize: Responsive.scaledFontSize(context, 9.5),
                     fontWeight: FontWeight.w800,
                     color: const Color(0xFF059669),
                   ),
@@ -140,7 +140,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
               children: [
               // 1. Left Vertical Subcategory Rail (Blinkit 2-Pane Navigation)
               Container(
-                width: 82,
+                width: Responsive.isSmallMobile(context) ? 64 : 82,
                 color: const Color(0xFFF9FAFB),
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -188,7 +188,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                               child: Center(
                                 child: Text(
                                   item['emoji']!,
-                                  style: const TextStyle(fontSize: 18),
+                                  style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18)),
                                 ),
                               ),
                             ),
@@ -197,7 +197,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                               item['name']!,
                               textAlign: TextAlign.center,
                               style: GoogleFonts.inter(
-                                fontSize: 9.5,
+                                fontSize: Responsive.scaledFontSize(context, 9.5),
                                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
                                 color: isSelected ? const Color(0xFFEA580C) : const Color(0xFF4B5563),
                                 height: 1.2,
@@ -237,10 +237,10 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                             child: TextField(
                               controller: _searchController,
                               onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
-                              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF111827)),
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF111827)),
                               decoration: InputDecoration(
                                 hintText: 'Search in ${widget.category.name}...',
-                                hintStyle: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF9CA3AF)),
+                                hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: const Color(0xFF9CA3AF)),
                                 prefixIcon: const Icon(Icons.search_rounded, size: 16, color: Color(0xFF9CA3AF)),
                                 suffixIcon: _searchQuery.isNotEmpty
                                     ? GestureDetector(
@@ -317,12 +317,12 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Text('🍿', style: TextStyle(fontSize: 40)),
+                                  const Text('🍿', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 40))),
                                   const SizedBox(height: 8),
                                   Text(
                                     'No products found',
                                     style: GoogleFonts.inter(
-                                      fontSize: 13,
+                                      fontSize: Responsive.scaledFontSize(context, 13),
                                       fontWeight: FontWeight.w700,
                                       color: const Color(0xFF6B7280),
                                     ),
@@ -335,7 +335,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                           return LayoutBuilder(
                             builder: (context, constraints) {
                               final columns = (constraints.maxWidth / 140).floor().clamp(2, 6);
-                              final itemAspect = constraints.maxWidth < 360 ? 0.58 : (columns > 2 ? 0.64 : 0.58);
+                              final itemAspect = Responsive.productCardAspectRatio(context, isCompact: true);
 
                               return AnimationLimiter(
                                 child: GridView.builder(
@@ -398,7 +398,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                                 const SizedBox(height: 8),
                                 Text(
                                   'Tap to reload products',
-                                  style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+                                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
                                 ),
                                 const SizedBox(height: 12),
                                 ElevatedButton(
@@ -410,7 +410,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                                     backgroundColor: primaryRed,
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                   ),
-                                  child: const Text('Retry', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                  child: const Text('Retry', style: TextStyle(color: Colors.white, fontSize: Responsive.scaledFontSize(context, 12))),
                                 ),
                               ],
                             ),
@@ -449,7 +449,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
         child: Text(
           title,
           style: GoogleFonts.inter(
-            fontSize: 10.5,
+            fontSize: Responsive.scaledFontSize(context, 10.5),
             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
             color: isSelected ? Colors.white : const Color(0xFF374151),
           ),

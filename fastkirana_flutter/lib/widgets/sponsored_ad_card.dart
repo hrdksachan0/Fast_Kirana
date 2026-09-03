@@ -73,7 +73,7 @@ class SponsoredAdCard extends StatelessWidget {
                           Text(
                             'SPONSORED PARTNER',
                             style: GoogleFonts.inter(
-                              fontSize: 9,
+                              fontSize: Responsive.scaledFontSize(context, 9),
                               fontWeight: FontWeight.w900,
                               color: Colors.white,
                               letterSpacing: 0.6,
@@ -93,7 +93,7 @@ class SponsoredAdCard extends StatelessWidget {
                         child: Text(
                           discountText!,
                           style: GoogleFonts.inter(
-                            fontSize: 9.5,
+                            fontSize: Responsive.scaledFontSize(context, 9.5),
                             fontWeight: FontWeight.w900,
                             color: const Color(0xFFE11D48),
                             letterSpacing: 0.3,
@@ -117,7 +117,7 @@ class SponsoredAdCard extends StatelessWidget {
                           Text(
                             title ?? 'Special Partner Offer',
                             style: GoogleFonts.inter(
-                              fontSize: 13.5,
+                              fontSize: Responsive.scaledFontSize(context, 13.5),
                               fontWeight: FontWeight.w900,
                               color: const Color(0xFF78350F),
                               height: 1.25,
@@ -127,7 +127,7 @@ class SponsoredAdCard extends StatelessWidget {
                           Text(
                             subtitle ?? 'Discover trending local dishes & groceries.',
                             style: GoogleFonts.inter(
-                              fontSize: 11,
+                              fontSize: Responsive.scaledFontSize(context, 11),
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF92400E),
                               height: 1.3,
@@ -197,7 +197,7 @@ class SponsoredAdCard extends StatelessWidget {
                               Text(
                                 'CODE: ',
                                 style: GoogleFonts.inter(
-                                  fontSize: 9.5,
+                                  fontSize: Responsive.scaledFontSize(context, 9.5),
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFFB45309),
                                 ),
@@ -205,7 +205,7 @@ class SponsoredAdCard extends StatelessWidget {
                               Text(
                                 promoCode!,
                                 style: GoogleFonts.inter(
-                                  fontSize: 10.5,
+                                  fontSize: Responsive.scaledFontSize(context, 10.5),
                                   fontWeight: FontWeight.w900,
                                   color: const Color(0xFF92400E),
                                   letterSpacing: 0.5,
@@ -240,7 +240,7 @@ class SponsoredAdCard extends StatelessWidget {
                           Text(
                             actionText ?? 'Explore',
                             style: GoogleFonts.inter(
-                              fontSize: 11,
+                              fontSize: Responsive.scaledFontSize(context, 11),
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
                             ),

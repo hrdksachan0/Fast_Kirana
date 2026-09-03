@@ -49,14 +49,14 @@ class AddressCard extends StatelessWidget {
                 children: [
                   Text(label,
                     style: TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w600,
+                      fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w600,
                       color: isSelected ? AppDesignSystem.primary : AppDesignSystem.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(fullAddress,
                     maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11.5, color: AppDesignSystem.textSecondary),
+                    style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 11.5), color: AppDesignSystem.textSecondary),
                   ),
                 ],
               ),

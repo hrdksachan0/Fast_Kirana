@@ -126,7 +126,7 @@ class _LiveGpsRouteCardState extends State<LiveGpsRouteCard> with SingleTickerPr
                     Text(
                       widget.isDelivered ? 'ORDER DELIVERED' : countdownText,
                       style: GoogleFonts.inter(
-                        fontSize: 14.5,
+                        fontSize: Responsive.scaledFontSize(context, 14.5),
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                         letterSpacing: -0.2,
@@ -144,7 +144,7 @@ class _LiveGpsRouteCardState extends State<LiveGpsRouteCard> with SingleTickerPr
                   child: Text(
                     '⚡ LIVE GPS',
                     style: GoogleFonts.inter(
-                      fontSize: 10,
+                      fontSize: Responsive.scaledFontSize(context, 10),
                       fontWeight: FontWeight.w900,
                       color: const Color(0xFF10B981),
                       letterSpacing: 0.5,
@@ -188,13 +188,13 @@ class _LiveGpsRouteCardState extends State<LiveGpsRouteCard> with SingleTickerPr
                 Expanded(
                   child: Row(
                     children: [
-                      const Text('🏬', style: TextStyle(fontSize: 12)),
+                      const Text('🏬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           widget.storeName,
                           style: GoogleFonts.inter(
-                            fontSize: 11,
+                            fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF94A3B8),
                           ),
@@ -213,13 +213,13 @@ class _LiveGpsRouteCardState extends State<LiveGpsRouteCard> with SingleTickerPr
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      const Text('🏠', style: TextStyle(fontSize: 12)),
+                      const Text('🏠', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
                           widget.destinationAddress,
                           style: GoogleFonts.inter(
-                            fontSize: 11,
+                            fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFFE2E8F0),
                           ),
@@ -316,7 +316,7 @@ class _GpsRoutePainter extends CustomPainter {
     final textPainter = TextPainter(
       text: const TextSpan(
         text: '🛵',
-        style: TextStyle(fontSize: 14),
+        style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14)),
       ),
       textDirection: TextDirection.ltr,
     )..layout();

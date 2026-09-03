@@ -28,8 +28,16 @@ Order _$OrderFromJson(Map<String, dynamic> json) => Order(
       deliveryMethod: json['deliveryMethod'] as String?,
       shopName: json['shopName'] as String?,
       shopPhone: json['shopPhone'] as String?,
+      deliveryBoyName: json['deliveryBoyName'] as String?,
+      deliveryBoyPhone: json['deliveryBoyPhone'] as String?,
+      deliveryLat: (json['deliveryLat'] as num?)?.toDouble(),
+      deliveryLng: (json['deliveryLng'] as num?)?.toDouble(),
+      addressRaw: json['addressRaw'] as Map<String, dynamic>?,
       notes: json['notes'] as String?,
       couponCode: json['couponCode'] as String?,
+      customerName: json['customerName'] as String?,
+      customerPhone: json['customerPhone'] as String?,
+      customerAddress: json['customerAddress'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       confirmedAt: json['confirmedAt'] == null
           ? null
@@ -45,6 +53,14 @@ Order _$OrderFromJson(Map<String, dynamic> json) => Order(
           : DateTime.parse(json['deliveredAt'] as String),
       items: (json['items'] as List<dynamic>?)
           ?.map((e) => OrderItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      combinedId: json['combinedId'] as String?,
+      isCombined: json['isCombined'] as bool? ?? false,
+      subOrders: (json['subOrders'] as List<dynamic>?)
+          ?.map((e) => Order.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      subLabels: (json['subLabels'] as List<dynamic>?)
+          ?.map((e) => e as String)
           .toList(),
     );
 
@@ -68,14 +84,26 @@ Map<String, dynamic> _$OrderToJson(Order instance) => <String, dynamic>{
       'deliveryMethod': instance.deliveryMethod,
       'shopName': instance.shopName,
       'shopPhone': instance.shopPhone,
+      'deliveryBoyName': instance.deliveryBoyName,
+      'deliveryBoyPhone': instance.deliveryBoyPhone,
+      'deliveryLat': instance.deliveryLat,
+      'deliveryLng': instance.deliveryLng,
+      'addressRaw': instance.addressRaw,
       'notes': instance.notes,
       'couponCode': instance.couponCode,
+      'customerName': instance.customerName,
+      'customerPhone': instance.customerPhone,
+      'customerAddress': instance.customerAddress,
       'createdAt': instance.createdAt.toIso8601String(),
       'confirmedAt': instance.confirmedAt?.toIso8601String(),
       'packedAt': instance.packedAt?.toIso8601String(),
       'shippedAt': instance.shippedAt?.toIso8601String(),
       'deliveredAt': instance.deliveredAt?.toIso8601String(),
       'items': instance.items,
+      'combinedId': instance.combinedId,
+      'isCombined': instance.isCombined,
+      'subOrders': instance.subOrders,
+      'subLabels': instance.subLabels,
     };
 
 const _$OrderStatusEnumMap = {
@@ -101,6 +129,7 @@ OrderItem _$OrderItemFromJson(Map<String, dynamic> json) => OrderItem(
       quantity: (json['quantity'] as num).toInt(),
       imageUrl: json['imageUrl'] as String?,
       selectedVariant: json['selectedVariant'] as String?,
+      notes: json['notes'] as String?,
     );
 
 Map<String, dynamic> _$OrderItemToJson(OrderItem instance) => <String, dynamic>{
@@ -111,4 +140,5 @@ Map<String, dynamic> _$OrderItemToJson(OrderItem instance) => <String, dynamic>{
       'quantity': instance.quantity,
       'imageUrl': instance.imageUrl,
       'selectedVariant': instance.selectedVariant,
+      'notes': instance.notes,
     };

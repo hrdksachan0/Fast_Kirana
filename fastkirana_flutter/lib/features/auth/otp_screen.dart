@@ -247,6 +247,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
         if (roleUpper == 'DELIVERY' || roleUpper == 'RIDER' || roleUpper == 'DELIVERY_PARTNER') {
           await prefs.setString('user_role', 'DELIVERY');
           await SecureStorage.write('user_role', 'DELIVERY');
+          await SecureStorage.loadCache();  // Refresh interceptor cache with updated role
           if (mounted) {
             Navigator.of(context).pushAndRemoveUntil(
               FadeSlideRoute(page: const DeliveryDashboard()),
@@ -259,6 +260,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
         if (roleUpper == 'ADMIN') {
           await prefs.setString('user_role', 'ADMIN');
           await SecureStorage.write('user_role', 'ADMIN');
+          await SecureStorage.loadCache();  // Refresh interceptor cache with updated role
           if (mounted) {
             Navigator.of(context).pushAndRemoveUntil(
               FadeSlideRoute(page: const AdminDashboard()),
@@ -271,6 +273,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
         if (roleUpper == 'RESTAURANT_OWNER' || roleUpper == 'CHEF' || roleUpper == 'RESTAURANT') {
           await prefs.setString('user_role', 'RESTAURANT_OWNER');
           await SecureStorage.write('user_role', 'RESTAURANT_OWNER');
+          await SecureStorage.loadCache();  // Refresh interceptor cache
           if (mounted) {
             Navigator.of(context).pushAndRemoveUntil(
               FadeSlideRoute(page: RestaurantDashboard(
@@ -285,6 +288,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
         if (roleUpper == 'PICKER') {
           await prefs.setString('user_role', 'PICKER');
           await SecureStorage.write('user_role', 'PICKER');
+          await SecureStorage.loadCache();  // Refresh interceptor cache
           if (mounted) {
             Navigator.of(context).pushAndRemoveUntil(
               FadeSlideRoute(page: PickerDashboard()),
@@ -363,7 +367,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                           color: const Color(0xFFFFF1F2),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Text('👋', style: TextStyle(fontSize: 22)),
+                        child: const Text('👋', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22))),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -373,7 +377,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                             Text(
                               'What should we call you?',
                               style: GoogleFonts.inter(
-                                fontSize: 16,
+                                fontSize: Responsive.scaledFontSize(context, 16),
                                 fontWeight: FontWeight.w800,
                                 color: slateDark,
                                 letterSpacing: -0.2,
@@ -382,7 +386,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                             Text(
                               'Enter your name to personalize your orders',
                               style: GoogleFonts.inter(
-                                fontSize: 12,
+                                fontSize: Responsive.scaledFontSize(context, 12),
                                 color: slateMuted,
                               ),
                             ),
@@ -406,11 +410,11 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                       controller: nameCtrl,
                       autofocus: true,
                       textCapitalization: TextCapitalization.words,
-                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: slateDark),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: slateDark),
                       decoration: InputDecoration(
                         icon: const Icon(Icons.person_outline_rounded, size: 18, color: slateLight),
                         hintText: 'e.g. Rahul Sharma',
-                        hintStyle: GoogleFonts.inter(fontSize: 13, color: slateLight),
+                        hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: slateLight),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(vertical: 12),
                       ),
@@ -455,7 +459,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                         child: Text(
                           'Let\'s Get Started ➔',
                           style: GoogleFonts.inter(
-                            fontSize: 14,
+                            fontSize: Responsive.scaledFontSize(context, 14),
                             fontWeight: FontWeight.w800,
                             color: Colors.white,
                           ),
@@ -592,7 +596,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                           ],
                         ),
                         child: const Center(
-                          child: Text('📲', style: TextStyle(fontSize: 30)),
+                          child: Text('📲', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 30))),
                         ),
                       ),
                     ],
@@ -608,7 +612,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                       Text(
                         'OTP Verification',
                         style: GoogleFonts.inter(
-                          fontSize: 24,
+                          fontSize: Responsive.scaledFontSize(context, 24),
                           fontWeight: FontWeight.w900,
                           color: const Color(0xFF0F172A),
                           letterSpacing: -0.6,
@@ -618,7 +622,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                       Text(
                         'Enter the 6-digit code sent via SMS to',
                         style: GoogleFonts.inter(
-                          fontSize: 13.5,
+                          fontSize: Responsive.scaledFontSize(context, 13.5),
                           fontWeight: FontWeight.w500,
                           color: const Color(0xFF64748B),
                         ),
@@ -641,12 +645,12 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('🇮🇳', style: TextStyle(fontSize: 14)),
+                            const Text('🇮🇳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
                             const SizedBox(width: 6),
                             Text(
                               '+91 ${widget.identifier}',
                               style: GoogleFonts.inter(
-                                fontSize: 13.5,
+                                fontSize: Responsive.scaledFontSize(context, 13.5),
                                 fontWeight: FontWeight.w800,
                                 color: const Color(0xFF0F172A),
                                 letterSpacing: 0.5,
@@ -664,7 +668,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                                 child: Text(
                                   'Edit',
                                   style: GoogleFonts.inter(
-                                    fontSize: 11.5,
+                                    fontSize: Responsive.scaledFontSize(context, 11.5),
                                     fontWeight: FontWeight.w800,
                                     color: const Color(0xFF2563EB),
                                   ),
@@ -716,7 +720,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                                 child: Text(
                                   _errorMessage!,
                                   style: GoogleFonts.inter(
-                                    fontSize: 12.5,
+                                    fontSize: Responsive.scaledFontSize(context, 12.5),
                                     color: primaryRed,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -787,7 +791,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                                     cursorWidth: 2.2,
                                     cursorHeight: 22,
                                     style: GoogleFonts.inter(
-                                      fontSize: 23,
+                                      fontSize: Responsive.scaledFontSize(context, 23),
                                       fontWeight: FontWeight.w900,
                                       color: const Color(0xFF0F172A),
                                     ),
@@ -823,7 +827,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                           Text(
                             "Didn't receive the OTP? ",
                             style: GoogleFonts.inter(
-                              fontSize: 13,
+                              fontSize: Responsive.scaledFontSize(context, 13),
                               fontWeight: FontWeight.w500,
                               color: slateMuted,
                             ),
@@ -840,7 +844,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                               child: Text(
                                 _resendCooldown > 0 ? 'Resend in ${_resendCooldown}s' : 'Resend OTP ➔',
                                 style: GoogleFonts.inter(
-                                  fontSize: 12.5,
+                                  fontSize: Responsive.scaledFontSize(context, 12.5),
                                   fontWeight: FontWeight.w800,
                                   color: _resendCooldown > 0 ? const Color(0xFF94A3B8) : primaryRed,
                                 ),
@@ -898,7 +902,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                                       Text(
                                         'Verify & Proceed',
                                         style: GoogleFonts.inter(
-                                          fontSize: 15.5,
+                                          fontSize: Responsive.scaledFontSize(context, 15.5),
                                           fontWeight: FontWeight.w900,
                                           color: Colors.white,
                                           letterSpacing: 0.3,
@@ -945,7 +949,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                         Text(
                           'End-to-End Encrypted & Secure Login',
                           style: GoogleFonts.inter(
-                            fontSize: 11.5,
+                            fontSize: Responsive.scaledFontSize(context, 11.5),
                             fontWeight: FontWeight.w700,
                             color: slateMuted,
                           ),

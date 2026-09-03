@@ -41,13 +41,13 @@ class AddressesScreen extends ConsumerWidget {
                       const SizedBox(height: 16),
                       Text(
                         'No addresses saved yet',
-                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: AppDesignSystem.textPrimary),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w600, color: AppDesignSystem.textPrimary),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Tap "Add Address" to save your first delivery address',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textSecondary),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textSecondary),
                       ),
                     ],
                   ),
@@ -71,13 +71,13 @@ class AddressesScreen extends ConsumerWidget {
                   const SizedBox(height: 12),
                   Text(
                     'Could not load addresses',
-                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     err.toString(),
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary),
                   ),
                   const SizedBox(height: 16),
                   BrandButton(
@@ -114,7 +114,7 @@ class AddressesScreen extends ConsumerWidget {
               const SizedBox(width: 12),
               Text(
                 addr.label,
-                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w700),
               ),
               const Spacer(),
               if (addr.isDefault)
@@ -127,7 +127,7 @@ class AddressesScreen extends ConsumerWidget {
                   child: Text(
                     'DEFAULT',
                     style: GoogleFonts.inter(
-                      fontSize: 10,
+                      fontSize: Responsive.scaledFontSize(context, 10),
                       fontWeight: FontWeight.w700,
                       color: AppDesignSystem.success,
                     ),
@@ -138,12 +138,12 @@ class AddressesScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           Text(
             addr.fullAddress,
-            style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textSecondary),
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textSecondary),
           ),
           const SizedBox(height: 4),
           Text(
             'Phone: ${addr.phone}',
-            style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary),
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary),
           ),
           const SizedBox(height: 12),
           Row(

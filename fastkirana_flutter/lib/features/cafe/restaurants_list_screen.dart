@@ -61,7 +61,7 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
             Text(
               'Restaurants',
               style: GoogleFonts.inter(
-                fontSize: 17,
+                fontSize: Responsive.scaledFontSize(context, 17),
                 fontWeight: FontWeight.w900,
                 color: AppDesignSystem.textPrimary,
                 letterSpacing: -0.5,
@@ -70,7 +70,7 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
             Text(
               'Freshly prepared from top partner kitchens',
               style: GoogleFonts.inter(
-                fontSize: 10,
+                fontSize: Responsive.scaledFontSize(context, 10),
                 fontWeight: FontWeight.w600,
                 color: AppDesignSystem.textSecondary,
               ),
@@ -98,11 +98,11 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
                     onChanged: (val) {
                       ref.read(restaurantSearchQueryProvider.notifier).state = val;
                     },
-                    style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w600),
                     decoration: InputDecoration(
                       hintText: 'Search restaurants, rolls, burgers, biryani...',
                       hintStyle: GoogleFonts.inter(
-                        fontSize: 12,
+                        fontSize: Responsive.scaledFontSize(context, 12),
                         fontWeight: FontWeight.w500,
                         color: AppDesignSystem.textMuted,
                       ),
@@ -156,12 +156,12 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(cat['emoji']!, style: const TextStyle(fontSize: 12)),
+                            Text(cat['emoji']!, style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
                             const SizedBox(width: 5),
                             Text(
                               cat['label']!,
                               style: GoogleFonts.inter(
-                                fontSize: 11.5,
+                                fontSize: Responsive.scaledFontSize(context, 11.5),
                                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
                                 color: isSelected ? Colors.white : const Color(0xFFC2410C),
                               ),
@@ -223,12 +223,12 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Text('🍽️', style: TextStyle(fontSize: 48)),
+                            const Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 48))),
                             const SizedBox(height: 12),
                             Text(
                               'No restaurants match your filters',
                               style: GoogleFonts.inter(
-                                fontSize: 14,
+                                fontSize: Responsive.scaledFontSize(context, 14),
                                 fontWeight: FontWeight.w800,
                                 color: AppDesignSystem.textPrimary,
                               ),
@@ -237,7 +237,7 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
                             Text(
                               'Try clearing filters or search query',
                               style: GoogleFonts.inter(
-                                fontSize: 12,
+                                fontSize: Responsive.scaledFontSize(context, 12),
                                 color: AppDesignSystem.textSecondary,
                               ),
                             ),
@@ -263,12 +263,12 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text('⚠️', style: TextStyle(fontSize: 48)),
+                        const Text('⚠️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 48))),
                         const SizedBox(height: 12),
                         Text(
                           'Failed to load restaurants',
                           style: GoogleFonts.inter(
-                            fontSize: 14,
+                            fontSize: Responsive.scaledFontSize(context, 14),
                             fontWeight: FontWeight.w800,
                             color: AppDesignSystem.textPrimary,
                           ),
@@ -313,7 +313,7 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
         child: Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 11,
+            fontSize: Responsive.scaledFontSize(context, 11),
             fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
             color: isActive ? const Color(0xFFEA580C) : const Color(0xFF4B5563),
           ),

@@ -127,7 +127,7 @@ class _RestaurantDeliveryLoadingScreenState extends State<RestaurantDeliveryLoad
                           'Hot & fresh food from\nnearby restaurants delivered!',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 22,
+                            fontSize: Responsive.scaledFontSize(context, 22),
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF94A3B8), // Soft rounded light-gray
                             height: 1.35,
@@ -155,7 +155,7 @@ class _RestaurantDeliveryLoadingScreenState extends State<RestaurantDeliveryLoad
                           Text(
                             'NEARBY RESTAURANTS',
                             style: GoogleFonts.inter(
-                              fontSize: 10,
+                              fontSize: Responsive.scaledFontSize(context, 10),
                               fontWeight: FontWeight.w800,
                               color: const Color(0xFFCBD5E1), // Very subtle & minimal
                               letterSpacing: 1.8,

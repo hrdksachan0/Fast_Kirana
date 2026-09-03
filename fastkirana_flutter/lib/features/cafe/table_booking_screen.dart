@@ -73,7 +73,7 @@ class _TableBookingScreenState extends ConsumerState<TableBookingScreen> {
         centerTitle: true,
         title: Text(
           'Reserve a Table',
-          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
         ),
       ),
       body: SingleChildScrollView(
@@ -102,16 +102,16 @@ class _TableBookingScreenState extends ConsumerState<TableBookingScreen> {
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Center(child: Text('☕', style: const TextStyle(fontSize: 28))),
+                    child: Center(child: Text('☕', style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 28)))),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(widget.restaurantName, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)),
+                        Text(widget.restaurantName, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: Colors.white)),
                         const SizedBox(height: 4),
-                        Text('⭐ 4.5 • Cafe • ₹300 for two', style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withOpacity(0.9))),
+                        Text('⭐ 4.5 • Cafe • ₹300 for two', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: Colors.white.withOpacity(0.9))),
                       ],
                     ),
                   ),
@@ -122,7 +122,7 @@ class _TableBookingScreenState extends ConsumerState<TableBookingScreen> {
             const SizedBox(height: 24),
 
             // Guests
-            Text('Number of Guests', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+            Text('Number of Guests', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(8),
@@ -146,7 +146,7 @@ class _TableBookingScreenState extends ConsumerState<TableBookingScreen> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Center(
-                        child: Text('$num', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: isSelected ? Colors.white : AppDesignSystem.textPrimary)),
+                        child: Text('$num', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: isSelected ? Colors.white : AppDesignSystem.textPrimary)),
                       ),
                     ),
                   );
@@ -157,7 +157,7 @@ class _TableBookingScreenState extends ConsumerState<TableBookingScreen> {
             const SizedBox(height: 24),
 
             // Date
-            Text('Select Date', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+            Text('Select Date', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
             const SizedBox(height: 12),
             SizedBox(
               height: 80,
@@ -182,10 +182,10 @@ class _TableBookingScreenState extends ConsumerState<TableBookingScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(DateFormat('EEE').format(date), style: GoogleFonts.inter(fontSize: 11, color: isSelected ? Colors.white : AppDesignSystem.textSecondary)),
+                          Text(DateFormat('EEE').format(date), style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: isSelected ? Colors.white : AppDesignSystem.textSecondary)),
                           const SizedBox(height: 4),
-                          Text('${date.day}', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w800, color: isSelected ? Colors.white : AppDesignSystem.textPrimary)),
-                          Text(DateFormat('MMM').format(date), style: GoogleFonts.inter(fontSize: 10, color: isSelected ? Colors.white70 : AppDesignSystem.textMuted)),
+                          Text('${date.day}', style: GoogleFonts.poppins(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: isSelected ? Colors.white : AppDesignSystem.textPrimary)),
+                          Text(DateFormat('MMM').format(date), style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), color: isSelected ? Colors.white70 : AppDesignSystem.textMuted)),
                         ],
                       ),
                     ),
@@ -197,7 +197,7 @@ class _TableBookingScreenState extends ConsumerState<TableBookingScreen> {
             const SizedBox(height: 24),
 
             // Slot
-            Text('Meal Slot', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+            Text('Meal Slot', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
             const SizedBox(height: 12),
             Row(
               children: _slots.map((slot) {
@@ -214,7 +214,7 @@ class _TableBookingScreenState extends ConsumerState<TableBookingScreen> {
                         border: Border.all(color: isSelected ? AppDesignSystem.primary : AppDesignSystem.borderLight),
                       ),
                       child: Center(
-                        child: Text(slot, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: isSelected ? Colors.white : AppDesignSystem.textPrimary)),
+                        child: Text(slot, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: isSelected ? Colors.white : AppDesignSystem.textPrimary)),
                       ),
                     ),
                   ),
@@ -225,7 +225,7 @@ class _TableBookingScreenState extends ConsumerState<TableBookingScreen> {
             const SizedBox(height: 24),
 
             // Time
-            Text('Select Time', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+            Text('Select Time', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -241,7 +241,7 @@ class _TableBookingScreenState extends ConsumerState<TableBookingScreen> {
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: isSelected ? AppDesignSystem.primary : AppDesignSystem.borderLight),
                     ),
-                    child: Text(time, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: isSelected ? Colors.white : AppDesignSystem.textPrimary)),
+                    child: Text(time, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700, color: isSelected ? Colors.white : AppDesignSystem.textPrimary)),
                   ),
                 );
               }).toList(),
@@ -250,7 +250,7 @@ class _TableBookingScreenState extends ConsumerState<TableBookingScreen> {
             const SizedBox(height: 24),
 
             // Special Request
-            Text('Special Requests (Optional)', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+            Text('Special Requests (Optional)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
@@ -264,7 +264,7 @@ class _TableBookingScreenState extends ConsumerState<TableBookingScreen> {
                 maxLines: 3,
                 decoration: InputDecoration(
                   hintText: 'Any special requests?',
-                  hintStyle: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textMuted),
+                  hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textMuted),
                   border: InputBorder.none,
                 ),
               ),

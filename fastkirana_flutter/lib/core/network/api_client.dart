@@ -21,7 +21,9 @@ final dioProvider = Provider<Dio>((ref) {
         if (options.extra.containsKey('override_base_url')) {
           options.baseUrl = options.extra['override_base_url'] as String;
         }
-        final token = await SecureStorage.read('auth_token');
+
+        // ─── In-memory auth headers (instant, zero I/O) ─────────────────
+        final token = SecureStorage.cachedToken;
 
         final isOtpRoute = options.path.contains('/api/auth/otp');
         if (token != null && token.isNotEmpty && !isOtpRoute) {
@@ -36,26 +38,21 @@ final dioProvider = Provider<Dio>((ref) {
             !options.path.contains('/api/user');
 
         if (!isAuthRoute && !isPublicGetRoute) {
-          final authFields = await SecureStorage.readMany(const [
-            'user_data', 'user_id', 'user_phone', 'user_email', 'user_name', 'user_role',
-          ]);
-          final rawUserData = authFields['user_data'];
-          String? userId = authFields['user_id'];
-          String? directPhone = authFields['user_phone'];
-          String? userEmail = authFields['user_email'];
-          String? userName = authFields['user_name'];
-          String? userRole = authFields['user_role'];
+          final rawUserData = SecureStorage.cachedUserData;
+          String? userId = SecureStorage.cachedUserId;
+          String? directPhone = SecureStorage.cachedUserPhone;
+          String? userEmail = SecureStorage.cachedUserEmail;
+          String? userName = SecureStorage.cachedUserName;
+          String? userRole = SecureStorage.cachedUserRole;
           String? userPhone = directPhone;
 
           if (rawUserData != null && rawUserData.isNotEmpty) {
-            try {
-              final json = jsonDecode(rawUserData) as Map<String, dynamic>;
-              userId ??= json['id']?.toString();
-              userEmail = json['email']?.toString() ?? userEmail;
-              userName = json['name']?.toString() ?? userName;
-              userRole = json['role']?.toString() ?? userRole;
-              userPhone ??= json['phone']?.toString();
-            } catch (_) {}
+            final parse = (String k) => rawUserData[k];
+            userId ??= parse('id');
+            userEmail = parse('email') ?? userEmail;
+            userName = parse('name') ?? userName;
+            userRole = parse('role') ?? userRole;
+            userPhone ??= parse('phone');
           }
 
           if (userId != null && userId.isNotEmpty) {

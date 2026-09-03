@@ -23,6 +23,7 @@ import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/store_settings_provider.dart';
 import '../../widgets/cart_conflict_dialog.dart';
+import '../../widgets/shimmer_box.dart';
 import '../auth/login_screen.dart';
 import '../checkout/checkout_screen.dart';
 import 'coupons_screen.dart';
@@ -158,7 +159,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             const SizedBox(height: 18),
             Text(
               'Bill Summary',
-              style: GoogleFonts.inter(fontSize: 16.5, fontWeight: FontWeight.w900, color: slateDark),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16.5), fontWeight: FontWeight.w900, color: slateDark),
             ),
             const SizedBox(height: 14),
             _buildBillRow('Item Total', '₹${subtotal.toInt()}'),
@@ -184,7 +185,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 13,
+              fontSize: Responsive.scaledFontSize(context, 13),
               color: isBold ? slateDark : slateMuted,
               fontWeight: isBold ? FontWeight.w800 : FontWeight.w500,
             ),
@@ -192,7 +193,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           Text(
             value,
             style: GoogleFonts.inter(
-              fontSize: 13.5,
+              fontSize: Responsive.scaledFontSize(context, 13.5),
               color: isGreen ? brandGreen : slateDark,
               fontWeight: isBold ? FontWeight.w900 : FontWeight.w700,
             ),
@@ -227,7 +228,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               ),
               title: Text(
                 'Your Cart',
-                style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w900, color: slateDark),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 17), fontWeight: FontWeight.w900, color: slateDark),
               ),
             ),
             body: _buildEmptyState(context),
@@ -235,11 +236,23 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         }
         return _buildCartScreenContent(context, ref, cart);
       },
-      loading: () => const Scaffold(
-        backgroundColor: Colors.white,
-        body: Center(child: CircularProgressIndicator(color: primaryRed)),
+      loading: () => Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, color: slateDark),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text(
+            'Your Cart',
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 17), fontWeight: FontWeight.w900, color: slateDark),
+          ),
+        ),
+        body: _buildCartLoadingSkeleton(),
       ),
-      error: (_, __) => Scaffold(
+      error: (err, _) => Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
           backgroundColor: Colors.white,
@@ -248,8 +261,112 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             icon: const Icon(Icons.arrow_back_rounded, color: slateDark),
             onPressed: () => Navigator.pop(context),
           ),
+          title: Text(
+            'Your Cart',
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 17), fontWeight: FontWeight.w900, color: slateDark),
+          ),
         ),
-        body: _buildEmptyState(context),
+        body: _buildCartErrorState(context, ref),
+      ),
+    );
+  }
+
+  Widget _buildCartLoadingSkeleton() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        for (int i = 0; i < 3; i++)
+          Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFF1F5F9)),
+            ),
+            child: Row(
+              children: [
+                ShimmerBox(
+                  width: 64,
+                  height: 64,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ShimmerBox(
+                        width: double.infinity,
+                        height: 14,
+                      ),
+                      SizedBox(height: 8),
+                      ShimmerBox(
+                        width: 90,
+                        height: 12,
+                      ),
+                      SizedBox(height: 10),
+                      ShimmerBox(
+                        width: 60,
+                        height: 14,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildCartErrorState(BuildContext context, WidgetRef ref) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFEF2F2),
+                shape: BoxShape.circle,
+              ),
+              child: const Center(
+                child: Icon(Icons.wifi_off_rounded, size: 40, color: Color(0xFFEF4444)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Connection Issue',
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w900, color: slateDark),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Unable to load your cart items. Please check your network and try again.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: slateMuted, height: 1.4),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                ref.read(cartProvider.notifier).loadCart();
+              },
+              icon: const Icon(Icons.refresh_rounded, size: 18, color: Colors.white),
+              label: Text('Retry', style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: Responsive.scaledFontSize(context, 13))),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryRed,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 13),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -275,13 +392,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             const SizedBox(height: 18),
             Text(
               'Your Cart is Empty',
-              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w900, color: slateDark),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w900, color: slateDark),
             ),
             const SizedBox(height: 6),
             Text(
               'Add farm fresh fruits, dairy, snacks & hot meals!',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 12.5, color: slateMuted),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: slateMuted),
             ),
             const SizedBox(height: 22),
             ElevatedButton(
@@ -293,7 +410,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 elevation: 0,
               ),
-              child: Text('Explore Products', style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 13)),
+              child: Text('Explore Products', style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: Responsive.scaledFontSize(context, 13))),
             ),
           ],
         ),
@@ -343,7 +460,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             Text(
               'Your Cart',
               style: GoogleFonts.inter(
-                fontSize: 17,
+                fontSize: Responsive.scaledFontSize(context, 17),
                 fontWeight: FontWeight.w900,
                 color: slateDark,
                 letterSpacing: -0.3,
@@ -359,7 +476,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               child: Text(
                 '$totalItems ${totalItems == 1 ? 'item' : 'items'}',
                 style: GoogleFonts.inter(
-                  fontSize: 11,
+                  fontSize: Responsive.scaledFontSize(context, 11),
                   fontWeight: FontWeight.w800,
                   color: primaryRed,
                 ),
@@ -383,7 +500,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               if (groceryItems.isNotEmpty) ...[
                 Row(
                   children: [
-                    const Text('📦', style: TextStyle(fontSize: 13)),
+                    const Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Column(
@@ -392,7 +509,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           Text(
                             'Grocery & Daily Essentials',
                             style: GoogleFonts.inter(
-                              fontSize: 12.5,
+                              fontSize: Responsive.scaledFontSize(context, 12.5),
                               fontWeight: FontWeight.w800,
                               color: primaryRed,
                             ),
@@ -400,7 +517,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           Text(
                             'Delivered from FastKirana Darkstore',
                             style: GoogleFonts.inter(
-                              fontSize: 10.5,
+                              fontSize: Responsive.scaledFontSize(context, 10.5),
                               fontWeight: FontWeight.w500,
                               color: slateMuted,
                             ),
@@ -424,7 +541,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   children: [
                     Row(
                       children: [
-                        const Text('🥘', style: TextStyle(fontSize: 13)),
+                        const Text('🥘', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Column(
@@ -433,7 +550,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               Text(
                                 outletName,
                                 style: GoogleFonts.inter(
-                                  fontSize: 12.5,
+                                  fontSize: Responsive.scaledFontSize(context, 12.5),
                                   fontWeight: FontWeight.w800,
                                   color: primaryRed,
                                 ),
@@ -441,7 +558,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               Text(
                                 'Freshly prepared at outlet kitchen',
                                 style: GoogleFonts.inter(
-                                  fontSize: 10.5,
+                                  fontSize: Responsive.scaledFontSize(context, 10.5),
                                   fontWeight: FontWeight.w500,
                                   color: slateMuted,
                                 ),
@@ -465,10 +582,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       ),
                       child: TextField(
                         controller: _cookingInstructionsController,
-                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: slateDark),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: slateDark),
                         decoration: InputDecoration(
                           hintText: 'Cooking instruction (e.g. less sugar, extra spicy)...',
-                          hintStyle: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w500),
+                          hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: const Color(0xFF94A3B8), fontWeight: FontWeight.w500),
                           border: InputBorder.none,
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(vertical: 10),
@@ -493,12 +610,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         children: [
                           Row(
                             children: [
-                              const Text('🛒', style: TextStyle(fontSize: 13)),
+                              const Text('🛒', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                               const SizedBox(width: 6),
                               Text(
                                 'Frequently bought together',
                                 style: GoogleFonts.inter(
-                                  fontSize: 13,
+                                  fontSize: Responsive.scaledFontSize(context, 13),
                                   fontWeight: FontWeight.w800,
                                   color: slateDark,
                                 ),
@@ -508,7 +625,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           Text(
                             'Slide for more →',
                             style: GoogleFonts.inter(
-                              fontSize: 10.5,
+                              fontSize: Responsive.scaledFontSize(context, 10.5),
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFF94A3B8),
                             ),
@@ -606,11 +723,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         children: [
           Row(
             children: [
-              const Text('🛵', style: TextStyle(fontSize: 13)),
+              const Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
               const SizedBox(width: 6),
               Text(
                 'Delivery Instructions',
-                style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800, color: slateDark),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w800, color: slateDark),
               ),
             ],
           ),
@@ -643,12 +760,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     ),
                     child: Row(
                       children: [
-                        Text(item['icon']!, style: const TextStyle(fontSize: 12)),
+                        Text(item['icon']!, style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
                         const SizedBox(width: 5),
                         Text(
                           item['label']!,
                           style: GoogleFonts.inter(
-                            fontSize: 11,
+                            fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                             color: isSelected ? primaryRed : slateDark,
                           ),
@@ -683,17 +800,17 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             children: [
               Row(
                 children: [
-                  const Text('💖', style: TextStyle(fontSize: 13)),
+                  const Text('💖', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                   const SizedBox(width: 6),
                   Text(
                     'Tip your delivery partner',
-                    style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800, color: slateDark),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w800, color: slateDark),
                   ),
                 ],
               ),
               Text(
                 '100% goes to partner',
-                style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w600, color: const Color(0xFF16A34A)),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w600, color: const Color(0xFF16A34A)),
               ),
             ],
           ),
@@ -720,7 +837,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       child: Text(
                         '₹$tip',
                         style: GoogleFonts.inter(
-                          fontSize: 12,
+                          fontSize: Responsive.scaledFontSize(context, 12),
                           fontWeight: FontWeight.w800,
                           color: isSelected ? brandGreen : slateDark,
                         ),
@@ -749,11 +866,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         children: [
           Row(
             children: [
-              const Text('🧾', style: TextStyle(fontSize: 13)),
+              const Text('🧾', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
               const SizedBox(width: 6),
               Text(
                 'Bill Summary',
-                style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800, color: slateDark),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w800, color: slateDark),
               ),
             ],
           ),
@@ -769,8 +886,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('To Pay', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: slateDark)),
-              Text('₹${grandTotal.toInt()}', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: slateDark)),
+              Text('To Pay', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: slateDark)),
+              Text('₹${grandTotal.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: slateDark)),
             ],
           ),
         ],
@@ -795,7 +912,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             child: Text(
               '100% Quality & Replacement Guarantee. Orders cannot be cancelled once packed by store.',
               style: GoogleFonts.inter(
-                fontSize: 10.5,
+                fontSize: Responsive.scaledFontSize(context, 10.5),
                 color: slateMuted,
                 height: 1.35,
               ),
@@ -829,7 +946,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     ? '⚠️ Outside 5.0 km Central Hub Delivery Zone'
                     : '🎉 You are saving ₹${totalSavings > 0 ? totalSavings.toInt() : 20} on this order!',
                 style: GoogleFonts.inter(
-                  fontSize: 11,
+                  fontSize: Responsive.scaledFontSize(context, 11),
                   fontWeight: FontWeight.w800,
                   color: !tier.isServiceable ? const Color(0xFFDC2626) : const Color(0xFF047857),
                 ),
@@ -858,7 +975,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         Text(
                           '₹${grandTotal.toInt()}',
                           style: GoogleFonts.inter(
-                            fontSize: 18,
+                            fontSize: Responsive.scaledFontSize(context, 18),
                             fontWeight: FontWeight.w900,
                             color: const Color(0xFF0F172A),
                             letterSpacing: -0.3,
@@ -871,7 +988,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     Text(
                       'TOTAL BILL • VIEW BREAKDOWN',
                       style: GoogleFonts.inter(
-                        fontSize: 8.5,
+                        fontSize: Responsive.scaledFontSize(context, 8.5),
                         fontWeight: FontWeight.w800,
                         color: const Color(0xFF00A344),
                         letterSpacing: 0.3,
@@ -1005,7 +1122,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         Text(
                           !tier.isServiceable ? 'Outside 5km Zone' : 'Proceed to Checkout',
                           style: GoogleFonts.inter(
-                            fontSize: 13,
+                            fontSize: Responsive.scaledFontSize(context, 13),
                             fontWeight: FontWeight.w900,
                             color: Colors.white,
                             letterSpacing: 0.2,
@@ -1117,7 +1234,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           Text(
             name,
             style: GoogleFonts.inter(
-              fontSize: 11.5,
+              fontSize: Responsive.scaledFontSize(context, 11.5),
               fontWeight: FontWeight.w700,
               color: slateDark,
               height: 1.25,
@@ -1131,7 +1248,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           Text(
             unit,
             style: GoogleFonts.inter(
-              fontSize: 10,
+              fontSize: Responsive.scaledFontSize(context, 10),
               fontWeight: FontWeight.w500,
               color: slateMuted,
             ),
@@ -1149,7 +1266,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               Text(
                 '₹${price.toInt()}',
                 style: GoogleFonts.inter(
-                  fontSize: 13,
+                  fontSize: Responsive.scaledFontSize(context, 13),
                   fontWeight: FontWeight.w900,
                   color: slateDark,
                 ),
@@ -1178,7 +1295,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       Text(
                         '${cartItem.quantity}',
                         style: GoogleFonts.inter(
-                          fontSize: 11.5,
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
                         ),
@@ -1225,7 +1342,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                       groceryCount > 0
                                           ? 'Switched to $newOutlet. $groceryCount grocery item(s) kept safe in cart! 🛒'
                                           : 'Switched to $newOutlet! 🍽️',
-                                      style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white),
+                                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w700, color: Colors.white),
                                     ),
                                   ),
                                 ],
@@ -1252,7 +1369,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     child: Text(
                       '+ ADD',
                       style: GoogleFonts.inter(
-                        fontSize: 10.5,
+                        fontSize: Responsive.scaledFontSize(context, 10.5),
                         fontWeight: FontWeight.w900,
                         color: primaryRed,
                         letterSpacing: 0.2,
@@ -1280,7 +1397,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('⚠️', style: TextStyle(fontSize: 16)),
+            const Text('⚠️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -1288,12 +1405,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 children: [
                   Text(
                     'Outside Delivery Zone (${tier.distanceKm.toStringAsFixed(1)} km away)',
-                    style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800, color: const Color(0xFFDC2626)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w800, color: const Color(0xFFDC2626)),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     'Delivery is currently limited to a maximum of 5.0 km from our central hub in Ghatampur. Please select an address within 5 km.',
-                    style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF991B1B)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: const Color(0xFF991B1B)),
                   ),
                 ],
               ),
@@ -1326,7 +1443,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             children: [
               Text(
                 isUnlocked ? '🎉' : '⚡',
-                style: const TextStyle(fontSize: 16),
+                style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 16)),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -1338,7 +1455,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           ? 'FREE Express Delivery Unlocked!'
                           : 'Add ₹${remaining.toInt()} more for FREE Delivery',
                       style: GoogleFonts.inter(
-                        fontSize: 12.5,
+                        fontSize: Responsive.scaledFontSize(context, 12.5),
                         fontWeight: FontWeight.w800,
                         color: isUnlocked ? const Color(0xFF15803D) : const Color(0xFFC2410C),
                       ),
@@ -1346,7 +1463,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     Text(
                       '📍 ${tier.tierName}',
                       style: GoogleFonts.inter(
-                        fontSize: 10,
+                        fontSize: Responsive.scaledFontSize(context, 10),
                         fontWeight: FontWeight.w600,
                         color: isUnlocked ? const Color(0xFF16A34A) : const Color(0xFFEA580C),
                       ),
@@ -1363,7 +1480,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 child: Text(
                   isUnlocked ? 'SAVED ₹${tier.baseFee.toInt()}' : 'Save ₹${tier.baseFee.toInt()}',
                   style: GoogleFonts.inter(
-                    fontSize: 10.5,
+                    fontSize: Responsive.scaledFontSize(context, 10.5),
                     fontWeight: FontWeight.w900,
                     color: isUnlocked ? const Color(0xFF16A34A) : const Color(0xFFEA580C),
                   ),
@@ -1515,7 +1632,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 Text(
                   prod.name,
                   style: GoogleFonts.inter(
-                    fontSize: 13.5,
+                    fontSize: Responsive.scaledFontSize(context, 13.5),
                     fontWeight: FontWeight.w800,
                     color: slateDark,
                     letterSpacing: -0.2,
@@ -1528,7 +1645,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   Text(
                     prod.unit,
                     style: GoogleFonts.inter(
-                      fontSize: 11,
+                      fontSize: Responsive.scaledFontSize(context, 11),
                       fontWeight: FontWeight.w500,
                       color: slateMuted,
                     ),
@@ -1543,7 +1660,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     Text(
                       '₹${(prod.price * qty).toInt()}',
                       style: GoogleFonts.inter(
-                        fontSize: 14,
+                        fontSize: Responsive.scaledFontSize(context, 14),
                         fontWeight: FontWeight.w900,
                         color: slateDark,
                       ),
@@ -1552,7 +1669,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       Text(
                         '₹${(mrp * qty).toInt()}',
                         style: GoogleFonts.inter(
-                          fontSize: 11.5,
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
                           color: const Color(0xFF94A3B8),
                           decoration: TextDecoration.lineThrough,
                           fontWeight: FontWeight.w500,
@@ -1568,7 +1685,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         child: Text(
                           'Save ₹${saveAmount.toInt()}',
                           style: GoogleFonts.inter(
-                            fontSize: 9.5,
+                            fontSize: Responsive.scaledFontSize(context, 9.5),
                             fontWeight: FontWeight.w800,
                             color: const Color(0xFF137333),
                           ),
@@ -1625,7 +1742,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   child: Text(
                     '$qty',
                     style: GoogleFonts.inter(
-                      fontSize: 13.5,
+                      fontSize: Responsive.scaledFontSize(context, 13.5),
                       fontWeight: FontWeight.w900,
                       color: slateDark,
                     ),
@@ -1648,7 +1765,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                 Expanded(
                                   child: Text(
                                     'Only ${prod.stock} units available in stock!',
-                                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: Colors.white),
                                   ),
                                 ),
                               ],
@@ -1721,7 +1838,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   Text(
                     'Apply Coupon',
                     style: GoogleFonts.inter(
-                      fontSize: 14,
+                      fontSize: Responsive.scaledFontSize(context, 14),
                       fontWeight: FontWeight.w800,
                       color: slateDark,
                       letterSpacing: -0.2,
@@ -1746,7 +1863,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     Text(
                       'View offers',
                       style: GoogleFonts.inter(
-                        fontSize: 12,
+                        fontSize: Responsive.scaledFontSize(context, 12),
                         fontWeight: FontWeight.w800,
                         color: const Color(0xFFEA580C),
                       ),
@@ -1794,7 +1911,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                             Text(
                               _appliedCoupon!,
                               style: GoogleFonts.inter(
-                                fontSize: 13,
+                                fontSize: Responsive.scaledFontSize(context, 13),
                                 fontWeight: FontWeight.w900,
                                 color: const Color(0xFF065F46),
                                 letterSpacing: 0.5,
@@ -1810,7 +1927,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               child: Text(
                                 'APPLIED',
                                 style: GoogleFonts.inter(
-                                  fontSize: 8.5,
+                                  fontSize: Responsive.scaledFontSize(context, 8.5),
                                   fontWeight: FontWeight.w900,
                                   color: Colors.white,
                                 ),
@@ -1822,7 +1939,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         Text(
                           'You saved ₹${_couponDiscount.toInt()} with this coupon!',
                           style: GoogleFonts.inter(
-                            fontSize: 11,
+                            fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF047857),
                           ),
@@ -1842,7 +1959,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       child: Text(
                         'Remove',
                         style: GoogleFonts.inter(
-                          fontSize: 11,
+                          fontSize: Responsive.scaledFontSize(context, 11),
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFFE11D48),
                         ),
@@ -1871,7 +1988,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       controller: _couponController,
                       textCapitalization: TextCapitalization.characters,
                       style: GoogleFonts.inter(
-                        fontSize: 13,
+                        fontSize: Responsive.scaledFontSize(context, 13),
                         fontWeight: FontWeight.w800,
                         color: slateDark,
                         letterSpacing: 0.6,
@@ -1879,7 +1996,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       decoration: InputDecoration(
                         hintText: 'Enter coupon code',
                         hintStyle: GoogleFonts.inter(
-                          fontSize: 12.5,
+                          fontSize: Responsive.scaledFontSize(context, 12.5),
                           fontWeight: FontWeight.w500,
                           color: const Color(0xFF94A3B8),
                         ),
@@ -1937,7 +2054,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               : Text(
                                   'APPLY',
                                   style: GoogleFonts.inter(
-                                    fontSize: 12.5,
+                                    fontSize: Responsive.scaledFontSize(context, 12.5),
                                     fontWeight: FontWeight.w900,
                                     color: Colors.white,
                                     letterSpacing: 0.6,

@@ -45,8 +45,17 @@ export async function GET(request: NextRequest) {
       ]
     }
     if (status) {
-      where.status = status
+      if (status === 'live' || status === 'active') {
+        where.status = { in: ['PENDING', 'CONFIRMED', 'PREPARING', 'PACKED', 'READY', 'OUT_FOR_DELIVERY'] }
+      } else if (status.includes(',')) {
+        where.status = { in: status.split(',').map(s => s.trim().toUpperCase()) }
+      } else {
+        where.status = status
+      }
     }
+
+    const limitParam = parseInt(searchParams.get('limit') || '100', 10)
+    const limit = Math.min(Math.max(limitParam, 1), 300)
 
     const orders = await prisma.order.findMany({
       where,
@@ -56,7 +65,7 @@ export async function GET(request: NextRequest) {
         address: true,
       },
       orderBy: { createdAt: 'desc' },
-      take: 500,
+      take: limit,
     })
 
     // Fetch restaurant commission rate for Sales tab

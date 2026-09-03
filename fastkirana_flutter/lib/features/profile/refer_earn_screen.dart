@@ -24,7 +24,7 @@ class ReferEarnScreen extends ConsumerWidget {
         centerTitle: true,
         title: Text(
           'Refer & Earn',
-          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
         ),
       ),
       body: SingleChildScrollView(
@@ -47,7 +47,7 @@ class ReferEarnScreen extends ConsumerWidget {
                 children: [
                   Text(
                     'Your Referral Code',
-                    style: GoogleFonts.inter(fontSize: 14, color: Colors.white.withValues(alpha: 0.9)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: Colors.white.withValues(alpha: 0.9)),
                   ),
                   const SizedBox(height: 12),
                   GestureDetector(
@@ -73,7 +73,7 @@ class ReferEarnScreen extends ConsumerWidget {
                         children: [
                           Text(
                             referralCode,
-                            style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 2),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 24), fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 2),
                           ),
                           const SizedBox(width: 8),
                           const Icon(Icons.copy_rounded, size: 16, color: Colors.white),
@@ -84,7 +84,7 @@ class ReferEarnScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   Text(
                     'Share with friends & earn rewards!',
-                    style: GoogleFonts.inter(fontSize: 15, color: Colors.white, fontWeight: FontWeight.w600),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), color: Colors.white, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -95,7 +95,7 @@ class ReferEarnScreen extends ConsumerWidget {
             // How it works
             Text(
               'How it works',
-              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
             ),
             const SizedBox(height: 16),
             Row(
@@ -140,7 +140,7 @@ class ReferEarnScreen extends ConsumerWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
                 icon: const Icon(Icons.share_rounded, color: Colors.white),
-                label: Text('Share Referral Code', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)),
+                label: Text('Share Referral Code', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: Colors.white)),
               ),
             ),
           ],
@@ -170,13 +170,13 @@ class ReferEarnScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Center(
-                child: Text(number, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white)),
+                child: Text(number, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: Colors.white)),
               ),
             ),
             const SizedBox(height: 8),
-            Text(title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary), textAlign: TextAlign.center),
+            Text(title, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary), textAlign: TextAlign.center),
             const SizedBox(height: 4),
-            Text(desc, style: GoogleFonts.inter(fontSize: 11, color: AppDesignSystem.textSecondary), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
+            Text(desc, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: AppDesignSystem.textSecondary), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
           ],
         ),
       ),
@@ -186,9 +186,9 @@ class ReferEarnScreen extends ConsumerWidget {
   Widget _statItem(String label, String value) {
     return Column(
       children: [
-        Text(value, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: AppDesignSystem.primary)),
+        Text(value, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 20), fontWeight: FontWeight.w800, color: AppDesignSystem.primary)),
         const SizedBox(height: 4),
-        Text(label, style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
+        Text(label, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary)),
       ],
     );
   }

@@ -6,17 +6,18 @@ part of 'banner.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-Banner _$BannerFromJson(Map<String, dynamic> json) => Banner(
+_$BannerImpl _$$BannerImplFromJson(Map<String, dynamic> json) => _$BannerImpl(
       id: json['id'] as String,
       title: json['title'] as String,
       subtitle: json['subtitle'] as String?,
       imageUrl: json['imageUrl'] as String,
       link: json['link'] as String?,
-      sortOrder: (json['sortOrder'] as num).toInt(),
-      isActive: json['isActive'] as bool,
+      sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
+      isActive: json['isActive'] as bool? ?? true,
     );
 
-Map<String, dynamic> _$BannerToJson(Banner instance) => <String, dynamic>{
+Map<String, dynamic> _$$BannerImplToJson(_$BannerImpl instance) =>
+    <String, dynamic>{
       'id': instance.id,
       'title': instance.title,
       'subtitle': instance.subtitle,

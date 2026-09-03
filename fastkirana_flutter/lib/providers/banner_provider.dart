@@ -8,6 +8,7 @@ final bannerRepositoryProvider = Provider<BannerRepository>((ref) {
 });
 
 final bannersProvider = FutureProvider.family<List<Banner>, String?>((ref, type) async {
+  ref.keepAlive();
   final repo = ref.watch(bannerRepositoryProvider);
   return repo.getBanners(type: type);
 });

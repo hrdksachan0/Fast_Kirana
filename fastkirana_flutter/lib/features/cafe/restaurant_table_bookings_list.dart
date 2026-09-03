@@ -20,7 +20,7 @@ class RestaurantTableBookingListScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppDesignSystem.background,
         elevation: 0,
-        title: Text('Table Bookings', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+        title: Text('Table Bookings', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
@@ -43,7 +43,7 @@ class RestaurantTableBookingListScreen extends StatelessWidget {
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(color: AppDesignSystem.cafeAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                  child: Center(child: Text('👤', style: TextStyle(fontSize: 28))),
+                  child: Center(child: Text('👤', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 28)))),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -52,17 +52,17 @@ class RestaurantTableBookingListScreen extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Text(b['name']?.toString() ?? '', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
+                          Text(b['name']?.toString() ?? '', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
                           const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
-                            child: Text(b['status']?.toString() ?? '', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: statusColor)),
+                            child: Text(b['status']?.toString() ?? '', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9), fontWeight: FontWeight.w800, color: statusColor)),
                           ),
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text('${b['guests']} guests • ${b['time']} • ${b['date']}', style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
+                      Text('${b['guests']} guests • ${b['time']} • ${b['date']}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary)),
                     ],
                   ),
                 ),

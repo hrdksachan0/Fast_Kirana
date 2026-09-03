@@ -16,7 +16,7 @@ class EmptyWishlistScreen extends StatelessWidget {
         backgroundColor: AppDesignSystem.background,
         elevation: 0,
         centerTitle: true,
-        title: Text('Wishlist', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+        title: Text('Wishlist', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
       ),
       body: EmptyState(
         emoji: '💝',

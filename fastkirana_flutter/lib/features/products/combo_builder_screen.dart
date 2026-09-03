@@ -15,7 +15,7 @@ class ComboBuilderScreen extends StatelessWidget {
         backgroundColor: AppDesignSystem.background,
         elevation: 0,
         centerTitle: true,
-        title: Text('Combo Builder', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+        title: Text('Combo Builder', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
       ),
       body: Column(
         children: [
@@ -40,15 +40,15 @@ class ComboBuilderScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Custom Combo', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)),
-                      Text('3/5 items selected', style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withOpacity(0.9))),
+                      Text('Custom Combo', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: Colors.white)),
+                      Text('3/5 items selected', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: Colors.white.withOpacity(0.9))),
                     ],
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-                  child: Text('₹349', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.primary)),
+                  child: Text('₹349', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.primary)),
                 ),
               ],
             ),

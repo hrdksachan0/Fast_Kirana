@@ -55,7 +55,7 @@ void showAppErrorSnackBar(BuildContext context, AppException error) {
           Expanded(
             child: Text(
               error.userMessage,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+              style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w500),
             ),
           ),
         ],

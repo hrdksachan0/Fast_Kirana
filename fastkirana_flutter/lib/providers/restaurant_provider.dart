@@ -15,6 +15,7 @@ final ratingFilterProvider = StateProvider<bool>((ref) => false);
 final restaurantSearchQueryProvider = StateProvider<String>((ref) => '');
 
 final restaurantsProvider = FutureProvider<List<Restaurant>>((ref) async {
+  ref.keepAlive();
   final repo = ref.watch(restaurantRepositoryProvider);
   return repo.getRestaurants();
 });
@@ -70,11 +71,13 @@ final filteredRestaurantsProvider = Provider<List<Restaurant>>((ref) {
 });
 
 final restaurantMenuProvider = FutureProvider.family<List<Product>, String>((ref, restaurantId) async {
+  ref.keepAlive();
   final repo = ref.watch(restaurantRepositoryProvider);
   return repo.getRestaurantMenu(restaurantId);
 });
 
 final restaurantReviewsProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, restaurantId) async {
+  ref.keepAlive();
   final repo = ref.watch(restaurantRepositoryProvider);
   return repo.getRestaurantReviews(restaurantId);
 });

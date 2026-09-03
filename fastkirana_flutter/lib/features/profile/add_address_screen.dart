@@ -250,7 +250,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
         title: Text(
           widget.initialAddress != null ? 'Edit Delivery Address' : 'Select Delivery Location',
           style: GoogleFonts.inter(
-            fontSize: 16,
+            fontSize: Responsive.scaledFontSize(context, 16),
             fontWeight: FontWeight.w900,
             color: slateDark,
             letterSpacing: -0.3,
@@ -278,7 +278,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                         Text(
                           'ENTER COMPLETE ADDRESS',
                           style: GoogleFonts.inter(
-                            fontSize: 11,
+                            fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: FontWeight.w900,
                             color: slateMuted,
                             letterSpacing: 0.6,
@@ -383,7 +383,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                             title: Text(
                               'Set as default delivery address',
                               style: GoogleFonts.inter(
-                                fontSize: 13,
+                                fontSize: Responsive.scaledFontSize(context, 13),
                                 fontWeight: FontWeight.w700,
                                 color: slateDark,
                               ),
@@ -460,7 +460,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                       Text(
                         _isServiceable ? 'Order Delivers Here' : 'Outside Service Zone',
                         style: GoogleFonts.inter(
-                          fontSize: 10.5,
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
                           fontWeight: FontWeight.w800,
                           color: Colors.white,
                         ),
@@ -529,7 +529,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                     child: Text(
                       _detectedFormattedAddress,
                       style: GoogleFonts.inter(
-                        fontSize: 11,
+                        fontSize: Responsive.scaledFontSize(context, 11),
                         fontWeight: FontWeight.w700,
                         color: slateDark,
                       ),
@@ -547,7 +547,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                     child: Text(
                       '${_distanceKm.toStringAsFixed(1)} KM',
                       style: GoogleFonts.inter(
-                        fontSize: 9.5,
+                        fontSize: Responsive.scaledFontSize(context, 9.5),
                         fontWeight: FontWeight.w900,
                         color: const Color(0xFF15803D),
                       ),
@@ -591,7 +591,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                     Text(
                       _isLocatingGps ? 'Locating...' : 'Use Current GPS',
                       style: GoogleFonts.inter(
-                        fontSize: 11,
+                        fontSize: Responsive.scaledFontSize(context, 11),
                         fontWeight: FontWeight.w800,
                         color: slateDark,
                       ),
@@ -647,7 +647,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                     Text(
                       item['label'] as String,
                       style: GoogleFonts.inter(
-                        fontSize: 10,
+                        fontSize: Responsive.scaledFontSize(context, 10),
                         fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
                         color: isSelected ? primaryRed : slateMuted,
                       ),
@@ -685,7 +685,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
           Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 10.5,
+              fontSize: Responsive.scaledFontSize(context, 10.5),
               fontWeight: FontWeight.w800,
               color: slateMuted,
             ),
@@ -694,7 +694,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
             controller: controller,
             keyboardType: keyboardType,
             style: GoogleFonts.inter(
-              fontSize: 13.5,
+              fontSize: Responsive.scaledFontSize(context, 13.5),
               fontWeight: FontWeight.w700,
               color: slateDark,
             ),
@@ -704,13 +704,13 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
               border: InputBorder.none,
               hintText: hint,
               hintStyle: GoogleFonts.inter(
-                fontSize: 12.5,
+                fontSize: Responsive.scaledFontSize(context, 12.5),
                 fontWeight: FontWeight.w500,
                 color: const Color(0xFF94A3B8),
               ),
               prefixText: prefixText,
               prefixStyle: GoogleFonts.inter(
-                fontSize: 13.5,
+                fontSize: Responsive.scaledFontSize(context, 13.5),
                 fontWeight: FontWeight.w800,
                 color: slateDark,
               ),
@@ -760,7 +760,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                       Text(
                         'Save & Deliver Here',
                         style: GoogleFonts.inter(
-                          fontSize: 14.5,
+                          fontSize: Responsive.scaledFontSize(context, 14.5),
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
                           letterSpacing: 0.2,

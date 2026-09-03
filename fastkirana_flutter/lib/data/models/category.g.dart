@@ -6,19 +6,21 @@ part of 'category.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-Category _$CategoryFromJson(Map<String, dynamic> json) => Category(
+_$CategoryImpl _$$CategoryImplFromJson(Map<String, dynamic> json) =>
+    _$CategoryImpl(
       id: json['id'] as String,
       name: json['name'] as String,
       slug: json['slug'] as String,
       imageUrl: json['imageUrl'] as String?,
       parentId: json['parentId'] as String?,
-      sortOrder: (json['sortOrder'] as num).toInt(),
+      sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
       count: json['_count'] == null
           ? null
           : CategoryCount.fromJson(json['_count'] as Map<String, dynamic>),
     );
 
-Map<String, dynamic> _$CategoryToJson(Category instance) => <String, dynamic>{
+Map<String, dynamic> _$$CategoryImplToJson(_$CategoryImpl instance) =>
+    <String, dynamic>{
       'id': instance.id,
       'name': instance.name,
       'slug': instance.slug,
@@ -28,12 +30,12 @@ Map<String, dynamic> _$CategoryToJson(Category instance) => <String, dynamic>{
       '_count': instance.count,
     };
 
-CategoryCount _$CategoryCountFromJson(Map<String, dynamic> json) =>
-    CategoryCount(
+_$CategoryCountImpl _$$CategoryCountImplFromJson(Map<String, dynamic> json) =>
+    _$CategoryCountImpl(
       products: (json['products'] as num).toInt(),
     );
 
-Map<String, dynamic> _$CategoryCountToJson(CategoryCount instance) =>
+Map<String, dynamic> _$$CategoryCountImplToJson(_$CategoryCountImpl instance) =>
     <String, dynamic>{
       'products': instance.products,
     };

@@ -92,6 +92,7 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
           await SecureStorage.write('user_phone', phone);
           await SecureStorage.write('user_id', (userMap?['id'] ?? 'rider_$phone').toString());
           await SecureStorage.write('user_role', 'DELIVERY');
+          await SecureStorage.loadCache();  // Refresh interceptor cache
 
           if (userMap != null) {
             final user = User.fromJson(Map<String, dynamic>.from(userMap));
@@ -112,6 +113,7 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
         await SecureStorage.write('user_id', 'rider_$phone');
         await SecureStorage.write('user_role', 'DELIVERY');
         await SecureStorage.write('user_name', 'FastKirana Rider ($phone)');
+        await SecureStorage.loadCache();  // Refresh interceptor cache
       }
 
       if (mounted) {
@@ -187,14 +189,14 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
                     ],
                   ),
                   child: const Center(
-                    child: Text('🛵', style: TextStyle(fontSize: 44)),
+                    child: Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 44))),
                   ),
                 ),
                 const SizedBox(height: 24),
                 Text(
                   'Delivery Partner Login',
                   style: GoogleFonts.inter(
-                    fontSize: 22,
+                    fontSize: Responsive.scaledFontSize(context, 22),
                     fontWeight: FontWeight.w900,
                     color: slateDark,
                     letterSpacing: -0.5,
@@ -203,7 +205,7 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
                 const SizedBox(height: 6),
                 Text(
                   'Enter your mobile number and rider password',
-                  style: GoogleFonts.inter(fontSize: 13, color: slateMuted),
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: slateMuted),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 28),
@@ -242,7 +244,7 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
                               Expanded(
                                 child: Text(
                                   _errorMessage!,
-                                  style: GoogleFonts.inter(fontSize: 11.5, color: primaryRed, fontWeight: FontWeight.w600),
+                                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: primaryRed, fontWeight: FontWeight.w600),
                                 ),
                               ),
                             ],
@@ -252,17 +254,17 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
                       ],
 
                       // Phone Input
-                      Text('Rider Mobile Number', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: slateDark)),
+                      Text('Rider Mobile Number', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: slateDark)),
                       const SizedBox(height: 8),
                       TextField(
                         controller: _phoneController,
                         keyboardType: TextInputType.phone,
                         maxLength: 10,
-                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: slateDark),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w700, color: slateDark),
                         decoration: InputDecoration(
                           hintText: 'Enter 10-digit number',
                           prefixText: '+91 ',
-                          prefixStyle: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: slateDark),
+                          prefixStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w700, color: slateDark),
                           counterText: '',
                           filled: true,
                           fillColor: const Color(0xFFF8FAFC),
@@ -273,12 +275,12 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
                       const SizedBox(height: 18),
 
                       // Password Input
-                      Text('Partner Password', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: slateDark)),
+                      Text('Partner Password', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: slateDark)),
                       const SizedBox(height: 8),
                       TextField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
-                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: slateDark),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w700, color: slateDark),
                         decoration: InputDecoration(
                           hintText: 'Enter password',
                           filled: true,

@@ -71,7 +71,7 @@ class WishlistScreen extends ConsumerWidget {
             Text(
               'My Wishlist',
               style: GoogleFonts.inter(
-                fontSize: 17,
+                fontSize: Responsive.scaledFontSize(context, 17),
                 fontWeight: FontWeight.w900,
                 color: slateDark,
                 letterSpacing: -0.3,
@@ -81,7 +81,7 @@ class WishlistScreen extends ConsumerWidget {
               Text(
                 '${wishlist.length} saved ${wishlist.length == 1 ? "item" : "items"}',
                 style: GoogleFonts.inter(
-                  fontSize: 11.5,
+                  fontSize: Responsive.scaledFontSize(context, 11.5),
                   fontWeight: FontWeight.w600,
                   color: slateMuted,
                 ),
@@ -109,7 +109,7 @@ class WishlistScreen extends ConsumerWidget {
                       Text(
                         'Share List',
                         style: GoogleFonts.inter(
-                          fontSize: 12,
+                          fontSize: Responsive.scaledFontSize(context, 12),
                           fontWeight: FontWeight.w800,
                           color: primaryRed,
                         ),
@@ -172,7 +172,7 @@ class WishlistScreen extends ConsumerWidget {
                         Text(
                           'Your Wishlist is Empty',
                           style: GoogleFonts.inter(
-                            fontSize: 19,
+                            fontSize: Responsive.scaledFontSize(context, 19),
                             fontWeight: FontWeight.w900,
                             color: slateDark,
                             letterSpacing: -0.4,
@@ -183,7 +183,7 @@ class WishlistScreen extends ConsumerWidget {
                           'Explore products and tap the heart icon to save your favorite grocery and food items!',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(
-                            fontSize: 12.5,
+                            fontSize: Responsive.scaledFontSize(context, 12.5),
                             fontWeight: FontWeight.w500,
                             color: slateMuted,
                             height: 1.4,
@@ -213,7 +213,7 @@ class WishlistScreen extends ConsumerWidget {
                                 child: Text(
                                   'Explore Store ➔',
                                   style: GoogleFonts.inter(
-                                    fontSize: 13.5,
+                                    fontSize: Responsive.scaledFontSize(context, 13.5),
                                     fontWeight: FontWeight.w800,
                                     color: Colors.white,
                                   ),
@@ -237,7 +237,7 @@ class WishlistScreen extends ConsumerWidget {
                                     Text(
                                       'Share App',
                                       style: GoogleFonts.inter(
-                                        fontSize: 13,
+                                        fontSize: Responsive.scaledFontSize(context, 13),
                                         fontWeight: FontWeight.w700,
                                         color: slateDark,
                                       ),

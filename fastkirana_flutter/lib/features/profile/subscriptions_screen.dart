@@ -39,7 +39,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
         centerTitle: true,
         title: Text(
           'Daily Subscriptions',
-          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
         ),
       ),
       body: ListView.builder(
@@ -66,7 +66,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
-                    child: Text(item['emoji'], style: const TextStyle(fontSize: 26)),
+                    child: Text(item['emoji'], style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 26))),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -76,17 +76,17 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                     children: [
                       Text(
                         item['title'],
-                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         item['schedule'],
-                        style: GoogleFonts.inter(fontSize: 11, color: AppDesignSystem.primary, fontWeight: FontWeight.w600),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: AppDesignSystem.primary, fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         '${item['qty']} • ${item['price']}',
-                        style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary),
                       ),
                     ],
                   ),

@@ -71,7 +71,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     groceryCount > 0
                         ? 'Switched to $newOutlet. $groceryCount grocery item(s) kept safe in cart! 🛒'
                         : 'Switched to $newOutlet! 🍽️',
-                    style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w700, color: Colors.white),
                   ),
                 ),
               ],
@@ -140,11 +140,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                   child: CircularProgressIndicator(color: primaryRed),
                                 ),
                                 errorWidget: (_, __, ___) => const Center(
-                                  child: Text('🛍️', style: TextStyle(fontSize: 72)),
+                                  child: Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 72))),
                                 ),
                               )
                             : const Center(
-                                child: Text('🛍️', style: TextStyle(fontSize: 72)),
+                                child: Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 72))),
                               ),
                       ),
                     ),
@@ -165,12 +165,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('🔥', style: TextStyle(fontSize: 12)),
+                            const Text('🔥', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
                             const SizedBox(width: 4),
                             Text(
                               '$discountPct% OFF',
                               style: GoogleFonts.inter(
-                                fontSize: 11.5,
+                                fontSize: Responsive.scaledFontSize(context, 11.5),
                                 fontWeight: FontWeight.w900,
                                 color: primaryRed,
                               ),
@@ -204,7 +204,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           Text(
                             'FAST DELIVERY',
                             style: GoogleFonts.inter(
-                              fontSize: 10,
+                              fontSize: Responsive.scaledFontSize(context, 10),
                               fontWeight: FontWeight.w900,
                               letterSpacing: 0.5,
                               color: const Color(0xFF047857),
@@ -219,7 +219,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     Text(
                       p.name,
                       style: GoogleFonts.inter(
-                        fontSize: 20,
+                        fontSize: Responsive.scaledFontSize(context, 20),
                         fontWeight: FontWeight.w900,
                         color: const Color(0xFF111827),
                         height: 1.25,
@@ -232,7 +232,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     Text(
                       activeUnit,
                       style: GoogleFonts.inter(
-                        fontSize: 13,
+                        fontSize: Responsive.scaledFontSize(context, 13),
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF6B7280),
                       ),
@@ -247,7 +247,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         Text(
                           '₹${activePrice.toInt()}',
                           style: GoogleFonts.inter(
-                            fontSize: 24,
+                            fontSize: Responsive.scaledFontSize(context, 24),
                             fontWeight: FontWeight.w900,
                             color: const Color(0xFF111827),
                           ),
@@ -257,7 +257,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           Text(
                             '₹${activeMrp.toInt()}',
                             style: GoogleFonts.inter(
-                              fontSize: 16,
+                              fontSize: Responsive.scaledFontSize(context, 16),
                               fontWeight: FontWeight.w600,
                               decoration: TextDecoration.lineThrough,
                               color: const Color(0xFF9CA3AF),
@@ -273,7 +273,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                             child: Text(
                               'Save ₹${(activeMrp - activePrice).toInt()}',
                               style: GoogleFonts.inter(
-                                fontSize: 11,
+                                fontSize: Responsive.scaledFontSize(context, 11),
                                 fontWeight: FontWeight.w800,
                                 color: const Color(0xFF15803D),
                               ),
@@ -289,7 +289,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       Text(
                         'Select Pack Size / Variant',
                         style: GoogleFonts.inter(
-                          fontSize: 13.5,
+                          fontSize: Responsive.scaledFontSize(context, 13.5),
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF111827),
                         ),
@@ -328,7 +328,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                     Text(
                                       variant.name,
                                       style: GoogleFonts.inter(
-                                        fontSize: 12,
+                                        fontSize: Responsive.scaledFontSize(context, 12),
                                         fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                                         color: isSelected ? primaryRed : const Color(0xFF111827),
                                       ),
@@ -336,7 +336,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                     Text(
                                       '₹${variant.price.toInt()}',
                                       style: GoogleFonts.inter(
-                                        fontSize: 11,
+                                        fontSize: Responsive.scaledFontSize(context, 11),
                                         fontWeight: FontWeight.w900,
                                         color: isSelected ? primaryRed : const Color(0xFF4B5563),
                                       ),
@@ -376,7 +376,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       Text(
                         'Product Details',
                         style: GoogleFonts.inter(
-                          fontSize: 15,
+                          fontSize: Responsive.scaledFontSize(context, 15),
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF111827),
                         ),
@@ -393,7 +393,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         child: Text(
                           p.description!,
                           style: GoogleFonts.inter(
-                            fontSize: 12.5,
+                            fontSize: Responsive.scaledFontSize(context, 12.5),
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF4B5563),
                             height: 1.5,
@@ -514,7 +514,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       Text(
                         'Total Price',
                         style: GoogleFonts.inter(
-                          fontSize: 10.5,
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF6B7280),
                         ),
@@ -522,7 +522,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       Text(
                         '₹${((inCartQty > 0 ? inCartQty : 1) * activePrice).toInt()}',
                         style: GoogleFonts.inter(
-                          fontSize: 20,
+                          fontSize: Responsive.scaledFontSize(context, 20),
                           fontWeight: FontWeight.w900,
                           color: const Color(0xFF111827),
                         ),
@@ -566,7 +566,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                       Expanded(
                                         child: Text(
                                           '🔔 We will notify you instantly when ${p.name} is back in stock!',
-                                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: Colors.white),
                                         ),
                                       ),
                                     ],
@@ -597,7 +597,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                   Text(
                                     _isNotified ? 'Notification Enabled ✓' : 'Notify When Available',
                                     style: GoogleFonts.inter(
-                                      fontSize: 13,
+                                      fontSize: Responsive.scaledFontSize(context, 13),
                                       fontWeight: FontWeight.w900,
                                       color: _isNotified ? const Color(0xFF047857) : const Color(0xFFB45309),
                                     ),
@@ -622,7 +622,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                   ? 'Next @ ${timingStatus.nextAvailableTimeStr}'
                                   : 'Not Available Right Now',
                               style: GoogleFonts.inter(
-                                fontSize: 13,
+                                fontSize: Responsive.scaledFontSize(context, 13),
                                 fontWeight: FontWeight.w800,
                                 color: const Color(0xFFD97706),
                               ),
@@ -642,7 +642,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                             child: Text(
                               'Store Currently Closed',
                               style: GoogleFonts.inter(
-                                fontSize: 13.5,
+                                fontSize: Responsive.scaledFontSize(context, 13.5),
                                 fontWeight: FontWeight.w800,
                                 color: const Color(0xFF94A3B8),
                               ),
@@ -673,7 +673,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 Text(
                                   '$inCartQty in Cart',
                                   style: GoogleFonts.inter(
-                                    fontSize: 14,
+                                    fontSize: Responsive.scaledFontSize(context, 14),
                                     fontWeight: FontWeight.w900,
                                     color: Colors.white,
                                   ),
@@ -692,7 +692,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                               Expanded(
                                                 child: Text(
                                                   'Only ${p.stock} units available in stock!',
-                                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                                                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: Colors.white),
                                                 ),
                                               ),
                                             ],
@@ -790,7 +790,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 Text(
                                   'Add to Cart',
                                   style: GoogleFonts.inter(
-                                    fontSize: 14,
+                                    fontSize: Responsive.scaledFontSize(context, 14),
                                     fontWeight: FontWeight.w900,
                                     color: Colors.white,
                                   ),
@@ -819,7 +819,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           child: Text(
             text,
             style: GoogleFonts.inter(
-              fontSize: 11.5,
+              fontSize: Responsive.scaledFontSize(context, 11.5),
               fontWeight: FontWeight.w600,
               color: const Color(0xFF374151),
             ),

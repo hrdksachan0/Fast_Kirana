@@ -159,7 +159,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             Text(
                               'Skip to Browse',
                               style: GoogleFonts.inter(
-                                fontSize: 12,
+                                fontSize: Responsive.scaledFontSize(context, 12),
                                 fontWeight: FontWeight.w700,
                                 color: const Color(0xFF0F172A),
                               ),
@@ -190,7 +190,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: Text(
                       'FastKirana',
                       style: GoogleFonts.inter(
-                        fontSize: 28,
+                        fontSize: Responsive.scaledFontSize(context, 28),
                         fontWeight: FontWeight.w900,
                         color: const Color(0xFF0F172A),
                         letterSpacing: -0.8,
@@ -212,12 +212,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('⚡', style: TextStyle(fontSize: 12)),
+                          const Text('⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
                           const SizedBox(width: 5),
                           Text(
                             "Superfast Grocery & Food Delivery",
                             style: GoogleFonts.inter(
-                              fontSize: 11.5,
+                              fontSize: Responsive.scaledFontSize(context, 11.5),
                               fontWeight: FontWeight.w700,
                               color: const Color(0xFF991B1B),
                             ),
@@ -254,7 +254,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             Text(
                               'Enter Mobile Number',
                               style: GoogleFonts.inter(
-                                fontSize: 13.5,
+                                fontSize: Responsive.scaledFontSize(context, 13.5),
                                 fontWeight: FontWeight.w800,
                                 color: const Color(0xFF0F172A),
                               ),
@@ -274,7 +274,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 Text(
                                   'OTP Verification',
                                   style: GoogleFonts.inter(
-                                    fontSize: 11.5,
+                                    fontSize: Responsive.scaledFontSize(context, 11.5),
                                     fontWeight: FontWeight.w700,
                                     color: const Color(0xFF16A34A),
                                   ),
@@ -315,12 +315,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Text('🇮🇳', style: TextStyle(fontSize: 16)),
+                                    const Text('🇮🇳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
                                     const SizedBox(width: 6),
                                     Text(
                                       '+91',
                                       style: GoogleFonts.inter(
-                                        fontSize: 15,
+                                        fontSize: Responsive.scaledFontSize(context, 15),
                                         fontWeight: FontWeight.w800,
                                         color: const Color(0xFF0F172A),
                                       ),
@@ -349,7 +349,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     LengthLimitingTextInputFormatter(10),
                                   ],
                                   style: GoogleFonts.inter(
-                                    fontSize: 15.5,
+                                    fontSize: Responsive.scaledFontSize(context, 15.5),
                                     fontWeight: FontWeight.w800,
                                     color: const Color(0xFF0F172A),
                                     letterSpacing: 0.8,
@@ -357,7 +357,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   decoration: InputDecoration(
                                     hintText: 'Enter 10-digit number',
                                     hintStyle: GoogleFonts.inter(
-                                      fontSize: 13.5,
+                                      fontSize: Responsive.scaledFontSize(context, 13.5),
                                       fontWeight: FontWeight.w500,
                                       color: const Color(0xFF94A3B8),
                                       letterSpacing: 0.2,
@@ -402,7 +402,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           Text(
                             _errorMessage!,
                             style: GoogleFonts.inter(
-                              fontSize: 11.5,
+                              fontSize: Responsive.scaledFontSize(context, 11.5),
                               fontWeight: FontWeight.w600,
                               color: primaryRed,
                             ),
@@ -445,7 +445,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         Text(
                                           'Continue with OTP',
                                           style: GoogleFonts.inter(
-                                            fontSize: 15,
+                                            fontSize: Responsive.scaledFontSize(context, 15),
                                             fontWeight: FontWeight.w800,
                                             color: Colors.white,
                                           ),
@@ -477,7 +477,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           textAlign: TextAlign.center,
                           text: TextSpan(
                             style: GoogleFonts.inter(
-                              fontSize: 11.5,
+                              fontSize: Responsive.scaledFontSize(context, 11.5),
                               color: const Color(0xFF94A3B8),
                             ),
                             children: [
@@ -544,7 +544,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Text(
                         'Terms & Conditions',
                         style: GoogleFonts.inter(
-                          fontSize: 18,
+                          fontSize: Responsive.scaledFontSize(context, 18),
                           fontWeight: FontWeight.w900,
                           color: const Color(0xFF0F172A),
                           letterSpacing: -0.3,
@@ -553,7 +553,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Text(
                         'FastKirana Services & Privacy Policy',
                         style: GoogleFonts.inter(
-                          fontSize: 12,
+                          fontSize: Responsive.scaledFontSize(context, 12),
                           fontWeight: FontWeight.w500,
                           color: const Color(0xFF64748B),
                         ),
@@ -635,7 +635,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: Text(
                     'I Understand & Agree',
                     style: GoogleFonts.inter(
-                      fontSize: 14,
+                      fontSize: Responsive.scaledFontSize(context, 14),
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
                     ),
@@ -658,7 +658,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           Text(
             title,
             style: GoogleFonts.inter(
-              fontSize: 13.5,
+              fontSize: Responsive.scaledFontSize(context, 13.5),
               fontWeight: FontWeight.w800,
               color: const Color(0xFF0F172A),
             ),
@@ -667,7 +667,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           Text(
             body,
             style: GoogleFonts.inter(
-              fontSize: 12,
+              fontSize: Responsive.scaledFontSize(context, 12),
               fontWeight: FontWeight.w500,
               color: const Color(0xFF475569),
               height: 1.45,

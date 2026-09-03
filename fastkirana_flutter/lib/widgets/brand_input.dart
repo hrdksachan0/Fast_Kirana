@@ -34,7 +34,7 @@ class BrandInput extends StatelessWidget {
       keyboardType: keyboardType,
       validator: validator,
       style: GoogleFonts.inter(
-        fontSize: 14,
+        fontSize: Responsive.scaledFontSize(context, 14),
         color: AppDesignSystem.textPrimary,
       ),
       decoration: InputDecoration(

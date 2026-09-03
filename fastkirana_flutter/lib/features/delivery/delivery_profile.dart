@@ -12,7 +12,7 @@ class DeliveryProfileScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppDesignSystem.background,
         elevation: 0,
-        title: Text('Profile', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+        title: Text('Profile', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -32,23 +32,23 @@ class DeliveryProfileScreen extends StatelessWidget {
                     width: 60,
                     height: 60,
                     decoration: BoxDecoration(gradient: LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]), borderRadius: BorderRadius.circular(30)),
-                    child: Center(child: Text('RK', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white))),
+                    child: Center(child: Text('RK', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: Colors.white))),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Ravi Kumar', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
-                        Text('+91 98xxx xxx00', style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textSecondary)),
+                        Text('Ravi Kumar', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+                        Text('+91 98xxx xxx00', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textSecondary)),
                         const SizedBox(height: 4),
                         Row(
                           children: [
                             Icon(Icons.star_rounded, color: AppDesignSystem.warning, size: 14),
                             const SizedBox(width: 4),
-                            Text('4.8 rating', style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
+                            Text('4.8 rating', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary)),
                             const SizedBox(width: 12),
-                            Text('142 orders', style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)),
+                            Text('142 orders', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary)),
                           ],
                         ),
                       ],
@@ -85,8 +85,8 @@ class DeliveryProfileScreen extends StatelessWidget {
         decoration: BoxDecoration(color: AppDesignSystem.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
         child: Icon(icon, color: AppDesignSystem.primary, size: 18),
       ),
-      title: Text(title, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
-      subtitle: subtitle.isNotEmpty ? Text(subtitle, style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.textSecondary)) : null,
+      title: Text(title, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
+      subtitle: subtitle.isNotEmpty ? Text(subtitle, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary)) : null,
       trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppDesignSystem.textMuted),
     );
   }

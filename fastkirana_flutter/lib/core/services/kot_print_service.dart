@@ -11,9 +11,10 @@ import 'supabase_service.dart';
 
 /// Exact 1:1 Port of Web App's KOT & POS Printing Engine (src/lib/kot-print.ts)
 class KotPrintService {
-  /// Send Remote KOT Broadcast to Web Kitchen Console with Dual-Path Guarantee:
-  /// Path 1: Server-side HTTP API (`/api/kot-broadcast`) - 100% reliable across networks
-  /// Path 2: Direct Supabase Channel Broadcast (`restaurant-orders-live`)
+  static final Map<String, DateTime> _recentPrintTimestamps = {};
+
+  /// Send Remote KOT Broadcast to Web Kitchen Console:
+  /// Single authoritative path via server-side HTTP API (`/api/kot-broadcast`)
   static Future<bool> sendRemoteKOTToKitchen({
     required String orderId,
     String? readableId,
@@ -29,6 +30,15 @@ class KotPrintService {
     var cleanId = orderId.trim();
     if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
 
+    // Multi-click cooldown guard (5 seconds)
+    final now = DateTime.now();
+    final lastTime = _recentPrintTimestamps[cleanId];
+    if (lastTime != null && now.difference(lastTime).inSeconds < 5) {
+      debugPrint('[KotPrintService] ⚠️ Multi-tap ignored for #$cleanId (cooldown active)');
+      return true;
+    }
+    _recentPrintTimestamps[cleanId] = now;
+
     final payload = {
       'orderId': cleanId,
       'readableId': readableId ?? cleanId,
@@ -41,7 +51,8 @@ class KotPrintService {
       'printedAt': DateTime.now().toIso8601String(),
     };
 
-    // Path 1: Server-side HTTP API (Guaranteed delivery via backend to web kitchen)
+    // Path 1: Server-side HTTP API (Primary reliable gateway to web kitchen)
+    bool apiSuccess = false;
     try {
       final dio = dioClient ??
           Dio(BaseOptions(
@@ -51,6 +62,7 @@ class KotPrintService {
           ));
       final res = await dio.post('/api/kot-broadcast', data: payload);
       if (res.statusCode == 200) {
+        apiSuccess = true;
         success = true;
         debugPrint('[KotPrintService] Server-side KOT broadcast success for #$cleanId');
       }
@@ -58,11 +70,12 @@ class KotPrintService {
       debugPrint('[KotPrintService] Server KOT broadcast note/err: $e');
     }
 
-    // Path 2: Direct Supabase Realtime Channel
+    // Path 2: Direct Supabase Realtime Channel (Fallback ONLY if server API failed)
+    // Also updates the order record as kot_sent in DB
     try {
       final sb = SupabaseService.client;
       if (sb != null) {
-        // Update DB
+        // Update DB record
         try {
           await sb.from('orders').update({
             'kot_printed': true,
@@ -71,25 +84,20 @@ class KotPrintService {
           }).eq('id', cleanId);
         } catch (_) {}
 
-        final channel = sb.channel('restaurant-orders-live');
-        channel.subscribe((status, [error]) async {
-          if (status == RealtimeSubscribeStatus.subscribed) {
-            await channel.sendBroadcastMessage(
-              event: 'reprint-kot',
-              payload: payload,
-            );
-            debugPrint('[KotPrintService] Supabase KOT broadcast sent on subscribe for #$cleanId');
-          }
-        });
-
-        // Also attempt immediate send if already connected
-        try {
-          await channel.sendBroadcastMessage(
-            event: 'reprint-kot',
-            payload: payload,
-          );
+        // If the backend API already broadcasted, DO NOT send a duplicate broadcast!
+        if (!apiSuccess) {
+          final channel = sb.channel('restaurant-orders-live');
+          channel.subscribe((status, [error]) async {
+            if (status == RealtimeSubscribeStatus.subscribed) {
+              await channel.sendBroadcastMessage(
+                event: 'reprint-kot',
+                payload: payload,
+              );
+              debugPrint('[KotPrintService] Supabase fallback KOT broadcast sent for #$cleanId');
+            }
+          });
           success = true;
-        } catch (_) {}
+        }
       }
     } catch (e) {
       debugPrint('[KotPrintService] Supabase direct broadcast error: $e');
@@ -164,23 +172,23 @@ class KotPrintService {
           order['shopName']?.toString().contains('+') == true;
 
       if (isCombined) {
-        // Exclude typical grocery keywords and categories
-        const groceryKeywords = [
-          'atta', 'rice', 'dal', 'oil', 'ghee', 'flour', 'sugar', 'salt', 'spice', 'masala',
-          'soap', 'shampoo', 'paste', 'brush', 'detergent', 'surf', 'cleaning', 'biscuit',
-          'namkeen', 'chips', 'munchies', 'dairy', 'milk', 'bread', 'butter', 'paneer',
-          'personal care', 'household', 'grocery', 'atta-rice-dal', 'snacks-munchies'
+        // Cooked food items should NEVER be excluded
+        const cookedFoodWhitelists = [
+          'dosa', 'burger', 'pizza', 'sandwich', 'roll', 'frankie', 'chowmein', 'noodles',
+          'fried rice', 'paneer', 'manchurian', 'shake', 'cold coffee', 'tea', 'chai', 'coffee',
+          'pasta', 'thali', 'roti', 'naan', 'gravy', 'curry', 'biryani', 'pav bhaji', 'fries',
+          'momos', 'samosa', 'maggi', 'soup'
+        ];
+        const pureGroceryOnlyKeywords = [
+          'atta', 'raw rice', 'dal packet', 'mustard oil', 'refined oil', 'washing powder',
+          'soap', 'shampoo', 'toothpaste', 'brush', 'detergent', 'surf excel', 'toilet cleaner'
         ];
 
         final filteredRestItems = allItems.where((it) {
           if (it is! Map) return false;
           final name = (it['name'] ?? (it['product'] is Map ? it['product']['name'] : '')).toString().toLowerCase();
-          final catSlug = (it['categorySlug'] ?? (it['category'] is Map ? it['category']['slug'] : '')).toString().toLowerCase();
-
-          final isGroceryCat = catSlug.contains('dairy') || catSlug.contains('atta') || catSlug.contains('personal') || catSlug.contains('household') || catSlug.contains('grocery') || catSlug.contains('snack');
-          if (isGroceryCat) return false;
-
-          final isGroceryStaple = groceryKeywords.any((k) => name.contains(k));
+          if (cookedFoodWhitelists.some((cw) => name.contains(cw))) return true;
+          final isGroceryStaple = pureGroceryOnlyKeywords.any((k) => name.contains(k));
           return !isGroceryStaple;
         }).toList();
 
@@ -294,11 +302,14 @@ class KotPrintService {
         targetItems = order['restaurantItems'] as List;
       } else if (order['subOrders'] is List) {
         final subOrders = order['subOrders'] as List;
-        final restSub = subOrders.firstWhere(
-          (s) => s is Map && (s['type'] == 'RESTAURANT' || s['restaurantId'] != null),
-          orElse: () => null,
-        );
-        if (restSub != null && restSub['items'] is List) {
+        dynamic restSub;
+        for (final s in subOrders) {
+          if (s is Map && (s['type'] == 'RESTAURANT' || s['restaurantId'] != null)) {
+            restSub = s;
+            break;
+          }
+        }
+        if (restSub != null && restSub is Map && restSub['items'] is List) {
           targetItems = restSub['items'] as List;
         }
       }

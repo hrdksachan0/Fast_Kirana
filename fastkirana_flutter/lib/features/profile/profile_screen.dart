@@ -78,7 +78,7 @@ class ProfileScreen extends ConsumerWidget {
                       Text(
                         'Edit Profile Details',
                         style: GoogleFonts.inter(
-                          fontSize: 17,
+                          fontSize: Responsive.scaledFontSize(context, 17),
                           fontWeight: FontWeight.w900,
                           color: const Color(0xFF0F172A),
                         ),
@@ -87,7 +87,7 @@ class ProfileScreen extends ConsumerWidget {
                       Text(
                         'Update your name, phone and email address',
                         style: GoogleFonts.inter(
-                          fontSize: 11.5,
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
                           color: const Color(0xFF64748B),
                         ),
                       ),
@@ -102,7 +102,7 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 18),
               Text(
                 'Full Name',
-                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF334155)),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: const Color(0xFF334155)),
               ),
               const SizedBox(height: 6),
               Container(
@@ -114,10 +114,10 @@ class ProfileScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: TextField(
                   controller: nameCtrl,
-                  style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w600),
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     hintText: 'Enter your full name',
-                    hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
+                    hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: const Color(0xFF94A3B8)),
                     border: InputBorder.none,
                   ),
                 ),
@@ -125,7 +125,7 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 14),
               Text(
                 'Phone Number',
-                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF334155)),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: const Color(0xFF334155)),
               ),
               const SizedBox(height: 6),
               Container(
@@ -137,15 +137,15 @@ class ProfileScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: Row(
                   children: [
-                    Text('+91 ', style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w700, color: const Color(0xFF64748B))),
+                    Text('+91 ', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w700, color: const Color(0xFF64748B))),
                     Expanded(
                       child: TextField(
                         controller: phoneCtrl,
                         keyboardType: TextInputType.phone,
-                        style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w600),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w600),
                         decoration: InputDecoration(
                           hintText: '10-digit mobile number',
-                          hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
+                          hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: const Color(0xFF94A3B8)),
                           border: InputBorder.none,
                         ),
                       ),
@@ -156,7 +156,7 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 14),
               Text(
                 'Email Address',
-                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF334155)),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: const Color(0xFF334155)),
               ),
               const SizedBox(height: 6),
               Container(
@@ -169,10 +169,10 @@ class ProfileScreen extends ConsumerWidget {
                 child: TextField(
                   controller: emailCtrl,
                   keyboardType: TextInputType.emailAddress,
-                  style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w600),
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     hintText: 'Enter your email',
-                    hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
+                    hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: const Color(0xFF94A3B8)),
                     border: InputBorder.none,
                   ),
                 ),
@@ -284,7 +284,7 @@ class ProfileScreen extends ConsumerWidget {
                   },
                   child: Text(
                     'Save Changes',
-                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: Colors.white),
                   ),
                 ),
               ),
@@ -325,7 +325,7 @@ class ProfileScreen extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         title,
-                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
                       ),
                     ),
                     IconButton(
@@ -337,7 +337,7 @@ class ProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: GoogleFonts.inter(fontSize: 12.5, color: const Color(0xFF64748B), height: 1.3),
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: const Color(0xFF64748B), height: 1.3),
                 ),
                 const SizedBox(height: 18),
                 Container(
@@ -351,10 +351,10 @@ class ProfileScreen extends ConsumerWidget {
                     controller: otpCtrl,
                     keyboardType: TextInputType.number,
                     maxLength: 6,
-                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 4),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, letterSpacing: 4),
                     decoration: InputDecoration(
                       hintText: 'ENTER 6-DIGIT OTP',
-                      hintStyle: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8), letterSpacing: 0.5),
+                      hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF94A3B8), letterSpacing: 0.5),
                       border: InputBorder.none,
                       counterText: '',
                     ),
@@ -364,7 +364,7 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(height: 6),
                   Text(
                     errorText!,
-                    style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFFDC2626), fontWeight: FontWeight.w600),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: const Color(0xFFDC2626), fontWeight: FontWeight.w600),
                   ),
                 ],
                 const SizedBox(height: 20),
@@ -405,7 +405,7 @@ class ProfileScreen extends ConsumerWidget {
                         ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                         : Text(
                             'Verify & Update',
-                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: Colors.white),
                           ),
                   ),
                 ),
@@ -426,16 +426,16 @@ class ProfileScreen extends ConsumerWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           'Log Out of FastKirana?',
-          style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: const Color(0xFF111827)),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: const Color(0xFF111827)),
         ),
         content: Text(
           'You will need to enter your phone or email to log back in.',
-          style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF6B7280)),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: const Color(0xFF6B7280)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF6B7280))),
+            child: Text('Cancel', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w600, color: const Color(0xFF6B7280))),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -451,7 +451,7 @@ class ProfileScreen extends ConsumerWidget {
                 const SnackBar(content: Text('Logged out successfully')),
               );
             },
-            child: Text('Log Out', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white)),
+            child: Text('Log Out', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: Colors.white)),
           ),
         ],
       ),
@@ -479,13 +479,13 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             Text(
               'FastKirana 24x7 Customer Care',
-              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
             ),
             const SizedBox(height: 4),
             Text(
               'We are here to assist with orders, deliveries & refunds in Ghatampur',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF64748B)),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: const Color(0xFF64748B)),
             ),
             const SizedBox(height: 20),
             ListTile(
@@ -498,8 +498,8 @@ class ProfileScreen extends ConsumerWidget {
                 decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(12)),
                 child: const Icon(Icons.phone_rounded, color: Color(0xFF2563EB), size: 22),
               ),
-              title: Text('Call Support', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800)),
-              subtitle: Text('+91 81128 49854 (Instant Call)', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+              title: Text('Call Support', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800)),
+              subtitle: Text('+91 81128 49854 (Instant Call)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF64748B))),
               trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
             ),
             const Divider(height: 1, color: Color(0xFFF1F5F9)),
@@ -511,10 +511,10 @@ class ProfileScreen extends ConsumerWidget {
               leading: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(color: const Color(0xFFECFDF5), borderRadius: BorderRadius.circular(12)),
-                child: const Text('💬', style: TextStyle(fontSize: 20)),
+                child: const Text('💬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 20))),
               ),
-              title: Text('WhatsApp Chat Support', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800)),
-              subtitle: Text('Chat with Ghatampur Support team', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+              title: Text('WhatsApp Chat Support', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800)),
+              subtitle: Text('Chat with Ghatampur Support team', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF64748B))),
               trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
             ),
             const Divider(height: 1, color: Color(0xFFF1F5F9)),
@@ -528,8 +528,8 @@ class ProfileScreen extends ConsumerWidget {
                 decoration: BoxDecoration(color: const Color(0xFFFFF1F2), borderRadius: BorderRadius.circular(12)),
                 child: const Icon(Icons.email_outlined, color: Color(0xFFDC2626), size: 22),
               ),
-              title: Text('Email Support', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800)),
-              subtitle: Text('fastkiranadelivery@gmail.com', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+              title: Text('Email Support', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800)),
+              subtitle: Text('fastkiranadelivery@gmail.com', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF64748B))),
               trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
             ),
           ],
@@ -665,7 +665,7 @@ class ProfileScreen extends ConsumerWidget {
                                 Text(
                                   'Operations Command Suite',
                                   style: GoogleFonts.inter(
-                                    fontSize: 13.5,
+                                    fontSize: Responsive.scaledFontSize(context, 13.5),
                                     fontWeight: FontWeight.w900,
                                     color: const Color(0xFF0F172A),
                                   ),
@@ -681,7 +681,7 @@ class ProfileScreen extends ConsumerWidget {
                               child: Text(
                                 'ADMIN',
                                 style: GoogleFonts.inter(
-                                  fontSize: 8.5,
+                                  fontSize: Responsive.scaledFontSize(context, 8.5),
                                   fontWeight: FontWeight.w900,
                                   color: const Color(0xFF15803D),
                                   letterSpacing: 0.5,
@@ -797,7 +797,7 @@ class ProfileScreen extends ConsumerWidget {
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
                             ),
-                            child: const Center(child: Text('🛵', style: TextStyle(fontSize: 22))),
+                            child: const Center(child: Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -808,7 +808,7 @@ class ProfileScreen extends ConsumerWidget {
                                   children: [
                                     Text(
                                       'Delivery Partner Dashboard',
-                                      style: GoogleFonts.inter(fontSize: 14.5, fontWeight: FontWeight.w900, color: Colors.white),
+                                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14.5), fontWeight: FontWeight.w900, color: Colors.white),
                                     ),
                                     const SizedBox(width: 6),
                                     Container(
@@ -817,14 +817,14 @@ class ProfileScreen extends ConsumerWidget {
                                         color: Colors.white,
                                         borderRadius: BorderRadius.circular(6),
                                       ),
-                                      child: Text('ACTIVE', style: GoogleFonts.inter(fontSize: 8.5, fontWeight: FontWeight.w900, color: const Color(0xFF047857))),
+                                      child: Text('ACTIVE', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 8.5), fontWeight: FontWeight.w900, color: const Color(0xFF047857))),
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
                                   'Tap to open GPS routes & active order pickups ➔',
-                                  style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.9)),
+                                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.9)),
                                 ),
                               ],
                             ),
@@ -881,7 +881,7 @@ class ProfileScreen extends ConsumerWidget {
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
                             ),
-                            child: const Center(child: Text('👨‍🍳', style: TextStyle(fontSize: 22))),
+                            child: const Center(child: Text('👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -892,20 +892,97 @@ class ProfileScreen extends ConsumerWidget {
                                   children: [
                                     Text(
                                       'Restaurant Kitchen Console',
-                                      style: GoogleFonts.inter(fontSize: 14.5, fontWeight: FontWeight.w900, color: Colors.white),
+                                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14.5), fontWeight: FontWeight.w900, color: Colors.white),
                                     ),
                                     const SizedBox(width: 6),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
-                                      child: Text('KITCHEN', style: GoogleFonts.inter(fontSize: 8.5, fontWeight: FontWeight.w900, color: const Color(0xFFBE123C))),
+                                      child: Text('KITCHEN', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 8.5), fontWeight: FontWeight.w900, color: const Color(0xFFBE123C))),
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
                                   'Manage live cooking orders, KOT slips & menu ➔',
-                                  style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.9)),
+                                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.9)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            // ─── PICKER ONLY: Warehouse Picker Card ────────────────────────
+            if (isPickerOnly)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+                  child: Bounceable(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.push(
+                        context,
+                        FadeSlideRoute(page: const PickerDashboard()),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF4338CA), Color(0xFF6366F1), Color(0xFF818CF8)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 46,
+                            height: 46,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
+                            ),
+                            child: const Center(child: Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      'Picker Hub Console',
+                                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14.5), fontWeight: FontWeight.w900, color: Colors.white),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
+                                      child: Text('PICKER', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 8.5), fontWeight: FontWeight.w900, color: const Color(0xFF4338CA))),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  'Pack orders, scan barcodes & assign riders ➔',
+                                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.9)),
                                 ),
                               ],
                             ),
@@ -1109,7 +1186,7 @@ class ProfileScreen extends ConsumerWidget {
                               Text(
                                 'FastKirana Express v1.0.0',
                                 style: GoogleFonts.inter(
-                                  fontSize: 11,
+                                  fontSize: Responsive.scaledFontSize(context, 11),
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFF94A3B8),
                                 ),
@@ -1120,7 +1197,7 @@ class ProfileScreen extends ConsumerWidget {
                           Text(
                             'Proudly Serving Ghatampur, Kanpur Nagar ❤️',
                             style: GoogleFonts.inter(
-                              fontSize: 10.5,
+                              fontSize: Responsive.scaledFontSize(context, 10.5),
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFFCBD5E1),
                             ),
@@ -1144,7 +1221,7 @@ class ProfileScreen extends ConsumerWidget {
       child: Text(
         title,
         style: GoogleFonts.inter(
-          fontSize: 10.5,
+          fontSize: Responsive.scaledFontSize(context, 10.5),
           fontWeight: FontWeight.w800,
           color: const Color(0xFF94A3B8),
           letterSpacing: 0.8,
@@ -1193,7 +1270,7 @@ class ProfileScreen extends ConsumerWidget {
                     Text(
                       'Welcome to FastKirana',
                       style: GoogleFonts.inter(
-                        fontSize: 18,
+                        fontSize: Responsive.scaledFontSize(context, 18),
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                         letterSpacing: -0.4,
@@ -1203,7 +1280,7 @@ class ProfileScreen extends ConsumerWidget {
                     Text(
                       'Log in for 10-min delivery & live tracking',
                       style: GoogleFonts.inter(
-                        fontSize: 12,
+                        fontSize: Responsive.scaledFontSize(context, 12),
                         fontWeight: FontWeight.w500,
                         color: Colors.white.withValues(alpha: 0.9),
                       ),
@@ -1239,7 +1316,7 @@ class ProfileScreen extends ConsumerWidget {
                   Text(
                     'Login / Sign Up ➔',
                     style: GoogleFonts.inter(
-                      fontSize: 14,
+                      fontSize: Responsive.scaledFontSize(context, 14),
                       fontWeight: FontWeight.w900,
                       color: primaryRed,
                       letterSpacing: 0.2,
@@ -1318,7 +1395,7 @@ class ProfileScreen extends ConsumerWidget {
                   child: Text(
                     name.isNotEmpty ? name[0].toUpperCase() : 'U',
                     style: GoogleFonts.inter(
-                      fontSize: 20,
+                      fontSize: Responsive.scaledFontSize(context, 20),
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
                     ),
@@ -1337,7 +1414,7 @@ class ProfileScreen extends ConsumerWidget {
                 Text(
                   name,
                   style: GoogleFonts.inter(
-                    fontSize: 15.5,
+                    fontSize: Responsive.scaledFontSize(context, 15.5),
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
                     letterSpacing: -0.2,
@@ -1350,7 +1427,7 @@ class ProfileScreen extends ConsumerWidget {
                 Text(
                   phoneDisplay,
                   style: GoogleFonts.inter(
-                    fontSize: 12,
+                    fontSize: Responsive.scaledFontSize(context, 12),
                     fontWeight: FontWeight.w600,
                     color: Colors.white.withValues(alpha: 0.88),
                     letterSpacing: 0.2,
@@ -1369,7 +1446,7 @@ class ProfileScreen extends ConsumerWidget {
                   child: Text(
                     badgeText,
                     style: GoogleFonts.inter(
-                      fontSize: 8.5,
+                      fontSize: Responsive.scaledFontSize(context, 8.5),
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
                       letterSpacing: 0.3,
@@ -1407,7 +1484,7 @@ class ProfileScreen extends ConsumerWidget {
                   Text(
                     'Edit',
                     style: GoogleFonts.inter(
-                      fontSize: 11.5,
+                      fontSize: Responsive.scaledFontSize(context, 11.5),
                       fontWeight: FontWeight.w800,
                       color: const Color(0xFFDC2626),
                     ),
@@ -1455,7 +1532,7 @@ class ProfileScreen extends ConsumerWidget {
               Text(
                 title,
                 style: GoogleFonts.inter(
-                  fontSize: 12.5,
+                  fontSize: Responsive.scaledFontSize(context, 12.5),
                   fontWeight: FontWeight.w800,
                   color: const Color(0xFF0F172A),
                 ),
@@ -1464,7 +1541,7 @@ class ProfileScreen extends ConsumerWidget {
               Text(
                 subtitle,
                 style: GoogleFonts.inter(
-                  fontSize: 10.5,
+                  fontSize: Responsive.scaledFontSize(context, 10.5),
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF64748B),
                 ),
@@ -1520,7 +1597,7 @@ class ProfileScreen extends ConsumerWidget {
                     ],
                   ),
                   child: Center(
-                    child: Text(emoji, style: const TextStyle(fontSize: 16)),
+                    child: Text(emoji, style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
                   ),
                 ),
                 Container(
@@ -1533,7 +1610,7 @@ class ProfileScreen extends ConsumerWidget {
                   child: Text(
                     badge,
                     style: GoogleFonts.inter(
-                      fontSize: 8,
+                      fontSize: Responsive.scaledFontSize(context, 8),
                       fontWeight: FontWeight.w900,
                       color: textColor,
                       letterSpacing: 0.4,
@@ -1546,7 +1623,7 @@ class ProfileScreen extends ConsumerWidget {
             Text(
               title,
               style: GoogleFonts.inter(
-                fontSize: 13,
+                fontSize: Responsive.scaledFontSize(context, 13),
                 fontWeight: FontWeight.w900,
                 color: const Color(0xFF0F172A),
               ),
@@ -1557,7 +1634,7 @@ class ProfileScreen extends ConsumerWidget {
             Text(
               subtitle,
               style: GoogleFonts.inter(
-                fontSize: 10.5,
+                fontSize: Responsive.scaledFontSize(context, 10.5),
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF64748B),
               ),
@@ -1602,7 +1679,7 @@ class ProfileScreen extends ConsumerWidget {
             Text(
               title,
               style: GoogleFonts.inter(
-                fontSize: 13.5,
+                fontSize: Responsive.scaledFontSize(context, 13.5),
                 fontWeight: FontWeight.w800,
                 color: const Color(0xFF0F172A),
               ),
@@ -1618,7 +1695,7 @@ class ProfileScreen extends ConsumerWidget {
                 child: Text(
                   badge,
                   style: GoogleFonts.inter(
-                    fontSize: 9.5,
+                    fontSize: Responsive.scaledFontSize(context, 9.5),
                     fontWeight: FontWeight.w800,
                     color: badgeColor ?? const Color(0xFF475569),
                   ),
@@ -1630,7 +1707,7 @@ class ProfileScreen extends ConsumerWidget {
         subtitle: Text(
           subtitle,
           style: GoogleFonts.inter(
-            fontSize: 11,
+            fontSize: Responsive.scaledFontSize(context, 11),
             fontWeight: FontWeight.w500,
             color: const Color(0xFF64748B),
           ),

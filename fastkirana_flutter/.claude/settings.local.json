@@ -20,7 +20,9 @@
       "Bash(npm install *)",
       "Bash(node convert-webp.mjs)",
       "Bash(cd *)",
-      "Bash(grep -v \"//\\\\|\\\\.webp\\\\|ImageByteFormat\\\\|media_\")"
+      "Bash(grep -v \"//\\\\|\\\\.webp\\\\|ImageByteFormat\\\\|media_\")",
+      "Bash(npx prisma *)",
+      "Bash(node -e ' *)"
     ]
   }
 }

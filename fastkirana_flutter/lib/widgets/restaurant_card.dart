@@ -204,7 +204,7 @@ class _RestaurantCardState extends State<RestaurantCard> {
                                     child: Text(
                                       'CLOSED',
                                       style: GoogleFonts.inter(
-                                        fontSize: 9,
+                                        fontSize: Responsive.scaledFontSize(context, 9),
                                         fontWeight: FontWeight.w900,
                                         color: Colors.white,
                                         letterSpacing: 0.5,
@@ -229,7 +229,7 @@ class _RestaurantCardState extends State<RestaurantCard> {
                               child: Text(
                                 r.name,
                                 style: GoogleFonts.inter(
-                                  fontSize: 14.5,
+                                  fontSize: Responsive.scaledFontSize(context, 14.5),
                                   fontWeight: FontWeight.w900,
                                   color: const Color(0xFF0F172A),
                                   letterSpacing: -0.3,
@@ -255,12 +255,12 @@ class _RestaurantCardState extends State<RestaurantCard> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Text('🏆', style: TextStyle(fontSize: 8.5)),
+                                      const Text('🏆', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 8.5))),
                                       const SizedBox(width: 3),
                                       Text(
                                         'TOP RATED',
                                         style: GoogleFonts.inter(
-                                          fontSize: 8.5,
+                                          fontSize: Responsive.scaledFontSize(context, 8.5),
                                           fontWeight: FontWeight.w900,
                                           color: const Color(0xFFC2410C),
                                           letterSpacing: 0.2,
@@ -279,12 +279,12 @@ class _RestaurantCardState extends State<RestaurantCard> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Text('🌿', style: TextStyle(fontSize: 8.5)),
+                                      const Text('🌿', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 8.5))),
                                       const SizedBox(width: 3),
                                       Text(
                                         'PURE VEG',
                                         style: GoogleFonts.inter(
-                                          fontSize: 8.5,
+                                          fontSize: Responsive.scaledFontSize(context, 8.5),
                                           fontWeight: FontWeight.w900,
                                           color: const Color(0xFF047857),
                                           letterSpacing: 0.2,
@@ -300,7 +300,7 @@ class _RestaurantCardState extends State<RestaurantCard> {
                             // Location text
                             Row(
                               children: [
-                                const Text('📍', style: TextStyle(fontSize: 9.5)),
+                                const Text('📍', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 9.5))),
                                 const SizedBox(width: 3),
                                 Expanded(
                                   child: Text(
@@ -308,7 +308,7 @@ class _RestaurantCardState extends State<RestaurantCard> {
                                         ? r.address!
                                         : 'Ghatampur, UP',
                                     style: GoogleFonts.inter(
-                                      fontSize: 10.5,
+                                      fontSize: Responsive.scaledFontSize(context, 10.5),
                                       fontWeight: FontWeight.w500,
                                       color: const Color(0xFF64748B),
                                     ),
@@ -331,7 +331,7 @@ class _RestaurantCardState extends State<RestaurantCard> {
                               child: Text(
                                 '🔥 $offer',
                                 style: GoogleFonts.inter(
-                                  fontSize: 9,
+                                  fontSize: Responsive.scaledFontSize(context, 9),
                                   fontWeight: FontWeight.w900,
                                   color: const Color(0xFFEA580C),
                                   letterSpacing: 0.2,
@@ -346,12 +346,12 @@ class _RestaurantCardState extends State<RestaurantCard> {
                               children: [
                                 Row(
                                   children: [
-                                    const Text('⚡', style: TextStyle(fontSize: 11)),
+                                    const Text('⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 11))),
                                     const SizedBox(width: 3),
                                     Text(
                                       '30m Prep',
                                       style: GoogleFonts.inter(
-                                        fontSize: 10.5,
+                                        fontSize: Responsive.scaledFontSize(context, 10.5),
                                         fontWeight: FontWeight.w800,
                                         color: const Color(0xFF64748B),
                                       ),
@@ -381,7 +381,7 @@ class _RestaurantCardState extends State<RestaurantCard> {
                                       Text(
                                         'EXPLORE',
                                         style: GoogleFonts.inter(
-                                          fontSize: 10,
+                                          fontSize: Responsive.scaledFontSize(context, 10),
                                           fontWeight: FontWeight.w900,
                                           color: Colors.white,
                                           letterSpacing: 0.3,
@@ -391,7 +391,7 @@ class _RestaurantCardState extends State<RestaurantCard> {
                                       const Text(
                                         '➔',
                                         style: TextStyle(
-                                          fontSize: 10,
+                                          fontSize: Responsive.scaledFontSize(context, 10),
                                           fontWeight: FontWeight.w900,
                                           color: Colors.white,
                                         ),

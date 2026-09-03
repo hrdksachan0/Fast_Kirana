@@ -41,12 +41,12 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
               const SizedBox(height: 32),
               Text(
                 'Delivery Partner Login',
-                style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
+                style: GoogleFonts.poppins(fontSize: Responsive.scaledFontSize(context, 24), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
               ),
               const SizedBox(height: 8),
               Text(
                 'Sign in to start delivering',
-                style: GoogleFonts.inter(fontSize: 14, color: AppDesignSystem.textSecondary),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: AppDesignSystem.textSecondary),
               ),
               const SizedBox(height: 40),
               Container(
@@ -79,7 +79,7 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
                         isLoading: _isLoading,
                       ),
                     ] else ...[
-                      Text('Enter 4-digit OTP', style: GoogleFonts.inter(fontSize: 14, color: AppDesignSystem.textSecondary)),
+                      Text('Enter 4-digit OTP', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: AppDesignSystem.textSecondary)),
                       const SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -91,7 +91,7 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
                             keyboardType: TextInputType.number,
                             textAlign: TextAlign.center,
                             maxLength: 4,
-                            style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w800),
+                            style: GoogleFonts.poppins(fontSize: Responsive.scaledFontSize(context, 24), fontWeight: FontWeight.w800),
                             decoration: const InputDecoration(
                               counterText: '',
                               border: OutlineInputBorder(borderSide: BorderSide(width: 2)),
