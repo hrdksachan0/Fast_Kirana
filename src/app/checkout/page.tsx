@@ -1241,109 +1241,30 @@ export default function CheckoutPage() {
           {/* Main Checkout Box */}
           <div className="bg-card border border-border p-3.5 min-[375px]:p-5 md:p-6 rounded-2xl shadow-sm space-y-6 md:space-y-8 animate-fade-in">
               <div className="space-y-4">
-                <h2 className="text-base sm:text-lg font-black text-text-primary flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  Choose Fulfillment Method
-                </h2>
-
-                {/* Fulfillment Option */}
-                <div className="grid grid-cols-2 gap-3 md:gap-4">
-                  <div
-                    onClick={() => setDeliveryMethod('DELIVERY')}
-                    className={cn(
-                      "flex flex-col items-center justify-center p-3 min-[375px]:p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 text-center gap-2",
-                      deliveryMethod === 'DELIVERY' ? "border-primary bg-primary/5 shadow-sm text-primary" : "border-border hover:border-primary/40 text-text-secondary"
-                    )}
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base sm:text-lg font-black text-text-primary flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-primary" />
+                    Delivery Address
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewAddressForm({ label: 'Home', houseNo: '', street: '', area: '', city: 'Ghatampur', pincode: '209206', phone: '' })
+                      setIsAddingAddress(true)
+                    }}
+                    className="text-xs font-black text-primary hover:underline flex items-center gap-1 cursor-pointer"
                   >
-                    <span className="text-2xl">🚚</span>
-                    <span className="text-sm font-bold">Home Delivery</span>
-                    <span className="text-[10px] text-text-muted">Delivered to your doorstep</span>
-                  </div>
-                  <div
-                    onClick={() => setDeliveryMethod('PICKUP')}
-                    className={cn(
-                      "flex flex-col items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all bg-muted/20 text-center gap-2",
-                      deliveryMethod === 'PICKUP' ? "border-primary bg-primary/5 shadow-sm text-primary" : "border-border hover:border-primary/40 text-text-secondary"
-                    )}
-                  >
-                    <span className="text-2xl">🏪</span>
-                    <span className="text-sm font-bold">Self-Pickup</span>
-                    <span className="text-[10px] text-text-muted">Waived delivery fee (Save ₹25)</span>
-                  </div>
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Add New</span>
+                  </button>
                 </div>
 
-                {deliveryMethod === 'PICKUP' ? (
-                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-4">
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl">🏪</span>
-                      <div className="space-y-3 flex-1">
-                        <h4 className="text-sm font-black text-text-primary uppercase tracking-wide">Pickup Addresses</h4>
-                        
-                        {hasGrocery && (
-                          <div className="border-l-2 border-primary/30 pl-3">
-                            <span className="text-[10px] uppercase font-black text-primary">Grocery Mart Pickup</span>
-                            <p className="text-xs text-text-secondary leading-relaxed mt-0.5">
-                              {groceryPickupAddress || contactAddress}
-                            </p>
-                          </div>
-                        )}
-
-                        {hasCafe && (
-                          (() => {
-                            const cafeItem = items.find((item) => item.product.category?.slug === 'cafe' || (item.product as any).tags?.includes('cafe'))
-                            const restaurantId = (cafeItem?.product as any)?.restaurantId || (cafeItem?.product as any)?.restaurant?.id
-                            const specificCafe = restaurantsList.find(r => r.id === restaurantId || r.slug?.includes('cafe')) || (cafeItem?.product as any)?.restaurant
-
-                            return (
-                              <div className="border-l-2 border-orange-500/30 pl-3">
-                                <span className="text-[10px] uppercase font-black text-orange-600">
-                                  ☕ {specificCafe ? specificCafe.name : 'Cafe'} Pickup
-                                </span>
-                                <p className="text-xs text-text-secondary leading-relaxed mt-0.5 font-bold">
-                                  {specificCafe?.address || cafePickupAddress || contactAddress}
-                                </p>
-                              </div>
-                            )
-                          })()
-                        )}
-
-                        {hasRestaurant && (
-                          (() => {
-                            const restaurantItem = items.find((item) => (item.product as any).restaurantId || (item.product as any).restaurant)
-                            const prodRest = (restaurantItem?.product as any)?.restaurant
-                            const restaurantId = (restaurantItem?.product as any)?.restaurantId || prodRest?.id
-                            const specificRestaurant = prodRest || restaurantsList.find(r => r.id === restaurantId || (prodRest?.slug && r.slug === prodRest.slug)) || restaurantsList.find(r => r.slug?.includes('wedson')) || restaurantsList[0]
-
-                            return (
-                              <div className="border-l-2 border-rose-500/30 pl-3">
-                                <span className="text-[10px] uppercase font-black text-rose-600">
-                                  📍 {specificRestaurant ? specificRestaurant.name : 'Restaurant'} Pickup
-                                </span>
-                                <p className="text-xs text-text-secondary leading-relaxed mt-0.5 font-bold">
-                                  {specificRestaurant?.address || restaurantPickupAddress || contactAddress}
-                                </p>
-                              </div>
-                            )
-                          })()
-                        )}
-
-                        <p className="text-xs text-text-secondary pt-1 border-t border-border/20">
-                          Phone: <span className="font-semibold text-primary">{formatPhone(contactPhone)}</span>
-                        </p>
-                        
-                        <div className="mt-3 text-[10px] text-accent font-bold bg-accent/10 px-2 py-1 rounded inline-block">
-                          ✓ Self-Pickup Selected: No delivery charge
-                        </div>
-                      </div>
-                    </div>
+                {isAddressesLoading ? (
+                  <div className="flex justify-center py-10">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
                 ) : (
-                  isAddressesLoading ? (
-                    <div className="flex justify-center py-10">
-                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    </div>
-                  ) : (
-                    <div id="address-section" className="space-y-4 scroll-mt-24">
+                  <div id="address-section" className="space-y-4 scroll-mt-24">
                       {addresses.map((addr) => (
                         <div
                           key={addr.id}
@@ -1827,9 +1748,7 @@ export default function CheckoutPage() {
               <div className="flex flex-col text-left">
                 <span>Delivery Charge</span>
                 <span className="text-[9px] text-text-muted">
-                  {deliveryMethod === 'PICKUP' 
-                    ? 'Store Pickup' 
-                    : adjustedSubtotal >= ((deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : (groceryThreshold || 200))
+                  {adjustedSubtotal >= ((deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : (groceryThreshold || 200))
                     ? `Free delivery on orders ₹${(deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : (groceryThreshold || 200)}+`
                     : `₹${deliveryFee} fee on orders under ₹${(deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : (groceryThreshold || 200)}`}
                 </span>
@@ -1869,7 +1788,7 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {deliveryMethod === 'DELIVERY' && selectedAddress && (
+            {selectedAddress && (
               <>
                 {deliveryRules && !deliveryRules.isServiceable && (
                   <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 p-2.5 rounded-xl text-center mt-2">
@@ -1919,9 +1838,7 @@ export default function CheckoutPage() {
           <span className="text-[9px] text-text-secondary font-medium leading-none">Grand Total</span>
           <span className="text-base font-black text-primary mt-1">₹{grandTotal.toFixed(0)}</span>
           <div className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-0.5 mt-0.5 max-w-[140px] truncate">
-            {deliveryMethod === 'PICKUP' ? (
-              <span>🏪 Store Pickup</span>
-            ) : selectedAddress ? (
+            {selectedAddress ? (
               <span className="truncate">📍 {selectedAddress.street}</span>
             ) : (
               <span className="text-rose-500">📍 Select Address</span>

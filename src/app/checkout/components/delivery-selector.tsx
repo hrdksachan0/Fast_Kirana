@@ -28,36 +28,7 @@ export function CheckoutDeliverySelector({
 }: DeliverySelectorProps) {
   return (
     <div className="bg-card border border-border p-4 sm:p-5 rounded-2xl shadow-xs space-y-4">
-      {/* Method Tabs */}
-      <div className="flex rounded-xl bg-muted/40 p-1 border border-border/40">
-        <button
-          type="button"
-          onClick={() => setDeliveryMethod('DELIVERY')}
-          className={`flex-1 py-2 text-xs font-black rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-            deliveryMethod === 'DELIVERY'
-              ? 'bg-card text-text-primary shadow-xs'
-              : 'text-text-secondary hover:text-text-primary'
-          }`}
-        >
-          <Truck className="h-4 w-4" />
-          <span>Doorstep Delivery</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setDeliveryMethod('PICKUP')}
-          className={`flex-1 py-2 text-xs font-black rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-            deliveryMethod === 'PICKUP'
-              ? 'bg-card text-text-primary shadow-xs'
-              : 'text-text-secondary hover:text-text-primary'
-          }`}
-        >
-          <Store className="h-4 w-4" />
-          <span>Self Pickup</span>
-        </button>
-      </div>
-
-      {deliveryMethod === 'DELIVERY' ? (
-        <div className="space-y-3">
+      <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-extrabold text-text-primary">Delivery Address</h4>
             <button
@@ -114,16 +85,6 @@ export function CheckoutDeliverySelector({
             />
           </div>
         </div>
-      ) : (
-        <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs space-y-1">
-          <p className="font-extrabold text-purple-700 dark:text-purple-300">
-            🏬 Store Pickup Selected
-          </p>
-          <p className="text-text-secondary text-[11px]">
-            Collect directly from FastKirana Store counter once order is ready. No delivery fee charged.
-          </p>
-        </div>
-      )}
     </div>
   )
 }
