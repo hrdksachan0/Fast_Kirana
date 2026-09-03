@@ -1249,8 +1249,16 @@ export default function CheckoutPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setNewAddressForm({ label: 'Home', houseNo: '', street: '', area: '', city: 'Ghatampur', pincode: '209206', phone: '' })
-                      setIsAddingAddress(true)
+                      setAddressForm({
+                        label: 'Home',
+                        street: '',
+                        pincode: '209206',
+                        phone: addressForm.phone,
+                        isDefault: false,
+                        lat: null,
+                        lng: null,
+                      })
+                      setShowNewAddressForm(true)
                     }}
                     className="text-xs font-black text-primary hover:underline flex items-center gap-1 cursor-pointer"
                   >
@@ -1507,8 +1515,7 @@ export default function CheckoutPage() {
                         </form>
                       )}
                     </div>
-                  )
-                )}
+                  )}
               </div>
 
 
