@@ -1885,14 +1885,20 @@ export function AdminDashboard({
 
       const res = await fetch('/api/products', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(sessionUserId ? { 'x-user-id': sessionUserId, 'x-user-role': sessionUserRole } : {})
+        },
         body: JSON.stringify({
           ...newProduct,
+          restaurantId: newProduct.restaurantId || null,
+          barcode: newProduct.barcode || null,
+          location: newProduct.location || null,
           categoryId: resolvedCategoryId || newProduct.categoryId,
           mrp: hasVariantsNew && newProductVariants.length > 0 ? parseFloat(newProductVariants[0].mrp) : parseFloat(newProduct.mrp),
           price: hasVariantsNew && newProductVariants.length > 0 ? parseFloat(newProductVariants[0].price) : parseFloat(newProduct.price),
-          stock: (isNewProductCafe || isNewProductRestaurant) ? 99999 : (hasVariantsNew && newProductVariants.length > 0 ? newProductVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0) : (parseInt(newProduct.stock) || 0)),
-          minStock: (isNewProductCafe || isNewProductRestaurant) ? 0 : (parseInt(newProduct.minStock) || 10),
+          stock: (isNewProductCafe || isNewProductRestaurant || newProduct.restaurantId) ? 99999 : (hasVariantsNew && newProductVariants.length > 0 ? newProductVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0) : (parseInt(newProduct.stock) || 0)),
+          minStock: (isNewProductCafe || isNewProductRestaurant || newProduct.restaurantId) ? 0 : (parseInt(newProduct.minStock) || 10),
           expiryDate: newProduct.expiryDate ? new Date(newProduct.expiryDate).toISOString() : null,
           costPrice: parseFloat(newProduct.costPrice) || 0,
           tags: tagsArray,
@@ -1938,11 +1944,12 @@ export function AdminDashboard({
         })
 
       } else {
-        const errData = await res.json()
+        const errData = await res.json().catch(() => ({}))
         toast.error(errData.error || 'Failed to create product')
       }
-    } catch (err) {
-      toast.error('Error creating product')
+    } catch (err: any) {
+      console.error('Error creating product:', err)
+      toast.error(err?.message || 'Error creating product')
     } finally {
       setIsCreatingProduct(false)
     }

@@ -550,7 +550,7 @@ export async function POST(request: NextRequest) {
   const limited = await apiWriteLimiter.check(request)
   if (limited) return limited
 
-  const adminResult = await requireAdmin()
+  const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
   const session = adminResult.session
 
@@ -600,25 +600,25 @@ export async function POST(request: NextRequest) {
     }
 
     if (!name || !finalCategoryId || mrp === undefined || price === undefined) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      return NextResponse.json({ error: 'Missing required fields (name, categoryId, price, mrp)' }, { status: 400 })
     }
 
-    const finalUnit = (unit && typeof unit === 'string') ? unit.trim() : ''
+    const finalUnit = (unit && typeof unit === 'string' && unit.trim().length > 0) ? unit.trim() : (restaurantId ? '1 Serving' : '1 pc')
 
     // Generate slug from name
-    const slug = name
+    const rawSlug = name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)+/g, '')
 
     // Check slug uniqueness
     const existing = await prisma.product.findUnique({
-      where: { slug }
+      where: { slug: rawSlug }
     })
 
-    let finalSlug = slug
+    let finalSlug = rawSlug
     if (existing) {
-      finalSlug = `${slug}-${Date.now().toString().slice(-4)}`
+      finalSlug = `${rawSlug}-${Date.now().toString().slice(-4)}`
     }
 
     let finalMrp = Number(mrp)
@@ -635,21 +635,38 @@ export async function POST(request: NextRequest) {
       ? Math.max(0, Math.round(((finalMrp - finalPrice) / finalMrp) * 100))
       : 0
 
-    // Find highest readableId to increment
-    const lastProduct = await prisma.product.findFirst({
-      orderBy: { readableId: 'desc' },
-      select: { readableId: true }
-    })
-    const nextReadableId = lastProduct && lastProduct.readableId
-      ? lastProduct.readableId + 1
-      : 200001
+    // Find highest readableId to increment safely
+    let nextReadableId = 200001
+    try {
+      const lastProduct = await prisma.product.findFirst({
+        where: { readableId: { not: null } },
+        orderBy: { readableId: 'desc' },
+        select: { readableId: true }
+      })
+      if (lastProduct && typeof lastProduct.readableId === 'number') {
+        nextReadableId = lastProduct.readableId + 1
+      }
+    } catch (e) {
+      console.warn('Could not query last readableId:', e)
+    }
+
+    let parsedExpiry: Date | null = null
+    if (expiryDate && typeof expiryDate === 'string' && expiryDate.trim().length > 0) {
+      const parsedTime = Date.parse(expiryDate)
+      if (!isNaN(parsedTime)) {
+        parsedExpiry = new Date(parsedTime)
+      }
+    }
+
+    const cleanBarcode = (barcode && typeof barcode === 'string' && barcode.trim().length > 0) ? barcode.trim() : null
+    const cleanLocation = (location && typeof location === 'string' && location.trim().length > 0) ? location.trim() : null
 
     const product = await prisma.product.create({
       data: {
-        name,
+        name: name.trim(),
         readableId: nextReadableId,
         slug: finalSlug,
-        description,
+        description: description || '',
         imageUrl: imageUrl || '📦',
         categoryId: finalCategoryId,
         restaurantId: restaurantId || null,
@@ -657,19 +674,19 @@ export async function POST(request: NextRequest) {
         price: finalPrice,
         discount: calculatedDiscount,
         unit: finalUnit,
-        stock: restaurantId ? 999 : Number(stock),
+        stock: restaurantId ? 99999 : Number(stock || 0),
         isAvailable: isAvailable !== undefined ? !!isAvailable : true,
         tags: tagsList,
-        variants: sortedVariants || undefined,
-        minStock: Number(minStock),
-        expiryDate: expiryDate ? new Date(expiryDate) : undefined,
-        costPrice: Number(costPrice),
-        location: location || undefined,
+        variants: (sortedVariants && Array.isArray(sortedVariants) && sortedVariants.length > 0) ? sortedVariants : undefined,
+        minStock: Number(minStock || 0),
+        expiryDate: parsedExpiry,
+        costPrice: Number(costPrice || 0),
+        location: cleanLocation,
         isFlashDeal: !!isFlashDeal,
         isTopPick: !!isTopPick,
         isBestSeller: !!isBestSeller,
-        sortOrder: Number(sortOrder),
-        barcode: barcode || undefined,
+        sortOrder: Number(sortOrder || 0),
+        barcode: cleanBarcode,
       },
       include: {
         category: true,
@@ -682,6 +699,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(product, { status: 201 })
   } catch (error: any) {
     console.error('Failed to create product:', error)
-    return NextResponse.json({ error: 'Failed to create product' }, { status: 500 })
+    return NextResponse.json({ 
+      error: error?.message || 'Failed to create product in database',
+      code: error?.code || null 
+    }, { status: 500 })
   }
 }
