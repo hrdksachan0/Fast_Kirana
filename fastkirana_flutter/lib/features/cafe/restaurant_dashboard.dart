@@ -1,14 +1,12 @@
 import 'package:fastkirana_flutter/core/theme/design_system.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -23,8 +21,8 @@ import '../../core/services/logger_service.dart';
 import '../../core/services/kot_print_service.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/utils/restaurant_utils.dart';
+import '../common/widgets/battery_optimization_dialog.dart';
 import '../../core/utils/app_toast.dart';
-import '../../core/theme/responsive.dart';
 import '../../data/models/order.dart';
 import '../../data/repositories/order_repository.dart';
 import '../../widgets/live_clock_badge.dart';
@@ -32,6 +30,8 @@ import '../../providers/auth_provider.dart';
 import '../delivery/widgets/connectivity_banner.dart';
 import '../common/order_edit_modal.dart';
 import 'widgets/add_restaurant_product_modal.dart';
+import 'widgets/restaurant_menu_catalog_tab.dart';
+import 'widgets/restaurant_sales_report_tab.dart';
 
 class RestaurantDashboard extends ConsumerStatefulWidget {
   final String? initialRestaurantId;
@@ -62,7 +62,6 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
   Map<String, dynamic> _salesSummary = {};
   
   Timer? _autoRefreshTimer;
-  Timer? _menuSearchDebounce;
   bool _isFetchingOrders = false;
   String _restaurantName = 'Restaurant Console';
   String? _assignedRestaurantId;
@@ -94,12 +93,6 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
   RealtimeChannel? _restaurantOrdersChannel;
   RealtimeChannel? _restaurantBroadcastChannel;
   final String _selectedStatusFilter = 'ALL'; // ALL, PENDING, CONFIRMED, PACKED, COMPLETED
-  String _selectedSalesPeriod = 'TODAY'; // TODAY, YESTERDAY, WEEK, MONTH, ALL
-
-  // Menu Search & Filter State
-  String _menuSearchQuery = '';
-  String _menuStockFilter = 'ALL'; // ALL, IN_STOCK, OUT_STOCK
-  final TextEditingController _menuSearchController = TextEditingController();
 
   // Dynamic Theme Colors
   static const Color primaryRed = AppDesignSystem.primary;
@@ -128,6 +121,12 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
     _initConnectivityAndOfflineQueue();
     _initOutletDetails();
     _initNotificationSubscriptions();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        BatteryOptimizationDialog.showIfNecessary(context);
+      }
+    });
 
     // 15-second background refresh timer (with countdown indicator)
     _autoRefreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -261,7 +260,6 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
     _stopPendingAlarm();
     _autoRefreshTimer?.cancel();
     _connectivitySubscription?.cancel();
-    _menuSearchDebounce?.cancel();
     if (_restaurantOrdersChannel != null) {
       SupabaseService.unsubscribe(_restaurantOrdersChannel);
     }
@@ -269,7 +267,6 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
       SupabaseService.unsubscribe(_restaurantBroadcastChannel);
     }
     _audioPlayer.dispose();
-    _menuSearchController.dispose();
     super.dispose();
   }
 
@@ -1937,9 +1934,23 @@ $formattedItems
                 : _activeTab == 0
                     ? _buildLiveOrdersTab()
                     : _activeTab == 1
-                        ? _buildMenuCatalogTab()
+                        ? RestaurantMenuCatalogTab(
+                            menuItems: _menuItems,
+                            restaurantName: _restaurantName,
+                            onAddDish: _openAddDishModal,
+                            onToggleAvailability: _toggleItemAvailability,
+                          )
                         : _activeTab == 2
-                            ? _buildSalesReportTab()
+                            ? RestaurantSalesReportTab(
+                                salesOrders: _salesOrders,
+                                salesSummary: _salesSummary,
+                                commissionRate: _commissionRate,
+                                primaryRed: primaryRed,
+                                brandGreen: brandGreen,
+                                slateDark: slateDark,
+                                slateMuted: slateMuted,
+                                slateBorder: slateBorder,
+                              )
                             : _buildStoreSettingsTab(),
           ),
         ],
@@ -2524,697 +2535,9 @@ $formattedItems
     );
   }
 
-  Widget _buildMenuCatalogTab() {
-    if (_menuItems.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.menu_book_rounded, size: 48, color: slateMuted),
-            const SizedBox(height: 12),
-            Text('No menu items loaded', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w800, color: slateDark)),
-            const SizedBox(height: 4),
-            Text('Dishes for $_restaurantName will appear here', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryRed,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                elevation: 0,
-              ),
-              onPressed: _openAddDishModal,
-              icon: const Icon(Icons.add_rounded, color: Colors.white, size: 18),
-              label: Text(
-                'Add First Dish',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: Colors.white),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
 
-    final query = _menuSearchQuery.trim().toLowerCase();
-    final inStockCount = _menuItems.where((p) => p['isAvailable'] == true).length;
-    final outStockCount = _menuItems.length - inStockCount;
 
-    // Filter items by search query and stock filter
-    final filteredItems = _menuItems.where((item) {
-      final name = (item['name'] ?? '').toString().toLowerCase();
-      final category = (item['category'] is Map ? item['category']['name'] : '').toString().toLowerCase();
-      final priceStr = (item['price'] ?? '').toString();
 
-      final matchesQuery = query.isEmpty ||
-          name.contains(query) ||
-          category.contains(query) ||
-          priceStr.contains(query);
-
-      if (!matchesQuery) return false;
-
-      final isAvailable = item['isAvailable'] ?? true;
-      if (_menuStockFilter == 'IN_STOCK') return isAvailable == true;
-      if (_menuStockFilter == 'OUT_STOCK') return isAvailable == false;
-      return true;
-    }).toList();
-
-    return Column(
-      children: [
-        // ─── 1. Premium Search Bar & Filter Header ──────────────────────────
-        Container(
-          padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-          color: bgMain,
-          child: Column(
-            children: [
-              // Modern Search Box
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: _menuSearchQuery.isNotEmpty ? primaryRed : AppDesignSystem.slate200,
-                    width: _menuSearchQuery.isNotEmpty ? 1.5 : 1.2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppDesignSystem.slate900.withValues(alpha: 0.04),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _menuSearchController,
-                  onChanged: (val) {
-                    _menuSearchDebounce?.cancel();
-                    _menuSearchDebounce = Timer(const Duration(milliseconds: 300), () {
-                      if (mounted) setState(() => _menuSearchQuery = val);
-                    });
-                  },
-                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w600, color: slateDark),
-                  decoration: InputDecoration(
-                    hintText: 'Search dish name, price or category...',
-                    hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.slate400, fontWeight: FontWeight.w500),
-                    prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppDesignSystem.slate500),
-                    suffixIcon: _menuSearchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.cancel_rounded, size: 18, color: AppDesignSystem.slate400),
-                            onPressed: () {
-                              _menuSearchController.clear();
-                              setState(() {
-                                _menuSearchQuery = '';
-                              });
-                            },
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              // Filter Chips (All, In Stock, 86 / Out of Stock)
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Row(
-                  children: [
-                    _buildMenuFilterChip(
-                      label: 'All Dishes (${_menuItems.length})',
-                      isSelected: _menuStockFilter == 'ALL',
-                      color: slateDark,
-                      onTap: () => setState(() => _menuStockFilter = 'ALL'),
-                    ),
-                    const SizedBox(width: 8),
-                    _buildMenuFilterChip(
-                      label: '🟢 In Stock ($inStockCount)',
-                      isSelected: _menuStockFilter == 'IN_STOCK',
-                      color: AppDesignSystem.green700,
-                      onTap: () => setState(() => _menuStockFilter = 'IN_STOCK'),
-                    ),
-                    const SizedBox(width: 8),
-                    _buildMenuFilterChip(
-                      label: '🔴 86 / Out of Stock ($outStockCount)',
-                      isSelected: _menuStockFilter == 'OUT_STOCK',
-                      color: primaryRed,
-                      onTap: () => setState(() => _menuStockFilter = 'OUT_STOCK'),
-                    ),
-                    const SizedBox(width: 8),
-                    Bounceable(
-                      onTap: _openAddDishModal,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: primaryRed,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.add_rounded, size: 16, color: Colors.white),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Add Dish',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 12),
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // ─── 2. Dishes List / Empty State ─────────────────────────────────────
-        Expanded(
-          child: filteredItems.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            color: AppDesignSystem.slate100,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Center(
-                            child: Icon(Icons.search_off_rounded, size: 32, color: AppDesignSystem.slate400),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Text(
-                          'No dishes found',
-                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: slateDark),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _menuSearchQuery.isNotEmpty
-                              ? 'No items match "$_menuSearchQuery"'
-                              : 'No dishes match selected stock filter',
-                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: slateMuted),
-                          textAlign: TextAlign.center,
-                        ),
-                        if (_menuSearchQuery.isNotEmpty) ...[
-                          const SizedBox(height: 14),
-                          ElevatedButton(
-                            onPressed: () {
-                              _menuSearchController.clear();
-                              setState(() {
-                                _menuSearchQuery = '';
-                              });
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: slateDark,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                            ),
-                            child: Text(
-                              'Clear Search',
-                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: Colors.white),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
-                  itemCount: filteredItems.length,
-                  itemBuilder: (context, idx) {
-                    final item = filteredItems[idx];
-                    final isAvailable = item['isAvailable'] ?? true;
-                    final num price = (item['price'] is num)
-                        ? (item['price'] as num)
-                        : (num.tryParse(item['price']?.toString() ?? '0') ?? 0);
-
-                    final String name = item['name']?.toString() ?? 'Dish';
-                    final String? imageUrl = (item['images'] is List && (item['images'] as List).isNotEmpty)
-                        ? item['images'][0].toString()
-                        : item['image']?.toString();
-
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: isAvailable ? AppDesignSystem.slate100 : AppDesignSystem.statusCancelled,
-                          width: isAvailable ? 1.2 : 1.4,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppDesignSystem.slate900.withValues(alpha: 0.03),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          // Dish Thumbnail / Avatar
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: isAvailable ? AppDesignSystem.slate50 : AppDesignSystem.statusCancelled,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: isAvailable ? AppDesignSystem.slate200 : AppDesignSystem.red200,
-                              ),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: (imageUrl != null && imageUrl.trim().isNotEmpty)
-                                  ? CachedNetworkImage(
-                                      imageUrl: imageUrl,
-                                      fit: BoxFit.cover,
-                                      memCacheWidth: 200,
-                                      memCacheHeight: 200,
-                                      maxWidthDiskCache: 200,
-                                      maxHeightDiskCache: 200,
-                                      errorWidget: (_, __, ___) => Center(
-                                        child: Text('🍲', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 20))),
-                                      ),
-                                    )
-                                  : Center(
-                                      child: Text('🍲', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 20))),
-                                    ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-
-                          // Dish Info & Price
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  name,
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 14),
-                                    fontWeight: FontWeight.w800,
-                                    color: isAvailable ? slateDark : AppDesignSystem.slate400,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 3),
-                                Row(
-                                  children: [
-                                    Text(
-                                      '₹${price.toInt()}',
-                                      style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 13),
-                                        fontWeight: FontWeight.w900,
-                                        color: isAvailable ? AppDesignSystem.slate900 : AppDesignSystem.slate400,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: isAvailable ? AppDesignSystem.green100 : AppDesignSystem.statusCancelled,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        isAvailable ? 'LIVE' : '86 • OFF',
-                                        style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 9.5),
-                                          fontWeight: FontWeight.w900,
-                                          color: isAvailable ? AppDesignSystem.green700 : AppDesignSystem.red600,
-                                          letterSpacing: 0.3,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // Availability Switch
-                          Switch.adaptive(
-                            value: isAvailable,
-                            activeColor: brandGreen,
-                            activeTrackColor: AppDesignSystem.emerald200,
-                            inactiveTrackColor: AppDesignSystem.slate200,
-                            onChanged: (_) => _toggleItemAvailability(item),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMenuFilterChip({
-    required String label,
-    required bool isSelected,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Bounceable(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: isSelected ? color : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? color : AppDesignSystem.slate200,
-            width: isSelected ? 1.4 : 1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.25),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: Responsive.scaledFontSize(context, 11.5),
-            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-            color: isSelected ? Colors.white : AppDesignSystem.slate500,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSalesReportTab() {
-    final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
-    final yesterdayStart = todayStart.subtract(const Duration(days: 1));
-    final weekStart = now.subtract(const Duration(days: 7));
-    final monthStart = DateTime(now.year, now.month, 1);
-
-    final filteredOrdersList = _salesOrders.where((o) {
-      final status = o['status']?.toString().toUpperCase() ?? '';
-      if (status == 'CANCELLED') return false;
-      final dt = DateTime.tryParse(o['createdAt']?.toString() ?? '');
-      if (dt == null) return true;
-
-      switch (_selectedSalesPeriod) {
-        case 'YESTERDAY':
-          return dt.isAfter(yesterdayStart) && dt.isBefore(todayStart);
-        case 'WEEK':
-          return dt.isAfter(weekStart);
-        case 'MONTH':
-          return dt.isAfter(monthStart);
-        case 'ALL':
-          return true;
-        case 'TODAY':
-        default:
-          return dt.isAfter(todayStart);
-      }
-    }).toList();
-
-    double calculatedGrossSales = 0.0;
-    for (final o in filteredOrdersList) {
-      final dynamic rawItems = o['items'];
-      if (rawItems is List && rawItems.isNotEmpty) {
-        double orderFoodSum = 0.0;
-        for (final it in rawItems) {
-          final num p = (it['price'] is num) ? (it['price'] as num) : (num.tryParse(it['price']?.toString() ?? '0') ?? 0);
-          final int q = (it['quantity'] is num) ? (it['quantity'] as num).toInt() : (int.tryParse(it['quantity']?.toString() ?? '1') ?? 1);
-          orderFoodSum += (p * q).toDouble();
-        }
-        calculatedGrossSales += orderFoodSum;
-      } else {
-        final num sub = (o['subtotal'] is num) ? (o['subtotal'] as num) : (num.tryParse(o['subtotal']?.toString() ?? '0') ?? 0);
-        if (sub > 0) {
-          calculatedGrossSales += sub.toDouble();
-        } else {
-          final num tot = (o['total'] is num) ? (o['total'] as num) : (num.tryParse(o['total']?.toString() ?? '0') ?? 0);
-          final num del = (o['deliveryFee'] is num) ? (o['deliveryFee'] as num) : (num.tryParse(o['deliveryFee']?.toString() ?? '0') ?? 0);
-          final num misc = (o['miscFee'] is num) ? (o['miscFee'] as num) : (num.tryParse(o['miscFee']?.toString() ?? '0') ?? 0);
-          calculatedGrossSales += math.max(0.0, (tot - del - misc).toDouble());
-        }
-      }
-    }
-
-    final num apiTotalSales = (_salesSummary['totalSales'] is num)
-        ? (_salesSummary['totalSales'] as num)
-        : (num.tryParse(_salesSummary['totalSales']?.toString() ?? '0') ?? 0);
-
-    final double totalSales = (_selectedSalesPeriod == 'TODAY' && calculatedGrossSales == 0 && apiTotalSales > 0)
-        ? apiTotalSales.toDouble()
-        : calculatedGrossSales;
-
-    final int ordersCount = filteredOrdersList.length;
-    final double commPercent = _commissionRate;
-
-    final double commissionDeduction = totalSales * (commPercent / 100.0);
-    final double netProfit = math.max(0.0, totalSales - commissionDeduction);
-
-    String periodTitle = "Today's Net Settlement";
-    if (_selectedSalesPeriod == 'YESTERDAY') {
-      periodTitle = "Yesterday's Net Settlement";
-    } else if (_selectedSalesPeriod == 'WEEK') periodTitle = "Last 7 Days Net Settlement";
-    else if (_selectedSalesPeriod == 'MONTH') periodTitle = "This Month's Net Settlement";
-    else if (_selectedSalesPeriod == 'ALL') periodTitle = "All Time Net Settlement";
-    final periods = [
-      {'id': 'TODAY', 'label': 'Today'},
-      {'id': 'YESTERDAY', 'label': 'Yesterday'},
-      {'id': 'WEEK', 'label': 'Last 7 Days'},
-      {'id': 'MONTH', 'label': 'This Month'},
-      {'id': 'ALL', 'label': 'All Time'},
-    ];
-
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. Date-wise Filter Bar
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            child: Row(
-              children: periods.map((p) {
-                final isSel = _selectedSalesPeriod == p['id'];
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: Bounceable(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      setState(() => _selectedSalesPeriod = p['id']!);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: isSel ? primaryRed : Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: isSel ? primaryRed : slateBorder),
-                        boxShadow: isSel
-                            ? [
-                                BoxShadow(
-                                  color: primaryRed.withValues(alpha: 0.25),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: Text(
-                        p['label']!,
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 12),
-                          fontWeight: FontWeight.w800,
-                          color: isSel ? Colors.white : slateDark,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // 2. Net Settlement Highlight Card
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [primaryRed, AppDesignSystem.red800],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(color: primaryRed.withValues(alpha: 0.35), blurRadius: 14, offset: const Offset(0, 5)),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(periodTitle, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: Colors.white.withValues(alpha: 0.9), fontWeight: FontWeight.w700)),
-                const SizedBox(height: 6),
-                Text('₹${netProfit.toStringAsFixed(2)}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 28), fontWeight: FontWeight.w900, color: Colors.white)),
-                const SizedBox(height: 14),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Food Sales: ₹${totalSales.toStringAsFixed(0)}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: Colors.white, fontWeight: FontWeight.w700)),
-                    Text('Orders: $ordersCount', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: Colors.white, fontWeight: FontWeight.w700)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // 3. Settlement Breakdown
-          Text('Settlement Breakdown', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w900, color: slateDark)),
-          const SizedBox(height: 10),
-          _buildSummaryRow(
-            'Food Item Sales (Gross)',
-            '₹${totalSales.toStringAsFixed(2)}',
-            slateDark,
-          ),
-          _buildSummaryRow(
-            'Platform Commission (${commPercent.toInt()}%)',
-            commissionDeduction > 0 ? '-₹${commissionDeduction.toStringAsFixed(2)}' : '-${commPercent.toInt()}%',
-            primaryRed,
-          ),
-          _buildSummaryRow(
-            'Net Payable Settlement',
-            '₹${netProfit.toStringAsFixed(2)}',
-            brandGreen,
-          ),
-          const SizedBox(height: 22),
-
-          // 4. Settled Orders for this period
-          if (filteredOrdersList.isNotEmpty) ...[
-            Text('Orders in this Period ($ordersCount)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: slateDark)),
-            const SizedBox(height: 10),
-            ...filteredOrdersList.map((o) {
-              final String id = (o['id'] ?? '').toString();
-              final rawReadable = o['readableId'];
-              final String displayId = (rawReadable != null && rawReadable.toString().isNotEmpty)
-                  ? '#$rawReadable-R'
-                  : '#${id.length > 4 ? id.substring(id.length - 4) : id}-R';
-              final num tot = (o['total'] is num) ? (o['total'] as num) : (num.tryParse(o['total']?.toString() ?? '0') ?? 0);
-              final dynamic rawItems = o['items'];
-              final List items = (rawItems is List) ? rawItems : [];
-              double orderFoodSum = 0.0;
-              if (items.isNotEmpty) {
-                for (final it in items) {
-                  final num p = (it['price'] is num) ? (it['price'] as num) : (num.tryParse(it['price']?.toString() ?? '0') ?? 0);
-                  final int q = (it['quantity'] is num) ? (it['quantity'] as num).toInt() : (int.tryParse(it['quantity']?.toString() ?? '1') ?? 1);
-                  orderFoodSum += (p * q).toDouble();
-                }
-              } else {
-                orderFoodSum = tot.toDouble();
-              }
-              final String itemsDesc = items.isNotEmpty
-                  ? items.map((i) => '${i['quantity'] ?? 1}x ${i['name'] ?? 'Dish'}').join(', ')
-                  : 'Food Items';
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(13),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: slateBorder),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 1)),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(9),
-                      decoration: BoxDecoration(
-                        color: AppDesignSystem.slate100,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.receipt_long_rounded, size: 18, color: slateDark),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(displayId, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w900, color: slateDark)),
-                              Text('₹${orderFoodSum.toStringAsFixed(0)}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: brandGreen)),
-                            ],
-                          ),
-                          const SizedBox(height: 3),
-                          Text(itemsDesc, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: slateMuted, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-          ] else ...[
-            Container(
-              padding: const EdgeInsets.all(28),
-              alignment: Alignment.center,
-              child: Column(
-                children: [
-                  Icon(Icons.receipt_outlined, size: 44, color: slateMuted.withValues(alpha: 0.5)),
-                  const SizedBox(height: 10),
-                  Text('No Settled Orders Found', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: slateDark)),
-                  const SizedBox(height: 4),
-                  Text('Delivered restaurant orders will appear here.', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryRow(String title, String val, Color valColor) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: slateBorder)),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(title, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700, color: slateDark)),
-          Text(val, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: valColor)),
-        ],
-      ),
-    );
-  }
 
   Widget _buildStoreSettingsTab() {
     return ListView(

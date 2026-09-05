@@ -187,7 +187,6 @@ async def send_pwa_notification_to_roles(roles: list, title: str, body: str, dat
     try:
         # 1. Send to broad staff topic
         await send_fcm_topic_notification("staff_orders", title, body, data)
-        await send_fcm_topic_notification("all_users", title, body, data)
 
         # 2. Also send to individual registered tokens
         async with AsyncSessionLocal() as session:
