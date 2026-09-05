@@ -1231,6 +1231,7 @@ export async function POST(request: NextRequest) {
                   orderBy: { createdAt: 'desc' },
                   take: 10,
                 })
+                const uniqueRestTokens = Array.from(new Set(restTokens.map(t => t.token)))
                 for (const token of uniqueRestTokens) {
                   fcmMessaging.send({ token, ...restaurantPayload }).catch(() => {})
                 }
