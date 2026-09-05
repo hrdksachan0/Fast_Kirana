@@ -81,21 +81,34 @@ export default function RestaurantKitchenPage() {
     fetch('/api/restaurants')
       .then(res => res.ok ? res.json() : null)
       .then(data => {
-        if (data?.restaurants && Array.isArray(data.restaurants)) {
-          setRestaurants(data.restaurants)
-          const assignedId = (session?.user as any)?.assignedRestaurantId
-          if (assignedId) {
-            setSelectedRestaurantId(assignedId)
-            const matched = data.restaurants.find((r: any) => r.id === assignedId)
-            if (matched) {
-              setRestaurantName(`${matched.name} Console`)
-              setIsCafe(matched.slug === 'fastkirana-cafe' || matched.slug?.includes('cafe'))
-            }
-          } else if (data.restaurants.length > 0) {
-            const first = data.restaurants[0]
-            setSelectedRestaurantId(first.id)
-            setRestaurantName(`${first.name} Console`)
-            setIsCafe(first.slug === 'fastkirana-cafe' || first.slug?.includes('cafe'))
+        const list = Array.isArray(data) ? data : (data?.restaurants || [])
+        if (list.length > 0) {
+          setRestaurants(list)
+          
+          let searchParamRestId: string | null = null
+          let searchParamTab: string | null = null
+          if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search)
+            searchParamRestId = params.get('restaurantId')
+            searchParamTab = params.get('tab')
+          }
+
+          if (searchParamTab && ['orders', 'analytics', 'catalog', 'sections', 'payouts', 'reviews', 'settings'].includes(searchParamTab)) {
+            setActiveTab(searchParamTab as any)
+          }
+
+          const isPlatformAdmin = session?.user?.role === 'ADMIN'
+          const userAssignedId = (session?.user as any)?.assignedRestaurantId
+          const assignedId = isPlatformAdmin 
+            ? (searchParamRestId || userAssignedId) 
+            : (userAssignedId || searchParamRestId)
+
+          const targetId = assignedId && list.some((r: any) => r.id === assignedId) ? assignedId : list[0].id
+          setSelectedRestaurantId(targetId)
+          const matched = list.find((r: any) => r.id === targetId)
+          if (matched) {
+            setRestaurantName(`${matched.name} Console`)
+            setIsCafe(matched.slug === 'fastkirana-cafe' || matched.slug?.includes('cafe'))
           }
         }
       })
@@ -103,6 +116,10 @@ export default function RestaurantKitchenPage() {
   }, [session])
 
   const handleRestaurantChange = (restId: string) => {
+    if (session?.user?.role !== 'ADMIN') {
+      toast.error('Restricted: You can only manage your own restaurant outlet.')
+      return
+    }
     setSelectedRestaurantId(restId)
     const found = restaurants.find(r => r.id === restId)
     if (found) {
@@ -346,9 +363,18 @@ export default function RestaurantKitchenPage() {
 
         {/* Console Container */}
         <div className="bg-card border border-border/60 rounded-2xl sm:rounded-3xl p-3 sm:p-6 shadow-xs">
-          {activeTab === 'orders' && <RestaurantOrdersConsole />}
+          {activeTab === 'orders' && (
+            <RestaurantOrdersConsole 
+              restaurantId={selectedRestaurantId || (session?.user as any)?.assignedRestaurantId || ''} 
+              restaurant={restaurants.find(r => r.id === (selectedRestaurantId || (session?.user as any)?.assignedRestaurantId))}
+            />
+          )}
           {activeTab === 'analytics' && <RestaurantSalesConsole />}
-          {activeTab === 'catalog' && <RestaurantCatalogManager />}
+          {activeTab === 'catalog' && (
+            <RestaurantCatalogManager 
+              initialRestaurantId={selectedRestaurantId || (session?.user as any)?.assignedRestaurantId || ''} 
+            />
+          )}
           {activeTab === 'sections' && (
             <RestaurantMenuSectionsEditor 
               assignedRestaurantId={selectedRestaurantId || (session?.user as any)?.assignedRestaurantId || ''} 

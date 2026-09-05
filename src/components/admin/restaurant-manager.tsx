@@ -16,7 +16,10 @@ import {
   MapPin,
   Clock,
   Package,
-  X
+  X,
+  ChefHat,
+  Layers,
+  ExternalLink
 } from 'lucide-react'
 import { RestaurantForm } from './restaurant-form'
 import { Button } from '@/components/ui/button'
@@ -149,10 +152,24 @@ export function RestaurantManager({ initialRestaurants }: RestaurantManagerProps
                 <div className="flex justify-between items-start mb-1">
                   <h3 className="font-bold text-lg text-text-primary line-clamp-1">{restaurant.name}</h3>
                 </div>
+
+                <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                  <span className="text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-0.5 rounded-md border border-zinc-200 dark:border-zinc-700">
+                    ID: {restaurant.id}
+                  </span>
+                  <a 
+                    href={`/food/${restaurant.slug}`} 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    className="text-[10px] font-mono text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5"
+                  >
+                    /{restaurant.slug} <ExternalLink className="h-2.5 w-2.5" />
+                  </a>
+                </div>
                 
                 <p className="text-xs text-text-secondary flex items-center gap-1 mb-3">
-                  <MapPin className="h-3 w-3" />
-                  {restaurant.address || restaurant.city}
+                  <MapPin className="h-3 w-3 shrink-0" />
+                  <span className="line-clamp-1">{restaurant.address || restaurant.city}</span>
                 </p>
                 
                 <div className="flex flex-wrap gap-1.5 mb-4">
@@ -216,6 +233,23 @@ export function RestaurantManager({ initialRestaurants }: RestaurantManagerProps
                   </div>
                   
                   <div className="grid grid-cols-2 gap-2 pt-2">
+                    <Link
+                      href={`/restaurant-kitchen?restaurantId=${restaurant.id}`}
+                      className="inline-flex items-center justify-center text-xs font-bold bg-muted/70 hover:bg-muted text-text-primary h-8 rounded-lg px-2.5 transition-colors gap-1.5"
+                    >
+                      <ChefHat className="h-3.5 w-3.5 text-orange-500" />
+                      Kitchen Console
+                    </Link>
+                    <Link
+                      href={`/restaurant-kitchen?tab=sections&restaurantId=${restaurant.id}`}
+                      className="inline-flex items-center justify-center text-xs font-bold bg-muted/70 hover:bg-muted text-text-primary h-8 rounded-lg px-2.5 transition-colors gap-1.5"
+                    >
+                      <Layers className="h-3.5 w-3.5 text-blue-500" />
+                      Menu Sections
+                    </Link>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1">
                     <button 
                       type="button"
                       onClick={() => setEditingRestaurant(restaurant)}

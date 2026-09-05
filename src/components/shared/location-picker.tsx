@@ -525,14 +525,31 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
 
               {/* Warning Banner if Not Serviceable */}
               {!isWithinZone && (
-                <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 rounded-2xl p-3.5 flex items-start gap-3 text-rose-900 dark:text-rose-200 animate-fadeIn">
-                  <AlertCircle size={20} className="text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-                  <div className="text-xs">
-                    <h5 className="font-bold text-rose-900 dark:text-rose-300">Warning: Location Not Serviceable</h5>
-                    <p className="mt-0.5 text-rose-800/90 dark:text-rose-300 font-medium leading-relaxed">
-                      This address is {distance.toFixed(1)} km away. Delivery is only available within {deliveryRadius} km of our dark store.
-                    </p>
+                <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 rounded-2xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-rose-900 dark:text-rose-200 animate-fadeIn">
+                  <div className="flex items-start gap-2.5 text-xs">
+                    <AlertCircle size={20} className="text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                    <div>
+                      <h5 className="font-bold text-rose-900 dark:text-rose-300">Location Outside Delivery Zone</h5>
+                      <p className="mt-0.5 text-rose-800/90 dark:text-rose-300 font-medium leading-relaxed">
+                        This address is {distance.toFixed(1)} km away. FastKirana delivers within {deliveryRadius} km of our operational store hubs.
+                      </p>
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentLat(storeLat)
+                      setCurrentLng(storeLng)
+                      setAddressName('Store Hub Central Market')
+                      if (mapRef.current) {
+                        mapRef.current.panTo({ lat: storeLat, lng: storeLng })
+                        mapRef.current.setZoom(16)
+                      }
+                    }}
+                    className="shrink-0 bg-[#e20a22] hover:bg-[#c9081e] text-white text-[11px] font-black uppercase tracking-wider px-3 py-1.5 rounded-xl transition-all shadow-sm active:scale-95 self-end sm:self-auto"
+                  >
+                    📍 Center on Hub
+                  </button>
                 </div>
               )}
 

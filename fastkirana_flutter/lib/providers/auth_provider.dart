@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/user.dart';
 import '../core/network/api_client.dart';
+import '../core/services/logger_service.dart';
 import '../core/services/notification_service.dart';
 import '../core/services/secure_storage_service.dart';
 
@@ -31,7 +32,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
         final dio = _ref.read(dioProvider);
         NotificationService().registerDeviceToken(dio);
       } catch (e) {
-        print("Failed to register FCM token on startup: $e");
+        LoggerService.error("Failed to register FCM token on startup: $e");
       }
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -56,7 +57,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       final dio = _ref.read(dioProvider);
       NotificationService().registerDeviceToken(dio);
     } catch (e) {
-      print("Failed to register FCM token on login: $e");
+      LoggerService.error("Failed to register FCM token on login: $e");
     }
   }
 

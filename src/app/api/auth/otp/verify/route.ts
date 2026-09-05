@@ -30,28 +30,49 @@ export async function POST(request: NextRequest) {
     const trimmed = rawEmail.trim()
     let normalizedEmail = trimmed.toLowerCase()
 
-    if (isValidIndianPhone(trimmed)) {
-      const normalizedPhone = normalizePhone(trimmed)
+    const isPhone = isValidIndianPhone(trimmed)
+    const phoneDigits = isPhone ? getLast10Digits(trimmed) : ''
+    const normalizedPhone = phoneDigits ? `+91${phoneDigits}` : ''
+
+    if (isPhone) {
       const existingUser = await prisma.user.findFirst({
-        where: { phone: normalizedPhone },
+        where: {
+          OR: [
+            { phone: normalizedPhone },
+            { phone: phoneDigits },
+            { phone: `91${phoneDigits}` },
+            { email: `wa-${phoneDigits}@fastkirana.com` },
+            { email: trimmed.toLowerCase() }
+          ]
+        },
         select: { email: true }
       })
       if (existingUser) {
         normalizedEmail = existingUser.email
       } else {
-        const phoneDigits = getLast10Digits(normalizedPhone)
         normalizedEmail = `wa-${phoneDigits}@fastkirana.com`
       }
     }
 
-    // 1. Find the OTP token
+    // 1. Find the OTP token across candidate identifiers
     let otpRecord = null
     if (otp === '123456') {
       otpRecord = { id: 'bypass', token: '123456' }
     } else {
+      const candidateEmails = [normalizedEmail, trimmed.toLowerCase()]
+      if (phoneDigits) {
+        candidateEmails.push(
+          `wa-${phoneDigits}@fastkirana.com`,
+          phoneDigits,
+          normalizedPhone,
+          `91${phoneDigits}`
+        )
+      }
       otpRecord = await prisma.otpToken.findFirst({
         where: {
-          token: otp
+          token: otp,
+          email: { in: candidateEmails },
+          expiresAt: { gt: new Date() }
         }
       })
     }
@@ -60,19 +81,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired OTP code' }, { status: 400 })
     }
 
+    // Delete used OTP token if not bypass
+    if (otpRecord.id !== 'bypass') {
+      await prisma.otpToken.delete({
+        where: { id: otpRecord.id }
+      }).catch(() => {})
+    }
+
     // 2. Check if user exists, create in database if new
     let user = await prisma.user.findFirst({
       where: {
         OR: [
           { email: normalizedEmail },
-          isValidIndianPhone(trimmed) ? { phone: normalizePhone(trimmed) } : null,
-          isValidIndianPhone(trimmed) ? { phone: { contains: getLast10Digits(trimmed) } } : null,
+          phoneDigits ? { phone: normalizedPhone } : null,
+          phoneDigits ? { phone: phoneDigits } : null,
+          phoneDigits ? { phone: `91${phoneDigits}` } : null,
+          phoneDigits ? { email: `wa-${phoneDigits}@fastkirana.com` } : null,
         ].filter(Boolean) as any
       }
     })
 
     if (!user) {
-      const phoneDigits = isValidIndianPhone(trimmed) ? getLast10Digits(trimmed) : ''
       const phoneFormatted = phoneDigits ? `+91${phoneDigits}` : null
       user = await prisma.user.create({
         data: {
@@ -98,6 +127,7 @@ export async function POST(request: NextRequest) {
       email: cleanEmail,
       phone: user.phone || trimmed,
       role: user.role || 'USER',
+      assignedStoreId: user.assignedStoreId || null,
       assignedRestaurantId: user.assignedRestaurantId || null,
       user: {
         id: user.id,
@@ -105,6 +135,7 @@ export async function POST(request: NextRequest) {
         email: cleanEmail,
         phone: user.phone || trimmed,
         role: user.role || 'USER',
+        assignedStoreId: user.assignedStoreId || null,
         assignedRestaurantId: user.assignedRestaurantId || null,
         isBlocked: user.isBlocked || false,
       }

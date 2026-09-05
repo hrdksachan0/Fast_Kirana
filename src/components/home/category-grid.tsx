@@ -1,50 +1,12 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Category } from '@/types'
 import { useUIStore } from '@/stores/ui-store'
 import { cn } from '@/lib/utils'
-
-const getCafeSectionImage = (tag: string) => {
-  const mapping: Record<string, string> = {
-    'hot-beverage': '/cafe_brews_category.webp',
-    'hot-bite': '/cafe_snacks_category.webp',
-    'sandwiches': '/cafe_sandwiches_category.webp',
-    'frankie-rolls': '/cafe_rolls_category.webp',
-    'chinese': '/cafe_chinese_category.webp',
-    'italian-pasta': '/cafe_pasta_category.webp',
-    'bombay-bites': '/cafe_bombay_bites_category.webp',
-    'rice-dishes': '/cafe_rice_category.webp',
-  }
-  return mapping[tag] || '/cafe_all_menu_category.webp'
-}
-
-const getCafeSectionTitle = (tag: string) => {
-  const mapping: Record<string, string> = {
-    'hot-beverage': 'Brews',
-    'hot-bite': 'Snacks',
-    'sandwiches': 'Sandwiches',
-    'frankie-rolls': 'Rolls',
-    'chinese': 'Chinese',
-    'italian-pasta': 'Pasta',
-    'bombay-bites': 'Bombay Bites',
-    'rice-dishes': 'Rice',
-    'shakes': 'Shakes',
-    'mocktails': 'Mocktails',
-    'cold-coffee': 'Coffee',
-    'south-indian': 'South Indian',
-    'bakery': 'Bakery',
-    'chilled': 'Cold Drinks',
-    'pizza': 'Pizza',
-    'burgers': 'Burgers',
-    'garlic-bread': 'Garlic Bread',
-    'desserts': 'Desserts',
-  }
-  return mapping[tag] || tag
-}
-import { Salad, Milk, Cookie, CupSoda, Sparkles, Home, Croissant, Wheat, ShoppingBag, IceCream } from 'lucide-react'
+import { Salad, Milk, Cookie, CupSoda, Sparkles, Home, Croissant, Wheat, ShoppingBag, IceCream, ChevronLeft, ChevronRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 interface CategoryGridProps {
@@ -162,23 +124,53 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
     'cafe': { bg: 'bg-[#fff8e1] dark:bg-amber-950/20', text: 'text-[#f57f17]', label: 'Cafe', emoji: '☕' },
   }
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  const handleScroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const scrollOffset = direction === 'left' ? -220 : 220
+      scrollContainerRef.current.scrollBy({ left: scrollOffset, behavior: 'smooth' })
+    }
+  }
+
   return (
     <section className="py-2 md:py-6">
-      {/* Mobile Header: Shop by Categories + See all */}
+      {/* Mobile Header: Shop by Categories + Controls + See all */}
       <div className="flex items-center justify-between mb-2.5 md:hidden px-1">
         <h2 className="text-base font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
           Trending Categories
         </h2>
-        <Link 
-          href="/category/fruits-vegetables" 
-          className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-primary hover:bg-primary/15 transition-all duration-300 shadow-[0_1.5px_4px_rgba(0,0,0,0.015)] active:scale-95 whitespace-nowrap"
-        >
-          See all
-        </Link>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => handleScroll('left')}
+            aria-label="Scroll left"
+            className="w-6 h-6 rounded-full border border-border/60 bg-card hover:bg-muted text-text-secondary flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-2xs"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => handleScroll('right')}
+            aria-label="Scroll right"
+            className="w-6 h-6 rounded-full border border-border/60 bg-card hover:bg-muted text-text-secondary flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-2xs"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+          <Link 
+            href="/category/fruits-vegetables" 
+            className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary hover:bg-primary/15 transition-all duration-300 shadow-[0_1.5px_4px_rgba(0,0,0,0.015)] active:scale-95 whitespace-nowrap ml-0.5"
+          >
+            See all
+          </Link>
+        </div>
       </div>
 
-      {/* Mobile: Horizontal scrollable/sliding list */}
-      <div className="flex gap-4.5 overflow-x-auto pb-3.5 pt-1.5 scrollbar-none md:hidden px-2 snap-x snap-mandatory scroll-smooth">
+      {/* Mobile: Horizontal scrollable/sliding list with useRef controller */}
+      <div 
+        ref={scrollContainerRef}
+        className="flex gap-4.5 overflow-x-auto pb-3.5 pt-1.5 scrollbar-none md:hidden px-2 snap-x snap-mandatory scroll-smooth"
+      >
         {allDisplayCategories.map((category: any) => {
             const config = mobileColorMap[category.slug] || {
               bg: 'bg-rose-500/10 dark:bg-rose-950/20 hover:border-rose-500/30',

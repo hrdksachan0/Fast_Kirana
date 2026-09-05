@@ -19,19 +19,6 @@ export default function Error({
     console.error('FastKirana App Error:', error)
   }, [error])
 
-  // Auto-retry once on first mount (handles transient DB connection blips)
-  useEffect(() => {
-    if (retryCount === 0) {
-      setRetryCount(1)
-      setIsRetrying(true)
-      const timer = setTimeout(() => {
-        reset()
-        setIsRetrying(false)
-      }, 1500)
-      return () => clearTimeout(timer)
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
   const handleRetry = () => {
     triggerHaptic('medium')
     setIsRetrying(true)

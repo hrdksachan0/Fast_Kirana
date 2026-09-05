@@ -1,13 +1,25 @@
 import '../../data/models/product.dart';
 
-const String outletWedsonId = 'cms2p1lyx0001n0idod904lfu';
-const String outletAsRestaurantId = 'cms2p1lap0000n0id8alldboy';
-const String outletBalUdyanId = 'cmsbhxb6a000304if8kf1cwji';
+const String outletAsRestaurantId = 'REST-101';
+const String outletWedsonId = 'REST-102';
+const String outletBalUdyanId = 'REST-103';
+const String outletPariMilkId = 'REST-104';
+
+// Legacy CUIDs for backward compatibility
+const String legacyAsRestaurantId = 'cms2p1lap0000n0id8alldboy';
+const String legacyWedsonId = 'cms2p1lyx0001n0idod904lfu';
+const String legacyBalUdyanId = 'cmsbhxb6a000304if8kf1cwji';
+const String legacyPariMilkId = 'cmtn66nhy000004k0fu84b7ke';
 
 const Map<String, String> outletNamesMap = {
-  outletWedsonId: 'Wedson Restaurant',
   outletAsRestaurantId: 'A.S. Restaurant',
+  outletWedsonId: 'Wedson Restaurant',
   outletBalUdyanId: 'Bal Udyan Restaurant',
+  outletPariMilkId: 'Pari Milk Dairy & Sweets',
+  legacyAsRestaurantId: 'A.S. Restaurant',
+  legacyWedsonId: 'Wedson Restaurant',
+  legacyBalUdyanId: 'Bal Udyan Restaurant',
+  legacyPariMilkId: 'Pari Milk Dairy & Sweets',
   'wedson': 'Wedson Restaurant',
   'wedson-restaurant': 'Wedson Restaurant',
   'as-restaurant': 'A.S. Restaurant',
@@ -15,6 +27,9 @@ const Map<String, String> outletNamesMap = {
   'bal-udyan-restaurant': 'Bal Udyan Restaurant',
   'bal-udyan': 'Bal Udyan Restaurant',
   'baludyan': 'Bal Udyan Restaurant',
+  'pari-milk-dairy-sweets': 'Pari Milk Dairy & Sweets',
+  'pari-milk': 'Pari Milk Dairy & Sweets',
+  'pari': 'Pari Milk Dairy & Sweets',
   'cafe': 'Restaurant',
   'restaurant-kitchen': 'Wedson Restaurant',
 };
@@ -28,10 +43,12 @@ bool isRestaurantProduct(Product product) {
   }
 
   // 2. Explicit restaurant category
-  final categorySlug = (product.category?.slug ?? product.categoryId).toLowerCase();
+  final categorySlug = (product.category?.slug ?? product.categoryId ?? '').toLowerCase();
   if (categorySlug == 'restaurant' ||
       categorySlug == 'restaurant-food' ||
       categorySlug == 'fast-food-kitchen' ||
+      categorySlug == 'cat-112' ||
+      categorySlug.contains('cat-112') ||
       categorySlug == 'cafe' ||
       categorySlug.contains('restaurant') ||
       categorySlug.contains('cafe')) {
@@ -185,6 +202,15 @@ const OutletLocation balUdyanLocation = OutletLocation(
   isRestaurant: true,
 );
 
+const OutletLocation pariMilkLocation = OutletLocation(
+  id: outletPariMilkId,
+  name: 'Pari Milk Dairy & Sweets',
+  lat: 26.1520,
+  lng: 80.1700,
+  address: 'Near CityKart, Ghatampur, UP 209206',
+  isRestaurant: true,
+);
+
 /// Resolves the exact physical store/restaurant location dynamically
 OutletLocation getOutletLocation({
   String? restaurantId,
@@ -259,6 +285,16 @@ OutletLocation getOutletLocation({
       sName.contains('wedson') ||
       sName.contains('hamirpur road')) {
     return wedsonLocation;
+  }
+
+  // 6. Direct Pari Milk Dairy & Sweets Checks
+  if (rId == outletPariMilkId ||
+      rId == 'pari-milk-dairy-sweets' ||
+      rId == 'pari-milk' ||
+      rId.contains('pari') ||
+      sName.contains('pari') ||
+      sName.contains('citykart')) {
+    return pariMilkLocation;
   }
 
   // 6. Inspect Item Names / Product Tags if available

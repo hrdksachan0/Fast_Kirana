@@ -66,6 +66,8 @@ export function buildOrderFcmPayload(
 ) {
   const collapseId = data.orderId ? `order_${data.orderId}` : undefined
 
+  const isKitchenAlert = data.screen === 'restaurant-console' || Boolean(data.restaurantId)
+
   return {
     notification: { title, body },
     data,
@@ -74,12 +76,13 @@ export function buildOrderFcmPayload(
       ttl: ttlSeconds,
       ...(collapseId ? { collapseKey: collapseId } : {}),
       notification: {
-        channelId: 'fastkirana_alerts',
-        sound: 'default',
-        defaultSound: true,
-        defaultVibrateTimings: true,
+        channelId: isKitchenAlert ? 'fastkirana_kitchen_alerts' : 'fastkirana_alerts',
+        sound: isKitchenAlert ? 'order_chime' : 'default',
+        defaultSound: !isKitchenAlert,
+        defaultVibrateTimings: !isKitchenAlert,
+        ...(isKitchenAlert ? { vibrateTimingsMillis: [0, 1000, 500, 1000, 500, 1000, 500, 1000] } : {}),
         visibility: 'PUBLIC' as const,
-        priority: 'HIGH' as const,
+        priority: isKitchenAlert ? ('MAX' as const) : ('HIGH' as const),
         clickAction: 'FLUTTER_NOTIFICATION_CLICK',
         ...(collapseId ? { tag: collapseId } : {}),
       },

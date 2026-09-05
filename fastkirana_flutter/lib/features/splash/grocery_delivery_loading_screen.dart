@@ -1,4 +1,5 @@
-import 'dart:math' as math;
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import '../../core/theme/responsive.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -129,7 +130,7 @@ class _GroceryDeliveryLoadingScreenState extends State<GroceryDeliveryLoadingScr
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: Responsive.scaledFontSize(context, 22),
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF94A3B8), // Rounded modern light-gray
+                            color: AppDesignSystem.slate400, // Rounded modern light-gray
                             height: 1.35,
                             letterSpacing: -0.4,
                           ),
@@ -147,7 +148,7 @@ class _GroceryDeliveryLoadingScreenState extends State<GroceryDeliveryLoadingScr
                             width: 5,
                             height: 5,
                             decoration: const BoxDecoration(
-                              color: Color(0xFF16A34A), // Fresh grocery green accent dot
+                              color: AppDesignSystem.green600, // Fresh grocery green accent dot
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -157,7 +158,7 @@ class _GroceryDeliveryLoadingScreenState extends State<GroceryDeliveryLoadingScr
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 10),
                               fontWeight: FontWeight.w800,
-                              color: const Color(0xFFCBD5E1), // Very subtle & minimal
+                              color: AppDesignSystem.slate300, // Very subtle & minimal
                               letterSpacing: 1.8,
                             ),
                           ),
@@ -190,10 +191,10 @@ class _GroceryDeliveryLoadingScreenState extends State<GroceryDeliveryLoadingScr
             height: 140,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFFF0FDF4),
+              color: AppDesignSystem.green50,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF10B981).withOpacity(0.04),
+                  color: AppDesignSystem.success.withValues(alpha: 0.04),
                   blurRadius: 30,
                   spreadRadius: 10,
                 ),
@@ -207,7 +208,7 @@ class _GroceryDeliveryLoadingScreenState extends State<GroceryDeliveryLoadingScr
             right: 20,
             child: Opacity(
               opacity: 0.4 + 0.6 * _sparkleAnim.value,
-              child: const Icon(Icons.auto_awesome, size: 16, color: Color(0xFFFBBF24)),
+              child: const Icon(Icons.auto_awesome, size: 16, color: AppDesignSystem.amber400),
             ),
           ),
           Positioned(
@@ -215,7 +216,7 @@ class _GroceryDeliveryLoadingScreenState extends State<GroceryDeliveryLoadingScr
             left: 18,
             child: Opacity(
               opacity: 0.3 + 0.5 * (1.0 - _sparkleAnim.value),
-              child: const Icon(Icons.star_rounded, size: 13, color: Color(0xFF34D399)),
+              child: const Icon(Icons.star_rounded, size: 13, color: AppDesignSystem.emerald400),
             ),
           ),
 
@@ -238,7 +239,7 @@ class _CuteGroceryVectorPainter extends CustomPainter {
 
     // ─── 1. Soft Ground Shadow ───
     final shadowPaint = Paint()
-      ..color = const Color(0xFFF1F5F9)
+      ..color = AppDesignSystem.slate100
       ..style = PaintingStyle.fill;
     canvas.drawOval(
       Rect.fromCenter(center: Offset(center.dx, center.dy + 38), width: 115, height: 16),
@@ -254,11 +255,11 @@ class _CuteGroceryVectorPainter extends CustomPainter {
       Rect.fromCenter(center: Offset(milkX, milkY + 12), width: 34, height: 46),
       const Radius.circular(5),
     );
-    final milkPaint = Paint()..color = const Color(0xFFF8FAFC);
+    final milkPaint = Paint()..color = AppDesignSystem.slate50;
     canvas.drawRRect(milkBody, milkPaint);
 
     final milkBorder = Paint()
-      ..color = const Color(0xFFE2E8F0)
+      ..color = AppDesignSystem.slate200
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
     canvas.drawRRect(milkBody, milkBorder);
@@ -269,7 +270,7 @@ class _CuteGroceryVectorPainter extends CustomPainter {
       topLeft: Radius.zero,
       topRight: Radius.zero,
     );
-    final blueBandPaint = Paint()..color = const Color(0xFF38BDF8);
+    final blueBandPaint = Paint()..color = AppDesignSystem.cyan400;
     canvas.drawRRect(blueBand, blueBandPaint);
 
     // Milk Gable Top (Triangular Roof)
@@ -278,7 +279,7 @@ class _CuteGroceryVectorPainter extends CustomPainter {
       ..lineTo(milkX, milkY - 24)
       ..lineTo(milkX + 17, milkY - 11)
       ..close();
-    final roofPaint = Paint()..color = const Color(0xFF0284C7);
+    final roofPaint = Paint()..color = AppDesignSystem.cyan600;
     canvas.drawPath(roofPath, roofPaint);
 
     // ─── 3. Fresh Crisp Greens / Celery (Back-Right) ───
@@ -286,7 +287,7 @@ class _CuteGroceryVectorPainter extends CustomPainter {
     final greenY = center.dy - 12;
 
     final leafPaint = Paint()
-      ..color = const Color(0xFF22C55E)
+      ..color = AppDesignSystem.lime500
       ..style = PaintingStyle.fill;
 
     // Leaf 1
@@ -297,7 +298,7 @@ class _CuteGroceryVectorPainter extends CustomPainter {
     canvas.drawPath(leaf1, leafPaint);
 
     // Leaf 2 (Darker green)
-    final darkLeafPaint = Paint()..color = const Color(0xFF16A34A);
+    final darkLeafPaint = Paint()..color = AppDesignSystem.green600;
     final leaf2 = Path()
       ..moveTo(greenX + 4, greenY + 20)
       ..quadraticBezierTo(greenX + 18, greenY - 2, greenX + 10, greenY - 18)
@@ -311,7 +312,7 @@ class _CuteGroceryVectorPainter extends CustomPainter {
       ..lineTo(center.dx + 27, center.dy + 34)
       ..lineTo(center.dx - 27, center.dy + 34)
       ..close();
-    final bagPaint = Paint()..color = const Color(0xFFD97706).withOpacity(0.85); // Warm kraft paper
+    final bagPaint = Paint()..color = AppDesignSystem.amber600.withValues(alpha: 0.85); // Warm kraft paper
     canvas.drawPath(bagPath, bagPaint);
 
     // Folded top lip of bag
@@ -319,11 +320,11 @@ class _CuteGroceryVectorPainter extends CustomPainter {
       Rect.fromCenter(center: Offset(center.dx, center.dy - 7), width: 66, height: 7),
       const Radius.circular(3),
     );
-    final bagLipPaint = Paint()..color = const Color(0xFFB45309);
+    final bagLipPaint = Paint()..color = AppDesignSystem.amber700;
     canvas.drawRRect(bagLip, bagLipPaint);
 
     // FastKirana Red Heart / Logo Badge on Bag
-    final badgePaint = Paint()..color = const Color(0xFFE20A22);
+    final badgePaint = Paint()..color = AppDesignSystem.primary;
     canvas.drawCircle(Offset(center.dx, center.dy + 14), 10, badgePaint);
 
     // White 'F' symbol
@@ -346,7 +347,7 @@ class _CuteGroceryVectorPainter extends CustomPainter {
     );
 
     // Ripe Golden Mango
-    final mangoPaint = Paint()..color = const Color(0xFFF59E0B);
+    final mangoPaint = Paint()..color = AppDesignSystem.warning;
     final mangoPath = Path()
       ..moveTo(mangoX - 6, mangoY - 8)
       ..cubicTo(mangoX + 16, mangoY - 10, mangoX + 16, mangoY + 12, mangoX, mangoY + 10)
@@ -355,7 +356,7 @@ class _CuteGroceryVectorPainter extends CustomPainter {
     canvas.drawPath(mangoPath, mangoPaint);
 
     // Cute Green Leaf on Mango
-    final mangoLeafPaint = Paint()..color = const Color(0xFF22C55E);
+    final mangoLeafPaint = Paint()..color = AppDesignSystem.lime500;
     final mangoLeaf = Path()
       ..moveTo(mangoX - 4, mangoY - 7)
       ..quadraticBezierTo(mangoX - 12, mangoY - 14, mangoX - 6, mangoY - 16)
@@ -366,3 +367,4 @@ class _CuteGroceryVectorPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+

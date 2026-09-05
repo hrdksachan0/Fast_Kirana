@@ -24,7 +24,7 @@ class ComboBuilderScreen extends StatelessWidget {
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [AppDesignSystem.accent, AppDesignSystem.accentDark]),
+              gradient: const LinearGradient(colors: [AppDesignSystem.accent, AppDesignSystem.accentDark]),
               borderRadius: BorderRadius.circular(16),
               boxShadow: AppDesignSystem.shadowCard,
             ),
@@ -32,8 +32,8 @@ class ComboBuilderScreen extends StatelessWidget {
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(10)),
-                  child: Icon(Icons.shopping_basket_rounded, color: Colors.white, size: 24),
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.shopping_basket_rounded, color: Colors.white, size: 24),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -41,7 +41,7 @@ class ComboBuilderScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Custom Combo', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: Colors.white)),
-                      Text('3/5 items selected', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: Colors.white.withOpacity(0.9))),
+                      Text('3/5 items selected', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: Colors.white.withValues(alpha: 0.9))),
                     ],
                   ),
                 ),
@@ -57,11 +57,11 @@ class ComboBuilderScreen extends StatelessWidget {
           // Products to add
           Expanded(
             child: GridView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.75,
-                crossAxisSpacing: 12,
+              padding: EdgeInsets.symmetric(horizontal: Responsive.horizontalPadding(context)),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: Responsive.gridColumns(context, smallMobile: 2, mobile: 2, smallTablet: 3, tablet: 4, desktop: 5),
+                childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: true),
+                crossAxisSpacing: Responsive.horizontalPadding(context) * 0.5,
                 mainAxisSpacing: 12,
               ),
               itemCount: 8,

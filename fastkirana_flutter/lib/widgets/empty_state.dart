@@ -67,13 +67,13 @@ class EmptyState extends StatelessWidget {
       key: key,
       emoji: '👨‍🍳',
       title: 'No Outlets Currently Open',
-      subtitle: 'Partner kitchens in Ghatampur deliver from 11:00 AM to 11:00 PM.\nYou can still order snacks, beverages & groceries 24/7!',
+      subtitle: 'Partner kitchens deliver from 11:00 AM to 11:00 PM.\nYou can still order snacks, beverages & groceries 24/7!',
       ctaLabel: 'Switch to Grocery Mart',
       onCta: onSwitchToGrocery,
       secondaryLabel: onRetry != null ? 'Refresh Outlets' : null,
       onSecondary: onRetry,
-      bgTint: const Color(0xFFFFF7ED),
-      ctaColor: const Color(0xFFEA580C),
+      bgTint: AppDesignSystem.orange50,
+      ctaColor: AppDesignSystem.orange600,
     );
   }
 
@@ -94,7 +94,7 @@ class EmptyState extends StatelessWidget {
       onCta: onExploreAll ?? onReset,
       secondaryLabel: onReset != null && onExploreAll != null ? 'Reset Filters' : null,
       onSecondary: onReset,
-      bgTint: const Color(0xFFFEF2F2),
+      bgTint: AppDesignSystem.statusCancelled,
       isCompact: isCompact,
     );
   }
@@ -112,7 +112,7 @@ class EmptyState extends StatelessWidget {
       subtitle: 'Today\'s lightning discounts sold out super fast.\nNext batch drops at 6:00 PM today!',
       ctaLabel: 'Explore Trending Essentials',
       onCta: onExploreTrending,
-      bgTint: const Color(0xFFFEF2F2),
+      bgTint: AppDesignSystem.statusCancelled,
       isCompact: isCompact,
     );
   }
@@ -129,7 +129,7 @@ class EmptyState extends StatelessWidget {
       subtitle: 'Add farm fresh veggies, dairy, snacks & hot meals to start your order!',
       ctaLabel: 'Start Shopping',
       onCta: onStartShopping,
-      bgTint: const Color(0xFFFFF1F2),
+      bgTint: AppDesignSystem.rose50,
     );
   }
 
@@ -145,8 +145,8 @@ class EmptyState extends StatelessWidget {
       subtitle: 'Looks like you haven\'t placed any orders yet.\nGet fresh groceries delivered at your doorstep!',
       ctaLabel: 'Order Now',
       onCta: onStartShopping,
-      bgTint: const Color(0xFFF0FDF4),
-      ctaColor: const Color(0xFF16A34A),
+      bgTint: AppDesignSystem.green50,
+      ctaColor: AppDesignSystem.green600,
     );
   }
 
@@ -163,7 +163,7 @@ class EmptyState extends StatelessWidget {
       subtitle: 'Check for typos or try searching for generic terms like "milk", "atta", "maggi" or "chips".',
       ctaLabel: onClear != null ? 'Clear Search' : null,
       onCta: onClear,
-      bgTint: const Color(0xFFF1F5F9),
+      bgTint: AppDesignSystem.slate100,
     );
   }
 
@@ -179,7 +179,7 @@ class EmptyState extends StatelessWidget {
       subtitle: 'Unable to reach FastKirana servers.\nPlease check your internet connection and retry.',
       ctaLabel: 'Retry',
       onCta: onRetry,
-      bgTint: const Color(0xFFF8FAFC),
+      bgTint: AppDesignSystem.slate50,
     );
   }
 

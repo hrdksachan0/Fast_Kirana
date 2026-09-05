@@ -25,6 +25,7 @@ export function CartStickyBar() {
   const toggleCart = useUIStore((s) => s.toggleCart)
   const isCartOpen = useUIStore((s) => s.isCartOpen)
   const isTabBarVisible = useUIStore((s) => s.isTabBarVisible)
+  const isLocationServiceable = useUIStore((s) => s.isLocationServiceable)
   const [isBouncing, setIsBouncing] = useState(false)
 
   const router = useRouter()
@@ -125,7 +126,9 @@ export function CartStickyBar() {
               {totalItems} {totalItems === 1 ? 'Item' : 'Items'} • {formatPrice(subtotal)}
             </span>
             <span className="text-[9px] font-extrabold text-red-100/95 leading-tight truncate mt-0.5">
-              {hasFreeDelivery 
+              {!isLocationServiceable
+                ? "📍 Outside Ghatampur Zone"
+                : hasFreeDelivery 
                 ? "✨ Free delivery unlocked!" 
                 : `Add ${formatPrice(needsForFreeDelivery)} for FREE delivery`}
             </span>
@@ -141,9 +144,14 @@ export function CartStickyBar() {
           }}
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.95 }}
-          className="bg-white text-[#e8153a] hover:bg-red-50 font-black text-[10px] tracking-wide px-3.5 py-1.5 rounded-full flex items-center gap-1 shadow-sm transition-all cursor-pointer shrink-0"
+          className={cn(
+            "font-black text-[10px] tracking-wide px-3.5 py-1.5 rounded-full flex items-center gap-1 shadow-sm transition-all cursor-pointer shrink-0",
+            !isLocationServiceable
+              ? "bg-amber-400 text-black hover:bg-amber-300"
+              : "bg-white text-[#e8153a] hover:bg-red-50"
+          )}
         >
-          <span>VIEW CART</span>
+          <span>{!isLocationServiceable ? "CHECK ZONE" : "VIEW CART"}</span>
           <ChevronRight className="h-3.5 w-3.5 stroke-[3]" />
         </motion.button>
       </div>

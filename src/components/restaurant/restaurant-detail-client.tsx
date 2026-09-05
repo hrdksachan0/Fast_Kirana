@@ -29,7 +29,7 @@ export function RestaurantDetailClient({ restaurant, products }: RestaurantDetai
 
   // Generate categories from products and menu sections
   const categories = useMemo(() => {
-    let sections = restaurant.menuSections ? (typeof restaurant.menuSections === 'string' ? JSON.parse(restaurant.menuSections) : restaurant.menuSections) : DEFAULT_RESTAURANT_MENU_SECTIONS
+    let sections = restaurant.menuSections ? (typeof restaurant.menuSections === 'string' ? JSON.parse(restaurant.menuSections) : restaurant.menuSections) : []
     
     // Filter products
     let filteredProducts = products

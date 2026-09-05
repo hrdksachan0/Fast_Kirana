@@ -1,3 +1,4 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,10 +21,10 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
   final _focusNode = FocusNode();
   String? _inlineError;
 
-  static const Color primaryRed = Color(0xFFE20A22);
-  static const Color slateDark = Color(0xFF0F172A);
-  static const Color slateMuted = Color(0xFF64748B);
-  static const Color slateBorder = Color(0xFFE2E8F0);
+  static const Color primaryRed = AppDesignSystem.primary;
+  static const Color slateDark = AppDesignSystem.slate900;
+  static const Color slateMuted = AppDesignSystem.slate500;
+  static const Color slateBorder = AppDesignSystem.slate200;
 
   @override
   void dispose() {
@@ -48,7 +49,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
     final couponsAsync = ref.watch(couponsProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppDesignSystem.slate50,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -111,7 +112,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                 // 2. Section Header
                 Row(
                   children: [
-                    const Text('🎟️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15))),
+                    Text('🎟️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15))),
                     const SizedBox(width: 8),
                     Text(
                       'Available Coupons for You',
@@ -162,7 +163,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -192,7 +193,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                     hintStyle: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 12.5),
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF94A3B8),
+                      color: AppDesignSystem.slate400,
                       letterSpacing: 0.5,
                     ),
                     icon: const Icon(Icons.local_offer_outlined, color: primaryRed, size: 20),
@@ -215,7 +216,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: primaryRed.withOpacity(0.25),
+                        color: primaryRed.withValues(alpha: 0.25),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -279,12 +280,12 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isEligible ? const Color(0xFFFECDD3) : slateBorder,
+          color: isEligible ? AppDesignSystem.rose200 : slateBorder,
           width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),
@@ -307,9 +308,9 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFEF2F2),
+                          color: AppDesignSystem.statusCancelled,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFFCA5A5)),
+                          border: Border.all(color: AppDesignSystem.red300),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -358,7 +359,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: isEligible ? const Color(0xFFDC2626) : const Color(0xFFF1F5F9),
+                      color: isEligible ? AppDesignSystem.red600 : AppDesignSystem.slate100,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
@@ -366,7 +367,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 12),
                         fontWeight: FontWeight.w900,
-                        color: isEligible ? Colors.white : const Color(0xFF94A3B8),
+                        color: isEligible ? Colors.white : AppDesignSystem.slate400,
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -382,7 +383,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
               30,
               (index) => Expanded(
                 child: Container(
-                  color: index % 2 == 0 ? Colors.transparent : const Color(0xFFE2E8F0),
+                  color: index % 2 == 0 ? Colors.transparent : AppDesignSystem.slate200,
                   height: 1.2,
                 ),
               ),
@@ -393,7 +394,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: isEligible ? const Color(0xFFFFF7ED) : const Color(0xFFF8FAFC),
+              color: isEligible ? AppDesignSystem.orange50 : AppDesignSystem.slate50,
               borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
             ),
             child: Row(
@@ -401,7 +402,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                 Icon(
                   isEligible ? Icons.check_circle_rounded : Icons.info_outline_rounded,
                   size: 13,
-                  color: isEligible ? const Color(0xFFEA580C) : slateMuted,
+                  color: isEligible ? AppDesignSystem.orange600 : slateMuted,
                 ),
                 const SizedBox(width: 6),
                 Expanded(
@@ -412,7 +413,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 11),
                       fontWeight: FontWeight.w600,
-                      color: isEligible ? const Color(0xFF9A3412) : slateMuted,
+                      color: isEligible ? AppDesignSystem.amber800 : slateMuted,
                     ),
                   ),
                 ),
@@ -435,7 +436,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
         border: Border.all(color: slateBorder),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 14,
             offset: const Offset(0, 4),
           ),
@@ -448,11 +449,9 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
             height: 68,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              color: Color(0xFFFFF1F2),
+              color: AppDesignSystem.rose50,
             ),
-            child: const Center(
-              child: Text('🎟️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 32))),
-            ),
+            child: Center(child: Text('🎟️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 32)))),
           ),
           const SizedBox(height: 16),
           Text(
@@ -482,9 +481,9 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: AppDesignSystem.slate100,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFCBD5E1)),
+                border: Border.all(color: AppDesignSystem.slate300),
               ),
               child: Text(
                 'Back to Cart',
@@ -517,7 +516,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
           child: Center(
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(primaryRed.withOpacity(0.6)),
+              valueColor: AlwaysStoppedAnimation<Color>(primaryRed.withValues(alpha: 0.6)),
             ),
           ),
         ),

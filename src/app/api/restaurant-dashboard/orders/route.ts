@@ -11,13 +11,20 @@ export async function GET(request: NextRequest) {
     const headerUserId = request.headers.get('x-user-id')
     const cleanPhone = headerPhone ? headerPhone.replace(/[^0-9]/g, '') : ''
 
-    let effectiveRestId = paramRestId || (session?.user as any)?.assignedRestaurantId
+    const isPlatformAdmin = session?.user?.role === 'ADMIN'
+    const sessionRestId = (session?.user as any)?.assignedRestaurantId
+
+    // Strict tenant isolation: If not admin, always force their own assigned restaurant ID
+    let effectiveRestId = (!isPlatformAdmin && sessionRestId)
+      ? sessionRestId
+      : (paramRestId || sessionRestId)
 
     if (!effectiveRestId && cleanPhone) {
       const last10 = cleanPhone.slice(-10)
-      if (last10 === '8112849854') effectiveRestId = 'cms2p1lap0000n0id8alldboy'
-      else if (last10 === '9250138656') effectiveRestId = 'cms2p1lyx0001n0idod904lfu'
-      else if (last10 === '7991488783') effectiveRestId = 'cmsbhxb6a000304if8kf1cwji'
+      if (last10 === '8112849854') effectiveRestId = 'REST-101'
+      else if (last10 === '9250138656') effectiveRestId = 'REST-102'
+      else if (last10 === '7991488783') effectiveRestId = 'REST-103'
+      else if (last10 === '9900112233') effectiveRestId = 'REST-104'
     }
 
     if (!effectiveRestId && headerUserId) {
@@ -30,9 +37,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Default fallback to Wedson if no specific outlet requested
+    // Normalize legacy CUIDs to REST-1xx series
+    if (effectiveRestId === 'cms2p1lap0000n0id8alldboy' || effectiveRestId === 'as-restaurant') effectiveRestId = 'REST-101'
+    else if (effectiveRestId === 'cms2p1lyx0001n0idod904lfu' || effectiveRestId === 'wedson-restaurant' || effectiveRestId === 'wedson') effectiveRestId = 'REST-102'
+    else if (effectiveRestId === 'cmsbhxb6a000304if8kf1cwji' || effectiveRestId === 'bal-udyan-restaurant' || effectiveRestId === 'bal-udyan') effectiveRestId = 'REST-103'
+    else if (effectiveRestId === 'cmtn66nhy000004k0fu84b7ke' || effectiveRestId === 'pari-milk-dairy-sweets' || effectiveRestId === 'pari-milk') effectiveRestId = 'REST-104'
+
+    // Default fallback to A.S. Restaurant if no specific outlet requested
     if (!effectiveRestId) {
-      effectiveRestId = 'cms2p1lyx0001n0idod904lfu'
+      effectiveRestId = 'REST-101'
     }
 
     const status = searchParams.get('status')
@@ -44,29 +57,46 @@ export async function GET(request: NextRequest) {
         { storeId: effectiveRestId },
       ]
     }
+    const VALID_ORDER_STATUSES = ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED']
+
     if (status) {
       if (status === 'live' || status === 'active') {
-        where.status = { in: ['PENDING', 'CONFIRMED', 'PREPARING', 'PACKED', 'READY', 'OUT_FOR_DELIVERY'] }
+        where.status = { in: ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED'] }
       } else if (status.includes(',')) {
-        where.status = { in: status.split(',').map(s => s.trim().toUpperCase()) }
+        const statuses = status
+          .split(',')
+          .map(s => s.trim().toUpperCase())
+          .filter(s => VALID_ORDER_STATUSES.includes(s))
+        if (statuses.length > 0) {
+          where.status = { in: statuses }
+        }
       } else {
-        where.status = status
+        const upper = status.trim().toUpperCase()
+        if (VALID_ORDER_STATUSES.includes(upper)) {
+          where.status = upper
+        }
       }
     }
 
     const limitParam = parseInt(searchParams.get('limit') || '100', 10)
     const limit = Math.min(Math.max(limitParam, 1), 300)
 
-    const orders = await prisma.order.findMany({
+    const rawOrders = await prisma.order.findMany({
       where,
       include: {
         items: true,
         user: { select: { id: true, name: true, phone: true } },
         address: true,
+        restaurant: { select: { id: true, name: true, slug: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: limit,
     })
+
+    const orders = rawOrders.map(o => ({
+      ...o,
+      restaurantName: o.restaurant?.name || o.shopName || '',
+    }))
 
     // Fetch restaurant commission rate for Sales tab
     let commissionRate = 0.15

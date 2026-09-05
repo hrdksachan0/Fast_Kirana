@@ -27,10 +27,12 @@ export function normalizePhone(phone: string): string {
     cleaned = cleaned.slice(3)
   }
 
-  const parsed = parsePhoneNumberFromString(cleaned, 'IN')
-  if (parsed && parsed.isValid()) {
-    return parsed.number // E.164 format: +919876543210
-  }
+  try {
+    const parsed = parsePhoneNumberFromString(cleaned, 'IN')
+    if (parsed && parsed.isValid()) {
+      return parsed.number // E.164 format: +919876543210
+    }
+  } catch {}
 
   // Fallback to basic cleaning if parsing fails
   const digits = digitsOnly(cleaned)
@@ -44,10 +46,12 @@ export function normalizePhone(phone: string): string {
  * Get the last 10 digits of a phone number (for OTP lookup, validation, etc.)
  */
 export function getLast10Digits(phone: string): string {
-  const parsed = parsePhoneNumberFromString(phone, 'IN')
-  if (parsed && parsed.isValid()) {
-    return parsed.nationalNumber as string
-  }
+  try {
+    const parsed = parsePhoneNumberFromString(phone, 'IN')
+    if (parsed && parsed.isValid()) {
+      return parsed.nationalNumber as string
+    }
+  } catch {}
   return digitsOnly(phone).slice(-10)
 }
 
@@ -56,8 +60,13 @@ export function getLast10Digits(phone: string): string {
  * Accepts 10-digit (XXXXXXXXXX) or 12-digit with 91 prefix (91XXXXXXXXXX)
  */
 export function isValidIndianPhone(phone: string): boolean {
-  const parsed = parsePhoneNumberFromString(phone, 'IN')
-  return parsed ? parsed.isValid() : false
+  try {
+    const parsed = parsePhoneNumberFromString(phone, 'IN')
+    return parsed ? parsed.isValid() : false
+  } catch {
+    const d = digitsOnly(phone)
+    return d.length === 10 || (d.length === 12 && d.startsWith('91'))
+  }
 }
 
 /**

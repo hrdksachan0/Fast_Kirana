@@ -1,3 +1,4 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -39,10 +40,10 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
   final Set<String> _selectedInstructions = {};
   bool _isSaving = false;
 
-  static const Color primaryOrange = Color(0xFFEA580C);
-  static const Color slateDark = Color(0xFF0F172A);
-  static const Color slateMuted = Color(0xFF64748B);
-  static const Color slateBorder = Color(0xFFE2E8F0);
+  static const Color primaryOrange = AppDesignSystem.orange600;
+  static const Color slateDark = AppDesignSystem.slate900;
+  static const Color slateMuted = AppDesignSystem.slate500;
+  static const Color slateBorder = AppDesignSystem.slate200;
 
   @override
   void initState() {
@@ -86,7 +87,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
       HapticFeedback.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color(0xFFDC2626),
+          backgroundColor: AppDesignSystem.red600,
           content: Text('Please enter Building / House / Floor No.', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
           behavior: SnackBarBehavior.floating,
         ),
@@ -165,7 +166,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
     final accountPhone = (user?.phone != null && user!.phone!.isNotEmpty) ? user.phone! : '+91 70544 70303';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppDesignSystem.slate50,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -200,7 +201,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
         ),
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, color: Color(0xFFF1F5F9)),
+          child: Divider(height: 1, color: AppDesignSystem.slate100),
         ),
       ),
       body: SafeArea(
@@ -248,12 +249,12 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                     ? Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF0FDF4),
+                          color: AppDesignSystem.green50,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFBBF7D0)),
+                          border: Border.all(color: AppDesignSystem.green200),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF16A34A).withValues(alpha: 0.04),
+                              color: AppDesignSystem.green600.withValues(alpha: 0.04),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -264,10 +265,10 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: const BoxDecoration(
-                                color: Color(0xFFDCFCE7),
+                                color: AppDesignSystem.green100,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.check_rounded, color: Color(0xFF16A34A), size: 18),
+                              child: const Icon(Icons.check_rounded, color: AppDesignSystem.green600, size: 18),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -281,14 +282,14 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                         style: GoogleFonts.inter(
                                           fontSize: Responsive.scaledFontSize(context, 13.5),
                                           fontWeight: FontWeight.w800,
-                                          color: const Color(0xFF0F172A),
+                                          color: AppDesignSystem.slate900,
                                         ),
                                       ),
                                       const SizedBox(width: 6),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFDCFCE7),
+                                          color: AppDesignSystem.green100,
                                           borderRadius: BorderRadius.circular(6),
                                         ),
                                         child: Text(
@@ -296,7 +297,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                           style: GoogleFonts.inter(
                                             fontSize: Responsive.scaledFontSize(context, 9),
                                             fontWeight: FontWeight.w900,
-                                            color: const Color(0xFF16A34A),
+                                            color: AppDesignSystem.green600,
                                           ),
                                         ),
                                       ),
@@ -308,7 +309,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                     style: GoogleFonts.inter(
                                       fontSize: Responsive.scaledFontSize(context, 11.5),
                                       fontWeight: FontWeight.w600,
-                                      color: const Color(0xFF15803D),
+                                      color: AppDesignSystem.green700,
                                     ),
                                   ),
                                 ],
@@ -324,14 +325,14 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0xFF86EFAC)),
+                                  border: Border.all(color: AppDesignSystem.emerald200),
                                 ),
                                 child: Text(
                                   'Edit',
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 11.5),
                                     fontWeight: FontWeight.w800,
-                                    color: const Color(0xFF16A34A),
+                                    color: AppDesignSystem.green600,
                                   ),
                                 ),
                               ),
@@ -344,7 +345,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFFED7AA), width: 1.2),
+                          border: Border.all(color: AppDesignSystem.orange300, width: 1.2),
                           boxShadow: [
                             BoxShadow(
                               color: primaryOrange.withValues(alpha: 0.04),
@@ -381,7 +382,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                     style: GoogleFonts.inter(
                                       fontSize: Responsive.scaledFontSize(context, 11.5),
                                       fontWeight: FontWeight.w700,
-                                      color: const Color(0xFF16A34A),
+                                      color: AppDesignSystem.green600,
                                     ),
                                   ),
                                 ),
@@ -431,9 +432,9 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFFFF7ED),
+                                          color: AppDesignSystem.orange50,
                                           borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(color: const Color(0xFFFED7AA)),
+                                          border: Border.all(color: AppDesignSystem.orange300),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
@@ -458,7 +459,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                 Container(
                                   height: 48,
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFF8FAFC),
+                                    color: AppDesignSystem.slate50,
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(color: slateBorder),
                                   ),
@@ -472,7 +473,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                         ),
                                         child: Row(
                                           children: [
-                                            const Text('🇮🇳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
+                                            Text('🇮🇳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
                                             const SizedBox(width: 5),
                                             Text(
                                               '+91',
@@ -506,7 +507,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                             hintStyle: GoogleFonts.inter(
                                               fontSize: Responsive.scaledFontSize(context, 13),
                                               fontWeight: FontWeight.w500,
-                                              color: const Color(0xFF94A3B8),
+                                              color: AppDesignSystem.slate400,
                                               letterSpacing: 0,
                                             ),
                                             border: InputBorder.none,
@@ -557,7 +558,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                       Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
+                          color: AppDesignSystem.slate100,
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Row(
@@ -593,9 +594,9 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
+                          color: AppDesignSystem.slate50,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(color: AppDesignSystem.slate200),
                         ),
                         child: Row(
                           children: [
@@ -633,7 +634,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: const Color(0xFFFED7AA)),
+                                  border: Border.all(color: AppDesignSystem.orange300),
                                 ),
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
@@ -711,7 +712,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         decoration: const BoxDecoration(
           color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
+          border: Border(top: BorderSide(color: AppDesignSystem.slate100)),
           boxShadow: [
             BoxShadow(
               color: Color(0x0F0F172A),
@@ -728,7 +729,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
               height: 52,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+                  colors: [AppDesignSystem.orange600, AppDesignSystem.orange500],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -778,7 +779,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF0F172A) : Colors.transparent,
+            color: isSelected ? AppDesignSystem.slate900 : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
@@ -787,7 +788,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
               Icon(
                 icon,
                 size: 16,
-                color: isSelected ? Colors.white : const Color(0xFF64748B),
+                color: isSelected ? Colors.white : AppDesignSystem.slate500,
               ),
               const SizedBox(width: 6),
               Text(
@@ -795,7 +796,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 12.5),
                   fontWeight: FontWeight.w800,
-                  color: isSelected ? Colors.white : const Color(0xFF64748B),
+                  color: isSelected ? Colors.white : AppDesignSystem.slate500,
                 ),
               ),
             ],
@@ -815,9 +816,9 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: AppDesignSystem.slate50,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppDesignSystem.slate200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -845,7 +846,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
               hintStyle: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 12.5),
                 fontWeight: FontWeight.w400,
-                color: const Color(0xFF94A3B8),
+                color: AppDesignSystem.slate400,
               ),
               border: InputBorder.none,
               isDense: true,
@@ -875,10 +876,10 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFFF7ED) : Colors.white,
+          color: isSelected ? AppDesignSystem.orange50 : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? primaryOrange : const Color(0xFFE2E8F0),
+            color: isSelected ? primaryOrange : AppDesignSystem.slate200,
             width: isSelected ? 1.4 : 1.0,
           ),
         ),

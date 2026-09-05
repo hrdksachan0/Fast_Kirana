@@ -24,11 +24,17 @@ export async function requireRole(allowedRoles: string[], request?: Request) {
   const userRole = session?.user?.role || (request ? request.headers.get('x-user-role') : null)
   const userEmail = (session?.user?.email || (request ? request.headers.get('x-user-email') : '') || '').toLowerCase()
   const userPhone = ((session?.user as any)?.phone || (request ? request.headers.get('x-user-phone') : '') || '')
+  const phoneDigits = userPhone.replace(/\D/g, '').slice(-10)
+  const assignedStoreId = (session?.user as any)?.assignedStoreId || (request ? request.headers.get('x-user-store-id') : null)
   
-  const isSuper = userEmail.startsWith('admin') || userEmail.includes('hrdk') || userPhone.includes('8112849854')
+  const isSuper = userEmail.startsWith('admin') || 
+    userEmail.includes('hrdk') || 
+    phoneDigits === '8112849854' || 
+    phoneDigits === '9170942500' || 
+    ((userRole?.toUpperCase() === 'ADMIN' || session?.user?.role?.toUpperCase() === 'ADMIN') && !assignedStoreId)
 
   if (isSuper || (userRole && (allowedRoles.includes(userRole.toUpperCase()) || userRole.toUpperCase() === 'ADMIN'))) {
-    return { error: null, session: session || ({ user: { role: userRole?.toUpperCase() || 'ADMIN', id: request?.headers.get('x-user-id') || 'admin' } } as any) }
+    return { error: null, session: session || ({ user: { role: userRole?.toUpperCase() || 'ADMIN', id: request?.headers.get('x-user-id') || 'admin', assignedStoreId } } as any) }
   }
 
   if (!session?.user && !userRole) {

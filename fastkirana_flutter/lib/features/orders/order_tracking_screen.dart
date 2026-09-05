@@ -66,7 +66,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   BitmapDescriptor? _customerMarkerIcon;
 
   // Subscriptions & Timers
-  RealtimeChannel? _supabaseChannel;
+  final List<RealtimeChannel> _supabaseChannels = [];
+  final Set<String> _subscribedChannelKeys = {};
   Timer? _pollTimer;
   Timer? _etaUpdateTimer;
   StreamSubscription<String>? _sseLineSubscription;
@@ -77,6 +78,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   late AnimationController _riderAnimController;
   LatLng? _prevRiderPosition;
   LatLng? _targetRiderPosition;
+  DateTime? _lastLocationUpdateTime;
+  DateTime? _lastCameraFollowTime;
+  double _startRiderHeading = 0.0;
+  double _targetRiderHeading = 0.0;
 
   // Confetti for Delivery Celebration
   late ConfettiController _confettiController;
@@ -108,8 +113,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     _fetchLiveOrder();
     _initSupabaseRealtime();
 
-    // Fallback polling every 8 seconds to back up Supabase Realtime WebSocket
-    _pollTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+    // Fallback polling every 4 seconds to back up Supabase Realtime WebSocket
+    _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       _silentPollOrder();
     });
   }
@@ -132,7 +137,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     _confettiController.dispose();
     _mapController?.dispose();
     _razorpay?.clear();
-    SupabaseService.unsubscribe(_supabaseChannel);
+    for (final ch in _supabaseChannels) {
+      SupabaseService.unsubscribe(ch);
+    }
+    _supabaseChannels.clear();
+    _subscribedChannelKeys.clear();
     super.dispose();
   }
 
@@ -239,15 +248,41 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
   }
 
-  /// Initialize Supabase Realtime subscription for live location and order status updates
-  Future<void> _initSupabaseRealtime() async {
-    try {
-      await SupabaseService.initialize();
-      var cleanId = widget.orderId.trim();
-      if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
+  /// Collect all possible channel key aliases for this order
+  Set<String> _collectTrackingChannelKeys() {
+    final keys = <String>{};
+    void addKey(String? raw) {
+      if (raw == null || raw.trim().isEmpty) return;
+      var clean = raw.trim().replaceAll('#', '');
+      if (clean.isNotEmpty) {
+        keys.add(clean);
+        if (clean.startsWith('FK-')) {
+          final numOnly = clean.substring(3);
+          if (numOnly.isNotEmpty) keys.add(numOnly);
+        } else if (RegExp(r'^\d+$').hasMatch(clean)) {
+          keys.add('FK-$clean');
+        }
+      }
+    }
+    addKey(widget.orderId);
+    if (_order != null) {
+      addKey(_order!.id);
+      addKey(_order!.readableId);
+      if (_order!.combinedId != null && _order!.combinedId!.isNotEmpty) {
+        addKey(_order!.combinedId);
+      }
+    }
+    return keys;
+  }
 
-      _supabaseChannel = SupabaseService.subscribeToOrderLocation(
-        orderId: cleanId,
+  /// Subscribe to ALL channel key aliases for the order
+  void _subscribeToChannelKeys(Set<String> keys) {
+    for (final key in keys) {
+      if (_subscribedChannelKeys.contains(key)) continue;
+      _subscribedChannelKeys.add(key);
+
+      final ch = SupabaseService.subscribeToOrderLocation(
+        orderId: key,
         onLocationUpdate: (locationData) {
           if (!mounted) return;
           final lat = locationData['lat'] as double?;
@@ -260,14 +295,28 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         },
         onStatusUpdate: (newStatusStr) {
           if (!mounted) return;
-          debugPrint('[OrderTracking] Realtime status change: $newStatusStr');
+          debugPrint('[OrderTracking] Realtime status change via key=$key: $newStatusStr');
           _fetchLiveOrder();
         },
       );
 
-      if (_supabaseChannel != null && mounted) {
-        setState(() => _isRealtimeConnected = true);
+      if (ch != null) {
+        _supabaseChannels.add(ch);
+        debugPrint('[OrderTracking] Subscribed to channel: order-live-tracking-$key');
       }
+    }
+
+    if (_supabaseChannels.isNotEmpty && mounted) {
+      setState(() => _isRealtimeConnected = true);
+    }
+  }
+
+  /// Initialize Supabase Realtime subscription for live location and order status updates
+  Future<void> _initSupabaseRealtime() async {
+    try {
+      await SupabaseService.initialize();
+      final keys = _collectTrackingChannelKeys();
+      _subscribeToChannelKeys(keys);
     } catch (e) {
       debugPrint('[OrderTracking] Supabase realtime init warning: $e');
     }
@@ -293,6 +342,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         }
 
         _setupCoordinatesFromOrder(order);
+
+        // Re-subscribe with newly discovered order IDs (readableId, combinedId)
+        final newKeys = _collectTrackingChannelKeys();
+        _subscribeToChannelKeys(newKeys);
       }
     } catch (e) {
       debugPrint('[OrderTracking] Fetch error: $e');
@@ -309,7 +362,15 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       final order = await repo.getOrder(cleanId);
       if (mounted) {
         setState(() => _order = order);
-        _setupCoordinatesFromOrder(order);
+
+        // Stale-data protection: if live GPS arrived in last 15 seconds,
+        // don't let polled DB coordinates snap the rider marker backwards
+        final hasRecentLiveGps = _lastLocationUpdateTime != null &&
+            DateTime.now().difference(_lastLocationUpdateTime!).inSeconds < 15;
+
+        if (!hasRecentLiveGps) {
+          _setupCoordinatesFromOrder(order);
+        }
       }
     } catch (_) {}
   }
@@ -372,21 +433,65 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     _calculateETA();
   }
 
-  /// Smoothly animate rider marker between positions
+  /// Calculate bearing between two geographic coordinates (degrees 0-360)
+  double _calculateBearing(double lat1, double lng1, double lat2, double lng2) {
+    final dLng = (lng2 - lng1) * math.pi / 180.0;
+    final lat1Rad = lat1 * math.pi / 180.0;
+    final lat2Rad = lat2 * math.pi / 180.0;
+    final y = math.sin(dLng) * math.cos(lat2Rad);
+    final x = math.cos(lat1Rad) * math.sin(lat2Rad) - math.sin(lat1Rad) * math.cos(lat2Rad) * math.cos(dLng);
+    final bearing = math.atan2(y, x) * 180.0 / math.pi;
+    return (bearing + 360) % 360;
+  }
+
+  /// Smoothly animate rider marker between positions with jitter rejection
   void _updateRiderLocation(LatLng newPos, double heading) {
+    final now = DateTime.now();
+
     if (_riderPosition == null) {
+      _lastLocationUpdateTime = now;
       setState(() {
         _riderPosition = newPos;
         _riderHeading = heading;
       });
       _refreshMapElements();
       _calculateETA();
+      _followRiderWithCamera();
       return;
     }
 
+    // GPS micro-jitter rejection: ignore updates less than 0.4 meters away
+    final jitterDist = Geolocator.distanceBetween(
+      _riderPosition!.latitude,
+      _riderPosition!.longitude,
+      newPos.latitude,
+      newPos.longitude,
+    );
+    if (jitterDist < 0.4) return;
+
+    // Dynamic animation pacing: match animation duration to GPS update interval
+    if (_lastLocationUpdateTime != null) {
+      final interval = now.difference(_lastLocationUpdateTime!).inMilliseconds;
+      final clampedDuration = interval.clamp(300, 2000);
+      _riderAnimController.duration = Duration(milliseconds: clampedDuration);
+    }
+    _lastLocationUpdateTime = now;
+
     _prevRiderPosition = _riderPosition;
     _targetRiderPosition = newPos;
-    _riderHeading = heading;
+
+    // Calculate true vector bearing for smooth heading transition
+    _startRiderHeading = _riderHeading;
+    if (heading != 0.0) {
+      _targetRiderHeading = heading;
+    } else {
+      _targetRiderHeading = _calculateBearing(
+        _prevRiderPosition!.latitude,
+        _prevRiderPosition!.longitude,
+        newPos.latitude,
+        newPos.longitude,
+      );
+    }
 
     _riderAnimController.reset();
     _riderAnimController.forward();
@@ -398,10 +503,41 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     final curLat = _prevRiderPosition!.latitude + (_targetRiderPosition!.latitude - _prevRiderPosition!.latitude) * progress;
     final curLng = _prevRiderPosition!.longitude + (_targetRiderPosition!.longitude - _prevRiderPosition!.longitude) * progress;
 
-    setState(() {
-      _riderPosition = LatLng(curLat, curLng);
-    });
-    _refreshMapElements();
+    // Shortest-arc angular interpolation for heading
+    double deltaHeading = _targetRiderHeading - _startRiderHeading;
+    if (deltaHeading > 180) deltaHeading -= 360;
+    if (deltaHeading < -180) deltaHeading += 360;
+    final curHeading = (_startRiderHeading + deltaHeading * progress) % 360;
+
+    _riderPosition = LatLng(curLat, curLng);
+    _riderHeading = curHeading;
+
+    // Optimized: only update rider marker in the markers set, not full rebuild
+    _markers.removeWhere((m) => m.markerId.value == 'rider');
+    if (_riderMarkerIcon != null) {
+      _markers.add(Marker(
+        markerId: const MarkerId('rider'),
+        position: _riderPosition!,
+        icon: _riderMarkerIcon!,
+        anchor: const Offset(0.5, 0.5),
+        rotation: _riderHeading,
+        flat: true,
+        zIndex: 10,
+      ));
+    }
+    setState(() {});
+
+    // Throttle camera follow to every 1.5 seconds to avoid jank
+    final now = DateTime.now();
+    if (_lastCameraFollowTime == null || now.difference(_lastCameraFollowTime!).inMilliseconds > 1500) {
+      _lastCameraFollowTime = now;
+      _followRiderWithCamera();
+    }
+
+    // Recalculate ETA at end of animation
+    if (progress >= 1.0) {
+      _calculateETA();
+    }
   }
 
   /// Calculate distance & estimated arrival time using Haversine formula (Throttled, No excess API calls)
@@ -508,7 +644,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     final emojiPainter = TextPainter(
       text: TextSpan(
         text: emoji,
-        style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 26)),
+        style: TextStyle(fontSize: Responsive.scaledFontSize(context, 26)),
       ),
       textDirection: TextDirection.ltr,
       textAlign: TextAlign.center,
@@ -528,7 +664,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     final labelPainter = TextPainter(
       text: TextSpan(
         text: label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: Responsive.scaledFontSize(context, 9.5),
           fontWeight: FontWeight.w900,
           color: Colors.white,
@@ -779,6 +915,13 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     } catch (e) {
       debugPrint('[OrderTracking] _fitMapBounds error: $e');
     }
+  }
+
+  void _followRiderWithCamera() {
+    if (_mapController == null || _riderPosition == null || !mounted) return;
+    _mapController!.animateCamera(
+      CameraUpdate.newLatLngZoom(_riderPosition!, 16.0),
+    );
   }
 
   int _getStatusStep(OrderStatus? status) {
@@ -1061,7 +1204,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
               shape: BoxShape.circle,
               border: Border.all(color: const Color(0xFFFCD34D), width: 1.5),
             ),
-            child: const Center(
+            child: Center(
               child: Text('👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24))),
             ),
           ),
@@ -1274,7 +1417,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('🛒', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                          Text('🛒', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                           const SizedBox(width: 4),
                           Text(
                             'Darkstore',
@@ -1294,7 +1437,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                          Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                           const SizedBox(width: 4),
                           Text(
                             _restaurantOutlet?.name ?? 'Kitchen',
@@ -1314,7 +1457,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                          Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                           const SizedBox(width: 4),
                           Text(
                             '1 Rider',
@@ -1334,7 +1477,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('🏠', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                          Text('🏠', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                           const SizedBox(width: 4),
                           Text(
                             'Home',
@@ -1373,7 +1516,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(isRest ? '🍽️' : '🏪', style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                            Text(isRest ? '🍽️' : '🏪', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                             const SizedBox(width: 4),
                             Text(
                               displayStoreName,
@@ -1390,7 +1533,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                            Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                             const SizedBox(width: 4),
                             Text(
                               'On the Way',
@@ -1407,7 +1550,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('🏠', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                            Text('🏠', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                             const SizedBox(width: 4),
                             Text(
                               'Your Home',
@@ -1564,7 +1707,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                           ),
                         ],
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22))),
                       ),
                     ),
@@ -1676,7 +1819,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: const Color(0xFFBBF7D0)),
                         ),
-                        child: const Center(
+                        child: Center(
                           child: Text('💬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 17))),
                         ),
                       ),
@@ -1976,7 +2119,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                       ),
                       child: Row(
                         children: [
-                          Text(subIcon, style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
+                          Text(subIcon, style: TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Column(

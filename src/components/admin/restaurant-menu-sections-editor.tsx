@@ -37,9 +37,8 @@ interface RestaurantMenuSectionsEditorProps {
   isCafe: boolean
 }
 
-export function RestaurantMenuSectionsEditor({ assignedRestaurantId, isCafe }: RestaurantMenuSectionsEditorProps) {
-  const defaultSections = isCafe ? DEFAULT_CAFE_MENU_SECTIONS : DEFAULT_RESTAURANT_MENU_SECTIONS
-  const [menuSections, setMenuSections] = useState<CafeMenuSection[]>(defaultSections)
+export function RestaurantMenuSectionsEditor({ assignedRestaurantId }: RestaurantMenuSectionsEditorProps) {
+  const [menuSections, setMenuSections] = useState<CafeMenuSection[]>([])
   
   // Section Editing Form States
   const [isAddingNewSec, setIsAddingNewSec] = useState(false)
@@ -143,16 +142,20 @@ export function RestaurantMenuSectionsEditor({ assignedRestaurantId, isCafe }: R
 
   const handleSaveSectionForm = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!secTag || !secTitle) {
-      toast.error('Tag and Title are required!')
+    if (!secTitle || !secTitle.trim()) {
+      toast.error('Section Title is required!')
       return
     }
 
-    const cleanTag = secTag.toLowerCase().replace(/[^a-z0-9-]/g, '').trim()
+    const cleanTag = (secTag || secTitle).toLowerCase().replace(/[^a-z0-9-]/g, '').trim() || `sec-${Date.now().toString(36)}`
     const parsedMatchTags = secMatchTags
       .split(',')
       .map(t => t.trim().toLowerCase())
       .filter(Boolean)
+
+    const secId = (editingSecIndex !== null && (menuSections[editingSecIndex] as any)?.id)
+      ? (menuSections[editingSecIndex] as any).id
+      : `sec_${cleanTag.replace(/-/g, '_')}_${Date.now().toString(36)}`
 
     const newSec: CafeMenuSection = {
       tag: cleanTag,
@@ -162,6 +165,7 @@ export function RestaurantMenuSectionsEditor({ assignedRestaurantId, isCafe }: R
       matchTags: parsedMatchTags.length > 0 ? parsedMatchTags : [cleanTag],
       disabled: false
     }
+    ;(newSec as any).id = secId
     if (secImageUrl.trim()) {
       ;(newSec as any).imageUrl = secImageUrl.trim()
     }
@@ -218,14 +222,21 @@ export function RestaurantMenuSectionsEditor({ assignedRestaurantId, isCafe }: R
   const handleSaveMenuSections = async () => {
     try {
       setSavingSections(true)
+      const normalizedSections = menuSections.map((s, idx) => ({
+        ...s,
+        id: (s as any).id || `sec_${s.tag.replace(/-/g, '_')}_${idx + 1}`,
+        sortOrder: (s as any).sortOrder !== undefined ? (s as any).sortOrder : idx + 1,
+      }))
+
       const res = await fetch(`/api/restaurants/${assignedRestaurantId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ menuSections })
+        body: JSON.stringify({ menuSections: normalizedSections })
       })
 
       if (!res.ok) throw new Error('Failed to update sections')
       
+      setMenuSections(normalizedSections)
       toast.success('Menu categories updated successfully!')
     } catch (err: any) {
       console.error(err)
@@ -290,13 +301,12 @@ export function RestaurantMenuSectionsEditor({ assignedRestaurantId, isCafe }: R
             </div>
             
             <div className="space-y-1">
-              <label className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider block">Unique URL Tag *</label>
+              <label className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider block">Identifier / Slug (Auto-Generated)</label>
               <input
                 type="text"
-                placeholder="e.g. italian-pasta"
+                placeholder="Auto-generated from name"
                 value={secTag}
                 onChange={(e) => setSecTag(e.target.value)}
-                required
                 disabled={editingSecIndex !== null}
                 className="w-full text-xs font-bold bg-background border border-border rounded-lg h-9 px-3 outline-none focus:border-primary disabled:opacity-50"
               />
@@ -314,8 +324,8 @@ export function RestaurantMenuSectionsEditor({ assignedRestaurantId, isCafe }: R
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider block">Category Icon Image</label>
-              <div className="flex items-center gap-2">
+              <label className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider block">Icon / Cover Image</label>
+              <div className="flex gap-2">
                 <input
                   type="url"
                   placeholder="Paste URL or upload image ->"
@@ -355,10 +365,10 @@ export function RestaurantMenuSectionsEditor({ assignedRestaurantId, isCafe }: R
             </div>
 
             <div className="sm:col-span-2 space-y-1">
-              <label className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider block">Cuisine / Product Tags Match (comma separated)</label>
+              <label className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider block">Search Keywords (Optional — Customer Search ke liye)</label>
               <input
                 type="text"
-                placeholder="e.g. pasta, spaghetti, macaroni, lasagna (leave empty to match URL tag)"
+                placeholder="e.g. pasta, spaghetti, noodles (customer search mein madad ke liye)"
                 value={secMatchTags}
                 onChange={(e) => setSecMatchTags(e.target.value)}
                 className="w-full text-xs font-bold bg-background border border-border rounded-lg h-9 px-3 outline-none focus:border-primary"

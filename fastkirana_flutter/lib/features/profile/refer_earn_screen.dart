@@ -35,7 +35,7 @@ class ReferEarnScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
+                gradient: const LinearGradient(
                   colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -57,7 +57,7 @@ class ReferEarnScreen extends ConsumerWidget {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('Copied "$referralCode" to clipboard!'),
-                          backgroundColor: const Color(0xFF00A344),
+                          backgroundColor: AppDesignSystem.green700,
                           behavior: SnackBarBehavior.floating,
                         ),
                       );
@@ -100,9 +100,9 @@ class ReferEarnScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             Row(
               children: [
-                _stepCard('1', 'Share Code', 'Send your referral code to friends'),
-                _stepCard('2', 'They Sign Up', 'Friend uses your code & first order'),
-                _stepCard('3', 'You Earn', 'Get ₹50 in your wallet'),
+                _stepCard(context, '1', 'Share Code', 'Send your referral code to friends'),
+                _stepCard(context, '2', 'They Sign Up', 'Friend uses your code & first order'),
+                _stepCard(context, '3', 'You Earn', 'Get ₹50 in your wallet'),
               ],
             ),
 
@@ -120,9 +120,9 @@ class ReferEarnScreen extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _statItem('Total Referrals', '12'),
-                  _statItem('Successful', '8'),
-                  _statItem('Earned', '₹400'),
+                  _statItem(context, 'Total Referrals', '12'),
+                  _statItem(context, 'Successful', '8'),
+                  _statItem(context, 'Earned', '₹400'),
                 ],
               ),
             ),
@@ -149,7 +149,7 @@ class ReferEarnScreen extends ConsumerWidget {
     );
   }
 
-  Widget _stepCard(String number, String title, String desc) {
+  Widget _stepCard(BuildContext context, String number, String title, String desc) {
     return Expanded(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -166,7 +166,7 @@ class ReferEarnScreen extends ConsumerWidget {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]),
+                gradient: const LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Center(
@@ -183,7 +183,7 @@ class ReferEarnScreen extends ConsumerWidget {
     );
   }
 
-  Widget _statItem(String label, String value) {
+  Widget _statItem(BuildContext context, String label, String value) {
     return Column(
       children: [
         Text(value, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 20), fontWeight: FontWeight.w800, color: AppDesignSystem.primary)),

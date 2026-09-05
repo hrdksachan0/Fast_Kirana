@@ -56,6 +56,10 @@ export async function GET(request: Request) {
           email: true,
           phone: true,
           role: true,
+          assignedStoreId: true,
+          assignedStore: {
+            select: { id: true, name: true }
+          },
           isBlocked: true,
           blockReason: true,
           blockedAt: true,
@@ -83,7 +87,7 @@ export async function PATCH(request: Request) {
   const session = adminResult.session
 
   try {
-    const { userId, role, name, phone } = await request.json()
+    const { userId, role, name, phone, assignedStoreId } = await request.json()
 
     if (!userId) {
       return NextResponse.json({ error: 'Missing required userId' }, { status: 400 })
@@ -92,6 +96,9 @@ export async function PATCH(request: Request) {
     const updateData: any = {}
     if (name) updateData.name = name.trim()
     if (phone) updateData.phone = phone.trim()
+    if (assignedStoreId !== undefined) {
+      updateData.assignedStoreId = assignedStoreId ? assignedStoreId : null
+    }
 
     if (Object.keys(updateData).length > 0) {
       await prisma.user.update({

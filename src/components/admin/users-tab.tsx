@@ -8,6 +8,7 @@ import { formatDisplayEmail } from '@/lib/utils'
 
 interface UserWithCount extends User {
   _count?: { orders: number }
+  assignedStore?: { id: string; name: string } | null
 }
 
 interface UsersTabProps {
@@ -36,10 +37,12 @@ interface UsersTabProps {
   handleExportCustomersCsv: () => Promise<void>
   handleUserPhoneSave: (userId: string) => Promise<void>
   handleUserRoleChange: (userId: string, newRole: string) => Promise<void>
+  handleUserStoreChange?: (userId: string, storeId: string) => Promise<void>
   handleSetPassword: (userId: string) => Promise<void>
   handleToggleBlock: (user: UserWithCount, shouldBlock: boolean, reason?: string) => Promise<void>
   onRequestBlock: (user: UserWithCount) => void
   renderPagination: (page: number, total: number, perPage: number, onChange: (p: number) => void) => React.ReactNode
+  stores?: Array<{ id: string; name: string }>
 }
 
 export function UsersTab({
@@ -68,10 +71,12 @@ export function UsersTab({
   handleExportCustomersCsv,
   handleUserPhoneSave,
   handleUserRoleChange,
+  handleUserStoreChange,
   handleSetPassword,
   handleToggleBlock,
   onRequestBlock,
   renderPagination,
+  stores = []
 }: UsersTabProps) {
   return (
     <div className="bg-card border border-border rounded-2xl p-6 shadow-sm overflow-hidden animate-fade-in">
@@ -137,6 +142,7 @@ export function UsersTab({
               <th className="py-3 px-4">Email</th>
               <th className="py-3 px-4">Phone</th>
               <th className="py-3 px-4 text-center">Role</th>
+              <th className="py-3 px-4 text-center">Store Hub</th>
               <th className="py-3 px-4 text-center">Account Status</th>
               <th className="py-3 px-4 text-center">Password</th>
               <th className="py-3 px-4 text-center">Orders Placed</th>
@@ -219,6 +225,30 @@ export function UsersTab({
                     <option value="DELIVERY">Delivery Rider</option>
                     <option value="ADMIN">Admin</option>
                   </select>
+                </td>
+
+                {/* Store Hub */}
+                <td className="py-3 px-4 text-center">
+                  {u.role === 'DELIVERY' || u.role === 'PICKER' || u.role === 'ADMIN' ? (
+                    <select
+                      value={u.assignedStoreId || ''}
+                      onChange={(e) => handleUserStoreChange && handleUserStoreChange(u.id, e.target.value)}
+                      className="bg-muted px-2 py-1 rounded-lg border text-[11px] font-bold text-text-primary focus:outline-none cursor-pointer"
+                    >
+                      <option value="">No Hub Assigned</option>
+                      {stores && stores.length > 0 ? (
+                        stores.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            🏢 {s.name} Hub
+                          </option>
+                        ))
+                      ) : (
+                        <option value="hub-209206">🏢 Ghatampur Central Hub</option>
+                      )}
+                    </select>
+                  ) : (
+                    <span className="text-text-muted text-[10px]">—</span>
+                  )}
                 </td>
 
                 {/* Account Status */}

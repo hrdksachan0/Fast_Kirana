@@ -36,7 +36,7 @@ export interface Product {
   slug: string
   description: string | null
   imageUrl: string | null
-  categoryId: string
+  categoryId?: string | null
   restaurantId?: string | null
   mrp: number
   price: number
@@ -47,7 +47,7 @@ export interface Product {
   tags: string[]
   variants?: any[] | null
   minStock?: number
-  category?: Category
+  category?: Category | null
   restaurant?: Restaurant | null
   images?: ProductImage[]
   reviews?: Review[]

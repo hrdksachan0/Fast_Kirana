@@ -1,3 +1,4 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -13,19 +14,24 @@ import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:dio/dio.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../core/network/api_client.dart';
-import '../../core/config/app_config.dart';
 import '../../core/services/supabase_service.dart';
+import '../../core/services/offline_sync_service.dart';
+import '../../core/services/logger_service.dart';
 import '../../core/services/kot_print_service.dart';
+import '../../core/services/notification_service.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../../core/utils/app_toast.dart';
 import '../../core/theme/responsive.dart';
 import '../../data/models/order.dart';
 import '../../data/repositories/order_repository.dart';
-import '../../widgets/brand_logo.dart';
 import '../../widgets/live_clock_badge.dart';
 import '../../providers/auth_provider.dart';
+import '../delivery/widgets/connectivity_banner.dart';
+import '../common/order_edit_modal.dart';
+import 'widgets/add_restaurant_product_modal.dart';
 
 class RestaurantDashboard extends ConsumerStatefulWidget {
   final String? initialRestaurantId;
@@ -48,7 +54,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
   bool _isRefreshing = false;
   bool _isStoreOpen = true;
   bool _isBusyMode = false;
-  int _refreshCountdown = 20;
+  int _refreshCountdown = 15;
 
   List<Map<String, dynamic>> _orders = _cachedOrders;
   List<Map<String, dynamic>> _menuItems = [];
@@ -75,12 +81,19 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
     if (id == outletBalUdyanId || id.contains('bal') || name.contains('bal') || name.contains('udyan')) {
       return 20.0;
     }
+    if (id == outletPariMilkId || id.contains('pari') || name.contains('pari')) {
+      return 15.0;
+    }
     return 25.0;
   }
 
   final Set<String> _knownPendingOrderIds = {};
   final AudioPlayer _audioPlayer = AudioPlayer();
-  String _selectedStatusFilter = 'ALL'; // ALL, PENDING, CONFIRMED, PACKED, COMPLETED
+  Timer? _pendingAlarmTimer;
+  bool _isPlayingAlarm = false;
+  RealtimeChannel? _restaurantOrdersChannel;
+  RealtimeChannel? _restaurantBroadcastChannel;
+  final String _selectedStatusFilter = 'ALL'; // ALL, PENDING, CONFIRMED, PACKED, COMPLETED
   String _selectedSalesPeriod = 'TODAY'; // TODAY, YESTERDAY, WEEK, MONTH, ALL
 
   // Menu Search & Filter State
@@ -89,39 +102,172 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
   final TextEditingController _menuSearchController = TextEditingController();
 
   // Dynamic Theme Colors
-  static const Color primaryRed = Color(0xFFE20A22);
-  static const Color brandGreen = Color(0xFF10B981);
-  static const Color brandAmber = Color(0xFFF59E0B);
-  static const Color slateDark = Color(0xFF0F172A);
-  static const Color slateMuted = Color(0xFF64748B);
-  static const Color slateBorder = Color(0xFFE2E8F0);
-  static const Color cardBg = Colors.white;
-  static const Color bgMain = Color(0xFFF8FAFC);
+  static const Color primaryRed = AppDesignSystem.primary;
+  static const Color brandGreen = AppDesignSystem.success;
+  static const Color brandAmber = AppDesignSystem.warning;
+  static const Color slateDark = AppDesignSystem.slate900;
+  static const Color slateMuted = AppDesignSystem.slate500;
+  static const Color slateBorder = AppDesignSystem.slate200;
+  static const Color bgMain = AppDesignSystem.slate50;
 
   final List<Map<String, String>> _availableOutlets = [
     {'id': outletWedsonId, 'name': 'Wedson Restaurant'},
     {'id': outletAsRestaurantId, 'name': 'A.S. Restaurant'},
     {'id': outletBalUdyanId, 'name': 'Bal Udyan Restaurant'},
+    {'id': outletPariMilkId, 'name': 'Pari Milk Dairy & Sweets'},
   ];
+
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  bool _isDeviceOffline = false;
 
   @override
   void initState() {
     super.initState();
+    _initAudioPlayer();
+    _loadLocalCachedData();
+    _initConnectivityAndOfflineQueue();
     _initOutletDetails();
+    _initNotificationSubscriptions();
 
-    // 60-second background refresh.
-    // Supabase Realtime (below) handles instant pushes — this is just a safety net.
-    // Guard inside _fetchOrders prevents overlap with Realtime-triggered fetches.
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
-      if (!mounted || _isFetchingOrders) return;
-      _fetchOrders(silent: true);
+    // 15-second background refresh timer (with countdown indicator)
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      if (_refreshCountdown > 1) {
+        setState(() => _refreshCountdown--);
+      } else {
+        setState(() => _refreshCountdown = 15);
+        if (!_isFetchingOrders && !_isDeviceOffline) {
+          _fetchOrders(silent: true);
+        }
+      }
+    });
+  }
+
+  Future<void> _initAudioPlayer() async {
+    try {
+      await _audioPlayer.setAudioContext(
+        AudioContext(
+          android: const AudioContextAndroid(
+            isSpeakerphoneOn: true,
+            stayAwake: true,
+            contentType: AndroidContentType.sonification,
+            usageType: AndroidUsageType.alarm,
+            audioFocus: AndroidAudioFocus.gainTransientExclusive,
+          ),
+          iOS: AudioContextIOS(
+            category: AVAudioSessionCategory.playback,
+            options: const {
+              AVAudioSessionOptions.duckOthers,
+              AVAudioSessionOptions.defaultToSpeaker,
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      LoggerService.error('RestaurantDashboard: AudioContext setup error', e);
+    }
+  }
+
+  void _initConnectivityAndOfflineQueue() {
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((results) {
+      final isOffline = results.contains(ConnectivityResult.none) || results.isEmpty;
+      if (mounted) {
+        final wasOffline = _isDeviceOffline;
+        setState(() => _isDeviceOffline = isOffline);
+        if (wasOffline && !isOffline) {
+          _flushOfflineRestaurantQueue();
+          _fetchOrders(silent: true);
+          _fetchMenuItems();
+        }
+      }
+    });
+  }
+
+  Future<void> _loadLocalCachedData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final rawOrders = prefs.getString('local_restaurant_orders');
+      if (rawOrders != null && rawOrders.isNotEmpty && mounted) {
+        final List list = jsonDecode(rawOrders);
+        final loadedOrders = list.map((e) => Map<String, dynamic>.from(e)).toList();
+        setState(() {
+          _orders = loadedOrders;
+          _isLoading = false;
+        });
+        _syncAlarmStateWithOrders(loadedOrders);
+      }
+
+      final rawMenu = prefs.getString('local_restaurant_menu');
+      if (rawMenu != null && rawMenu.isNotEmpty && mounted) {
+        final List menuList = jsonDecode(rawMenu);
+        setState(() {
+          _menuItems = menuList.map((e) => Map<String, dynamic>.from(e)).toList();
+        });
+      }
+    } catch (e, _) { LoggerService.error('RestaurantDashboard: silent catch', e); }
+  }
+
+  Future<void> _saveLocalCachedOrders(List<Map<String, dynamic>> orders) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('local_restaurant_orders', jsonEncode(orders));
+    } catch (e, _) { LoggerService.error('RestaurantDashboard: silent catch', e); }
+  }
+
+  Future<void> _saveLocalCachedMenu(List<Map<String, dynamic>> menu) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('local_restaurant_menu', jsonEncode(menu));
+    } catch (e, _) { LoggerService.error('RestaurantDashboard: silent catch', e); }
+  }
+
+  Future<void> _flushOfflineRestaurantQueue() async {
+    final dio = ref.read(dioProvider);
+    await OfflineSyncService.flushQueue(OfflineSyncService.queueRestaurant, (item) async {
+      final action = item['action']?.toString();
+      final payload = Map<String, dynamic>.from(item['payload'] as Map);
+
+      try {
+        if (action == 'UPDATE_ORDER_STATUS') {
+          final orderId = payload['orderId']?.toString();
+          final status = payload['nextStatus']?.toString();
+          if (orderId == null || status == null) return true;
+
+          final body = <String, dynamic>{'status': status};
+          if (payload['prepTime'] != null) {
+            body['prepTime'] = payload['prepTime'];
+          }
+
+          final res = await dio.patch('/api/orders/$orderId', data: body);
+          return res.statusCode == 200 || res.statusCode == 204;
+        } else if (action == 'TOGGLE_MENU_STOCK') {
+          final itemId = payload['itemId']?.toString();
+          final isAvailable = payload['isAvailable'] == true;
+          if (itemId == null) return true;
+
+          final res = await dio.patch('/api/restaurant-dashboard/products/$itemId', data: {'isAvailable': isAvailable});
+          return res.statusCode == 200 || res.statusCode == 204;
+        }
+        return true;
+      } catch (e) {
+        LoggerService.error('[Restaurant Offline Sync Error]: $e');
+        return false;
+      }
     });
   }
 
   @override
   void dispose() {
+    _stopPendingAlarm();
     _autoRefreshTimer?.cancel();
+    _connectivitySubscription?.cancel();
     _menuSearchDebounce?.cancel();
+    if (_restaurantOrdersChannel != null) {
+      SupabaseService.unsubscribe(_restaurantOrdersChannel);
+    }
+    if (_restaurantBroadcastChannel != null) {
+      SupabaseService.unsubscribe(_restaurantBroadcastChannel);
+    }
     _audioPlayer.dispose();
     _menuSearchController.dispose();
     super.dispose();
@@ -140,7 +286,21 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
     final user = ref.read(authProvider).valueOrNull;
 
     if (_assignedRestaurantId == null || _assignedRestaurantId!.isEmpty) {
-      if (user?.assignedRestaurantId != null && user!.assignedRestaurantId!.isNotEmpty) {
+      final userPhone = (user?.phone ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+      final last10 = userPhone.length >= 10 ? userPhone.substring(userPhone.length - 10) : userPhone;
+      if (last10 == '8112849854') {
+        _assignedRestaurantId = outletAsRestaurantId;
+        _restaurantName = 'A.S. Restaurant';
+      } else if (last10 == '9250138656') {
+        _assignedRestaurantId = outletWedsonId;
+        _restaurantName = 'Wedson Restaurant';
+      } else if (last10 == '7991488783') {
+        _assignedRestaurantId = outletBalUdyanId;
+        _restaurantName = 'Bal Udyan Restaurant';
+      } else if (last10 == '9900112233') {
+        _assignedRestaurantId = outletPariMilkId;
+        _restaurantName = 'Pari Milk Dairy & Sweets';
+      } else if (user?.assignedRestaurantId != null && user!.assignedRestaurantId!.isNotEmpty) {
         _assignedRestaurantId = user.assignedRestaurantId;
       } else {
         final prefs = await SharedPreferences.getInstance();
@@ -148,11 +308,27 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
         if (rawUserData != null && rawUserData.isNotEmpty) {
           try {
             final json = jsonDecode(rawUserData) as Map<String, dynamic>;
-            final rId = json['assignedRestaurantId']?.toString();
-            if (rId != null && rId.isNotEmpty) {
-              _assignedRestaurantId = rId;
+            final savedPhone = (json['phone']?.toString() ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+            final savedLast10 = savedPhone.length >= 10 ? savedPhone.substring(savedPhone.length - 10) : savedPhone;
+            if (savedLast10 == '8112849854') {
+              _assignedRestaurantId = outletAsRestaurantId;
+              _restaurantName = 'A.S. Restaurant';
+            } else if (savedLast10 == '9250138656') {
+              _assignedRestaurantId = outletWedsonId;
+              _restaurantName = 'Wedson Restaurant';
+            } else if (savedLast10 == '7991488783') {
+              _assignedRestaurantId = outletBalUdyanId;
+              _restaurantName = 'Bal Udyan Restaurant';
+            } else if (savedLast10 == '9900112233') {
+              _assignedRestaurantId = outletPariMilkId;
+              _restaurantName = 'Pari Milk Dairy & Sweets';
+            } else {
+              final rId = json['assignedRestaurantId']?.toString();
+              if (rId != null && rId.isNotEmpty) {
+                _assignedRestaurantId = rId;
+              }
             }
-          } catch (_) {}
+          } catch (e, _) { LoggerService.error('RestaurantDashboard: silent catch', e); }
         }
       }
     }
@@ -172,6 +348,31 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
     _commissionRate = _getCommissionRateForOutlet(_assignedRestaurantId, _restaurantName);
 
     if (mounted) setState(() {});
+
+    // Dynamically fetch all active restaurants to keep outlet switcher fresh
+    try {
+      final dio = ref.read(dioProvider);
+      dio.get('/api/restaurants').then((res) {
+        if (res.statusCode == 200 && res.data is List) {
+          final List list = res.data as List;
+          bool updated = false;
+          for (final item in list) {
+            if (item is Map) {
+              final id = item['id']?.toString() ?? '';
+              final name = item['name']?.toString() ?? '';
+              if (id.isNotEmpty && name.isNotEmpty) {
+                final exists = _availableOutlets.any((o) => o['id'] == id);
+                if (!exists) {
+                  _availableOutlets.add({'id': id, 'name': name});
+                  updated = true;
+                }
+              }
+            }
+          }
+          if (updated && mounted) setState(() {});
+        }
+      }).catchError((_) {});
+    } catch (_) {}
 
     // Only fetch live orders on init (the active tab). Menu and Sales load lazily.
     if (_cachedOrders.isNotEmpty) {
@@ -205,8 +406,8 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
       final supabase = SupabaseService.client;
       if (supabase == null) return;
 
-      // 1. Database table changes
-      supabase
+      // 1. Database table changes (Listen to all orders changes)
+      _restaurantOrdersChannel = supabase
           .channel('public:restaurant_orders_channel_${_assignedRestaurantId ?? 'all'}')
           .onPostgresChanges(
             event: PostgresChangeEvent.all,
@@ -216,11 +417,11 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
               _fetchOrders(silent: true);
               _playChime();
             },
-          )
-          .subscribe();
+          );
+      _restaurantOrdersChannel?.subscribe();
 
-      // 2. Direct broadcast channel for instant KOT sync across devices
-      supabase
+      // 2. Direct broadcast channel for instant KOT and order sync across devices
+      _restaurantBroadcastChannel = supabase
           .channel('restaurant-orders-live')
           .onBroadcast(
             event: 'reprint-kot',
@@ -229,14 +430,79 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
               _playChime();
             },
           )
-          .subscribe();
-    } catch (_) {}
+          .onBroadcast(
+            event: 'new_order',
+            callback: (payload) {
+              _fetchOrders(silent: true);
+              _playChime();
+            },
+          );
+      _restaurantBroadcastChannel?.subscribe();
+    } catch (e, _) { LoggerService.error('RestaurantDashboard: silent catch', e); }
   }
 
   Future<void> _playChime() async {
     try {
       HapticFeedback.heavyImpact();
-    } catch (_) {}
+      try {
+        await _audioPlayer.stop();
+        // Play local asset audio for zero latency and offline reliability
+        await _audioPlayer.play(
+          AssetSource('sounds/order_chime.mp3'),
+          volume: 1.0,
+        );
+      } catch (e) {
+        // Fallback to device system alert sound
+        await SystemSound.play(SystemSoundType.alert);
+      }
+    } catch (e, _) {
+      LoggerService.error('RestaurantDashboard: audio chime error', e);
+      try {
+        await SystemSound.play(SystemSoundType.alert);
+      } catch (_) {}
+    }
+  }
+
+  void _startPendingAlarm() {
+    if (_isPlayingAlarm) return;
+    _isPlayingAlarm = true;
+    if (mounted) setState(() {});
+
+    // Play immediately
+    _playChime();
+
+    // Repeat every 4 seconds continuously until confirmed or rejected
+    _pendingAlarmTimer?.cancel();
+    _pendingAlarmTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted) return;
+      final hasPending = _orders.any((o) => (o['status'] ?? '').toString().toUpperCase() == 'PENDING');
+      if (!hasPending) {
+        _stopPendingAlarm();
+      } else {
+        _playChime();
+      }
+    });
+  }
+
+  void _stopPendingAlarm() {
+    _pendingAlarmTimer?.cancel();
+    _pendingAlarmTimer = null;
+    if (_isPlayingAlarm) {
+      _isPlayingAlarm = false;
+      try {
+        _audioPlayer.stop();
+      } catch (_) {}
+      if (mounted) setState(() {});
+    }
+  }
+
+  void _syncAlarmStateWithOrders(List<Map<String, dynamic>> orders) {
+    final hasPending = orders.any((o) => (o['status'] ?? '').toString().toUpperCase() == 'PENDING');
+    if (hasPending) {
+      _startPendingAlarm();
+    } else {
+      _stopPendingAlarm();
+    }
   }
 
   Future<void> _fetchOrders({bool silent = false}) async {
@@ -258,7 +524,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
       Response response;
       try {
         response = await dio.get(primaryUrl);
-      } catch (_) {
+      } catch (e) { LoggerService.error('RestaurantDashboard: silent catch', e);
         // Fallback: Use picker/orders endpoint (which already only returns PENDING/CONFIRMED)
         final fallbackUrl = _assignedRestaurantId != null
             ? '/api/picker/orders?type=restaurant&restaurantId=$_assignedRestaurantId'
@@ -280,8 +546,17 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
                 parsed = fbList.map((e) => Map<String, dynamic>.from(e)).toList();
               }
             }
-          } catch (_) {}
+          } catch (e, _) { LoggerService.error('RestaurantDashboard: silent catch', e); }
         }
+
+        // Filter out pure grocery orders that do not belong to kitchen
+        parsed = parsed.where((o) {
+          final oType = (o['orderType'] ?? '').toString().toUpperCase();
+          if (oType == 'GROCERY') return false;
+          final rId = (o['restaurantId'] ?? o['restaurant']?['id'] ?? '').toString().trim();
+          if (rId.isEmpty) return false;
+          return true;
+        }).toList();
 
         // Ensure ID-wise outlet filtering
         if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty && _assignedRestaurantId != 'ALL') {
@@ -294,23 +569,23 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
               if (_assignedRestaurantId == outletWedsonId && (rId == 'wedson' || rId == 'wedson-restaurant')) return true;
               if (_assignedRestaurantId == outletAsRestaurantId && (rId == 'as-restaurant' || rId == 'as-cafe')) return true;
               if (_assignedRestaurantId == outletBalUdyanId && (rId == 'bal-udyan-restaurant' || rId == 'bal-udyan')) return true;
+              if (_assignedRestaurantId == outletPariMilkId && (rId == 'pari-milk-dairy-sweets' || rId == 'pari-milk')) return true;
             }
 
             if (_assignedRestaurantId == outletWedsonId && rName.contains('wedson')) return true;
             if (_assignedRestaurantId == outletAsRestaurantId && (rName.contains('as ') || rName.contains('a.s') || rName.contains('as-'))) return true;
             if (_assignedRestaurantId == outletBalUdyanId && (rName.contains('bal') || rName.contains('udyan'))) return true;
+            if (_assignedRestaurantId == outletPariMilkId && (rName.contains('pari') || rName.contains('milk'))) return true;
 
             return false;
           }).toList();
         }
 
-        // Check for new pending orders
-        final newPending = parsed.where((o) => o['status'] == 'PENDING').map((o) => o['id'].toString()).toSet();
-        final brandNew = newPending.difference(_knownPendingOrderIds);
-        if (brandNew.isNotEmpty) {
-          _playChime();
-        }
+        // Check for pending orders & trigger/stop continuous alarm
+        final newPending = parsed.where((o) => (o['status'] ?? '').toString().toUpperCase() == 'PENDING').map((o) => o['id'].toString()).toSet();
         _knownPendingOrderIds.addAll(newPending);
+
+        _syncAlarmStateWithOrders(parsed);
 
         _cachedOrders = parsed;
         if (mounted) {
@@ -439,19 +714,21 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
       }
       _updatingOrderId = orderId;
     });
+    _saveLocalCachedOrders(_orders);
+    _syncAlarmStateWithOrders(_orders);
 
     if (mounted) {
       if (nextStatus == 'CONFIRMED') {
         AppToast.showSuccess(
           context,
           'Order Accepted! 👨‍🍳',
-          subtitle: 'Kitchen timer set and cooking started.',
+          subtitle: _isDeviceOffline ? 'Saved offline. Cooking started.' : 'Kitchen timer set and cooking started.',
         );
       } else if (nextStatus == 'PACKED') {
         AppToast.showSuccess(
           context,
           'Food Ready for Pickup! 🥡',
-          subtitle: 'Rider notified to collect the package.',
+          subtitle: _isDeviceOffline ? 'Saved offline. Rider will be notified when online.' : 'Rider notified to collect the package.',
         );
       } else {
         AppToast.showSuccess(
@@ -462,6 +739,10 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
     }
 
     try {
+      if (_isDeviceOffline) {
+        throw Exception('Offline');
+      }
+
       final dio = ref.read(dioProvider);
       final body = <String, dynamic>{'status': nextStatus};
       if (prepTime != null) {
@@ -479,7 +760,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
             'updatedAt': DateTime.now().toIso8601String(),
           }).eq('id', orderId);
         }
-      } catch (_) {}
+      } catch (e, _) { LoggerService.error('RestaurantDashboard: silent catch', e); }
 
       try {
         final parsed = OrderStatus.values.firstWhere(
@@ -487,9 +768,18 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
           orElse: () => OrderStatus.pending,
         );
         await OrderRepository(dio).updateOrderStatus(orderId, parsed);
-      } catch (_) {}
+      } catch (e, _) { LoggerService.error('RestaurantDashboard: silent catch', e); }
     } catch (e) {
-      debugPrint('[Restaurant status update error]: $e');
+      // Offline fallback: enqueue action for automatic flush
+      await OfflineSyncService.enqueueAction(
+        queueName: OfflineSyncService.queueRestaurant,
+        action: 'UPDATE_ORDER_STATUS',
+        payload: {
+          'orderId': orderId,
+          'nextStatus': nextStatus,
+          if (prepTime != null) 'prepTime': prepTime,
+        },
+      );
     } finally {
       if (mounted) setState(() => _updatingOrderId = null);
     }
@@ -507,9 +797,14 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
         _menuItems[index]['isAvailable'] = newStatus;
       }
     });
+    _saveLocalCachedMenu(_menuItems);
     HapticFeedback.lightImpact();
 
     try {
+      if (_isDeviceOffline) {
+        throw Exception('Offline');
+      }
+
       final dio = ref.read(dioProvider);
       await dio.patch('/api/restaurant-dashboard/products/$itemId', data: {'isAvailable': newStatus});
       if (mounted) {
@@ -527,17 +822,36 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
           );
         }
       }
-    } catch (_) {
-      // Revert optimistic update
+    } catch (e) { LoggerService.error('RestaurantDashboard: silent catch', e);
+      // Enqueue offline action if network unavailable
+      await OfflineSyncService.enqueueAction(
+        queueName: OfflineSyncService.queueRestaurant,
+        action: 'TOGGLE_MENU_STOCK',
+        payload: {
+          'itemId': itemId,
+          'isAvailable': newStatus,
+        },
+      );
       if (mounted) {
-        setState(() {
-          final index = _menuItems.indexWhere((p) => p['id'].toString() == itemId);
-          if (index != -1) {
-            _menuItems[index]['isAvailable'] = currentStatus;
-          }
-        });
+        AppToast.showSuccess(
+          context,
+          '${item['name']} updated offline 📴',
+          subtitle: 'Will sync to customer menu when online',
+        );
       }
     }
+  }
+
+  void _openAddDishModal() {
+    HapticFeedback.selectionClick();
+    AddRestaurantProductModal.show(
+      context: context,
+      restaurantId: _assignedRestaurantId ?? outletWedsonId,
+      restaurantName: _restaurantName,
+      onProductAdded: () {
+        _fetchMenuItems();
+      },
+    );
   }
 
   void _showPrepTimeModal(Map<String, dynamic> order) {
@@ -588,7 +902,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               decoration: BoxDecoration(
-                                color: isSelected ? primaryRed : const Color(0xFFF1F5F9),
+                                color: isSelected ? primaryRed : AppDesignSystem.slate100,
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
                                   color: isSelected ? primaryRed : slateBorder,
@@ -662,7 +976,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
     if (order['createdAt'] != null) {
       try {
         orderDate = DateTime.parse(order['createdAt'].toString()).toLocal();
-      } catch (_) {}
+      } catch (e, _) { LoggerService.error('RestaurantDashboard: silent catch', e); }
     }
     final timeStr = DateFormat('hh:mm a').format(orderDate);
 
@@ -752,7 +1066,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
           s = '${s.replaceAll(' ', 'T')}Z';
         }
         orderDate = DateTime.parse(s).toLocal();
-      } catch (_) {}
+      } catch (e, _) { LoggerService.error('RestaurantDashboard: silent catch', e); }
     }
     final rawCustName = (order['userName'] ?? (order['user'] is Map ? order['user']['name'] : null) ?? order['customerName'])?.toString().trim();
     final custName = rawCustName != null && rawCustName.isNotEmpty ? ' | $rawCustName' : '';
@@ -764,7 +1078,8 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
 ======================================
 TOKEN : #$readableId$custName
 TYPE  : $typeStr
-Print :  $printTimeStr
+ORDER : ${DateFormat('dd MMM  hh:mm a').format(orderDate)}
+PRINT : $printTimeStr
 --------------------------------------
 QTY   ITEM
 --------------------------------------
@@ -805,7 +1120,7 @@ $formattedItems
                 child: Container(
                   width: 40,
                   height: 4,
-                  decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
+                  decoration: BoxDecoration(color: AppDesignSystem.slate300, borderRadius: BorderRadius.circular(2)),
                 ),
               ),
               const SizedBox(height: 14),
@@ -817,10 +1132,10 @@ $formattedItems
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEFF6FF),
+                          color: AppDesignSystem.blue50,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(Icons.print_rounded, color: Color(0xFF2563EB), size: 20),
+                        child: const Icon(Icons.print_rounded, color: AppDesignSystem.blue600, size: 20),
                       ),
                       const SizedBox(width: 10),
                       Column(
@@ -845,16 +1160,16 @@ $formattedItems
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: AppDesignSystem.slate50,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(color: AppDesignSystem.slate200),
                 ),
                 child: Text(
                   kotText,
                   style: GoogleFonts.robotoMono(
                     fontSize: Responsive.scaledFontSize(context, 11.5),
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF1E293B),
+                    color: AppDesignSystem.slate800,
                     height: 1.35,
                   ),
                 ),
@@ -875,7 +1190,7 @@ $formattedItems
                       icon: const Icon(Icons.print_rounded, size: 17, color: Colors.white),
                       label: Text('Print KOT (Thermal POS)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: Colors.white)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
+                        backgroundColor: AppDesignSystem.blue600,
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
@@ -915,16 +1230,16 @@ $formattedItems
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFDCFCE7),
+                          color: AppDesignSystem.green100,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFF86EFAC)),
+                          border: Border.all(color: AppDesignSystem.emerald200),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15))),
+                            Text('👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15))),
                             const SizedBox(width: 4),
-                            Text('Kitchen', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: const Color(0xFF15803D))),
+                            Text('Kitchen', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: AppDesignSystem.green700)),
                           ],
                         ),
                       ),
@@ -953,11 +1268,11 @@ $formattedItems
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
+                        color: AppDesignSystem.slate100,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                        border: Border.all(color: AppDesignSystem.slate300),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text('💬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15))),
@@ -990,7 +1305,7 @@ $formattedItems
                 child: Container(
                   width: 40,
                   height: 4,
-                  decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
+                  decoration: BoxDecoration(color: AppDesignSystem.slate300, borderRadius: BorderRadius.circular(2)),
                 ),
               ),
               const SizedBox(height: 16),
@@ -1013,14 +1328,14 @@ $formattedItems
                       borderRadius: BorderRadius.circular(14),
                       side: BorderSide(color: isSelected ? primaryRed : slateBorder, width: isSelected ? 1.5 : 1),
                     ),
-                    tileColor: isSelected ? const Color(0xFFFFF1F2) : const Color(0xFFF8FAFC),
+                    tileColor: isSelected ? AppDesignSystem.rose50 : AppDesignSystem.slate50,
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: isSelected ? primaryRed : const Color(0xFFE2E8F0),
+                        color: isSelected ? primaryRed : AppDesignSystem.slate200,
                         shape: BoxShape.circle,
                       ),
-                      child: const Text('👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
+                      child: Text('👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
                     ),
                     title: Text(
                       outlet['name'] ?? '',
@@ -1088,7 +1403,7 @@ $formattedItems
                       margin: const EdgeInsets.only(top: 12),
                       width: 40,
                       height: 4,
-                      decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
+                      decoration: BoxDecoration(color: AppDesignSystem.slate300, borderRadius: BorderRadius.circular(2)),
                     ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
@@ -1124,9 +1439,9 @@ $formattedItems
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFECFDF5),
+                                color: AppDesignSystem.green50,
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: const Color(0xFFA7F3D0)),
+                                border: Border.all(color: AppDesignSystem.emerald200),
                               ),
                               child: Column(
                                 children: [
@@ -1141,9 +1456,9 @@ $formattedItems
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFFF1F2),
+                                color: AppDesignSystem.rose50,
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: const Color(0xFFFECDD3)),
+                                border: Border.all(color: AppDesignSystem.rose200),
                               ),
                               child: Column(
                                 children: [
@@ -1161,7 +1476,7 @@ $formattedItems
                       padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
+                          color: AppDesignSystem.slate100,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: TextField(
@@ -1196,11 +1511,11 @@ $formattedItems
                                   width: 38,
                                   height: 38,
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFF8FAFC),
+                                    color: AppDesignSystem.slate50,
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(color: slateBorder),
                                   ),
-                                  child: const Center(child: Text('🍲', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18)))),
+                                  child: Center(child: Text('🍲', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18)))),
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
@@ -1291,11 +1606,11 @@ $formattedItems
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF1F2),
+                      color: AppDesignSystem.rose50,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFFECDD3)),
+                      border: Border.all(color: AppDesignSystem.rose200),
                     ),
-                    child: const Center(child: Text('👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15)))),
+                    child: Center(child: Text('👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15)))),
                   ),
                   const SizedBox(width: 7),
                   Column(
@@ -1351,6 +1666,23 @@ $formattedItems
             ),
           ),
           actions: [
+            // Sound Test & Alert Toggle Button
+            Bounceable(
+              onTap: () {
+                _playChime();
+                AppToast.showSuccess(context, 'Sound Alert Tested! 🔔', subtitle: 'Volume playing on speaker');
+              },
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: AppDesignSystem.amber50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFDE68A)),
+                ),
+                child: const Icon(Icons.volume_up_rounded, size: 15, color: brandAmber),
+              ),
+            ),
             // Stock / Menu Items Quick Manager
             Bounceable(
               onTap: _showQuick86BottomSheet,
@@ -1358,9 +1690,9 @@ $formattedItems
                 margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
                 padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF1F2),
+                  color: AppDesignSystem.rose50,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFFECDD3)),
+                  border: Border.all(color: AppDesignSystem.rose200),
                 ),
                 child: const Icon(Icons.inventory_2_outlined, size: 15, color: primaryRed),
               ),
@@ -1370,13 +1702,19 @@ $formattedItems
               margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: AppDesignSystem.slate100,
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: Text(
-                '${_refreshCountdown}s',
-                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w800, color: slateMuted),
-              ),
+              child: _isRefreshing
+                  ? const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: primaryRed),
+                    )
+                  : Text(
+                      '${_refreshCountdown}s',
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w800, color: slateMuted),
+                    ),
             ),
             // Logout Button
             Bounceable(
@@ -1389,7 +1727,7 @@ $formattedItems
                     actions: [
                       TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
                       ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+                        style: ElevatedButton.styleFrom(backgroundColor: AppDesignSystem.red600),
                         onPressed: () => Navigator.pop(ctx, true),
                         child: const Text('Logout', style: TextStyle(color: Colors.white)),
                       ),
@@ -1407,7 +1745,7 @@ $formattedItems
                 margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
                 padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
+                  color: AppDesignSystem.slate100,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.logout_rounded, size: 15, color: slateMuted),
@@ -1418,6 +1756,100 @@ $formattedItems
         ),
         body: Column(
           children: [
+            if (_isDeviceOffline)
+              ConnectivityBanner(
+                onRetry: () {
+                  _fetchOrders();
+                  _fetchMenuItems();
+                },
+              ),
+
+            // Continuous Ringing Alert Banner when orders need confirmation
+            if (_isPlayingAlarm && pendingCount > 0)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppDesignSystem.red600, primaryRed],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryRed.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.notifications_active_rounded,
+                        color: primaryRed,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '🔔 $pendingCount New Order${pendingCount > 1 ? 's' : ''} Received!',
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: Responsive.scaledFontSize(context, 13),
+                            ),
+                          ),
+                          Text(
+                            'Ringing continuously until accepted/confirmed',
+                            style: GoogleFonts.inter(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              fontWeight: FontWeight.w600,
+                              fontSize: Responsive.scaledFontSize(context, 10.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Bounceable(
+                      onTap: _stopPendingAlarm,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.volume_off_rounded, size: 14, color: Colors.white),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Mute',
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: Responsive.scaledFontSize(context, 11),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             // Sub-Header Metric Strip
             Container(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
@@ -1468,6 +1900,18 @@ $formattedItems
           ),
         ],
       ),
+      floatingActionButton: _activeTab == 1
+          ? FloatingActionButton.extended(
+              backgroundColor: primaryRed,
+              elevation: 4,
+              onPressed: _openAddDishModal,
+              icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+              label: Text(
+                'Add Dish',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: Colors.white),
+              ),
+            )
+          : null,
     ),
   );
   }
@@ -1477,7 +1921,7 @@ $formattedItems
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 8),
         decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
+          color: AppDesignSystem.slate50,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: slateBorder),
         ),
@@ -1503,9 +1947,9 @@ $formattedItems
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 8),
         decoration: BoxDecoration(
-          color: isAlert ? const Color(0xFFFEF2F2) : const Color(0xFFF8FAFC),
+          color: isAlert ? AppDesignSystem.statusCancelled : AppDesignSystem.slate50,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: isAlert ? const Color(0xFFFECDD3) : slateBorder),
+          border: Border.all(color: isAlert ? AppDesignSystem.rose200 : slateBorder),
         ),
         child: Column(
           children: [
@@ -1567,7 +2011,7 @@ $formattedItems
             children: [
               Container(
                 padding: const EdgeInsets.all(18),
-                decoration: const BoxDecoration(color: Color(0xFFF1F5F9), shape: BoxShape.circle),
+                decoration: const BoxDecoration(color: AppDesignSystem.slate100, shape: BoxShape.circle),
                 child: const Icon(Icons.check_circle_outline, size: 44, color: slateMuted),
               ),
               const SizedBox(height: 14),
@@ -1627,7 +2071,7 @@ $formattedItems
       statusBadgeColor = brandGreen;
       statusLabel = 'READY FOR PICKUP';
     } else if (status == 'OUT_FOR_DELIVERY') {
-      statusBadgeColor = const Color(0xFF3B82F6);
+      statusBadgeColor = AppDesignSystem.info;
       statusLabel = 'DISPATCHED';
     }
 
@@ -1675,24 +2119,24 @@ $formattedItems
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: isPickup ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7),
+                                color: isPickup ? AppDesignSystem.statusPending : AppDesignSystem.green100,
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
-                                  color: isPickup ? const Color(0xFFF59E0B) : const Color(0xFF86EFAC),
+                                  color: isPickup ? AppDesignSystem.warning : AppDesignSystem.emerald200,
                                   width: 1.0,
                                 ),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(isPickup ? '🚶‍♂️' : '🛵', style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 9.5))),
+                                  Text(isPickup ? '🚶‍♂️' : '🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 9.5))),
                                   const SizedBox(width: 3),
                                   Text(
                                     isPickup ? 'SELF PICKUP' : 'DELIVERY',
                                     style: GoogleFonts.inter(
                                       fontSize: Responsive.scaledFontSize(context, 9),
                                       fontWeight: FontWeight.w900,
-                                      color: isPickup ? const Color(0xFFB45309) : const Color(0xFF15803D),
+                                      color: isPickup ? AppDesignSystem.amber700 : AppDesignSystem.green700,
                                     ),
                                   ),
                                 ],
@@ -1724,18 +2168,18 @@ $formattedItems
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFFBEB),
+                          color: AppDesignSystem.amber50,
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: const Color(0xFFFDE68A)),
+                          border: Border.all(color: AppDesignSystem.yellow200),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('📍', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
+                            Text('📍', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
                             const SizedBox(width: 3),
                             Text(
                               'Customer will collect takeaway at counter (No Rider)',
-                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w800, color: const Color(0xFF92400E)),
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w800, color: AppDesignSystem.statusPendingText),
                             ),
                           ],
                         ),
@@ -1776,16 +2220,16 @@ $formattedItems
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEFF6FF),
+                          color: AppDesignSystem.blue50,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                          border: Border.all(color: AppDesignSystem.blue200),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.print_rounded, size: 12, color: Color(0xFF2563EB)),
+                            const Icon(Icons.print_rounded, size: 12, color: AppDesignSystem.blue600),
                             const SizedBox(width: 4),
-                            Text('KOT', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w900, color: const Color(0xFF2563EB))),
+                            Text('KOT', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w900, color: AppDesignSystem.blue600)),
                           ],
                         ),
                       ),
@@ -1848,18 +2292,18 @@ $formattedItems
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF0FDF4),
+                  color: AppDesignSystem.green50,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                  border: Border.all(color: AppDesignSystem.green200),
                 ),
                 child: Row(
                   children: [
-                    const Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
+                    Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         'Rider: ${assignedRider['name'] ?? 'Assigned'}',
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w800, color: const Color(0xFF166534)),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w800, color: AppDesignSystem.green800),
                       ),
                     ),
                   ],
@@ -1879,13 +2323,42 @@ $formattedItems
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFF1F2),
+                          color: AppDesignSystem.rose50,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFFECDD3)),
+                          border: Border.all(color: AppDesignSystem.rose200),
                         ),
                         child: Center(
                           child: Text('Reject', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w800, color: primaryRed)),
                         ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Bounceable(
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (ctx) => OrderEditModal(
+                          order: order,
+                          isRestaurant: true,
+                          restaurantId: _assignedRestaurantId ?? order['restaurantId']?.toString(),
+                          onOrderUpdated: () => _fetchOrders(silent: true),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+                      decoration: BoxDecoration(
+                        color: AppDesignSystem.amber50,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppDesignSystem.amber400),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.edit_note_rounded, size: 18, color: AppDesignSystem.amber700),
+                        ],
                       ),
                     ),
                   ),
@@ -1932,15 +2405,40 @@ $formattedItems
                   ),
                   const SizedBox(width: 8),
                   Bounceable(
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (ctx) => OrderEditModal(
+                          order: order,
+                          isRestaurant: true,
+                          restaurantId: _assignedRestaurantId ?? order['restaurantId']?.toString(),
+                          onOrderUpdated: () => _fetchOrders(silent: true),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+                      decoration: BoxDecoration(
+                        color: AppDesignSystem.amber50,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppDesignSystem.amber400),
+                      ),
+                      child: const Icon(Icons.edit_note_rounded, size: 18, color: AppDesignSystem.amber700),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Bounceable(
                     onTap: () => _showKOTPrintModal(order),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
+                        color: AppDesignSystem.blue50,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                        border: Border.all(color: AppDesignSystem.blue200),
                       ),
-                      child: const Icon(Icons.print_rounded, size: 18, color: Color(0xFF2563EB)),
+                      child: const Icon(Icons.print_rounded, size: 18, color: AppDesignSystem.blue600),
                     ),
                   ),
                 ],
@@ -1952,9 +2450,9 @@ $formattedItems
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 13),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFECFDF5),
+                        color: AppDesignSystem.green50,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFA7F3D0)),
+                        border: Border.all(color: AppDesignSystem.emerald200),
                       ),
                       child: Center(
                         child: Text('Waiting for Rider Pickup 🛵', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: brandGreen)),
@@ -1967,11 +2465,11 @@ $formattedItems
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
+                        color: AppDesignSystem.blue50,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                        border: Border.all(color: AppDesignSystem.blue200),
                       ),
-                      child: const Icon(Icons.print_rounded, size: 18, color: Color(0xFF2563EB)),
+                      child: const Icon(Icons.print_rounded, size: 18, color: AppDesignSystem.blue600),
                     ),
                   ),
                 ],
@@ -1993,6 +2491,21 @@ $formattedItems
             Text('No menu items loaded', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w800, color: slateDark)),
             const SizedBox(height: 4),
             Text('Dishes for $_restaurantName will appear here', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryRed,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                elevation: 0,
+              ),
+              onPressed: _openAddDishModal,
+              icon: const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+              label: Text(
+                'Add First Dish',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: Colors.white),
+              ),
+            ),
           ],
         ),
       );
@@ -2035,12 +2548,12 @@ $formattedItems
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: _menuSearchQuery.isNotEmpty ? primaryRed : const Color(0xFFE2E8F0),
+                    color: _menuSearchQuery.isNotEmpty ? primaryRed : AppDesignSystem.slate200,
                     width: _menuSearchQuery.isNotEmpty ? 1.5 : 1.2,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                      color: AppDesignSystem.slate900.withValues(alpha: 0.04),
                       blurRadius: 10,
                       offset: const Offset(0, 3),
                     ),
@@ -2057,11 +2570,11 @@ $formattedItems
                   style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w600, color: slateDark),
                   decoration: InputDecoration(
                     hintText: 'Search dish name, price or category...',
-                    hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: const Color(0xFF94A3B8), fontWeight: FontWeight.w500),
-                    prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF64748B)),
+                    hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.slate400, fontWeight: FontWeight.w500),
+                    prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppDesignSystem.slate500),
                     suffixIcon: _menuSearchQuery.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.cancel_rounded, size: 18, color: Color(0xFF94A3B8)),
+                            icon: const Icon(Icons.cancel_rounded, size: 18, color: AppDesignSystem.slate400),
                             onPressed: () {
                               _menuSearchController.clear();
                               setState(() {
@@ -2093,7 +2606,7 @@ $formattedItems
                     _buildMenuFilterChip(
                       label: '🟢 In Stock ($inStockCount)',
                       isSelected: _menuStockFilter == 'IN_STOCK',
-                      color: const Color(0xFF15803D),
+                      color: AppDesignSystem.green700,
                       onTap: () => setState(() => _menuStockFilter = 'IN_STOCK'),
                     ),
                     const SizedBox(width: 8),
@@ -2102,6 +2615,32 @@ $formattedItems
                       isSelected: _menuStockFilter == 'OUT_STOCK',
                       color: primaryRed,
                       onTap: () => setState(() => _menuStockFilter = 'OUT_STOCK'),
+                    ),
+                    const SizedBox(width: 8),
+                    Bounceable(
+                      onTap: _openAddDishModal,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: primaryRed,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.add_rounded, size: 16, color: Colors.white),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Add Dish',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 12),
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -2123,11 +2662,11 @@ $formattedItems
                           width: 64,
                           height: 64,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
+                            color: AppDesignSystem.slate100,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: const Center(
-                            child: Icon(Icons.search_off_rounded, size: 32, color: Color(0xFF94A3B8)),
+                            child: Icon(Icons.search_off_rounded, size: 32, color: AppDesignSystem.slate400),
                           ),
                         ),
                         const SizedBox(height: 14),
@@ -2189,12 +2728,12 @@ $formattedItems
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
-                          color: isAvailable ? const Color(0xFFF1F5F9) : const Color(0xFFFEE2E2),
+                          color: isAvailable ? AppDesignSystem.slate100 : AppDesignSystem.statusCancelled,
                           width: isAvailable ? 1.2 : 1.4,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                            color: AppDesignSystem.slate900.withValues(alpha: 0.03),
                             blurRadius: 10,
                             offset: const Offset(0, 3),
                           ),
@@ -2207,10 +2746,10 @@ $formattedItems
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(
-                              color: isAvailable ? const Color(0xFFF8FAFC) : const Color(0xFFFEF2F2),
+                              color: isAvailable ? AppDesignSystem.slate50 : AppDesignSystem.statusCancelled,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: isAvailable ? const Color(0xFFE2E8F0) : const Color(0xFFFECACA),
+                                color: isAvailable ? AppDesignSystem.slate200 : AppDesignSystem.red200,
                               ),
                             ),
                             child: ClipRRect(
@@ -2219,11 +2758,15 @@ $formattedItems
                                   ? CachedNetworkImage(
                                       imageUrl: imageUrl,
                                       fit: BoxFit.cover,
-                                      errorWidget: (_, __, ___) => const Center(
+                                      memCacheWidth: 200,
+                                      memCacheHeight: 200,
+                                      maxWidthDiskCache: 200,
+                                      maxHeightDiskCache: 200,
+                                      errorWidget: (_, __, ___) => Center(
                                         child: Text('🍲', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 20))),
                                       ),
                                     )
-                                  : const Center(
+                                  : Center(
                                       child: Text('🍲', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 20))),
                                     ),
                             ),
@@ -2240,7 +2783,7 @@ $formattedItems
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 14),
                                     fontWeight: FontWeight.w800,
-                                    color: isAvailable ? slateDark : const Color(0xFF94A3B8),
+                                    color: isAvailable ? slateDark : AppDesignSystem.slate400,
                                   ),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
@@ -2253,14 +2796,14 @@ $formattedItems
                                       style: GoogleFonts.inter(
                                         fontSize: Responsive.scaledFontSize(context, 13),
                                         fontWeight: FontWeight.w900,
-                                        color: isAvailable ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
+                                        color: isAvailable ? AppDesignSystem.slate900 : AppDesignSystem.slate400,
                                       ),
                                     ),
                                     const SizedBox(width: 8),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: isAvailable ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                                        color: isAvailable ? AppDesignSystem.green100 : AppDesignSystem.statusCancelled,
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Text(
@@ -2268,7 +2811,7 @@ $formattedItems
                                         style: GoogleFonts.inter(
                                           fontSize: Responsive.scaledFontSize(context, 9.5),
                                           fontWeight: FontWeight.w900,
-                                          color: isAvailable ? const Color(0xFF15803D) : const Color(0xFFDC2626),
+                                          color: isAvailable ? AppDesignSystem.green700 : AppDesignSystem.red600,
                                           letterSpacing: 0.3,
                                         ),
                                       ),
@@ -2283,9 +2826,8 @@ $formattedItems
                           Switch.adaptive(
                             value: isAvailable,
                             activeColor: brandGreen,
-                            activeTrackColor: const Color(0xFF86EFAC),
-                            inactiveThumbColor: const Color(0xFF94A3B8),
-                            inactiveTrackColor: const Color(0xFFE2E8F0),
+                            activeTrackColor: AppDesignSystem.emerald200,
+                            inactiveTrackColor: AppDesignSystem.slate200,
                             onChanged: (_) => _toggleItemAvailability(item),
                           ),
                         ],
@@ -2316,7 +2858,7 @@ $formattedItems
           color: isSelected ? color : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? color : const Color(0xFFE2E8F0),
+            color: isSelected ? color : AppDesignSystem.slate200,
             width: isSelected ? 1.4 : 1,
           ),
           boxShadow: isSelected
@@ -2334,7 +2876,7 @@ $formattedItems
           style: GoogleFonts.inter(
             fontSize: Responsive.scaledFontSize(context, 11.5),
             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-            color: isSelected ? Colors.white : const Color(0xFF64748B),
+            color: isSelected ? Colors.white : AppDesignSystem.slate500,
           ),
         ),
       ),
@@ -2408,8 +2950,9 @@ $formattedItems
     final double netProfit = math.max(0.0, totalSales - commissionDeduction);
 
     String periodTitle = "Today's Net Settlement";
-    if (_selectedSalesPeriod == 'YESTERDAY') periodTitle = "Yesterday's Net Settlement";
-    else if (_selectedSalesPeriod == 'WEEK') periodTitle = "Last 7 Days Net Settlement";
+    if (_selectedSalesPeriod == 'YESTERDAY') {
+      periodTitle = "Yesterday's Net Settlement";
+    } else if (_selectedSalesPeriod == 'WEEK') periodTitle = "Last 7 Days Net Settlement";
     else if (_selectedSalesPeriod == 'MONTH') periodTitle = "This Month's Net Settlement";
     else if (_selectedSalesPeriod == 'ALL') periodTitle = "All Time Net Settlement";
     final periods = [
@@ -2477,7 +3020,7 @@ $formattedItems
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [primaryRed, Color(0xFFB91C1C)],
+                colors: [primaryRed, AppDesignSystem.red800],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -2568,7 +3111,7 @@ $formattedItems
                     Container(
                       padding: const EdgeInsets.all(9),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
+                        color: AppDesignSystem.slate100,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(Icons.receipt_long_rounded, size: 18, color: slateDark),

@@ -113,9 +113,9 @@ export function ProductEditModal({
     return restaurantsList.find((r) => r.id === productEditForm.restaurantId)
   }, [productEditForm.restaurantId, restaurantsList])
 
-  // Resolve dynamic menu sections for the specific restaurant
+  // Resolve dynamic menu sections for the specific restaurant (strictly restaurant-owned)
   const resolvedMenuSections = useMemo(() => {
-    if (!productEditForm.restaurantId) return RESTAURANT_MENU_SECTIONS
+    if (!productEditForm.restaurantId) return []
     if (selectedRestaurant?.menuSections) {
       try {
         const raw = typeof selectedRestaurant.menuSections === 'string'
@@ -128,8 +128,8 @@ export function ProductEditModal({
         console.error('Error parsing restaurant menuSections:', e)
       }
     }
-    return RESTAURANT_MENU_SECTIONS
-  }, [productEditForm.restaurantId, selectedRestaurant, RESTAURANT_MENU_SECTIONS])
+    return []
+  }, [productEditForm.restaurantId, selectedRestaurant])
 
   // Margin calculation for grocery
   const marginPercent = useMemo(() => {
@@ -544,7 +544,11 @@ export function ProductEditModal({
                     }}
                     className="w-full px-3 py-2 text-xs rounded-xl border border-amber-500/40 bg-card focus:outline-none focus:border-amber-500 font-black text-amber-600 dark:text-amber-400 cursor-pointer shadow-xs"
                   >
-                    <option value="">-- Select Menu Section --</option>
+                    <option value="">
+                      {resolvedMenuSections.length === 0
+                        ? '-- No Sections (Add in Restaurant Menu Manager) --'
+                        : '-- Select Menu Section --'}
+                    </option>
                     {resolvedMenuSections.map((sec) => (
                       <option key={sec.tag} value={sec.tag}>
                         {sec.emoji} {sec.title}

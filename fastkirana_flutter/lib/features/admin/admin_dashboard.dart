@@ -10,6 +10,7 @@ import '../../core/network/api_client.dart';
 import '../../core/services/supabase_service.dart';
 import 'admin_orders_list.dart';
 import 'admin_products.dart';
+import '../../core/theme/responsive.dart';
 
 class AdminDashboard extends ConsumerStatefulWidget {
   const AdminDashboard({super.key});
@@ -54,7 +55,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
           ],
         ),
         content: Text(
-          'You will be signed out from the Ghatampur Store Operations portal.',
+          'You will be signed out from the Store Operations portal.',
           style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: const Color(0xFF64748B), height: 1.4),
         ),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),

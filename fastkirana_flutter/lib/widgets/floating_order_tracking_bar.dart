@@ -1,5 +1,8 @@
+import '../core/theme/design_system.dart';
+import '../core/theme/responsive.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../core/services/logger_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,7 +10,6 @@ import '../core/routes/page_transitions.dart';
 import '../core/network/api_client.dart';
 import '../data/models/order.dart';
 import '../data/repositories/order_repository.dart';
-import '../providers/cart_provider.dart';
 import '../features/orders/order_tracking_screen.dart';
 import '../features/orders/orders_screen.dart';
 import '../core/services/supabase_service.dart';
@@ -55,7 +57,7 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
             await repo.updateOrderStatus(cleanId, liveOrder.status);
             if (mounted) ref.invalidate(ordersProvider(''));
           }
-        } catch (_) {}
+        } catch (e, _) { LoggerService.error('FloatingOrderTrackingBar: silent catch', e); }
       }
     });
 
@@ -77,7 +79,7 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
             )
             .subscribe();
       }
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('FloatingOrderTrackingBar: silent catch', e); }
   }
 
   @override
@@ -86,7 +88,7 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
     if (_ordersSubscription != null) {
       try {
         SupabaseService.client?.removeChannel(_ordersSubscription!);
-      } catch (_) {}
+      } catch (e, _) { LoggerService.error('FloatingOrderTrackingBar: silent catch', e); }
     }
     super.dispose();
   }
@@ -147,7 +149,7 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: const Color(0xFFE2E8F0),
+                    color: AppDesignSystem.slate300,
                     width: 1.2,
                   ),
                   boxShadow: [
@@ -157,7 +159,7 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                       offset: const Offset(0, 5),
                     ),
                     BoxShadow(
-                      color: const Color(0xFF00A344).withValues(alpha: 0.08),
+                      color: AppDesignSystem.accent.withValues(alpha: 0.08),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -170,10 +172,10 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFECFDF5),
+                        color: AppDesignSystem.statusDelivered,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: const Color(0xFFA7F3D0),
+                          color: AppDesignSystem.emerald200,
                           width: 1,
                         ),
                       ),
@@ -182,7 +184,7 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                           latestOrder.status == OrderStatus.shipped
                               ? '🛵'
                               : (latestOrder.status == OrderStatus.packed ? '📦' : '⚡'),
-                          style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 17)),
+                          style: TextStyle(fontSize: Responsive.scaledFontSize(context, 17)),
                         ),
                       ),
                     ),
@@ -210,7 +212,7 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                                     style: GoogleFonts.inter(
                                       fontSize: Responsive.scaledFontSize(context, 12.5),
                                       fontWeight: FontWeight.w900,
-                                      color: const Color(0xFF0F172A),
+                                      color: AppDesignSystem.slate900,
                                       letterSpacing: -0.2,
                                     ),
                                   );
@@ -220,9 +222,9 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFECFDF5),
+                                  color: AppDesignSystem.statusDelivered,
                                   borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: const Color(0xFFA7F3D0)),
+                                  border: Border.all(color: AppDesignSystem.emerald200),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -231,11 +233,11 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                                       width: 4.5,
                                       height: 4.5,
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF10B981),
+                                        color: AppDesignSystem.success,
                                         shape: BoxShape.circle,
                                         boxShadow: [
                                           BoxShadow(
-                                            color: const Color(0xFF10B981).withValues(alpha: 0.8),
+                                            color: AppDesignSystem.success.withValues(alpha: 0.8),
                                             blurRadius: 4,
                                           ),
                                         ],
@@ -247,7 +249,7 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                                       style: GoogleFonts.inter(
                                         fontSize: Responsive.scaledFontSize(context, 9.5),
                                         fontWeight: FontWeight.w800,
-                                        color: const Color(0xFF059669),
+                                        color: AppDesignSystem.emerald600,
                                       ),
                                     ),
                                   ],
@@ -266,7 +268,7 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 10),
                                     fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF64748B),
+                                    color: AppDesignSystem.slate500,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -284,14 +286,14 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6.5),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF00A344), Color(0xFF008736)],
+                          colors: [AppDesignSystem.accent, AppDesignSystem.accentDark],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF00A344).withValues(alpha: 0.3),
+                            color: AppDesignSystem.accent.withValues(alpha: 0.3),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -324,3 +326,4 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
     );
   }
 }
+

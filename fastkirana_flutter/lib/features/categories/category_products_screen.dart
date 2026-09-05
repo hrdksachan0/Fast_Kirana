@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shimmer/shimmer.dart';
-import 'package:action_slider/action_slider.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/theme/responsive.dart';
 import '../../core/routes/page_transitions.dart';
@@ -15,8 +12,6 @@ import '../../providers/cart_provider.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/floating_cart_bar.dart';
 import '../products/product_detail_screen.dart';
-import '../cart/cart_screen.dart';
-import '../search/search_screen.dart';
 
 class CategoryProductsScreen extends ConsumerStatefulWidget {
   final Category category;
@@ -32,9 +27,11 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   String _searchQuery = '';
-  bool _isSearchActive = false;
+  final bool _isSearchActive = false;
+  final ScrollController _scrollController = ScrollController();
+  int _visibleCount = 12;
 
-  static const Color primaryRed = Color(0xFFE20A22);
+  static const Color primaryRed = AppDesignSystem.primary;
 
   // Subcategories mapping matching the Next.js Web App
   final Map<String, List<Map<String, String>>> _subcatMap = {
@@ -73,7 +70,35 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
   };
 
   @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.hasClients &&
+        _scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 250) {
+      if (mounted) {
+        setState(() {
+          _visibleCount += 12;
+        });
+      }
+    }
+  }
+
+  void _resetPagination() {
+    setState(() {
+      _visibleCount = 12;
+    });
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
+  }
+
+  @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
@@ -98,7 +123,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF111827)),
+          icon: const Icon(Icons.arrow_back_rounded, color: AppDesignSystem.gray900),
           onPressed: () => Navigator.pop(context),
         ),
         title: Column(
@@ -109,20 +134,20 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 16),
                 fontWeight: FontWeight.w900,
-                color: const Color(0xFF111827),
+                color: AppDesignSystem.gray900,
                 letterSpacing: -0.3,
               ),
             ),
             Row(
               children: [
-                const Icon(Icons.bolt_rounded, size: 12, color: Color(0xFF059669)),
+                const Icon(Icons.bolt_rounded, size: 12, color: AppDesignSystem.emerald600),
                 const SizedBox(width: 2),
                 Text(
                   'FAST DELIVERY',
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 9.5),
                     fontWeight: FontWeight.w800,
-                    color: const Color(0xFF059669),
+                    color: AppDesignSystem.emerald600,
                   ),
                 ),
               ],
@@ -141,7 +166,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
               // 1. Left Vertical Subcategory Rail (Blinkit 2-Pane Navigation)
               Container(
                 width: Responsive.isSmallMobile(context) ? 64 : 82,
-                color: const Color(0xFFF9FAFB),
+                color: AppDesignSystem.gray50,
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   itemCount: subcats.length,
@@ -152,7 +177,8 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                     return GestureDetector(
                       onTap: () {
                         HapticFeedback.selectionClick();
-                        setState(() => _selectedSubcatIndex = idx);
+                        _selectedSubcatIndex = idx;
+                        _resetPagination();
                       },
                       child: Container(
                         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
@@ -161,12 +187,12 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                           color: isSelected ? Colors.white : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
                           border: isSelected
-                              ? Border.all(color: const Color(0xFFFED7AA), width: 1.5)
+                              ? Border.all(color: AppDesignSystem.orange300, width: 1.5)
                               : null,
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.04),
+                                    color: Colors.black.withValues(alpha: 0.04),
                                     blurRadius: 6,
                                     offset: const Offset(0, 2),
                                   ),
@@ -181,8 +207,8 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                               height: 38,
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? const Color(0xFFFFF7ED)
-                                    : const Color(0xFFF3F4F6),
+                                    ? AppDesignSystem.orange50
+                                    : AppDesignSystem.surfaceMuted,
                                 shape: BoxShape.circle,
                               ),
                               child: Center(
@@ -199,7 +225,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 9.5),
                                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
-                                color: isSelected ? const Color(0xFFEA580C) : const Color(0xFF4B5563),
+                                color: isSelected ? AppDesignSystem.orange600 : AppDesignSystem.gray600,
                                 height: 1.2,
                               ),
                               maxLines: 2,
@@ -222,7 +248,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                       padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                       decoration: const BoxDecoration(
                         color: Colors.white,
-                        border: Border(bottom: BorderSide(color: Color(0xFFF3F4F6))),
+                        border: Border(bottom: BorderSide(color: AppDesignSystem.surfaceMuted)),
                       ),
                       child: Column(
                         children: [
@@ -231,24 +257,28 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                             height: 38,
                             padding: const EdgeInsets.symmetric(horizontal: 10),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF3F4F6),
+                              color: AppDesignSystem.surfaceMuted,
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: TextField(
                               controller: _searchController,
-                              onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
-                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF111827)),
+                              onChanged: (val) {
+                                _searchQuery = val.trim().toLowerCase();
+                                _resetPagination();
+                              },
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.gray900),
                               decoration: InputDecoration(
                                 hintText: 'Search in ${widget.category.name}...',
-                                hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: const Color(0xFF9CA3AF)),
-                                prefixIcon: const Icon(Icons.search_rounded, size: 16, color: Color(0xFF9CA3AF)),
+                                hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: AppDesignSystem.textTertiary),
+                                prefixIcon: const Icon(Icons.search_rounded, size: 16, color: AppDesignSystem.textTertiary),
                                 suffixIcon: _searchQuery.isNotEmpty
                                     ? GestureDetector(
-                                        onTap: () => setState(() {
+                                        onTap: () {
                                           _searchController.clear();
                                           _searchQuery = '';
-                                        }),
-                                        child: const Icon(Icons.clear_rounded, size: 16, color: Color(0xFF9CA3AF)),
+                                          _resetPagination();
+                                        },
+                                        child: const Icon(Icons.clear_rounded, size: 16, color: AppDesignSystem.textTertiary),
                                       )
                                     : null,
                                 border: InputBorder.none,
@@ -317,14 +347,14 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Text('🍿', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 40))),
+                                  Text('🍿', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 40))),
                                   const SizedBox(height: 8),
                                   Text(
                                     'No products found',
                                     style: GoogleFonts.inter(
                                       fontSize: Responsive.scaledFontSize(context, 13),
                                       fontWeight: FontWeight.w700,
-                                      color: const Color(0xFF6B7280),
+                                      color: AppDesignSystem.textSecondary,
                                     ),
                                   ),
                                 ],
@@ -336,27 +366,27 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                             builder: (context, constraints) {
                               final columns = (constraints.maxWidth / 140).floor().clamp(2, 6);
                               final itemAspect = Responsive.productCardAspectRatio(context, isCompact: true);
+                              final visibleProducts = list.take(_visibleCount).toList();
+                              final hasMore = _visibleCount < list.length;
 
-                              return AnimationLimiter(
-                                child: GridView.builder(
-                                  padding: EdgeInsets.fromLTRB(6, 6, 6, cartCount > 0 ? 80 : 20),
-                                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: columns,
-                                    childAspectRatio: itemAspect,
-                                    crossAxisSpacing: 8,
-                                    mainAxisSpacing: 10,
-                                  ),
-                                  itemCount: list.length,
-                                  itemBuilder: (context, index) {
-                                    final product = list[index];
-                                    return AnimationConfiguration.staggeredGrid(
-                                      position: index,
-                                      columnCount: columns,
-                                      duration: const Duration(milliseconds: 375),
-                                      child: ScaleAnimation(
-                                        scale: 0.9,
-                                        child: FadeInAnimation(
-                                          child: ProductCard(
+                              return CustomScrollView(
+                                controller: _scrollController,
+                                physics: const BouncingScrollPhysics(),
+                                slivers: [
+                                  SliverPadding(
+                                    padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
+                                    sliver: SliverGrid(
+                                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: columns,
+                                        childAspectRatio: itemAspect,
+                                        crossAxisSpacing: 8,
+                                        mainAxisSpacing: 10,
+                                      ),
+                                      delegate: SliverChildBuilderDelegate(
+                                        (context, index) {
+                                          final product = visibleProducts[index];
+                                          return ProductCard(
+                                            key: ValueKey(product.id),
                                             product: product,
                                             isCompact: true,
                                             onTap: () {
@@ -367,26 +397,46 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                                                 ),
                                               );
                                             },
+                                          );
+                                        },
+                                        childCount: visibleProducts.length,
+                                      ),
+                                    ),
+                                  ),
+                                  if (hasMore)
+                                    const SliverToBoxAdapter(
+                                      child: Padding(
+                                        padding: EdgeInsets.symmetric(vertical: 16),
+                                        child: Center(
+                                          child: SizedBox(
+                                            width: 22,
+                                            height: 22,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.2,
+                                              color: primaryRed,
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    );
-                                  },
-                                ),
+                                    ),
+                                  SliverToBoxAdapter(
+                                    child: SizedBox(height: cartCount > 0 ? 80 : 20),
+                                  ),
+                                ],
                               );
                             },
                           );
                         },
                         loading: () => GridView.builder(
                           padding: const EdgeInsets.fromLTRB(6, 6, 6, 20),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.58,
-                            crossAxisSpacing: 6,
-                            mainAxisSpacing: 6,
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: Responsive.gridColumns(context, smallMobile: 2, mobile: 2, smallTablet: 3, tablet: 4, desktop: 5),
+                            childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: true),
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 10,
                           ),
                           itemCount: 6,
-                          itemBuilder: (_, __) => const ProductCardSkeleton(),
+                          itemBuilder: (_, __) => const ProductCardSkeleton(isCompact: true),
                         ),
                         error: (e, _) => Center(
                           child: Padding(
@@ -394,11 +444,11 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.refresh_rounded, size: 36, color: Color(0xFF94A3B8)),
+                                const Icon(Icons.refresh_rounded, size: 36, color: AppDesignSystem.slate400),
                                 const SizedBox(height: 8),
                                 Text(
                                   'Tap to reload products',
-                                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+                                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w600, color: AppDesignSystem.slate500),
                                 ),
                                 const SizedBox(height: 12),
                                 ElevatedButton(
@@ -410,7 +460,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                                     backgroundColor: primaryRed,
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                   ),
-                                  child: const Text('Retry', style: TextStyle(color: Colors.white, fontSize: Responsive.scaledFontSize(context, 12))),
+                                  child: Text('Retry', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
                                 ),
                               ],
                             ),
@@ -425,7 +475,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
           ),
 
           // 3. Floating Bottom Cart Bar (Exact Homepage Design)
-          const FloatingCartBar(bottomOffset: 16),
+          FloatingCartBar(bottomOffset: MediaQuery.of(context).padding.bottom + 10),
         ],
       ),
     ),
@@ -436,22 +486,23 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
-        setState(() => _selectedSort = title);
+        _selectedSort = title;
+        _resetPagination();
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: isSelected ? primaryRed : const Color(0xFFF3F4F6),
+          color: isSelected ? primaryRed : AppDesignSystem.surfaceMuted,
           borderRadius: BorderRadius.circular(16),
-          border: isSelected ? null : Border.all(color: const Color(0xFFE5E7EB)),
+          border: isSelected ? null : Border.all(color: AppDesignSystem.border),
         ),
         child: Text(
           title,
           style: GoogleFonts.inter(
             fontSize: Responsive.scaledFontSize(context, 10.5),
             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-            color: isSelected ? Colors.white : const Color(0xFF374151),
+            color: isSelected ? Colors.white : AppDesignSystem.gray700,
           ),
         ),
       ),

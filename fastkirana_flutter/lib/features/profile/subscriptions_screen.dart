@@ -66,7 +66,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
-                    child: Text(item['emoji'], style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 26))),
+                    child: Text(item['emoji'], style: TextStyle(fontSize: Responsive.scaledFontSize(context, 26))),
                   ),
                 ),
                 const SizedBox(width: 14),

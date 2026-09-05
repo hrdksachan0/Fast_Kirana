@@ -1,9 +1,11 @@
+import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/cart.dart';
 import '../data/models/product.dart';
 import '../data/repositories/cart_repository.dart';
 import '../core/network/api_client.dart';
 import '../core/utils/restaurant_utils.dart';
+import '../core/utils/app_connectivity.dart';
 
 final cartRepoProvider = Provider<CartRepository>((ref) {
   return CartRepository(ref.read(dioProvider));
@@ -44,7 +46,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
           state = AsyncValue.data(serverCart);
           await repository.saveLocalCart(serverCart.items);
         }
-      } catch (_) {}
+      } catch (e, _) { LoggerService.error('CartProvider: silent catch', e); }
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -301,13 +303,18 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
     repository.clearCart();
   }
 
+  /// Automatically sync offline pending items to server
+  Future<void> syncPendingCart() async {
+    await repository.syncPendingCartIfNeeded();
+  }
+
   /// Backward compatible addItem
   Future<void> addItem(String productId, int quantity) async {
     final currentCart = state.value;
     if (currentCart != null) {
       final existing = currentCart.items.cast<CartItem?>().firstWhere((i) => i?.productId == productId, orElse: () => null);
       if (existing != null) {
-        await updateQuantity(productId, existing.quantity + quantity);
+        updateQuantity(productId, existing.quantity + quantity);
         return;
       }
     }
@@ -316,5 +323,14 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
 
 final cartProvider = StateNotifierProvider<CartNotifier, AsyncValue<Cart>>((ref) {
   final repo = ref.watch(cartRepoProvider);
-  return CartNotifier(repo);
+  final notifier = CartNotifier(repo);
+
+  // Auto-sync offline cart when device reconnects to internet
+  ref.listen<AppConnectivityObserver>(connectivityProvider, (previous, next) {
+    if (next.isOnline) {
+      notifier.syncPendingCart();
+    }
+  });
+
+  return notifier;
 });

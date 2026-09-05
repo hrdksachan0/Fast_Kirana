@@ -16,9 +16,7 @@ import '../../features/auth/delivery_login.dart';
 import '../../features/delivery/delivery_dashboard.dart';
 import '../../features/location/delivery_location_screen.dart';
 import '../../features/location/map_picker_screen.dart';
-import '../../features/cafe/restaurant_delivery_loading_screen.dart';
 import '../../features/cafe/restaurant_dashboard.dart';
-import '../../features/splash/grocery_delivery_loading_screen.dart';
 import '../widgets/contextual_brand_transition_screen.dart';
 import '../theme/design_system.dart';
 
@@ -34,7 +32,8 @@ class AppRouter {
       case '/main':
         return FadeThroughRoute(page: const MainShell());
       case '/location':
-        return SwiggyModalRoute(page: const DeliveryLocationScreen());
+        final autoFetch = (settings.arguments as bool?) ?? false;
+        return SwiggyModalRoute(page: DeliveryLocationScreen(autoFetchLocation: autoFetch));
       case '/map-picker':
         return SwiggyModalRoute(page: const MapPickerScreen());
       case '/login':

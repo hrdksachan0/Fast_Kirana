@@ -1,3 +1,5 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import '../../../core/theme/responsive.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -5,14 +7,15 @@ import 'package:google_fonts/google_fonts.dart';
 /// Actions taken while offline are queued and replayed when connectivity
 /// returns.
 class ConnectivityBanner extends StatelessWidget {
-  const ConnectivityBanner({super.key});
+  final VoidCallback? onRetry;
+  const ConnectivityBanner({super.key, this.onRetry});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
-      decoration: const BoxDecoration(color: Color(0xFFDC2626)),
+      decoration: const BoxDecoration(color: AppDesignSystem.red600),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [

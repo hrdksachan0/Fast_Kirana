@@ -1,3 +1,4 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -29,7 +30,7 @@ class FastKiranaLogoPainter extends CustomPainter {
 
     final Paint redPaint = Paint()
       ..shader = const LinearGradient(
-        colors: [Color(0xFFE20A22), Color(0xFFFF1E3C)],
+        colors: [AppDesignSystem.primary, AppDesignSystem.red400],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ).createShader(const Rect.fromLTWH(0, 0, 135, 110))
@@ -75,7 +76,7 @@ class FastKiranaLogoPainter extends CustomPainter {
 
     // Soft Shadow
     final Paint shadowPaint = Paint()
-      ..color = const Color(0xFFE20A22).withValues(alpha: 0.30)
+      ..color = AppDesignSystem.primary.withValues(alpha: 0.30)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
     canvas.drawRRect(squircle.shift(const Offset(0, 4)), shadowPaint);
 
@@ -137,7 +138,7 @@ class BrandLogo extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: size * 0.58,
                 fontWeight: FontWeight.w900,
-                color: textColor ?? const Color(0xFF0F172A),
+                color: textColor ?? AppDesignSystem.slate900,
                 letterSpacing: -0.5,
                 height: 1.1,
               ),
@@ -147,7 +148,7 @@ class BrandLogo extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: size * 0.22,
                 fontWeight: FontWeight.w800,
-                color: const Color(0xFFE20A22),
+                color: AppDesignSystem.primary,
                 letterSpacing: 1.2,
               ),
             ),

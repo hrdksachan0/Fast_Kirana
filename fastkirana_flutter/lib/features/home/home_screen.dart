@@ -10,35 +10,28 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/design_system.dart';
-import '../../core/theme/responsive.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../data/models/product.dart';
 import '../../data/models/category.dart';
-import '../../data/models/restaurant.dart';
 import '../../data/models/order.dart';
 import '../../data/models/store_settings.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/restaurant_provider.dart';
-import '../../providers/auth_provider.dart';
 import '../../providers/store_settings_provider.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/restaurant_card.dart';
-import '../../widgets/floating_cart_bar.dart';
 import '../../widgets/brand_logo.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../providers/address_provider.dart';
-import '../../providers/banner_provider.dart';
+import '../../providers/store_hub_provider.dart';
 import '../categories/category_products_screen.dart';
 import '../search/search_screen.dart';
-import '../cart/cart_screen.dart';
-import '../cafe/cafe_menu_screen.dart';
-import '../profile/address_book_screen.dart';
 import '../profile/notifications_screen.dart';
 import '../location/delivery_location_screen.dart';
-import '../orders/order_tracking_screen.dart';
 import '../orders/orders_screen.dart';
 import '../../widgets/voice_search_sheet.dart';
+import '../../widgets/unserviceable_location_banner.dart';
 import 'main_shell.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -70,9 +63,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     'title': 'Ghatampur',
     'subtitle': 'Milk, Fruits, Vegetables, Snacks & more',
     'cta': 'Shop Now →',
-    'bgColor': Color(0xFFFDF0F1),
-    'textColor': Color(0xFFE20A22),
-    'imageAsset': 'assets/categories/grocery_bag_banner.webp',
+    'bgColor': AppDesignSystem.slate50,
+    'textColor': AppDesignSystem.primary,
+    'imageAsset': 'assets/categories/fruits_vegetables_category.webp',
     'webFallback': 'https://www.fastkirana.in/grocery_bag_banner.png',
     'categorySlug': 'fruits-vegetables',
   };
@@ -172,16 +165,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   // 1. Pinned Header & Search
                   SliverToBoxAdapter(child: _buildTopHeader()),
 
+                  // 1b. Location Unserviceable Warning Banner (Swiggy / Zepto Style)
+                  const SliverToBoxAdapter(child: UnserviceableLocationBanner()),
+
                   // 2. Mode Switcher (Grocery vs Food) - Placed directly above banner
                   SliverToBoxAdapter(child: _buildCategoryToggle()),
 
-                  // 3. Single Hero Promo Banner (Ghatampur Express)
-                  SliverToBoxAdapter(child: _buildHeroPromoBanner()),
-
-                  // 4. Sleek Trust Badge Strip (Exact match to media_1787720540434.png)
-                  SliverToBoxAdapter(child: _buildTrustBadgeStrip()),
-
                   if (_isGrocerySelected) ...[
+                    // 3. Single Hero Promo Banner (Ghatampur Express - Grocery Only)
+                    SliverToBoxAdapter(child: _buildHeroPromoBanner()),
+
+                    // 4. Sleek Trust Badge Strip (Grocery Only)
+                    SliverToBoxAdapter(child: _buildTrustBadgeStrip()),
+
                     // 5. Circular Category Carousel (Web 1:1)
                     SliverToBoxAdapter(child: _buildCircularCategoryCarousel()),
 
@@ -199,7 +195,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     SliverToBoxAdapter(child: _buildFooter()),
                   ],
 
-                  const SliverToBoxAdapter(child: SizedBox(height: 150)),
+                  SliverToBoxAdapter(child: SizedBox(height: 250 + MediaQuery.of(context).padding.bottom)),
                 ],
               ),
             ),
@@ -235,8 +231,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: Consumer(
                   builder: (context, ref, _) {
                     final selectedAddress = ref.watch(selectedAddressProvider);
+                    final currentHub = ref.watch(currentStoreHubProvider);
                     final locationLabel = selectedAddress?.displayLabel ?? 'Home';
-                    final shortLocation = selectedAddress?.shortAddress ?? 'Ghatampur';
+                    final shortLocation = selectedAddress?.shortAddress ?? currentHub.city;
 
                     return GestureDetector(
                       onTap: () {
@@ -257,7 +254,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 width: 6,
                                 height: 6,
                                 decoration: const BoxDecoration(
-                                  color: Color(0xFF16A34A),
+                                  color: AppDesignSystem.green600,
                                   shape: BoxShape.circle,
                                 ),
                               ),
@@ -267,7 +264,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 11),
                                   fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF6B7280),
+                                  color: AppDesignSystem.textSecondary,
                                 ),
                               ),
                             ],
@@ -282,7 +279,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 14.5),
                                     fontWeight: FontWeight.w900,
-                                    color: const Color(0xFF111827),
+                                    color: AppDesignSystem.textPrimary,
                                     height: 1.1,
                                   ),
                                   maxLines: 1,
@@ -290,7 +287,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 ),
                               ),
                               const SizedBox(width: 3),
-                              const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF111827)),
+                              const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppDesignSystem.textPrimary),
                             ],
                           ),
                         ],
@@ -310,12 +307,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF9FAFB),
+                    color: AppDesignSystem.gray50,
                     shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                    border: Border.all(color: AppDesignSystem.border),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.02),
+                        color: Colors.black.withValues(alpha: 0.02),
                         blurRadius: 4,
                         offset: const Offset(0, 1),
                       ),
@@ -324,7 +321,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      const Icon(Icons.notifications_none_rounded, size: 20, color: Color(0xFF374151)),
+                      const Icon(Icons.notifications_none_rounded, size: 20, color: AppDesignSystem.gray700),
                       Positioned(
                         top: 8,
                         right: 8,
@@ -332,7 +329,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           width: 7,
                           height: 7,
                           decoration: const BoxDecoration(
-                            color: Color(0xFFE20A22),
+                            color: AppDesignSystem.primary,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -357,44 +354,66 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+                border: Border.all(color: AppDesignSystem.border, width: 1),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Icon(Icons.search_rounded, size: 18, color: Color(0xFF9CA3AF)),
+                  const Icon(Icons.search_rounded, size: 18, color: AppDesignSystem.textTertiary),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 250),
-                      layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
-                        return Stack(
-                          alignment: Alignment.centerLeft,
-                          children: <Widget>[
-                            ...previousChildren,
-                            if (currentChild != null) currentChild,
-                          ],
+                    child: Builder(
+                      builder: (context) {
+                        final restaurants = ref.watch(homeRestaurantsProvider).valueOrNull ?? [];
+                        final restaurantNames = restaurants
+                            .map((r) => r.name.trim())
+                            .where((name) => name.isNotEmpty)
+                            .take(5)
+                            .toList();
+
+                        final dynamicPlaceholders = [
+                          'Search for milk',
+                          if (restaurantNames.isNotEmpty) ...restaurantNames.map((name) => 'Search for "$name"'),
+                          'Search "atta"',
+                          'Search "maggi"',
+                          'Search "dairy milk"',
+                        ];
+
+                        final placeholderText =
+                            dynamicPlaceholders[_searchPlaceholderIndex % dynamicPlaceholders.length];
+
+                        return AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 250),
+                          layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                            return Stack(
+                              alignment: Alignment.centerLeft,
+                              children: <Widget>[
+                                ...previousChildren,
+                                if (currentChild != null) currentChild,
+                              ],
+                            );
+                          },
+                          transitionBuilder: (child, animation) => FadeTransition(
+                            opacity: animation,
+                            child: child,
+                          ),
+                          child: Align(
+                            key: ValueKey<String>(placeholderText),
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              placeholderText,
+                              textAlign: TextAlign.left,
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 13),
+                                fontWeight: FontWeight.w400,
+                                color: AppDesignSystem.textTertiary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         );
                       },
-                      transitionBuilder: (child, animation) => FadeTransition(
-                        opacity: animation,
-                        child: child,
-                      ),
-                      child: Align(
-                        key: ValueKey<int>(_searchPlaceholderIndex),
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          _searchPlaceholders[_searchPlaceholderIndex],
-                          textAlign: TextAlign.left,
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 13),
-                            fontWeight: FontWeight.w400,
-                            color: const Color(0xFF9CA3AF),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -412,10 +431,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: const BoxDecoration(
-                        color: Color(0xFFFEF2F2),
+                        color: AppDesignSystem.rose50,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.mic_rounded, size: 16, color: Color(0xFFE20A22)),
+                      child: const Icon(Icons.mic_rounded, size: 16, color: AppDesignSystem.primary),
                     ),
                   ),
                 ],
@@ -492,7 +511,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             style: GoogleFonts.inter(
               fontSize: Responsive.scaledFontSize(context, 18),
               fontWeight: FontWeight.w900,
-              color: const Color(0xFF0F172A),
+              color: AppDesignSystem.slate900,
               letterSpacing: -0.4,
             ),
           ),
@@ -504,10 +523,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+              border: Border.all(color: AppDesignSystem.slate300, width: 1.2),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF0F172A).withOpacity(0.04),
+                  color: AppDesignSystem.slate900.withValues(alpha: 0.04),
                   blurRadius: 16,
                   offset: const Offset(0, 5),
                 ),
@@ -522,12 +541,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
+                        color: AppDesignSystem.slate200,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         '#$orderId',
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w800, color: const Color(0xFF334155)),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w800, color: AppDesignSystem.slate700),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -535,13 +554,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                       decoration: BoxDecoration(
                         color: isDelivered
-                            ? const Color(0xFFDCFCE7)
-                            : (isShipped ? const Color(0xFFFFEDD5) : const Color(0xFFE0E7FF)),
+                            ? AppDesignSystem.statusDelivered
+                            : (isShipped ? AppDesignSystem.statusShipped : AppDesignSystem.statusPacked),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: isDelivered
-                              ? const Color(0xFFBBF7D0)
-                              : (isShipped ? const Color(0xFFFED7AA) : const Color(0xFFC7D2FE)),
+                              ? AppDesignSystem.statusDeliveredText
+                              : (isShipped ? AppDesignSystem.statusShippedText : AppDesignSystem.statusShippedText),
                         ),
                       ),
                       child: Row(
@@ -552,7 +571,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               width: 6,
                               height: 6,
                               decoration: const BoxDecoration(
-                                color: Color(0xFFEA580C),
+                                color: AppDesignSystem.orange600,
                                 shape: BoxShape.circle,
                               ),
                             ).animate(onPlay: (controller) => controller.repeat(reverse: true)).scaleXY(
@@ -565,8 +584,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               height: 6,
                               decoration: BoxDecoration(
                                 color: isDelivered
-                                    ? const Color(0xFF16A34A)
-                                    : (isShipped ? const Color(0xFFEA580C) : const Color(0xFF4F46E5)),
+                                    ? AppDesignSystem.green600
+                                    : (isShipped ? AppDesignSystem.orange600 : AppDesignSystem.violet600),
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -577,8 +596,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               fontSize: Responsive.scaledFontSize(context, 9.5),
                               fontWeight: FontWeight.w900,
                               color: isDelivered
-                                  ? const Color(0xFF16A34A)
-                                  : (isShipped ? const Color(0xFFEA580C) : const Color(0xFF4F46E5)),
+                                  ? AppDesignSystem.green600
+                                  : (isShipped ? AppDesignSystem.orange600 : AppDesignSystem.violet600),
                               letterSpacing: 0.3,
                             ),
                           ),
@@ -593,21 +612,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF0FDF4),
+                    color: AppDesignSystem.statusConfirmed,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFBBF7D0)),
+                    border: Border.all(color: AppDesignSystem.statusDeliveredText),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
+                      Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
                       const SizedBox(width: 4),
                       Text(
                         'Grocery',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 10.5),
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF15803D),
+                          color: AppDesignSystem.green700,
                         ),
                       ),
                       Text(
@@ -615,17 +634,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 10.5),
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF15803D),
+                          color: AppDesignSystem.green700,
                         ),
                       ),
-                      const Text('🏬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
+                      Text('🏬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
                       const SizedBox(width: 4),
                       Text(
                         'Restaurant Combined',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 10.5),
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF0F766E),
+                          color: AppDesignSystem.teal700,
                         ),
                       ),
                     ],
@@ -645,7 +664,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 20),
                     fontWeight: FontWeight.w900,
-                    color: const Color(0xFF0F172A),
+                    color: AppDesignSystem.slate900,
                     letterSpacing: -0.5,
                   ),
                 ),
@@ -657,7 +676,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 12.5),
                     fontWeight: FontWeight.w500,
-                    color: const Color(0xFF64748B),
+                    color: AppDesignSystem.slate500,
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -666,21 +685,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                    color: AppDesignSystem.slate50,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: AppDesignSystem.slate300),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.access_time_rounded, size: 14, color: Color(0xFFEF4444)),
+                      const Icon(Icons.access_time_rounded, size: 14, color: AppDesignSystem.danger),
                       const SizedBox(width: 6),
                       Text(
                         'Placed at: $placedTimeStr',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w700,
-                          color: const Color(0xFF334155),
+                          color: AppDesignSystem.slate700,
                         ),
                       ),
                     ],
@@ -707,21 +726,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE0F2FE),
+                    color: AppDesignSystem.cyan100,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFBAE6FD)),
+                    border: Border.all(color: AppDesignSystem.cyan200),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.local_shipping_rounded, size: 14, color: Color(0xFF0284C7)),
+                      const Icon(Icons.local_shipping_rounded, size: 14, color: AppDesignSystem.cyan600),
                       const SizedBox(width: 6),
                       Text(
                         'DOORSTEP FAST DELIVERY',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 10.5),
                           fontWeight: FontWeight.w900,
-                          color: const Color(0xFF0369A1),
+                          color: AppDesignSystem.cyan700,
                           letterSpacing: 0.4,
                         ),
                       ),
@@ -735,9 +754,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF1F2).withOpacity(0.7),
+                    color: AppDesignSystem.rose50.withValues(alpha: 0.7),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFFECDD3), width: 1.2),
+                    border: Border.all(color: AppDesignSystem.rose200, width: 1.2),
                   ),
                   child: Column(
                     children: [
@@ -747,14 +766,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.storefront_rounded, size: 18, color: Color(0xFFE20A22)),
+                              const Icon(Icons.storefront_rounded, size: 18, color: AppDesignSystem.primary),
                               const SizedBox(width: 7),
                               Text(
                                 'MULTI-STORE PREPARATION\nPROGRESS',
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 11),
                                   fontWeight: FontWeight.w900,
-                                  color: const Color(0xFF0F172A),
+                                  color: AppDesignSystem.slate900,
                                   letterSpacing: 0.2,
                                   height: 1.2,
                                 ),
@@ -764,21 +783,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF3E8FF),
+                              color: AppDesignSystem.statusConfirmed,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFE9D5FF)),
+                              border: Border.all(color: AppDesignSystem.violet200),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Text('🔗', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
+                                Text('🔗', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
                                 const SizedBox(width: 4),
                                 Text(
                                   '1 DELIVERY • 2 STOPS',
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 9.5),
                                     fontWeight: FontWeight.w900,
-                                    color: const Color(0xFF7E22CE),
+                                    color: AppDesignSystem.violet500,
                                     letterSpacing: 0.3,
                                   ),
                                 ),
@@ -795,17 +814,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFF1F5F9)),
+                          border: Border.all(color: AppDesignSystem.slate200),
                         ),
                         child: Row(
                           children: [
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF8FAFC),
+                                color: AppDesignSystem.slate50,
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Icon(Icons.shopping_cart_outlined, size: 18, color: Color(0xFF64748B)),
+                              child: const Icon(Icons.shopping_cart_outlined, size: 18, color: AppDesignSystem.slate500),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
@@ -817,7 +836,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     style: GoogleFonts.inter(
                                       fontSize: Responsive.scaledFontSize(context, 12.5),
                                       fontWeight: FontWeight.w800,
-                                      color: const Color(0xFF0F172A),
+                                      color: AppDesignSystem.slate900,
                                     ),
                                   ),
                                   Text(
@@ -825,7 +844,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     style: GoogleFonts.inter(
                                       fontSize: Responsive.scaledFontSize(context, 11),
                                       fontWeight: FontWeight.w500,
-                                      color: const Color(0xFF64748B),
+                                      color: AppDesignSystem.slate500,
                                     ),
                                   ),
                                 ],
@@ -834,16 +853,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFDCFCE7),
+                                color: AppDesignSystem.statusDelivered,
                                 borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFFBBF7D0)),
+                                border: Border.all(color: AppDesignSystem.statusDeliveredText),
                               ),
                               child: Text(
                                 status.displayName.toUpperCase(),
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 9.5),
                                   fontWeight: FontWeight.w900,
-                                  color: const Color(0xFF16A34A),
+                                  color: AppDesignSystem.green600,
                                 ),
                               ),
                             ),
@@ -858,17 +877,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFF1F5F9)),
+                          border: Border.all(color: AppDesignSystem.slate200),
                         ),
                         child: Row(
                           children: [
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF8FAFC),
+                                color: AppDesignSystem.slate50,
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Icon(Icons.restaurant_rounded, size: 18, color: Color(0xFF64748B)),
+                              child: const Icon(Icons.restaurant_rounded, size: 18, color: AppDesignSystem.slate500),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
@@ -880,7 +899,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     style: GoogleFonts.inter(
                                       fontSize: Responsive.scaledFontSize(context, 12.5),
                                       fontWeight: FontWeight.w800,
-                                      color: const Color(0xFF0F172A),
+                                      color: AppDesignSystem.slate900,
                                     ),
                                   ),
                                   Text(
@@ -888,7 +907,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     style: GoogleFonts.inter(
                                       fontSize: Responsive.scaledFontSize(context, 11),
                                       fontWeight: FontWeight.w500,
-                                      color: const Color(0xFF64748B),
+                                      color: AppDesignSystem.slate500,
                                     ),
                                   ),
                                 ],
@@ -897,16 +916,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFDCFCE7),
+                                color: AppDesignSystem.statusDelivered,
                                 borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFFBBF7D0)),
+                                border: Border.all(color: AppDesignSystem.statusDeliveredText),
                               ),
                               child: Text(
                                 status.displayName.toUpperCase(),
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 9.5),
                                   fontWeight: FontWeight.w900,
-                                  color: const Color(0xFF16A34A),
+                                  color: AppDesignSystem.green600,
                                 ),
                               ),
                             ),
@@ -931,21 +950,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     width: double.infinity,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF1F2),
+                      color: AppDesignSystem.rose50,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFFECDD3)),
+                      border: Border.all(color: AppDesignSystem.rose200),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.phone_outlined, size: 16, color: Color(0xFFE20A22)),
+                        const Icon(Icons.phone_outlined, size: 16, color: AppDesignSystem.primary),
                         const SizedBox(width: 8),
                         Text(
                           'FastKirana Support (8112849854)',
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 12.5),
                             fontWeight: FontWeight.w900,
-                            color: const Color(0xFFE20A22),
+                            color: AppDesignSystem.primary,
                           ),
                         ),
                       ],
@@ -962,9 +981,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildStepperNode(String label, IconData icon, bool isCompleted, {bool isDeliveredNode = false, bool isCurrent = false}) {
     Color bg = isCompleted
-        ? (isDeliveredNode ? const Color(0xFFE20A22) : const Color(0xFF0D9488))
-        : const Color(0xFFE2E8F0);
-    Color iconColor = isCompleted ? Colors.white : const Color(0xFF94A3B8);
+        ? (isDeliveredNode ? AppDesignSystem.primary : AppDesignSystem.teal600)
+        : AppDesignSystem.slate300;
+    Color iconColor = isCompleted ? Colors.white : AppDesignSystem.slate400;
 
     return Column(
       children: [
@@ -977,7 +996,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             boxShadow: isDeliveredNode && isCompleted
                 ? [
                     BoxShadow(
-                      color: const Color(0xFFE20A22).withOpacity(0.35),
+                      color: AppDesignSystem.primary.withValues(alpha: 0.35),
                       blurRadius: 10,
                       spreadRadius: 2,
                       offset: const Offset(0, 2),
@@ -995,7 +1014,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           style: GoogleFonts.inter(
             fontSize: Responsive.scaledFontSize(context, 11),
             fontWeight: isCompleted ? FontWeight.w800 : FontWeight.w600,
-            color: isDeliveredNode && isCompleted ? const Color(0xFFE20A22) : (isCompleted ? const Color(0xFF0F172A) : const Color(0xFF94A3B8)),
+            color: isDeliveredNode && isCompleted ? AppDesignSystem.primary : (isCompleted ? AppDesignSystem.slate900 : AppDesignSystem.slate400),
           ),
         ),
       ],
@@ -1008,7 +1027,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         height: 3,
         margin: const EdgeInsets.only(bottom: 20, left: 4, right: 4),
         decoration: BoxDecoration(
-          color: isCompleted ? const Color(0xFF0D9488) : const Color(0xFFE2E8F0),
+          color: isCompleted ? AppDesignSystem.teal600 : AppDesignSystem.slate300,
           borderRadius: BorderRadius.circular(2),
         ),
       ),
@@ -1033,9 +1052,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           height: 52,
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: const Color(0xFFFAFAFA),
+            color: AppDesignSystem.background,
             borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+            border: Border.all(color: AppDesignSystem.border, width: 1),
           ),
           child: Row(
             children: [
@@ -1055,7 +1074,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     decoration: BoxDecoration(
                       gradient: _isGrocerySelected
                           ? const LinearGradient(
-                              colors: [Color(0xFFE20A22), Color(0xFFFF334B)],
+                              colors: [AppDesignSystem.primary, AppDesignSystem.red300],
                               begin: Alignment.centerLeft,
                               end: Alignment.centerRight,
                             )
@@ -1064,7 +1083,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       boxShadow: _isGrocerySelected
                           ? [
                               BoxShadow(
-                                color: const Color(0xFFE20A22).withOpacity(0.35),
+                                color: AppDesignSystem.primary.withValues(alpha: 0.35),
                                 blurRadius: 10,
                                 offset: const Offset(0, 3),
                               ),
@@ -1088,7 +1107,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             _isGrocerySelected ? Icons.shopping_bag_rounded : Icons.shopping_bag_outlined,
                             key: ValueKey<bool>(_isGrocerySelected),
                             size: 20,
-                            color: _isGrocerySelected ? Colors.white : const Color(0xFF6B7280),
+                            color: _isGrocerySelected ? Colors.white : AppDesignSystem.textSecondary,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -1105,7 +1124,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 13),
                                     fontWeight: FontWeight.w800,
-                                    color: _isGrocerySelected ? Colors.white : const Color(0xFF374151),
+                                    color: _isGrocerySelected ? Colors.white : AppDesignSystem.gray700,
                                     height: 1.1,
                                   ),
                                 ),
@@ -1115,7 +1134,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     fontSize: Responsive.scaledFontSize(context, 7.5),
                                     fontWeight: FontWeight.w800,
                                     letterSpacing: 0.5,
-                                    color: _isGrocerySelected ? Colors.white.withOpacity(0.95) : const Color(0xFF9CA3AF),
+                                    color: _isGrocerySelected ? Colors.white.withValues(alpha: 0.95) : AppDesignSystem.textTertiary,
                                   ),
                                 ),
                               ],
@@ -1146,7 +1165,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     decoration: BoxDecoration(
                       gradient: !_isGrocerySelected
                           ? const LinearGradient(
-                              colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+                              colors: [AppDesignSystem.orange600, AppDesignSystem.orange500],
                               begin: Alignment.centerLeft,
                               end: Alignment.centerRight,
                             )
@@ -1155,7 +1174,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       boxShadow: !_isGrocerySelected
                           ? [
                               BoxShadow(
-                                color: const Color(0xFFEA580C).withOpacity(0.35),
+                                color: AppDesignSystem.orange600.withValues(alpha: 0.35),
                                 blurRadius: 10,
                                 offset: const Offset(0, 3),
                               ),
@@ -1179,7 +1198,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             !_isGrocerySelected ? Icons.restaurant_rounded : Icons.restaurant_outlined,
                             key: ValueKey<bool>(!_isGrocerySelected),
                             size: 20,
-                            color: !_isGrocerySelected ? Colors.white : const Color(0xFF6B7280),
+                            color: !_isGrocerySelected ? Colors.white : AppDesignSystem.textSecondary,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -1196,7 +1215,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 13),
                                     fontWeight: FontWeight.w800,
-                                    color: !_isGrocerySelected ? Colors.white : const Color(0xFF374151),
+                                    color: !_isGrocerySelected ? Colors.white : AppDesignSystem.gray700,
                                     height: 1.1,
                                   ),
                                 ),
@@ -1206,7 +1225,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     fontSize: Responsive.scaledFontSize(context, 7.5),
                                     fontWeight: FontWeight.w800,
                                     letterSpacing: 0.5,
-                                    color: !_isGrocerySelected ? Colors.white.withOpacity(0.95) : const Color(0xFF9CA3AF),
+                                    color: !_isGrocerySelected ? Colors.white.withValues(alpha: 0.95) : AppDesignSystem.textTertiary,
                                   ),
                                 ),
                               ],
@@ -1227,7 +1246,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   // 3. Hero Promo Banner (Single Ghatampur Express Front Banner)
   Widget _buildHeroPromoBanner() {
-    final slide = _heroPromoBanner;
+    const slide = _heroPromoBanner;
     final bgColor = slide['bgColor'] as Color;
     final textColor = slide['textColor'] as Color;
 
@@ -1265,7 +1284,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFFCE7F3), width: 1.2),
+            border: Border.all(color: AppDesignSystem.rose100, width: 1.2),
             boxShadow: [
               BoxShadow(
                 color: textColor.withValues(alpha: 0.08),
@@ -1328,7 +1347,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           style: GoogleFonts.inter(
                             fontSize: context.isCompact ? 9 : 10,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF4D4D4D),
+                            color: AppDesignSystem.textSecondary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -1401,6 +1420,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       fit: BoxFit.contain,
                       errorBuilder: (_, __, ___) => CachedNetworkImage(
                         imageUrl: slide['webFallback'] as String,
+                        fit: BoxFit.contain,
+                        memCacheWidth: 200,
+                        memCacheHeight: 200,
                       ),
                     ),
                   ),
@@ -1430,18 +1452,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 16),
                   fontWeight: FontWeight.w900,
-                  color: const Color(0xFF111827),
+                  color: AppDesignSystem.textPrimary,
                 ),
               ),
               GestureDetector(
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  ref.read(selectedTabProvider.notifier).state = 1; // Switch to categories tab
+                  ref.read(selectedTabProvider.notifier).state = 2; // Switch to categories tab
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFCE7F3),
+                    color: AppDesignSystem.rose100,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
@@ -1449,7 +1471,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 10),
                       fontWeight: FontWeight.w900,
-                      color: const Color(0xFFDB2777),
+                      color: AppDesignSystem.pink600,
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -1488,7 +1510,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               if (groceryCategories.isEmpty) return const SizedBox.shrink();
               return AnimationLimiter(
                 child: SizedBox(
-                  height: 102,
+                  height: Responsive.isSmallMobile(context) ? 94 : 102,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     physics: const BouncingScrollPhysics(),
@@ -1524,11 +1546,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                         height: context.isCompact ? 56 : 64,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color: const Color(0xFFF9FAFB),
-                                          border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
+                                          color: AppDesignSystem.gray50,
+                                          border: Border.all(color: AppDesignSystem.border, width: 1.5),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black.withOpacity(0.04),
+                                              color: Colors.black.withValues(alpha: 0.04),
                                               blurRadius: 6,
                                               offset: const Offset(0, 2),
                                             ),
@@ -1545,7 +1567,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       style: GoogleFonts.inter(
                                         fontSize: Responsive.scaledFontSize(context, 10),
                                         fontWeight: FontWeight.w700,
-                                        color: const Color(0xFF1F2937),
+                                        color: AppDesignSystem.gray800,
                                         height: 1.15,
                                       ),
                                       textAlign: TextAlign.center,
@@ -1565,14 +1587,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               );
             },
             loading: () => SizedBox(
-              height: 102,
+              height: Responsive.isSmallMobile(context) ? 94 : 102,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: 5,
                 separatorBuilder: (_, __) => const SizedBox(width: 12),
                 itemBuilder: (_, __) => Shimmer.fromColors(
-                  baseColor: const Color(0xFFE5E7EB),
-                  highlightColor: const Color(0xFFF9FAFB),
+                  baseColor: AppDesignSystem.border,
+                  highlightColor: AppDesignSystem.gray50,
                   child: Column(
                     children: [
                       Container(
@@ -1605,9 +1627,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return CachedNetworkImage(
         imageUrl: imgUrl,
         fit: BoxFit.cover,
+        memCacheWidth: 200,
+        memCacheHeight: 200,
         placeholder: (_, __) => Shimmer.fromColors(
-          baseColor: const Color(0xFFE5E7EB),
-          highlightColor: const Color(0xFFF9FAFB),
+          baseColor: AppDesignSystem.border,
+          highlightColor: AppDesignSystem.gray50,
           child: Container(color: Colors.white),
         ),
         errorWidget: (_, __, ___) => _buildCategoryFallback(cat),
@@ -1619,9 +1643,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return CachedNetworkImage(
         imageUrl: 'https://www.fastkirana.in$imgUrl',
         fit: BoxFit.cover,
+        memCacheWidth: 200,
+        memCacheHeight: 200,
         placeholder: (_, __) => Shimmer.fromColors(
-          baseColor: const Color(0xFFE5E7EB),
-          highlightColor: const Color(0xFFF9FAFB),
+          baseColor: AppDesignSystem.border,
+          highlightColor: AppDesignSystem.gray50,
           child: Container(color: Colors.white),
         ),
         errorWidget: (_, __, ___) => _buildCategoryFallback(cat),
@@ -1666,14 +1692,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildCategoryFallback(Category cat) {
     return Container(
-      color: const Color(0xFFF3F4F6),
+      color: AppDesignSystem.surfaceMuted,
       child: Center(
         child: Text(
           cat.name.isNotEmpty ? cat.name.characters.first.toUpperCase() : '🛍️',
           style: GoogleFonts.inter(
             fontSize: Responsive.scaledFontSize(context, 22),
             fontWeight: FontWeight.w900,
-            color: const Color(0xFFE20A22),
+            color: AppDesignSystem.primary,
           ),
         ),
       ),
@@ -1683,10 +1709,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   // 4. Sleek Trust Badge Strip (Exact match to media_1787720540434.png + Synced with Admin Portal)
   Widget _buildTrustBadgeStrip() {
     final settingsAsync = ref.watch(storeSettingsProvider);
-    final settings = settingsAsync.valueOrNull ?? StoreSettings();
+    final settings = settingsAsync.valueOrNull ?? const StoreSettings();
     final selectedAddress = ref.watch(selectedAddressProvider);
-    final rawCity = selectedAddress?.city?.isNotEmpty == true
-        ? selectedAddress!.city!
+    final rawCity = selectedAddress?.city.isNotEmpty == true
+        ? selectedAddress!.city
         : settings.trustBadge1;
     final cityName = rawCity.split(',').first.trim();
 
@@ -1700,7 +1726,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+          border: Border.all(color: AppDesignSystem.slate200, width: 1.2),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.025),
@@ -1720,19 +1746,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   width: 6.5,
                   height: 6.5,
                   decoration: const BoxDecoration(
-                    color: Color(0xFF16A34A),
+                    color: AppDesignSystem.green600,
                     shape: BoxShape.circle,
                   ),
                 ),
                 const SizedBox(width: 5),
-                const Icon(Icons.bolt_rounded, size: 16, color: Color(0xFFF59E0B)),
+                const Icon(Icons.bolt_rounded, size: 16, color: AppDesignSystem.warning),
                 const SizedBox(width: 4),
                 Text(
                   cityName,
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 12.5),
                     fontWeight: FontWeight.w800,
-                    color: const Color(0xFF0F172A),
+                    color: AppDesignSystem.slate900,
                     letterSpacing: -0.2,
                   ),
                 ),
@@ -1740,7 +1766,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
 
             // Divider
-            Container(width: 1, height: 13, color: const Color(0xFFE2E8F0)),
+            Container(width: 1, height: 13, color: AppDesignSystem.slate300),
 
             // 2. 💠 50+ (Verified badge / Varieties)
             Row(
@@ -1749,7 +1775,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 const Icon(
                   Icons.verified_rounded,
                   size: 15,
-                  color: Color(0xFF3B82F6),
+                  color: AppDesignSystem.info,
                 ),
                 const SizedBox(width: 5),
                 Text(
@@ -1757,7 +1783,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 12.5),
                     fontWeight: FontWeight.w800,
-                    color: const Color(0xFF0F172A),
+                    color: AppDesignSystem.slate900,
                     letterSpacing: -0.2,
                   ),
                 ),
@@ -1765,7 +1791,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
 
             // Divider
-            Container(width: 1, height: 13, color: const Color(0xFFE2E8F0)),
+            Container(width: 1, height: 13, color: AppDesignSystem.slate300),
 
             // 3. 💖 1000+ (Happy Customers / Orders)
             Row(
@@ -1774,7 +1800,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 const Icon(
                   Icons.favorite_rounded,
                   size: 15,
-                  color: Color(0xFFEC4899),
+                  color: AppDesignSystem.pink500,
                 ),
                 const SizedBox(width: 5),
                 Text(
@@ -1782,7 +1808,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 12.5),
                     fontWeight: FontWeight.w800,
-                    color: const Color(0xFF0F172A),
+                    color: AppDesignSystem.slate900,
                     letterSpacing: -0.2,
                   ),
                 ),
@@ -1800,32 +1826,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       {
         'title': 'All',
         'icon': Icons.storefront_rounded,
-        'iconColor': const Color(0xFF6366F1),
-        'bg': const Color(0xFFEEF2FF),
+        'iconColor': AppDesignSystem.indigo500,
+        'bg': AppDesignSystem.indigo50,
       },
       {
         'title': 'Flash Deals',
         'icon': Icons.bolt_rounded,
-        'iconColor': const Color(0xFFEF4444),
-        'bg': const Color(0xFFFEF2F2),
+        'iconColor': AppDesignSystem.danger,
+        'bg': AppDesignSystem.rose50,
       },
       {
         'title': 'Best Sellers',
         'icon': Icons.emoji_events_rounded,
-        'iconColor': const Color(0xFFF59E0B),
-        'bg': const Color(0xFFFEFCE8),
+        'iconColor': AppDesignSystem.warning,
+        'bg': AppDesignSystem.yellow50,
       },
       {
         'title': 'Trending',
         'icon': Icons.local_fire_department_rounded,
-        'iconColor': const Color(0xFFF97316),
-        'bg': const Color(0xFFFFF7ED),
+        'iconColor': AppDesignSystem.orange500,
+        'bg': AppDesignSystem.orange50,
       },
       {
         'title': 'Snacks',
         'icon': Icons.fastfood_rounded,
-        'iconColor': const Color(0xFFEC4899),
-        'bg': const Color(0xFFFDF2F8),
+        'iconColor': AppDesignSystem.pink500,
+        'bg': AppDesignSystem.rose50,
       },
     ];
 
@@ -1840,7 +1866,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             style: GoogleFonts.inter(
               fontSize: Responsive.scaledFontSize(context, 19),
               fontWeight: FontWeight.w900,
-              color: const Color(0xFF111827),
+              color: AppDesignSystem.textPrimary,
               letterSpacing: -0.3,
             ),
           ),
@@ -1850,7 +1876,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             style: GoogleFonts.inter(
               fontSize: Responsive.scaledFontSize(context, 12),
               fontWeight: FontWeight.w500,
-              color: const Color(0xFF6B7280),
+              color: AppDesignSystem.textSecondary,
             ),
           ),
           const SizedBox(height: 12),
@@ -1882,13 +1908,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           shape: BoxShape.circle,
                           color: item['bg'] as Color,
                           border: Border.all(
-                            color: isSelected ? const Color(0xFF6366F1) : const Color(0xFFE5E7EB),
+                            color: isSelected ? AppDesignSystem.indigo500 : AppDesignSystem.border,
                             width: isSelected ? 2.0 : 1.0,
                           ),
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
-                                    color: const Color(0xFF6366F1).withOpacity(0.25),
+                                    color: AppDesignSystem.indigo500.withValues(alpha: 0.25),
                                     blurRadius: 10,
                                     offset: const Offset(0, 3),
                                   ),
@@ -1910,7 +1936,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11),
                           fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                          color: isSelected ? const Color(0xFF111827) : const Color(0xFF6B7280),
+                          color: isSelected ? AppDesignSystem.textPrimary : AppDesignSystem.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -1920,7 +1946,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           width: 22,
                           height: 2.5,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF6366F1),
+                            color: AppDesignSystem.indigo500,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         )
@@ -2030,8 +2056,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Shimmer.fromColors(
-            baseColor: const Color(0xFFE5E7EB),
-            highlightColor: const Color(0xFFF9FAFB),
+            baseColor: AppDesignSystem.border,
+            highlightColor: AppDesignSystem.gray50,
             child: Container(
               width: cardWidth * 0.6,
               height: 18,
@@ -2043,12 +2069,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           const SizedBox(height: 10),
           SizedBox(
-            height: 248,
+            height: Responsive.isSmallMobile(context) ? 232 : 252,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: EdgeInsets.only(right: Responsive.horizontalPadding(context)),
               itemCount: 4,
-              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              separatorBuilder: (_, __) => SizedBox(width: Responsive.isSmallMobile(context) ? 8 : 10),
               itemBuilder: (_, __) => SizedBox(
                 width: cardWidth,
                 child: ProductCardSkeleton(width: cardWidth),
@@ -2082,7 +2108,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 16),
                         fontWeight: FontWeight.w900,
-                        color: const Color(0xFF111827),
+                        color: AppDesignSystem.textPrimary,
                         letterSpacing: -0.2,
                       ),
                     ),
@@ -2092,7 +2118,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 11),
                         fontWeight: FontWeight.w500,
-                        color: const Color(0xFF6B7280),
+                        color: AppDesignSystem.textSecondary,
                       ),
                     ),
                   ],
@@ -2110,9 +2136,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFEF2F2),
+                      color: AppDesignSystem.rose50,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFFCA5A5), width: 0.8),
+                      border: Border.all(color: AppDesignSystem.red300, width: 0.8),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -2122,12 +2148,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 10),
                             fontWeight: FontWeight.w900,
-                            color: const Color(0xFFDC2626),
+                            color: AppDesignSystem.red600,
                             letterSpacing: 0.5,
                           ),
                         ),
                         const SizedBox(width: 2),
-                        const Icon(Icons.arrow_forward_ios_rounded, size: 9, color: Color(0xFFDC2626)),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 9, color: AppDesignSystem.red600),
                       ],
                     ),
                   ),
@@ -2138,13 +2164,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(height: 12),
           AnimationLimiter(
             child: SizedBox(
-              height: 248,
+              height: Responsive.isSmallMobile(context) ? 232 : 252,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.only(right: 16),
-                itemCount: products.length + 1, // +1 for "Explore More" End Card
-                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                padding: EdgeInsets.only(right: Responsive.horizontalPadding(context)),
+                itemCount: products.length + 1,
+                separatorBuilder: (_, __) => SizedBox(width: Responsive.isSmallMobile(context) ? 8 : 10),
                 itemBuilder: (context, index) {
                   if (index < products.length) {
                     final product = products[index];
@@ -2183,9 +2209,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     width: 110,
                     margin: const EdgeInsets.symmetric(vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF9FAFB),
+                      color: AppDesignSystem.gray50,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
+                      border: Border.all(color: AppDesignSystem.border, width: 1.2),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -2194,12 +2220,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           padding: const EdgeInsets.all(12),
                           decoration: const BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Color(0xFFFEE2E2),
+                            color: AppDesignSystem.statusCancelled,
                           ),
                           child: const Icon(
                             Icons.arrow_forward_rounded,
                             size: 22,
-                            color: Color(0xFFDC2626),
+                            color: AppDesignSystem.red600,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -2209,7 +2235,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: FontWeight.w800,
-                            color: const Color(0xFF111827),
+                            color: AppDesignSystem.textPrimary,
                           ),
                         ),
                       ],
@@ -2246,13 +2272,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildPaymentIcon('UPI', const Color(0xFFD97706)),
+                _buildPaymentIcon('UPI', AppDesignSystem.amber600),
                 const SizedBox(width: 12),
-                _buildPaymentIcon('Card', const Color(0xFF22C55E)),
+                _buildPaymentIcon('Card', AppDesignSystem.lime500),
                 const SizedBox(width: 12),
                 _buildPaymentIcon('COD', AppDesignSystem.primary),
                 const SizedBox(width: 12),
-                _buildPaymentIcon('Wallet', const Color(0xFF3B82F6)),
+                _buildPaymentIcon('Wallet', AppDesignSystem.info),
               ],
             ),
             const SizedBox(height: 10),
@@ -2275,9 +2301,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppDesignSystem.radiusSm),
-        border: Border.all(color: color.withOpacity(0.25)),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Text(
         label,
@@ -2316,12 +2342,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFFEFDF5),
+          color: AppDesignSystem.warmWhite,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0xFFFEF08A)),
+          border: Border.all(color: AppDesignSystem.yellow300),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFCA8A04).withOpacity(0.04),
+              color: AppDesignSystem.yellow700.withValues(alpha: 0.04),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -2338,19 +2364,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFFDE68A)),
+                    border: Border.all(color: AppDesignSystem.yellow200),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('☀️ ⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
+                      Text('☀️ ⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
                       const SizedBox(width: 4),
                       Text(
                         'GROCERY MART • ONLINE',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 9.5),
                           fontWeight: FontWeight.w900,
-                          color: const Color(0xFFB45309),
+                          color: AppDesignSystem.amber700,
                           letterSpacing: 0.2,
                         ),
                       ),
@@ -2362,7 +2388,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   width: 7,
                   height: 7,
                   decoration: const BoxDecoration(
-                    color: Color(0xFF10B981),
+                    color: AppDesignSystem.success,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -2379,7 +2405,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 17),
                       fontWeight: FontWeight.w900,
-                      color: const Color(0xFF111827),
+                      color: AppDesignSystem.textPrimary,
                       letterSpacing: -0.4,
                       height: 1.2,
                     ),
@@ -2393,7 +2419,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 11),
                 fontWeight: FontWeight.w500,
-                color: const Color(0xFF6B7280),
+                color: AppDesignSystem.textSecondary,
               ),
             ),
             const SizedBox(height: 10),
@@ -2402,21 +2428,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
               decoration: BoxDecoration(
-                color: const Color(0xFFECFDF5),
+                color: AppDesignSystem.green50,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFA7F3D0)),
+                border: Border.all(color: AppDesignSystem.emerald200),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('🛒', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
+                  Text('🛒', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
                   const SizedBox(width: 4),
                   Text(
                     'GROCERY MART: 7 AM – 10 PM',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 9.5),
                       fontWeight: FontWeight.w900,
-                      color: const Color(0xFF047857),
+                      color: AppDesignSystem.emerald700,
                     ),
                   ),
                 ],
@@ -2429,7 +2455,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF8B5CF6), Color(0xFFD946EF)],
+                  colors: [AppDesignSystem.violet500, AppDesignSystem.fuchsia500],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -2441,13 +2467,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.25),
+                      color: Colors.white.withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 9))),
+                        Text('⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 9))),
                         const SizedBox(width: 3),
                         Text(
                           'Fast Delivery',
@@ -2474,7 +2500,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     'Freshly baked custom treats, party snacks & drinks',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 10.5),
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                     ),
                   ),
                 ],
@@ -2488,7 +2514,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
 
   List<Widget> _buildFoodRestaurantListing() {
-    final restaurantsAsync = ref.watch(restaurantsProvider);
+    final restaurantsAsync = ref.watch(homeRestaurantsProvider);
 
     final foodQuickCategories = [
       {'title': 'Burgers', 'emoji': '🍔', 'tag': 'burgers'},
@@ -2502,121 +2528,70 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ];
 
     return [
-      // 1. Food Hero Promo Card
+      // Top Restaurants & Cafes Simple Header
       SliverToBoxAdapter(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFEA580C), Color(0xFFF97316)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFEA580C).withOpacity(0.32),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.25),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          'HOT & FRESH ⚡',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 9.5),
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                            letterSpacing: 0.4,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Hungry? Order From Top Outlets! 🍕🔥',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 16),
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          letterSpacing: -0.3,
-                          height: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Wedson, Bal Udyan & A.S. Restaurant delivered hot',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11),
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white.withOpacity(0.92),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Container(
-                  width: 58,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Center(
-                    child: Text('🍲', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 30))),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-
-
-
-      // 3. Featured Outlets Header
-      SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
           child: Row(
             children: [
-              Text(
-                'Top Restaurants',
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 15),
-                  fontWeight: FontWeight.w900,
-                  color: AppDesignSystem.textPrimary,
-                  letterSpacing: -0.3,
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7ED),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFFEDD5)),
+                ),
+                child: const Text('🍽️', style: TextStyle(fontSize: 14)),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Top Restaurants & Cafes',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 16),
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF0F172A),
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      'Order food from your favorite spots in Ghatampur',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 11),
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFEF3C7),
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFDE68A)),
                 ),
-                child: Text(
-                  'EXPRESS DELIVERY',
-                  style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 8.5),
-                    fontWeight: FontWeight.w900,
-                    color: const Color(0xFFB45309),
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.bolt_rounded, size: 12, color: Color(0xFFD97706)),
+                    const SizedBox(width: 2),
+                    Text(
+                      'FAST FOOD',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 8.5),
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFFB45309),
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -2635,9 +2610,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
         ),
-        loading: () => SliverToBoxAdapter(
+        loading: () => const SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.all(32),
+            padding: EdgeInsets.all(32),
             child: Center(
               child: CircularProgressIndicator(color: AppDesignSystem.cafeAccent),
             ),

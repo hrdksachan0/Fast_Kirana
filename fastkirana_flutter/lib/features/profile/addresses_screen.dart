@@ -37,7 +37,7 @@ class AddressesScreen extends ConsumerWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.location_on_outlined, size: 64, color: Color(0xFFCCCCCC)),
+                      const Icon(Icons.location_on_outlined, size: 64, color: AppDesignSystem.gray400),
                       const SizedBox(height: 16),
                       Text(
                         'No addresses saved yet',
@@ -121,7 +121,7 @@ class AddressesScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: AppDesignSystem.success.withOpacity(0.1),
+                    color: AppDesignSystem.success.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(

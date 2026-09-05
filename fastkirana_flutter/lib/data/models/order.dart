@@ -104,6 +104,7 @@ class Order {
   final bool isCombined;
   final List<Order>? subOrders;
   final List<String>? subLabels;
+  final bool kotPrinted;
 
   Order({
     required this.id,
@@ -145,6 +146,7 @@ class Order {
     this.isCombined = false,
     this.subOrders,
     this.subLabels,
+    this.kotPrinted = false,
   });
 
   ({String? name, String? phone})? get deliveryUser =>
@@ -300,14 +302,18 @@ class Order {
       }
       final restId = json['restaurantId']?.toString();
       if (restId != null && restId.isNotEmpty && restId != 'null') {
-        if (restId == 'cms2p1lyx0001n0idod904lfu' || restId == 'wedson' || restId == 'wedson-restaurant') {
+        final upperRest = restId.toUpperCase();
+        if (upperRest == 'REST-102' || restId == 'cms2p1lyx0001n0idod904lfu' || restId == 'wedson' || restId == 'wedson-restaurant') {
           return 'Wedson Restaurant';
         }
-        if (restId == 'cms2p1lap0000n0id8alldboy' || restId == 'as-restaurant' || restId == 'as-cafe') {
+        if (upperRest == 'REST-101' || restId == 'cms2p1lap0000n0id8alldboy' || restId == 'as-restaurant' || restId == 'as-cafe') {
           return 'A.S. Restaurant';
         }
-        if (restId == 'cmsbhxb6a000304if8kf1cwji' || restId == 'bal-udyan' || restId == 'bal-udyan-restaurant') {
+        if (upperRest == 'REST-103' || restId == 'cmsbhxb6a000304if8kf1cwji' || restId == 'bal-udyan' || restId == 'bal-udyan-restaurant') {
           return 'Bal Udyan Restaurant';
+        }
+        if (upperRest == 'REST-104' || restId == 'cmtn66nhy000004k0fu84b7ke' || restId == 'pari-milk' || restId == 'pari-milk-dairy-sweets') {
+          return 'Pari Milk Dairy & Sweets';
         }
       }
       final rid = (json['readableId']?.toString() ?? '').toUpperCase();
@@ -401,6 +407,7 @@ class Order {
           ? (json['subOrders'] as List).map((x) => x is Order ? x : Order.fromJson(x)).toList()
           : null,
       subLabels: (json['subLabels'] is List) ? (json['subLabels'] as List).map((x) => x.toString()).toList() : null,
+      kotPrinted: json['kot_printed'] == true || json['kotPrinted'] == true || json['kot_sent'] == true || json['kotSent'] == true,
     );
   }
 
@@ -441,6 +448,7 @@ class Order {
     bool? isCombined,
     List<Order>? subOrders,
     List<String>? subLabels,
+    bool? kotPrinted,
   }) {
     return Order(
       id: id ?? this.id,
@@ -479,6 +487,7 @@ class Order {
       isCombined: isCombined ?? this.isCombined,
       subOrders: subOrders ?? this.subOrders,
       subLabels: subLabels ?? this.subLabels,
+      kotPrinted: kotPrinted ?? this.kotPrinted,
     );
   }
 
@@ -513,6 +522,7 @@ class Order {
     'shippedAt': shippedAt?.toIso8601String(),
     'deliveredAt': deliveredAt?.toIso8601String(),
     'items': items?.map((i) => i.toJson()).toList(),
+    'kot_printed': kotPrinted,
   };
 }
 

@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../core/services/logger_service.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
-import '../../core/theme/responsive.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../widgets/floating_cart_bar.dart';
@@ -45,7 +45,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
       if (!kIsWeb) {
         try {
           NotificationService().registerDeviceToken(ref.read(dioProvider));
-        } catch (_) {}
+        } catch (e, _) { LoggerService.error('MainShell: silent catch', e); }
       }
     });
   }
@@ -79,7 +79,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
       if (response.statusCode == 200) {
         await prefs.remove('pending_fcm_token');
       }
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('MainShell: silent catch', e); }
   }
 
   @override
@@ -153,7 +153,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
     final selectedIndex = ref.watch(selectedTabProvider);
 
     // 4 Standard Tabs matching Web: Home · Search · Category · Account
-    final screens = const [
+    const screens = [
       HomeScreen(),
       SearchScreen(),
       CategoriesScreen(),
@@ -163,9 +163,12 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
     final cart = ref.watch(cartProvider).valueOrNull;
     final cartCount = cart?.items.fold<int>(0, (s, item) => s + item.quantity) ?? 0;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final navBaseBottom = bottomPadding > 0 ? bottomPadding + 6 : 10.0;
+    const navHeight = 58.0;
+    final navTop = navBaseBottom + navHeight;
 
-    final cartBottomOffset = _isBottomNavVisible ? (bottomPadding + 76) : (bottomPadding + 16);
-    final trackingBottomOffset = cartCount > 0 ? (cartBottomOffset + 58) : cartBottomOffset;
+    final cartBottomOffset = navTop + 8.0;
+    final trackingBottomOffset = cartCount > 0 ? (cartBottomOffset + 54.0) : cartBottomOffset;
 
     return PopScope(
       canPop: false,
@@ -193,7 +196,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
               ),
               duration: const Duration(seconds: 2),
               behavior: SnackBarBehavior.floating,
-              backgroundColor: const Color(0xFF1E293B),
+              backgroundColor: AppDesignSystem.slate800,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
           );
@@ -208,48 +211,35 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
         body: ResponsiveContainer(
           maxWidth: Responsive.wideMaxContentWidth,
           fillHeight: true,
-          child: NotificationListener<UserScrollNotification>(
-            onNotification: (notification) {
-              _onUserScroll(notification);
-              return false;
-            },
-            child: Stack(
+          child: Stack(
             children: [
               IndexedStack(
                 index: selectedIndex,
                 children: screens,
               ),
 
-              // Floating Order Tracking Pill (Stacked right above Floating Cart, perfectly synchronized)
+              // Floating Order Tracking Pill (Stacked cleanly above Floating Cart)
               FloatingOrderTrackingBar(bottomOffset: trackingBottomOffset),
 
-              // Slim Modern Floating Sticky Cart Bar (Shared across all pages)
+              // Slim Modern Floating Sticky Cart Bar (Docked right above Bottom Navigation)
               FloatingCartBar(bottomOffset: cartBottomOffset),
 
-              // Liquid Flow Glass Bottom Navigation (Auto Hide & Auto Reveal in 1s)
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 450),
-                curve: Curves.easeOutCubic,
+              // Liquid Flow Glass Bottom Navigation (Always accessible, rock solid)
+              Positioned(
                 left: 0,
                 right: 0,
-                bottom: _isBottomNavVisible ? (bottomPadding + 12) : -(bottomPadding + 90),
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 350),
-                  curve: Curves.easeInOut,
-                  opacity: _isBottomNavVisible ? 1.0 : 0.0,
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    child: _buildLiquidBottomNav(context, ref, selectedIndex),
-                  ),
+                bottom: navBaseBottom,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: _buildLiquidBottomNav(context, ref, selectedIndex),
                 ),
               ),
             ],
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildLiquidBottomNav(BuildContext context, WidgetRef ref, int selectedIndex) {
     final navItems = [
@@ -285,10 +275,10 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppDesignSystem.slate200),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.08),
+            color: AppDesignSystem.slate900.withValues(alpha: 0.08),
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),
@@ -307,12 +297,12 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
                   width: tabWidth,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
+                    color: AppDesignSystem.statusCancelled,
                     borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: const Color(0xFFFECDD3)),
+                    border: Border.all(color: AppDesignSystem.rose200),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFDC2626).withValues(alpha: 0.06),
+                        color: AppDesignSystem.red600.withValues(alpha: 0.06),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -345,7 +335,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
                               child: Icon(
                                 (isSelected ? item['activeIcon'] : item['inactiveIcon']) as IconData,
                                 size: 21,
-                                color: isSelected ? const Color(0xFFDC2626) : const Color(0xFF94A3B8),
+                                color: isSelected ? AppDesignSystem.red600 : AppDesignSystem.slate400,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -354,7 +344,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 9.5),
                                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
-                                color: isSelected ? const Color(0xFFDC2626) : const Color(0xFF94A3B8),
+                                color: isSelected ? AppDesignSystem.red600 : AppDesignSystem.slate400,
                                 letterSpacing: -0.2,
                               ),
                             ),

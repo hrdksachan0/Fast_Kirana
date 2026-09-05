@@ -11,6 +11,8 @@ export async function GET(request: NextRequest) {
   const queryUserId = searchParams.get('userId') || searchParams.get('deliveryUserId')
   const queryPhone = searchParams.get('phone')
 
+  const queryStoreId = searchParams.get('storeId')
+
   let effectiveUserId = session?.user?.id || queryUserId || null
 
   if (!effectiveUserId && queryPhone) {
@@ -22,12 +24,23 @@ export async function GET(request: NextRequest) {
     if (riderUser) effectiveUserId = riderUser.id
   }
 
+  let riderStoreId: string | null = queryStoreId || null
+  if (effectiveUserId && !riderStoreId) {
+    try {
+      const riderUser = await prisma.user.findUnique({
+        where: { id: effectiveUserId },
+        select: { assignedStoreId: true }
+      })
+      riderStoreId = riderUser?.assignedStoreId || null
+    } catch (_) {}
+  }
+
   try {
     let orders: any[] = []
 
     if (effectiveUserId) {
       orders = await prisma.$queryRaw`
-        SELECT o.id, o."userId", o."addressId", o."readableId", o."combinedId", o."restaurantId",
+        SELECT o.id, o."userId", o."addressId", o."readableId", o."combinedId", o."restaurantId", o."storeId",
                o.status::text as status,
                o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
                o."paymentMethod"::text as "paymentMethod",
@@ -45,12 +58,13 @@ export async function GET(request: NextRequest) {
             OR
             (o.status::text = 'DELIVERED' AND (o."deliveryUserId" = ${effectiveUserId} OR o."deliveryUserId" IS NULL) AND COALESCE(o."deliveredAt", o."updatedAt", o."createdAt") >= CURRENT_DATE)
           )
+          AND (${riderStoreId}::text IS NULL OR o."storeId" = ${riderStoreId} OR o."storeId" IS NULL)
         ORDER BY o."createdAt" DESC
       `
     } else {
       // General active delivery queue for dark store / riders
       orders = await prisma.$queryRaw`
-        SELECT o.id, o."userId", o."addressId", o."readableId", o."combinedId", o."restaurantId",
+        SELECT o.id, o."userId", o."addressId", o."readableId", o."combinedId", o."restaurantId", o."storeId",
                o.status::text as status,
                o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
                o."paymentMethod"::text as "paymentMethod",
@@ -62,6 +76,7 @@ export async function GET(request: NextRequest) {
         FROM orders o
         WHERE (o."deliveryMethod" = 'DELIVERY' OR o."deliveryMethod" IS NULL)
           AND o.status::text IN ('CONFIRMED', 'PREPARING', 'PACKED', 'SHIPPED', 'DELIVERED')
+          AND (${riderStoreId}::text IS NULL OR o."storeId" = ${riderStoreId} OR o."storeId" IS NULL)
         ORDER BY o."createdAt" DESC
         LIMIT 50
       `

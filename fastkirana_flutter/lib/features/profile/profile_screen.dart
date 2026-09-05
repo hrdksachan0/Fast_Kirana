@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/services/logger_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -15,13 +16,10 @@ import '../../providers/address_provider.dart';
 import '../../providers/wishlist_provider.dart';
 import '../../providers/product_provider.dart';
 import '../auth/login_screen.dart';
-import '../auth/admin_login.dart';
-import '../auth/delivery_login.dart';
 import '../delivery/delivery_dashboard.dart';
 import '../delivery/picker_dashboard.dart';
 import '../admin/admin_dashboard.dart';
 import '../cafe/restaurant_dashboard.dart';
-import '../../core/utils/restaurant_utils.dart';
 import 'package:share_plus/share_plus.dart';
 import '../orders/orders_screen.dart';
 import 'address_book_screen.dart';
@@ -31,7 +29,7 @@ import 'notifications_screen.dart';
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
-  static const Color primaryRed = Color(0xFFDC2626);
+  static const Color primaryRed = AppDesignSystem.red600;
 
   void _showEditProfileModal(BuildContext context, WidgetRef ref, User user) {
     final nameCtrl = TextEditingController(text: user.name ?? '');
@@ -63,7 +61,7 @@ class ProfileScreen extends ConsumerWidget {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE2E8F0),
+                    color: AppDesignSystem.slate200,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -80,7 +78,7 @@ class ProfileScreen extends ConsumerWidget {
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 17),
                           fontWeight: FontWeight.w900,
-                          color: const Color(0xFF0F172A),
+                          color: AppDesignSystem.slate900,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -88,13 +86,13 @@ class ProfileScreen extends ConsumerWidget {
                         'Update your name, phone and email address',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11.5),
-                          color: const Color(0xFF64748B),
+                          color: AppDesignSystem.slate500,
                         ),
                       ),
                     ],
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF64748B)),
+                    icon: const Icon(Icons.close_rounded, size: 20, color: AppDesignSystem.slate500),
                     onPressed: () => Navigator.pop(ctx),
                   ),
                 ],
@@ -102,14 +100,14 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 18),
               Text(
                 'Full Name',
-                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: const Color(0xFF334155)),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: AppDesignSystem.slate700),
               ),
               const SizedBox(height: 6),
               Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: AppDesignSystem.slate50,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(color: AppDesignSystem.slate200),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: TextField(
@@ -117,7 +115,7 @@ class ProfileScreen extends ConsumerWidget {
                   style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     hintText: 'Enter your full name',
-                    hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: const Color(0xFF94A3B8)),
+                    hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.slate400),
                     border: InputBorder.none,
                   ),
                 ),
@@ -125,19 +123,19 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 14),
               Text(
                 'Phone Number',
-                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: const Color(0xFF334155)),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: AppDesignSystem.slate700),
               ),
               const SizedBox(height: 6),
               Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: AppDesignSystem.slate50,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(color: AppDesignSystem.slate200),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: Row(
                   children: [
-                    Text('+91 ', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w700, color: const Color(0xFF64748B))),
+                    Text('+91 ', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w700, color: AppDesignSystem.slate500)),
                     Expanded(
                       child: TextField(
                         controller: phoneCtrl,
@@ -145,7 +143,7 @@ class ProfileScreen extends ConsumerWidget {
                         style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w600),
                         decoration: InputDecoration(
                           hintText: '10-digit mobile number',
-                          hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: const Color(0xFF94A3B8)),
+                          hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.slate400),
                           border: InputBorder.none,
                         ),
                       ),
@@ -156,14 +154,14 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 14),
               Text(
                 'Email Address',
-                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: const Color(0xFF334155)),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: AppDesignSystem.slate700),
               ),
               const SizedBox(height: 6),
               Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: AppDesignSystem.slate50,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(color: AppDesignSystem.slate200),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: TextField(
@@ -172,7 +170,7 @@ class ProfileScreen extends ConsumerWidget {
                   style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     hintText: 'Enter your email',
-                    hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: const Color(0xFF94A3B8)),
+                    hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.slate400),
                     border: InputBorder.none,
                   ),
                 ),
@@ -183,7 +181,7 @@ class ProfileScreen extends ConsumerWidget {
                 height: 48,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFDC2626),
+                    backgroundColor: AppDesignSystem.red600,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     elevation: 0,
                   ),
@@ -248,7 +246,7 @@ class ProfileScreen extends ConsumerWidget {
                     if (newName.isNotEmpty && newName != user.name) {
                       try {
                         await authRepo.updateName(newName);
-                      } catch (_) {}
+                      } catch (e, _) { LoggerService.error('ProfileScreen: silent catch', e); }
                     }
 
                     final updatedUser = User(
@@ -268,10 +266,10 @@ class ProfileScreen extends ConsumerWidget {
                     if (context.mounted) {
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: const Color(0xFF15803D),
+                        const SnackBar(
+                          backgroundColor: AppDesignSystem.green700,
                           content: Row(
-                            children: const [
+                            children: [
                               Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
                               SizedBox(width: 8),
                               Text('Profile updated successfully!'),
@@ -325,11 +323,11 @@ class ProfileScreen extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         title,
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: AppDesignSystem.slate900),
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF64748B)),
+                      icon: const Icon(Icons.close_rounded, size: 20, color: AppDesignSystem.slate500),
                       onPressed: () => Navigator.pop(dialogCtx, false),
                     ),
                   ],
@@ -337,14 +335,14 @@ class ProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: const Color(0xFF64748B), height: 1.3),
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: AppDesignSystem.slate500, height: 1.3),
                 ),
                 const SizedBox(height: 18),
                 Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                    color: AppDesignSystem.slate50,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: errorText != null ? const Color(0xFFDC2626) : const Color(0xFFE2E8F0)),
+                    border: Border.all(color: errorText != null ? AppDesignSystem.red600 : AppDesignSystem.slate200),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   child: TextField(
@@ -354,7 +352,7 @@ class ProfileScreen extends ConsumerWidget {
                     style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, letterSpacing: 4),
                     decoration: InputDecoration(
                       hintText: 'ENTER 6-DIGIT OTP',
-                      hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF94A3B8), letterSpacing: 0.5),
+                      hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate400, letterSpacing: 0.5),
                       border: InputBorder.none,
                       counterText: '',
                     ),
@@ -364,7 +362,7 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(height: 6),
                   Text(
                     errorText!,
-                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: const Color(0xFFDC2626), fontWeight: FontWeight.w600),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: AppDesignSystem.red600, fontWeight: FontWeight.w600),
                   ),
                 ],
                 const SizedBox(height: 20),
@@ -373,7 +371,7 @@ class ProfileScreen extends ConsumerWidget {
                   height: 48,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFDC2626),
+                      backgroundColor: AppDesignSystem.red600,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       elevation: 0,
                     ),
@@ -426,16 +424,16 @@ class ProfileScreen extends ConsumerWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           'Log Out of FastKirana?',
-          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: const Color(0xFF111827)),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: AppDesignSystem.gray900),
         ),
         content: Text(
           'You will need to enter your phone or email to log back in.',
-          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: const Color(0xFF6B7280)),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w600, color: const Color(0xFF6B7280))),
+            child: Text('Cancel', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w600, color: AppDesignSystem.textSecondary)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -474,18 +472,18 @@ class ProfileScreen extends ConsumerWidget {
             Container(
               width: 40,
               height: 4,
-              decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: AppDesignSystem.slate200, borderRadius: BorderRadius.circular(2)),
             ),
             const SizedBox(height: 16),
             Text(
               'FastKirana 24x7 Customer Care',
-              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: AppDesignSystem.slate900),
             ),
             const SizedBox(height: 4),
             Text(
               'We are here to assist with orders, deliveries & refunds in Ghatampur',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: const Color(0xFF64748B)),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: AppDesignSystem.slate500),
             ),
             const SizedBox(height: 20),
             ListTile(
@@ -495,14 +493,14 @@ class ProfileScreen extends ConsumerWidget {
               },
               leading: Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.phone_rounded, color: Color(0xFF2563EB), size: 22),
+                decoration: BoxDecoration(color: AppDesignSystem.blue50, borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.phone_rounded, color: AppDesignSystem.blue600, size: 22),
               ),
               title: Text('Call Support', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800)),
-              subtitle: Text('+91 81128 49854 (Instant Call)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF64748B))),
-              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
+              subtitle: Text('+91 81128 49854 (Instant Call)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate500)),
+              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppDesignSystem.slate400),
             ),
-            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            const Divider(height: 1, color: AppDesignSystem.slate100),
             ListTile(
               onTap: () async {
                 final uri = Uri.parse('https://wa.me/918112849854?text=Hello%20FastKirana%20Support');
@@ -510,14 +508,14 @@ class ProfileScreen extends ConsumerWidget {
               },
               leading: Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: const Color(0xFFECFDF5), borderRadius: BorderRadius.circular(12)),
-                child: const Text('💬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 20))),
+                decoration: BoxDecoration(color: AppDesignSystem.green50, borderRadius: BorderRadius.circular(12)),
+                child: Text('💬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 20))),
               ),
               title: Text('WhatsApp Chat Support', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800)),
-              subtitle: Text('Chat with Ghatampur Support team', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF64748B))),
-              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
+              subtitle: Text('Chat with Ghatampur Support team', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate500)),
+              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppDesignSystem.slate400),
             ),
-            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            const Divider(height: 1, color: AppDesignSystem.slate100),
             ListTile(
               onTap: () async {
                 final uri = Uri.parse('mailto:fastkiranadelivery@gmail.com?subject=FastKirana%20Customer%20Support');
@@ -525,12 +523,12 @@ class ProfileScreen extends ConsumerWidget {
               },
               leading: Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: const Color(0xFFFFF1F2), borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.email_outlined, color: Color(0xFFDC2626), size: 22),
+                decoration: BoxDecoration(color: AppDesignSystem.rose50, borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.email_outlined, color: AppDesignSystem.red600, size: 22),
               ),
               title: Text('Email Support', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800)),
-              subtitle: Text('fastkiranadelivery@gmail.com', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF64748B))),
-              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
+              subtitle: Text('fastkiranadelivery@gmail.com', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate500)),
+              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppDesignSystem.slate400),
             ),
           ],
         ),
@@ -589,13 +587,15 @@ class ProfileScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: ResponsiveContainer(
-        maxWidth: Responsive.wideMaxContentWidth,
-        fillHeight: true,
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
+      backgroundColor: AppDesignSystem.slate50,
+      body: SafeArea(
+        bottom: false,
+        child: ResponsiveContainer(
+          maxWidth: Responsive.wideMaxContentWidth,
+          fillHeight: true,
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
             // ─── 1. Luxury Glassmorphic Header ─────────────────────────────
             SliverToBoxAdapter(
               child: Container(
@@ -603,7 +603,7 @@ class ProfileScreen extends ConsumerWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFFE11D48), Color(0xFFDC2626), Color(0xFF991B1B)],
+                    colors: [AppDesignSystem.rose600, AppDesignSystem.red600, AppDesignSystem.statusCancelledText],
                   ),
                   borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
                   boxShadow: [
@@ -636,10 +636,10 @@ class ProfileScreen extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      border: Border.all(color: AppDesignSystem.slate200),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                          color: AppDesignSystem.slate900.withValues(alpha: 0.04),
                           blurRadius: 14,
                           offset: const Offset(0, 4),
                         ),
@@ -656,10 +656,10 @@ class ProfileScreen extends ConsumerWidget {
                                 Container(
                                   padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFFEF3C7),
+                                    color: AppDesignSystem.statusPending,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: const Icon(Icons.bolt_rounded, size: 16, color: Color(0xFFD97706)),
+                                  child: const Icon(Icons.bolt_rounded, size: 16, color: AppDesignSystem.amber600),
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
@@ -667,7 +667,7 @@ class ProfileScreen extends ConsumerWidget {
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 13.5),
                                     fontWeight: FontWeight.w900,
-                                    color: const Color(0xFF0F172A),
+                                    color: AppDesignSystem.slate900,
                                   ),
                                 ),
                               ],
@@ -675,7 +675,7 @@ class ProfileScreen extends ConsumerWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFDCFCE7),
+                                color: AppDesignSystem.green100,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -683,7 +683,7 @@ class ProfileScreen extends ConsumerWidget {
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 8.5),
                                   fontWeight: FontWeight.w900,
-                                  color: const Color(0xFF15803D),
+                                  color: AppDesignSystem.green700,
                                   letterSpacing: 0.5,
                                 ),
                               ),
@@ -694,29 +694,29 @@ class ProfileScreen extends ConsumerWidget {
                         Row(
                           children: [
                             Expanded(
-                              child: _buildOperationBentoTile(
+                              child: _buildOperationBentoTile(context: context, 
                                 title: 'Admin Console',
                                 subtitle: 'Store & Orders',
                                 emoji: '🛡️',
                                 badge: 'ADMIN',
-                                gradientColors: [const Color(0xFFB45309), const Color(0xFFD97706)],
-                                bgTint: const Color(0xFFFFFBEB),
-                                borderColor: const Color(0xFFFDE68A),
-                                textColor: const Color(0xFF92400E),
+                                gradientColors: [AppDesignSystem.amber700, AppDesignSystem.amber600],
+                                bgTint: AppDesignSystem.amber50,
+                                borderColor: AppDesignSystem.yellow200,
+                                textColor: AppDesignSystem.statusPendingText,
                                 onTap: () => Navigator.push(context, FadeSlideRoute(page: const AdminDashboard())),
                               ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
-                              child: _buildOperationBentoTile(
+                              child: _buildOperationBentoTile(context: context, 
                                 title: 'Rider Console',
                                 subtitle: 'GPS & Deliveries',
                                 emoji: '🛵',
                                 badge: 'RIDER',
-                                gradientColors: [const Color(0xFF15803D), const Color(0xFF16A34A)],
-                                bgTint: const Color(0xFFF0FDF4),
-                                borderColor: const Color(0xFFBBF7D0),
-                                textColor: const Color(0xFF166534),
+                                gradientColors: [AppDesignSystem.green700, AppDesignSystem.green600],
+                                bgTint: AppDesignSystem.green50,
+                                borderColor: AppDesignSystem.green200,
+                                textColor: AppDesignSystem.green800,
                                 onTap: () => Navigator.push(context, FadeSlideRoute(page: const DeliveryDashboard())),
                               ),
                             ),
@@ -726,29 +726,29 @@ class ProfileScreen extends ConsumerWidget {
                         Row(
                           children: [
                             Expanded(
-                              child: _buildOperationBentoTile(
+                              child: _buildOperationBentoTile(context: context, 
                                 title: 'Kitchen KOT',
                                 subtitle: 'Cooking Orders',
                                 emoji: '👨‍🍳',
                                 badge: 'KITCHEN',
-                                gradientColors: [const Color(0xFFDC2626), const Color(0xFFE11D48)],
-                                bgTint: const Color(0xFFFEF2F2),
-                                borderColor: const Color(0xFFFECACA),
-                                textColor: const Color(0xFF991B1B),
+                                gradientColors: [AppDesignSystem.red600, AppDesignSystem.rose600],
+                                bgTint: AppDesignSystem.statusCancelled,
+                                borderColor: AppDesignSystem.red200,
+                                textColor: AppDesignSystem.statusCancelledText,
                                 onTap: () => Navigator.push(context, FadeSlideRoute(page: const RestaurantDashboard())),
                               ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
-                              child: _buildOperationBentoTile(
+                              child: _buildOperationBentoTile(context: context, 
                                 title: 'Picker Hub',
                                 subtitle: 'Item Packing',
                                 emoji: '📦',
                                 badge: 'PICKER',
-                                gradientColors: [const Color(0xFFEA580C), const Color(0xFFF97316)],
-                                bgTint: const Color(0xFFFFF7ED),
-                                borderColor: const Color(0xFFFED7AA),
-                                textColor: const Color(0xFF9A3412),
+                                gradientColors: [AppDesignSystem.orange600, AppDesignSystem.orange500],
+                                bgTint: AppDesignSystem.orange50,
+                                borderColor: AppDesignSystem.orange300,
+                                textColor: AppDesignSystem.amber800,
                                 onTap: () => Navigator.push(context, FadeSlideRoute(page: const PickerDashboard())),
                               ),
                             ),
@@ -774,14 +774,14 @@ class ProfileScreen extends ConsumerWidget {
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF065F46), Color(0xFF059669), Color(0xFF10B981)],
+                          colors: [AppDesignSystem.statusDeliveredText, AppDesignSystem.emerald600, AppDesignSystem.success],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(22),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF059669).withValues(alpha: 0.3),
+                            color: AppDesignSystem.emerald600.withValues(alpha: 0.3),
                             blurRadius: 16,
                             offset: const Offset(0, 6),
                           ),
@@ -797,7 +797,7 @@ class ProfileScreen extends ConsumerWidget {
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
                             ),
-                            child: const Center(child: Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
+                            child: Center(child: Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -817,7 +817,7 @@ class ProfileScreen extends ConsumerWidget {
                                         color: Colors.white,
                                         borderRadius: BorderRadius.circular(6),
                                       ),
-                                      child: Text('ACTIVE', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 8.5), fontWeight: FontWeight.w900, color: const Color(0xFF047857))),
+                                      child: Text('ACTIVE', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 8.5), fontWeight: FontWeight.w900, color: AppDesignSystem.emerald700)),
                                     ),
                                   ],
                                 ),
@@ -858,14 +858,14 @@ class ProfileScreen extends ConsumerWidget {
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF881337), Color(0xFFBE123C), Color(0xFFE11D48)],
+                          colors: [AppDesignSystem.rose900, AppDesignSystem.rose600, AppDesignSystem.rose600],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(22),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFE11D48).withValues(alpha: 0.3),
+                            color: AppDesignSystem.rose600.withValues(alpha: 0.3),
                             blurRadius: 16,
                             offset: const Offset(0, 6),
                           ),
@@ -881,7 +881,7 @@ class ProfileScreen extends ConsumerWidget {
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
                             ),
-                            child: const Center(child: Text('👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
+                            child: Center(child: Text('👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -898,7 +898,7 @@ class ProfileScreen extends ConsumerWidget {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
-                                      child: Text('KITCHEN', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 8.5), fontWeight: FontWeight.w900, color: const Color(0xFFBE123C))),
+                                      child: Text('KITCHEN', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 8.5), fontWeight: FontWeight.w900, color: AppDesignSystem.rose600)),
                                     ),
                                   ],
                                 ),
@@ -935,14 +935,14 @@ class ProfileScreen extends ConsumerWidget {
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF4338CA), Color(0xFF6366F1), Color(0xFF818CF8)],
+                          colors: [AppDesignSystem.indigo900, AppDesignSystem.indigo500, AppDesignSystem.indigo400],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(22),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+                            color: AppDesignSystem.indigo500.withValues(alpha: 0.3),
                             blurRadius: 16,
                             offset: const Offset(0, 6),
                           ),
@@ -958,7 +958,7 @@ class ProfileScreen extends ConsumerWidget {
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
                             ),
-                            child: const Center(child: Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
+                            child: Center(child: Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -975,7 +975,7 @@ class ProfileScreen extends ConsumerWidget {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
-                                      child: Text('PICKER', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 8.5), fontWeight: FontWeight.w900, color: const Color(0xFF4338CA))),
+                                      child: Text('PICKER', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 8.5), fontWeight: FontWeight.w900, color: AppDesignSystem.indigo900)),
                                     ),
                                   ],
                                 ),
@@ -1006,10 +1006,10 @@ class ProfileScreen extends ConsumerWidget {
                       iconWidget: Container(
                         padding: const EdgeInsets.all(9),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEFF6FF),
+                          color: AppDesignSystem.blue50,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.receipt_long_rounded, color: Color(0xFF2563EB), size: 20),
+                        child: const Icon(Icons.receipt_long_rounded, color: AppDesignSystem.blue600, size: 20),
                       ),
                       title: 'My Orders',
                       subtitle: ordersCount > 0 ? '$ordersCount Placed' : 'No Orders',
@@ -1021,10 +1021,10 @@ class ProfileScreen extends ConsumerWidget {
                       iconWidget: Container(
                         padding: const EdgeInsets.all(9),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFF1F2),
+                          color: AppDesignSystem.rose50,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.favorite_rounded, color: Color(0xFFE11D48), size: 20),
+                        child: const Icon(Icons.favorite_rounded, color: AppDesignSystem.rose600, size: 20),
                       ),
                       title: 'Wishlist',
                       subtitle: wishlist.isNotEmpty ? '${wishlist.length} Items' : '0 Saved',
@@ -1036,10 +1036,10 @@ class ProfileScreen extends ConsumerWidget {
                       iconWidget: Container(
                         padding: const EdgeInsets.all(9),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFECFDF5),
+                          color: AppDesignSystem.green50,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.location_on_rounded, color: Color(0xFF059669), size: 20),
+                        child: const Icon(Icons.location_on_rounded, color: AppDesignSystem.emerald600, size: 20),
                       ),
                       title: 'Addresses',
                       subtitle: addresses.isNotEmpty ? '${addresses.length} Saved' : 'Add New',
@@ -1058,15 +1058,15 @@ class ProfileScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Section 1: Account & Preferences
-                    _buildSectionHeader('ACCOUNT & ADDRESSES'),
+                    _buildSectionHeader(context, 'ACCOUNT & ADDRESSES'),
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+                        border: Border.all(color: AppDesignSystem.slate100, width: 1.2),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                            color: AppDesignSystem.slate900.withValues(alpha: 0.03),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -1077,30 +1077,30 @@ class ProfileScreen extends ConsumerWidget {
                           _buildMenuItem(
                             context,
                             icon: Icons.location_on_rounded,
-                            iconBg: const Color(0xFFECFDF5),
-                            iconColor: const Color(0xFF059669),
+                            iconBg: AppDesignSystem.green50,
+                            iconColor: AppDesignSystem.emerald600,
                             title: 'Saved Addresses',
                             subtitle: addresses.isNotEmpty ? '${addresses.length} locations saved in Ghatampur' : 'Add home, office or shop location',
                             badge: addresses.isNotEmpty ? '${addresses.length}' : null,
                             onTap: () => Navigator.push(context, FadeSlideRoute(page: const AddressBookScreen())),
                           ),
-                          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                          const Divider(height: 1, color: AppDesignSystem.slate100),
                           _buildMenuItem(
                             context,
                             icon: Icons.notifications_active_rounded,
-                            iconBg: const Color(0xFFEEF2FF),
-                            iconColor: const Color(0xFF4F46E5),
+                            iconBg: AppDesignSystem.indigo50,
+                            iconColor: AppDesignSystem.indigo700,
                             title: 'Notifications & Alerts',
                             subtitle: 'Order tracking, offers & dispatch updates',
                             onTap: () => Navigator.push(context, FadeSlideRoute(page: const NotificationsScreen())),
                           ),
                           if (user != null) ...[
-                            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                            const Divider(height: 1, color: AppDesignSystem.slate100),
                             _buildMenuItem(
                               context,
                               icon: Icons.edit_note_rounded,
-                              iconBg: const Color(0xFFF8FAFC),
-                              iconColor: const Color(0xFF475569),
+                              iconBg: AppDesignSystem.slate50,
+                              iconColor: AppDesignSystem.slate600,
                               title: 'Personal Information',
                               subtitle: 'Edit your name, phone & email',
                               onTap: () => _showEditProfileModal(context, ref, user),
@@ -1113,15 +1113,15 @@ class ProfileScreen extends ConsumerWidget {
                     const SizedBox(height: 16),
 
                     // Section 2: Help & Support
-                    _buildSectionHeader('SUPPORT & FASTKIRANA'),
+                    _buildSectionHeader(context, 'SUPPORT & FASTKIRANA'),
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+                        border: Border.all(color: AppDesignSystem.slate100, width: 1.2),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                            color: AppDesignSystem.slate900.withValues(alpha: 0.03),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -1132,20 +1132,18 @@ class ProfileScreen extends ConsumerWidget {
                           _buildMenuItem(
                             context,
                             icon: Icons.headset_mic_rounded,
-                            iconBg: const Color(0xFFFAF5FF),
-                            iconColor: const Color(0xFF7E22CE),
+                            iconBg: AppDesignSystem.violet50,
+                            iconColor: AppDesignSystem.fuchsia700,
                             title: '24x7 Customer Support',
                             subtitle: 'Direct WhatsApp & phone assistance',
-                            badge: 'FAST HELP',
-                            badgeColor: const Color(0xFF7E22CE),
                             onTap: () => _showSupportModal(context),
                           ),
-                          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                          const Divider(height: 1, color: AppDesignSystem.slate100),
                           _buildMenuItem(
                             context,
                             icon: Icons.share_rounded,
-                            iconBg: const Color(0xFFFFFBEB),
-                            iconColor: const Color(0xFFD97706),
+                            iconBg: AppDesignSystem.amber50,
+                            iconColor: AppDesignSystem.amber600,
                             title: 'Share with Friends & Family',
                             subtitle: 'Invite neighbours to 10-min delivery',
                             onTap: () {
@@ -1157,11 +1155,11 @@ class ProfileScreen extends ConsumerWidget {
                             },
                           ),
                           if (user != null) ...[
-                            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                            const Divider(height: 1, color: AppDesignSystem.slate100),
                             _buildMenuItem(
                               context,
                               icon: Icons.logout_rounded,
-                              iconBg: const Color(0xFFFEF2F2),
+                              iconBg: AppDesignSystem.statusCancelled,
                               iconColor: primaryRed,
                               title: 'Log Out',
                               subtitle: 'Sign out from this phone',
@@ -1181,14 +1179,14 @@ class ProfileScreen extends ConsumerWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Container(width: 4, height: 4, decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle)),
+                              Container(width: 4, height: 4, decoration: const BoxDecoration(color: AppDesignSystem.success, shape: BoxShape.circle)),
                               const SizedBox(width: 6),
                               Text(
                                 'FastKirana Express v1.0.0',
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 11),
                                   fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF94A3B8),
+                                  color: AppDesignSystem.slate400,
                                 ),
                               ),
                             ],
@@ -1199,23 +1197,24 @@ class ProfileScreen extends ConsumerWidget {
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 10.5),
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFFCBD5E1),
+                              color: AppDesignSystem.slate300,
                             ),
                           ),
                         ],
                       ),
                     ),
                   ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
       child: Text(
@@ -1223,7 +1222,7 @@ class ProfileScreen extends ConsumerWidget {
         style: GoogleFonts.inter(
           fontSize: Responsive.scaledFontSize(context, 10.5),
           fontWeight: FontWeight.w800,
-          color: const Color(0xFF94A3B8),
+          color: AppDesignSystem.slate400,
           letterSpacing: 0.8,
         ),
       ),
@@ -1371,7 +1370,7 @@ class ProfileScreen extends ConsumerWidget {
             height: 48,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFFFEF08A), Color(0xFFFACC15)],
+                colors: [AppDesignSystem.yellow300, AppDesignSystem.yellow400],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -1388,7 +1387,7 @@ class ProfileScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(2),
               child: Container(
                 decoration: const BoxDecoration(
-                  color: Color(0xFF991B1B),
+                  color: AppDesignSystem.statusCancelledText,
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -1479,14 +1478,14 @@ class ProfileScreen extends ConsumerWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.edit_rounded, size: 12, color: Color(0xFFDC2626)),
+                  const Icon(Icons.edit_rounded, size: 12, color: AppDesignSystem.red600),
                   const SizedBox(width: 3.5),
                   Text(
                     'Edit',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 11.5),
                       fontWeight: FontWeight.w800,
-                      color: const Color(0xFFDC2626),
+                      color: AppDesignSystem.red600,
                     ),
                   ),
                 ],
@@ -1516,10 +1515,10 @@ class ProfileScreen extends ConsumerWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+            border: Border.all(color: AppDesignSystem.slate100, width: 1.2),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0F172A).withOpacity(0.03),
+                color: AppDesignSystem.slate900.withValues(alpha: 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
@@ -1534,7 +1533,7 @@ class ProfileScreen extends ConsumerWidget {
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 12.5),
                   fontWeight: FontWeight.w800,
-                  color: const Color(0xFF0F172A),
+                  color: AppDesignSystem.slate900,
                 ),
               ),
               const SizedBox(height: 2),
@@ -1543,7 +1542,7 @@ class ProfileScreen extends ConsumerWidget {
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 10.5),
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFF64748B),
+                  color: AppDesignSystem.slate500,
                 ),
               ),
             ],
@@ -1554,6 +1553,7 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Widget _buildOperationBentoTile({
+    required BuildContext context,
     required String title,
     required String subtitle,
     required String emoji,
@@ -1597,7 +1597,7 @@ class ProfileScreen extends ConsumerWidget {
                     ],
                   ),
                   child: Center(
-                    child: Text(emoji, style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
+                    child: Text(emoji, style: TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
                   ),
                 ),
                 Container(
@@ -1625,7 +1625,7 @@ class ProfileScreen extends ConsumerWidget {
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 13),
                 fontWeight: FontWeight.w900,
-                color: const Color(0xFF0F172A),
+                color: AppDesignSystem.slate900,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -1636,7 +1636,7 @@ class ProfileScreen extends ConsumerWidget {
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 10.5),
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF64748B),
+                color: AppDesignSystem.slate500,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -1676,12 +1676,16 @@ class ProfileScreen extends ConsumerWidget {
         ),
         title: Row(
           children: [
-            Text(
-              title,
-              style: GoogleFonts.inter(
-                fontSize: Responsive.scaledFontSize(context, 13.5),
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF0F172A),
+            Expanded(
+              child: Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 13.5),
+                  fontWeight: FontWeight.w800,
+                  color: AppDesignSystem.slate900,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (badge != null) ...[
@@ -1689,7 +1693,7 @@ class ProfileScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                 decoration: BoxDecoration(
-                  color: badgeColor != null ? badgeColor.withValues(alpha: 0.12) : const Color(0xFFF1F5F9),
+                  color: badgeColor != null ? badgeColor.withValues(alpha: 0.12) : AppDesignSystem.slate100,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -1697,7 +1701,7 @@ class ProfileScreen extends ConsumerWidget {
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 9.5),
                     fontWeight: FontWeight.w800,
-                    color: badgeColor ?? const Color(0xFF475569),
+                    color: badgeColor ?? AppDesignSystem.slate600,
                   ),
                 ),
               ),
@@ -1709,10 +1713,10 @@ class ProfileScreen extends ConsumerWidget {
           style: GoogleFonts.inter(
             fontSize: Responsive.scaledFontSize(context, 11),
             fontWeight: FontWeight.w500,
-            color: const Color(0xFF64748B),
+            color: AppDesignSystem.slate500,
           ),
         ),
-        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
+        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppDesignSystem.slate400),
       ),
     );
   }

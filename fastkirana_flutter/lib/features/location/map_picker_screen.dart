@@ -1,6 +1,9 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import '../../core/theme/responsive.dart';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../core/services/logger_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -47,7 +50,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
   late final AnimationController _pulseController;
   late final Animation<double> _pulseAnim;
 
-  static const Color slateDark = Color(0xFF0F172A);
+  static const Color slateDark = AppDesignSystem.slate900;
 
   @override
   void initState() {
@@ -116,7 +119,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
           return;
         }
       }
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('MapPickerScreen: silent catch', e); }
 
     if (mounted) {
       setState(() {
@@ -146,7 +149,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
         _mapController.move(target, 16.5);
         await _updateLocationDetails(pos.latitude, pos.longitude);
       }
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('MapPickerScreen: silent catch', e); }
 
     if (mounted) {
       setState(() => _isLocating = false);
@@ -156,7 +159,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: AppDesignSystem.slate100,
       body: Stack(
         children: [
           // 1. 100% REAL INTERACTIVE OPENSTREETMAP / CARTO TILES VIEWPORT
@@ -188,8 +191,8 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                       point: const LatLng(storeLat, storeLng),
                       radius: 5000,
                       useRadiusInMeter: true,
-                      color: const Color(0xFF16A34A).withValues(alpha: 0.08),
-                      borderColor: const Color(0xFF16A34A).withValues(alpha: 0.4),
+                      color: AppDesignSystem.green600.withValues(alpha: 0.08),
+                      borderColor: AppDesignSystem.green600.withValues(alpha: 0.4),
                       borderStrokeWidth: 2,
                     ),
                   ],
@@ -209,7 +212,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
                     decoration: BoxDecoration(
-                      color: _isServiceable ? const Color(0xFF0F172A) : const Color(0xFFDC2626),
+                      color: _isServiceable ? AppDesignSystem.slate900 : AppDesignSystem.red600,
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
@@ -257,11 +260,11 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                       height: 48,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: _isServiceable ? const Color(0xFFEA580C) : const Color(0xFFDC2626),
+                        color: _isServiceable ? AppDesignSystem.orange600 : AppDesignSystem.red600,
                         border: Border.all(color: Colors.white, width: 3),
                         boxShadow: [
                           BoxShadow(
-                            color: (_isServiceable ? const Color(0xFFEA580C) : const Color(0xFFDC2626))
+                            color: (_isServiceable ? AppDesignSystem.orange600 : AppDesignSystem.red600)
                                 .withValues(alpha: 0.45),
                             blurRadius: 14,
                             offset: const Offset(0, 6),
@@ -339,7 +342,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.search_rounded, size: 20, color: Color(0xFFEA580C)),
+                          const Icon(Icons.search_rounded, size: 20, color: AppDesignSystem.orange600),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
@@ -388,16 +391,16 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                         ? const SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFEA580C)),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppDesignSystem.orange600),
                           )
-                        : const Icon(Icons.my_location_rounded, size: 18, color: Color(0xFFEA580C)),
+                        : const Icon(Icons.my_location_rounded, size: 18, color: AppDesignSystem.orange600),
                     const SizedBox(width: 7),
                     Text(
                       'Current location',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 12.5),
                         fontWeight: FontWeight.w800,
-                        color: const Color(0xFFEA580C),
+                        color: AppDesignSystem.orange600,
                       ),
                     ),
                   ],
@@ -436,7 +439,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 12),
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF64748B),
+                        color: AppDesignSystem.slate500,
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -448,13 +451,13 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFF7ED),
+                            color: AppDesignSystem.orange50,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
                             Icons.location_on_rounded,
                             size: 24,
-                            color: Color(0xFFEA580C),
+                            color: AppDesignSystem.orange600,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -467,7 +470,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 17),
                                   fontWeight: FontWeight.w900,
-                                  color: const Color(0xFF0F172A),
+                                  color: AppDesignSystem.slate900,
                                   letterSpacing: -0.3,
                                 ),
                               ),
@@ -477,7 +480,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 12.5),
                                   fontWeight: FontWeight.w500,
-                                  color: const Color(0xFF64748B),
+                                  color: AppDesignSystem.slate500,
                                   height: 1.35,
                                 ),
                                 maxLines: 2,
@@ -497,8 +500,8 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                         if (!_isServiceable) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              backgroundColor: const Color(0xFFDC2626),
-                              content: Text('Delivery is limited to 5.0 km from Ghatampur central store (${_distanceKm.toStringAsFixed(1)} km away)'),
+                              backgroundColor: AppDesignSystem.red600,
+                              content: Text('Delivery is available within 5.0 km of our active operational hub (${_distanceKm.toStringAsFixed(1)} km away)'),
                               behavior: SnackBarBehavior.floating,
                             ),
                           );
@@ -527,14 +530,14 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                         height: 52,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+                            colors: [AppDesignSystem.orange600, AppDesignSystem.orange500],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFFEA580C).withValues(alpha: 0.38),
+                              color: AppDesignSystem.orange600.withValues(alpha: 0.38),
                               blurRadius: 16,
                               offset: const Offset(0, 6),
                             ),
@@ -574,3 +577,4 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
     );
   }
 }
+

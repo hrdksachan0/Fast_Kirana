@@ -17,11 +17,24 @@ export async function GET(request: Request) {
   const paramRestId = searchParams.get('restaurantId')
   
   let assignedRestaurantId = (session?.user as any)?.assignedRestaurantId || paramRestId
+  if (assignedRestaurantId === 'cms2p1lap0000n0id8alldboy' || assignedRestaurantId === 'as-restaurant') assignedRestaurantId = 'REST-101'
+  else if (assignedRestaurantId === 'cms2p1lyx0001n0idod904lfu' || assignedRestaurantId === 'wedson-restaurant' || assignedRestaurantId === 'wedson') assignedRestaurantId = 'REST-102'
+  else if (assignedRestaurantId === 'cmsbhxb6a000304if8kf1cwji' || assignedRestaurantId === 'bal-udyan-restaurant' || assignedRestaurantId === 'bal-udyan') assignedRestaurantId = 'REST-103'
+  else if (assignedRestaurantId === 'cmtn66nhy000004k0fu84b7ke' || assignedRestaurantId === 'pari-milk-dairy-sweets' || assignedRestaurantId === 'pari-milk') assignedRestaurantId = 'REST-104'
+
   if (!assignedRestaurantId && headerPhone) {
     const clean = headerPhone.replace(/[^0-9]/g, '').slice(-10)
-    if (clean === '8112849854') assignedRestaurantId = 'cms2p1lap0000n0id8alldboy'
-    else if (clean === '9250138656') assignedRestaurantId = 'cms2p1lyx0001n0idod904lfu'
-    else if (clean === '7991488783') assignedRestaurantId = 'cmsbhxb6a000304if8kf1cwji'
+    if (clean === '8112849854') assignedRestaurantId = 'REST-101'
+    else if (clean === '9250138656') assignedRestaurantId = 'REST-102'
+    else if (clean === '7991488783') assignedRestaurantId = 'REST-103'
+    else if (clean === '9900112233') assignedRestaurantId = 'REST-104'
+    else {
+      const rest = await prisma.restaurant.findFirst({
+        where: { ownerPhone: { contains: clean } },
+        select: { id: true }
+      })
+      if (rest) assignedRestaurantId = rest.id
+    }
   }
 
   if (role === 'CHEF' || role === 'RESTAURANT_OWNER') {

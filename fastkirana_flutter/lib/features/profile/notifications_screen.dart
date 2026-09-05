@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../core/services/logger_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -45,7 +46,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           _isLoading = false;
         });
       }
-    } catch (_) {
+    } catch (e) { LoggerService.error('NotificationsScreen: silent catch', e);
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -97,14 +98,14 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                               width: 64,
                               height: 64,
                               decoration: const BoxDecoration(
-                                color: Color(0xFFF1F5F9),
+                                color: AppDesignSystem.slate100,
                                 shape: BoxShape.circle,
                               ),
                               child: const Center(
                                 child: Icon(
                                   Icons.notifications_none_rounded,
                                   size: 32,
-                                  color: Color(0xFF94A3B8),
+                                  color: AppDesignSystem.slate400,
                                 ),
                               ),
                             ),
@@ -199,10 +200,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isUnread ? const Color(0xFFFEF2F2) : Colors.white,
+        color: isUnread ? AppDesignSystem.statusCancelled : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isUnread ? const Color(0xFFFECACA) : const Color(0xFFF1F5F9),
+          color: isUnread ? AppDesignSystem.red200 : AppDesignSystem.slate100,
           width: 1.2,
         ),
         boxShadow: [
@@ -220,12 +221,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: isUnread ? Colors.white : const Color(0xFFF8FAFC),
+              color: isUnread ? Colors.white : AppDesignSystem.slate50,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFF1F5F9)),
+              border: Border.all(color: AppDesignSystem.slate100),
             ),
             child: Center(
-              child: Text(icon, style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 20))),
+              child: Text(icon, style: TextStyle(fontSize: Responsive.scaledFontSize(context, 20))),
             ),
           ),
           const SizedBox(width: 12),

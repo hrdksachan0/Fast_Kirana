@@ -39,10 +39,10 @@ class HelpSupportScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppDesignSystem.primary.withOpacity(0.1),
+                          color: AppDesignSystem.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(Icons.phone_rounded, size: 24, color: AppDesignSystem.primary),
+                        child: const Icon(Icons.phone_rounded, size: 24, color: AppDesignSystem.primary),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -54,7 +54,7 @@ class HelpSupportScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppDesignSystem.textMuted),
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppDesignSystem.textMuted),
                     ],
                   ),
                   const Divider(height: 24),
@@ -63,10 +63,10 @@ class HelpSupportScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppDesignSystem.accent.withOpacity(0.1),
+                          color: AppDesignSystem.accent.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(Icons.email_rounded, size: 24, color: AppDesignSystem.accent),
+                        child: const Icon(Icons.email_rounded, size: 24, color: AppDesignSystem.accent),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -78,7 +78,7 @@ class HelpSupportScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppDesignSystem.textMuted),
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppDesignSystem.textMuted),
                     ],
                   ),
                 ],
@@ -95,18 +95,22 @@ class HelpSupportScreen extends StatelessWidget {
             const SizedBox(height: 16),
 
             _faqItem(
+              context,
               'How do I place an order?',
               'Browse products, add to cart, proceed to checkout, select address and payment, place order.',
             ),
             _faqItem(
+              context,
               'What are the delivery charges?',
               'Orders above ₹199 get free delivery. Below that, ₹35 delivery fee applies.',
             ),
             _faqItem(
+              context,
               'How can I cancel my order?',
               'You can cancel within 5 minutes of placing the order from My Orders section.',
             ),
             _faqItem(
+              context,
               'What payment methods are available?',
               'We accept Cash on Delivery, UPI (GPay, PhonePe), and all major cards.',
             ),
@@ -116,7 +120,7 @@ class HelpSupportScreen extends StatelessWidget {
     );
   }
 
-  Widget _faqItem(String question, String answer) {
+  Widget _faqItem(BuildContext context, String question, String answer) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(

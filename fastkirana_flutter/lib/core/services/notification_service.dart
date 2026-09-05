@@ -1,5 +1,7 @@
+import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -14,55 +16,57 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (kIsWeb) return;
   try {
     await Firebase.initializeApp();
-  } catch (_) {}
+  } catch (e, _) { LoggerService.error('NotificationService: silent catch', e); }
 
   final notification = message.notification;
   final data = message.data;
   final title = notification?.title ?? data['title'] ?? '⚡ FastKirana Express';
   final body = notification?.body ?? data['body'] ?? data['message'];
 
-  // If received as data-only message in background, manually trigger system notification
-  if (body != null && notification == null) {
+  // Trigger system notification when app is killed or phone screen is off
+  if (body != null) {
     try {
+      final isKitchen = data['screen'] == 'restaurant-console' ||
+          data['restaurantId'] != null ||
+          title.toString().contains('👨‍🍳') ||
+          title.toString().toLowerCase().contains('kitchen') ||
+          title.toString().toLowerCase().contains('new order');
+
       final localNotifications = FlutterLocalNotificationsPlugin();
       const AndroidInitializationSettings androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
       const InitializationSettings initSettings = InitializationSettings(android: androidInit);
       await localNotifications.initialize(initSettings);
 
-      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-        'fastkirana_alerts',
-        'FastKirana Alerts',
-        channelDescription: 'Notifications for order updates and tracking.',
+      final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        isKitchen ? 'fastkirana_kitchen_alerts' : 'fastkirana_alerts',
+        isKitchen ? 'Kitchen & Order Buzz Alerts' : 'FastKirana Alerts',
+        channelDescription: isKitchen
+            ? 'Loud alarm for kitchen orders even when phone is locked.'
+            : 'Notifications for order updates and tracking.',
         icon: '@mipmap/ic_launcher',
         importance: Importance.max,
         priority: Priority.high,
-        showWhen: true,
+        fullScreenIntent: isKitchen,
         playSound: true,
+        sound: isKitchen ? const RawResourceAndroidNotificationSound('order_chime') : null,
+        audioAttributesUsage: isKitchen ? AudioAttributesUsage.alarm : AudioAttributesUsage.notification,
         enableVibration: true,
+        vibrationPattern: isKitchen
+            ? Int64List.fromList([0, 1000, 500, 1000, 500, 1000, 500, 1000])
+            : null,
+        showWhen: true,
+        when: DateTime.now().millisecondsSinceEpoch,
       );
 
       await localNotifications.show(
         message.hashCode,
         title.toString(),
         body.toString(),
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            'fastkirana_alerts',
-            'FastKirana Alerts',
-            channelDescription: 'Notifications for order updates and tracking.',
-            icon: '@mipmap/ic_launcher',
-            importance: Importance.max,
-            priority: Priority.high,
-            showWhen: true,
-            when: DateTime.now().millisecondsSinceEpoch,
-            playSound: true,
-            enableVibration: true,
-          ),
-        ),
+        NotificationDetails(android: androidDetails),
         payload: data.toString(),
       );
     } catch (e) {
-      print("Background notification show error: $e");
+      debugPrint("Background notification show error: $e");
     }
   }
 }
@@ -76,7 +80,7 @@ class NotificationService {
     if (kIsWeb) return null;
     try {
       return FirebaseMessaging.instance;
-    } catch (_) {
+    } catch (e) { LoggerService.error('NotificationService: silent catch', e);
       return null;
     }
   }
@@ -85,7 +89,7 @@ class NotificationService {
     if (kIsWeb) return null;
     try {
       return FlutterLocalNotificationsPlugin();
-    } catch (_) {
+    } catch (e) { LoggerService.error('NotificationService: silent catch', e);
       return null;
     }
   }
@@ -125,7 +129,7 @@ class NotificationService {
         await _localNotifications
             ?.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
             ?.requestNotificationsPermission();
-      } catch (_) {}
+      } catch (e, _) { LoggerService.error('NotificationService: silent catch', e); }
 
       // 3. Setup local notification channel for Android with MAX priority
       const AndroidNotificationChannel channel = AndroidNotificationChannel(
@@ -138,9 +142,23 @@ class NotificationService {
         showBadge: true,
       );
 
-      await _localNotifications
-          ?.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-          ?.createNotificationChannel(channel);
+      final AndroidNotificationChannel kitchenChannel = AndroidNotificationChannel(
+        'fastkirana_kitchen_alerts',
+        'Kitchen & Order Buzz Alerts',
+        description: 'Loud alarm for kitchen orders even when phone is locked.',
+        importance: Importance.max,
+        playSound: true,
+        sound: const RawResourceAndroidNotificationSound('order_chime'),
+        enableVibration: true,
+        vibrationPattern: Int64List.fromList([0, 1000, 500, 1000, 500, 1000, 500, 1000]),
+        audioAttributesUsage: AudioAttributesUsage.alarm,
+        showBadge: true,
+      );
+
+      final androidPlugin = _localNotifications
+          ?.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      await androidPlugin?.createNotificationChannel(channel);
+      await androidPlugin?.createNotificationChannel(kitchenChannel);
 
       // 4. Initialize Local Notifications Plugin
       const AndroidInitializationSettings androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -370,11 +388,18 @@ class NotificationService {
     }
   }
 
+  Future<void> subscribeToTopic(String topic) async {
+    if (kIsWeb) return;
+    try {
+      await _fcm?.subscribeToTopic(topic);
+    } catch (e, _) { LoggerService.error('NotificationService: silent catch', e); }
+  }
+
   Future<void> unsubscribeFromTopic(String topic) async {
     if (kIsWeb) return;
     try {
       await _fcm?.unsubscribeFromTopic(topic);
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('NotificationService: silent catch', e); }
   }
 
   // ─── Notification Preferences ───────────────────────────────────────────

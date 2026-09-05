@@ -72,6 +72,9 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
           success: true,
+          token: `token_${user.id}_${Date.now()}`,
+          role: user.role,
+          assignedStoreId: user.assignedStoreId || null,
           user: {
             id: user.id,
             name: user.name,
@@ -79,7 +82,8 @@ export async function POST(request: NextRequest) {
             role: user.role,
             phone: user.phone,
             image: user.image,
-            assignedRestaurantId: user.assignedRestaurantId,
+            assignedStoreId: user.assignedStoreId || null,
+            assignedRestaurantId: user.assignedRestaurantId || null,
           }
         })
       }
@@ -95,6 +99,9 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
+        token: `token_${user.id}_${Date.now()}`,
+        role: user.role,
+        assignedStoreId: user.assignedStoreId || null,
         user: {
           id: user.id,
           name: user.name,
@@ -102,7 +109,8 @@ export async function POST(request: NextRequest) {
           role: user.role,
           phone: user.phone,
           image: user.image,
-          assignedRestaurantId: user.assignedRestaurantId,
+          assignedStoreId: user.assignedStoreId || null,
+          assignedRestaurantId: user.assignedRestaurantId || null,
         }
       })
     }
@@ -159,13 +167,18 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
+        token: `token_${user.id}_${Date.now()}`,
+        role: user.role,
+        assignedStoreId: user.assignedStoreId || null,
         user: {
           id: user.id,
           name: user.name,
           email: user.email,
           role: user.role,
           phone: user.phone,
-          image: user.image
+          image: user.image,
+          assignedStoreId: user.assignedStoreId || null,
+          assignedRestaurantId: user.assignedRestaurantId || null,
         }
       })
     }

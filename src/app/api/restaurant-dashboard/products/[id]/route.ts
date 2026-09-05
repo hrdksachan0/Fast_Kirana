@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { invalidateProductCache } from '@/lib/search-cache'
+import { normalizeRestaurantId } from '@/lib/restaurant-ids'
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -69,9 +70,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
 
     if (body.restaurantId) {
-      updateData.restaurantId = body.restaurantId
+      updateData.restaurantId = normalizeRestaurantId(body.restaurantId)
     } else if (!existing.restaurantId && assignedRestaurantId) {
-      updateData.restaurantId = assignedRestaurantId
+      updateData.restaurantId = normalizeRestaurantId(assignedRestaurantId)
     }
 
     const product = await prisma.product.update({

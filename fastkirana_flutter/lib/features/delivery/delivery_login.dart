@@ -16,7 +16,7 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
   final _phoneController = TextEditingController();
   final _otpController = TextEditingController();
   bool _showOtp = false;
-  bool _isLoading = false;
+  final bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -32,11 +32,11 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]),
+                  gradient: const LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]),
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: AppDesignSystem.shadowGlow,
                 ),
-                child: Icon(Icons.delivery_dining_rounded, size: 56, color: Colors.white),
+                child: const Icon(Icons.delivery_dining_rounded, size: 56, color: Colors.white),
               ),
               const SizedBox(height: 32),
               Text(

@@ -14,8 +14,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing orderId' }, { status: 400 })
     }
 
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
+    const cleanId = orderId.replace(/^#/, '').trim()
+    const order = await prisma.order.findFirst({
+      where: {
+        OR: [
+          { id: cleanId },
+          { readableId: cleanId },
+          { readableId: `FK-${cleanId}` },
+          { readableId: cleanId.replace(/^FK-/, '') }
+        ]
+      },
       select: {
         id: true,
         deliveryUserId: true,
@@ -133,13 +141,38 @@ export async function POST(request: NextRequest) {
 
     // Update order's live deliveryLat and deliveryLng
     if (orderId) {
-      await prisma.order.update({
-        where: { id: orderId },
-        data: {
-          deliveryLat: parsedLat,
-          deliveryLng: parsedLng,
+      const cleanId = String(orderId).replace(/^#/, '').trim()
+      const existing = await prisma.order.findFirst({
+        where: {
+          OR: [
+            { id: cleanId },
+            { readableId: cleanId },
+            { readableId: `FK-${cleanId}` },
+            { readableId: cleanId.replace(/^FK-/, '') }
+          ]
+        },
+        select: { id: true, combinedId: true }
+      }).catch(() => null)
+
+      if (existing) {
+        await prisma.order.update({
+          where: { id: existing.id },
+          data: {
+            deliveryLat: parsedLat,
+            deliveryLng: parsedLng,
+          }
+        }).catch(() => {})
+
+        if (existing.combinedId) {
+          await prisma.order.updateMany({
+            where: { combinedId: existing.combinedId },
+            data: {
+              deliveryLat: parsedLat,
+              deliveryLng: parsedLng,
+            }
+          }).catch(() => {})
         }
-      }).catch(() => {})
+      }
     }
 
     return NextResponse.json({ success: true, lat: parsedLat, lng: parsedLng })

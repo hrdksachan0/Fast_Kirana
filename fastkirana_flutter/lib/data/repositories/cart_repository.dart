@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/cart.dart';
+import '../../core/services/logger_service.dart';
 import '../../core/network/api_client.dart';
 
 class CartRepository {
@@ -17,7 +18,19 @@ class CartRepository {
     }
   }
 
-  Future<void> syncCart(List<CartItem> items) async {
+  static const String _pendingSyncKey = 'has_pending_cart_sync';
+
+  Future<bool> hasPendingSync() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_pendingSyncKey) ?? false;
+  }
+
+  Future<void> setPendingSync(bool pending) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_pendingSyncKey, pending);
+  }
+
+  Future<bool> syncCart(List<CartItem> items) async {
     try {
       await dio.post('/api/cart', data: {
         'items': items.map((item) => {
@@ -27,15 +40,31 @@ class CartRepository {
           'notes': item.notes,
         }).toList(),
       });
-    } on DioException catch (_) {
-      // Background sync fail silent
+      await setPendingSync(false);
+      return true;
+    } catch (e) { LoggerService.error('CartRepository: silent catch', e);
+      // Offline / network failure -> mark for auto-sync when online
+      await setPendingSync(true);
+      return false;
     }
+  }
+
+  Future<void> syncPendingCartIfNeeded() async {
+    final pending = await hasPendingSync();
+    if (!pending) return;
+
+    final localItems = await getLocalCart();
+    await syncCart(localItems);
   }
 
   Future<void> clearCart() async {
     try {
+      await setPendingSync(false);
+      await saveLocalCart([]);
       await dio.delete('/api/cart');
-    } catch (_) {}
+    } catch (e) { LoggerService.error('CartRepository: silent catch', e);
+      // Network error on server cart delete shouldn't block local cart wipe
+    }
   }
 
   Future<Map<String, dynamic>> applyCoupon(String code, {double? subtotal, List<Map<String, dynamic>>? items}) async {
@@ -62,6 +91,11 @@ class CartRepository {
   Future<void> saveLocalCart(List<CartItem> items) async {
     final prefs = await SharedPreferences.getInstance();
     final cacheKey = await _getCartCacheKey();
+    if (items.isEmpty) {
+      await prefs.remove(cacheKey);
+      await prefs.remove('local_cart_guest');
+      return;
+    }
     final data = items.map((item) => item.toJson()).toList();
     await prefs.setString(cacheKey, jsonEncode(data));
   }
@@ -82,7 +116,7 @@ class CartRepository {
         await saveLocalCart(items);
       }
       return items;
-    } catch (_) {
+    } catch (e) { LoggerService.error('CartRepository: silent catch', e);
       return [];
     }
   }

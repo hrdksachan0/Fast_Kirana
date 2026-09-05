@@ -1,3 +1,4 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
 import 'package:flutter/material.dart';
 
 /// FastKirana App-Wide Responsive Breakpoints & Helpers
@@ -95,17 +96,21 @@ class Responsive {
     return 0.78;
   }
 
-  /// Dynamic Product Card Aspect Ratio
+  /// Dynamic Product Card Aspect Ratio (Universal Auto-Fit for Any Screen Size)
   static double productCardAspectRatio(BuildContext context, {bool isCompact = false}) {
     final width = MediaQuery.of(context).size.width;
     if (isCompact) {
+      // Used in screens with side category rail (narrower column ~125-145px)
       if (width < 360) return 0.58;
-      if (width < mobileBreakpoint) return 0.62;
-      return 0.66;
+      if (width < mobileBreakpoint) return 0.61;
+      return 0.63;
     }
-    if (width < 360) return 0.62;
-    if (width < mobileBreakpoint) return 0.66;
-    return 0.70;
+    // Full width 2-column grid (card width is ~165-195px)
+    if (width < 360) return 0.68;
+    if (width < 400) return 0.70;
+    if (width < mobileBreakpoint) return 0.71;
+    if (width < tabletBreakpoint) return 0.75;
+    return 0.78;
   }
 
   /// Responsive scaled font size with safety clamping
@@ -178,7 +183,7 @@ class ResponsiveContainer extends StatelessWidget {
                   color: backgroundColor ?? Colors.white,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
+                      color: Colors.black.withValues(alpha: 0.04),
                       blurRadius: 24,
                       offset: const Offset(0, 4),
                     ),
@@ -192,7 +197,7 @@ class ResponsiveContainer extends StatelessWidget {
 
     if (isWide && fillHeight) {
       return Container(
-        color: const Color(0xFFF1F5F9),
+        color: AppDesignSystem.slate100,
         alignment: Alignment.topCenter,
         child: content,
       );

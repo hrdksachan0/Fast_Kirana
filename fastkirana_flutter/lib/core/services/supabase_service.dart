@@ -1,3 +1,4 @@
+import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -11,7 +12,7 @@ class SupabaseService {
     if (_isInitialized) {
       try {
         return Supabase.instance.client;
-      } catch (_) {
+      } catch (e) { LoggerService.error('SupabaseService: silent catch', e);
         return _client;
       }
     }

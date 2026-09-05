@@ -34,11 +34,12 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { role: true, assignedRestaurantId: true, phone: true }
+            select: { role: true, assignedRestaurantId: true, assignedStoreId: true, phone: true }
           })
           if (dbUser) {
             token.role = dbUser.role
             token.assignedRestaurantId = dbUser.assignedRestaurantId
+            token.assignedStoreId = dbUser.assignedStoreId
             if (dbUser.phone) token.phone = dbUser.phone
           }
         } catch (e) {
@@ -51,6 +52,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
         session.user.role = token.role as any
         session.user.phone = token.phone as string
         session.user.assignedRestaurantId = token.assignedRestaurantId as string
+        session.user.assignedStoreId = token.assignedStoreId as string
         if (token.email) {
           session.user.email = token.email as string
         }
@@ -147,7 +149,20 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
               ]
             }
           })
-          user = matchingUsers.find(u => u.role !== 'USER' || !!u.passwordHash) || matchingUsers[0]
+          // Prioritize canonical staff & restaurant accounts:
+          // 9170942500 -> superadmin@fastkirana.com (Super Admin HQ)
+          // 7054470303 -> admin@fastkirana.com (Store Operations Manager)
+          // 8112849854 -> asrestaurant3@gmail.com (A.S. Restaurant Owner REST-101)
+          // 9250138656 -> restaurant@fastkirana.com (Wedson Restaurant Owner REST-102)
+          // 7991488783 -> baludyanhotelrestaurant@gmail.com (Bal Udyan Restaurant Owner REST-103)
+          const canonicalUser = matchingUsers.find(u => 
+            (cleanPhoneDigits === '9170942500' && u.email === 'superadmin@fastkirana.com') ||
+            (cleanPhoneDigits === '7054470303' && u.email === 'admin@fastkirana.com') ||
+            (cleanPhoneDigits === '8112849854' && (u.email === 'asrestaurant3@gmail.com' || u.assignedRestaurantId === 'REST-101')) ||
+            (cleanPhoneDigits === '9250138656' && (u.email === 'restaurant@fastkirana.com' || u.assignedRestaurantId === 'REST-102')) ||
+            (cleanPhoneDigits === '7991488783' && (u.email === 'baludyanhotelrestaurant@gmail.com' || u.assignedRestaurantId === 'REST-103'))
+          )
+          user = canonicalUser || matchingUsers.find(u => u.role !== 'USER' || !!u.passwordHash) || matchingUsers[0]
         } else {
           user = await prisma.user.findUnique({
             where: { email: input.toLowerCase() },
@@ -162,7 +177,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
           if (!user) {
             // Auto-detect role based on email prefix for developer convenience
             let role: 'USER' | 'ADMIN' | 'CHEF' | 'RESTAURANT_OWNER' | 'PICKER' | 'DELIVERY' = 'USER'
-            if (input.startsWith('admin')) role = 'ADMIN'
+            if (input.startsWith('admin') || input.startsWith('superadmin')) role = 'ADMIN'
             else if (input.startsWith('chef')) role = 'CHEF'
             else if (input.startsWith('restaurant') || input.startsWith('owner')) role = 'RESTAURANT_OWNER'
             else if (input.startsWith('picker')) role = 'PICKER'
@@ -194,6 +209,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
             phone: user.phone,
             image: user.image,
             assignedRestaurantId: user.assignedRestaurantId,
+            assignedStoreId: user.assignedStoreId,
           }
         }
 
@@ -211,6 +227,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
           phone: user.phone,
           image: user.image,
           assignedRestaurantId: user.assignedRestaurantId,
+          assignedStoreId: user.assignedStoreId,
         }
       },
     }),
@@ -231,17 +248,29 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
         const name = credentials.name as string
         let phone = credentials.phone as string
 
-        if (isValidIndianPhone(email)) {
-          const normalizedPhone = normalizePhone(email)
+        const isPhoneInput = isValidIndianPhone(email) || (phone && isValidIndianPhone(phone))
+        const rawPhoneInput = isPhoneInput ? (isValidIndianPhone(email) ? email : phone) : ''
+        const cleanDigits = rawPhoneInput ? getLast10Digits(rawPhoneInput) : ''
+        const normalizedPhone = cleanDigits ? `+91${cleanDigits}` : ''
+
+        if (isPhoneInput) {
           const existingUser = await prisma.user.findFirst({
-            where: { phone: normalizedPhone },
-            select: { email: true }
+            where: {
+              OR: [
+                { phone: normalizedPhone },
+                { phone: cleanDigits },
+                { phone: `91${cleanDigits}` },
+                { email: `wa-${cleanDigits}@fastkirana.com` },
+                { email: email }
+              ]
+            },
+            select: { email: true, phone: true }
           })
           if (existingUser) {
             email = existingUser.email
+            if (!phone && existingUser.phone) phone = existingUser.phone
           } else {
-            const phoneDigits = getLast10Digits(normalizedPhone)
-            email = `wa-${phoneDigits}@fastkirana.com`
+            email = `wa-${cleanDigits}@fastkirana.com`
           }
           if (!phone) {
             phone = normalizedPhone
@@ -250,10 +279,13 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
 
         // 1. Verify OTP in database across all candidate identifier formats
         const candidateEmails = [email, email.toLowerCase()]
-        if (isValidIndianPhone(credentials.email as string)) {
-          const raw = credentials.email as string
-          const digits = getLast10Digits(raw)
-          candidateEmails.push(`wa-${digits}@fastkirana.com`, raw, normalizePhone(raw))
+        if (cleanDigits) {
+          candidateEmails.push(
+            `wa-${cleanDigits}@fastkirana.com`,
+            cleanDigits,
+            normalizedPhone,
+            `91${cleanDigits}`
+          )
         }
 
         const otpRecord = await prisma.otpToken.findFirst({
@@ -272,8 +304,18 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
         })
 
         // 3. Find or create user
-        let user = await prisma.user.findUnique({
-          where: { email }
+        let user = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { email },
+              ...(cleanDigits ? [
+                { phone: normalizedPhone },
+                { phone: cleanDigits },
+                { phone: `91${cleanDigits}` },
+                { email: `wa-${cleanDigits}@fastkirana.com` }
+              ] : [])
+            ]
+          }
         })
 
         if (user && user.isBlocked) {
@@ -281,12 +323,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
         }
 
         if (!user) {
-          let userPhone = phone || null
-          if (email.startsWith('wa-') && !userPhone) {
-            const phoneDigits = email.split('@')[0].replace('wa-', '')
-            userPhone = `+91${phoneDigits}`
-          }
-
+          let userPhone = phone || (cleanDigits ? normalizedPhone : null)
           user = await prisma.user.create({
             data: {
               email,
@@ -297,7 +334,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
           })
         } else if (name || phone) {
           user = await prisma.user.update({
-            where: { email },
+            where: { id: user.id },
             data: {
               name: name || user.name,
               phone: phone || user.phone
@@ -311,7 +348,9 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
           email: user.email,
           role: user.role,
           phone: user.phone,
-          image: user.image
+          image: user.image,
+          assignedStoreId: user.assignedStoreId,
+          assignedRestaurantId: user.assignedRestaurantId,
         }
       }
     }),
@@ -364,6 +403,22 @@ export async function auth(...args: any[]) {
         }
       }
 
+      let assignedStoreId: string | null = headersList.get('x-user-store-id') || null
+      let assignedRestaurantId: string | null = null
+
+      if (resolvedUserId) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: resolvedUserId },
+            select: { assignedStoreId: true, assignedRestaurantId: true, role: true }
+          })
+          if (dbUser) {
+            if (dbUser.assignedStoreId) assignedStoreId = dbUser.assignedStoreId
+            if (dbUser.assignedRestaurantId) assignedRestaurantId = dbUser.assignedRestaurantId
+          }
+        } catch (e) {}
+      }
+
       return {
         user: {
           id: resolvedUserId,
@@ -371,6 +426,8 @@ export async function auth(...args: any[]) {
           email: userEmail,
           name: userName,
           phone: userPhone,
+          assignedStoreId,
+          assignedRestaurantId,
         },
         expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       };

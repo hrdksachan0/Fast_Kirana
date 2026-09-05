@@ -27,7 +27,7 @@ class AboutScreen extends StatelessWidget {
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
+                gradient: const LinearGradient(
                   colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -35,7 +35,7 @@ class AboutScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: AppDesignSystem.shadowGlow,
               ),
-              child: Icon(Icons.shopping_basket_rounded, size: 50, color: Colors.white),
+              child: const Icon(Icons.shopping_basket_rounded, size: 50, color: Colors.white),
             ),
 
             const SizedBox(height: 16),
@@ -91,9 +91,9 @@ class AboutScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _statBox('50K+', 'Happy Users'),
-                      _statBox('500+', 'Products'),
-                      _statBox('30 min', 'Delivery'),
+                      _statBox(context, '50K+', 'Happy Users'),
+                      _statBox(context, '500+', 'Products'),
+                      _statBox(context, '30 min', 'Delivery'),
                     ],
                   ),
                 ],
@@ -111,13 +111,13 @@ class AboutScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  _linkItem('Privacy Policy'),
+                  _linkItem(context, 'Privacy Policy'),
                   _divider(),
-                  _linkItem('Terms of Service'),
+                  _linkItem(context, 'Terms of Service'),
                   _divider(),
-                  _linkItem('Refund Policy'),
+                  _linkItem(context, 'Refund Policy'),
                   _divider(),
-                  _linkItem('Rate Us on Play Store'),
+                  _linkItem(context, 'Rate Us on Play Store'),
                 ],
               ),
             ),
@@ -133,7 +133,7 @@ class AboutScreen extends StatelessWidget {
     );
   }
 
-  Widget _statBox(String number, String label) {
+  Widget _statBox(BuildContext context, String number, String label) {
     return Column(
       children: [
         Text(number, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 20), fontWeight: FontWeight.w800, color: AppDesignSystem.primary)),
@@ -143,15 +143,15 @@ class AboutScreen extends StatelessWidget {
     );
   }
 
-  Widget _linkItem(String label) {
+  Widget _linkItem(BuildContext context, String label) {
     return ListTile(
       title: Text(label, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: AppDesignSystem.textPrimary)),
-      trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppDesignSystem.textMuted),
+      trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppDesignSystem.textMuted),
       onTap: () {},
     );
   }
 
   Widget _divider() {
-    return Divider(height: 1, indent: 16, endIndent: 16, color: AppDesignSystem.divider);
+    return const Divider(height: 1, indent: 16, endIndent: 16, color: AppDesignSystem.divider);
   }
 }

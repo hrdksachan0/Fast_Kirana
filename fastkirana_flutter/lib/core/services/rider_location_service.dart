@@ -1,12 +1,12 @@
+import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show Color;
 import 'package:geolocator/geolocator.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
-import '../config/app_config.dart';
-import '../network/api_client.dart';
 import 'supabase_service.dart';
 
 class RiderLocationService {
@@ -16,12 +16,15 @@ class RiderLocationService {
 
   StreamSubscription<Position>? _positionSubscription;
   String? _activeOrderId;
+  String? _activeReadableId;
+  List<String> _activeRelatedOrderIds = [];
   String? _riderId;
   DateTime? _lastUploadTime;
   DateTime? _lastDbInsertTime;
   Position? _lastPosition;
   bool _isTracking = false;
   Dio? _dio;
+  final Map<String, RealtimeChannel> _activeChannels = {};
 
   bool get isTracking => _isTracking;
   String? get activeOrderId => _activeOrderId;
@@ -64,10 +67,14 @@ class RiderLocationService {
   Future<bool> startTracking({
     required String orderId,
     required String riderId,
+    String? readableId,
+    List<String>? relatedOrderIds,
     Dio? dioClient,
   }) async {
     if (dioClient != null) _dio = dioClient;
     _activeOrderId = orderId;
+    _activeReadableId = readableId;
+    _activeRelatedOrderIds = relatedOrderIds ?? [];
     _riderId = riderId;
 
     final hasPermission = await requestPermissions();
@@ -77,12 +84,12 @@ class RiderLocationService {
     }
 
     if (_isTracking && _positionSubscription != null) {
-      debugPrint('[RiderLocation] Already tracking order $_activeOrderId, updated target to $orderId');
+      debugPrint('[RiderLocation] Already tracking order $_activeOrderId, updated targets ($orderId, $readableId)');
       return true;
     }
 
     _isTracking = true;
-    debugPrint('[RiderLocation] Starting real-time GPS stream for Order #$orderId');
+    debugPrint('[RiderLocation] Starting real-time GPS stream for Order #$orderId (Readable: $readableId)');
 
     // Send immediate initial position
     try {
@@ -95,11 +102,40 @@ class RiderLocationService {
       debugPrint('[RiderLocation] Initial GPS acquisition error: $e');
     }
 
-    // Subscribe to location stream with ultra-responsive 2m distance filter & high accuracy navigation
-    const locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.bestForNavigation,
-      distanceFilter: 2, // Immediate trigger after 2 meters movement
-    );
+    // Configure foreground service for uninterrupted tracking when screen is off or app is backgrounded
+    late LocationSettings locationSettings;
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      locationSettings = AndroidSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 1, // Trigger after 1 meter of movement
+        intervalDuration: const Duration(seconds: 1),
+        foregroundNotificationConfig: const ForegroundNotificationConfig(
+          notificationTitle: 'FastKirana Delivery Partner 🛵',
+          notificationText: 'Sharing live location with customer',
+          notificationChannelName: 'Live Delivery Tracking',
+          notificationIcon: AndroidResource(
+            name: 'ic_launcher',
+            defType: 'mipmap',
+          ),
+          enableWakeLock: true,
+          setOngoing: true,
+          color: Color(0xFFE20A22),
+        ),
+      );
+    } else if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS) {
+      locationSettings = AppleSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        activityType: ActivityType.automotiveNavigation,
+        distanceFilter: 1,
+        pauseLocationUpdatesAutomatically: false,
+        showBackgroundLocationIndicator: true,
+      );
+    } else {
+      locationSettings = const LocationSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 1,
+      );
+    }
 
     _positionSubscription = Geolocator.getPositionStream(
       locationSettings: locationSettings,
@@ -118,7 +154,7 @@ class RiderLocationService {
   void _handleNewPosition(Position position) {
     final now = DateTime.now();
 
-    // High-speed responsiveness: upload every 1.5 seconds or if moved > 3 meters
+    // High-speed responsiveness: broadcast every 1 second or if moved > 1.5 meters
     if (_lastUploadTime != null && _lastPosition != null) {
       final elapsedMs = now.difference(_lastUploadTime!).inMilliseconds;
       final distanceMoved = Geolocator.distanceBetween(
@@ -128,7 +164,7 @@ class RiderLocationService {
         position.longitude,
       );
 
-      if (elapsedMs < 1500 && distanceMoved < 3) {
+      if (elapsedMs < 1000 && distanceMoved < 1.5) {
         return;
       }
     }
@@ -139,7 +175,28 @@ class RiderLocationService {
     _sendLocationUpdate(position);
   }
 
-  RealtimeChannel? _trackingChannel;
+  Set<String> _getChannelKeys() {
+    final keys = <String>{};
+    void addKey(String? raw) {
+      if (raw == null || raw.trim().isEmpty) return;
+      var clean = raw.trim().replaceAll('#', '');
+      if (clean.isNotEmpty) {
+        keys.add(clean);
+        if (clean.startsWith('FK-')) {
+          final numOnly = clean.substring(3);
+          if (numOnly.isNotEmpty) keys.add(numOnly);
+        } else if (RegExp(r'^\d+$').hasMatch(clean)) {
+          keys.add('FK-$clean');
+        }
+      }
+    }
+    addKey(_activeOrderId);
+    addKey(_activeReadableId);
+    for (final rel in _activeRelatedOrderIds) {
+      addKey(rel);
+    }
+    return keys;
+  }
 
   /// Broadcast GPS coordinate update to Backend and Supabase Realtime
   Future<void> _sendLocationUpdate(Position position) async {
@@ -156,67 +213,77 @@ class RiderLocationService {
       'timestamp': DateTime.now().toIso8601String(),
     };
 
-    debugPrint('[RiderLocation] Broadcasting GPS: Lat: ${position.latitude.toStringAsFixed(5)}, Lng: ${position.longitude.toStringAsFixed(5)}, Heading: ${position.heading.toStringAsFixed(1)}°');
+    debugPrint('[RiderLocation] Live GPS: Lat: ${position.latitude.toStringAsFixed(5)}, Lng: ${position.longitude.toStringAsFixed(5)}, Heading: ${position.heading.toStringAsFixed(1)}°, Speed: ${position.speed.toStringAsFixed(1)}m/s');
 
-    // 1. Post to /api/delivery/location
-    try {
-      if (_dio != null) {
-        await _dio!.post(
+    // 1. Post to /api/delivery/location (throttled to 3s to not overload API while streaming live over WS)
+    final now = DateTime.now();
+    final shouldPostHttp = _lastDbInsertTime == null || now.difference(_lastDbInsertTime!).inMilliseconds >= 3000;
+
+    if (shouldPostHttp && _dio != null) {
+      try {
+        _dio!.post(
           '/api/delivery/location',
           data: {
             'lat': position.latitude,
             'lng': position.longitude,
             'orderId': _activeOrderId,
+            'readableId': _activeReadableId,
             'riderId': _riderId,
             'heading': position.heading,
             'speed': position.speed,
             'accuracy': position.accuracy,
           },
           options: Options(
-            sendTimeout: const Duration(seconds: 5),
-            receiveTimeout: const Duration(seconds: 5),
+            sendTimeout: const Duration(seconds: 4),
+            receiveTimeout: const Duration(seconds: 4),
             headers: {
               if (_riderId != null) 'x-rider-id': _riderId,
               if (_riderId != null) 'x-user-id': _riderId,
             },
           ),
-        );
+        ).catchError((e) {
+          debugPrint('[RiderLocation] API upload failed: $e');
+          _queueOfflineLocation(payload);
+          return Response(requestOptions: RequestOptions(path: ''));
+        });
+      } catch (e) {
+        _queueOfflineLocation(payload);
       }
-    } catch (e) {
-      debugPrint('[RiderLocation] API upload failed, queuing for offline sync: $e');
-      _queueOfflineLocation(payload);
     }
 
-    // 2. Direct Supabase Broadcast & DB Update
+    // 2. Direct Supabase Broadcast & DB Update across all channel aliases
     try {
       final sb = SupabaseService.client;
-      if (sb != null && _activeOrderId != null) {
-        var cleanId = _activeOrderId!.trim();
-        if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
+      if (sb != null) {
+        final channelKeys = _getChannelKeys();
 
-        // Ensure channel is subscribed
-        if (_trackingChannel == null) {
-          _trackingChannel = sb.channel('order-live-tracking-$cleanId');
-          _trackingChannel!.subscribe();
+        for (final key in channelKeys) {
+          RealtimeChannel? chan = _activeChannels[key];
+          if (chan == null) {
+            chan = sb.channel('order-live-tracking-$key');
+            chan.subscribe();
+            _activeChannels[key] = chan;
+          }
+
+          // Instant in-memory WebSocket broadcast (0ms latency to customer app)
+          chan.sendBroadcastMessage(
+            event: 'location_update',
+            payload: {
+              'lat': position.latitude,
+              'lng': position.longitude,
+              'heading': position.heading,
+              'speed': position.speed,
+              'accuracy': position.accuracy,
+              'timestamp': DateTime.now().toIso8601String(),
+            },
+          );
         }
 
-        // Instant in-memory WebSocket broadcast (0ms latency)
-        _trackingChannel!.sendBroadcastMessage(
-          event: 'location_update',
-          payload: {
-            'lat': position.latitude,
-            'lng': position.longitude,
-            'heading': position.heading,
-            'speed': position.speed,
-            'accuracy': position.accuracy,
-            'timestamp': DateTime.now().toIso8601String(),
-          },
-        );
-
-        // Update orders table with live deliveryLat & deliveryLng
-        final now = DateTime.now();
-        if (_lastDbInsertTime == null || now.difference(_lastDbInsertTime!).inSeconds >= 5) {
+        // Direct database record update every 4 seconds
+        if (shouldPostHttp && _activeOrderId != null) {
           _lastDbInsertTime = now;
+          var cleanId = _activeOrderId!.trim().replaceAll('#', '');
+
           sb.from('orders').update({
             'deliveryLat': position.latitude,
             'deliveryLng': position.longitude,
@@ -253,7 +320,6 @@ class RiderLocationService {
       final queueStr = prefs.getString('offline_location_queue') ?? '[]';
       final List<dynamic> queue = jsonDecode(queueStr);
       queue.add(data);
-      // Keep queue bounded
       if (queue.length > 50) queue.removeAt(0);
       await prefs.setString('offline_location_queue', jsonEncode(queue));
     } catch (e) {
@@ -283,7 +349,7 @@ class RiderLocationService {
               'speed': item['speed'],
               'accuracy': item['accuracy'],
             });
-          } catch (_) {}
+          } catch (e, _) { LoggerService.error('RiderLocationService: silent catch', e); }
         }
       }
       await prefs.remove('offline_location_queue');
@@ -298,12 +364,16 @@ class RiderLocationService {
     debugPrint('[RiderLocation] Stopping GPS tracking for Order #$_activeOrderId');
     await _positionSubscription?.cancel();
     _positionSubscription = null;
-    if (_trackingChannel != null) {
-      SupabaseService.unsubscribe(_trackingChannel);
-      _trackingChannel = null;
+
+    for (final chan in _activeChannels.values) {
+      SupabaseService.unsubscribe(chan);
     }
+    _activeChannels.clear();
+
     _isTracking = false;
     _activeOrderId = null;
+    _activeReadableId = null;
+    _activeRelatedOrderIds.clear();
     _lastPosition = null;
     _lastUploadTime = null;
   }

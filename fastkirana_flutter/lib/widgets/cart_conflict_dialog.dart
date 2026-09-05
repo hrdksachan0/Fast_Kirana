@@ -1,6 +1,8 @@
+import '../core/theme/responsive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../core/theme/design_system.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../data/models/product.dart';
 import '../core/utils/restaurant_utils.dart';
@@ -64,12 +66,12 @@ class CartConflictDialog extends StatelessWidget {
               width: 54,
               height: 54,
               decoration: BoxDecoration(
-                color: const Color(0xFFFEF3C7),
+                color: AppDesignSystem.statusPending,
                 shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFFDE68A), width: 1.5),
+                border: Border.all(color: AppDesignSystem.yellow200, width: 1.5),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                    color: AppDesignSystem.warning.withValues(alpha: 0.15),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -79,7 +81,7 @@ class CartConflictDialog extends StatelessWidget {
                 child: Icon(
                   Icons.restaurant_rounded,
                   size: 26,
-                  color: Color(0xFFD97706),
+                  color: AppDesignSystem.amber600,
                 ),
               ),
             ),
@@ -91,7 +93,7 @@ class CartConflictDialog extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 18),
                 fontWeight: FontWeight.w900,
-                color: const Color(0xFF0F172A),
+                color: AppDesignSystem.slate900,
                 letterSpacing: -0.3,
               ),
               textAlign: TextAlign.center,
@@ -105,7 +107,7 @@ class CartConflictDialog extends StatelessWidget {
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 12.5),
                   fontWeight: FontWeight.w500,
-                  color: const Color(0xFF64748B),
+                  color: AppDesignSystem.slate500,
                   height: 1.45,
                 ),
                 children: [
@@ -114,7 +116,7 @@ class CartConflictDialog extends StatelessWidget {
                     text: existingOutletName,
                     style: const TextStyle(
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFFD97706),
+                      color: AppDesignSystem.amber600,
                     ),
                   ),
                   const TextSpan(
@@ -129,9 +131,9 @@ class CartConflictDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
+                color: AppDesignSystem.slate50,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: AppDesignSystem.slate200),
               ),
               child: Row(
                 children: [
@@ -142,7 +144,7 @@ class CartConflictDialog extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFF1F5F9)),
+                      border: Border.all(color: AppDesignSystem.slate100),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
@@ -152,13 +154,13 @@ class CartConflictDialog extends StatelessWidget {
                                   ? 'https://www.fastkirana.in${product.imageUrl}'
                                   : product.imageUrl!,
                               fit: BoxFit.cover,
-                              errorWidget: (_, __, ___) => const Center(
-                                child: Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22))),
-                              ),
+                              memCacheWidth: 200,
+                              memCacheHeight: 200,
+                              maxWidthDiskCache: 200,
+                              maxHeightDiskCache: 200,
+                              errorWidget: (_, __, ___) => Center(child: Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
                             )
-                          : const Center(
-                              child: Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22))),
-                            ),
+                          : Center(child: Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -171,16 +173,16 @@ class CartConflictDialog extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFECFDF5),
+                            color: AppDesignSystem.green50,
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFFA7F3D0)),
+                            border: Border.all(color: AppDesignSystem.emerald200),
                           ),
                           child: Text(
                             newOutletName.toUpperCase(),
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 9),
                               fontWeight: FontWeight.w900,
-                              color: const Color(0xFF047857),
+                              color: AppDesignSystem.emerald700,
                               letterSpacing: 0.3,
                             ),
                           ),
@@ -191,7 +193,7 @@ class CartConflictDialog extends StatelessWidget {
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 13),
                             fontWeight: FontWeight.w800,
-                            color: const Color(0xFF0F172A),
+                            color: AppDesignSystem.slate900,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -202,7 +204,7 @@ class CartConflictDialog extends StatelessWidget {
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF64748B),
+                            color: AppDesignSystem.slate500,
                           ),
                         ),
                       ],
@@ -217,13 +219,13 @@ class CartConflictDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0FDF4),
+                color: AppDesignSystem.green50,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFBBF7D0)),
+                border: Border.all(color: AppDesignSystem.emerald200),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF16A34A)),
+                  const Icon(Icons.check_circle_rounded, size: 16, color: AppDesignSystem.green600),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -233,7 +235,7 @@ class CartConflictDialog extends StatelessWidget {
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 11),
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF15803D),
+                        color: AppDesignSystem.green700,
                       ),
                     ),
                   ),
@@ -255,14 +257,14 @@ class CartConflictDialog extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      side: const BorderSide(color: AppDesignSystem.slate300),
                     ),
                     child: Text(
                       'Cancel',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 13),
                         fontWeight: FontWeight.w800,
-                        color: const Color(0xFF475569),
+                        color: AppDesignSystem.slate600,
                       ),
                     ),
                   ),
@@ -277,7 +279,7 @@ class CartConflictDialog extends StatelessWidget {
                     },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      backgroundColor: const Color(0xFFEA580C),
+                      backgroundColor: AppDesignSystem.orange600,
                       foregroundColor: Colors.white,
                       elevation: 2,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -302,3 +304,4 @@ class CartConflictDialog extends StatelessWidget {
     );
   }
 }
+

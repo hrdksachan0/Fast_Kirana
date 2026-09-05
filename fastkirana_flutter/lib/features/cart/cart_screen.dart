@@ -16,7 +16,6 @@ import '../../core/utils/restaurant_utils.dart';
 import '../../core/services/location_service.dart';
 import '../../data/models/cart.dart';
 import '../../data/models/product.dart';
-import '../../data/models/store_settings.dart';
 import '../../data/repositories/cart_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
@@ -46,11 +45,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   int _selectedTip = 0;
   final Set<String> _selectedInstructions = {};
 
-  static const Color primaryRed = Color(0xFFE20A22);
-  static const Color brandGreen = Color(0xFF00A344);
-  static const Color slateDark = Color(0xFF0F172A);
-  static const Color slateMuted = Color(0xFF64748B);
-  static const Color slateBorder = Color(0xFFF1F5F9);
+  static const Color primaryRed = AppDesignSystem.primary;
+  static const Color brandGreen = AppDesignSystem.green700;
+  static const Color slateDark = AppDesignSystem.slate900;
+  static const Color slateMuted = AppDesignSystem.slate500;
+  static const Color slateBorder = AppDesignSystem.slate200;
 
   static const double freeDeliveryThreshold = 199.0;
   static const double standardDeliveryFee = 25.0;
@@ -151,7 +150,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 width: 38,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE2E8F0),
+                  color: AppDesignSystem.slate300,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -167,7 +166,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             _buildBillRow('Delivery Fee', deliveryFee == 0 ? 'FREE' : '₹${deliveryFee.toInt()}', isGreen: deliveryFee == 0),
             if (_selectedTip > 0) _buildBillRow('Delivery Partner Tip', '₹$_selectedTip', isGreen: false),
             _buildBillRow('Handling & Taxes', '₹0', isGreen: true),
-            const Divider(height: 22, color: Color(0xFFE2E8F0)),
+            const Divider(height: 22, color: AppDesignSystem.slate300),
             _buildBillRow('To Pay', '₹${grandTotal.toInt()}', isBold: true),
             const SizedBox(height: 20),
           ],
@@ -219,7 +218,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 icon: Container(
                   padding: const EdgeInsets.all(6),
                   decoration: const BoxDecoration(
-                    color: Color(0xFFF1F5F9),
+                    color: AppDesignSystem.slate200,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.arrow_back_rounded, color: slateDark, size: 18),
@@ -237,7 +236,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         return _buildCartScreenContent(context, ref, cart);
       },
       loading: () => Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
+        backgroundColor: AppDesignSystem.slate50,
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
@@ -282,7 +281,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFF1F5F9)),
+              border: Border.all(color: AppDesignSystem.slate200),
             ),
             child: Row(
               children: [
@@ -331,11 +330,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               width: 80,
               height: 80,
               decoration: const BoxDecoration(
-                color: Color(0xFFFEF2F2),
+                color: AppDesignSystem.statusPending,
                 shape: BoxShape.circle,
               ),
               child: const Center(
-                child: Icon(Icons.wifi_off_rounded, size: 40, color: Color(0xFFEF4444)),
+                child: Icon(Icons.wifi_off_rounded, size: 40, color: AppDesignSystem.danger),
               ),
             ),
             const SizedBox(height: 20),
@@ -382,7 +381,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               width: 86,
               height: 86,
               decoration: const BoxDecoration(
-                color: Color(0xFFFFF1F2),
+                color: AppDesignSystem.rose50,
                 shape: BoxShape.circle,
               ),
               child: const Center(
@@ -422,8 +421,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final tier = ref.watch(deliveryTierProvider);
     final subtotal = cart.subtotal;
     final deliveryFee = tier.deliveryFee;
-    final packagingFee = 5.0;
-    final packagingLabel = 'Standard Packaging';
+    const packagingFee = 5.0;
+    const packagingLabel = 'Standard Packaging';
     final itemSavings = cart.savings;
     final totalSavings = itemSavings + _couponDiscount;
     final grandTotal = (subtotal + deliveryFee + packagingFee + _selectedTip - _couponDiscount).clamp(0.0, 999999.0);
@@ -440,7 +439,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppDesignSystem.slate50,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -448,7 +447,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           icon: Container(
             padding: const EdgeInsets.all(6),
             decoration: const BoxDecoration(
-              color: Color(0xFFF1F5F9),
+              color: AppDesignSystem.slate200,
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.arrow_back_rounded, color: slateDark, size: 18),
@@ -470,7 +469,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFECEF),
+                color: AppDesignSystem.red200,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -500,7 +499,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               if (groceryItems.isNotEmpty) ...[
                 Row(
                   children: [
-                    const Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                    Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Column(
@@ -541,7 +540,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   children: [
                     Row(
                       children: [
-                        const Text('🥘', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                        Text('🥘', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Column(
@@ -576,16 +575,16 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       margin: const EdgeInsets.only(bottom: 14),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
+                        color: AppDesignSystem.slate50,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        border: Border.all(color: AppDesignSystem.slate300),
                       ),
                       child: TextField(
                         controller: _cookingInstructionsController,
                         style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: slateDark),
                         decoration: InputDecoration(
                           hintText: 'Cooking instruction (e.g. less sugar, extra spicy)...',
-                          hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: const Color(0xFF94A3B8), fontWeight: FontWeight.w500),
+                          hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: AppDesignSystem.slate400, fontWeight: FontWeight.w500),
                           border: InputBorder.none,
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(vertical: 10),
@@ -610,7 +609,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         children: [
                           Row(
                             children: [
-                              const Text('🛒', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                              Text('🛒', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                               const SizedBox(width: 6),
                               Text(
                                 'Frequently bought together',
@@ -627,7 +626,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 10.5),
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFF94A3B8),
+                              color: AppDesignSystem.slate400,
                             ),
                           ),
                         ],
@@ -679,7 +678,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFF1F5F9), width: 1.2)),
+          border: Border(top: BorderSide(color: AppDesignSystem.slate200, width: 1.2)),
           boxShadow: [
             BoxShadow(
               color: Color(0x0A000000),
@@ -723,7 +722,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         children: [
           Row(
             children: [
-              const Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+              Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
               const SizedBox(width: 6),
               Text(
                 'Delivery Instructions',
@@ -754,13 +753,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     margin: const EdgeInsets.only(right: 8),
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFFFF1F2) : const Color(0xFFF8FAFC),
+                      color: isSelected ? AppDesignSystem.rose50 : AppDesignSystem.slate50,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: isSelected ? primaryRed : const Color(0xFFE2E8F0)),
+                      border: Border.all(color: isSelected ? primaryRed : AppDesignSystem.slate300),
                     ),
                     child: Row(
                       children: [
-                        Text(item['icon']!, style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
+                        Text(item['icon']!, style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
                         const SizedBox(width: 5),
                         Text(
                           item['label']!,
@@ -800,7 +799,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             children: [
               Row(
                 children: [
-                  const Text('💖', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                  Text('💖', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                   const SizedBox(width: 6),
                   Text(
                     'Tip your delivery partner',
@@ -810,7 +809,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               ),
               Text(
                 '100% goes to partner',
-                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w600, color: const Color(0xFF16A34A)),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w600, color: AppDesignSystem.green600),
               ),
             ],
           ),
@@ -829,9 +828,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFE6F4EA) : const Color(0xFFF8FAFC),
+                      color: isSelected ? AppDesignSystem.green100 : AppDesignSystem.slate50,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: isSelected ? brandGreen : const Color(0xFFE2E8F0)),
+                      border: Border.all(color: isSelected ? brandGreen : AppDesignSystem.slate300),
                     ),
                     child: Center(
                       child: Text(
@@ -866,7 +865,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         children: [
           Row(
             children: [
-              const Text('🧾', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+              Text('🧾', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
               const SizedBox(width: 6),
               Text(
                 'Bill Summary',
@@ -899,14 +898,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: AppDesignSystem.slate50,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: slateBorder),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.shield_outlined, size: 16, color: Color(0xFF64748B)),
+          const Icon(Icons.shield_outlined, size: 16, color: AppDesignSystem.slate500),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -936,9 +935,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: !tier.isServiceable ? const Color(0xFFFEF2F2) : const Color(0xFFECFDF5),
+              color: !tier.isServiceable ? AppDesignSystem.statusPending : AppDesignSystem.statusDelivered,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: !tier.isServiceable ? const Color(0xFFFECDD3) : const Color(0xFFA7F3D0), width: 0.8),
+              border: Border.all(color: !tier.isServiceable ? AppDesignSystem.rose300 : AppDesignSystem.emerald200, width: 0.8),
             ),
             child: Center(
               child: Text(
@@ -948,7 +947,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 11),
                   fontWeight: FontWeight.w800,
-                  color: !tier.isServiceable ? const Color(0xFFDC2626) : const Color(0xFF047857),
+                  color: !tier.isServiceable ? AppDesignSystem.red600 : AppDesignSystem.emerald700,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -977,12 +976,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 18),
                             fontWeight: FontWeight.w900,
-                            color: const Color(0xFF0F172A),
+                            color: AppDesignSystem.slate900,
                             letterSpacing: -0.3,
                           ),
                         ),
                         const SizedBox(width: 4),
-                        const Icon(Icons.info_outline_rounded, size: 13, color: Color(0xFF00A344)),
+                        const Icon(Icons.info_outline_rounded, size: 13, color: AppDesignSystem.green700),
                       ],
                     ),
                     Text(
@@ -990,7 +989,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 8.5),
                         fontWeight: FontWeight.w800,
-                        color: const Color(0xFF00A344),
+                        color: AppDesignSystem.green700,
                         letterSpacing: 0.3,
                       ),
                     ),
@@ -1007,7 +1006,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       ScaffoldMessenger.of(context).hideCurrentSnackBar();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          backgroundColor: const Color(0xFFDC2626),
+                          backgroundColor: AppDesignSystem.red600,
                           behavior: SnackBarBehavior.floating,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           content: Text(
@@ -1032,7 +1031,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         ScaffoldMessenger.of(context).hideCurrentSnackBar();
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            backgroundColor: const Color(0xFFE11D48),
+                            backgroundColor: AppDesignSystem.rose500,
                             behavior: SnackBarBehavior.floating,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             content: const Text(
@@ -1048,7 +1047,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         ScaffoldMessenger.of(context).hideCurrentSnackBar();
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            backgroundColor: const Color(0xFFE11D48),
+                            backgroundColor: AppDesignSystem.rose500,
                             behavior: SnackBarBehavior.floating,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             content: const Text(
@@ -1101,16 +1100,16 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     height: 44,
                     decoration: BoxDecoration(
                       gradient: !tier.isServiceable
-                          ? const LinearGradient(colors: [Color(0xFF94A3B8), Color(0xFF64748B)])
+                          ? const LinearGradient(colors: [AppDesignSystem.slate400, AppDesignSystem.slate500])
                           : const LinearGradient(
-                              colors: [Color(0xFF00A344), Color(0xFF008736)],
+                              colors: [AppDesignSystem.green700, AppDesignSystem.accentDark],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: (!tier.isServiceable ? const Color(0xFF94A3B8) : const Color(0xFF00A344)).withValues(alpha: 0.3),
+                          color: (!tier.isServiceable ? AppDesignSystem.slate400 : AppDesignSystem.green700).withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 3),
                         ),
@@ -1191,10 +1190,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+        border: Border.all(color: AppDesignSystem.slate300, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+            color: AppDesignSystem.slate900.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1208,7 +1207,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             width: double.infinity,
             height: 80,
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
+              color: AppDesignSystem.slate50,
               borderRadius: BorderRadius.circular(12),
             ),
             child: ClipRRect(
@@ -1218,14 +1217,16 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       ? Image.network(
                           imageUrl,
                           fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag_outlined, size: 24, color: Color(0xFFCBD5E1)),
+                          errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag_outlined, size: 24, color: AppDesignSystem.slate400),
                         )
                       : CachedNetworkImage(
                           imageUrl: imageUrl,
                           fit: BoxFit.contain,
-                          errorWidget: (_, __, ___) => const Icon(Icons.shopping_bag_outlined, size: 24, color: Color(0xFFCBD5E1)),
+                          memCacheWidth: 200,
+                          memCacheHeight: 200,
+                          errorWidget: (_, __, ___) => const Icon(Icons.shopping_bag_outlined, size: 24, color: AppDesignSystem.slate400),
                         ))
-                  : const Icon(Icons.shopping_bag_outlined, size: 24, color: Color(0xFFCBD5E1)),
+                  : const Icon(Icons.shopping_bag_outlined, size: 24, color: AppDesignSystem.slate400),
             ),
           ),
           const SizedBox(height: 8),
@@ -1330,7 +1331,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           ScaffoldMessenger.of(context).hideCurrentSnackBar();
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              backgroundColor: const Color(0xFF047857),
+                              backgroundColor: AppDesignSystem.emerald700,
                               behavior: SnackBarBehavior.floating,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               content: Row(
@@ -1361,9 +1362,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     height: 26,
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF1F2),
+                      color: AppDesignSystem.rose50,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFFFD1D8), width: 1.2),
+                      border: Border.all(color: AppDesignSystem.red100, width: 1.2),
                     ),
                     alignment: Alignment.center,
                     child: Text(
@@ -1390,14 +1391,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFFFEF2F2),
+          color: AppDesignSystem.statusPending,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFFECDD3), width: 1.2),
+          border: Border.all(color: AppDesignSystem.rose300, width: 1.2),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('⚠️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
+            Text('⚠️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -1405,12 +1406,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 children: [
                   Text(
                     'Outside Delivery Zone (${tier.distanceKm.toStringAsFixed(1)} km away)',
-                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w800, color: const Color(0xFFDC2626)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w800, color: AppDesignSystem.red600),
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    'Delivery is currently limited to a maximum of 5.0 km from our central hub in Ghatampur. Please select an address within 5 km.',
-                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: const Color(0xFF991B1B)),
+                    'Delivery is currently available within 5.0 km of our active operational hub. Please select a serviceable delivery address.',
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: AppDesignSystem.statusPendingText),
                   ),
                 ],
               ),
@@ -1429,10 +1430,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: isUnlocked ? const Color(0xFFF0FDF4) : const Color(0xFFFFF7ED),
+        color: isUnlocked ? AppDesignSystem.green50 : AppDesignSystem.orange50,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isUnlocked ? const Color(0xFF86EFAC) : const Color(0xFFFED7AA),
+          color: isUnlocked ? AppDesignSystem.emerald200 : AppDesignSystem.orange300,
           width: 1.1,
         ),
       ),
@@ -1443,7 +1444,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             children: [
               Text(
                 isUnlocked ? '🎉' : '⚡',
-                style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 16)),
+                style: TextStyle(fontSize: Responsive.scaledFontSize(context, 16)),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -1457,7 +1458,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 12.5),
                         fontWeight: FontWeight.w800,
-                        color: isUnlocked ? const Color(0xFF15803D) : const Color(0xFFC2410C),
+                        color: isUnlocked ? AppDesignSystem.green700 : AppDesignSystem.orange700,
                       ),
                     ),
                     Text(
@@ -1465,7 +1466,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 10),
                         fontWeight: FontWeight.w600,
-                        color: isUnlocked ? const Color(0xFF16A34A) : const Color(0xFFEA580C),
+                        color: isUnlocked ? AppDesignSystem.green600 : AppDesignSystem.orange600,
                       ),
                     ),
                   ],
@@ -1474,7 +1475,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
-                  color: isUnlocked ? const Color(0xFFDCFCE7) : const Color(0xFFFFEDD5),
+                  color: isUnlocked ? AppDesignSystem.green100 : AppDesignSystem.orange200,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -1482,7 +1483,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 10.5),
                     fontWeight: FontWeight.w900,
-                    color: isUnlocked ? const Color(0xFF16A34A) : const Color(0xFFEA580C),
+                    color: isUnlocked ? AppDesignSystem.green600 : AppDesignSystem.orange600,
                   ),
                 ),
               ),
@@ -1494,9 +1495,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 6,
-              backgroundColor: isUnlocked ? const Color(0xFFDCFCE7) : const Color(0xFFFFEDD5),
+              backgroundColor: isUnlocked ? AppDesignSystem.green100 : AppDesignSystem.orange200,
               valueColor: AlwaysStoppedAnimation<Color>(
-                isUnlocked ? const Color(0xFF16A34A) : const Color(0xFFF97316),
+                isUnlocked ? AppDesignSystem.green600 : AppDesignSystem.cafeAccent,
               ),
             ),
           ),
@@ -1577,10 +1578,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.1),
+        border: Border.all(color: AppDesignSystem.slate300, width: 1.1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -1594,9 +1595,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
+              color: AppDesignSystem.slate50,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: AppDesignSystem.slate300),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
@@ -1612,6 +1613,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       : CachedNetworkImage(
                           imageUrl: prod.imageUrl!,
                           fit: BoxFit.cover,
+                          memCacheWidth: 200,
+                          memCacheHeight: 200,
                           errorWidget: (_, __, ___) => const Center(
                             child: Icon(Icons.shopping_bag_outlined, color: Colors.grey, size: 22),
                           ),
@@ -1670,7 +1673,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         '₹${(mrp * qty).toInt()}',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11.5),
-                          color: const Color(0xFF94A3B8),
+                          color: AppDesignSystem.slate400,
                           decoration: TextDecoration.lineThrough,
                           fontWeight: FontWeight.w500,
                         ),
@@ -1679,7 +1682,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE6F4EA),
+                          color: AppDesignSystem.green100,
                           borderRadius: BorderRadius.circular(5),
                         ),
                         child: Text(
@@ -1687,7 +1690,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 9.5),
                             fontWeight: FontWeight.w800,
-                            color: const Color(0xFF137333),
+                            color: AppDesignSystem.green800,
                           ),
                         ),
                       ),
@@ -1704,10 +1707,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+              border: Border.all(color: AppDesignSystem.slate300, width: 1.2),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
+                  color: Colors.black.withValues(alpha: 0.03),
                   blurRadius: 4,
                   offset: const Offset(0, 1),
                 ),
@@ -1731,7 +1734,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       child: const Icon(
                         Icons.remove_rounded,
                         size: 16,
-                        color: Color(0xFFE20A22),
+                        color: AppDesignSystem.primary,
                       ),
                     ),
                   ),
@@ -1770,7 +1773,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                 ),
                               ],
                             ),
-                            backgroundColor: const Color(0xFFDC2626),
+                            backgroundColor: AppDesignSystem.red600,
                             behavior: SnackBarBehavior.floating,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             duration: const Duration(seconds: 2),
@@ -1788,7 +1791,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       child: const Icon(
                         Icons.add_rounded,
                         size: 16,
-                        color: Color(0xFFE20A22),
+                        color: AppDesignSystem.primary,
                       ),
                     ),
                   ),
@@ -1807,7 +1810,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+        border: Border.all(color: AppDesignSystem.slate200, width: 1.5),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -1828,11 +1831,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   Container(
                     padding: const EdgeInsets.all(7),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF7ED),
+                      color: AppDesignSystem.orange50,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFFFEDD5)),
+                      border: Border.all(color: AppDesignSystem.orange200),
                     ),
-                    child: const Icon(Icons.local_offer_rounded, size: 16, color: Color(0xFFEA580C)),
+                    child: const Icon(Icons.local_offer_rounded, size: 16, color: AppDesignSystem.orange600),
                   ),
                   const SizedBox(width: 10),
                   Text(
@@ -1865,11 +1868,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 12),
                         fontWeight: FontWeight.w800,
-                        color: const Color(0xFFEA580C),
+                        color: AppDesignSystem.orange600,
                       ),
                     ),
                     const SizedBox(width: 3),
-                    const Icon(Icons.arrow_forward_ios_rounded, size: 11, color: Color(0xFFEA580C)),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 11, color: AppDesignSystem.orange600),
                   ],
                 ),
               ),
@@ -1884,19 +1887,19 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFFECFDF5), Color(0xFFD1FAE5)],
+                  colors: [AppDesignSystem.statusDelivered, AppDesignSystem.statusDelivered],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFF6EE7B7), width: 1.2),
+                border: Border.all(color: AppDesignSystem.emerald300, width: 1.2),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: const BoxDecoration(
-                      color: Color(0xFF10B981),
+                      color: AppDesignSystem.success,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.check_rounded, size: 14, color: Colors.white),
@@ -1913,7 +1916,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 13),
                                 fontWeight: FontWeight.w900,
-                                color: const Color(0xFF065F46),
+                                color: AppDesignSystem.statusDeliveredText,
                                 letterSpacing: 0.5,
                               ),
                             ),
@@ -1921,7 +1924,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF047857),
+                                color: AppDesignSystem.emerald700,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -1941,7 +1944,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF047857),
+                            color: AppDesignSystem.emerald700,
                           ),
                         ),
                       ],
@@ -1954,14 +1957,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.8),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFFECDD3)),
+                        border: Border.all(color: AppDesignSystem.rose300),
                       ),
                       child: Text(
                         'Remove',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11),
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFFE11D48),
+                          color: AppDesignSystem.rose500,
                         ),
                       ),
                     ),
@@ -1974,14 +1977,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             Container(
               height: 48,
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
+                color: AppDesignSystem.slate50,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                border: Border.all(color: AppDesignSystem.slate300, width: 1.2),
               ),
               child: Row(
                 children: [
                   const SizedBox(width: 14),
-                  const Icon(Icons.confirmation_number_outlined, size: 19, color: Color(0xFF94A3B8)),
+                  const Icon(Icons.confirmation_number_outlined, size: 19, color: AppDesignSystem.slate400),
                   const SizedBox(width: 10),
                   Expanded(
                     child: TextField(
@@ -1998,7 +2001,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         hintStyle: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 12.5),
                           fontWeight: FontWeight.w500,
-                          color: const Color(0xFF94A3B8),
+                          color: AppDesignSystem.slate400,
                         ),
                         border: InputBorder.none,
                         isDense: true,
@@ -2015,7 +2018,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       },
                       child: const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 6),
-                        child: Icon(Icons.cancel_rounded, size: 16, color: Color(0xFF94A3B8)),
+                        child: Icon(Icons.cancel_rounded, size: 16, color: AppDesignSystem.slate400),
                       ),
                     ),
                   Padding(
@@ -2031,14 +2034,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 22),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+                            colors: [AppDesignSystem.orange600, AppDesignSystem.cafeAccent],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           borderRadius: BorderRadius.circular(11),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFFEA580C).withValues(alpha: 0.28),
+                              color: AppDesignSystem.orange600.withValues(alpha: 0.28),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),

@@ -370,15 +370,27 @@ const recentPrintTimesWeb = new Map<string, number>()
  * Queue KOT print job cleanly without UI lag or blocking popups
  */
 export function printKOTReceipt(order: any, shopType: string = 'RESTAURANT', force: boolean = false) {
-  const cleanId = (order.id || order.readableId || '').toString().trim()
+  const idKey = (order.id || '').toString().trim().replace(/^#/, '')
+  const readableKey = (order.readableId || '').toString().trim().replace(/^#/, '')
+  const combinedKey = (order.combinedId || '').toString().trim()
+  const baseReadableKey = readableKey.replace(/-[GR\d]+$/i, '')
   const now = Date.now()
-  if (!force && cleanId) {
-    const lastTime = recentPrintTimesWeb.get(cleanId)
-    if (lastTime && (now - lastTime) < 8000) {
-      console.warn(`[KOT Print] Ignored duplicate print for #${cleanId} (${Math.round((8000 - (now - lastTime))/1000)}s cooldown active)`)
+
+  if (!force) {
+    const lastTimeId = idKey ? recentPrintTimesWeb.get(idKey) : undefined
+    const lastTimeReadable = readableKey ? recentPrintTimesWeb.get(readableKey) : undefined
+    const lastTimeCombined = combinedKey ? recentPrintTimesWeb.get(combinedKey) : undefined
+    const lastTimeBase = baseReadableKey ? recentPrintTimesWeb.get(baseReadableKey) : undefined
+    const lastTime = Math.max(lastTimeId || 0, lastTimeReadable || 0, lastTimeCombined || 0, lastTimeBase || 0)
+
+    if (lastTime > 0 && (now - lastTime) < 10000) {
+      console.warn(`[KOT Print] 🛡️ Ignored duplicate print for #${readableKey || idKey} (${Math.round((10000 - (now - lastTime))/1000)}s cooldown active)`)
       return
     }
-    recentPrintTimesWeb.set(cleanId, now)
+    if (idKey) recentPrintTimesWeb.set(idKey, now)
+    if (readableKey) recentPrintTimesWeb.set(readableKey, now)
+    if (combinedKey) recentPrintTimesWeb.set(combinedKey, now)
+    if (baseReadableKey) recentPrintTimesWeb.set(baseReadableKey, now)
   }
 
   const html = generateKOTHtml(order, shopType)

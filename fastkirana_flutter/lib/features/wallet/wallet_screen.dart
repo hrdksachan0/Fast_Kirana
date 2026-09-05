@@ -27,22 +27,22 @@ class WalletScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]),
+              gradient: const LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]),
               borderRadius: BorderRadius.circular(20),
               boxShadow: AppDesignSystem.shadowCard,
             ),
             child: Column(
               children: [
-                Text('Wallet Balance', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: Colors.white.withOpacity(0.9))),
+                Text('Wallet Balance', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: Colors.white.withValues(alpha: 0.9))),
                 const SizedBox(height: 8),
                 Text('₹1,250', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 40), fontWeight: FontWeight.w800, color: Colors.white)),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _action('Add Money', Icons.add_rounded, () {}),
-                    _action('Send', Icons.send_rounded, () {}),
-                    _action('Withdraw', Icons.arrow_downward_rounded, () {}),
+                    _action(context, 'Add Money', Icons.add_rounded, () {}),
+                    _action(context, 'Send', Icons.send_rounded, () {}),
+                    _action(context, 'Withdraw', Icons.arrow_downward_rounded, () {}),
                   ],
                 ),
               ],
@@ -60,7 +60,7 @@ class WalletScreen extends StatelessWidget {
                 Container(
                   width: 40,
                   height: 40,
-                  decoration: BoxDecoration(color: ((t['isCredit'] as bool) ? AppDesignSystem.success : AppDesignSystem.danger).withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                  decoration: BoxDecoration(color: ((t['isCredit'] as bool) ? AppDesignSystem.success : AppDesignSystem.danger).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
                   child: Center(child: Icon((t['isCredit'] as bool) ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded, size: 18, color: (t['isCredit'] as bool) ? AppDesignSystem.success : AppDesignSystem.danger)),
                 ),
                 const SizedBox(width: 12),
@@ -73,7 +73,14 @@ class WalletScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                Text(t['amount'] as String, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: (t['isCredit'] as bool) ? AppDesignSystem.success : AppDesignSystem.danger)),
+                Text(
+                  '${(t['isCredit'] as bool) ? '+' : '-'}₹${t['amount']}',
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 15),
+                    fontWeight: FontWeight.w800,
+                    color: (t['isCredit'] as bool) ? AppDesignSystem.success : AppDesignSystem.danger,
+                  ),
+                ),
               ],
             ),
           )),
@@ -82,12 +89,12 @@ class WalletScreen extends StatelessWidget {
     );
   }
 
-  Widget _action(String label, IconData icon, VoidCallback onTap) {
+  Widget _action(BuildContext context, String label, IconData icon, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12)),
         child: Column(
           children: [
             Icon(icon, color: Colors.white, size: 20),

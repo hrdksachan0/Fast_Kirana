@@ -291,7 +291,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
           await SecureStorage.loadCache();  // Refresh interceptor cache
           if (mounted) {
             Navigator.of(context).pushAndRemoveUntil(
-              FadeSlideRoute(page: PickerDashboard()),
+              FadeSlideRoute(page: const PickerDashboard()),
               (route) => false,
             );
           }
@@ -300,7 +300,11 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
 
         // Customer Navigation: Compulsory Delivery Location Setup
         if (mounted) {
-          Navigator.of(context).pushNamedAndRemoveUntil('/location', (route) => false);
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/location',
+            (route) => false,
+            arguments: true,
+          );
         }
         return;
       } else {
@@ -367,7 +371,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                           color: const Color(0xFFFFF1F2),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Text('👋', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22))),
+                        child: Text('👋', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22))),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -595,7 +599,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                             ),
                           ],
                         ),
-                        child: const Center(
+                        child: Center(
                           child: Text('📲', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 30))),
                         ),
                       ),
@@ -645,7 +649,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('🇮🇳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
+                            Text('🇮🇳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
                             const SizedBox(width: 6),
                             Text(
                               '+91 ${widget.identifier}',

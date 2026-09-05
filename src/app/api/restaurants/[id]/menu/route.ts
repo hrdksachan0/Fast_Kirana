@@ -223,9 +223,12 @@ export async function GET(
         sectionTitle: null as string | null
       }
 
-      // Find matching section by tag or matchTags
+      // Find matching section by ID first, then fallback to search tags
       let matchedSection = normalizedSections.find(sec => {
-        return prodTags.includes(sec.tag.toLowerCase()) || 
+        return (prod as any).sectionId === sec.id ||
+               (prod as any).menuSectionId === sec.id ||
+               prodTags.includes(sec.id.toLowerCase()) ||
+               prodTags.includes(sec.tag.toLowerCase()) || 
                sec.matchTags.some((mt: string) => prodTags.includes(mt))
       })
 

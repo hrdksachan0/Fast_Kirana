@@ -19,7 +19,7 @@ class AdminBannersScreen extends StatelessWidget {
         backgroundColor: AppDesignSystem.background,
         elevation: 0,
         title: Text('Banners Management', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
-        actions: [IconButton(icon: Icon(Icons.add_photo_alternate_rounded, color: AppDesignSystem.primary), onPressed: () {})],
+        actions: [IconButton(icon: const Icon(Icons.add_photo_alternate_rounded, color: AppDesignSystem.primary), onPressed: () {})],
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
@@ -39,9 +39,9 @@ class AdminBannersScreen extends StatelessWidget {
                 Container(
                   width: 100,
                   height: 80,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     gradient: LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]),
-                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
+                    borderRadius: BorderRadius.horizontal(left: Radius.circular(16)),
                   ),
                   child: Center(child: Text(b['title'].toString(), style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w800, color: Colors.white))),
                 ),
@@ -60,7 +60,7 @@ class AdminBannersScreen extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: (b['active'] as bool) ? AppDesignSystem.success.withOpacity(0.1) : AppDesignSystem.danger.withOpacity(0.1),
+                                color: (b['active'] as bool) ? AppDesignSystem.success.withValues(alpha: 0.1) : AppDesignSystem.danger.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text((b['active'] as bool) ? 'LIVE' : 'INACTIVE', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9), fontWeight: FontWeight.w800, color: (b['active'] as bool) ? AppDesignSystem.success : AppDesignSystem.danger)),
@@ -71,7 +71,7 @@ class AdminBannersScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                IconButton(icon: Icon(Icons.edit_outlined, color: AppDesignSystem.primary), onPressed: () {}),
+                IconButton(icon: const Icon(Icons.edit_outlined, color: AppDesignSystem.primary), onPressed: () {}),
               ],
             ),
           );

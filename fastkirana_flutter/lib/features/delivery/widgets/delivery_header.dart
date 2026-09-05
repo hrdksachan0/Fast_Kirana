@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/theme/design_system.dart';
+import '../../../../core/theme/responsive.dart';
 import '../../../../widgets/live_clock_badge.dart';
 
 /// Top header for the delivery dashboard. Contains:
@@ -18,6 +20,7 @@ class DeliveryHeader extends StatelessWidget {
   final String userName;
   final int refreshCountdown;
   final int activeTab;
+  final String? storeName;
   final VoidCallback onBack;
   final VoidCallback onToggleOnline;
   final VoidCallback onToggleDarkMode;
@@ -30,6 +33,7 @@ class DeliveryHeader extends StatelessWidget {
     required this.isOnline,
     required this.isDarkMode,
     required this.userName,
+    this.storeName,
     required this.refreshCountdown,
     required this.activeTab,
     required this.onBack,
@@ -63,11 +67,11 @@ class DeliveryHeader extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
           child: Column(
             children: [
-              _statusBar(),
+              _statusBar(context),
               const SizedBox(height: 12),
-              _greeting(),
+              _greeting(context),
               const SizedBox(height: 12),
-              _segmentedTabs(),
+              _segmentedTabs(context),
             ],
           ),
         ),
@@ -75,7 +79,7 @@ class DeliveryHeader extends StatelessWidget {
     );
   }
 
-  Widget _statusBar() {
+  Widget _statusBar(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -165,6 +169,7 @@ class DeliveryHeader extends StatelessWidget {
             ),
             child: const Icon(Icons.refresh_rounded, size: 14, color: Colors.white),
           ),
+        ),
         if (onLogout != null) ...[
           const SizedBox(width: 6),
           Bounceable(
@@ -184,7 +189,7 @@ class DeliveryHeader extends StatelessWidget {
     );
   }
 
-  Widget _greeting() {
+  Widget _greeting(BuildContext context) {
     return Row(
       children: [
         Stack(
@@ -255,9 +260,35 @@ class DeliveryHeader extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 5),
-                  const Text('👋', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
+                  Text('👋', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
                 ],
               ),
+              if (storeName != null && storeName!.isNotEmpty) ...[
+                const SizedBox(height: 3),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.storefront_rounded, size: 10, color: Colors.white),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Store Hub: $storeName',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 9.5),
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -296,7 +327,7 @@ class DeliveryHeader extends StatelessWidget {
     );
   }
 
-  Widget _segmentedTabs() {
+  Widget _segmentedTabs(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(3.5),
       decoration: BoxDecoration(
@@ -305,15 +336,15 @@ class DeliveryHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _segmentTab(0, 'Deliveries', Icons.local_shipping_rounded),
-          _segmentTab(1, 'Cash Wallet', Icons.account_balance_wallet_rounded),
-          _segmentTab(2, 'History', Icons.check_circle_outline_rounded),
+          _segmentTab(0, 'Deliveries', Icons.local_shipping_rounded, context),
+          _segmentTab(1, 'Cash Wallet', Icons.account_balance_wallet_rounded, context),
+          _segmentTab(2, 'History', Icons.check_circle_outline_rounded, context),
         ],
       ),
     );
   }
 
-  Widget _segmentTab(int index, String label, IconData icon) {
+  Widget _segmentTab(int index, String label, IconData icon, BuildContext context) {
     final isSelected = activeTab == index;
     return Expanded(
       child: Bounceable(

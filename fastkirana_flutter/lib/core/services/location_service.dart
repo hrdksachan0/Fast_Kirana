@@ -4,8 +4,8 @@ import 'package:geocoding/geocoding.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_config.dart';
 import '../../data/models/address.dart';
-import '../../providers/address_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/store_hub_provider.dart';
 
 class LocationDetails {
   final double latitude;
@@ -225,8 +225,8 @@ class LocationService {
 
 /// Provider that calculates the dynamic distance tier for the currently selected address & cart
 final deliveryTierProvider = Provider<DeliveryTierInfo>((ref) {
-  final address = ref.watch(selectedAddressProvider);
+  final nearestResult = ref.watch(nearestHubResultProvider);
   final cart = ref.watch(cartProvider);
   final subtotal = cart.valueOrNull?.subtotal ?? 0.0;
-  return LocationService.getTierForAddress(address, subtotal);
+  return LocationService.getDeliveryTier(nearestResult.distanceKm, subtotal);
 });

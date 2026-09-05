@@ -58,8 +58,41 @@ export async function POST(request: Request) {
       finalSlug = `${slug}-${Date.now().toString().slice(-4)}`
     }
 
+    // Auto-generate clean series ID (Blinkit style: CAT-1xx for Ghatampur, CAT-2xx for Hamirpur)
+    let categoryId = body.id?.trim()
+    if (!categoryId) {
+      const isHamirpur = body.city?.toLowerCase().includes('hamirpur') || body.hubId?.includes('210301')
+      const prefix = isHamirpur ? 'CAT-2' : 'CAT-1'
+      const startNum = isHamirpur ? 201 : 101
+
+      if (body.parentId) {
+        // Subcategory ID format: SUB-<cleanParentId>-01
+        const cleanParent = body.parentId.replace(/^CAT-/, '')
+        const existingSubs = await prisma.category.findMany({
+          where: { parentId: body.parentId, id: { startsWith: `SUB-${cleanParent}-` } },
+          select: { id: true },
+        })
+        const nextSubNum = existingSubs.length + 1
+        categoryId = `SUB-${cleanParent}-${String(nextSubNum).padStart(2, '0')}`
+      } else {
+        const existingCats = await prisma.category.findMany({
+          where: { id: { startsWith: prefix } },
+          select: { id: true },
+        })
+        let maxNum = startNum - 1
+        for (const c of existingCats) {
+          const num = parseInt(c.id.replace('CAT-', ''), 10)
+          if (!isNaN(num) && num > maxNum) {
+            maxNum = num
+          }
+        }
+        categoryId = `CAT-${maxNum + 1}`
+      }
+    }
+
     const category = await prisma.category.create({
       data: {
+        id: categoryId,
         name,
         slug: finalSlug,
         imageUrl: imageUrl || '📦',

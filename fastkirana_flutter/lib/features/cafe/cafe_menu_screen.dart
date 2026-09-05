@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/services/logger_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,6 +8,7 @@ import 'package:shimmer/shimmer.dart';
 import '../../data/models/product.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../core/theme/responsive.dart';
+import '../../core/theme/design_system.dart';
 import '../../data/models/restaurant.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/restaurant_provider.dart';
@@ -15,7 +17,6 @@ import '../../widgets/floating_cart_bar.dart';
 import '../../widgets/cart_conflict_dialog.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../products/product_detail_screen.dart';
-import '../cart/cart_screen.dart';
 import '../profile/add_review_screen.dart';
 
 class WebMenuSection {
@@ -201,7 +202,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
   final Map<String, GlobalKey> _sectionKeys = {};
   bool _isManualTabClick = false;
 
-  static const Color primaryOrange = Color(0xFFEA580C);
+  static const Color primaryOrange = AppDesignSystem.orange600;
 
   @override
   void initState() {
@@ -317,7 +318,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
   List<RenderedCategory> _buildCategories(List<Product> products, Restaurant? restaurant) {
     List<WebMenuSection> baseSections;
     if (restaurant?.menuSections != null && restaurant!.menuSections!.isNotEmpty) {
-      baseSections = restaurant!.menuSections!.map((s) {
+      baseSections = restaurant.menuSections!.map((s) {
         final map = s is Map ? s : <String, dynamic>{};
         final tag = map['tag']?.toString() ?? 'section';
         final title = map['title']?.toString() ?? 'Menu Section';
@@ -446,6 +447,8 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
         return CachedNetworkImage(
           imageUrl: banner,
           fit: BoxFit.cover,
+          memCacheWidth: 800,
+          memCacheHeight: 400,
           errorWidget: (_, __, ___) => _buildFallbackBanner(name),
         );
       } else if (banner.startsWith('/')) {
@@ -469,20 +472,20 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
         errorBuilder: (_, __, ___) => Image.asset(
           'assets/categories/wedson_restaurant_bg.webp',
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1F2937)),
+          errorBuilder: (_, __, ___) => Container(color: AppDesignSystem.gray800),
         ),
       );
     } else if (lower.contains('bal') || lower.contains('udyan')) {
       return Image.asset(
         'assets/categories/cafe_banner.webp',
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1F2937)),
+        errorBuilder: (_, __, ___) => Container(color: AppDesignSystem.gray800),
       );
     }
     return Image.asset(
       'assets/categories/cafe_banner.webp',
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1F2937)),
+      errorBuilder: (_, __, ___) => Container(color: AppDesignSystem.gray800),
     );
   }
 
@@ -495,6 +498,8 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
         return CachedNetworkImage(
           imageUrl: logo,
           fit: BoxFit.cover,
+          memCacheWidth: 200,
+          memCacheHeight: 200,
           errorWidget: (_, __, ___) => _buildFallbackLogo(name),
         );
       } else if (logo.startsWith('/')) {
@@ -518,26 +523,26 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
         errorBuilder: (_, __, ___) => Image.asset(
           'assets/categories/wedson_restaurant_banner.webp',
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => const Center(child: Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
+          errorBuilder: (_, __, ___) => Center(child: Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
         ),
       );
     } else if (lower.contains('a.s') || lower.contains('as-')) {
       return Image.asset(
         'assets/categories/cafe_all_menu_category.webp',
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => const Center(child: Text('☕', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
+        errorBuilder: (_, __, ___) => Center(child: Text('☕', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
       );
     } else if (lower.contains('bal') || lower.contains('udyan')) {
       return Image.asset(
         'assets/categories/cafe_category.webp',
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => const Center(child: Text('🍲', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
+        errorBuilder: (_, __, ___) => Center(child: Text('🍲', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
       );
     }
     return Image.asset(
       'assets/categories/cafe_category.webp',
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => const Center(child: Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
+      errorBuilder: (_, __, ___) => Center(child: Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
     );
   }
 
@@ -562,7 +567,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
     final isPureVeg = currentRestaurant?.isPureVeg ?? true;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: AppDesignSystem.gray50,
       body: ResponsiveContainer(
         maxWidth: Responsive.wideMaxContentWidth,
         fillHeight: true,
@@ -575,6 +580,10 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                 pinned: true,
                 expandedHeight: 210,
                 backgroundColor: Colors.white,
+                surfaceTintColor: Colors.transparent,
+                systemOverlayStyle: innerBoxIsScrolled
+                    ? SystemUiOverlayStyle.dark
+                    : SystemUiOverlayStyle.light,
                 elevation: innerBoxIsScrolled ? 0.5 : 0,
                 leading: Container(
                   margin: const EdgeInsets.all(8),
@@ -585,7 +594,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                   child: IconButton(
                     icon: Icon(
                       Icons.arrow_back_rounded,
-                      color: innerBoxIsScrolled ? const Color(0xFF0F172A) : Colors.white,
+                      color: innerBoxIsScrolled ? AppDesignSystem.slate900 : Colors.white,
                       size: 20,
                     ),
                     onPressed: () => Navigator.pop(context),
@@ -601,7 +610,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                     child: IconButton(
                       icon: Icon(
                         Icons.search_rounded,
-                        color: innerBoxIsScrolled ? const Color(0xFF0F172A) : Colors.white,
+                        color: innerBoxIsScrolled ? AppDesignSystem.slate900 : Colors.white,
                         size: 20,
                       ),
                       onPressed: () {
@@ -622,7 +631,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 16.5),
                           fontWeight: FontWeight.w900,
-                          color: const Color(0xFF0F172A),
+                          color: AppDesignSystem.slate900,
                           letterSpacing: -0.2,
                         ),
                       )
@@ -646,7 +655,12 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                       ),
                       SafeArea(
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 44, 16, 14),
+                          padding: EdgeInsets.fromLTRB(
+                            Responsive.horizontalPadding(context),
+                            Responsive.isSmallMobile(context) ? 36 : 44,
+                            Responsive.horizontalPadding(context),
+                            14,
+                          ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.end,
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -655,8 +669,8 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   Container(
-                                    width: 56,
-                                    height: 56,
+                                    width: Responsive.isSmallMobile(context) ? 44 : 56,
+                                    height: Responsive.isSmallMobile(context) ? 44 : 56,
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       shape: BoxShape.circle,
@@ -736,21 +750,21 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFF00B140).withValues(alpha: 0.25),
+                                          color: AppDesignSystem.accent.withValues(alpha: 0.25),
                                           borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(color: const Color(0xFF4ADE80), width: 0.8),
+                                          border: Border.all(color: AppDesignSystem.green400, width: 0.8),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            const Icon(Icons.eco_rounded, size: 10, color: Color(0xFF4ADE80)),
+                                            const Icon(Icons.eco_rounded, size: 10, color: AppDesignSystem.green400),
                                             const SizedBox(width: 3),
                                             Text(
                                               'Pure Veg',
                                               style: GoogleFonts.inter(
                                                 fontSize: Responsive.scaledFontSize(context, 9.5),
                                                 fontWeight: FontWeight.w800,
-                                                color: const Color(0xFF4ADE80),
+                                                color: AppDesignSystem.green400,
                                               ),
                                             ),
                                           ],
@@ -777,7 +791,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF15803D),
+                          color: AppDesignSystem.green700,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -795,7 +809,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                       const SizedBox(width: 6),
                       Text(
                         '($totalReviews reviews)',
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: const Color(0xFF6B7280)),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: AppDesignSystem.textSecondary),
                       ),
                     ],
                   ),
@@ -807,7 +821,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                 child: Container(
                   decoration: const BoxDecoration(
                     color: Colors.white,
-                    border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1)),
+                    border: Border(bottom: BorderSide(color: AppDesignSystem.border, width: 1)),
                   ),
                   child: TabBar(
                     controller: _tabController,
@@ -815,7 +829,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                     indicatorWeight: 2.5,
                     indicatorSize: TabBarIndicatorSize.label,
                     labelColor: primaryOrange,
-                    unselectedLabelColor: const Color(0xFF9CA3AF),
+                    unselectedLabelColor: AppDesignSystem.textTertiary,
                     labelStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w900, letterSpacing: 0.3),
                     unselectedLabelStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w600),
                     tabs: [
@@ -888,7 +902,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                 child: Container(
                   margin: const EdgeInsets.fromLTRB(0, 0, 0, 4),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  color: const Color(0xFFFFF7ED),
+                  color: AppDesignSystem.orange50,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -900,18 +914,18 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFECFDF5),
+                            color: AppDesignSystem.green50,
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFFA7F3D0)),
+                            border: Border.all(color: AppDesignSystem.emerald200),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('🌿', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
+                              Text('🌿', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
                               const SizedBox(width: 3),
                               Text(
                                 '100% Pure Veg Kitchen',
-                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w800, color: const Color(0xFF047857)),
+                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w800, color: AppDesignSystem.emerald700),
                               ),
                             ],
                           ),
@@ -932,14 +946,14 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                     sliver: SliverGrid(
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: Responsive.gridColumns(context, smallMobile: 2, mobile: 2, tablet: 3, desktop: 4),
-                        childAspectRatio: Responsive.gridAspectRatio(context, smallMobile: 0.62, mobile: 0.64, tablet: 0.70, desktop: 0.76),
+                        childAspectRatio: Responsive.gridAspectRatio(context, smallMobile: 0.64, mobile: 0.66, tablet: 0.70, desktop: 0.75),
                         crossAxisSpacing: 10,
                         mainAxisSpacing: 10,
                       ),
                       delegate: SliverChildBuilderDelegate(
                         (context, index) => ProductCard(
                           product: section.products[index],
-                          isCompact: true,
+                          isCompact: false,
                           showOutlet: false,
                           onTap: () {
                             HapticFeedback.lightImpact();
@@ -955,7 +969,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                   ),
               ],
 
-              const SliverPadding(padding: EdgeInsets.only(bottom: 90)),
+              SliverPadding(padding: EdgeInsets.only(bottom: 180 + MediaQuery.of(context).padding.bottom)),
             ],
           ),
         );
@@ -992,7 +1006,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              backgroundColor: const Color(0xFF047857),
+              backgroundColor: AppDesignSystem.emerald700,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               content: Row(
@@ -1051,10 +1065,10 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+          border: Border.all(color: AppDesignSystem.slate100, width: 1.2),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+              color: AppDesignSystem.slate900.withValues(alpha: 0.03),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -1075,7 +1089,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                         height: 14,
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: isVeg ? const Color(0xFF15803D) : const Color(0xFFDC2626),
+                            color: isVeg ? AppDesignSystem.green700 : AppDesignSystem.red600,
                             width: 1.5,
                           ),
                           borderRadius: BorderRadius.circular(3.5),
@@ -1086,7 +1100,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                             height: 6,
                             decoration: BoxDecoration(
                               shape: isVeg ? BoxShape.circle : BoxShape.rectangle,
-                              color: isVeg ? const Color(0xFF15803D) : const Color(0xFFDC2626),
+                              color: isVeg ? AppDesignSystem.green700 : AppDesignSystem.red600,
                             ),
                           ),
                         ),
@@ -1096,21 +1110,21 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFFBEB),
+                            color: AppDesignSystem.amber50,
                             borderRadius: BorderRadius.circular(5),
-                            border: Border.all(color: const Color(0xFFFDE68A), width: 0.8),
+                            border: Border.all(color: AppDesignSystem.yellow200, width: 0.8),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('⭐', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 8))),
+                              Text('⭐', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 8))),
                               const SizedBox(width: 2),
                               Text(
                                 'Bestseller',
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 9),
                                   fontWeight: FontWeight.w800,
-                                  color: const Color(0xFFB45309),
+                                  color: AppDesignSystem.amber700,
                                 ),
                               ),
                             ],
@@ -1125,7 +1139,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 14.5),
                       fontWeight: FontWeight.w800,
-                      color: const Color(0xFF0F172A),
+                      color: AppDesignSystem.slate900,
                       letterSpacing: -0.2,
                     ),
                     maxLines: 2,
@@ -1139,7 +1153,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 15),
                           fontWeight: FontWeight.w900,
-                          color: const Color(0xFF0F172A),
+                          color: AppDesignSystem.slate900,
                         ),
                       ),
                       if (product.mrp > product.price) ...[
@@ -1150,7 +1164,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                             fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: FontWeight.w500,
                             decoration: TextDecoration.lineThrough,
-                            color: const Color(0xFF94A3B8),
+                            color: AppDesignSystem.slate400,
                           ),
                         ),
                       ],
@@ -1163,7 +1177,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 11.5),
                         fontWeight: FontWeight.w400,
-                        color: const Color(0xFF64748B),
+                        color: AppDesignSystem.slate500,
                         height: 1.25,
                       ),
                       maxLines: 2,
@@ -1187,9 +1201,9 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                     height: 100,
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
+                      color: AppDesignSystem.slate50,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFF1F5F9)),
+                      border: Border.all(color: AppDesignSystem.slate100),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(15),
@@ -1218,15 +1232,17 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
       return CachedNetworkImage(
         imageUrl: imgUrl,
         fit: BoxFit.cover,
+        memCacheWidth: 300,
+        memCacheHeight: 300,
         placeholder: (_, __) => Shimmer.fromColors(
-          baseColor: const Color(0xFFF1F5F9),
-          highlightColor: const Color(0xFFFAFAFA),
+          baseColor: AppDesignSystem.slate100,
+          highlightColor: AppDesignSystem.background,
           child: Container(color: Colors.white),
         ),
         errorWidget: (_, __, ___) => Center(
           child: Text(
             _getEmojiForDish(product.name),
-            style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 34)),
+            style: TextStyle(fontSize: Responsive.scaledFontSize(context, 34)),
           ),
         ),
       );
@@ -1234,7 +1250,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
     return Center(
       child: Text(
         _getEmojiForDish(product.name),
-        style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 34)),
+        style: TextStyle(fontSize: Responsive.scaledFontSize(context, 34)),
       ),
     );
   }
@@ -1280,7 +1296,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                   ),
                 ],
               ),
-              backgroundColor: const Color(0xFF0F172A),
+              backgroundColor: AppDesignSystem.slate900,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               duration: const Duration(seconds: 2),
@@ -1291,9 +1307,9 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
           height: 30,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: const Color(0xFFF1F5F9),
+            color: AppDesignSystem.slate100,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+            border: Border.all(color: AppDesignSystem.slate200),
           ),
           child: Center(
             child: Text(
@@ -1301,7 +1317,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 10.5),
                 fontWeight: FontWeight.w900,
-                color: const Color(0xFF94A3B8),
+                color: AppDesignSystem.slate400,
                 letterSpacing: 0.5,
               ),
             ),
@@ -1316,14 +1332,14 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
         padding: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+            colors: [AppDesignSystem.orange600, AppDesignSystem.orange500],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFEA580C).withValues(alpha: 0.35),
+              color: AppDesignSystem.orange600.withValues(alpha: 0.35),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -1375,14 +1391,14 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+            colors: [AppDesignSystem.orange600, AppDesignSystem.orange500],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFEA580C).withValues(alpha: 0.3),
+              color: AppDesignSystem.orange600.withValues(alpha: 0.3),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -1427,14 +1443,14 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 13),
                   fontWeight: FontWeight.w900,
-                  color: const Color(0xFF0F172A),
+                  color: AppDesignSystem.slate900,
                   letterSpacing: 0.3,
                 ),
               ),
             ),
             Text(
               '${section.products.length} Items',
-              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w600, color: const Color(0xFF9CA3AF)),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w600, color: AppDesignSystem.textTertiary),
             ),
             const SizedBox(width: 8),
             Text(
@@ -1467,16 +1483,16 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('⭐', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 48))),
+                Text('⭐', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 48))),
                 const SizedBox(height: 12),
                 Text(
                   'No reviews yet',
-                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w700, color: const Color(0xFF475569)),
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w700, color: AppDesignSystem.slate600),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Be the first to review!',
-                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF94A3B8)),
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate400),
                 ),
                 const SizedBox(height: 16),
                 GestureDetector(
@@ -1519,7 +1535,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFF1F5F9)),
+                  border: Border.all(color: AppDesignSystem.slate100),
                 ),
                 child: Row(
                   children: [
@@ -1528,19 +1544,19 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                       children: [
                         Text(
                           '$avgRating',
-                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 32), fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 32), fontWeight: FontWeight.w900, color: AppDesignSystem.slate900),
                         ),
                         Row(
                           children: List.generate(5, (i) => Icon(
                             Icons.star_rounded,
                             size: 16,
-                            color: i < (avgRating is num ? avgRating.round() : 4) ? const Color(0xFFF59E0B) : const Color(0xFFE5E7EB),
+                            color: i < (avgRating is num ? avgRating.round() : 4) ? AppDesignSystem.warning : AppDesignSystem.border,
                           )),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '$totalCount reviews',
-                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w600, color: const Color(0xFF9CA3AF)),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w600, color: AppDesignSystem.textTertiary),
                         ),
                       ],
                     ),
@@ -1587,7 +1603,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFF1F5F9)),
+                border: Border.all(color: AppDesignSystem.slate100),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1596,10 +1612,10 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                     children: [
                       CircleAvatar(
                         radius: 16,
-                        backgroundColor: const Color(0xFFF1F5F9),
+                        backgroundColor: AppDesignSystem.slate100,
                         child: Text(
                           userName.isNotEmpty ? userName[0].toUpperCase() : 'C',
-                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: const Color(0xFF475569)),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: AppDesignSystem.slate600),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -1609,13 +1625,13 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                           children: [
                             Text(
                               userName,
-                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700, color: AppDesignSystem.slate900),
                             ),
                             Row(
                               children: List.generate(5, (i) => Icon(
                                 Icons.star_rounded,
                                 size: 12,
-                                color: i < rating ? const Color(0xFFF59E0B) : const Color(0xFFE5E7EB),
+                                color: i < rating ? AppDesignSystem.warning : AppDesignSystem.border,
                               )),
                             ),
                           ],
@@ -1624,7 +1640,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                       if (createdAt.isNotEmpty)
                         Text(
                           _formatDate(createdAt),
-                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), color: const Color(0xFF9CA3AF)),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), color: AppDesignSystem.textTertiary),
                         ),
                     ],
                   ),
@@ -1632,7 +1648,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                     const SizedBox(height: 8),
                     Text(
                       comment,
-                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: const Color(0xFF475569), height: 1.4),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: AppDesignSystem.slate600, height: 1.4),
                     ),
                   ],
                 ],
@@ -1641,7 +1657,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
           },
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFFEA580C))),
+      loading: () => const Center(child: CircularProgressIndicator(color: AppDesignSystem.orange600)),
       error: (_, __) => const Center(child: Text('Failed to load reviews')),
     );
   }
@@ -1656,7 +1672,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
       if (diff.inDays < 7) return '${diff.inDays}d ago';
       if (diff.inDays < 30) return '${(diff.inDays / 7).floor()}w ago';
       return '${dt.day}/${dt.month}/${dt.year}';
-    } catch (_) {
+    } catch (e) { LoggerService.error('CafeMenuScreen: silent catch', e);
       return '';
     }
   }
@@ -1679,7 +1695,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
           Container(
             width: 40,
             height: 4,
-            decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(2)),
+            decoration: BoxDecoration(color: AppDesignSystem.slate200, borderRadius: BorderRadius.circular(2)),
           ),
           const SizedBox(height: 16),
           TextField(
@@ -1688,22 +1704,22 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
             onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
             decoration: InputDecoration(
               hintText: 'Search items...',
-              hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: const Color(0xFF94A3B8)),
-              prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF94A3B8)),
+              hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: AppDesignSystem.slate400),
+              prefixIcon: const Icon(Icons.search_rounded, color: AppDesignSystem.slate400),
               suffixIcon: _searchQuery.isNotEmpty
                   ? GestureDetector(
                       onTap: () {
                         _searchController.clear();
                         setState(() => _searchQuery = '');
                       },
-                      child: const Icon(Icons.close_rounded, color: Color(0xFF94A3B8)),
+                      child: const Icon(Icons.close_rounded, color: AppDesignSystem.slate400),
                     )
                   : null,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFEA580C))),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppDesignSystem.slate200)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppDesignSystem.orange600)),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
-            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: const Color(0xFF0F172A)),
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: AppDesignSystem.slate900),
           ),
         ],
       ),
@@ -1712,11 +1728,11 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
 
   Widget _buildShimmerGrid() {
     return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 90),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.76,
-        crossAxisSpacing: 10,
+      padding: EdgeInsets.fromLTRB(Responsive.horizontalPadding(context), 12, Responsive.horizontalPadding(context), 90),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: Responsive.gridColumns(context, smallMobile: 2, mobile: 2, smallTablet: 3, tablet: 4, desktop: 5),
+        childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: true),
+        crossAxisSpacing: Responsive.horizontalPadding(context) * 0.5,
         mainAxisSpacing: 10,
       ),
       itemCount: 6,
@@ -1764,7 +1780,11 @@ class _CategoryChipsDelegate extends SliverPersistentHeaderDelegate {
       return CachedNetworkImage(
         imageUrl: cat.imageUrl!,
         fit: BoxFit.cover,
-        placeholder: (_, __) => Center(child: Text(cat.emoji, style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 18)))),
+        memCacheWidth: 200,
+        memCacheHeight: 200,
+        maxWidthDiskCache: 200,
+        maxHeightDiskCache: 200,
+        placeholder: (_, __) => Center(child: Text(cat.emoji, style: const TextStyle(fontSize: 18))),
         errorWidget: (_, __, ___) => _buildLocalAssetOrEmoji(cat),
       );
     }
@@ -1777,10 +1797,10 @@ class _CategoryChipsDelegate extends SliverPersistentHeaderDelegate {
       return Image.asset(
         asset,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Center(child: Text(cat.emoji, style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 20)))),
+        errorBuilder: (_, __, ___) => Center(child: Text(cat.emoji, style: const TextStyle(fontSize: 20))),
       );
     }
-    return Center(child: Text(cat.emoji, style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 20))));
+    return Center(child: Text(cat.emoji, style: const TextStyle(fontSize: 20)));
   }
 
   @override
@@ -1789,7 +1809,7 @@ class _CategoryChipsDelegate extends SliverPersistentHeaderDelegate {
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(
-          bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1.5),
+          bottom: BorderSide(color: AppDesignSystem.slate100, width: 1.5),
         ),
         boxShadow: [
           BoxShadow(
@@ -1828,15 +1848,15 @@ class _CategoryChipsDelegate extends SliverPersistentHeaderDelegate {
                           padding: const EdgeInsets.all(2),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: isSelected ? const Color(0xFFFFF7ED) : Colors.white,
+                            color: isSelected ? AppDesignSystem.orange50 : Colors.white,
                             border: Border.all(
-                              color: isSelected ? const Color(0xFFEA580C) : const Color(0xFFE2E8F0),
+                              color: isSelected ? AppDesignSystem.orange600 : AppDesignSystem.slate200,
                               width: isSelected ? 2.5 : 1.2,
                             ),
                             boxShadow: isSelected
                                 ? [
                                     BoxShadow(
-                                      color: const Color(0xFFEA580C).withValues(alpha: 0.25),
+                                      color: AppDesignSystem.orange600.withValues(alpha: 0.25),
                                       blurRadius: 6,
                                       offset: const Offset(0, 2),
                                     ),
@@ -1853,7 +1873,7 @@ class _CategoryChipsDelegate extends SliverPersistentHeaderDelegate {
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 9.5),
                             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                            color: isSelected ? const Color(0xFFEA580C) : const Color(0xFF475569),
+                            color: isSelected ? AppDesignSystem.orange600 : AppDesignSystem.slate600,
                             height: 1.15,
                           ),
                           textAlign: TextAlign.center,

@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/services/logger_service.dart';
 import '../models/address.dart';
-import '../../core/network/api_client.dart';
 
 class AddressRepository {
   final Dio dio;
@@ -44,7 +44,7 @@ class AddressRepository {
       try {
         final List<dynamic> decoded = jsonDecode(rawJson) as List<dynamic>;
         localAddresses = decoded.map((j) => Address.fromJson(j as Map<String, dynamic>)).toList();
-      } catch (_) {}
+      } catch (e, _) { LoggerService.error('AddressRepository', e); }
     }
 
     try {
@@ -57,7 +57,7 @@ class AddressRepository {
           return apiAddresses;
         }
       }
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('AddressRepository', e); }
 
     return localAddresses;
   }
@@ -110,7 +110,7 @@ class AddressRepository {
       if (response.data is Map<String, dynamic>) {
         return Address.fromJson(response.data as Map<String, dynamic>);
       }
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('AddressRepository', e); }
 
     return newAddress;
   }
@@ -144,7 +144,7 @@ class AddressRepository {
       if (response.data is Map<String, dynamic>) {
         return Address.fromJson(response.data as Map<String, dynamic>);
       }
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('AddressRepository', e); }
 
     return updated.firstWhere((a) => a.id == id, orElse: () => defaultGhatampurAddress);
   }
@@ -159,7 +159,7 @@ class AddressRepository {
 
     try {
       await dio.delete('/api/addresses', data: {'id': id});
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('AddressRepository', e); }
   }
 
   Future<void> updateCoordinates(String id, double lat, double lng) async {
@@ -191,7 +191,7 @@ class AddressRepository {
         'lat': lat,
         'lng': lng,
       });
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('AddressRepository', e); }
   }
 
   Future<void> _saveToCache(List<Address> addresses) async {

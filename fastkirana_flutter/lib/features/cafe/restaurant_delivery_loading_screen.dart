@@ -1,3 +1,5 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import '../../core/theme/responsive.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -129,7 +131,7 @@ class _RestaurantDeliveryLoadingScreenState extends State<RestaurantDeliveryLoad
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: Responsive.scaledFontSize(context, 22),
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF94A3B8), // Soft rounded light-gray
+                            color: AppDesignSystem.slate400, // Soft rounded light-gray
                             height: 1.35,
                             letterSpacing: -0.4,
                           ),
@@ -147,7 +149,7 @@ class _RestaurantDeliveryLoadingScreenState extends State<RestaurantDeliveryLoad
                             width: 5,
                             height: 5,
                             decoration: const BoxDecoration(
-                              color: Color(0xFFE20A22),
+                              color: AppDesignSystem.primary,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -157,7 +159,7 @@ class _RestaurantDeliveryLoadingScreenState extends State<RestaurantDeliveryLoad
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 10),
                               fontWeight: FontWeight.w800,
-                              color: const Color(0xFFCBD5E1), // Very subtle & minimal
+                              color: AppDesignSystem.slate300, // Very subtle & minimal
                               letterSpacing: 1.8,
                             ),
                           ),
@@ -190,10 +192,10 @@ class _RestaurantDeliveryLoadingScreenState extends State<RestaurantDeliveryLoad
             height: 140,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFFFFF4F5),
+              color: AppDesignSystem.rose50alt,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFFF2D55).withOpacity(0.04),
+                  color: AppDesignSystem.rose500alt.withValues(alpha: 0.04),
                   blurRadius: 30,
                   spreadRadius: 10,
                 ),
@@ -229,7 +231,7 @@ class _CuteFoodVectorPainter extends CustomPainter {
 
     // ─── 1. Soft Ground Shadow ───
     final shadowPaint = Paint()
-      ..color = const Color(0xFFF1F5F9)
+      ..color = AppDesignSystem.slate100
       ..style = PaintingStyle.fill;
     canvas.drawOval(
       Rect.fromCenter(center: Offset(center.dx, center.dy + 38), width: 110, height: 16),
@@ -241,18 +243,18 @@ class _CuteFoodVectorPainter extends CustomPainter {
       Rect.fromCenter(center: Offset(center.dx - 28, center.dy + 6), width: 56, height: 48),
       const Radius.circular(10),
     );
-    final boxPaint = Paint()..color = const Color(0xFFFFE4E6);
+    final boxPaint = Paint()..color = AppDesignSystem.rose100alt;
     canvas.drawRRect(boxRect, boxPaint);
 
     final boxLid = RRect.fromRectAndRadius(
       Rect.fromCenter(center: Offset(center.dx - 28, center.dy - 18), width: 62, height: 12),
       const Radius.circular(6),
     );
-    final boxLidPaint = Paint()..color = const Color(0xFFFDA4AF);
+    final boxLidPaint = Paint()..color = AppDesignSystem.rose300;
     canvas.drawRRect(boxLid, boxLidPaint);
 
     // Small FastKirana Brand Tag on Box
-    final badgePaint = Paint()..color = const Color(0xFFE20A22);
+    final badgePaint = Paint()..color = AppDesignSystem.primary;
     canvas.drawCircle(Offset(center.dx - 28, center.dy + 6), 9, badgePaint);
     final innerBadgePaint = Paint()..color = Colors.white;
     canvas.drawCircle(Offset(center.dx - 28, center.dy + 6), 4, innerBadgePaint);
@@ -264,12 +266,12 @@ class _CuteFoodVectorPainter extends CustomPainter {
       ..lineTo(center.dx + 44, center.dy + 34)
       ..lineTo(center.dx + 24, center.dy + 34)
       ..close();
-    final friesCupPaint = Paint()..color = const Color(0xFFE20A22);
+    final friesCupPaint = Paint()..color = AppDesignSystem.primary;
     canvas.drawPath(friesCupPath, friesCupPaint);
 
     // Fries Sticks
     final fryPaint = Paint()
-      ..color = const Color(0xFFFBBF24)
+      ..color = AppDesignSystem.amber400
       ..strokeWidth = 4.5
       ..strokeCap = StrokeCap.round;
     canvas.drawLine(Offset(center.dx + 25, center.dy - 2), Offset(center.dx + 23, center.dy - 16), fryPaint);
@@ -289,7 +291,7 @@ class _CuteFoodVectorPainter extends CustomPainter {
       topLeft: const Radius.circular(3),
       topRight: const Radius.circular(3),
     );
-    final bunPaint = Paint()..color = const Color(0xFFF59E0B);
+    final bunPaint = Paint()..color = AppDesignSystem.warning;
     canvas.drawRRect(bottomBun, bunPaint);
 
     // Patty
@@ -297,7 +299,7 @@ class _CuteFoodVectorPainter extends CustomPainter {
       Rect.fromCenter(center: Offset(burgerX, burgerY + 10), width: 56, height: 8),
       const Radius.circular(4),
     );
-    final pattyPaint = Paint()..color = const Color(0xFF78350F);
+    final pattyPaint = Paint()..color = AppDesignSystem.amber900;
     canvas.drawRRect(patty, pattyPaint);
 
     // Melted Cheese Corner
@@ -308,12 +310,12 @@ class _CuteFoodVectorPainter extends CustomPainter {
       ..lineTo(burgerX - 6, burgerY + 7)
       ..lineTo(burgerX - 18, burgerY + 14)
       ..close();
-    final cheesePaint = Paint()..color = const Color(0xFFFBBF24);
+    final cheesePaint = Paint()..color = AppDesignSystem.amber400;
     canvas.drawPath(cheesePath, cheesePaint);
 
     // Crisp Green Lettuce Wavy Strip
     final lettucePaint = Paint()
-      ..color = const Color(0xFF22C55E)
+      ..color = AppDesignSystem.lime500
       ..strokeWidth = 3.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -329,7 +331,7 @@ class _CuteFoodVectorPainter extends CustomPainter {
       Rect.fromCenter(center: Offset(burgerX, burgerY + 1), width: 50, height: 6),
       const Radius.circular(3),
     );
-    final tomatoPaint = Paint()..color = const Color(0xFFEF4444);
+    final tomatoPaint = Paint()..color = AppDesignSystem.danger;
     canvas.drawRRect(tomato, tomatoPaint);
 
     // Top Dome Bun
@@ -341,7 +343,7 @@ class _CuteFoodVectorPainter extends CustomPainter {
 
     // White Sesame Seeds on Top Bun
     final seedPaint = Paint()
-      ..color = Colors.white.withOpacity(0.9)
+      ..color = Colors.white.withValues(alpha: 0.9)
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
     canvas.drawPoints(
@@ -369,7 +371,7 @@ class _SteamPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final steamPaint = Paint()
-      ..color = const Color(0xFFFDA4AF).withOpacity(0.55 * (1.0 - progress * 0.4))
+      ..color = AppDesignSystem.rose300.withValues(alpha: 0.55 * (1.0 - progress * 0.4))
       ..strokeWidth = 2.2
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -398,3 +400,4 @@ class _SteamPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _SteamPainter oldDelegate) => oldDelegate.progress != progress;
 }
+

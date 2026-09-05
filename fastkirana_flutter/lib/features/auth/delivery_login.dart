@@ -1,4 +1,7 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import '../../core/theme/responsive.dart';
 import 'package:flutter/material.dart';
+import '../../core/services/logger_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -25,10 +28,10 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
   bool _isLoading = false;
   String? _errorMessage;
 
-  static const Color brandGreen = Color(0xFF00A344);
-  static const Color primaryRed = Color(0xFFE20A22);
-  static const Color slateDark = Color(0xFF0F172A);
-  static const Color slateMuted = Color(0xFF64748B);
+  static const Color brandGreen = AppDesignSystem.green700;
+  static const Color primaryRed = AppDesignSystem.primary;
+  static const Color slateDark = AppDesignSystem.slate900;
+  static const Color slateMuted = AppDesignSystem.slate500;
 
   // Rider master password
   static const String _masterRiderPassword = 'Aryan@2026';
@@ -99,7 +102,7 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
             await ref.read(authProvider.notifier).setUser(user);
           }
         }
-      } catch (_) {
+      } catch (e) { LoggerService.error('DeliveryLogin: silent catch', e);
         // Master password bypass allows instant access even if backend auth service is in offline/custom mode
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', 'rider_token_$phone');
@@ -146,7 +149,7 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppDesignSystem.slate50,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -175,20 +178,20 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
                   height: 88,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF00A344), Color(0xFF008736)],
+                      colors: [AppDesignSystem.green700, AppDesignSystem.accentDark],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF00A344).withValues(alpha: 0.3),
+                        color: AppDesignSystem.green700.withValues(alpha: 0.3),
                         blurRadius: 16,
                         offset: const Offset(0, 6),
                       ),
                     ],
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 44))),
                   ),
                 ),
@@ -216,7 +219,7 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: AppDesignSystem.slate200),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.04),
@@ -233,9 +236,9 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFEF2F2),
+                            color: AppDesignSystem.statusCancelled,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFFECDD3)),
+                            border: Border.all(color: AppDesignSystem.rose200),
                           ),
                           child: Row(
                             children: [
@@ -267,8 +270,8 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
                           prefixStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w700, color: slateDark),
                           counterText: '',
                           filled: true,
-                          fillColor: const Color(0xFFF8FAFC),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                          fillColor: AppDesignSystem.slate50,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppDesignSystem.slate300)),
                           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: brandGreen, width: 2)),
                         ),
                       ),
@@ -284,12 +287,12 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
                         decoration: InputDecoration(
                           hintText: 'Enter password',
                           filled: true,
-                          fillColor: const Color(0xFFF8FAFC),
+                          fillColor: AppDesignSystem.slate50,
                           suffixIcon: IconButton(
                             icon: Icon(_obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: slateMuted, size: 20),
                             onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                           ),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppDesignSystem.slate300)),
                           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: brandGreen, width: 2)),
                         ),
                       ),

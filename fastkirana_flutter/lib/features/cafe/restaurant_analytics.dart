@@ -34,7 +34,7 @@ class RestaurantAnalyticsScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('This Month', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
-                      Icon(Icons.calendar_today_rounded, size: 16, color: AppDesignSystem.textSecondary),
+                      const Icon(Icons.calendar_today_rounded, size: 16, color: AppDesignSystem.textSecondary),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -42,7 +42,7 @@ class RestaurantAnalyticsScreen extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.trending_up_rounded, color: AppDesignSystem.success, size: 14),
+                      const Icon(Icons.trending_up_rounded, color: AppDesignSystem.success, size: 14),
                       const SizedBox(width: 4),
                       Text('+18.5% vs last month', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.success)),
                     ],
@@ -53,9 +53,9 @@ class RestaurantAnalyticsScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(child: _miniCard('Orders', '1,240', AppDesignSystem.primary)),
+                Expanded(child: _miniCard(context, 'Orders', '1,240', AppDesignSystem.primary)),
                 const SizedBox(width: 12),
-                Expanded(child: _miniCard('Avg Rating', '4.5', AppDesignSystem.warning)),
+                Expanded(child: _miniCard(context, 'Avg Rating', '4.5', AppDesignSystem.warning)),
               ],
             ),
             const SizedBox(height: 24),
@@ -68,7 +68,7 @@ class RestaurantAnalyticsScreen extends StatelessWidget {
                 decoration: BoxDecoration(color: AppDesignSystem.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppDesignSystem.borderLight)),
                 child: Row(
                   children: [
-                    Container(width: 32, height: 32, decoration: BoxDecoration(color: AppDesignSystem.cafeAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: Center(child: Text('${e.key + 1}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: AppDesignSystem.cafeAccent)))),
+                    Container(width: 32, height: 32, decoration: BoxDecoration(color: AppDesignSystem.cafeAccent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Center(child: Text('${e.key + 1}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: AppDesignSystem.cafeAccent)))),
                     const SizedBox(width: 12),
                     Expanded(child: Text(e.value.split(' (')[0], style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: AppDesignSystem.textPrimary))),
                     Text(e.value.split(' (')[1].replaceAll(')', ''), style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: AppDesignSystem.cafeAccent)),
@@ -82,14 +82,14 @@ class RestaurantAnalyticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _miniCard(String label, String value, Color color) {
+  Widget _miniCard(BuildContext context, String label, String value, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: AppDesignSystem.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppDesignSystem.borderLight), boxShadow: AppDesignSystem.shadowSm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(width: 32, height: 32, decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: Icon(Icons.bar_chart_rounded, color: color, size: 18)),
+          Container(width: 32, height: 32, decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Icon(Icons.bar_chart_rounded, color: color, size: 18)),
           const SizedBox(height: 12),
           Text(value, style: GoogleFonts.poppins(fontSize: Responsive.scaledFontSize(context, 20), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
           Text(label, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary)),

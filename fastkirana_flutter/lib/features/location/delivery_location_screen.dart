@@ -12,9 +12,11 @@ import '../../data/models/address.dart';
 import '../../providers/address_provider.dart';
 import 'map_picker_screen.dart';
 import '../home/main_shell.dart';
+import '../../widgets/unserviceable_location_banner.dart';
 
 class DeliveryLocationScreen extends ConsumerStatefulWidget {
-  const DeliveryLocationScreen({super.key});
+  final bool autoFetchLocation;
+  const DeliveryLocationScreen({super.key, this.autoFetchLocation = false});
 
   @override
   ConsumerState<DeliveryLocationScreen> createState() => _DeliveryLocationScreenState();
@@ -38,7 +40,9 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
   }
 
   Future<void> _checkAndAutoPromptLocation() async {
-    _useCurrentLocation();
+    if (widget.autoFetchLocation) {
+      _useCurrentLocation();
+    }
   }
 
   @override
@@ -54,6 +58,12 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
     try {
       final details = await LocationService.fetchCurrentLocationDetails();
       if (details != null && mounted) {
+        if (!details.isServiceable) {
+          setState(() => _isFetchingGps = false);
+          UnserviceableLocationBanner.showUnserviceableModal(context, ref, details.distanceKm);
+          return;
+        }
+
         final address = Address(
           id: 'gps_${DateTime.now().millisecondsSinceEpoch}',
           userId: 'current',
@@ -176,7 +186,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                   ),
                   const SizedBox(width: 5),
                   Text(
-                    'FastKirana Express • Ghatampur Zone',
+                    'FastKirana Express • Serviceable Zones',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 11),
                       fontWeight: FontWeight.w600,
@@ -227,7 +237,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                             controller: _searchController,
                             style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w600, color: slateDark),
                             decoration: InputDecoration(
-                              hintText: 'Search area, street, landmark in Ghatampur...',
+                              hintText: 'Search area, street, landmark...',
                               hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: const Color(0xFF94A3B8)),
                               border: InputBorder.none,
                               enabledBorder: InputBorder.none,
@@ -551,7 +561,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Add an address in Ghatampur to get fast deliveries.',
+                                'Add a delivery address to get fast deliveries.',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 11.5),
@@ -753,7 +763,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
+                      Text('⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
                       const SizedBox(width: 6),
                       Text(
                         'FastKirana',

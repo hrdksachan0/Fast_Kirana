@@ -39,6 +39,7 @@ export const authConfig = {
         token.id = user.id
         token.phone = (user as any).phone
         token.assignedRestaurantId = (user as any).assignedRestaurantId
+        token.assignedStoreId = (user as any).assignedStoreId
         
         // If it's a virtual email from WhatsApp login, clean it and set it as the email token field
         if (user.email && user.email.startsWith('wa-') && user.email.includes('@fastkirana.com')) {
@@ -51,31 +52,38 @@ export const authConfig = {
           token.email = user.email
         }
       }
-      // For Google OAuth users, the adapter creates the user but doesn't set
-      // role/phone on the JWT. Mark them so the middleware can handle it.
-      if (account?.provider === 'google' && !token.role) {
-        token.role = 'USER'
-      }
       if (trigger === 'update' && session) {
         if (session.name) token.name = session.name
         if (session.phone) token.phone = session.phone
         if (session.email) token.email = session.email
       }
 
-      // Only query DB if token.role is missing or during explicit session update trigger
-      if (token.id && (!token.role || trigger === 'update')) {
+      // Ensure token always has real-time DB role, phone, and assignedStoreId
+      if (token.id || user?.id || user?.email) {
         try {
           const { prisma } = require('@/lib/prisma')
-          const dbUser = await prisma.user.findUnique({
-            where: { id: token.id as string },
-            select: { role: true, assignedRestaurantId: true }
+          const userId = (token.id || user?.id) as string
+          const userEmail = (token.email || user?.email) as string
+          const dbUser = await prisma.user.findFirst({
+            where: {
+              OR: [
+                userId ? { id: userId } : null,
+                userEmail ? { email: userEmail.toLowerCase() } : null
+              ].filter(Boolean)
+            },
+            select: { id: true, role: true, assignedRestaurantId: true, assignedStoreId: true, phone: true }
           })
           if (dbUser) {
+            token.id = dbUser.id
             token.role = dbUser.role
             token.assignedRestaurantId = dbUser.assignedRestaurantId
+            token.assignedStoreId = dbUser.assignedStoreId
+            if (dbUser.phone && !token.phone) token.phone = dbUser.phone
+          } else if (!token.role) {
+            token.role = 'USER'
           }
         } catch (e) {
-          // Suppress error outside DB context
+          if (!token.role) token.role = 'USER'
         }
       }
 
@@ -87,6 +95,7 @@ export const authConfig = {
         session.user.role = token.role as any
         session.user.phone = token.phone as string
         session.user.assignedRestaurantId = token.assignedRestaurantId as string
+        session.user.assignedStoreId = token.assignedStoreId as string
         if (token.email) {
           session.user.email = token.email as string
         }

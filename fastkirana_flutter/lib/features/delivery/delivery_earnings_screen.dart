@@ -21,22 +21,22 @@ class DeliveryEarningsScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [AppDesignSystem.success, AppDesignSystem.accent]),
+                gradient: const LinearGradient(colors: [AppDesignSystem.success, AppDesignSystem.accent]),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: AppDesignSystem.shadowCard,
               ),
               child: Column(
                 children: [
-                  Text('Today\'s Earnings', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: Colors.white.withOpacity(0.9))),
+                  Text('Today\'s Earnings', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: Colors.white.withValues(alpha: 0.9))),
                   const SizedBox(height: 8),
                   Text('₹480', style: GoogleFonts.poppins(fontSize: Responsive.scaledFontSize(context, 36), fontWeight: FontWeight.w800, color: Colors.white)),
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _earnStat('Orders', '12'),
-                      _earnStat('Distance', '38 km'),
-                      _earnStat('Bonus', '₹80'),
+                      _earnStat(context, 'Orders', '12'),
+                      _earnStat(context, 'Distance', '38 km'),
+                      _earnStat(context, 'Bonus', '₹80'),
                     ],
                   ),
                 ],
@@ -67,16 +67,16 @@ class DeliveryEarningsScreen extends StatelessWidget {
     );
   }
 
-  Widget _earnStat(String label, String value) {
+  Widget _earnStat(BuildContext context, String label, String value) {
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
+          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
           child: Text(value, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: Colors.white)),
         ),
         const SizedBox(height: 4),
-        Text(label, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: Colors.white.withOpacity(0.9))),
+        Text(label, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: Colors.white.withValues(alpha: 0.9))),
       ],
     );
   }

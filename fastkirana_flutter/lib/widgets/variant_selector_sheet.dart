@@ -1,9 +1,11 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../data/models/product.dart';
+import '../core/theme/responsive.dart';
 import '../providers/cart_provider.dart';
 import '../providers/store_settings_provider.dart';
 import '../core/utils/restaurant_utils.dart';
@@ -62,7 +64,7 @@ class VariantSelectorSheet extends ConsumerWidget {
               width: 44,
               height: 4.5,
               decoration: BoxDecoration(
-                color: const Color(0xFFCBD5E1),
+                color: AppDesignSystem.slate300,
                 borderRadius: BorderRadius.circular(3),
               ),
             ),
@@ -79,9 +81,9 @@ class VariantSelectorSheet extends ConsumerWidget {
                   width: 58,
                   height: 58,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                    color: AppDesignSystem.slate50,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: AppDesignSystem.slate200),
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(11),
@@ -91,11 +93,15 @@ class VariantSelectorSheet extends ConsumerWidget {
                                 ? 'https://www.fastkirana.in${product.imageUrl}'
                                 : product.imageUrl!,
                             fit: BoxFit.contain,
-                            errorWidget: (_, __, ___) => const Center(
+                            memCacheWidth: 120,
+                            memCacheHeight: 120,
+                            maxWidthDiskCache: 200,
+                            maxHeightDiskCache: 200,
+                            errorWidget: (_, __, ___) => Center(
                               child: Text('🛒', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24))),
                             ),
                           )
-                        : const Center(
+                        : Center(
                             child: Text('🛒', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24))),
                           ),
                   ),
@@ -112,7 +118,7 @@ class VariantSelectorSheet extends ConsumerWidget {
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 15),
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF0F172A),
+                          color: AppDesignSystem.slate900,
                           height: 1.25,
                         ),
                         maxLines: 2,
@@ -124,7 +130,7 @@ class VariantSelectorSheet extends ConsumerWidget {
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF64748B),
+                          color: AppDesignSystem.slate500,
                         ),
                       ),
                     ],
@@ -134,7 +140,7 @@ class VariantSelectorSheet extends ConsumerWidget {
                 // Close Button
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF64748B)),
+                  icon: const Icon(Icons.close_rounded, size: 20, color: AppDesignSystem.slate500),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   splashRadius: 20,
@@ -143,7 +149,7 @@ class VariantSelectorSheet extends ConsumerWidget {
             ),
           ),
 
-          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          const Divider(height: 1, color: AppDesignSystem.slate100),
 
           // Section Title
           Padding(
@@ -153,7 +159,7 @@ class VariantSelectorSheet extends ConsumerWidget {
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 11),
                 fontWeight: FontWeight.w900,
-                color: const Color(0xFF94A3B8),
+                color: AppDesignSystem.slate400,
                 letterSpacing: 0.8,
               ),
             ),
@@ -236,10 +242,10 @@ class VariantSelectorSheet extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: isSelected ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
+        color: isSelected ? AppDesignSystem.green50 : AppDesignSystem.slate50,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isSelected ? const Color(0xFF22C55E) : const Color(0xFFE2E8F0),
+          color: isSelected ? AppDesignSystem.lime500 : AppDesignSystem.slate200,
           width: isSelected ? 1.5 : 1,
         ),
       ),
@@ -255,7 +261,7 @@ class VariantSelectorSheet extends ConsumerWidget {
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 13.5),
                     fontWeight: FontWeight.w800,
-                    color: const Color(0xFF0F172A),
+                    color: AppDesignSystem.slate900,
                   ),
                 ),
                 const SizedBox(height: 3),
@@ -266,7 +272,7 @@ class VariantSelectorSheet extends ConsumerWidget {
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 14.5),
                         fontWeight: FontWeight.w900,
-                        color: const Color(0xFF0F172A),
+                        color: AppDesignSystem.slate900,
                       ),
                     ),
                     if (variant.mrp > variant.price) ...[
@@ -277,14 +283,14 @@ class VariantSelectorSheet extends ConsumerWidget {
                           fontSize: Responsive.scaledFontSize(context, 11),
                           fontWeight: FontWeight.w500,
                           decoration: TextDecoration.lineThrough,
-                          color: const Color(0xFF94A3B8),
+                          color: AppDesignSystem.slate400,
                         ),
                       ),
                       const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFF1F2),
+                          color: AppDesignSystem.rose50,
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -292,7 +298,7 @@ class VariantSelectorSheet extends ConsumerWidget {
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 9.5),
                             fontWeight: FontWeight.w800,
-                            color: const Color(0xFFE11D48),
+                            color: AppDesignSystem.rose600,
                           ),
                         ),
                       ),
@@ -308,7 +314,7 @@ class VariantSelectorSheet extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: AppDesignSystem.slate100,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -316,7 +322,7 @@ class VariantSelectorSheet extends ConsumerWidget {
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 11),
                   fontWeight: FontWeight.w800,
-                  color: const Color(0xFF94A3B8),
+                  color: AppDesignSystem.slate400,
                 ),
               ),
             )
@@ -324,7 +330,7 @@ class VariantSelectorSheet extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: AppDesignSystem.slate100,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -332,7 +338,7 @@ class VariantSelectorSheet extends ConsumerWidget {
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 11),
                   fontWeight: FontWeight.w800,
-                  color: const Color(0xFF94A3B8),
+                  color: AppDesignSystem.slate400,
                 ),
               ),
             )
@@ -358,7 +364,7 @@ class VariantSelectorSheet extends ConsumerWidget {
                 ref.read(cartProvider.notifier).addProduct(variantProduct, 1, variant.name);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: isFood ? const Color(0xFFEA580C) : const Color(0xFF16A34A),
+                backgroundColor: isFood ? AppDesignSystem.orange600 : AppDesignSystem.green600,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -377,7 +383,7 @@ class VariantSelectorSheet extends ConsumerWidget {
             Container(
               height: 32,
               decoration: BoxDecoration(
-                color: isFood ? const Color(0xFFEA580C) : const Color(0xFF16A34A),
+                color: isFood ? AppDesignSystem.orange600 : AppDesignSystem.green600,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(

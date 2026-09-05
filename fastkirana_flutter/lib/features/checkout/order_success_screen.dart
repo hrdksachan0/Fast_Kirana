@@ -1,5 +1,8 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import '../../core/theme/responsive.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../core/services/logger_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,6 +11,7 @@ import '../../core/routes/page_transitions.dart';
 import '../../core/network/api_client.dart';
 import '../../data/models/order.dart';
 import '../../data/repositories/order_repository.dart';
+import '../../providers/cart_provider.dart';
 import '../orders/order_tracking_screen.dart';
 
 class OrderSuccessScreen extends ConsumerStatefulWidget {
@@ -31,10 +35,10 @@ class OrderSuccessScreen extends ConsumerStatefulWidget {
 }
 
 class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with SingleTickerProviderStateMixin {
-  static const Color primaryRed = Color(0xFFE20A22);
-  static const Color successGreen = Color(0xFF10B981);
-  static const Color slateDark = Color(0xFF0F172A);
-  static const Color slateMuted = Color(0xFF64748B);
+  static const Color primaryRed = AppDesignSystem.primary;
+  static const Color successGreen = AppDesignSystem.success;
+  static const Color slateDark = AppDesignSystem.slate900;
+  static const Color slateMuted = AppDesignSystem.slate500;
 
   late ConfettiController _confettiController;
   late AnimationController _animController;
@@ -127,6 +131,13 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
     // Start live syncing with admin/backend order updates
     _fetchLiveOrderStatus();
     _syncTimer = Timer.periodic(const Duration(seconds: 3), (_) => _fetchLiveOrderStatus());
+
+    // ─── Post-Order Cart Clear Guarantee ───
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        ref.read(cartProvider.notifier).clearCart();
+      } catch (e, _) { LoggerService.error('OrderSuccessScreen: silent catch', e); }
+    });
   }
 
   @override
@@ -144,12 +155,12 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
     try {
       final repo = OrderRepository(ref.read(dioProvider));
       final order = await repo.getOrder(displayId);
-      if (mounted && order != null) {
+      if (mounted) {
         setState(() {
           _liveOrder = order;
         });
       }
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('OrderSuccessScreen: silent catch', e); }
   }
 
   // Map backend OrderStatus to 5-stage integer step (0 to 4)
@@ -208,17 +219,17 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
   Color _getBadgeColor(int stage) {
     switch (stage) {
       case 0:
-        return const Color(0xFFD97706); // Amber
+        return AppDesignSystem.amber600; // Amber
       case 1:
-        return const Color(0xFF0284C7); // Sky Blue
+        return AppDesignSystem.cyan600; // Sky Blue
       case 2:
-        return const Color(0xFF7C3AED); // Purple
+        return AppDesignSystem.violet600; // Purple
       case 3:
-        return const Color(0xFFEA580C); // Orange
+        return AppDesignSystem.orange600; // Orange
       case 4:
-        return const Color(0xFF16A34A); // Green
+        return AppDesignSystem.green600; // Green
       default:
-        return const Color(0xFF16A34A);
+        return AppDesignSystem.green600;
     }
   }
 
@@ -267,10 +278,10 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
     final currentStatus = _liveOrder?.status ?? (widget.order?.status ?? OrderStatus.confirmed);
     final isCancelled = currentStatus == OrderStatus.cancelled;
     final stageIndex = _getStageIndex(currentStatus);
-    final badgeColor = isCancelled ? const Color(0xFFDC2626) : _getBadgeColor(stageIndex);
+    final badgeColor = isCancelled ? AppDesignSystem.red600 : _getBadgeColor(stageIndex);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppDesignSystem.slate50,
       body: Stack(
         alignment: Alignment.topCenter,
         children: [
@@ -280,11 +291,11 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
               blastDirectionality: BlastDirectionality.explosive,
               shouldLoop: false,
               colors: const [
-                Color(0xFFE20A22),
-                Color(0xFF10B981),
-                Color(0xFFF59E0B),
-                Color(0xFF3B82F6),
-                Color(0xFF8B5CF6),
+                AppDesignSystem.primary,
+                AppDesignSystem.success,
+                AppDesignSystem.warning,
+                AppDesignSystem.info,
+                AppDesignSystem.violet500,
               ],
               numberOfParticles: 40,
               gravity: 0.14,
@@ -305,13 +316,13 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                       height: 96,
                       decoration: BoxDecoration(
                         color: isCancelled
-                            ? const Color(0xFFFEF2F2)
+                            ? AppDesignSystem.statusCancelled
                             : successGreen.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
                             color: isCancelled
-                                ? const Color(0xFFEF4444).withValues(alpha: 0.2)
+                                ? AppDesignSystem.danger.withValues(alpha: 0.2)
                                 : successGreen.withValues(alpha: 0.25),
                             blurRadius: 24,
                             offset: const Offset(0, 8),
@@ -325,8 +336,8 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: isCancelled
-                                  ? [const Color(0xFFEF4444), const Color(0xFFDC2626)]
-                                  : [const Color(0xFF10B981), const Color(0xFF059669)],
+                                  ? [AppDesignSystem.danger, AppDesignSystem.red600]
+                                  : [AppDesignSystem.success, AppDesignSystem.emerald600],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
@@ -356,7 +367,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 21),
                               fontWeight: FontWeight.w900,
-                              color: isCancelled ? const Color(0xFFDC2626) : slateDark,
+                              color: isCancelled ? AppDesignSystem.red600 : slateDark,
                               letterSpacing: -0.5,
                             ),
                           ),
@@ -387,16 +398,16 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                           ? Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFEF2F2),
+                                color: AppDesignSystem.statusCancelled,
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: const Color(0xFFFECACA), width: 1.2),
+                                border: Border.all(color: AppDesignSystem.red200, width: 1.2),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
                                     children: [
-                                      const Icon(Icons.cancel_outlined, size: 18, color: Color(0xFFDC2626)),
+                                      const Icon(Icons.cancel_outlined, size: 18, color: AppDesignSystem.red600),
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
@@ -404,23 +415,23 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                                           style: GoogleFonts.inter(
                                             fontSize: Responsive.scaledFontSize(context, 13),
                                             fontWeight: FontWeight.w900,
-                                            color: const Color(0xFF991B1B),
+                                            color: AppDesignSystem.statusCancelledText,
                                           ),
                                         ),
                                       ),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFFEE2E2),
+                                          color: AppDesignSystem.statusCancelled,
                                           borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: const Color(0xFFFCA5A5)),
+                                          border: Border.all(color: AppDesignSystem.red300),
                                         ),
                                         child: Text(
                                           'CANCELLED',
                                           style: GoogleFonts.inter(
                                             fontSize: Responsive.scaledFontSize(context, 9.5),
                                             fontWeight: FontWeight.w900,
-                                            color: const Color(0xFFDC2626),
+                                            color: AppDesignSystem.red600,
                                             letterSpacing: 0.3,
                                           ),
                                         ),
@@ -433,7 +444,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                                     style: GoogleFonts.inter(
                                       fontSize: Responsive.scaledFontSize(context, 11.5),
                                       fontWeight: FontWeight.w500,
-                                      color: const Color(0xFF7F1D1D),
+                                      color: AppDesignSystem.red900,
                                       height: 1.35,
                                     ),
                                   ),
@@ -445,10 +456,10 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+                                border: Border.all(color: AppDesignSystem.slate100, width: 1.2),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                                    color: AppDesignSystem.slate900.withValues(alpha: 0.03),
                                     blurRadius: 14,
                                     offset: const Offset(0, 4),
                                   ),
@@ -459,7 +470,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                                 children: [
                                   Row(
                                     children: [
-                                      const Text('⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15))),
+                                      Text('⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15))),
                                       const SizedBox(width: 6),
                                       Expanded(
                                         child: Text(
@@ -538,10 +549,10 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+                          border: Border.all(color: AppDesignSystem.slate100, width: 1.2),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                              color: AppDesignSystem.slate900.withValues(alpha: 0.03),
                               blurRadius: 14,
                               offset: const Offset(0, 4),
                             ),
@@ -573,27 +584,27 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                                     child: Container(
                                       padding: const EdgeInsets.all(4),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFF1F5F9),
+                                        color: AppDesignSystem.slate100,
                                         borderRadius: BorderRadius.circular(6),
                                       ),
-                                      child: const Icon(Icons.copy_rounded, size: 13, color: Color(0xFF64748B)),
+                                      child: const Icon(Icons.copy_rounded, size: 13, color: AppDesignSystem.slate500),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            const Divider(height: 18, color: Color(0xFFF1F5F9)),
+                            const Divider(height: 18, color: AppDesignSystem.slate100),
                             _buildDetailRow('Total Amount', '₹${widget.totalAmount.toInt()}', isBold: true),
-                            const Divider(height: 18, color: Color(0xFFF1F5F9)),
+                            const Divider(height: 18, color: AppDesignSystem.slate100),
                             _buildDetailRow(
                               'Payment Mode',
                               widget.paymentMethod,
                               customValue: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFEF2F2),
+                                  color: AppDesignSystem.statusCancelled,
                                   borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: const Color(0xFFFEE2E2)),
+                                  border: Border.all(color: AppDesignSystem.statusCancelled),
                                 ),
                                 child: Text(
                                   widget.paymentMethod,
@@ -601,7 +612,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                                 ),
                               ),
                             ),
-                            const Divider(height: 18, color: Color(0xFFF1F5F9)),
+                            const Divider(height: 18, color: AppDesignSystem.slate100),
                             _buildDetailRow(
                               'Deliver To',
                               widget.deliveryAddress.isNotEmpty ? widget.deliveryAddress : 'Ghatampur Delivery Address',
@@ -642,7 +653,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                                 height: 50,
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFFE20A22), Color(0xFFFF2D4B)],
+                                    colors: [AppDesignSystem.primary, AppDesignSystem.primaryLight],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
@@ -684,9 +695,9 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                             child: Container(
                               height: 48,
                               decoration: BoxDecoration(
-                                color: isCancelled ? const Color(0xFFE20A22) : Colors.white,
+                                color: isCancelled ? AppDesignSystem.primary : Colors.white,
                                 borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: isCancelled ? const Color(0xFFE20A22) : const Color(0xFFE2E8F0)),
+                                border: Border.all(color: isCancelled ? AppDesignSystem.primary : AppDesignSystem.slate200),
                               ),
                               child: Center(
                                 child: Text(
@@ -694,7 +705,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 13.5),
                                     fontWeight: FontWeight.w800,
-                                    color: isCancelled ? Colors.white : const Color(0xFF334155),
+                                    color: isCancelled ? Colors.white : AppDesignSystem.slate700,
                                   ),
                                 ),
                               ),
@@ -722,7 +733,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
           height: 20,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isDone ? successGreen : const Color(0xFFE2E8F0),
+            color: isDone ? successGreen : AppDesignSystem.slate200,
           ),
           child: Center(
             child: isDone
@@ -732,7 +743,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                     height: 5,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Color(0xFF94A3B8),
+                      color: AppDesignSystem.slate400,
                     ),
                   ),
           ),
@@ -743,7 +754,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
           style: GoogleFonts.inter(
             fontSize: Responsive.scaledFontSize(context, 8.5),
             fontWeight: isDone ? FontWeight.w900 : FontWeight.w500,
-            color: isDone ? slateDark : const Color(0xFF94A3B8),
+            color: isDone ? slateDark : AppDesignSystem.slate400,
           ),
         ),
       ],
@@ -755,7 +766,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
       child: Container(
         height: 2.5,
         margin: const EdgeInsets.only(bottom: 14),
-        color: isDone ? successGreen : const Color(0xFFE2E8F0),
+        color: isDone ? successGreen : AppDesignSystem.slate200,
       ),
     );
   }

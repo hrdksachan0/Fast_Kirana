@@ -23,7 +23,7 @@ class AdminCouponsScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh_rounded, color: AppDesignSystem.primary),
+            icon: const Icon(Icons.refresh_rounded, color: AppDesignSystem.primary),
             onPressed: () => ref.invalidate(couponsProvider),
           ),
         ],
@@ -44,7 +44,7 @@ class AdminCouponsScreen extends ConsumerWidget {
                         color: AppDesignSystem.primary.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: const Center(child: Text('🎟️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 28)))),
+                      child: Center(child: Text('🎟️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 28)))),
                     ),
                     const SizedBox(height: 16),
                     Text(

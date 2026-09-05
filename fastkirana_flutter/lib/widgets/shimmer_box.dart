@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme/design_system.dart';
 
 class ShimmerBox extends StatefulWidget {
   final double? width;
@@ -53,10 +54,10 @@ class _ShimmerBoxState extends State<ShimmerBox> with SingleTickerProviderStateM
               begin: Alignment(-1.5 + _controller.value * 3, -0.3),
               end: Alignment(0.5 + _controller.value * 3, 0.3),
               colors: const [
-                Color(0xFFF1F5F9),
-                Color(0xFFE2E8F0),
-                Color(0xFFF8FAFC),
-                Color(0xFFF1F5F9),
+                AppDesignSystem.slate100,
+                AppDesignSystem.slate200,
+                AppDesignSystem.slate50,
+                AppDesignSystem.slate100,
               ],
               stops: const [0.0, 0.35, 0.65, 1.0],
             ),
@@ -79,7 +80,7 @@ class ProductCardSkeleton extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+        border: Border.all(color: AppDesignSystem.slate100, width: 1.2),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -173,7 +174,7 @@ class CategorySkeleton extends StatelessWidget {
             height: 64,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+              border: Border.all(color: AppDesignSystem.slate100, width: 1.5),
             ),
             child: const ShimmerBox(
               width: 64,
@@ -202,7 +203,7 @@ class RestaurantCardSkeleton extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+        border: Border.all(color: AppDesignSystem.slate100, width: 1.2),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -263,7 +264,7 @@ class RestaurantCardSkeleton extends StatelessWidget {
                 ShimmerBox(width: 200, height: 11, borderRadius: BorderRadius.circular(4)),
                 const SizedBox(height: 12),
                 // Divider
-                Container(height: 1, color: const Color(0xFFF1F5F9)),
+                Container(height: 1, color: AppDesignSystem.slate100),
                 const SizedBox(height: 10),
                 // Bottom stats & CTA
                 Row(

@@ -1,3 +1,5 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import '../core/theme/responsive.dart';
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -86,11 +88,11 @@ class _LiveGpsRouteCardState extends State<LiveGpsRouteCard> with SingleTickerPr
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A), // Luxury Dark Tech Canvas
+        color: AppDesignSystem.slate900, // Luxury Dark Tech Canvas
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withOpacity(0.18),
+            color: AppDesignSystem.slate900.withValues(alpha: 0.18),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -111,11 +113,11 @@ class _LiveGpsRouteCardState extends State<LiveGpsRouteCard> with SingleTickerPr
                       width: 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: widget.isDelivered ? const Color(0xFF10B981) : const Color(0xFFE20A22),
+                        color: widget.isDelivered ? AppDesignSystem.success : AppDesignSystem.primary,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: (widget.isDelivered ? const Color(0xFF10B981) : const Color(0xFFE20A22)).withOpacity(0.6),
+                            color: (widget.isDelivered ? AppDesignSystem.success : AppDesignSystem.primary).withValues(alpha: 0.6),
                             blurRadius: 8,
                             spreadRadius: 2,
                           ),
@@ -137,16 +139,16 @@ class _LiveGpsRouteCardState extends State<LiveGpsRouteCard> with SingleTickerPr
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.18),
+                    color: AppDesignSystem.success.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFF10B981).withOpacity(0.6)),
+                    border: Border.all(color: AppDesignSystem.success.withValues(alpha: 0.6)),
                   ),
                   child: Text(
                     '⚡ LIVE GPS',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 10),
                       fontWeight: FontWeight.w900,
-                      color: const Color(0xFF10B981),
+                      color: AppDesignSystem.success,
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -177,7 +179,7 @@ class _LiveGpsRouteCardState extends State<LiveGpsRouteCard> with SingleTickerPr
           Container(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B).withOpacity(0.7),
+              color: AppDesignSystem.slate800.withValues(alpha: 0.7),
               borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(24),
                 bottomRight: Radius.circular(24),
@@ -188,7 +190,7 @@ class _LiveGpsRouteCardState extends State<LiveGpsRouteCard> with SingleTickerPr
                 Expanded(
                   child: Row(
                     children: [
-                      const Text('🏬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
+                      Text('🏬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
@@ -196,7 +198,7 @@ class _LiveGpsRouteCardState extends State<LiveGpsRouteCard> with SingleTickerPr
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF94A3B8),
+                            color: AppDesignSystem.slate400,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -207,13 +209,13 @@ class _LiveGpsRouteCardState extends State<LiveGpsRouteCard> with SingleTickerPr
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: const Icon(Icons.arrow_forward_rounded, size: 12, color: Color(0xFF64748B)),
+                  child: const Icon(Icons.arrow_forward_rounded, size: 12, color: AppDesignSystem.slate500),
                 ),
                 Expanded(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      const Text('🏠', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
+                      Text('🏠', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
@@ -221,7 +223,7 @@ class _LiveGpsRouteCardState extends State<LiveGpsRouteCard> with SingleTickerPr
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFFE2E8F0),
+                            color: AppDesignSystem.slate200,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -266,7 +268,7 @@ class _GpsRoutePainter extends CustomPainter {
 
     // 1. Draw Inactive Dark Road
     final roadPaint = Paint()
-      ..color = const Color(0xFF334155)
+      ..color = AppDesignSystem.slate700
       ..strokeWidth = 5.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -281,7 +283,7 @@ class _GpsRoutePainter extends CustomPainter {
       ..shader = ui.Gradient.linear(
         startPoint,
         endPoint,
-        [const Color(0xFF10B981), const Color(0xFF06B6D4), const Color(0xFFE20A22)],
+        [AppDesignSystem.success, AppDesignSystem.cyan500, AppDesignSystem.primary],
       )
       ..strokeWidth = 5.0
       ..style = PaintingStyle.stroke
@@ -289,13 +291,13 @@ class _GpsRoutePainter extends CustomPainter {
     canvas.drawPath(activePath, activePaint);
 
     // 3. Draw Store Node (Origin 🏬)
-    final storePaint = Paint()..color = const Color(0xFF10B981);
+    final storePaint = Paint()..color = AppDesignSystem.success;
     canvas.drawCircle(startPoint, 8, storePaint);
     final storeInner = Paint()..color = Colors.white;
     canvas.drawCircle(startPoint, 3.5, storeInner);
 
     // 4. Draw Home Node (Destination 🏠)
-    final homePaint = Paint()..color = const Color(0xFFE20A22);
+    final homePaint = Paint()..color = AppDesignSystem.primary;
     canvas.drawCircle(endPoint, 9, homePaint);
     final homeInner = Paint()..color = Colors.white;
     canvas.drawCircle(endPoint, 4, homeInner);
@@ -305,18 +307,18 @@ class _GpsRoutePainter extends CustomPainter {
 
     // Glowing Pulse Halo around Scooter
     final pulsePaint = Paint()
-      ..color = const Color(0xFFE20A22).withOpacity(0.35)
+      ..color = AppDesignSystem.primary.withValues(alpha: 0.35)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(currentPoint, 18, pulsePaint);
 
-    final coreBadge = Paint()..color = const Color(0xFFE20A22);
+    final coreBadge = Paint()..color = AppDesignSystem.primary;
     canvas.drawCircle(currentPoint, 13, coreBadge);
 
     // Draw Scooter Icon Text inside badge
     final textPainter = TextPainter(
       text: const TextSpan(
         text: '🛵',
-        style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14)),
+        style: TextStyle(fontSize: 14),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
@@ -331,3 +333,4 @@ class _GpsRoutePainter extends CustomPainter {
   bool shouldRepaint(covariant _GpsRoutePainter oldDelegate) =>
       oldDelegate.progress != progress || oldDelegate.isDelivered != isDelivered;
 }
+

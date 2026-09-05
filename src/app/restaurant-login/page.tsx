@@ -80,8 +80,8 @@ export default function RestaurantLoginPage() {
             <div className="h-14 w-14 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center mx-auto shadow-inner border border-red-500/20">
               <UtensilsCrossed className="h-6 w-6" />
             </div>
-            <h2 className="text-lg font-black tracking-tight text-white uppercase mt-4">Wedson Restaurant</h2>
-            <p className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">Kitchen Staff Portal</p>
+            <h2 className="text-lg font-black tracking-tight text-white uppercase mt-4">Restaurant Partner Console</h2>
+            <p className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">Kitchen & Outlet Staff Portal</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">

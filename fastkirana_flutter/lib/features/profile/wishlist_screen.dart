@@ -1,3 +1,4 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,9 +13,9 @@ import '../../widgets/product_card.dart';
 class WishlistScreen extends ConsumerWidget {
   const WishlistScreen({super.key});
 
-  static const Color primaryRed = Color(0xFFE20A22);
-  static const Color slateDark = Color(0xFF0F172A);
-  static const Color slateMuted = Color(0xFF64748B);
+  static const Color primaryRed = AppDesignSystem.primary;
+  static const Color slateDark = AppDesignSystem.slate900;
+  static const Color slateMuted = AppDesignSystem.slate500;
 
   void _shareWishlist(BuildContext context, List wishlist) {
     HapticFeedback.lightImpact();
@@ -37,7 +38,7 @@ class WishlistScreen extends ConsumerWidget {
     final wishlist = ref.watch(wishlistProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppDesignSystem.slate50,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -52,9 +53,9 @@ class WishlistScreen extends ConsumerWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: AppDesignSystem.slate50,
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(color: AppDesignSystem.slate200),
                 ),
                 child: const Icon(
                   Icons.arrow_back_rounded,
@@ -97,9 +98,9 @@ class WishlistScreen extends ConsumerWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF1F2),
+                    color: AppDesignSystem.rose50,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFFFE4E6)),
+                    border: Border.all(color: AppDesignSystem.rose100alt),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -127,9 +128,9 @@ class WishlistScreen extends ConsumerWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
+                  color: AppDesignSystem.slate100,
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(color: AppDesignSystem.slate200),
                 ),
                 child: const Icon(
                   Icons.share_outlined,
@@ -156,9 +157,9 @@ class WishlistScreen extends ConsumerWidget {
                           width: 84,
                           height: 84,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFF1F2),
+                            color: AppDesignSystem.rose50,
                             shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFFFFE4E6), width: 2),
+                            border: Border.all(color: AppDesignSystem.rose100alt, width: 2),
                           ),
                           child: const Center(
                             child: Icon(
@@ -199,12 +200,12 @@ class WishlistScreen extends ConsumerWidget {
                                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
-                                    colors: [primaryRed, Color(0xFFFF2D4B)],
+                                    colors: [primaryRed, AppDesignSystem.primaryLight],
                                   ),
                                   borderRadius: BorderRadius.circular(14),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: primaryRed.withOpacity(0.3),
+                                      color: primaryRed.withValues(alpha: 0.3),
                                       blurRadius: 10,
                                       offset: const Offset(0, 4),
                                     ),
@@ -228,7 +229,7 @@ class WishlistScreen extends ConsumerWidget {
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                  border: Border.all(color: AppDesignSystem.slate200),
                                 ),
                                 child: Row(
                                   children: [
@@ -256,12 +257,17 @@ class WishlistScreen extends ConsumerWidget {
                   physics: const BouncingScrollPhysics(),
                   slivers: [
                     SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                      padding: EdgeInsets.fromLTRB(
+                        Responsive.horizontalPadding(context),
+                        16,
+                        Responsive.horizontalPadding(context),
+                        120,
+                      ),
                       sliver: SliverGrid(
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.62,
-                          crossAxisSpacing: 12,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: Responsive.gridColumns(context, smallMobile: 2, mobile: 2, smallTablet: 3, tablet: 4, desktop: 5),
+                          childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: true),
+                          crossAxisSpacing: Responsive.horizontalPadding(context) * 0.5,
                           mainAxisSpacing: 14,
                         ),
                         delegate: SliverChildBuilderDelegate(

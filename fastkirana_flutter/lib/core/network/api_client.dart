@@ -1,8 +1,8 @@
-import 'dart:convert';
+import 'package:fastkirana_flutter/core/services/logger_service.dart';
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import '../services/secure_storage_service.dart';
 
@@ -47,7 +47,7 @@ final dioProvider = Provider<Dio>((ref) {
           String? userPhone = directPhone;
 
           if (rawUserData != null && rawUserData.isNotEmpty) {
-            final parse = (String k) => rawUserData[k];
+            parse(String k) => rawUserData[k];
             userId ??= parse('id');
             userEmail = parse('email') ?? userEmail;
             userName = parse('name') ?? userName;
@@ -56,26 +56,55 @@ final dioProvider = Provider<Dio>((ref) {
           }
 
           if (userId != null && userId.isNotEmpty) {
-            options.headers['x-user-id'] = userId;
+            options.headers.putIfAbsent('x-user-id', () => userId);
           }
           if (userPhone != null && userPhone.isNotEmpty) {
-            options.headers['x-user-phone'] = userPhone;
+            options.headers.putIfAbsent('x-user-phone', () => userPhone);
           }
           if (userEmail != null && userEmail.isNotEmpty) {
-            options.headers['x-user-email'] = userEmail;
+            options.headers.putIfAbsent('x-user-email', () => userEmail);
           }
           if (userName != null && userName.isNotEmpty) {
-            options.headers['x-user-name'] = userName;
+            options.headers.putIfAbsent('x-user-name', () => userName);
           }
           if (userRole != null && userRole.isNotEmpty) {
-            options.headers['x-user-role'] = userRole;
+            options.headers.putIfAbsent('x-user-role', () => userRole);
           }
         }
-      } catch (_) {}
+      } catch (e, _) { LoggerService.error('ApiClient: silent catch', e); }
 
       return handler.next(options);
     },
     onError: (DioException error, ErrorInterceptorHandler handler) async {
+      // ─── 1. Automatic 401 Token Refresh & Request Replay ───────────────
+      if (error.response?.statusCode == 401 && !error.requestOptions.extra.containsKey('retried_refresh')) {
+        final isAuthEndpoint = error.requestOptions.path.contains('/api/auth/login') ||
+            error.requestOptions.path.contains('/api/auth/otp') ||
+            error.requestOptions.path.contains('/api/auth/refresh');
+
+        if (!isAuthEndpoint) {
+          try {
+            final newToken = await _refreshToken();
+            if (newToken != null && newToken.isNotEmpty) {
+              final requestOptions = error.requestOptions;
+              requestOptions.headers['Authorization'] = 'Bearer $newToken';
+              requestOptions.extra['retried_refresh'] = true;
+
+              final retryResponse = await dio.fetch(requestOptions);
+              return handler.resolve(retryResponse);
+            }
+          } catch (e, _) { LoggerService.error('ApiClient: silent catch', e); }
+        }
+      }
+
+      // ─── 2. Connection Fallback ─────────────────────────────────────────
+      // NEVER auto-retry KOT broadcast or order mutations to prevent duplicate prints/actions
+      final isKOTRequest = error.requestOptions.path.contains('kot-broadcast') ||
+          error.requestOptions.path.contains('broadcast');
+      if (isKOTRequest) {
+        return handler.next(error);
+      }
+
       final isConnectionError = error.type == DioExceptionType.connectionError ||
           error.type == DioExceptionType.connectionTimeout ||
           error.type == DioExceptionType.unknown;
@@ -105,7 +134,7 @@ final dioProvider = Provider<Dio>((ref) {
             ),
           );
           return handler.resolve(retryResponse);
-        } catch (_) {}
+        } catch (e, _) { LoggerService.error('ApiClient: silent catch', e); }
       }
       return handler.next(error);
     },
@@ -113,6 +142,63 @@ final dioProvider = Provider<Dio>((ref) {
 
   return dio;
 });
+
+// ─── Token Refresh Concurrency Queue ───────────────────────────────────────
+bool _isRefreshingToken = false;
+Completer<String?>? _refreshCompleter;
+
+Future<String?> _refreshToken() async {
+  if (_isRefreshingToken && _refreshCompleter != null) {
+    return _refreshCompleter!.future;
+  }
+
+  _isRefreshingToken = true;
+  _refreshCompleter = Completer<String?>();
+
+  try {
+    final currentToken = SecureStorage.cachedToken;
+    final refreshToken = SecureStorage.cachedRefreshToken ?? currentToken;
+
+    if (refreshToken == null || refreshToken.isEmpty) {
+      _refreshCompleter!.complete(null);
+      return null;
+    }
+
+    final refreshDio = Dio(BaseOptions(
+      baseUrl: AppConfig.apiBaseUrl,
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
+      headers: {'Content-Type': 'application/json'},
+    ));
+
+    final res = await refreshDio.post(
+      '/api/auth/refresh',
+      data: {'refreshToken': refreshToken},
+      options: Options(headers: {
+        'Authorization': 'Bearer $currentToken',
+      }),
+    );
+
+    if (res.statusCode == 200 && res.data != null) {
+      final String? newToken = res.data['token'] ?? res.data['accessToken'];
+      final String? newRefreshToken = res.data['refreshToken'];
+
+      if (newToken != null && newToken.isNotEmpty) {
+        await SecureStorage.saveAuthToken(newToken);
+        if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
+          await SecureStorage.saveRefreshToken(newRefreshToken);
+        }
+        _refreshCompleter!.complete(newToken);
+        return newToken;
+      }
+    }
+  } catch (e, _) { LoggerService.error('ApiClient: silent catch', e); } finally {
+    _isRefreshingToken = false;
+  }
+
+  _refreshCompleter?.complete(null);
+  return null;
+}
 
 class ApiException implements Exception {
   final String message;

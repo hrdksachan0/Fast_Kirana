@@ -18,9 +18,13 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // ─── CRITICAL PERFORMANCE FIX ──────────────────────────────────
-  // Disable runtime font downloading. All 1,356 GoogleFonts calls will now
-  // use bundled assets only — zero network latency on cold start.
-  GoogleFonts.config.allowRuntimeFetching = false;
+  // Allow runtime fetching on web and debug so GoogleFonts don't crash when individual variant files are missing.
+  GoogleFonts.config.allowRuntimeFetching = kIsWeb || kDebugMode;
+
+
+  // Image Cache Memory Bounds (Max 100 images or 60MB RAM)
+  PaintingBinding.instance.imageCache.maximumSize = 100;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 60 * 1024 * 1024;
 
   // ─── Global Flutter Error Handling ───────────────────────────────
   // When Crashlytics is enabled (Firebase initialized below) we forward
@@ -43,7 +47,7 @@ void main() async {
   ErrorWidget.builder = (FlutterErrorDetails details) {
     return Material(
       child: Container(
-        color: const Color(0xFFFEF2F2),
+        color: AppDesignSystem.statusCancelled,
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
@@ -51,11 +55,11 @@ void main() async {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.error_outline_rounded, size: 56, color: Color(0xFFDC2626)),
+                  const Icon(Icons.error_outline_rounded, size: 56, color: AppDesignSystem.danger),
                   const SizedBox(height: 16),
-                  Text(
+                  const Text(
                     'Oops! Something went wrong',
-                    style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.bold, color: AppDesignSystem.textPrimary),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppDesignSystem.textPrimary),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
@@ -64,7 +68,7 @@ void main() async {
                     textAlign: TextAlign.center,
                     maxLines: 4,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary, height: 1.4),
+                    style: const TextStyle(fontSize: 12, color: AppDesignSystem.textSecondary, height: 1.4),
                   ),
                   const SizedBox(height: 20),
                   Row(
@@ -77,7 +81,7 @@ void main() async {
                         icon: const Icon(Icons.arrow_back_rounded, size: 16),
                         label: const Text('Go Back'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFDC2626),
+                          backgroundColor: AppDesignSystem.danger,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

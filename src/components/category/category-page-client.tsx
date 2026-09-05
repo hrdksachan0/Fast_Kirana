@@ -362,8 +362,7 @@ function getSubcategories(
         }
       }
     )
-  } else if (categorySlug === 'restaurant' || categorySlug.includes('restaurant')) {
-    let rawSecs = DEFAULT_RESTAURANT_MENU_SECTIONS
+    let rawSecs: any[] = []
     const customSecsStr = settings.restaurant_menu_sections || settings.RESTAURANT_MENU_SECTIONS
     if (customSecsStr) {
       try {

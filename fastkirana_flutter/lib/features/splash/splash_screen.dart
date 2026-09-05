@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/services/logger_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -57,7 +58,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Future<void> _requestAppPermissions() async {
     try {
       await NotificationService().requestPermissions();
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('SplashScreen: silent catch', e); }
   }
 
   Future<void> _safeNavigate() async {
@@ -74,7 +75,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       if (token == null || token.isEmpty) {
         Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
       } else if (!hasChosenLocation) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/location', (route) => false);
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/location',
+          (route) => false,
+          arguments: true,
+        );
       } else {
         Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
       }
@@ -101,9 +106,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Color(0xFFE20A22), // Vibrant Brand Red
-              Color(0xFFB80517), // Deep Crimson
-              Color(0xFF88000F), // Dark Luxury Red
+              AppDesignSystem.primary, // Vibrant Brand Red
+              AppDesignSystem.primaryDark, // Deep Crimson
+              AppDesignSystem.primaryDark, // Dark Luxury Red
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -125,12 +130,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     borderRadius: BorderRadius.circular(28),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.22),
+                        color: Colors.black.withValues(alpha: 0.22),
                         blurRadius: 28,
                         offset: const Offset(0, 12),
                       ),
                       BoxShadow(
-                        color: const Color(0xFFE20A22).withOpacity(0.3),
+                        color: AppDesignSystem.primary.withValues(alpha: 0.3),
                         blurRadius: 20,
                         offset: const Offset(0, 4),
                       ),
@@ -173,10 +178,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.16),
+                        color: Colors.white.withValues(alpha: 0.16),
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.25),
+                          color: Colors.white.withValues(alpha: 0.25),
                           width: 1,
                         ),
                       ),
@@ -198,7 +203,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: Responsive.scaledFontSize(context, 13.5),
                         fontWeight: FontWeight.w500,
-                        color: Colors.white.withOpacity(0.92),
+                        color: Colors.white.withValues(alpha: 0.92),
                         letterSpacing: 0.1,
                       ),
                     ),
@@ -218,7 +223,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       height: 22,
                       child: CircularProgressIndicator(
                         strokeWidth: 2.2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white.withOpacity(0.9)),
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white.withValues(alpha: 0.9)),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -227,7 +232,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: Responsive.scaledFontSize(context, 10),
                         fontWeight: FontWeight.w700,
-                        color: Colors.white.withOpacity(0.65),
+                        color: Colors.white.withValues(alpha: 0.65),
                         letterSpacing: 1.8,
                       ),
                     ),

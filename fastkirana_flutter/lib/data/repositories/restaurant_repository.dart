@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../core/services/logger_service.dart';
 import '../models/restaurant.dart';
 import '../models/product.dart';
 
@@ -32,7 +33,7 @@ class RestaurantRepository {
       final list = await _inFlightRestaurantsFetch!;
       _inFlightRestaurantsFetch = null;
       return list;
-    } catch (_) {
+    } catch (e, _) { LoggerService.error('RestaurantRepository: silent catch', e);
       _inFlightRestaurantsFetch = null;
       if (_cachedRestaurants != null && _cachedRestaurants!.isNotEmpty) {
         return _cachedRestaurants!;
@@ -64,7 +65,7 @@ class RestaurantRepository {
   List<Restaurant> _getStaticFallbackRestaurants() {
     return [
       Restaurant(
-        id: 'cms2p1lap0000n0id8alldboy',
+        id: 'REST-101',
         name: 'A.S. Restaurant & Cafe',
         slug: 'as-restaurant',
         description: 'Authentic Burgers, Shakes, Pizzas & Rolls in Ghatampur',
@@ -79,7 +80,7 @@ class RestaurantRepository {
         bannerUrl: '/cafe_banner.webp',
       ),
       Restaurant(
-        id: 'cms2p1lyx0001n0idod904lfu',
+        id: 'REST-102',
         name: 'Wedson Restaurant',
         slug: 'wedson-restaurant',
         description: 'Premium North Indian, Curries & Family Dining',
@@ -94,7 +95,7 @@ class RestaurantRepository {
         bannerUrl: '/wedson_restaurant_banner.webp',
       ),
       Restaurant(
-        id: 'cmsbhxb6a000304if8kf1cwji',
+        id: 'REST-103',
         name: 'Bal Udyan Restaurant',
         slug: 'bal-udyan-restaurant',
         description: 'Authentic Indian Food, Chinese & Quick Bites',
@@ -106,6 +107,21 @@ class RestaurantRepository {
         cuisineTags: ['NORTH INDIAN', 'CHINESE', 'SNACKS'],
         isOpen: true,
         logoUrl: '/cafe_category.webp',
+        bannerUrl: '/cafe_banner.webp',
+      ),
+      Restaurant(
+        id: 'REST-104',
+        name: 'Pari Milk Dairy & Sweets',
+        slug: 'pari-milk-dairy-sweets',
+        description: 'Fresh Milk, Sweets, Paneer & Dairy Specialties',
+        address: 'Kanpur Road, Ghatampur',
+        isPureVeg: true,
+        rating: 4.7,
+        totalRatings: 45,
+        deliveryTime: '15-20 mins',
+        cuisineTags: ['SWEETS', 'DAIRY', 'MILK', 'PANEER'],
+        isOpen: false,
+        logoUrl: '/dairy.webp',
         bannerUrl: '/cafe_banner.webp',
       ),
     ];
@@ -131,15 +147,19 @@ class RestaurantRepository {
         String canonicalId = restaurantId;
         String? canonicalSlug;
 
-        if (restaurantId.contains('bal-udyan') || restaurantId.contains('cmsbhxb6a')) {
-          canonicalId = 'cmsbhxb6a000304if8kf1cwji';
+        final upperId = restaurantId.toUpperCase();
+        if (restaurantId.contains('bal-udyan') || restaurantId.contains('cmsbhxb6a') || upperId == 'REST-103') {
+          canonicalId = 'REST-103';
           canonicalSlug = 'bal-udyan-restaurant';
-        } else if (restaurantId.contains('wedson') || restaurantId.contains('cms2p1lyx')) {
-          canonicalId = 'cms2p1lyx0001n0idod904lfu';
+        } else if (restaurantId.contains('wedson') || restaurantId.contains('cms2p1lyx') || upperId == 'REST-102') {
+          canonicalId = 'REST-102';
           canonicalSlug = 'wedson-restaurant';
-        } else if (restaurantId.contains('as') || restaurantId.contains('cms2p1lap')) {
-          canonicalId = 'cms2p1lap0000n0id8alldboy';
+        } else if (restaurantId.contains('as') || restaurantId.contains('cms2p1lap') || upperId == 'REST-101') {
+          canonicalId = 'REST-101';
           canonicalSlug = 'as-restaurant';
+        } else if (restaurantId.contains('pari') || restaurantId.contains('cmtn66') || upperId == 'REST-104') {
+          canonicalId = 'REST-104';
+          canonicalSlug = 'pari-milk-dairy-sweets';
         }
 
         final queryParams = <String, dynamic>{
@@ -174,7 +194,7 @@ class RestaurantRepository {
       final result = await future;
       _inFlightMenuFetches.remove(restaurantId);
       return result;
-    } catch (_) {
+    } catch (e, _) { LoggerService.error('RestaurantRepository: silent catch', e);
       _inFlightMenuFetches.remove(restaurantId);
       if (_cachedMenus.containsKey(restaurantId)) {
         return _cachedMenus[restaurantId]!;
@@ -192,12 +212,13 @@ class RestaurantRepository {
       if (data is Map<String, dynamic> && data['reviews'] is List && (data['reviews'] as List).isNotEmpty) {
         return data;
       }
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('RestaurantRepository: silent catch', e); }
 
-    // Real reviews directly from PostgreSQL database (8 reviews for A.S. Restaurant)
-    final isAs = restaurantId.contains('as') || restaurantId.contains('cms2p1lap');
-    final isBalUdyan = restaurantId.contains('bal-udyan') || restaurantId.contains('cmsbhxb6a');
-    final isWedson = restaurantId.contains('wedson') || restaurantId.contains('cms2p1lyx');
+    final upperId = restaurantId.toUpperCase();
+    final isAs = restaurantId.contains('as') || restaurantId.contains('cms2p1lap') || upperId == 'REST-101';
+    final isBalUdyan = restaurantId.contains('bal-udyan') || restaurantId.contains('cmsbhxb6a') || upperId == 'REST-103';
+    final isWedson = restaurantId.contains('wedson') || restaurantId.contains('cms2p1lyx') || upperId == 'REST-102';
+    final isPari = restaurantId.contains('pari') || restaurantId.contains('cmtn66') || upperId == 'REST-104';
 
     if (isBalUdyan) {
       return {

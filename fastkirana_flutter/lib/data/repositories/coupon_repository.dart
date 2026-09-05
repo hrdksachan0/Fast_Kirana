@@ -1,4 +1,5 @@
-﻿import 'package:dio/dio.dart';
+import 'package:fastkirana_flutter/core/services/logger_service.dart';
+import 'package:dio/dio.dart';
 import '../models/coupon.dart';
 
 class CouponRepository {
@@ -12,7 +13,7 @@ class CouponRepository {
       if (data is List) {
         return data.map((json) => Coupon.fromJson(json as Map<String, dynamic>)).toList();
       }
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('CouponRepository: silent catch', e); }
     return [];
   }
 }

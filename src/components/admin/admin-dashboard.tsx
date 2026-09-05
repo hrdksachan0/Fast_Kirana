@@ -76,10 +76,12 @@ import {
   BrainCircuit,
   RefreshCw,
   Wallet,
+  Store,
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
+import { StoreHubsManager } from './store-hubs-manager'
 
 const CreateOrderModal = dynamic(() => import('./create-order-modal').then((m) => m.CreateOrderModal), { ssr: false })
 const ProductEditModal = dynamic(() => import('./product-edit-modal'), { ssr: false })
@@ -92,6 +94,14 @@ import { AdminSortManager } from './admin-sort-manager'
 import { getLast10Digits } from '@/lib/phone'
 
 interface AdminDashboardProps {
+  serverUser?: {
+    id?: string
+    name?: string | null
+    email?: string | null
+    role?: string
+    phone?: string | null
+    assignedStoreId?: string | null
+  }
   initialOrders?: any[]
   initialProducts?: any[]
   initialCategories?: any[]
@@ -117,6 +127,7 @@ interface AdminDashboardProps {
 type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'restaurant-report' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals' | 'forecast' | 'rider-cash' | 'restaurant-console' | 'csv-import'
 
 export function AdminDashboard({
+  serverUser,
   initialOrders,
   initialProducts,
   initialCategories,
@@ -128,8 +139,9 @@ export function AdminDashboard({
   stats
 }: AdminDashboardProps) {
   const { data: session } = useSession()
-  const sessionUserId = (session?.user as any)?.id || ''
-  const sessionUserRole = session?.user?.role || ''
+  const activeUser = session?.user || serverUser
+  const sessionUserId = (activeUser as any)?.id || ''
+  const sessionUserRole = activeUser?.role || ''
 
   const [activeTab, setActiveTab] = useState<TabType>('orders')
   const [activeHub, setActiveHub] = useState<'orders_hub' | 'grocery' | 'food' | 'insights' | 'people' | 'marketing'>('orders_hub')
@@ -226,7 +238,7 @@ export function AdminDashboard({
         console.error('Error parsing RESTAURANT_MENU_SECTIONS from settings:', e)
       }
     }
-    return DEFAULT_RESTAURANT_MENU_SECTIONS
+    return []
   }, [settingsMap])
 
   // Fetch settings function
@@ -575,19 +587,65 @@ export function AdminDashboard({
       setIsLoadingOrderItems(false)
     }
   }, [])
-  
+  const sessionUserEmail = ((activeUser as any)?.email || '').toLowerCase().trim()
+  const sessionUserPhone = (activeUser as any)?.phone || ''
+  const sessionAssignedStoreId = (activeUser as any)?.assignedStoreId || null
+  const phoneDigits = sessionUserPhone.replace(/\D/g, '').slice(-10)
+
+  // 👑 Strict Separation:
+  // 9170942500 / superadmin@fastkirana.com => Super Admin
+  // 7054470303 / admin@fastkirana.com => Store Operations Manager
+  const isSuperAdmin = 
+    (phoneDigits === '9170942500' ||
+    sessionUserEmail === 'superadmin@fastkirana.com' ||
+    sessionUserEmail.startsWith('superadmin')) &&
+    phoneDigits !== '7054470303' &&
+    sessionUserEmail !== 'admin@fastkirana.com'
+
+  const isHubAdmin = !isSuperAdmin
+  const [adminPortalMode, setAdminPortalMode] = useState<'superadmin' | 'manager'>(() => isSuperAdmin ? 'superadmin' : 'manager')
+  const [superAdminTab, setSuperAdminTab] = useState<'sales' | 'staff' | 'settings'>('sales')
+
   const [editingProduct, setEditingProduct] = useState<any | null>(null)
   const [savingProductId, setSavingProductId] = useState<string | null>(null)
   const [restaurantsList, setRestaurantsList] = useState<any[]>([])
+  const [storesList, setStoresList] = useState<any[]>([])
+  const [selectedHubId, setSelectedHubId] = useState<string>(() => isHubAdmin ? (sessionAssignedStoreId || 'hub-209206') : 'all')
+  const [isStoreHubsModalOpen, setIsStoreHubsModalOpen] = useState(false)
 
+  // Keep selectedHubId locked to assignedStoreId if user is Hub Admin
   useEffect(() => {
+    if (sessionAssignedStoreId && selectedHubId !== sessionAssignedStoreId) {
+      setSelectedHubId(sessionAssignedStoreId)
+    }
+  }, [sessionAssignedStoreId, selectedHubId])
+
+  const fetchStoresAndRestaurants = useCallback(() => {
     fetch('/api/restaurants?all=true')
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) setRestaurantsList(data)
       })
       .catch(console.error)
-  }, [])
+
+    fetch('/api/admin/stores')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setStoresList(data)
+          if (sessionAssignedStoreId) {
+            setSelectedHubId(sessionAssignedStoreId)
+          } else if (data.length > 0 && !data.some(s => s.id === selectedHubId) && selectedHubId !== 'all') {
+            setSelectedHubId(data[0].id)
+          }
+        }
+      })
+      .catch(console.error)
+  }, [selectedHubId, sessionAssignedStoreId])
+
+  useEffect(() => {
+    fetchStoresAndRestaurants()
+  }, [fetchStoresAndRestaurants])
 
   const [productEditForm, setProductEditForm] = useState({
     name: '',
@@ -870,7 +928,8 @@ export function AdminDashboard({
     let active = true
     const fetchOrders = async () => {
       try {
-        const res = await fetch(`/api/admin/orders?page=${orderPage}&limit=10&status=${orderStatusFilter}&search=${encodeURIComponent(orderSearchQuery)}&t=${Date.now()}`)
+        const storeQueryParam = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
+        const res = await fetch(`/api/admin/orders?page=${orderPage}&limit=10&status=${orderStatusFilter}&search=${encodeURIComponent(orderSearchQuery)}${storeQueryParam}&t=${Date.now()}`)
         if (res.ok && active) {
           const data = await res.json()
           setOrders(data.orders)
@@ -894,7 +953,7 @@ export function AdminDashboard({
       active = false
       clearInterval(interval)
     }
-  }, [orderPage, orderStatusFilter, orderSearchQuery, orderRefreshKey])
+  }, [orderPage, orderStatusFilter, orderSearchQuery, orderRefreshKey, selectedHubId])
 
   // Supabase Realtime Listener (Zero Polling Delay for DB Order Changes)
   useEffect(() => {
@@ -1421,6 +1480,25 @@ export function AdminDashboard({
       toast.error('Error updating user role')
     } finally {
       setUpdatingUserRoleId(null)
+    }
+  }
+
+  const handleUserStoreChange = async (userId: string, newStoreId: string) => {
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, assignedStoreId: newStoreId }),
+      })
+
+      if (res.ok) {
+        setUsers(users.map((u) => (u.id === userId ? { ...u, assignedStoreId: newStoreId || null } : u)))
+        toast.success('Staff/Rider Store Hub updated successfully!')
+      } else {
+        toast.error('Failed to update store hub')
+      }
+    } catch (err) {
+      toast.error('Error updating store hub')
     }
   }
 
@@ -2365,28 +2443,44 @@ export function AdminDashboard({
     return matchesSearch && matchesCategory && matchesType
   })
 
-  const tabConfig: { key: TabType; label: string; icon: any; count?: number }[] = [
-    { key: 'orders', label: 'Orders', icon: ShoppingBag, count: orderTotal },
-    { key: 'liveops', label: 'Live Ops Tracker', icon: Zap, count: activeCartsCount },
-    { key: 'products', label: 'Products', icon: Package, count: productTotal },
-    { key: 'categories', label: 'Categories', icon: Layers, count: categories.length },
-    { key: 'alerts', label: 'Stock Alerts', icon: AlertCircle, count: stats.lowStockCount },
-    { key: 'inward', label: 'Inward Items (GRN)', icon: Building2 },
-    { key: 'bulk-update', label: 'Bulk Update', icon: SlidersHorizontal },
-    { key: 'csv-import', label: 'CSV Import', icon: Download },
-    { key: 'restaurant-report', label: 'Restaurant Payout', icon: Utensils },
-    { key: 'reports', label: 'Ledger Report', icon: FileText },
-    { key: 'users', label: 'Staff & Customers', icon: Users, count: userTotal },
-    { key: 'rider-cash', label: 'Rider Cash & Settlement', icon: Wallet },
-    { key: 'reviews', label: 'Reviews', icon: Star, count: reviews.length },
-    { key: 'coupons', label: 'Offers', icon: Ticket, count: coupons.length },
-    { key: 'banners', label: 'Promo Banners', icon: ImageIcon },
-    { key: 'flash-deals', label: 'Store Highlights', icon: Zap },
-    { key: 'push-notifications', label: 'Push Notifications', icon: Bell },
-    { key: 'settings', label: 'Store Settings', icon: Settings },
-    { key: 'analytics', label: 'Analytics', icon: TrendingUp },
-    { key: 'forecast', label: 'AI Forecasting', icon: BrainCircuit },
-  ]
+  const tabConfig: { key: TabType; label: string; icon: any; count?: number }[] = useMemo(() => {
+    // 🏢 Store Operations Manager Tabs (Orders, Inventory, Fulfillments, Daily Kirana Work)
+    const operationalTabs: { key: TabType; label: string; icon: any; count?: number }[] = [
+      { key: 'orders', label: 'Orders', icon: ShoppingBag, count: orderTotal },
+      { key: 'liveops', label: 'Live Ops Tracker', icon: Zap, count: activeCartsCount },
+      { key: 'products', label: 'Products', icon: Package, count: productTotal },
+      { key: 'categories', label: 'Categories', icon: Layers, count: categories.length },
+      { key: 'alerts', label: 'Stock Alerts', icon: AlertCircle, count: stats.lowStockCount },
+      { key: 'inward', label: 'Inward Items (GRN)', icon: Building2 },
+      { key: 'bulk-update', label: 'Bulk Update', icon: SlidersHorizontal },
+      { key: 'csv-import', label: 'CSV Import', icon: Download },
+      { key: 'restaurant-report', label: 'Restaurant Payout', icon: Utensils },
+      { key: 'reports', label: 'Ledger Report', icon: FileText },
+      { key: 'rider-cash', label: 'Rider Cash & Settlement', icon: Wallet },
+      { key: 'reviews', label: 'Reviews', icon: Star, count: reviews.length },
+      { key: 'coupons', label: 'Offers', icon: Ticket, count: coupons.length },
+      { key: 'flash-deals', label: 'Store Highlights', icon: Zap },
+      { key: 'forecast', label: 'AI Forecasting', icon: BrainCircuit },
+    ]
+
+    // 👑 Super Admin Platform-Level Tools
+    if (isSuperAdmin) {
+      operationalTabs.push(
+        { key: 'users', label: 'Staff & Customers', icon: Users, count: userTotal },
+        { key: 'banners', label: 'Promo Banners', icon: ImageIcon },
+        { key: 'push-notifications', label: 'Push Notifications', icon: Bell },
+        { key: 'settings', label: 'Store Settings', icon: Settings },
+        { key: 'analytics', label: 'Analytics', icon: TrendingUp }
+      )
+    }
+
+    return operationalTabs
+  }, [orderTotal, activeCartsCount, productTotal, categories.length, stats.lowStockCount, userTotal, reviews.length, coupons.length, isSuperAdmin])
+
+  const activeStoreHub = storesList.find(s => s.id === selectedHubId) || storesList[0]
+  const hubRestaurants = restaurantsList.filter(r => 
+    !activeStoreHub || (r.city && activeStoreHub.name && r.city.toLowerCase().trim() === activeStoreHub.name.toLowerCase().trim())
+  )
 
   return (
     <div className="space-y-6">
@@ -2536,26 +2630,457 @@ export function AdminDashboard({
         </motion.div>
       )}
 
-      <DashboardStatsCards
-        stats={{
-          todaySales: apiTodaySales ?? stats?.todaySales ?? 0,
-          todayOrdersCount: apiTodayOrdersCount ?? stats?.todayOrdersCount ?? 0,
-          netSales: apiTodayNetSales ?? stats?.netSales ?? 0,
-          groceryRevenue: stats?.groceryRevenue ?? 0,
-          restaurantRevenue: stats?.restaurantRevenue ?? 0,
-          orderCount: stats?.orderCount || orderTotal || 0,
-          activeOrderCount: currentActiveOrdersCount,
-        }}
-      />
+      {/* 👑 / 🏢 MASTER PORTAL MODE SWITCHER (SUPER ADMIN ONLY) */}
+      {isSuperAdmin && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gradient-to-r from-slate-900 via-zinc-900 to-black p-3 sm:p-4 rounded-3xl border border-zinc-800 text-white shadow-xl animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 rounded-2xl bg-[#e20a22] text-white flex items-center justify-center font-black text-xl shadow-lg shadow-[#e20a22]/30">
+              {adminPortalMode === 'superadmin' ? '👑' : '🏢'}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-base sm:text-lg font-black tracking-tight text-white">
+                  {adminPortalMode === 'superadmin' ? 'FastKirana Executive Platform HQ' : 'Hub Operations & Store Manager'}
+                </h1>
+                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                  adminPortalMode === 'superadmin'
+                    ? 'bg-[#e20a22]/20 text-red-300 border-[#e20a22]/40'
+                    : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                }`}>
+                  {adminPortalMode === 'superadmin' ? 'Super Admin Mode' : 'Store Operations Mode'}
+                </span>
+              </div>
+              <p className="text-xs text-zinc-400 font-medium mt-0.5">
+                Logged in: <span className="text-zinc-200 font-bold font-mono">{sessionUserEmail || 'superadmin@fastkirana.com'}</span> • {adminPortalMode === 'superadmin' ? 'Platform Multi-Hub Network' : 'Store Catalog & Fulfillment'}
+              </p>
+            </div>
+          </div>
 
-      <DashboardHubNav
-        activeHub={activeHub}
-        setActiveHub={setActiveHub}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        hubs={HUB_CONFIG}
-        tabConfig={tabConfig}
-      />
+          {/* Dedicated Portal Mode Toggle */}
+          <div className="flex items-center gap-1.5 bg-zinc-800/80 p-1 rounded-2xl border border-zinc-700/80 self-stretch sm:self-auto">
+            <button
+              onClick={() => setAdminPortalMode('superadmin')}
+              className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                adminPortalMode === 'superadmin'
+                  ? 'bg-white text-black shadow-md'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <span>👑 Super Admin HQ</span>
+            </button>
+            <button
+              onClick={() => setAdminPortalMode('manager')}
+              className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                adminPortalMode === 'manager'
+                  ? 'bg-[#e20a22] text-white shadow-md'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>🏢 Store Operations</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 🏢 STORE OPERATIONS MANAGER HEADER (FOR admin@fastkirana.com / STORE MANAGERS) */}
+      {!isSuperAdmin && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gradient-to-r from-emerald-950 via-zinc-900 to-black p-3 sm:p-4 rounded-3xl border border-emerald-900/50 text-white shadow-xl animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black text-xl shadow-lg shadow-emerald-600/30">
+              🏢
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-base sm:text-lg font-black tracking-tight text-white">
+                  FastKirana Store Operations Console
+                </h1>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border bg-emerald-500/20 text-emerald-300 border-emerald-500/40">
+                  Store Operations Manager
+                </span>
+              </div>
+              <p className="text-xs text-zinc-400 font-medium mt-0.5">
+                Logged in: <span className="text-zinc-200 font-bold font-mono">{sessionUserEmail || 'admin@fastkirana.com'}</span> • Assigned Hub: <span className="text-emerald-400 font-bold">{activeStoreHub?.name || 'Ghatampur Central Hub'}</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 bg-emerald-950/60 px-3.5 py-1.5 rounded-2xl border border-emerald-800/40">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Store Operations Active</span>
+          </div>
+        </div>
+      )}
+
+      {/* 👑 1. SUPER ADMIN EXECUTIVE CONSOLE VIEW */}
+      {isSuperAdmin && adminPortalMode === 'superadmin' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Super Admin Navigation Sub-Tabs */}
+          <div className="flex flex-wrap items-center gap-2 bg-card p-1.5 rounded-2xl border border-border/80 shadow-xs">
+            <button
+              onClick={() => setSuperAdminTab('sales')}
+              className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                superAdminTab === 'sales'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
+              }`}
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>📈 Business & Sales Overview</span>
+            </button>
+            <button
+              onClick={() => {
+                setSuperAdminTab('sales')
+                setIsStoreHubsModalOpen(true)
+              }}
+              className="px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer text-text-secondary hover:text-text-primary hover:bg-muted/60"
+            >
+              <Building2 className="w-3.5 h-3.5 text-[#e20a22]" />
+              <span>🏢 Store Hubs Network ({storesList.length})</span>
+            </button>
+            <button
+              onClick={() => setSuperAdminTab('staff')}
+              className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                superAdminTab === 'staff'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>👥 Staff & Role Manager</span>
+            </button>
+            <button
+              onClick={() => setSuperAdminTab('settings')}
+              className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                superAdminTab === 'settings'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
+              }`}
+            >
+              <Settings className="w-3.5 h-3.5" />
+              <span>⚙️ Master Platform Settings</span>
+            </button>
+          </div>
+
+          {/* Super Admin Content: Sales */}
+          {superAdminTab === 'sales' && (
+            <div className="space-y-6">
+              <DashboardStatsCards
+                stats={{
+                  todaySales: apiTodaySales ?? stats?.todaySales ?? 0,
+                  todayOrdersCount: apiTodayOrdersCount ?? stats?.todayOrdersCount ?? 0,
+                  netSales: apiTodayNetSales ?? stats?.netSales ?? 0,
+                  groceryRevenue: stats?.groceryRevenue ?? 0,
+                  restaurantRevenue: stats?.restaurantRevenue ?? 0,
+                  orderCount: stats?.orderCount || orderTotal || 0,
+                  activeOrderCount: currentActiveOrdersCount,
+                }}
+              />
+
+              {/* Multi-City Store Hubs Overview Grid */}
+              <div className="bg-card border border-border/80 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-3 border-b border-border/60">
+                  <div>
+                    <h2 className="text-base font-black text-text-primary flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-[#e20a22]" />
+                      Active Operational Hubs & Territories
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                        {storesList.length} Active Hubs
+                      </span>
+                    </h2>
+                    <p className="text-xs text-text-secondary mt-0.5">
+                      Launch new city dark stores, assign territory managers, and monitor city-level performance.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setIsStoreHubsModalOpen(true)}
+                    className="px-3.5 py-2 rounded-xl bg-[#e20a22] hover:bg-[#c9081e] text-white text-xs font-black uppercase tracking-wider shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Launch New Hub</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+                  {storesList.map((store) => (
+                    <div
+                      key={store.id}
+                      className="bg-muted/20 hover:bg-muted/30 border border-border/80 rounded-2xl p-4 shadow-xs hover:border-primary/40 transition-all space-y-3"
+                    >
+                      <div className="flex items-center justify-between pb-2 border-b border-border/50">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black text-sm">
+                            🏢
+                          </div>
+                          <div>
+                            <h3 className="text-xs font-black text-text-primary">{store.name}</h3>
+                            <span className="text-[10px] font-mono text-text-secondary">store_id: {store.id}</span>
+                          </div>
+                        </div>
+                        <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                          store.groceryOpen
+                            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                            : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+                        }`}>
+                          {store.groceryOpen ? '● Grocery OPEN' : '○ CLOSED'}
+                        </span>
+                      </div>
+
+                      <div className="text-[11px] space-y-1.5 text-text-secondary font-medium">
+                        <div className="flex items-center justify-between">
+                          <span>Assigned Hub Manager:</span>
+                          <span className="font-bold text-text-primary font-mono text-xs">
+                            {store.manager?.phone || 'Not Assigned'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Serviceable Radius:</span>
+                          <span className="font-bold text-text-primary">
+                            {store.deliveryRadiusKm || 5.0} km
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Staff & Pickers:</span>
+                          <span className="font-bold text-text-primary">
+                            {store._count?.staffMembers || 0} assigned
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 flex items-center justify-between border-t border-border/40 text-[11px]">
+                        <button
+                          onClick={() => {
+                            setSelectedHubId(store.id)
+                            setIsStoreHubsModalOpen(true)
+                          }}
+                          className="font-bold text-[#e20a22] hover:underline text-xs flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>Manage Settings ⚙️</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedHubId(store.id)
+                            setAdminPortalMode('manager')
+                            setActiveTab('orders')
+                          }}
+                          className="text-text-secondary hover:text-text-primary text-[10px] font-bold cursor-pointer"
+                        >
+                          Switch to Store Console →
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <AnalyticsTab
+                products={allProducts}
+                orders={liveOrders}
+                categories={categories}
+                stats={{
+                  revenue: stats.revenue,
+                  orderCount: stats.orderCount,
+                  lowStockCount: stats.lowStockCount
+                }}
+              />
+            </div>
+          )}
+
+          {/* Super Admin Content: Staff & Role Management */}
+          {superAdminTab === 'staff' && (
+            <UsersTab
+              users={users}
+              userPage={userPage}
+              userTotal={userTotal}
+              userSearch={userSearch}
+              userRoleFilter={userRoleFilter}
+              userStatusFilter={userStatusFilter}
+              isExportingUsers={isExportingUsers}
+              editingPhoneUserId={editingPhoneUserId}
+              phoneInput={phoneInput}
+              savingPhoneId={savingPhoneId}
+              settingPasswordUserId={settingPasswordUserId}
+              passwordInput={passwordInput}
+              savingPasswordId={savingPasswordId}
+              isUpdatingBlockStatus={isUpdatingBlockStatus}
+              setUserPage={setUserPage}
+              setUserSearch={setUserSearch}
+              setUserRoleFilter={setUserRoleFilter}
+              setUserStatusFilter={setUserStatusFilter}
+              setEditingPhoneUserId={setEditingPhoneUserId}
+              setPhoneInput={setPhoneInput}
+              setSettingPasswordUserId={setSettingPasswordUserId}
+              setPasswordInput={setPasswordInput}
+              handleExportCustomersCsv={handleExportCustomersCsv}
+              handleUserPhoneSave={handleUserPhoneSave}
+              handleUserRoleChange={handleUserRoleChange}
+              handleUserStoreChange={handleUserStoreChange}
+              handleSetPassword={handleSetPassword}
+              handleToggleBlock={handleToggleBlock}
+              onRequestBlock={setBlockingUser}
+              renderPagination={renderPagination}
+              stores={storesList}
+            />
+          )}
+
+          {/* Super Admin Content: Settings */}
+          {superAdminTab === 'settings' && (
+            <SettingsTab onSettingsSaved={fetchSettings} />
+          )}
+        </div>
+      )}
+
+      {/* 🏢 2. STORE HUB HIERARCHY & OPERATIONS (SHOWN FOR HUB ADMIN OR WHEN IN MANAGER MODE) */}
+      {(isHubAdmin || adminPortalMode === 'manager') && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="bg-card border border-border/80 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-border/60">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-[#e20a22] to-amber-500 text-white flex items-center justify-center font-black shadow-md shadow-[#e20a22]/20 text-xl">
+                  🏢
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black uppercase tracking-wider text-text-secondary">Master Operational Hub</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                      ● 2 Domains Online
+                    </span>
+                  </div>
+                  <h2 className="text-lg sm:text-xl font-black text-text-primary tracking-tight flex items-center gap-2">
+                    {activeStoreHub?.name || 'Ghatampur'} Store Hub
+                    <span className="text-xs font-mono font-bold text-text-secondary bg-muted px-2 py-0.5 rounded-md border border-border/60">
+                      store_id: {activeStoreHub?.id || 'hub-209206'}
+                    </span>
+                  </h2>
+                </div>
+              </div>
+
+              {/* Hub Switcher & Management Actions */}
+              <div className="flex items-center gap-2 self-stretch sm:self-auto">
+                {!isSuperAdmin ? (
+                  <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 text-xs font-black shadow-xs">
+                    <span>🏢 {activeStoreHub?.name || 'Ghatampur Central Hub'} (Store Operations)</span>
+                  </div>
+                ) : (
+                  <select
+                    value={selectedHubId}
+                    onChange={(e) => setSelectedHubId(e.target.value)}
+                    className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl border border-border/80 bg-background text-text-primary text-xs font-bold shadow-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  >
+                    <option value="all">🌐 All Store Hubs (Super Admin)</option>
+                    {storesList.map((store) => (
+                      <option key={store.id} value={store.id}>
+                        📍 {store.name} Hub ({store.id})
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                {isSuperAdmin && (
+                  <button
+                    onClick={() => setIsStoreHubsModalOpen(true)}
+                    className="px-3.5 py-2 rounded-xl bg-muted hover:bg-muted/80 border border-border/80 text-text-primary text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 shrink-0 cursor-pointer"
+                  >
+                    <Building2 className="w-3.5 h-3.5 text-[#e20a22]" />
+                    <span>Manage Hubs</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* The Two Distinct Domains Breakdown */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* 🏪 1. CENTRAL GROCERY DOMAIN */}
+              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-emerald-500/20">
+                  <div className="flex items-center gap-2">
+                    <Store className="w-4 h-4 text-emerald-600" />
+                    <h3 className="text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                      1. Central Grocery Domain
+                    </h3>
+                  </div>
+                  <span className="text-[10px] font-mono font-black text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded">
+                    store_type: GROCERY
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between bg-card/80 p-3 rounded-xl border border-border/60 text-xs">
+                  <div>
+                    <div className="font-black text-text-primary flex items-center gap-1.5">
+                      <span>🛒 {activeStoreHub?.name || 'Ghatampur'} Dark Store</span>
+                      <span className="text-[10px] font-mono text-text-secondary">(darkstore)</span>
+                    </div>
+                    <div className="text-[11px] text-text-secondary mt-0.5 font-medium">
+                      {products.length} Grocery SKUs • {categories.length} Categories (by ID) • 5.0 km geofence
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setActiveHub('grocery')
+                      setActiveTab('products')
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer"
+                  >
+                    Grocery Catalog
+                  </button>
+                </div>
+              </div>
+
+              {/* 🍳 2. FOOD & RESTAURANT DOMAIN */}
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-amber-500/20">
+                  <div className="flex items-center gap-2">
+                    <Utensils className="w-4 h-4 text-amber-600" />
+                    <h3 className="text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                      2. Food & Restaurant Domain
+                    </h3>
+                  </div>
+                  <span className="text-[10px] font-mono font-black text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded">
+                    store_type: RESTAURANT
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {restaurantsList.slice(0, 4).map((r) => (
+                    <div key={r.id} className="bg-card/80 p-2.5 rounded-xl border border-border/60 text-center flex flex-col justify-between">
+                      <div>
+                        <div className="text-xs font-black text-text-primary truncate">{r.name}</div>
+                        <div className="text-[10px] font-bold text-text-secondary mt-0.5">{r._count?.products || 0} Dishes</div>
+                      </div>
+                      <Link
+                        href={`/restaurant-kitchen?restaurantId=${r.id}`}
+                        target="_blank"
+                        className="mt-2 text-[9px] font-black uppercase tracking-wider text-[#e20a22] bg-rose-500/10 hover:bg-rose-500/20 py-1 rounded-lg border border-rose-500/20 transition-all"
+                      >
+                        Console ↗
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DashboardStatsCards
+            stats={{
+              todaySales: apiTodaySales ?? stats?.todaySales ?? 0,
+              todayOrdersCount: apiTodayOrdersCount ?? stats?.todayOrdersCount ?? 0,
+              netSales: apiTodayNetSales ?? stats?.netSales ?? 0,
+              groceryRevenue: stats?.groceryRevenue ?? 0,
+              restaurantRevenue: stats?.restaurantRevenue ?? 0,
+              orderCount: stats?.orderCount || orderTotal || 0,
+              activeOrderCount: currentActiveOrdersCount,
+            }}
+          />
+
+          <DashboardHubNav
+            activeHub={activeHub}
+            setActiveHub={setActiveHub}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            hubs={HUB_CONFIG}
+            tabConfig={tabConfig}
+          />
 
       <AnimatePresence mode="wait">
         <motion.div
@@ -2722,10 +3247,12 @@ export function AdminDashboard({
           handleExportCustomersCsv={handleExportCustomersCsv}
           handleUserPhoneSave={handleUserPhoneSave}
           handleUserRoleChange={handleUserRoleChange}
+          handleUserStoreChange={handleUserStoreChange}
           handleSetPassword={handleSetPassword}
           handleToggleBlock={handleToggleBlock}
           onRequestBlock={setBlockingUser}
           renderPagination={renderPagination}
+          stores={storesList}
         />
       )}
 
@@ -2932,6 +3459,8 @@ export function AdminDashboard({
 
         </motion.div>
       </AnimatePresence>
+        </div>
+      )}
 
       {/* Product Edit Modal */}
       {editingProduct && (
@@ -3058,6 +3587,23 @@ export function AdminDashboard({
             setCategoryEditForm((prev) => ({ ...prev, imageUrl: url }))
           }
         }}
+      />
+
+      <StoreHubsManager
+        isOpen={isStoreHubsModalOpen}
+        onClose={() => setIsStoreHubsModalOpen(false)}
+        stores={storesList}
+        restaurants={restaurantsList}
+        selectedHubId={selectedHubId}
+        isHubAdmin={isHubAdmin}
+        assignedStoreId={sessionAssignedStoreId}
+        onSelectHub={(hubId) => {
+          if (!isHubAdmin) {
+            setSelectedHubId(hubId)
+          }
+          setIsStoreHubsModalOpen(false)
+        }}
+        onRefresh={fetchStoresAndRestaurants}
       />
     </div>
   )

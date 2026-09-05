@@ -23,6 +23,8 @@ interface UIState {
   restaurantOpen: boolean
   categoryStatus: Record<string, boolean>
   deliveryRadius: number
+  isLocationServiceable: boolean
+  userDistanceKm: number | null
   settings: Record<string, string>
   setCartOpen: (open: boolean) => void
   toggleCart: () => void
@@ -34,10 +36,23 @@ interface UIState {
   setPendingConflictProduct: (product: any | null) => void
   setSelectedLocation: (location: string) => void
   setUserCoords: (coords: UserCoords | null) => void
+  setIsLocationServiceable: (serviceable: boolean, distanceKm?: number | null) => void
   setShopDetails: (name: string, phone: string) => void
   setStoreStatus: (groceryOpen: boolean, cafeOpen: boolean, restaurantOpen: boolean, radius: number, categoryStatus: Record<string, boolean>) => void
   setSettings: (settings: Record<string, string>) => void
   hydrateLocation: () => void
+}
+
+export function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371
+  const dLat = (lat2 - lat1) * (Math.PI / 180)
+  const dLon = (lon2 - lon1) * (Math.PI / 180)
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -57,6 +72,8 @@ export const useUIStore = create<UIState>((set) => ({
   restaurantOpen: true,
   categoryStatus: {},
   deliveryRadius: 5,
+  isLocationServiceable: true,
+  userDistanceKm: null,
   settings: {},
 
   setCartOpen: (open) => set({ isCartOpen: open }),
@@ -73,11 +90,31 @@ export const useUIStore = create<UIState>((set) => ({
     }
     set({ selectedLocation: location })
   },
+  setIsLocationServiceable: (serviceable, distanceKm = null) => {
+    set({ isLocationServiceable: serviceable, userDistanceKm: distanceKm })
+  },
   setUserCoords: (coords) => {
     if (typeof window !== 'undefined' && coords) {
       localStorage.setItem('fk-coords', JSON.stringify(coords))
     }
-    set({ userCoords: coords })
+    if (!coords) {
+      set({ userCoords: null, isLocationServiceable: true, userDistanceKm: null })
+      return
+    }
+
+    const state = useUIStore.getState()
+    const hubLat = parseFloat(state.settings['store_lat'] || '26.1534185')
+    const hubLng = parseFloat(state.settings['store_lng'] || '80.1714024')
+    const maxRadius = parseFloat(state.settings['delivery_radius'] || String(state.deliveryRadius || 5))
+
+    const dist = calculateDistanceKm(coords.lat, coords.lng, hubLat, hubLng)
+    const isServiceable = dist <= maxRadius
+
+    set({
+      userCoords: coords,
+      isLocationServiceable: isServiceable,
+      userDistanceKm: dist,
+    })
   },
   setShopDetails: (name, phone) => {
     if (typeof window !== 'undefined') {
@@ -89,7 +126,21 @@ export const useUIStore = create<UIState>((set) => ({
   setStoreStatus: (groceryOpen, cafeOpen, restaurantOpen, radius, categoryStatus) => {
     set({ groceryMartOpen: groceryOpen, cafeOpen, restaurantOpen, deliveryRadius: radius, categoryStatus })
   },
-  setSettings: (settings) => set({ settings }),
+  setSettings: (settings) => {
+    set({ settings })
+    // Re-check serviceability when settings change
+    const state = useUIStore.getState()
+    if (state.userCoords) {
+      const hubLat = parseFloat(settings['store_lat'] || '26.1534185')
+      const hubLng = parseFloat(settings['store_lng'] || '80.1714024')
+      const maxRadius = parseFloat(settings['delivery_radius'] || String(state.deliveryRadius || 5))
+      const dist = calculateDistanceKm(state.userCoords.lat, state.userCoords.lng, hubLat, hubLng)
+      set({
+        isLocationServiceable: dist <= maxRadius,
+        userDistanceKm: dist,
+      })
+    }
+  },
   hydrateLocation: () => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('fk-location')
@@ -100,7 +151,21 @@ export const useUIStore = create<UIState>((set) => ({
       if (savedShopName) set({ shopName: savedShopName })
       if (savedShopPhone) set({ shopPhone: savedShopPhone })
       if (savedCoords) {
-        try { set({ userCoords: JSON.parse(savedCoords) }) } catch {}
+        try {
+          const parsed = JSON.parse(savedCoords)
+          if (parsed && typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
+            const state = useUIStore.getState()
+            const hubLat = parseFloat(state.settings['store_lat'] || '26.1534185')
+            const hubLng = parseFloat(state.settings['store_lng'] || '80.1714024')
+            const maxRadius = parseFloat(state.settings['delivery_radius'] || String(state.deliveryRadius || 5))
+            const dist = calculateDistanceKm(parsed.lat, parsed.lng, hubLat, hubLng)
+            set({
+              userCoords: parsed,
+              isLocationServiceable: dist <= maxRadius,
+              userDistanceKm: dist,
+            })
+          }
+        } catch {}
       }
     }
   },

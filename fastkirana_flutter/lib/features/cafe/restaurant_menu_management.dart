@@ -20,7 +20,7 @@ class RestaurantMenuManagementScreen extends StatelessWidget {
         backgroundColor: AppDesignSystem.background,
         elevation: 0,
         title: Text('Menu Management', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
-        actions: [IconButton(icon: Icon(Icons.add_rounded, color: AppDesignSystem.primary), onPressed: () {})],
+        actions: [IconButton(icon: const Icon(Icons.add_rounded, color: AppDesignSystem.primary), onPressed: () {})],
       ),
       body: Column(
         children: [
@@ -34,7 +34,7 @@ class RestaurantMenuManagementScreen extends StatelessWidget {
                     decoration: BoxDecoration(color: AppDesignSystem.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppDesignSystem.borderLight)),
                     child: Row(
                       children: [
-                        Icon(Icons.search_rounded, size: 18, color: AppDesignSystem.textMuted),
+                        const Icon(Icons.search_rounded, size: 18, color: AppDesignSystem.textMuted),
                         const SizedBox(width: 8),
                         Text('Search items...', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textMuted)),
                       ],
@@ -65,7 +65,7 @@ class RestaurantMenuManagementScreen extends StatelessWidget {
                         width: 50,
                         height: 50,
                         decoration: BoxDecoration(color: AppDesignSystem.background, borderRadius: BorderRadius.circular(10)),
-                        child: Center(child: Text(['☕', '🍵', '🍔', '🍟', '🥤', '🍰', '🌯', '🍫', '🥟', '🍝'][index], style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
+                        child: Center(child: Text(['☕', '🍵', '🍔', '🍟', '🥤', '🍰', '🌯', '🍫', '🥟', '🍝'][index], style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
                       ),
                       const SizedBox(width: 12),
                       Expanded(

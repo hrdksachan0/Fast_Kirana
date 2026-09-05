@@ -1,6 +1,6 @@
+import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'package:dio/dio.dart';
 import '../models/banner.dart';
-import '../../core/network/api_client.dart';
 
 class BannerRepository {
   final Dio dio;
@@ -18,7 +18,7 @@ class BannerRepository {
       if (data is List) {
         return data.map((json) => Banner.fromJson(json as Map<String, dynamic>)).toList();
       }
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('BannerRepository', e); }
     return [];
   }
 }

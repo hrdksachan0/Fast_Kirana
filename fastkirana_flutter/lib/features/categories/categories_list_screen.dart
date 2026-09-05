@@ -32,11 +32,11 @@ class CategoriesScreen extends StatelessWidget {
         title: Text('Categories', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
       ),
       body: GridView.builder(
-        padding: const EdgeInsets.all(16),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 0.85,
-          crossAxisSpacing: 12,
+        padding: EdgeInsets.all(Responsive.horizontalPadding(context)),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: Responsive.gridColumns(context, smallMobile: 2, mobile: 2, smallTablet: 3, tablet: 4, desktop: 5),
+          childAspectRatio: Responsive.gridAspectRatio(context, smallMobile: 0.72, mobile: 0.76, tablet: 0.82, desktop: 0.88),
+          crossAxisSpacing: Responsive.horizontalPadding(context) * 0.5,
           mainAxisSpacing: 12,
         ),
         itemCount: _categories.length,
@@ -68,10 +68,10 @@ class CategoriesScreen extends StatelessWidget {
                     width: 70,
                     height: 70,
                     decoration: BoxDecoration(
-                      color: Color(int.parse(cat['color']!)).withOpacity(0.15),
+                      color: Color(int.parse(cat['color']!)).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Center(child: Text(cat['emoji']!, style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 40)))),
+                    child: Center(child: Text(cat['emoji']!, style: TextStyle(fontSize: Responsive.scaledFontSize(context, 40)))),
                   ),
                   const SizedBox(height: 12),
                   Text(cat['name']!, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),

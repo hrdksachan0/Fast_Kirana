@@ -13,5 +13,4 @@ export '../../widgets/floating_cart_bar.dart';
 export '../../widgets/cart_conflict_dialog.dart';
 export '../../widgets/live_gps_route_card.dart';
 export '../../widgets/voice_search_sheet.dart';
-export '../../widgets/shimmer_box.dart';
-export '../../widgets/dotted_border.dart';
+export '../../widgets/shimmer_box.dart' hide ProductCardSkeleton;

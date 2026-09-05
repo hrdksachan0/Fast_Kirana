@@ -1,5 +1,8 @@
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../core/theme/design_system.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -11,6 +14,8 @@ import '../../core/network/api_client.dart';
 import '../../core/services/supabase_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/live_clock_badge.dart';
+import '../common/order_edit_modal.dart';
+import 'widgets/add_picker_product_modal.dart';
 
 class PickerDashboard extends ConsumerStatefulWidget {
   const PickerDashboard({super.key});
@@ -20,11 +25,43 @@ class PickerDashboard extends ConsumerStatefulWidget {
 }
 
 class _PickerDashboardState extends ConsumerState<PickerDashboard> {
-  bool _isLoading = true;
+  static List<Map<String, dynamic>> _cachedPickerOrders = [];
+  late bool _isLoading = _cachedPickerOrders.isEmpty;
   bool _isRefreshing = false;
   bool _isFetching = false;
   int _refreshCountdown = 30;
-  List<Map<String, dynamic>> _orders = [];
+  List<Map<String, dynamic>> _orders = _cachedPickerOrders;
+
+  static const String _diskPickerOrdersKey = 'cached_picker_orders_v2';
+
+  Future<void> _loadDiskPickerOrders() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_diskPickerOrdersKey);
+      if (raw != null && raw.isNotEmpty && mounted) {
+        final List<dynamic> decoded = jsonDecode(raw);
+        final list = decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        if (list.isNotEmpty && _orders.isEmpty) {
+          _cachedPickerOrders = list;
+          setState(() {
+            _orders = list;
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('[PickerDashboard] disk load error: $e');
+    }
+  }
+
+  Future<void> _saveDiskPickerOrders(List<Map<String, dynamic>> orders) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_diskPickerOrdersKey, jsonEncode(orders));
+    } catch (e) {
+      debugPrint('[PickerDashboard] disk save error: $e');
+    }
+  }
   final Map<String, Set<String>> _pickedItemIds = {}; // orderId -> Set of picked itemIds
   String? _updatingOrderId;
   Timer? _autoRefreshTimer;
@@ -39,6 +76,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
   @override
   void initState() {
     super.initState();
+    _loadDiskPickerOrders();
     _fetchPickerOrders();
     _initSupabaseRealtime();
 
@@ -88,14 +126,17 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
       if (response.statusCode == 200 && response.data != null) {
         final List list = response.data is List ? response.data : (response.data['orders'] ?? []);
         if (mounted) {
+          final filtered = list
+              .map((e) => Map<String, dynamic>.from(e))
+              .where((o) {
+                final s = o['status']?.toString().toUpperCase();
+                return s != 'CANCELLED' && s != 'DELIVERED';
+              })
+              .toList();
+          _cachedPickerOrders = filtered;
+          _saveDiskPickerOrders(filtered);
           setState(() {
-            _orders = list
-                .map((e) => Map<String, dynamic>.from(e))
-                .where((o) {
-                  final s = o['status']?.toString().toUpperCase();
-                  return s != 'CANCELLED' && s != 'DELIVERED';
-                })
-                .toList();
+            _orders = filtered;
           });
         }
       }
@@ -159,6 +200,16 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
     });
   }
 
+  void _openAddGroceryModal() {
+    HapticFeedback.selectionClick();
+    AddPickerProductModal.show(
+      context: context,
+      onProductAdded: () {
+        _fetchPickerOrders();
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final pendingCount = _orders.where((o) => o['status'] == 'PENDING' || o['status'] == 'CONFIRMED').length;
@@ -185,7 +236,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: const Color(0xFFFED7AA)),
               ),
-              child: const Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18))),
+              child: Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18))),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -208,6 +259,32 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
           ],
         ),
         actions: [
+          Bounceable(
+            onTap: _openAddGroceryModal,
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: brandOrange,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.add_rounded, size: 16, color: Colors.white),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Add Item',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 11.5),
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           IconButton(
             icon: _isRefreshing
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: brandOrange))
@@ -296,6 +373,16 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: brandOrange,
+        elevation: 4,
+        onPressed: _openAddGroceryModal,
+        icon: const Icon(Icons.add_shopping_cart_rounded, color: Colors.white, size: 20),
+        label: Text(
+          'Add Grocery Item',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: Colors.white),
+        ),
+      ),
     );
   }
 
@@ -310,7 +397,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
         ),
         child: Column(
           children: [
-            const LiveDigitalClockBadge(
+            LiveDigitalClockBadge(
               backgroundColor: Colors.transparent,
               borderColor: Colors.transparent,
               textColor: slateDark,
@@ -409,7 +496,49 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
               ],
             ),
             const SizedBox(height: 4),
-            Text('👤 Customer: $customerName', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: slateMuted)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('👤 Customer: $customerName', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: slateMuted)),
+                Bounceable(
+                  onTap: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (ctx) => OrderEditModal(
+                        order: order,
+                        isRestaurant: false,
+                        onOrderUpdated: () => _fetchPickerOrders(silent: true),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.edit_note_rounded, size: 14, color: AppDesignSystem.slate700),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Edit / Out of Stock',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 10.5),
+                            fontWeight: FontWeight.w800,
+                            color: AppDesignSystem.slate700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const Divider(height: 16, color: slateBorder),
 
             // Picking Items Checklist

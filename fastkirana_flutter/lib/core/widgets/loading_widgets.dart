@@ -1,3 +1,4 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
 import 'package:flutter/material.dart';
 
 class ProductCardShimmer extends StatelessWidget {
@@ -18,7 +19,7 @@ class ProductCardShimmer extends StatelessWidget {
           Container(
             height: 160,
             decoration: const BoxDecoration(
-              color: Color(0xFFF3F4F6),
+              color: AppDesignSystem.surfaceMuted,
               borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: const Center(
@@ -34,7 +35,7 @@ class ProductCardShimmer extends StatelessWidget {
                 Container(
                   height: 14, width: double.infinity,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
+                    color: AppDesignSystem.surfaceMuted,
                     borderRadius: BorderRadius.circular(6),
                   ),
                 ),
@@ -42,7 +43,7 @@ class ProductCardShimmer extends StatelessWidget {
                 Container(
                   height: 14, width: 80,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
+                    color: AppDesignSystem.surfaceMuted,
                     borderRadius: BorderRadius.circular(6),
                   ),
                 ),
@@ -53,14 +54,14 @@ class ProductCardShimmer extends StatelessWidget {
                     Container(
                       height: 20, width: 60,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
+                        color: AppDesignSystem.surfaceMuted,
                         borderRadius: BorderRadius.circular(6),
                       ),
                     ),
                     Container(
                       height: 32, width: 32,
                       decoration: const BoxDecoration(
-                        color: Color(0xFFF3F4F6), shape: BoxShape.circle,
+                        color: AppDesignSystem.surfaceMuted, shape: BoxShape.circle,
                       ),
                     ),
                   ],
@@ -92,7 +93,7 @@ class OrderCardShimmer extends StatelessWidget {
           Container(
             width: 56, height: 56,
             decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
+              color: AppDesignSystem.surfaceMuted,
               borderRadius: BorderRadius.circular(12),
             ),
           ),
@@ -104,7 +105,7 @@ class OrderCardShimmer extends StatelessWidget {
                 Container(
                   height: 14, width: double.infinity,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
+                    color: AppDesignSystem.surfaceMuted,
                     borderRadius: BorderRadius.circular(6),
                   ),
                 ),
@@ -112,7 +113,7 @@ class OrderCardShimmer extends StatelessWidget {
                 Container(
                   height: 12, width: 120,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
+                    color: AppDesignSystem.surfaceMuted,
                     borderRadius: BorderRadius.circular(6),
                   ),
                 ),

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_bounceable/flutter_bounceable.dart';
 import '../../core/theme/design_system.dart';
 import '../../widgets/empty_state.dart';
 
@@ -23,7 +21,7 @@ class EmptyCartScreen extends StatelessWidget {
         title: 'Your cart is empty',
         subtitle: 'Looks like you haven\'t added anything yet.\nStart shopping now!',
         ctaLabel: 'Start Shopping',
-        bgTint: const Color(0xFFFFF5F6),
+        bgTint: AppDesignSystem.primaryBg,
         onCta: () => Navigator.pop(context),
       ),
     );

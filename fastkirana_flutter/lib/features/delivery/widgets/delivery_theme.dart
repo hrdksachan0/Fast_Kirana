@@ -1,3 +1,4 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
 import 'package:flutter/material.dart';
 
 /// Dynamic light/dark theme colors used across the delivery dashboard.
@@ -8,20 +9,20 @@ class DeliveryTheme {
 
   const DeliveryTheme({this.isDarkMode = false});
 
-  static const Color emeraldGreen = Color(0xFF00965E);
-  static const Color emeraldDark = Color(0xFF045D38);
-  static const Color emeraldShadow = Color(0xFF02462A);
-  static const Color brandGreen = Color(0xFF10B981);
-  static const Color primaryRed = Color(0xFFE20A22);
-  static const Color slateDark = Color(0xFF0F172A);
-  static const Color slateMuted = Color(0xFF64748B);
-  static const Color slateBorder = Color(0xFFE2E8F0);
-  static const Color slateSurface = Color(0xFFF8FAFC);
+  static const Color emeraldGreen = AppDesignSystem.emeraldBrand;
+  static const Color emeraldDark = AppDesignSystem.emeraldDark;
+  static const Color emeraldShadow = AppDesignSystem.emeraldShadow;
+  static const Color brandGreen = AppDesignSystem.success;
+  static const Color primaryRed = AppDesignSystem.primary;
+  static const Color slateDark = AppDesignSystem.slate900;
+  static const Color slateMuted = AppDesignSystem.slate500;
+  static const Color slateBorder = AppDesignSystem.slate200;
+  static const Color slateSurface = AppDesignSystem.slate50;
 
-  Color get bgMain => isDarkMode ? const Color(0xFF0A0F1D) : slateSurface;
-  Color get cardBg => isDarkMode ? const Color(0xFF131C2E) : Colors.white;
-  Color get cardSubtle => isDarkMode ? const Color(0xFF1A263D) : slateSurface;
-  Color get borderCol => isDarkMode ? const Color(0xFF23324D) : slateBorder;
-  Color get textMain => isDarkMode ? const Color(0xFFF1F5F9) : slateDark;
-  Color get textMuted => isDarkMode ? const Color(0xFF94A3B8) : slateMuted;
+  Color get bgMain => isDarkMode ? AppDesignSystem.darkNavy : slateSurface;
+  Color get cardBg => isDarkMode ? AppDesignSystem.darkNavyCard : Colors.white;
+  Color get cardSubtle => isDarkMode ? AppDesignSystem.darkNavySubtle : slateSurface;
+  Color get borderCol => isDarkMode ? AppDesignSystem.darkNavyBorder : slateBorder;
+  Color get textMain => isDarkMode ? AppDesignSystem.slate100 : slateDark;
+  Color get textMuted => isDarkMode ? AppDesignSystem.slate400 : slateMuted;
 }

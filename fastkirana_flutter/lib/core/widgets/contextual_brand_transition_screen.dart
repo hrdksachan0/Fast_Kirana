@@ -1,3 +1,5 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import '../../core/theme/responsive.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -124,30 +126,30 @@ class _ContextualBrandTransitionScreenState extends State<ContextualBrandTransit
   Color get _accentColor {
     switch (widget.contextType) {
       case TransitionContextType.grocery:
-        return const Color(0xFF16A34A); // Emerald green
+        return AppDesignSystem.green600; // Emerald green
       case TransitionContextType.cafe:
-        return const Color(0xFFE20A22); // FastKirana Red / Coral
+        return AppDesignSystem.primary; // FastKirana Red / Coral
       case TransitionContextType.essentials:
-        return const Color(0xFF0284C7); // Cyan / Electric Blue
+        return AppDesignSystem.cyan600; // Cyan / Electric Blue
       case TransitionContextType.checkout:
-        return const Color(0xFFD97706); // Amber Gold
+        return AppDesignSystem.amber600; // Amber Gold
       case TransitionContextType.storeFinder:
-        return const Color(0xFF6366F1); // Indigo Purple
+        return AppDesignSystem.indigo500; // Indigo Purple
     }
   }
 
   Color get _glowColor {
     switch (widget.contextType) {
       case TransitionContextType.grocery:
-        return const Color(0xFFDCFCE7);
+        return AppDesignSystem.green100;
       case TransitionContextType.cafe:
-        return const Color(0xFFFFE4E6);
+        return AppDesignSystem.rose100alt;
       case TransitionContextType.essentials:
-        return const Color(0xFFE0F2FE);
+        return AppDesignSystem.cyan100;
       case TransitionContextType.checkout:
-        return const Color(0xFFFEF3C7);
+        return AppDesignSystem.statusPending;
       case TransitionContextType.storeFinder:
-        return const Color(0xFFEEF2FF);
+        return AppDesignSystem.indigo50;
     }
   }
 
@@ -247,7 +249,7 @@ class _ContextualBrandTransitionScreenState extends State<ContextualBrandTransit
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: Responsive.scaledFontSize(context, 21),
                                 fontWeight: FontWeight.w700,
-                                color: const Color(0xFF64748B),
+                                color: AppDesignSystem.slate500,
                                 height: 1.38,
                                 letterSpacing: -0.4,
                               ),
@@ -264,7 +266,7 @@ class _ContextualBrandTransitionScreenState extends State<ContextualBrandTransit
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 13),
                                   fontWeight: FontWeight.w500,
-                                  color: const Color(0xFF94A3B8),
+                                  color: AppDesignSystem.slate400,
                                   height: 1.4,
                                 ),
                               ),
@@ -291,7 +293,7 @@ class _ContextualBrandTransitionScreenState extends State<ContextualBrandTransit
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 10),
                                   fontWeight: FontWeight.w800,
-                                  color: const Color(0xFFCBD5E1),
+                                  color: AppDesignSystem.slate300,
                                   letterSpacing: 1.8,
                                 ),
                               ),
@@ -326,10 +328,10 @@ class _ContextualBrandTransitionScreenState extends State<ContextualBrandTransit
             height: 150 + 10 * pulse,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: _glowColor.withOpacity(0.7),
+              color: _glowColor.withValues(alpha: 0.7),
               boxShadow: [
                 BoxShadow(
-                  color: _accentColor.withOpacity(0.06 * pulse),
+                  color: _accentColor.withValues(alpha: 0.06 * pulse),
                   blurRadius: 40,
                   spreadRadius: 15,
                 ),
@@ -343,7 +345,7 @@ class _ContextualBrandTransitionScreenState extends State<ContextualBrandTransit
             right: 22,
             child: Opacity(
               opacity: 0.3 + 0.7 * pulse,
-              child: Icon(Icons.auto_awesome, size: 16, color: _accentColor.withOpacity(0.9)),
+              child: Icon(Icons.auto_awesome, size: 16, color: _accentColor.withValues(alpha: 0.9)),
             ),
           ),
           Positioned(
@@ -351,7 +353,7 @@ class _ContextualBrandTransitionScreenState extends State<ContextualBrandTransit
             left: 20,
             child: Opacity(
               opacity: 0.3 + 0.6 * (1.0 - pulse),
-              child: Icon(Icons.star_rounded, size: 14, color: _accentColor.withOpacity(0.7)),
+              child: Icon(Icons.star_rounded, size: 14, color: _accentColor.withValues(alpha: 0.7)),
             ),
           ),
 
@@ -447,14 +449,14 @@ class _GroceryBackPainter extends CustomPainter {
       Rect.fromCenter(center: Offset(milkX, milkY + 12), width: 30, height: 44),
       const Radius.circular(5),
     );
-    canvas.drawRRect(milkBody, Paint()..color = const Color(0xFFF8FAFC));
-    canvas.drawRRect(milkBody, Paint()..color = const Color(0xFFE20822).withOpacity(0.1)..style = PaintingStyle.stroke..strokeWidth = 1.5);
+    canvas.drawRRect(milkBody, Paint()..color = AppDesignSystem.slate50);
+    canvas.drawRRect(milkBody, Paint()..color = AppDesignSystem.primary.withValues(alpha: 0.1)..style = PaintingStyle.stroke..strokeWidth = 1.5);
 
     // Blue milk band
     final band = RRect.fromRectAndCorners(
       Rect.fromCenter(center: Offset(milkX, milkY + 14), width: 30, height: 14),
     );
-    canvas.drawRRect(band, Paint()..color = const Color(0xFF38BDF8));
+    canvas.drawRRect(band, Paint()..color = AppDesignSystem.cyan400);
 
     // Gable top
     final roof = Path()
@@ -462,7 +464,7 @@ class _GroceryBackPainter extends CustomPainter {
       ..lineTo(milkX, milkY - 22)
       ..lineTo(milkX + 15, milkY - 10)
       ..close();
-    canvas.drawPath(roof, Paint()..color = const Color(0xFF0284C7));
+    canvas.drawPath(roof, Paint()..color = AppDesignSystem.cyan600);
   }
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
@@ -480,7 +482,7 @@ class _GroceryFrontPainter extends CustomPainter {
       ..lineTo(center.dx + 23, center.dy + 30)
       ..lineTo(center.dx - 23, center.dy + 30)
       ..close();
-    canvas.drawPath(bagPath, Paint()..color = const Color(0xFFD97706).withOpacity(0.9));
+    canvas.drawPath(bagPath, Paint()..color = AppDesignSystem.amber600.withValues(alpha: 0.9));
 
     // Bag Lip
     canvas.drawRRect(
@@ -488,11 +490,11 @@ class _GroceryFrontPainter extends CustomPainter {
         Rect.fromCenter(center: Offset(center.dx, center.dy - 7), width: 58, height: 6),
         const Radius.circular(3),
       ),
-      Paint()..color = const Color(0xFFB45309),
+      Paint()..color = AppDesignSystem.amber700,
     );
 
     // FastKirana Red Logo Badge
-    canvas.drawCircle(Offset(center.dx, center.dy + 12), 9, Paint()..color = const Color(0xFFE20A22));
+    canvas.drawCircle(Offset(center.dx, center.dy + 12), 9, Paint()..color = AppDesignSystem.primary);
     final fPaint = Paint()..color = Colors.white..strokeWidth = 2.2..strokeCap = StrokeCap.round;
     canvas.drawLine(Offset(center.dx - 2, center.dy + 7), Offset(center.dx - 2, center.dy + 17), fPaint);
     canvas.drawLine(Offset(center.dx - 2, center.dy + 8), Offset(center.dx + 3, center.dy + 8), fPaint);
@@ -506,14 +508,14 @@ class _GroceryFrontPainter extends CustomPainter {
       ..cubicTo(mangoX + 15, mangoY - 9, mangoX + 15, mangoY + 11, mangoX, mangoY + 9)
       ..cubicTo(mangoX - 13, mangoY + 7, mangoX - 13, mangoY - 5, mangoX - 5, mangoY - 7)
       ..close();
-    canvas.drawPath(mangoPath, Paint()..color = const Color(0xFFF59E0B));
+    canvas.drawPath(mangoPath, Paint()..color = AppDesignSystem.warning);
 
     // Leaf
     final leaf = Path()
       ..moveTo(mangoX - 3, mangoY - 6)
       ..quadraticBezierTo(mangoX - 10, mangoY - 12, mangoX - 5, mangoY - 14)
       ..quadraticBezierTo(mangoX, mangoY - 10, mangoX - 3, mangoY - 6);
-    canvas.drawPath(leaf, Paint()..color = const Color(0xFF22C55E));
+    canvas.drawPath(leaf, Paint()..color = AppDesignSystem.lime500);
   }
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
@@ -536,10 +538,10 @@ class _CafeBackPainter extends CustomPainter {
       ..lineTo(fryX + 10, fryY + 24)
       ..lineTo(fryX - 10, fryY + 24)
       ..close();
-    canvas.drawPath(cup, Paint()..color = const Color(0xFFE20A22));
+    canvas.drawPath(cup, Paint()..color = AppDesignSystem.primary);
 
     // Fries Sticks
-    final fryPaint = Paint()..color = const Color(0xFFFBBF24)..strokeWidth = 3.5..strokeCap = StrokeCap.round;
+    final fryPaint = Paint()..color = AppDesignSystem.amber400..strokeWidth = 3.5..strokeCap = StrokeCap.round;
     canvas.drawLine(Offset(fryX - 7, fryY - 4), Offset(fryX - 9, fryY - 18), fryPaint);
     canvas.drawLine(Offset(fryX - 1, fryY - 4), Offset(fryX - 1, fryY - 22), fryPaint);
     canvas.drawLine(Offset(fryX + 5, fryY - 4), Offset(fryX + 6, fryY - 19), fryPaint);
@@ -560,7 +562,7 @@ class _CafeFrontPainter extends CustomPainter {
         bottomLeft: const Radius.circular(6),
         bottomRight: const Radius.circular(6),
       ),
-      Paint()..color = const Color(0xFFF59E0B),
+      Paint()..color = AppDesignSystem.warning,
     );
 
     // Patty
@@ -569,7 +571,7 @@ class _CafeFrontPainter extends CustomPainter {
         Rect.fromCenter(center: Offset(center.dx, center.dy + 5), width: 50, height: 7),
         const Radius.circular(3),
       ),
-      Paint()..color = const Color(0xFF78350F),
+      Paint()..color = AppDesignSystem.amber900,
     );
 
     // Melted Cheese
@@ -580,14 +582,14 @@ class _CafeFrontPainter extends CustomPainter {
       ..lineTo(center.dx - 4, center.dy + 3)
       ..lineTo(center.dx - 16, center.dy + 9)
       ..close();
-    canvas.drawPath(cheese, Paint()..color = const Color(0xFFFBBF24));
+    canvas.drawPath(cheese, Paint()..color = AppDesignSystem.amber400);
 
     // Top Dome Bun
     final topBun = Path()
       ..moveTo(center.dx - 24, center.dy - 3)
       ..quadraticBezierTo(center.dx, center.dy - 24, center.dx + 24, center.dy - 3)
       ..close();
-    canvas.drawPath(topBun, Paint()..color = const Color(0xFFF59E0B));
+    canvas.drawPath(topBun, Paint()..color = AppDesignSystem.warning);
   }
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
@@ -610,25 +612,25 @@ class _EssentialsBackPainter extends CustomPainter {
       Rect.fromCenter(center: Offset(watchX, watchY), width: 14, height: 62),
       const Radius.circular(7),
     );
-    canvas.drawRRect(strap, Paint()..color = const Color(0xFFFFD1D5));
+    canvas.drawRRect(strap, Paint()..color = AppDesignSystem.red100);
 
     // Watch Dial Body
     final dial = RRect.fromRectAndRadius(
       Rect.fromCenter(center: Offset(watchX, watchY), width: 32, height: 36),
       const Radius.circular(9),
     );
-    canvas.drawRRect(dial, Paint()..color = const Color(0xFFFFF0F2));
-    canvas.drawRRect(dial, Paint()..color = const Color(0xFFFDA4AF)..style = PaintingStyle.stroke..strokeWidth = 1.5);
+    canvas.drawRRect(dial, Paint()..color = AppDesignSystem.rose50);
+    canvas.drawRRect(dial, Paint()..color = AppDesignSystem.rose300..style = PaintingStyle.stroke..strokeWidth = 1.5);
 
     // Watch Screen Glass
     final screen = RRect.fromRectAndRadius(
       Rect.fromCenter(center: Offset(watchX, watchY), width: 22, height: 26),
       const Radius.circular(6),
     );
-    canvas.drawRRect(screen, Paint()..color = const Color(0xFF1E293B));
+    canvas.drawRRect(screen, Paint()..color = AppDesignSystem.slate800);
 
     // Time Indicator on Watch (10:00)
-    final timePaint = Paint()..color = const Color(0xFF38BDF8)..strokeWidth = 1.8..strokeCap = StrokeCap.round;
+    final timePaint = Paint()..color = AppDesignSystem.cyan400..strokeWidth = 1.8..strokeCap = StrokeCap.round;
     canvas.drawLine(Offset(watchX, watchY), Offset(watchX, watchY - 5), timePaint);
     canvas.drawLine(Offset(watchX, watchY), Offset(watchX + 4, watchY), timePaint);
   }
@@ -650,10 +652,10 @@ class _EssentialsFrontPainter extends CustomPainter {
       Rect.fromCenter(center: Offset(trimX, trimY + 8), width: 28, height: 48),
       const Radius.circular(8),
     );
-    canvas.drawRRect(trimmerBody, Paint()..color = const Color(0xFF67E8F9));
+    canvas.drawRRect(trimmerBody, Paint()..color = AppDesignSystem.cyan300);
 
     // Power Button on Trimmer
-    canvas.drawCircle(Offset(trimX, trimY + 12), 4, Paint()..color = const Color(0xFF06B6D4));
+    canvas.drawCircle(Offset(trimX, trimY + 12), 4, Paint()..color = AppDesignSystem.cyan500);
 
     // Blade Head Top (Teeth Comb)
     final blade = Path()
@@ -662,10 +664,10 @@ class _EssentialsFrontPainter extends CustomPainter {
       ..lineTo(trimX + 13, trimY - 26)
       ..lineTo(trimX - 13, trimY - 26)
       ..close();
-    canvas.drawPath(blade, Paint()..color = const Color(0xFF22D3EE));
+    canvas.drawPath(blade, Paint()..color = AppDesignSystem.cyan400alt);
 
     // Comb Teeth
-    final toothPaint = Paint()..color = const Color(0xFF0891B2)..strokeWidth = 1.5;
+    final toothPaint = Paint()..color = AppDesignSystem.cyan700..strokeWidth = 1.5;
     for (int i = -10; i <= 10; i += 4) {
       canvas.drawLine(Offset(trimX + i.toDouble(), trimY - 17), Offset(trimX + i.toDouble(), trimY - 25), toothPaint);
     }
@@ -685,14 +687,14 @@ class _CheckoutBackPainter extends CustomPainter {
     // GPS Pin (Top-Right)
     final pinX = center.dx + 30;
     final pinY = center.dy - 20;
-    canvas.drawCircle(Offset(pinX, pinY), 10, Paint()..color = const Color(0xFFE20A22));
+    canvas.drawCircle(Offset(pinX, pinY), 10, Paint()..color = AppDesignSystem.primary);
     canvas.drawCircle(Offset(pinX, pinY), 4, Paint()..color = Colors.white);
     final pinTail = Path()
       ..moveTo(pinX - 8, pinY + 5)
       ..lineTo(pinX, pinY + 18)
       ..lineTo(pinX + 8, pinY + 5)
       ..close();
-    canvas.drawPath(pinTail, Paint()..color = const Color(0xFFE20A22));
+    canvas.drawPath(pinTail, Paint()..color = AppDesignSystem.primary);
   }
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
@@ -708,14 +710,14 @@ class _CheckoutFrontPainter extends CustomPainter {
       Rect.fromCenter(center: Offset(center.dx, center.dy + 8), width: 54, height: 44),
       const Radius.circular(8),
     );
-    canvas.drawRRect(boxRect, Paint()..color = const Color(0xFFF59E0B));
+    canvas.drawRRect(boxRect, Paint()..color = AppDesignSystem.warning);
 
     // Box Tape Strip
     final tape = RRect.fromRectAndRadius(
       Rect.fromCenter(center: Offset(center.dx, center.dy + 8), width: 14, height: 44),
       const Radius.circular(2),
     );
-    canvas.drawRRect(tape, Paint()..color = const Color(0xFFD97706));
+    canvas.drawRRect(tape, Paint()..color = AppDesignSystem.amber600);
 
     // Lightning Bolt ⚡ on Box
     final bolt = Path()
@@ -742,7 +744,7 @@ class _StoreFinderBackPainter extends CustomPainter {
 
     // Radar Pulse Rings
     final ringPaint = Paint()
-      ..color = const Color(0xFF818CF8).withOpacity(0.35)
+      ..color = AppDesignSystem.indigo400.withValues(alpha: 0.35)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 
@@ -759,9 +761,9 @@ class _StoreFinderFrontPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
 
     // Center Pulse Hub
-    canvas.drawCircle(center, 18, Paint()..color = const Color(0xFF6366F1));
+    canvas.drawCircle(center, 18, Paint()..color = AppDesignSystem.indigo500);
     canvas.drawCircle(center, 9, Paint()..color = Colors.white);
-    canvas.drawCircle(center, 5, Paint()..color = const Color(0xFF4F46E5));
+    canvas.drawCircle(center, 5, Paint()..color = AppDesignSystem.indigo700);
   }
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;

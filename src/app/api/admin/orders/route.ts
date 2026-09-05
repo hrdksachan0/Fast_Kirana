@@ -13,6 +13,9 @@ export async function GET(request: Request) {
   const limit = parseInt(searchParams.get('limit') || '20')
   const status = searchParams.get('status')
   const search = searchParams.get('search')
+  const paramStoreId = searchParams.get('storeId')
+  const userAssignedStoreId = (session?.user as any)?.assignedStoreId
+  const effectiveStoreId = userAssignedStoreId || (paramStoreId && paramStoreId !== 'ALL' ? paramStoreId : null)
   
   const skip = (page - 1) * limit
 
@@ -23,12 +26,29 @@ export async function GET(request: Request) {
       where.status = status
     }
 
+    if (effectiveStoreId) {
+      if (effectiveStoreId === 'hub-209206' || effectiveStoreId === 'default-Ghatampur Market') {
+        where.OR = [
+          { storeId: 'hub-209206' },
+          { storeId: 'default-Ghatampur Market' },
+          { storeId: null }
+        ]
+      } else {
+        where.storeId = effectiveStoreId
+      }
+    }
+
     if (search) {
-      where.OR = [
-        { id: { contains: search, mode: 'insensitive' } },
-        { user: { name: { contains: search, mode: 'insensitive' } } },
-        { user: { email: { contains: search, mode: 'insensitive' } } },
-        { shopName: { contains: search, mode: 'insensitive' } },
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: [
+            { id: { contains: search, mode: 'insensitive' } },
+            { user: { name: { contains: search, mode: 'insensitive' } } },
+            { user: { email: { contains: search, mode: 'insensitive' } } },
+            { shopName: { contains: search, mode: 'insensitive' } },
+          ]
+        }
       ]
     }
 
@@ -40,62 +60,132 @@ export async function GET(request: Request) {
     // Construct dynamic raw SQL query based on filters to avoid enum deserialization bug
     if (status && status !== 'ALL' && search) {
       const searchLike = `%${search}%`
-      ordersRaw = await prisma.$queryRaw`
-        SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
-               o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
-               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
-               o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng"
-        FROM orders o
-        LEFT JOIN users u ON o."userId" = u.id
-        WHERE o.status::text = ${status}
-          AND (
-            o.id ILIKE ${searchLike}
+      if (effectiveStoreId) {
+        ordersRaw = await prisma.$queryRaw`
+          SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
+                 o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
+                 o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
+                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
+          FROM orders o
+          LEFT JOIN users u ON o."userId" = u.id
+          WHERE o.status::text = ${status}
+            AND (o."storeId" = ${effectiveStoreId} OR (${effectiveStoreId} IN ('hub-209206', 'default-Ghatampur Market') AND o."storeId" IS NULL))
+            AND (
+              o.id ILIKE ${searchLike}
+              OR o."readableId"::text ILIKE ${searchLike}
+              OR u.name ILIKE ${searchLike}
+              OR u.email ILIKE ${searchLike}
+              OR o."shopName" ILIKE ${searchLike}
+            )
+          ORDER BY o."createdAt" DESC
+          LIMIT ${limit} OFFSET ${skip}
+        `
+      } else {
+        ordersRaw = await prisma.$queryRaw`
+          SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
+                 o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
+                 o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
+                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
+          FROM orders o
+          LEFT JOIN users u ON o."userId" = u.id
+          WHERE o.status::text = ${status}
+            AND (
+              o.id ILIKE ${searchLike}
+              OR o."readableId"::text ILIKE ${searchLike}
+              OR u.name ILIKE ${searchLike}
+              OR u.email ILIKE ${searchLike}
+              OR o."shopName" ILIKE ${searchLike}
+            )
+          ORDER BY o."createdAt" DESC
+          LIMIT ${limit} OFFSET ${skip}
+        `
+      }
+    } else if (status && status !== 'ALL') {
+      if (effectiveStoreId) {
+        ordersRaw = await prisma.$queryRaw`
+          SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
+                 o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
+                 o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
+                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
+          FROM orders o
+          WHERE o.status::text = ${status}
+            AND (o."storeId" = ${effectiveStoreId} OR (${effectiveStoreId} IN ('hub-209206', 'default-Ghatampur Market') AND o."storeId" IS NULL))
+          ORDER BY o."createdAt" DESC
+          LIMIT ${limit} OFFSET ${skip}
+        `
+      } else {
+        ordersRaw = await prisma.$queryRaw`
+          SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
+                 o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
+                 o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
+                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
+          FROM orders o
+          WHERE o.status::text = ${status}
+          ORDER BY o."createdAt" DESC
+          LIMIT ${limit} OFFSET ${skip}
+        `
+      }
+    } else if (search) {
+      const searchLike = `%${search}%`
+      if (effectiveStoreId) {
+        ordersRaw = await prisma.$queryRaw`
+          SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
+                 o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
+                 o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
+                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
+          FROM orders o
+          LEFT JOIN users u ON o."userId" = u.id
+          WHERE (o."storeId" = ${effectiveStoreId} OR (${effectiveStoreId} IN ('hub-209206', 'default-Ghatampur Market') AND o."storeId" IS NULL))
+            AND (
+              o.id ILIKE ${searchLike}
+              OR o."readableId"::text ILIKE ${searchLike}
+              OR u.name ILIKE ${searchLike}
+              OR u.email ILIKE ${searchLike}
+              OR o."shopName" ILIKE ${searchLike}
+            )
+          ORDER BY o."createdAt" DESC
+          LIMIT ${limit} OFFSET ${skip}
+        `
+      } else {
+        ordersRaw = await prisma.$queryRaw`
+          SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
+                 o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
+                 o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
+                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
+          FROM orders o
+          LEFT JOIN users u ON o."userId" = u.id
+          WHERE o.id ILIKE ${searchLike}
             OR o."readableId"::text ILIKE ${searchLike}
             OR u.name ILIKE ${searchLike}
             OR u.email ILIKE ${searchLike}
             OR o."shopName" ILIKE ${searchLike}
-          )
-        ORDER BY o."createdAt" DESC
-        LIMIT ${limit} OFFSET ${skip}
-      `
-    } else if (status && status !== 'ALL') {
-      ordersRaw = await prisma.$queryRaw`
-        SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
-               o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
-               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
-               o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng"
-        FROM orders o
-        WHERE o.status::text = ${status}
-        ORDER BY o."createdAt" DESC
-        LIMIT ${limit} OFFSET ${skip}
-      `
-    } else if (search) {
-      const searchLike = `%${search}%`
-      ordersRaw = await prisma.$queryRaw`
-        SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
-               o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
-               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
-               o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng"
-        FROM orders o
-        LEFT JOIN users u ON o."userId" = u.id
-        WHERE o.id ILIKE ${searchLike}
-          OR o."readableId"::text ILIKE ${searchLike}
-          OR u.name ILIKE ${searchLike}
-          OR u.email ILIKE ${searchLike}
-          OR o."shopName" ILIKE ${searchLike}
-        ORDER BY o."createdAt" DESC
-        LIMIT ${limit} OFFSET ${skip}
-      `
+          ORDER BY o."createdAt" DESC
+          LIMIT ${limit} OFFSET ${skip}
+        `
+      }
     } else {
-      ordersRaw = await prisma.$queryRaw`
-        SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
-               o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
-               o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
-               o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng"
-        FROM orders o
-        ORDER BY o."createdAt" DESC
-        LIMIT ${limit} OFFSET ${skip}
-      `
+      if (effectiveStoreId) {
+        ordersRaw = await prisma.$queryRaw`
+          SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
+                 o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
+                 o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
+                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
+          FROM orders o
+          WHERE (o."storeId" = ${effectiveStoreId} OR (${effectiveStoreId} IN ('hub-209206', 'default-Ghatampur Market') AND o."storeId" IS NULL))
+          ORDER BY o."createdAt" DESC
+          LIMIT ${limit} OFFSET ${skip}
+        `
+      } else {
+        ordersRaw = await prisma.$queryRaw`
+          SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
+                 o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
+                 o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
+                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
+          FROM orders o
+          ORDER BY o."createdAt" DESC
+          LIMIT ${limit} OFFSET ${skip}
+        `
+      }
     }
 
     const orderIds = ordersRaw.map(o => o.id)
@@ -122,15 +212,16 @@ export async function GET(request: Request) {
         ? prisma.restaurant.findMany({ where: { id: { in: restaurantIds as string[] } }, select: { id: true, name: true, slug: true, address: true, logoUrl: true } })
         : [],
       prisma.order.count({ where }),
-      prisma.order.count({ where: { deliveryMethod: { not: 'RETAIL' } } }),
-      prisma.order.count({ where: { status: 'PENDING', deliveryMethod: { not: 'RETAIL' } } }),
-      prisma.order.count({ where: { status: 'CONFIRMED', deliveryMethod: { not: 'RETAIL' } } }),
-      prisma.order.count({ where: { status: 'PACKED', deliveryMethod: { not: 'RETAIL' } } }),
-      prisma.order.count({ where: { status: 'SHIPPED', deliveryMethod: { not: 'RETAIL' } } }),
-      prisma.order.count({ where: { status: 'DELIVERED', deliveryMethod: { not: 'RETAIL' } } }),
-      prisma.order.count({ where: { status: 'CANCELLED', deliveryMethod: { not: 'RETAIL' } } }),
+      prisma.order.count({ where: { ...whereForCounts, deliveryMethod: { not: 'RETAIL' } } }),
+      prisma.order.count({ where: { ...whereForCounts, status: 'PENDING', deliveryMethod: { not: 'RETAIL' } } }),
+      prisma.order.count({ where: { ...whereForCounts, status: 'CONFIRMED', deliveryMethod: { not: 'RETAIL' } } }),
+      prisma.order.count({ where: { ...whereForCounts, status: 'PACKED', deliveryMethod: { not: 'RETAIL' } } }),
+      prisma.order.count({ where: { ...whereForCounts, status: 'SHIPPED', deliveryMethod: { not: 'RETAIL' } } }),
+      prisma.order.count({ where: { ...whereForCounts, status: 'DELIVERED', deliveryMethod: { not: 'RETAIL' } } }),
+      prisma.order.count({ where: { ...whereForCounts, status: 'CANCELLED', deliveryMethod: { not: 'RETAIL' } } }),
       prisma.order.aggregate({
         where: {
+          ...whereForCounts,
           createdAt: { gte: startOfToday },
           status: { not: 'CANCELLED' },
           deliveryMethod: { not: 'RETAIL' },
@@ -140,6 +231,7 @@ export async function GET(request: Request) {
       }),
       prisma.order.aggregate({
         where: {
+          ...whereForCounts,
           createdAt: { gte: startOfToday },
           status: 'DELIVERED',
           deliveryMethod: { not: 'RETAIL' },
@@ -172,6 +264,7 @@ export async function GET(request: Request) {
         orderType: o.orderType || (o.restaurantId ? 'RESTAURANT' : 'GROCERY'),
         deliveryLat: o.deliveryLat || address?.lat || null,
         deliveryLng: o.deliveryLng || address?.lng || null,
+        storeId: o.storeId || null,
         status: o.status,
         paymentStatus: o.paymentStatus || 'PENDING',
         paymentMethod: o.paymentMethod || 'COD',

@@ -1,3 +1,5 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import '../../core/theme/responsive.dart';
 import 'package:flutter/material.dart';
 
 class EmptyState extends StatelessWidget {
@@ -23,12 +25,12 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(icon, style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 56))),
+            Text(icon, style: TextStyle(fontSize: Responsive.scaledFontSize(context, 56))),
             const SizedBox(height: 16),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: Responsive.scaledFontSize(context, 17),
                 fontWeight: FontWeight.w700,
                 color: AppDesignSystem.textPrimary,
@@ -39,7 +41,7 @@ class EmptyState extends StatelessWidget {
               Text(
                 subtitle!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: Responsive.scaledFontSize(context, 13),
                   color: AppDesignSystem.textSecondary,
                   height: 1.4,
@@ -60,7 +62,7 @@ class EmptyState extends StatelessWidget {
                 ),
                 child: Text(
                   actionLabel!,
-                  style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700),
                 ),
               ),
             ],
@@ -70,3 +72,4 @@ class EmptyState extends StatelessWidget {
     );
   }
 }
+

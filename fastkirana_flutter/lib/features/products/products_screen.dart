@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
-import '../../core/theme/responsive.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../core/network/api_client.dart';
 import '../../data/models/product.dart';
@@ -27,12 +26,12 @@ class ProductsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           'All Products',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+          style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: AppDesignSystem.slate900),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+          icon: const Icon(Icons.arrow_back_rounded, color: AppDesignSystem.slate900),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -46,7 +45,7 @@ class ProductsScreen extends ConsumerWidget {
                 emoji: '📦',
                 title: 'No products found',
                 subtitle: 'Check back later — new products are added every day!',
-                bgTint: const Color(0xFFFFF7ED),
+                bgTint: AppDesignSystem.orange50,
                 ctaLabel: 'Go Back',
                 onCta: () => Navigator.pop(context),
               );

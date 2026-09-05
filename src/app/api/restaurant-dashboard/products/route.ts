@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { invalidateProductCache } from '@/lib/search-cache'
+import { normalizeRestaurantId } from '@/lib/restaurant-ids'
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,7 +15,11 @@ export async function GET(request: NextRequest) {
 
     const paramRestId = searchParams.get('restaurantId')
     const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId || request.headers.get('x-restaurant-id')
-    const effectiveRestId = paramRestId || assignedRestaurantId
+    let effectiveRestId = normalizeRestaurantId(paramRestId || assignedRestaurantId)
+    if (effectiveRestId === 'cms2p1lap0000n0id8alldboy' || effectiveRestId === 'as-restaurant') effectiveRestId = 'REST-101'
+    else if (effectiveRestId === 'cms2p1lyx0001n0idod904lfu' || effectiveRestId === 'wedson-restaurant' || effectiveRestId === 'wedson') effectiveRestId = 'REST-102'
+    else if (effectiveRestId === 'cmsbhxb6a000304if8kf1cwji' || effectiveRestId === 'bal-udyan-restaurant' || effectiveRestId === 'bal-udyan') effectiveRestId = 'REST-103'
+    else if (effectiveRestId === 'cmtn66nhy000004k0fu84b7ke' || effectiveRestId === 'pari-milk-dairy-sweets' || effectiveRestId === 'pari-milk') effectiveRestId = 'REST-104'
 
     const where: any = {}
     if (effectiveRestId && effectiveRestId !== 'ALL') {
@@ -72,38 +77,25 @@ export async function POST(request: NextRequest) {
     const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId || request.headers.get('x-restaurant-id')
 
     // Determine target restaurant ID
-    let finalRestaurantId = body.restaurantId || assignedRestaurantId
+    let finalRestaurantId = normalizeRestaurantId(body.restaurantId || assignedRestaurantId)
     if (!finalRestaurantId) {
       const defaultRest = await prisma.restaurant.findFirst({ where: { isActive: true } })
-      finalRestaurantId = defaultRest?.id || null
+      finalRestaurantId = defaultRest?.id || 'REST-101'
     }
 
-    let targetCategoryId = categoryId
-    if (!targetCategoryId || targetCategoryId === '') {
-      let restCat = await prisma.category.findFirst({
-        where: {
-          OR: [
-            { slug: 'restaurant-food' },
-            { slug: 'restaurant' },
-            { name: { contains: 'Fast Food', mode: 'insensitive' } },
-            { name: { contains: 'Restaurant', mode: 'insensitive' } }
-          ]
-        }
-      })
-      if (!restCat) {
-        restCat = await prisma.category.findFirst()
-      }
-      targetCategoryId = restCat?.id
-    }
-
-    if (!targetCategoryId) {
-      return NextResponse.json({ error: 'No product category found. Please create a category first.' }, { status: 400 })
-    }
+    const targetCategoryId = (categoryId && typeof categoryId === 'string' && categoryId.trim()) ? categoryId.trim() : null
 
     const finalUnit = (unit && typeof unit === 'string' && unit.trim()) ? unit.trim() : '1 Serving'
     const parsedPrice = parseFloat(price) || 0
     const parsedMrp = mrp ? (parseFloat(mrp) || parsedPrice) : parsedPrice
     const parsedStock = stock !== undefined ? (parseInt(stock) || 999) : 999
+
+    if (parsedPrice <= 0) {
+      return NextResponse.json({ error: 'Selling price must be greater than 0' }, { status: 400 })
+    }
+    if (parsedPrice > parsedMrp) {
+      return NextResponse.json({ error: 'Selling price cannot exceed MRP' }, { status: 400 })
+    }
 
     const discountVal =
       parsedMrp > parsedPrice ? Math.max(0, Math.round(((parsedMrp - parsedPrice) / parsedMrp) * 100)) : 0
@@ -120,6 +112,28 @@ export async function POST(request: NextRequest) {
     const tagsList = Array.isArray(tags) ? [...tags] : []
     if (!tagsList.includes('restaurant')) {
       tagsList.push('restaurant')
+    }
+
+    // Add food type tag: 'veg', 'non-veg', 'egg'
+    if (body.foodType) {
+      const ft = String(body.foodType).toLowerCase().trim()
+      if (['veg', 'non-veg', 'egg'].includes(ft) && !tagsList.includes(ft)) {
+        tagsList.push(ft)
+      }
+    }
+
+    // Add prep time tag if provided
+    if (body.prepTime) {
+      const pt = parseInt(String(body.prepTime), 10)
+      if (pt > 0) {
+        tagsList.push(`prep-${pt}m`)
+      }
+    }
+
+    // Add unique section ID for relational indexing
+    const secId = body.sectionId || body.menuSectionId
+    if (secId && typeof secId === 'string' && secId.trim() && !tagsList.includes(secId.trim())) {
+      tagsList.push(secId.trim())
     }
 
     const product = await prisma.product.create({

@@ -1,7 +1,10 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import '../../core/theme/responsive.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../core/services/logger_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -19,11 +22,9 @@ import '../../core/config/app_config.dart';
 import '../../core/services/rider_location_service.dart';
 import '../../core/services/supabase_service.dart';
 import '../../core/utils/restaurant_utils.dart';
-import '../../widgets/brand_logo.dart';
 import '../../providers/auth_provider.dart';
 import 'widgets/connectivity_banner.dart';
 import 'widgets/delivery_header.dart';
-import 'widgets/delivery_theme.dart';
 
 class DeliveryDashboard extends ConsumerStatefulWidget {
   const DeliveryDashboard({super.key});
@@ -35,17 +36,52 @@ class DeliveryDashboard extends ConsumerStatefulWidget {
 class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     with SingleTickerProviderStateMixin {
   bool _isOnline = true;
-  bool _isLoading = true;
+  static List<Map<String, dynamic>> _cachedDeliveryOrders = [];
+  late bool _isLoading = _cachedDeliveryOrders.isEmpty;
   bool _isRefreshing = false;
   int _activeTab = 0; // 0: Deliveries, 1: Cash Wallet, 2: History
 
-  List<Map<String, dynamic>> _orders = [];
+  List<Map<String, dynamic>> _orders = _cachedDeliveryOrders;
+
+  static const String _diskDeliveryOrdersKey = 'cached_delivery_orders_v2';
+
+  Future<void> _loadDiskDeliveryOrders() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_diskDeliveryOrdersKey);
+      if (raw != null && raw.isNotEmpty && mounted) {
+        final List<dynamic> decoded = jsonDecode(raw);
+        final list = decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        if (list.isNotEmpty && _orders.isEmpty) {
+          _cachedDeliveryOrders = list;
+          setState(() {
+            _orders = list;
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('[DeliveryDashboard] disk load error: $e');
+    }
+  }
+
+  Future<void> _saveDiskDeliveryOrders(List<Map<String, dynamic>> orders) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final toSave = orders.take(50).toList();
+      await prefs.setString(_diskDeliveryOrdersKey, jsonEncode(toSave));
+    } catch (e) {
+      debugPrint('[DeliveryDashboard] disk save error: $e');
+    }
+  }
   Map<String, dynamic>? _walletInfo;
   Timer? _autoRefreshTimer;
-  int _refreshCountdown = 30;
+  final int _refreshCountdown = 30;
   String? _updatingOrderId;
   String? _currentUserId;
   String _userName = 'Partner';
+  String? _assignedStoreId;
+  String? _assignedStoreName;
 
   late ConfettiController _confettiController;
   final RiderLocationService _locationService = RiderLocationService();
@@ -57,20 +93,20 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
   StreamSubscription? _connectivitySubscription;
 
   // Dynamic Theme Colors (Supporting AMOLED Dark Mode & Light Mode)
-  Color get bgMain => _isDarkMode ? const Color(0xFF0A0F1D) : const Color(0xFFF8FAFC);
-  Color get cardBg => _isDarkMode ? const Color(0xFF131C2E) : Colors.white;
-  Color get cardSubtle => _isDarkMode ? const Color(0xFF1A263D) : const Color(0xFFF8FAFC);
-  Color get borderCol => _isDarkMode ? const Color(0xFF23324D) : const Color(0xFFE2E8F0);
-  Color get textMain => _isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
-  Color get textMuted => _isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+  Color get bgMain => _isDarkMode ? AppDesignSystem.darkNavy : AppDesignSystem.slate50;
+  Color get cardBg => _isDarkMode ? AppDesignSystem.darkNavyCard : Colors.white;
+  Color get cardSubtle => _isDarkMode ? AppDesignSystem.darkNavySubtle : AppDesignSystem.slate50;
+  Color get borderCol => _isDarkMode ? AppDesignSystem.darkNavyBorder : AppDesignSystem.slate200;
+  Color get textMain => _isDarkMode ? AppDesignSystem.slate100 : AppDesignSystem.slate900;
+  Color get textMuted => _isDarkMode ? AppDesignSystem.slate400 : AppDesignSystem.slate500;
 
-  static const Color emeraldGreen = Color(0xFF00965E);
-  static const Color emeraldDark = Color(0xFF045D38);
-  static const Color brandGreen = Color(0xFF10B981);
-  static const Color primaryRed = Color(0xFFE20A22);
-  static const Color slateDark = Color(0xFF0F172A);
-  static const Color slateMuted = Color(0xFF64748B);
-  static const Color slateBorder = Color(0xFFE2E8F0);
+  static const Color emeraldGreen = AppDesignSystem.emeraldBrand;
+  static const Color emeraldDark = AppDesignSystem.emeraldDark;
+  static const Color brandGreen = AppDesignSystem.success;
+  static const Color primaryRed = AppDesignSystem.primary;
+  static const Color slateDark = AppDesignSystem.slate900;
+  static const Color slateMuted = AppDesignSystem.slate500;
+  static const Color slateBorder = AppDesignSystem.slate200;
 
   bool _isFetchingOrders = false;
 
@@ -145,7 +181,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
             );
             syncedCount++;
           }
-        } catch (_) {}
+        } catch (e, _) { LoggerService.error('DeliveryDashboard: silent catch', e); }
       }
 
       await prefs.remove('offline_delivery_queue');
@@ -153,7 +189,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       if (syncedCount > 0 && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFF10B981),
+            backgroundColor: AppDesignSystem.success,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             content: Row(
@@ -190,7 +226,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFFF59E0B),
+            backgroundColor: AppDesignSystem.warning,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             content: Row(
@@ -234,19 +270,21 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       HapticFeedback.heavyImpact();
 
       try {
+        await _audioPlayer.stop();
         await _audioPlayer.play(
-          UrlSource('https://cdn.pixabay.com/download/audio/2022/03/15/audio_24a4c58cf3.mp3?filename=notification-sound-7062.mp3'),
+          AssetSource('sounds/order_chime.mp3'),
           volume: 1.0,
         );
-      } catch (_) {
-        SystemSound.play(SystemSoundType.alert);
+      } catch (e) {
+        LoggerService.error('DeliveryDashboard: silent catch', e);
+        await SystemSound.play(SystemSoundType.alert);
       }
 
       if (mounted) {
         final orderNum = newOrder['readableId'] ?? 'Order';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFF10B981),
+            backgroundColor: AppDesignSystem.success,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 4),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -316,7 +354,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         if (decoded['id'] != null) {
           _currentUserId = decoded['id'].toString();
         }
-      } catch (_) {}
+      } catch (e, _) { LoggerService.error('DeliveryDashboard: silent catch', e); }
     } else {
       final name = prefs.getString('user_name');
       if (name != null && name.trim().isNotEmpty) {
@@ -326,6 +364,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     if (mounted) {
       setState(() {
         _currentUserId ??= prefs.getString('user_id') ?? prefs.getString('delivery_user_id');
+        _assignedStoreId ??= prefs.getString('rider_store_id');
+        _assignedStoreName ??= prefs.getString('rider_store_name');
       });
     }
   }
@@ -353,15 +393,24 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     if (_isFetchingOrders) return;
     _isFetchingOrders = true;
 
-    if (!silent) setState(() => _isLoading = true);
-    else setState(() => _isRefreshing = true);
+    if (!silent) {
+      setState(() => _isLoading = true);
+    } else {
+      setState(() => _isRefreshing = true);
+    }
 
     try {
       final sb = SupabaseService.client;
       if (sb != null) {
-        final List<dynamic> data = await sb
+        var query = sb
             .from('orders')
-            .select('*, order_items(*), addresses(*), user:users!orders_userId_fkey(name,phone)')
+            .select('*, order_items(*), addresses(*), user:users!orders_userId_fkey(name,phone)');
+        
+        if (_assignedStoreId != null && _assignedStoreId!.isNotEmpty) {
+          query = query.or('storeId.eq.$_assignedStoreId,storeId.is.null');
+        }
+
+        final List<dynamic> data = await query
             .order('createdAt', ascending: false)
             .limit(50);
 
@@ -407,6 +456,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         queryParameters: {
           if (userId.isNotEmpty) 'userId': userId,
           if (phone.isNotEmpty) 'phone': phone,
+          if (_assignedStoreId != null && _assignedStoreId!.isNotEmpty) 'storeId': _assignedStoreId,
         },
         options: Options(
           headers: {
@@ -528,7 +578,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       merged['subOrders'] = subOrders;
       merged['subOrderIds'] = subOrders.map((o) => o['id']?.toString()).where((id) => id != null).toList();
       merged['subLabels'] = subLabels;
-      merged['shopName'] = '${subLabels.join(' + ')}';
+      merged['shopName'] = subLabels.join(' + ');
 
       result.add(merged);
     }
@@ -601,6 +651,17 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
             if (rider is Map && rider['id'] != null) {
               _currentUserId ??= rider['id'].toString();
             }
+            if (rider is Map) {
+              if (rider['assignedStoreId'] != null && rider['assignedStoreId'].toString().isNotEmpty) {
+                _assignedStoreId = rider['assignedStoreId'].toString();
+                prefs.setString('rider_store_id', _assignedStoreId!);
+              }
+              final sName = rider['storeName'] ?? rider['assignedStoreName'];
+              if (sName != null && sName.toString().isNotEmpty) {
+                _assignedStoreName = sName.toString();
+                prefs.setString('rider_store_name', _assignedStoreName!);
+              }
+            }
           });
         }
       }
@@ -615,11 +676,17 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     if (activeShipped.isNotEmpty && _isOnline) {
       final activeOrder = activeShipped.first;
       final orderId = activeOrder['id']?.toString() ?? '';
+      final readableId = activeOrder['readableId']?.toString();
+      final relatedIds = (activeOrder['subOrderIds'] is List)
+          ? (activeOrder['subOrderIds'] as List).map((e) => e.toString()).toList()
+          : <String>[];
       final riderId = _currentUserId ?? 'rider_current';
 
       if (!_locationService.isTracking || _locationService.activeOrderId != orderId) {
         _locationService.startTracking(
           orderId: orderId,
+          readableId: readableId,
+          relatedOrderIds: relatedIds,
           riderId: riderId,
           dioClient: ref.read(dioProvider),
         );
@@ -719,8 +786,16 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           _locationService.stopTracking();
         } else if (newStatus == 'SHIPPED') {
           HapticFeedback.heavyImpact();
+          final matching = _orders.firstWhere(
+            (o) => o['id'] == orderId,
+            orElse: () => <String, dynamic>{'id': orderId},
+          );
           _locationService.startTracking(
             orderId: orderId,
+            readableId: matching['readableId']?.toString(),
+            relatedOrderIds: (matching['subOrderIds'] is List)
+                ? (matching['subOrderIds'] as List).map((e) => e.toString()).toList()
+                : null,
             riderId: _currentUserId ?? 'rider_current',
             dioClient: dio,
           );
@@ -832,7 +907,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
+                color: AppDesignSystem.slate50,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: slateBorder, width: 1.5),
               ),
@@ -975,15 +1050,16 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
             Column(
               children: [
                 if (_isDeviceOffline)
-                  SafeArea(
+                  const SafeArea(
                     bottom: false,
-                    child: const ConnectivityBanner(),
+                    child: ConnectivityBanner(),
                   ),
 
                 DeliveryHeader(
                   isOnline: _isOnline,
                   isDarkMode: _isDarkMode,
                   userName: _userName,
+                  storeName: _assignedStoreName,
                   refreshCountdown: _refreshCountdown,
                   activeTab: _activeTab,
                   onBack: _handleBackPress,
@@ -1006,7 +1082,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                         actions: [
                           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
                           ElevatedButton(
-                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+                            style: ElevatedButton.styleFrom(backgroundColor: AppDesignSystem.red600),
                             onPressed: () => Navigator.pop(ctx, true),
                             child: const Text('Logout', style: TextStyle(color: Colors.white)),
                           ),
@@ -1025,7 +1101,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
                 Expanded(
                   child: _isLoading
-                      ? const Center(child: CircularProgressIndicator(color: Color(0xFF10B981)))
+                      ? const Center(child: CircularProgressIndicator(color: AppDesignSystem.success))
                       : IndexedStack(
                           index: _activeTab,
                           children: [
@@ -1044,7 +1120,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                 confettiController: _confettiController,
                 blastDirectionality: BlastDirectionality.explosive,
                 shouldLoop: false,
-                colors: const [Color(0xFF00A344), Color(0xFFE20A22), Color(0xFF2563EB), Color(0xFFF59E0B)],
+                colors: const [AppDesignSystem.green700, AppDesignSystem.primary, AppDesignSystem.blue600, AppDesignSystem.warning],
               ),
             ),
           ],
@@ -1068,7 +1144,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                 width: 26,
                 height: 26,
                 decoration: const BoxDecoration(
-                  color: Color(0xFF00965E),
+                  color: AppDesignSystem.emeraldBrand,
                   shape: BoxShape.circle,
                 ),
                 child: const Center(
@@ -1106,7 +1182,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                     width: 26,
                     height: 26,
                     decoration: const BoxDecoration(
-                      color: Color(0xFF7C3AED),
+                      color: AppDesignSystem.violet600,
                       shape: BoxShape.circle,
                     ),
                     child: const Center(
@@ -1128,7 +1204,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEDE9FE),
+                  color: AppDesignSystem.violet200,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -1136,7 +1212,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 10),
                     fontWeight: FontWeight.w800,
-                    color: const Color(0xFF7C3AED),
+                    color: AppDesignSystem.violet600,
                   ),
                 ),
               ),
@@ -1160,10 +1236,10 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+        border: Border.all(color: AppDesignSystem.slate100, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            color: AppDesignSystem.slate900.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -1171,7 +1247,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       ),
       child: Column(
         children: [
-          const Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 32))),
+          Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 32))),
           const SizedBox(height: 10),
           Text(
             'No orders out for delivery',
@@ -1203,7 +1279,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+        border: Border.all(color: AppDesignSystem.slate100, width: 1.2),
       ),
       child: Center(
         child: Text(
@@ -1230,7 +1306,11 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     final customer = order['user'] is Map ? order['user'] : {'name': 'Customer', 'phone': null};
     final address = order['address'] is Map ? order['address'] : null;
     final total = (order['total'] as num?)?.toDouble() ?? 0.0;
-    final isCod = order['paymentMethod'] == 'COD';
+    final rawPayMethod = (order['paymentMethod'] ?? '').toString().toUpperCase().trim();
+    final rawPayStatus = (order['paymentStatus'] ?? '').toString().toUpperCase().trim();
+    final isOnlineMethod = rawPayMethod == 'UPI' || rawPayMethod == 'ONLINE' || rawPayMethod == 'RAZORPAY' || rawPayMethod == 'CARD' || rawPayMethod == 'WALLET';
+    final isPaid = rawPayStatus == 'PAID' || (isOnlineMethod && rawPayMethod != 'COD');
+    final isCod = !isPaid && (rawPayMethod == 'COD' || rawPayMethod.isEmpty);
     final items = (order['items'] as List<dynamic>?) ?? [];
     final lat = (address?['lat'] as num?)?.toDouble() ?? AppConfig.darkstoreLat;
     final lng = (address?['lng'] as num?)?.toDouble() ?? AppConfig.darkstoreLng;
@@ -1252,7 +1332,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           s = '${s.replaceAll(' ', 'T')}Z';
         }
         orderDate = DateTime.parse(s).toLocal();
-      } catch (_) {}
+      } catch (e, _) { LoggerService.error('DeliveryDashboard: silent catch', e); }
     }
     final orderTimeStr = DateFormat('hh:mm a').format(orderDate);
 
@@ -1282,12 +1362,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: isFood ? const Color(0xFFFCE7F3) : const Color(0xFFCCFBF1),
+          color: isFood ? AppDesignSystem.rose100 : AppDesignSystem.teal100,
           width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+            color: AppDesignSystem.slate900.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -1300,7 +1380,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           Container(
             height: 3,
             decoration: BoxDecoration(
-              color: isFood ? const Color(0xFFF43F5E) : const Color(0xFF00965E),
+              color: isFood ? AppDesignSystem.rose500 : AppDesignSystem.emeraldBrand,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
             ),
           ),
@@ -1329,19 +1409,19 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFEE2E2),
+                              color: AppDesignSystem.statusCancelled,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Row(
                               children: [
-                                const Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
+                                Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
                                 const SizedBox(width: 3),
                                 Text(
                                   'FOOD',
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 9.5),
                                     fontWeight: FontWeight.w900,
-                                    color: const Color(0xFFDC2626),
+                                    color: AppDesignSystem.red600,
                                   ),
                                 ),
                               ],
@@ -1355,13 +1435,13 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
                       decoration: BoxDecoration(
                         color: status == 'PACKED'
-                            ? const Color(0xFFDCFCE7)
-                            : (status == 'PREPARING' ? const Color(0xFFFEF3C7) : const Color(0xFFEFF6FF)),
+                            ? AppDesignSystem.green100
+                            : (status == 'PREPARING' ? AppDesignSystem.statusPending : AppDesignSystem.blue50),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: status == 'PACKED'
-                              ? const Color(0xFF86EFAC)
-                              : (status == 'PREPARING' ? const Color(0xFFFDE68A) : const Color(0xFFBFDBFE)),
+                              ? AppDesignSystem.emerald200
+                              : (status == 'PREPARING' ? AppDesignSystem.yellow200 : AppDesignSystem.blue200),
                         ),
                       ),
                       child: Text(
@@ -1370,8 +1450,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           fontSize: Responsive.scaledFontSize(context, 9.5),
                           fontWeight: FontWeight.w900,
                           color: status == 'PACKED'
-                              ? const Color(0xFF15803D)
-                              : (status == 'PREPARING' ? const Color(0xFFB45309) : const Color(0xFF1D4ED8)),
+                              ? AppDesignSystem.green700
+                              : (status == 'PREPARING' ? AppDesignSystem.amber700 : AppDesignSystem.blue700),
                         ),
                       ),
                     ),
@@ -1381,15 +1461,15 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: outlet.isRestaurant ? const Color(0xFFFAF5FF) : const Color(0xFFF0FDF4),
+                    color: outlet.isRestaurant ? AppDesignSystem.violet50 : AppDesignSystem.green50,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: outlet.isRestaurant ? const Color(0xFFE9D5FF) : const Color(0xFFBBF7D0),
+                      color: outlet.isRestaurant ? AppDesignSystem.violet200 : AppDesignSystem.green200,
                     ),
                   ),
                   child: Row(
                     children: [
-                      Text(outlet.isRestaurant ? '🍽️' : '🏪', style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                      Text(outlet.isRestaurant ? '🍽️' : '🏪', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Column(
@@ -1400,14 +1480,14 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 11.5),
                                 fontWeight: FontWeight.w800,
-                                color: outlet.isRestaurant ? const Color(0xFF6B21A8) : const Color(0xFF166534),
+                                color: outlet.isRestaurant ? AppDesignSystem.statusShippedText : AppDesignSystem.green800,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             Text(
                               outlet.address,
-                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), color: const Color(0xFF64748B)),
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), color: AppDesignSystem.slate500),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -1423,20 +1503,20 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: outlet.isRestaurant ? const Color(0xFFD8B4FE) : const Color(0xFF86EFAC),
+                              color: outlet.isRestaurant ? AppDesignSystem.violet300 : AppDesignSystem.emerald200,
                             ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.directions_rounded, size: 12, color: outlet.isRestaurant ? const Color(0xFF7C3AED) : const Color(0xFF15803D)),
+                              Icon(Icons.directions_rounded, size: 12, color: outlet.isRestaurant ? AppDesignSystem.violet600 : AppDesignSystem.green700),
                               const SizedBox(width: 3),
                               Text(
                                 'Go Store',
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 10),
                                   fontWeight: FontWeight.w800,
-                                  color: outlet.isRestaurant ? const Color(0xFF7C3AED) : const Color(0xFF15803D),
+                                  color: outlet.isRestaurant ? AppDesignSystem.violet600 : AppDesignSystem.green700,
                                 ),
                               ),
                             ],
@@ -1452,9 +1532,9 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                    color: AppDesignSystem.slate50,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFF1F5F9)),
+                    border: Border.all(color: AppDesignSystem.slate100),
                   ),
                   child: Row(
                     children: [
@@ -1463,7 +1543,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                         width: 36,
                         height: 36,
                         decoration: const BoxDecoration(
-                          color: Color(0xFF3B82F6),
+                          color: AppDesignSystem.info,
                           shape: BoxShape.circle,
                         ),
                         child: Center(
@@ -1500,21 +1580,21 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFEFF6FF),
+                                    color: AppDesignSystem.blue50,
                                     borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: const Color(0xFFBFDBFE), width: 0.8),
+                                    border: Border.all(color: AppDesignSystem.blue200, width: 0.8),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.access_time_rounded, size: 9, color: Color(0xFF2563EB)),
+                                      const Icon(Icons.access_time_rounded, size: 9, color: AppDesignSystem.blue600),
                                       const SizedBox(width: 2.5),
                                       Text(
                                         orderTimeStr,
                                         style: GoogleFonts.inter(
                                           fontSize: Responsive.scaledFontSize(context, 9),
                                           fontWeight: FontWeight.w800,
-                                          color: const Color(0xFF1D4ED8),
+                                          color: AppDesignSystem.blue700,
                                         ),
                                       ),
                                     ],
@@ -1548,12 +1628,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           width: 38,
                           height: 38,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFEFF6FF),
+                            color: AppDesignSystem.blue50,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFBFDBFE), width: 0.8),
+                            border: Border.all(color: AppDesignSystem.blue200, width: 0.8),
                           ),
                           child: const Center(
-                            child: Icon(Icons.phone_outlined, size: 18, color: Color(0xFF2563EB)),
+                            child: Icon(Icons.phone_outlined, size: 18, color: AppDesignSystem.blue600),
                           ),
                         ),
                       ),
@@ -1566,14 +1646,14 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                    color: AppDesignSystem.slate50,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
                     children: [
                       Row(
                         children: [
-                          Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle)),
+                          Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppDesignSystem.success, shape: BoxShape.circle)),
                           const SizedBox(width: 6),
                           Text('PICKUP: ', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w800, color: slateMuted)),
                           Expanded(
@@ -1588,7 +1668,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFF3B82F6), shape: BoxShape.circle)),
+                          Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppDesignSystem.info, shape: BoxShape.circle)),
                           const SizedBox(width: 6),
                           Text('DELIVER: ', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w800, color: slateMuted)),
                           Expanded(
@@ -1612,14 +1692,14 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF047857), Color(0xFF10B981)],
+                        colors: [AppDesignSystem.emerald700, AppDesignSystem.success],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                          color: AppDesignSystem.success.withValues(alpha: 0.3),
                           blurRadius: 6,
                           offset: const Offset(0, 2),
                         ),
@@ -1651,9 +1731,9 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                     width: double.infinity,
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
+                      color: AppDesignSystem.slate50,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFF1F5F9)),
+                      border: Border.all(color: AppDesignSystem.slate100),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1663,14 +1743,14 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.shopping_bag_outlined, size: 14, color: Color(0xFF4F46E5)),
+                                const Icon(Icons.shopping_bag_outlined, size: 14, color: AppDesignSystem.indigo700),
                                 const SizedBox(width: 5),
                                 Text(
                                   'ITEMS TO PICK UP (${items.length})',
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 10),
                                     fontWeight: FontWeight.w900,
-                                    color: const Color(0xFF4338CA),
+                                    color: AppDesignSystem.indigo900,
                                     letterSpacing: 0.5,
                                   ),
                                 ),
@@ -1679,12 +1759,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFEEF2FF),
+                                color: AppDesignSystem.indigo50,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
                                 '${items.fold<int>(0, (sum, it) => sum + ((it['quantity'] as num?)?.toInt() ?? 1))} qty',
-                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w800, color: const Color(0xFF4F46E5)),
+                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w800, color: AppDesignSystem.indigo700),
                               ),
                             ),
                           ],
@@ -1703,7 +1783,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    border: Border.all(color: AppDesignSystem.slate200),
                                   ),
                                   child: Text(
                                     '${qty}x',
@@ -1744,7 +1824,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                   const SizedBox(height: 10),
                 ],
 
-                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                const Divider(height: 1, color: AppDesignSystem.slate100),
                 const SizedBox(height: 10),
 
                 // Footer: Total Value | Action Button
@@ -1770,10 +1850,10 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: isCod ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7),
+                                  color: isCod ? AppDesignSystem.statusPending : AppDesignSystem.green100,
                                   borderRadius: BorderRadius.circular(6),
                                   border: Border.all(
-                                    color: isCod ? const Color(0xFFFDE68A) : const Color(0xFF86EFAC),
+                                    color: isCod ? AppDesignSystem.yellow200 : AppDesignSystem.emerald200,
                                   ),
                                 ),
                                 child: Text(
@@ -1781,7 +1861,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 9),
                                     fontWeight: FontWeight.w900,
-                                    color: isCod ? const Color(0xFFB45309) : const Color(0xFF15803D),
+                                    color: isCod ? AppDesignSystem.amber700 : AppDesignSystem.green700,
                                   ),
                                 ),
                               ),
@@ -1790,7 +1870,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           const SizedBox(height: 2),
                           Row(
                             children: [
-                              Text(isCod ? '🔥' : '💳', style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
+                              Text(isCod ? '🔥' : '💳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
                               const SizedBox(width: 3),
                               Expanded(
                                 child: Text(
@@ -1798,7 +1878,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 9.5),
                                     fontWeight: FontWeight.w800,
-                                    color: isCod ? const Color(0xFFD97706) : const Color(0xFF059669),
+                                    color: isCod ? AppDesignSystem.amber600 : AppDesignSystem.emerald600,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -1818,21 +1898,21 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFEF3C7),
+                              color: AppDesignSystem.statusPending,
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFFFDE68A)),
+                              border: Border.all(color: AppDesignSystem.yellow200),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.access_time_rounded, size: 12, color: Color(0xFFD97706)),
+                                const Icon(Icons.access_time_rounded, size: 12, color: AppDesignSystem.amber600),
                                 const SizedBox(width: 4),
                                 Text(
                                   'Preparing in Kitchen...',
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 10.5),
                                     fontWeight: FontWeight.w800,
-                                    color: const Color(0xFFD97706),
+                                    color: AppDesignSystem.amber600,
                                   ),
                                 ),
                               ],
@@ -1846,7 +1926,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 9.5),
                                 fontWeight: FontWeight.w800,
-                                color: const Color(0xFF059669),
+                                color: AppDesignSystem.emerald600,
                               ),
                             ),
                           ),
@@ -1858,11 +1938,11 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF4F46E5),
+                            color: AppDesignSystem.indigo700,
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF4F46E5).withValues(alpha: 0.35),
+                                color: AppDesignSystem.indigo700.withValues(alpha: 0.35),
                                 blurRadius: 8,
                                 offset: const Offset(0, 3),
                               ),
@@ -1910,7 +1990,11 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     final customer = order['user'] is Map ? order['user'] : {'name': 'Customer', 'phone': null};
     final address = order['address'] is Map ? order['address'] : null;
     final total = (order['total'] as num?)?.toDouble() ?? 0.0;
-    final isCod = order['paymentMethod'] == 'COD';
+    final rawPayMethod = (order['paymentMethod'] ?? '').toString().toUpperCase().trim();
+    final rawPayStatus = (order['paymentStatus'] ?? '').toString().toUpperCase().trim();
+    final isOnlineMethod = rawPayMethod == 'UPI' || rawPayMethod == 'ONLINE' || rawPayMethod == 'RAZORPAY' || rawPayMethod == 'CARD' || rawPayMethod == 'WALLET';
+    final isPaid = rawPayStatus == 'PAID' || (isOnlineMethod && rawPayMethod != 'COD');
+    final isCod = !isPaid && (rawPayMethod == 'COD' || rawPayMethod.isEmpty);
     final items = (order['items'] as List<dynamic>?) ?? [];
     final lat = (address?['lat'] as num?)?.toDouble() ?? AppConfig.darkstoreLat;
     final lng = (address?['lng'] as num?)?.toDouble() ?? AppConfig.darkstoreLng;
@@ -1932,7 +2016,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           s = '${s.replaceAll(' ', 'T')}Z';
         }
         orderDate = DateTime.parse(s).toLocal();
-      } catch (_) {}
+      } catch (e, _) { LoggerService.error('DeliveryDashboard: silent catch', e); }
     }
     final orderTimeStr = DateFormat('hh:mm a').format(orderDate);
 
@@ -1961,10 +2045,10 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFF86EFAC), width: 1.5),
+        border: Border.all(color: AppDesignSystem.emerald200, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF10B981).withValues(alpha: 0.08),
+            color: AppDesignSystem.success.withValues(alpha: 0.08),
             blurRadius: 14,
             offset: const Offset(0, 4),
           ),
@@ -1977,7 +2061,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           Container(
             height: 4,
             decoration: const BoxDecoration(
-              gradient: LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]),
+              gradient: LinearGradient(colors: [AppDesignSystem.success, AppDesignSystem.emerald600]),
               borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
             ),
           ),
@@ -1992,7 +2076,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFDCFCE7),
+                        color: AppDesignSystem.green100,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -2000,7 +2084,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 9.5),
                           fontWeight: FontWeight.w900,
-                          color: const Color(0xFF15803D),
+                          color: AppDesignSystem.green700,
                         ),
                       ),
                     ),
@@ -2016,16 +2100,16 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                    color: AppDesignSystem.slate50,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFF1F5F9)),
+                    border: Border.all(color: AppDesignSystem.slate100),
                   ),
                   child: Row(
                     children: [
                       Container(
                         width: 36,
                         height: 36,
-                        decoration: const BoxDecoration(color: Color(0xFF3B82F6), shape: BoxShape.circle),
+                        decoration: const BoxDecoration(color: AppDesignSystem.info, shape: BoxShape.circle),
                         child: Center(
                           child: Text(avatarLetter,
                               style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: Colors.white)),
@@ -2050,21 +2134,21 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFEFF6FF),
+                                    color: AppDesignSystem.blue50,
                                     borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: const Color(0xFFBFDBFE), width: 0.8),
+                                    border: Border.all(color: AppDesignSystem.blue200, width: 0.8),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.access_time_rounded, size: 9, color: Color(0xFF2563EB)),
+                                      const Icon(Icons.access_time_rounded, size: 9, color: AppDesignSystem.blue600),
                                       const SizedBox(width: 2.5),
                                       Text(
                                         orderTimeStr,
                                         style: GoogleFonts.inter(
                                           fontSize: Responsive.scaledFontSize(context, 9),
                                           fontWeight: FontWeight.w800,
-                                          color: const Color(0xFF1D4ED8),
+                                          color: AppDesignSystem.blue700,
                                         ),
                                       ),
                                     ],
@@ -2104,12 +2188,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           width: 38,
                           height: 38,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFEFF6FF),
+                            color: AppDesignSystem.blue50,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFBFDBFE), width: 0.8),
+                            border: Border.all(color: AppDesignSystem.blue200, width: 0.8),
                           ),
                           child: const Center(
-                            child: Icon(Icons.phone_outlined, size: 18, color: Color(0xFF2563EB)),
+                            child: Icon(Icons.phone_outlined, size: 18, color: AppDesignSystem.blue600),
                           ),
                         ),
                       ),
@@ -2125,14 +2209,14 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF047857), Color(0xFF10B981)],
+                        colors: [AppDesignSystem.emerald700, AppDesignSystem.success],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                          color: AppDesignSystem.success.withValues(alpha: 0.3),
                           blurRadius: 6,
                           offset: const Offset(0, 2),
                         ),
@@ -2164,14 +2248,14 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFEF2F2),
+                      color: AppDesignSystem.statusCancelled,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFFECACA)),
+                      border: Border.all(color: AppDesignSystem.red200),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.location_on_rounded, size: 14, color: Color(0xFFDC2626)),
+                        const Icon(Icons.location_on_rounded, size: 14, color: AppDesignSystem.red600),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
@@ -2179,7 +2263,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 11),
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFF991B1B),
+                              color: AppDesignSystem.statusCancelledText,
                               height: 1.3,
                             ),
                             maxLines: 2,
@@ -2197,9 +2281,9 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                     width: double.infinity,
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
+                      color: AppDesignSystem.slate50,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFF1F5F9)),
+                      border: Border.all(color: AppDesignSystem.slate100),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2209,14 +2293,14 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.shopping_bag_outlined, size: 14, color: Color(0xFF059669)),
+                                const Icon(Icons.shopping_bag_outlined, size: 14, color: AppDesignSystem.emerald600),
                                 const SizedBox(width: 5),
                                 Text(
                                   'ITEMS IN THIS DROP (${items.length})',
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 10),
                                     fontWeight: FontWeight.w900,
-                                    color: const Color(0xFF065F46),
+                                    color: AppDesignSystem.statusDeliveredText,
                                     letterSpacing: 0.5,
                                   ),
                                 ),
@@ -2225,12 +2309,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFDCFCE7),
+                                color: AppDesignSystem.green100,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
                                 '${items.fold<int>(0, (sum, it) => sum + ((it['quantity'] as num?)?.toInt() ?? 1))} qty',
-                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w800, color: const Color(0xFF15803D)),
+                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w800, color: AppDesignSystem.green700),
                               ),
                             ),
                           ],
@@ -2249,7 +2333,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    border: Border.all(color: AppDesignSystem.slate200),
                                   ),
                                   child: Text(
                                     '${qty}x',
@@ -2290,6 +2374,61 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                   const SizedBox(height: 10),
                 ],
 
+                // Payment Status Highlight Strip (Crystal Clear for Rider)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isCod ? AppDesignSystem.statusPending : AppDesignSystem.green100,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isCod ? AppDesignSystem.yellow200 : AppDesignSystem.emerald200,
+                      width: 1.2,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Text(isCod ? '💵' : '💳', style: const TextStyle(fontSize: 15)),
+                          const SizedBox(width: 8),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isCod ? 'CASH ON DELIVERY' : 'PAID ONLINE (PREPAID)',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 10),
+                                  fontWeight: FontWeight.w900,
+                                  color: isCod ? const Color(0xFFD97706) : AppDesignSystem.statusDeliveredText,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                              Text(
+                                isCod ? 'Collect ₹${total.toInt()} cash from customer' : '₹0 to collect • Payment already done',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 11),
+                                  fontWeight: FontWeight.w700,
+                                  color: isCod ? const Color(0xFF78350F) : AppDesignSystem.statusDeliveredText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Text(
+                        '₹${total.toInt()}',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 17),
+                          fontWeight: FontWeight.w900,
+                          color: isCod ? const Color(0xFF78350F) : AppDesignSystem.statusDeliveredText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
                 // Action Buttons: Doorstep UPI QR + Delivered
                 Row(
                   children: [
@@ -2297,11 +2436,11 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () => _showDoorstepUpiQrModal(order),
-                          icon: const Icon(Icons.qr_code_rounded, size: 16, color: Color(0xFF2563EB)),
+                          icon: const Icon(Icons.qr_code_rounded, size: 16, color: AppDesignSystem.blue600),
                           label: Text('Doorstep QR',
-                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: const Color(0xFF2563EB))),
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: AppDesignSystem.blue600)),
                           style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Color(0xFF93C5FD)),
+                            side: const BorderSide(color: AppDesignSystem.blue300),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             padding: const EdgeInsets.symmetric(vertical: 11),
                           ),
@@ -2320,7 +2459,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: Colors.white),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
+                          backgroundColor: AppDesignSystem.success,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           padding: const EdgeInsets.symmetric(vertical: 11),
                           elevation: 0,
@@ -2356,10 +2495,10 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+              border: Border.all(color: AppDesignSystem.slate100, width: 1.5),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                  color: AppDesignSystem.slate900.withValues(alpha: 0.04),
                   blurRadius: 16,
                   offset: const Offset(0, 4),
                 ),
@@ -2371,21 +2510,21 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEF3C7),
+                    color: AppDesignSystem.statusPending,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFFDE68A)),
+                    border: Border.all(color: AppDesignSystem.yellow200),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.account_balance_wallet_rounded, size: 14, color: Color(0xFFB45309)),
+                      const Icon(Icons.account_balance_wallet_rounded, size: 14, color: AppDesignSystem.amber700),
                       const SizedBox(width: 6),
                       Text(
                         'CASH IN HAND (जेब में नकद)',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11),
                           fontWeight: FontWeight.w900,
-                          color: const Color(0xFFB45309),
+                          color: AppDesignSystem.amber700,
                           letterSpacing: 0.3,
                         ),
                       ),
@@ -2411,8 +2550,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                   size: const Size(130, 130),
                   painter: DonutCapacityPainter(
                     percent: capacityPercent / 100.0,
-                    trackColor: const Color(0xFFF1F5F9),
-                    progressColor: const Color(0xFF10B981),
+                    trackColor: AppDesignSystem.slate100,
+                    progressColor: AppDesignSystem.success,
                   ),
                   child: SizedBox(
                     width: 130,
@@ -2450,13 +2589,13 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFECFDF5),
+                    color: AppDesignSystem.green50,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFA7F3D0)),
+                    border: Border.all(color: AppDesignSystem.emerald200),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.check_circle_outline_rounded, size: 20, color: Color(0xFF059669)),
+                      const Icon(Icons.check_circle_outline_rounded, size: 20, color: AppDesignSystem.emerald600),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -2464,7 +2603,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 11.5),
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF065F46),
+                            color: AppDesignSystem.statusDeliveredText,
                           ),
                         ),
                       ),
@@ -2484,12 +2623,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: _isOnline ? const Color(0xFF86EFAC) : const Color(0xFFFECDD3),
+                color: _isOnline ? AppDesignSystem.emerald200 : AppDesignSystem.rose200,
                 width: 1.5,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: (_isOnline ? const Color(0xFF10B981) : const Color(0xFFF43F5E)).withValues(alpha: 0.06),
+                  color: (_isOnline ? AppDesignSystem.success : AppDesignSystem.rose500).withValues(alpha: 0.06),
                   blurRadius: 14,
                   offset: const Offset(0, 4),
                 ),
@@ -2507,12 +2646,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           width: 38,
                           height: 38,
                           decoration: BoxDecoration(
-                            color: _isOnline ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                            color: _isOnline ? AppDesignSystem.green100 : AppDesignSystem.statusCancelled,
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             _isOnline ? Icons.two_wheeler_rounded : Icons.power_settings_new_rounded,
-                            color: _isOnline ? const Color(0xFF15803D) : const Color(0xFFDC2626),
+                            color: _isOnline ? AppDesignSystem.green700 : AppDesignSystem.red600,
                             size: 20,
                           ),
                         ),
@@ -2525,7 +2664,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 13.5),
                                 fontWeight: FontWeight.w900,
-                                color: _isOnline ? const Color(0xFF15803D) : const Color(0xFFDC2626),
+                                color: _isOnline ? AppDesignSystem.green700 : AppDesignSystem.red600,
                               ),
                             ),
                             Text(
@@ -2540,10 +2679,9 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                       scale: 0.9,
                       child: Switch(
                         value: _isOnline,
-                        activeColor: const Color(0xFF10B981),
-                        activeTrackColor: const Color(0xFFBBF7D0),
-                        inactiveThumbColor: const Color(0xFFEF4444),
-                        inactiveTrackColor: const Color(0xFFFECDD3),
+                        activeColor: AppDesignSystem.success,
+                        activeTrackColor: AppDesignSystem.green200,
+                        inactiveTrackColor: AppDesignSystem.rose200,
                         onChanged: (val) {
                           HapticFeedback.mediumImpact();
                           setState(() => _isOnline = val);
@@ -2561,10 +2699,10 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
-                    color: _isOnline ? const Color(0xFFF0FDF4) : const Color(0xFFFFF1F2),
+                    color: _isOnline ? AppDesignSystem.green50 : AppDesignSystem.rose50,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: _isOnline ? const Color(0xFFBBF7D0) : const Color(0xFFFECDD3),
+                      color: _isOnline ? AppDesignSystem.green200 : AppDesignSystem.rose200,
                     ),
                   ),
                   child: Row(
@@ -2573,7 +2711,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                       Icon(
                         _isOnline ? Icons.info_outline_rounded : Icons.warning_amber_rounded,
                         size: 16,
-                        color: _isOnline ? const Color(0xFF15803D) : const Color(0xFFDC2626),
+                        color: _isOnline ? AppDesignSystem.green700 : AppDesignSystem.red600,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -2584,7 +2722,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: FontWeight.w600,
-                            color: _isOnline ? const Color(0xFF166534) : const Color(0xFF991B1B),
+                            color: _isOnline ? AppDesignSystem.green800 : AppDesignSystem.statusCancelledText,
                             height: 1.35,
                           ),
                         ),
@@ -2617,10 +2755,10 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+              border: Border.all(color: AppDesignSystem.slate100, width: 1.2),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                  color: AppDesignSystem.slate900.withValues(alpha: 0.03),
                   blurRadius: 12,
                   offset: const Offset(0, 3),
                 ),
@@ -2633,8 +2771,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                   size: const Size(64, 64),
                   painter: DonutCapacityPainter(
                     percent: math.min(1.0, totalCount / dailyTarget),
-                    trackColor: const Color(0xFFF1F5F9),
-                    progressColor: const Color(0xFF10B981),
+                    trackColor: AppDesignSystem.slate100,
+                    progressColor: AppDesignSystem.success,
                     strokeWidth: 6,
                   ),
                   child: SizedBox(
@@ -2682,14 +2820,14 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                       const SizedBox(height: 2),
                       Row(
                         children: [
-                          Text(totalCount >= dailyTarget ? '🏆' : '🎯', style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                          Text(totalCount >= dailyTarget ? '🏆' : '🎯', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
                           const SizedBox(width: 4),
                           Text(
                             totalCount >= dailyTarget ? 'Milestone Bonus Achieved!' : '$totalCount of $dailyTarget Completed',
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 12.5),
                               fontWeight: FontWeight.w900,
-                              color: totalCount >= dailyTarget ? const Color(0xFF059669) : slateDark,
+                              color: totalCount >= dailyTarget ? AppDesignSystem.emerald600 : slateDark,
                             ),
                           ),
                         ],
@@ -2722,7 +2860,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDCFCE7),
+                  color: AppDesignSystem.green100,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -2730,7 +2868,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 10),
                     fontWeight: FontWeight.w900,
-                    color: const Color(0xFF15803D),
+                    color: AppDesignSystem.green700,
                   ),
                 ),
               ),
@@ -2745,7 +2883,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFF1F5F9)),
+                border: Border.all(color: AppDesignSystem.slate100),
               ),
               child: Center(
                 child: Text(
@@ -2790,7 +2928,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                 try {
                   final dt = DateTime.parse(item['deliveredAt'] ?? item['createdAt']).toLocal();
                   timeStr = DateFormat('h:mm a').format(dt);
-                } catch (_) {}
+                } catch (e, _) { LoggerService.error('DeliveryDashboard: silent catch', e); }
               }
 
               return IntrinsicHeight(
@@ -2807,7 +2945,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                             height: 10,
                             margin: const EdgeInsets.only(top: 14),
                             decoration: const BoxDecoration(
-                              color: Color(0xFF10B981),
+                              color: AppDesignSystem.success,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -2815,7 +2953,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                             Expanded(
                               child: Container(
                                 width: 2,
-                                color: const Color(0xFF86EFAC),
+                                color: AppDesignSystem.emerald200,
                               ),
                             ),
                         ],
@@ -2830,7 +2968,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+                          border: Border.all(color: AppDesignSystem.slate100, width: 1.2),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2879,7 +3017,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                                       decoration: BoxDecoration(
-                                        color: isCod ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7),
+                                        color: isCod ? AppDesignSystem.statusPending : AppDesignSystem.green100,
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Text(
@@ -2887,7 +3025,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                         style: GoogleFonts.inter(
                                           fontSize: Responsive.scaledFontSize(context, 8.5),
                                           fontWeight: FontWeight.w900,
-                                          color: isCod ? const Color(0xFFB45309) : const Color(0xFF15803D),
+                                          color: isCod ? AppDesignSystem.amber700 : AppDesignSystem.green700,
                                         ),
                                       ),
                                     ),
@@ -2923,7 +3061,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFDCFCE7),
+                                    color: AppDesignSystem.green100,
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
@@ -2931,7 +3069,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                     style: GoogleFonts.inter(
                                       fontSize: Responsive.scaledFontSize(context, 9.5),
                                       fontWeight: FontWeight.w800,
-                                      color: const Color(0xFF15803D),
+                                      color: AppDesignSystem.green700,
                                     ),
                                   ),
                                 ),
@@ -3102,7 +3240,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
           child: Container(
             width: 38,
             height: 4,
-            decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(2)),
+            decoration: BoxDecoration(color: AppDesignSystem.slate200, borderRadius: BorderRadius.circular(2)),
           ),
         ),
         const SizedBox(height: 18),
@@ -3111,27 +3249,27 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
           height: 52,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF10B981), Color(0xFF059669)],
+              colors: [AppDesignSystem.success, AppDesignSystem.emerald600],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                color: AppDesignSystem.success.withValues(alpha: 0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
-          child: const Center(
+          child: Center(
             child: Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 26))),
           ),
         ),
         const SizedBox(height: 14),
         Text(
           'Confirm Parcel Handover',
-          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w900, color: AppDesignSystem.slate900),
         ),
         const SizedBox(height: 4),
         Row(
@@ -3139,11 +3277,11 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
           children: [
             Text(
               'Order #${widget.orderNum} • ',
-              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700, color: const Color(0xFF059669)),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700, color: AppDesignSystem.emerald600),
             ),
             Text(
               '₹${widget.total.toInt()}',
-              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w900, color: const Color(0xFF059669)),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w900, color: AppDesignSystem.emerald600),
             ),
           ],
         ),
@@ -3152,14 +3290,14 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
-            color: const Color(0xFFFAFAFA),
+            color: AppDesignSystem.background,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+            border: Border.all(color: AppDesignSystem.slate100, width: 1.2),
           ),
           child: Text(
             'Kya aapne customer ko parcel safely handover kar diya hai?',
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w600, color: const Color(0xFF475569), height: 1.4),
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w600, color: AppDesignSystem.slate600, height: 1.4),
           ),
         ),
         const SizedBox(height: 24),
@@ -3169,11 +3307,11 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
               child: OutlinedButton(
                 onPressed: () => Navigator.pop(context),
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.2),
+                  side: const BorderSide(color: AppDesignSystem.slate200, width: 1.2),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: Text('Cancel', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w800, color: const Color(0xFF64748B))),
+                child: Text('Cancel', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w800, color: AppDesignSystem.slate500)),
               ),
             ),
             const SizedBox(width: 12),
@@ -3187,7 +3325,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                   'isRiderCash': false,
                 }),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00965E),
+                  backgroundColor: AppDesignSystem.emeraldBrand,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   elevation: 0,
@@ -3219,7 +3357,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
             child: Container(
               width: 38,
               height: 4,
-              decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: AppDesignSystem.slate200, borderRadius: BorderRadius.circular(2)),
             ),
           ),
           const SizedBox(height: 16),
@@ -3228,20 +3366,20 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
             height: 48,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF10B981), Color(0xFF059669)],
+                colors: [AppDesignSystem.success, AppDesignSystem.emerald600],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.25),
+                  color: AppDesignSystem.success.withValues(alpha: 0.25),
                   blurRadius: 10,
                   offset: const Offset(0, 3),
                 ),
               ],
             ),
-            child: const Center(
+            child: Center(
               child: Text(
                 '₹',
                 style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24), fontWeight: FontWeight.w900, color: Colors.white),
@@ -3251,12 +3389,12 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
           const SizedBox(height: 12),
           Text(
             'Payment Collection',
-            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w900, color: AppDesignSystem.slate900),
           ),
           const SizedBox(height: 3),
           Text(
             'Order #${widget.orderNum} • Collect: ₹$orderTotalInt',
-            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w700, color: const Color(0xFF475569)),
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w700, color: AppDesignSystem.slate600),
           ),
           const SizedBox(height: 16),
 
@@ -3265,25 +3403,25 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
+                color: AppDesignSystem.slate50,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: AppDesignSystem.slate200),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.account_balance_wallet_outlined, size: 16, color: Color(0xFF64748B)),
+                  const Icon(Icons.account_balance_wallet_outlined, size: 16, color: AppDesignSystem.slate500),
                   const SizedBox(width: 8),
                   Text(
                     'Jeb mein: ₹${widget.cashInHand.toInt()}',
-                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w700, color: const Color(0xFF334155)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w700, color: AppDesignSystem.slate700),
                   ),
                   Text(
                     ' | ',
-                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: const Color(0xFFCBD5E1)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: AppDesignSystem.slate300),
                   ),
                   Text(
                     'Limit: ₹${widget.cashLimit.toInt()}',
-                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w700, color: const Color(0xFF64748B)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w700, color: AppDesignSystem.slate500),
                   ),
                 ],
               ),
@@ -3303,9 +3441,9 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
               child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFFBEB),
+                  color: AppDesignSystem.amber50,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFFDE68A), width: 1.5),
+                  border: Border.all(color: AppDesignSystem.yellow200, width: 1.5),
                 ),
                 child: Row(
                   children: [
@@ -3313,10 +3451,10 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEF3C7),
+                        color: AppDesignSystem.statusPending,
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: const Center(child: Text('💵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
+                      child: Center(child: Text('💵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -3325,17 +3463,17 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                         children: [
                           Text(
                             'Cash Liya (कैश लिया)',
-                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: const Color(0xFFB45309)),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: AppDesignSystem.amber700),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             'Customer ne cash diya — poora ya kuch',
-                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w500, color: const Color(0xFF78716C)),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w500, color: AppDesignSystem.stone500),
                           ),
                         ],
                       ),
                     ),
-                    const Icon(Icons.chevron_right_rounded, color: Color(0xFFD97706), size: 22),
+                    const Icon(Icons.chevron_right_rounded, color: AppDesignSystem.amber600, size: 22),
                   ],
                 ),
               ),
@@ -3349,9 +3487,9 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
               child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF0FDF4),
+                  color: AppDesignSystem.green50,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFBBF7D0), width: 1.5),
+                  border: Border.all(color: AppDesignSystem.green200, width: 1.5),
                 ),
                 child: Row(
                   children: [
@@ -3359,10 +3497,10 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFDCFCE7),
+                        color: AppDesignSystem.green100,
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: const Center(child: Text('📱', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
+                      child: Center(child: Text('📱', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -3371,12 +3509,12 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                         children: [
                           Text(
                             'Online Mila (ऑनलाइन मिला)',
-                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: const Color(0xFF15803D)),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: AppDesignSystem.green700),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             'Poora GPay / PhonePe / UPI se aaya',
-                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w500, color: const Color(0xFF78716C)),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w500, color: AppDesignSystem.stone500),
                           ),
                         ],
                       ),
@@ -3384,7 +3522,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF10B981),
+                        color: AppDesignSystem.success,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -3405,7 +3543,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
               onPressed: () => Navigator.pop(context),
               child: Text(
                 'Cancel',
-                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700, color: const Color(0xFF94A3B8)),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700, color: AppDesignSystem.slate400),
               ),
             ),
           ]
@@ -3418,16 +3556,16 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFFBEB),
+                  color: AppDesignSystem.amber50,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFFDE68A), width: 1.2),
+                  border: Border.all(color: AppDesignSystem.yellow200, width: 1.2),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'CUSTOMER NE KITNA DIYA? (₹)',
-                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w900, color: const Color(0xFFB45309), letterSpacing: 0.5),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w900, color: AppDesignSystem.amber700, letterSpacing: 0.5),
                     ),
                     const SizedBox(height: 10),
                     Container(
@@ -3435,12 +3573,12 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFF59E0B), width: 2),
+                        border: Border.all(color: AppDesignSystem.warning, width: 2),
                       ),
                       child: Center(
                         child: Text(
                           _cashReceivedController.text.isEmpty ? '0' : _cashReceivedController.text,
-                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 24), fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 24), fontWeight: FontWeight.w900, color: AppDesignSystem.slate900),
                         ),
                       ),
                     ),
@@ -3463,16 +3601,16 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFFF59E0B) : const Color(0xFFFEF3C7),
+                              color: isSelected ? AppDesignSystem.warning : AppDesignSystem.statusPending,
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: isSelected ? const Color(0xFFD97706) : const Color(0xFFFDE68A)),
+                              border: Border.all(color: isSelected ? AppDesignSystem.amber600 : AppDesignSystem.yellow200),
                             ),
                             child: Text(
                               label,
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 11),
                                 fontWeight: FontWeight.w800,
-                                color: isSelected ? Colors.white : const Color(0xFFB45309),
+                                color: isSelected ? Colors.white : AppDesignSystem.amber700,
                               ),
                             ),
                           ),
@@ -3488,17 +3626,17 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: AppDesignSystem.slate50,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(color: AppDesignSystem.slate200),
                 ),
                 child: Column(
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('💵 Cash Received', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: const Color(0xFF64748B))),
-                        Text('₹${cashReceived.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w900, color: const Color(0xFF0F172A))),
+                        Text('💵 Cash Received', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: AppDesignSystem.slate500)),
+                        Text('₹${cashReceived.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w900, color: AppDesignSystem.slate900)),
                       ],
                     ),
                     if (changeToGive > 0) ...[
@@ -3506,17 +3644,17 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('🔄 Change wapas do', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: const Color(0xFFE11D48))),
-                          Text('-₹${changeToGive.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w900, color: const Color(0xFFE11D48))),
+                          Text('🔄 Change wapas do', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: AppDesignSystem.rose600)),
+                          Text('-₹${changeToGive.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w900, color: AppDesignSystem.rose600)),
                         ],
                       ),
                     ],
-                    const Divider(height: 16, color: Color(0xFFE2E8F0)),
+                    const Divider(height: 16, color: AppDesignSystem.slate200),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('💰 Jeb mein rahega (Net Cash)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: const Color(0xFFB45309))),
-                        Text('₹${netCashInHand.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: const Color(0xFFB45309))),
+                        Text('💰 Jeb mein rahega (Net Cash)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: AppDesignSystem.amber700)),
+                        Text('₹${netCashInHand.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: AppDesignSystem.amber700)),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -3525,12 +3663,12 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.account_balance_wallet_outlined, size: 12, color: Color(0xFF94A3B8)),
+                            const Icon(Icons.account_balance_wallet_outlined, size: 12, color: AppDesignSystem.slate400),
                             const SizedBox(width: 4),
-                            Text('Wallet after this', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w600, color: const Color(0xFF94A3B8))),
+                            Text('Wallet after this', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w600, color: AppDesignSystem.slate400)),
                           ],
                         ),
-                        Text('₹${walletAfter.toInt()} / ₹${widget.cashLimit.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w700, color: const Color(0xFF64748B))),
+                        Text('₹${walletAfter.toInt()} / ₹${widget.cashLimit.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w700, color: AppDesignSystem.slate500)),
                       ],
                     ),
                   ],
@@ -3546,10 +3684,10 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                     _cashPortionController.text = (orderTotalInt ~/ 2).toString();
                   });
                 },
-                icon: const Icon(Icons.swap_horiz_rounded, size: 16, color: Color(0xFF7C3AED)),
+                icon: const Icon(Icons.swap_horiz_rounded, size: 16, color: AppDesignSystem.violet600),
                 label: Text(
                   'Kuch cash + kuch online mila? (Split)',
-                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w800, color: const Color(0xFF7C3AED)),
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w800, color: AppDesignSystem.violet600),
                 ),
               ),
             ] else ...[
@@ -3558,16 +3696,16 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFAF5FF),
+                  color: AppDesignSystem.violet50,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFE9D5FF), width: 1.2),
+                  border: Border.all(color: AppDesignSystem.violet200, width: 1.2),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'CASH MEIN KITNA LIYA? (₹)',
-                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w900, color: const Color(0xFF7C3AED), letterSpacing: 0.5),
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w900, color: AppDesignSystem.violet600, letterSpacing: 0.5),
                     ),
                     const SizedBox(height: 10),
                     Container(
@@ -3575,12 +3713,12 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFF7C3AED), width: 2),
+                        border: Border.all(color: AppDesignSystem.violet600, width: 2),
                       ),
                       child: Center(
                         child: Text(
                           _cashPortionController.text.isEmpty ? '0' : _cashPortionController.text,
-                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 24), fontWeight: FontWeight.w900, color: const Color(0xFF0F172A)),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 24), fontWeight: FontWeight.w900, color: AppDesignSystem.slate900),
                         ),
                       ),
                     ),
@@ -3600,16 +3738,16 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFF7C3AED) : const Color(0xFFF3E8FF),
+                              color: isSelected ? AppDesignSystem.violet600 : AppDesignSystem.statusShipped,
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: isSelected ? const Color(0xFF6D28D9) : const Color(0xFFE9D5FF)),
+                              border: Border.all(color: isSelected ? AppDesignSystem.violet700 : AppDesignSystem.violet200),
                             ),
                             child: Text(
                               '₹$preset cash',
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 11),
                                 fontWeight: FontWeight.w800,
-                                color: isSelected ? Colors.white : const Color(0xFF7C3AED),
+                                color: isSelected ? Colors.white : AppDesignSystem.violet600,
                               ),
                             ),
                           ),
@@ -3625,33 +3763,33 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: AppDesignSystem.slate50,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(color: AppDesignSystem.slate200),
                 ),
                 child: Column(
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('💵 Cash Collected', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: const Color(0xFFB45309))),
-                        Text('₹${cashPortion.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w900, color: const Color(0xFFB45309))),
+                        Text('💵 Cash Collected', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: AppDesignSystem.amber700)),
+                        Text('₹${cashPortion.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w900, color: AppDesignSystem.amber700)),
                       ],
                     ),
                     const SizedBox(height: 6),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('📱 Online Received', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: const Color(0xFF15803D))),
-                        Text('₹${onlinePortion.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w900, color: const Color(0xFF15803D))),
+                        Text('📱 Online Received', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: AppDesignSystem.green700)),
+                        Text('₹${onlinePortion.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w900, color: AppDesignSystem.green700)),
                       ],
                     ),
-                    const Divider(height: 16, color: Color(0xFFE2E8F0)),
+                    const Divider(height: 16, color: AppDesignSystem.slate200),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Total', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
-                        Text('₹$orderTotalInt', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: const Color(0xFF0F172A))),
+                        Text('Total', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: AppDesignSystem.slate900)),
+                        Text('₹$orderTotalInt', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: AppDesignSystem.slate900)),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -3660,12 +3798,12 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.account_balance_wallet_outlined, size: 12, color: Color(0xFF94A3B8)),
+                            const Icon(Icons.account_balance_wallet_outlined, size: 12, color: AppDesignSystem.slate400),
                             const SizedBox(width: 4),
-                            Text('Wallet after this', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w600, color: const Color(0xFF94A3B8))),
+                            Text('Wallet after this', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w600, color: AppDesignSystem.slate400)),
                           ],
                         ),
-                        Text('₹${walletAfter.toInt()} / ₹${widget.cashLimit.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w700, color: const Color(0xFF64748B))),
+                        Text('₹${walletAfter.toInt()} / ₹${widget.cashLimit.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w700, color: AppDesignSystem.slate500)),
                       ],
                     ),
                   ],
@@ -3683,7 +3821,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                 },
                 child: Text(
                   '← Poora cash mein liya (no split)',
-                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w700, color: const Color(0xFF64748B)),
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w700, color: AppDesignSystem.slate500),
                 ),
               ),
             ],
@@ -3702,11 +3840,11 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                       });
                     },
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.2),
+                      side: const BorderSide(color: AppDesignSystem.slate200, width: 1.2),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: Text('← Back', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: const Color(0xFF64748B))),
+                    child: Text('← Back', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: AppDesignSystem.slate500)),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -3726,7 +3864,7 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
                       });
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00965E),
+                      backgroundColor: AppDesignSystem.emeraldBrand,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       elevation: 0,

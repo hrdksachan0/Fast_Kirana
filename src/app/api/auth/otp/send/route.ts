@@ -38,14 +38,23 @@ export async function POST(request: NextRequest) {
 
     if (isPhoneNumber(trimmed)) {
       const normalizedPhone = getNormalizedPhone(trimmed)
+      const phoneDigits = getLast10Digits(trimmed)
       const existingUser = await prisma.user.findFirst({
-        where: { phone: normalizedPhone },
+        where: {
+          OR: [
+            { phone: normalizedPhone },
+            { phone: phoneDigits },
+            { phone: `91${phoneDigits}` },
+            { phone: `+91${phoneDigits}` },
+            { email: `wa-${phoneDigits}@fastkirana.com` },
+            { email: trimmed.toLowerCase() }
+          ]
+        },
         select: { email: true }
       })
       if (existingUser) {
         normalizedEmail = existingUser.email
       } else {
-        const phoneDigits = getLast10Digits(normalizedPhone)
         normalizedEmail = `wa-${phoneDigits}@fastkirana.com`
       }
     } else if (!trimmed.includes('@')) {
@@ -53,11 +62,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user account is blocked
+    const phoneDigits = isPhoneNumber(trimmed) ? getLast10Digits(trimmed) : null
     const existingUserRecord = await prisma.user.findFirst({
       where: {
         OR: [
           { email: normalizedEmail },
-          isPhoneNumber(trimmed) ? { phone: getNormalizedPhone(trimmed) } : null
+          phoneDigits ? { phone: `+91${phoneDigits}` } : null,
+          phoneDigits ? { phone: phoneDigits } : null,
         ].filter(Boolean) as any
       },
       select: { isBlocked: true, blockReason: true }
@@ -75,9 +86,16 @@ export async function POST(request: NextRequest) {
     // 2. Set expiry to 5 minutes from now
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
 
-    // 3. Clear any existing OTP tokens for this email
+    // 3. Clear any existing OTP tokens for this email and phone variants
     await prisma.otpToken.deleteMany({
-      where: { email: normalizedEmail }
+      where: {
+        OR: [
+          { email: normalizedEmail },
+          phoneDigits ? { email: `wa-${phoneDigits}@fastkirana.com` } : null,
+          phoneDigits ? { email: phoneDigits } : null,
+          phoneDigits ? { email: `+91${phoneDigits}` } : null,
+        ].filter(Boolean) as any
+      }
     })
 
     // 4. Create new OTP record
@@ -90,12 +108,10 @@ export async function POST(request: NextRequest) {
     })
 
     // 5. Send OTP via Meta WhatsApp Cloud API or Email
-    const phoneDigits = isPhoneNumber(trimmed)
-      ? getLast10Digits(trimmed)
-      : (normalizedEmail.startsWith('wa-') ? normalizedEmail.split('@')[0].replace('wa-', '') : null)
+    const recipientPhoneDigits = phoneDigits || (normalizedEmail.startsWith('wa-') ? normalizedEmail.split('@')[0].replace('wa-', '') : null)
 
-    if (phoneDigits) {
-      const recipientPhone = `+91${phoneDigits}`
+    if (recipientPhoneDigits) {
+      const recipientPhone = `+91${recipientPhoneDigits}`
       const isSent = await sendWhatsAppOtp(recipientPhone, otp)
 
       if (!isSent) {

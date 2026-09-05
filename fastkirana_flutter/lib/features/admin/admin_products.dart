@@ -1,5 +1,7 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../core/services/logger_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,6 +12,7 @@ import '../../providers/product_provider.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/supabase_service.dart';
 import '../../core/utils/restaurant_utils.dart';
+import '../../core/theme/responsive.dart';
 
 class AdminProductsScreen extends ConsumerStatefulWidget {
   final bool showAppBar;
@@ -31,7 +34,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
   final Map<String, bool> _localAvailability = {};
   final Map<String, int> _localStock = {};
 
-  static const Color primaryRed = Color(0xFFE20A22);
+  static const Color primaryRed = AppDesignSystem.primary;
 
   final List<Map<String, String>> _restaurantOutlets = [
     {'id': 'ALL', 'name': 'All Outlets'},
@@ -52,13 +55,13 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
     final categoriesAsync = ref.watch(categoriesProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppDesignSystem.slate50,
       appBar: widget.showAppBar
           ? AppBar(
               backgroundColor: Colors.white,
               elevation: 0,
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+                icon: const Icon(Icons.arrow_back_rounded, color: AppDesignSystem.slate900),
                 onPressed: () => Navigator.pop(context),
               ),
               title: Text(
@@ -66,7 +69,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 17),
                   fontWeight: FontWeight.w900,
-                  color: const Color(0xFF0F172A),
+                  color: AppDesignSystem.slate900,
                 ),
               ),
               actions: [
@@ -90,9 +93,9 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: AppDesignSystem.slate100,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
+                border: Border.all(color: AppDesignSystem.slate200, width: 0.8),
               ),
               child: Row(
                 children: [
@@ -126,13 +129,13 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
               height: 42,
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
+                color: AppDesignSystem.slate50,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: AppDesignSystem.slate200),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.search_rounded, size: 19, color: Color(0xFF64748B)),
+                  const Icon(Icons.search_rounded, size: 19, color: AppDesignSystem.slate500),
                   const SizedBox(width: 8),
                   Expanded(
                     child: TextField(
@@ -143,7 +146,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                         hintText: _selectedCatalogType == 0
                             ? 'Search grocery items or barcode...'
                             : 'Search restaurant dishes & outlets...',
-                        hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: const Color(0xFF94A3B8)),
+                        hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: AppDesignSystem.slate400),
                         border: InputBorder.none,
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
@@ -158,7 +161,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                       },
                       child: const Padding(
                         padding: EdgeInsets.only(right: 6),
-                        child: Icon(Icons.close_rounded, size: 18, color: Color(0xFF94A3B8)),
+                        child: Icon(Icons.close_rounded, size: 18, color: AppDesignSystem.slate400),
                       ),
                     ),
                   // Barcode Scanner Tool Button
@@ -168,11 +171,11 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
+                        color: AppDesignSystem.blue50,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                        border: Border.all(color: AppDesignSystem.blue200),
                       ),
-                      child: const Icon(Icons.qr_code_scanner_rounded, size: 18, color: Color(0xFF1D4ED8)),
+                      child: const Icon(Icons.qr_code_scanner_rounded, size: 18, color: AppDesignSystem.blue700),
                     ),
                   ),
                 ],
@@ -189,7 +192,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                 : _buildRestaurantOutletChips(),
           ),
 
-          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+          const Divider(height: 1, color: AppDesignSystem.slate200),
 
           // 4. Products List
           Expanded(
@@ -256,7 +259,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                               ? Icons.shopping_basket_outlined
                               : Icons.restaurant_outlined,
                           size: 48,
-                          color: const Color(0xFF94A3B8),
+                          color: AppDesignSystem.slate400,
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -266,7 +269,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 14),
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF64748B),
+                            color: AppDesignSystem.slate500,
                           ),
                         ),
                       ],
@@ -296,10 +299,10 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline_rounded, size: 40, color: Color(0xFFEF4444)),
+                    const Icon(Icons.error_outline_rounded, size: 40, color: AppDesignSystem.danger),
                     const SizedBox(height: 10),
                     Text('Failed to load items: $err',
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: const Color(0xFF64748B))),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.slate500)),
                   ],
                 ),
               ),
@@ -333,7 +336,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
+                    color: Colors.black.withValues(alpha: 0.06),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -346,7 +349,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
             Icon(
               icon,
               size: 15,
-              color: isSelected ? primaryRed : const Color(0xFF64748B),
+              color: isSelected ? primaryRed : AppDesignSystem.slate500,
             ),
             const SizedBox(width: 6),
             Text(
@@ -354,7 +357,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 12.5),
                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
-                color: isSelected ? primaryRed : const Color(0xFF64748B),
+                color: isSelected ? primaryRed : AppDesignSystem.slate500,
               ),
             ),
           ],
@@ -390,7 +393,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                   label: '⚠️ Low Stock (< 5)',
                   isSelected: _selectedGroceryCategoryId == 'LOW_STOCK',
                   onSelect: () => setState(() => _selectedGroceryCategoryId = 'LOW_STOCK'),
-                  badgeColor: const Color(0xFFD97706),
+                  badgeColor: AppDesignSystem.amber600,
                 ),
               ),
               ...groceryCategories.map((cat) {
@@ -459,7 +462,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
     required VoidCallback onSelect,
     Color? badgeColor,
   }) {
-    final activeColor = badgeColor ?? const Color(0xFF0F172A);
+    final activeColor = badgeColor ?? AppDesignSystem.slate900;
     return ChoiceChip(
       selected: isSelected,
       onSelected: (_) {
@@ -471,16 +474,16 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
         style: GoogleFonts.inter(
           fontSize: Responsive.scaledFontSize(context, 11.5),
           fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-          color: isSelected ? Colors.white : (badgeColor ?? const Color(0xFF475569)),
+          color: isSelected ? Colors.white : (badgeColor ?? AppDesignSystem.slate600),
         ),
       ),
       selectedColor: activeColor,
-      backgroundColor: badgeColor != null ? badgeColor.withOpacity(0.12) : const Color(0xFFF1F5F9),
+      backgroundColor: badgeColor != null ? badgeColor.withValues(alpha: 0.12) : AppDesignSystem.slate100,
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
         side: BorderSide(
-          color: isSelected ? activeColor : (badgeColor?.withOpacity(0.4) ?? const Color(0xFFE2E8F0)),
+          color: isSelected ? activeColor : (badgeColor?.withValues(alpha: 0.4) ?? AppDesignSystem.slate200),
         ),
       ),
     );
@@ -501,14 +504,14 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
           'isAvailable': clampedStock > 0 ? (_localAvailability[p.id] ?? p.isAvailable) : false,
           'updatedAt': DateTime.now().toIso8601String(),
         }).eq('id', p.id);
-      } catch (_) {}
+      } catch (e, _) { LoggerService.error('AdminProducts: silent catch', e); }
     }
 
     try {
       await ref.read(dioProvider).patch('/api/products/${p.id}', data: {
         'stock': clampedStock,
       });
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('AdminProducts: silent catch', e); }
   }
 
   void _promptDirectStockInput(Product p, int currentStock) {
@@ -530,7 +533,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
           children: [
             Text(
               'Enter available inventory quantity for this product:',
-              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF64748B)),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate500),
             ),
             const SizedBox(height: 10),
             TextField(
@@ -542,7 +545,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                 labelText: 'Stock Units',
                 hintText: 'e.g. 50',
                 filled: true,
-                fillColor: const Color(0xFFF8FAFC),
+                fillColor: AppDesignSystem.slate50,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
@@ -551,7 +554,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: const Color(0xFF64748B))),
+            child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: AppDesignSystem.slate500)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -596,7 +599,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
           children: [
             Text(
               'Enter or paste product barcode number to instantly locate item:',
-              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF64748B)),
+              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate500),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -607,8 +610,8 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
               decoration: InputDecoration(
                 hintText: 'e.g. 8901234567890',
                 filled: true,
-                fillColor: const Color(0xFFF8FAFC),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                fillColor: AppDesignSystem.slate50,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppDesignSystem.slate300)),
               ),
             ),
           ],
@@ -616,7 +619,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: const Color(0xFF64748B))),
+            child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: AppDesignSystem.slate500)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -671,13 +674,13 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: !isAvailable
-              ? const Color(0xFFEF4444).withOpacity(0.3)
-              : (isLowStock ? const Color(0xFFF59E0B).withOpacity(0.4) : const Color(0xFFE2E8F0)),
+              ? AppDesignSystem.danger.withValues(alpha: 0.3)
+              : (isLowStock ? AppDesignSystem.warning.withValues(alpha: 0.4) : AppDesignSystem.slate200),
           width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.025),
+            color: Colors.black.withValues(alpha: 0.025),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -696,9 +699,9 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                    color: AppDesignSystem.slate50,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFF1F5F9)),
+                    border: Border.all(color: AppDesignSystem.slate100),
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
@@ -706,11 +709,15 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                         ? CachedNetworkImage(
                             imageUrl: p.imageUrl!,
                             fit: BoxFit.cover,
+                            memCacheWidth: 200,
+                            memCacheHeight: 200,
+                            maxWidthDiskCache: 200,
+                            maxHeightDiskCache: 200,
                             errorWidget: (_, __, ___) => Center(
                               child: Icon(
                                 isRestaurant ? Icons.restaurant_rounded : Icons.shopping_basket_rounded,
                                 size: 26,
-                                color: const Color(0xFF94A3B8),
+                                color: AppDesignSystem.slate400,
                               ),
                             ),
                           )
@@ -718,7 +725,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                             child: Icon(
                               isRestaurant ? Icons.restaurant_rounded : Icons.shopping_basket_rounded,
                               size: 26,
-                              color: const Color(0xFF94A3B8),
+                              color: AppDesignSystem.slate400,
                             ),
                           ),
                   ),
@@ -736,7 +743,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 13.5),
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF0F172A),
+                          color: AppDesignSystem.slate900,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -750,7 +757,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFEF3C7),
+                                color: AppDesignSystem.statusPending,
                                 borderRadius: BorderRadius.circular(5),
                               ),
                               child: Text(
@@ -758,7 +765,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 10),
                                   fontWeight: FontWeight.w800,
-                                  color: const Color(0xFFD97706),
+                                  color: AppDesignSystem.amber600,
                                 ),
                               ),
                             ),
@@ -766,7 +773,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF1F5F9),
+                                color: AppDesignSystem.slate100,
                                 borderRadius: BorderRadius.circular(5),
                               ),
                               child: Text(
@@ -774,7 +781,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 10),
                                   fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF475569),
+                                  color: AppDesignSystem.slate600,
                                 ),
                               ),
                             ),
@@ -786,7 +793,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 11),
                                 fontWeight: FontWeight.w500,
-                                color: const Color(0xFF64748B),
+                                color: AppDesignSystem.slate500,
                               ),
                             ),
                           ],
@@ -802,7 +809,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 14),
                               fontWeight: FontWeight.w900,
-                              color: const Color(0xFF0F172A),
+                              color: AppDesignSystem.slate900,
                             ),
                           ),
                           if (p.mrp > p.price) ...[
@@ -811,7 +818,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                               '₹${p.mrp.toInt()}',
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 11),
-                                color: const Color(0xFF94A3B8),
+                                color: AppDesignSystem.slate400,
                                 decoration: TextDecoration.lineThrough,
                               ),
                             ),
@@ -822,13 +829,13 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                             Container(
                               decoration: BoxDecoration(
                                 color: isLowStock
-                                    ? const Color(0xFFFEF3C7)
-                                    : const Color(0xFFF1F5F9),
+                                    ? AppDesignSystem.statusPending
+                                    : AppDesignSystem.slate100,
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
                                   color: isLowStock
-                                      ? const Color(0xFFF59E0B).withOpacity(0.5)
-                                      : const Color(0xFFCBD5E1),
+                                      ? AppDesignSystem.warning.withValues(alpha: 0.5)
+                                      : AppDesignSystem.slate300,
                                   width: 1,
                                 ),
                               ),
@@ -844,7 +851,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                       child: Icon(
                                         Icons.remove_rounded,
                                         size: 14,
-                                        color: isLowStock ? const Color(0xFFD97706) : const Color(0xFF334155),
+                                        color: isLowStock ? AppDesignSystem.amber600 : AppDesignSystem.slate700,
                                       ),
                                     ),
                                   ),
@@ -859,7 +866,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                         style: GoogleFonts.inter(
                                           fontSize: Responsive.scaledFontSize(context, 11.5),
                                           fontWeight: FontWeight.w900,
-                                          color: isLowStock ? const Color(0xFFD97706) : const Color(0xFF0F172A),
+                                          color: isLowStock ? AppDesignSystem.amber600 : AppDesignSystem.slate900,
                                         ),
                                       ),
                                     ),
@@ -873,7 +880,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                       child: Icon(
                                         Icons.add_rounded,
                                         size: 14,
-                                        color: isLowStock ? const Color(0xFFD97706) : const Color(0xFF334155),
+                                        color: isLowStock ? AppDesignSystem.amber600 : AppDesignSystem.slate700,
                                       ),
                                     ),
                                   ),
@@ -893,10 +900,9 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                   children: [
                     Switch(
                       value: isAvailable,
-                      activeColor: const Color(0xFF16A34A),
-                      activeTrackColor: const Color(0xFFDCFCE7),
-                      inactiveThumbColor: const Color(0xFF94A3B8),
-                      inactiveTrackColor: const Color(0xFFE2E8F0),
+                      activeColor: AppDesignSystem.green600,
+                      activeTrackColor: AppDesignSystem.green100,
+                      inactiveTrackColor: AppDesignSystem.slate200,
                       onChanged: (val) async {
                         HapticFeedback.lightImpact();
                         setState(() {
@@ -907,12 +913,12 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                         if (sb != null) {
                           try {
                             await sb.from('products').update({'isAvailable': val}).eq('id', p.id);
-                          } catch (_) {}
+                          } catch (e, _) { LoggerService.error('AdminProducts: silent catch', e); }
                         }
 
                         try {
                           await ref.read(dioProvider).patch('/api/products/${p.id}', data: {'isAvailable': val});
-                        } catch (_) {}
+                        } catch (e, _) { LoggerService.error('AdminProducts: silent catch', e); }
 
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -921,7 +927,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                 '${p.name} marked as ${val ? "IN STOCK / AVAILABLE" : "OUT OF STOCK / HIDDEN"}',
                                 style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600),
                               ),
-                              backgroundColor: val ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                              backgroundColor: val ? AppDesignSystem.green600 : AppDesignSystem.red600,
                               duration: const Duration(seconds: 1),
                               behavior: SnackBarBehavior.floating,
                             ),
@@ -934,7 +940,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 9),
                         fontWeight: FontWeight.w800,
-                        color: isAvailable ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                        color: isAvailable ? AppDesignSystem.green600 : AppDesignSystem.red600,
                       ),
                     ),
                   ],
@@ -943,7 +949,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
             ),
           ),
 
-          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          const Divider(height: 1, color: AppDesignSystem.slate100),
 
           // Bottom Action Button: Edit Price, Stock & Variants
           InkWell(
@@ -952,20 +958,20 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 14),
               decoration: const BoxDecoration(
-                color: Color(0xFFF8FAFC),
+                color: AppDesignSystem.slate50,
                 borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.edit_note_rounded, size: 18, color: Color(0xFF0F172A)),
+                  const Icon(Icons.edit_note_rounded, size: 18, color: AppDesignSystem.slate900),
                   const SizedBox(width: 6),
                   Text(
                     'Edit Price, Stock & Variants',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 12),
                       fontWeight: FontWeight.w800,
-                      color: const Color(0xFF0F172A),
+                      color: AppDesignSystem.slate900,
                     ),
                   ),
                   if (variants.isNotEmpty) ...[
@@ -973,16 +979,16 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
+                        color: AppDesignSystem.blue50,
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                        border: Border.all(color: AppDesignSystem.blue200),
                       ),
                       child: Text(
                         '${variants.length} Variants ⚡',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 10),
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF1D4ED8),
+                          color: AppDesignSystem.blue700,
                         ),
                       ),
                     ),
@@ -1061,7 +1067,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
 
   final List<_VariantEditItem> _variantItems = [];
 
-  static const Color primaryRed = Color(0xFFE20A22);
+  static const Color primaryRed = AppDesignSystem.primary;
 
   @override
   void initState() {
@@ -1156,13 +1162,13 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
             ...payload,
             'updatedAt': DateTime.now().toIso8601String(),
           }).eq('id', widget.product.id);
-        } catch (_) {}
+        } catch (e, _) { LoggerService.error('AdminProducts: silent catch', e); }
       }
 
       // 2. REST API Update
       try {
         await ref.read(dioProvider).patch('/api/products/${widget.product.id}', data: payload);
-      } catch (_) {}
+      } catch (e, _) { LoggerService.error('AdminProducts: silent catch', e); }
 
       widget.onUpdated();
 
@@ -1180,7 +1186,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                 ),
               ],
             ),
-            backgroundColor: const Color(0xFF16A34A),
+            backgroundColor: AppDesignSystem.green600,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -1219,7 +1225,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
           Container(
             padding: const EdgeInsets.fromLTRB(20, 16, 16, 14),
             decoration: const BoxDecoration(
-              color: Color(0xFF0F172A),
+              color: AppDesignSystem.slate900,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: Row(
@@ -1227,7 +1233,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                 Container(
                   padding: const EdgeInsets.all(7),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.12),
+                    color: Colors.white.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.edit_note_rounded, size: 20, color: Colors.white),
@@ -1250,7 +1256,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w500,
-                          color: const Color(0xFF94A3B8),
+                          color: AppDesignSystem.slate400,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -1301,9 +1307,9 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
+                            color: AppDesignSystem.slate50,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                            border: Border.all(color: AppDesignSystem.slate200),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1313,7 +1319,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 11),
                                   fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF64748B),
+                                  color: AppDesignSystem.slate500,
                                 ),
                               ),
                               Row(
@@ -1324,12 +1330,12 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                                     style: GoogleFonts.inter(
                                       fontSize: Responsive.scaledFontSize(context, 12),
                                       fontWeight: FontWeight.w800,
-                                      color: _isAvailable ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                                      color: _isAvailable ? AppDesignSystem.green600 : AppDesignSystem.red600,
                                     ),
                                   ),
                                   Switch(
                                     value: _isAvailable,
-                                    activeColor: const Color(0xFF16A34A),
+                                    activeColor: AppDesignSystem.green600,
                                     onChanged: (val) => setState(() => _isAvailable = val),
                                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   ),
@@ -1396,21 +1402,21 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFEFF6FF),
+                            color: AppDesignSystem.blue50,
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFFBFDBFE)),
+                            border: Border.all(color: AppDesignSystem.blue200),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.add_rounded, size: 16, color: Color(0xFF1D4ED8)),
+                              const Icon(Icons.add_rounded, size: 16, color: AppDesignSystem.blue700),
                               const SizedBox(width: 4),
                               Text(
                                 '+ Add Variant',
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 11.5),
                                   fontWeight: FontWeight.w800,
-                                  color: const Color(0xFF1D4ED8),
+                                  color: AppDesignSystem.blue700,
                                 ),
                               ),
                             ],
@@ -1422,7 +1428,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                   const SizedBox(height: 6),
                   Text(
                     'Add multiple weight/pack options (e.g. 250g, 500g, 1kg) with custom price & stock.',
-                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: const Color(0xFF64748B)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: AppDesignSystem.slate500),
                   ),
                   const SizedBox(height: 10),
 
@@ -1431,14 +1437,14 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
+                        color: AppDesignSystem.slate50,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        border: Border.all(color: AppDesignSystem.slate200),
                       ),
                       child: Center(
                         child: Text(
                           'No variants added yet. Tap "+ Add Variant" to create weight/size options.',
-                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: const Color(0xFF94A3B8), fontWeight: FontWeight.w600),
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: AppDesignSystem.slate400, fontWeight: FontWeight.w600),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -1454,9 +1460,9 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                         return Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
+                            color: AppDesignSystem.slate50,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFFCBD5E1)),
+                            border: Border.all(color: AppDesignSystem.slate300),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1466,7 +1472,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF0F172A),
+                                      color: AppDesignSystem.slate900,
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
@@ -1485,14 +1491,14 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                                       style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800),
                                       decoration: InputDecoration(
                                         hintText: 'Variant Name (e.g. 500 g, 1 kg)',
-                                        hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF94A3B8)),
+                                        hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate400),
                                         isDense: true,
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                         filled: true,
                                         fillColor: Colors.white,
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(8),
-                                          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                                          borderSide: const BorderSide(color: AppDesignSystem.slate300),
                                         ),
                                       ),
                                     ),
@@ -1553,7 +1559,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
             padding: const EdgeInsets.fromLTRB(18, 12, 18, 16),
             decoration: const BoxDecoration(
               color: Colors.white,
-              border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+              border: Border(top: BorderSide(color: AppDesignSystem.slate200)),
             ),
             child: SizedBox(
               width: double.infinity,
@@ -1600,7 +1606,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
       style: GoogleFonts.inter(
         fontSize: Responsive.scaledFontSize(context, 11),
         fontWeight: FontWeight.w800,
-        color: const Color(0xFF64748B),
+        color: AppDesignSystem.slate500,
         letterSpacing: 0.5,
       ),
     );
@@ -1621,24 +1627,24 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
           style: GoogleFonts.inter(
             fontSize: Responsive.scaledFontSize(context, 11),
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF475569),
+            color: AppDesignSystem.slate600,
           ),
         ),
         const SizedBox(height: 4),
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
+            color: AppDesignSystem.slate50,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+            border: Border.all(color: AppDesignSystem.slate200),
           ),
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
-            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700, color: AppDesignSystem.slate900),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF94A3B8)),
-              prefixIcon: icon != null ? Icon(icon, size: 18, color: const Color(0xFF64748B)) : null,
+              hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate400),
+              prefixIcon: icon != null ? Icon(icon, size: 18, color: AppDesignSystem.slate500) : null,
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               isDense: true,
@@ -1662,7 +1668,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
           style: GoogleFonts.inter(
             fontSize: Responsive.scaledFontSize(context, 10),
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF64748B),
+            color: AppDesignSystem.slate500,
           ),
         ),
         const SizedBox(height: 3),
@@ -1672,14 +1678,14 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
           style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w800),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: const Color(0xFF94A3B8)),
+            hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: AppDesignSystem.slate400),
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             filled: true,
             fillColor: Colors.white,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+              borderSide: const BorderSide(color: AppDesignSystem.slate300),
             ),
           ),
         ),

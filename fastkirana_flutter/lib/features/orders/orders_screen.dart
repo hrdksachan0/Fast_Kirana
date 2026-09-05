@@ -1,17 +1,14 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/theme/responsive.dart';
 import '../../core/routes/page_transitions.dart';
-import '../../core/utils/validators.dart';
 import '../../core/network/api_client.dart';
 import '../../widgets/empty_state.dart';
 import '../../data/models/order.dart';
@@ -19,10 +16,8 @@ import '../../data/models/product.dart';
 import '../../data/repositories/order_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
-import '../../widgets/shimmer_box.dart';
 import '../cart/cart_screen.dart';
 import 'order_tracking_screen.dart';
-import 'order_detail_screen.dart';
 
 final ordersProvider = FutureProvider.family<List<Order>, String>((ref, userId) async {
   return OrderRepository(ref.read(dioProvider)).getOrders(userId);
@@ -36,10 +31,10 @@ class OrdersScreen extends ConsumerStatefulWidget {
 }
 
 class _OrdersScreenState extends ConsumerState<OrdersScreen> {
-  static const Color primaryRed = Color(0xFFE20A22);
-  static const Color primaryRedLight = Color(0xFFFF2D4B);
-  static const Color slateDark = Color(0xFF0F172A);
-  static const Color slateMuted = Color(0xFF64748B);
+  static const Color primaryRed = AppDesignSystem.primary;
+  static const Color primaryRedLight = AppDesignSystem.primaryLight;
+  static const Color slateDark = AppDesignSystem.slate900;
+  static const Color slateMuted = AppDesignSystem.slate500;
 
   // Sub-tabs: 'ACTIVE' | 'HISTORY'
   String _selectedTab = 'ACTIVE';
@@ -87,7 +82,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: const Color(0xFF16A34A),
+        backgroundColor: AppDesignSystem.green600,
         content: Text('Added ${items.length} items to your cart!'),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -104,7 +99,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     final ordersAsync = ref.watch(ordersProvider(userId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppDesignSystem.slate50,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -234,7 +229,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline_rounded, size: 48, color: Color(0xFFEF4444)),
+                  const Icon(Icons.error_outline_rounded, size: 48, color: AppDesignSystem.danger),
                   const SizedBox(height: 12),
                   Text('Failed to load orders',
                       style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: slateDark)),
@@ -258,7 +253,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
+        color: AppDesignSystem.slate100,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -295,7 +290,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                         margin: const EdgeInsets.only(right: 6),
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Color(0xFF16A34A),
+                          color: AppDesignSystem.green600,
                         ),
                       ),
                     Text(
@@ -311,7 +306,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFDCFCE7),
+                          color: AppDesignSystem.green100,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
@@ -319,7 +314,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 10),
                             fontWeight: FontWeight.w800,
-                            color: const Color(0xFF15803D),
+                            color: AppDesignSystem.green700,
                           ),
                         ),
                       ),
@@ -368,7 +363,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE2E8F0),
+                          color: AppDesignSystem.slate200,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
@@ -398,7 +393,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppDesignSystem.slate200),
       ),
       child: TextField(
         controller: _searchController,
@@ -406,11 +401,11 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
         style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w600, color: slateDark),
         decoration: InputDecoration(
           hintText: 'Search items or order ID...',
-          hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF94A3B8)),
-          prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF94A3B8)),
+          hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate400),
+          prefixIcon: const Icon(Icons.search_rounded, size: 18, color: AppDesignSystem.slate400),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.clear_rounded, size: 16, color: Color(0xFF94A3B8)),
+                  icon: const Icon(Icons.clear_rounded, size: 16, color: AppDesignSystem.slate400),
                   onPressed: () {
                     _searchController.clear();
                     setState(() => _searchQuery = '');
@@ -445,7 +440,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                   color: isSelected ? slateDark : Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isSelected ? slateDark : const Color(0xFFE2E8F0),
+                    color: isSelected ? slateDark : AppDesignSystem.slate200,
                   ),
                 ),
                 child: Text(
@@ -453,7 +448,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 11),
                     fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                    color: isSelected ? Colors.white : const Color(0xFF475569),
+                    color: isSelected ? Colors.white : AppDesignSystem.slate600,
                     letterSpacing: 0.2,
                   ),
                 ),
@@ -473,16 +468,16 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     final items = order.items ?? [];
     final shopName = order.shopName?.isNotEmpty == true ? order.shopName! : 'FastKirana Darkstore';
 
-    Color statusColor = const Color(0xFF2563EB);
-    Color statusBg = const Color(0xFFEFF6FF);
+    Color statusColor = AppDesignSystem.blue600;
+    Color statusBg = AppDesignSystem.blue50;
     String statusText = order.status.displayName.toUpperCase();
 
     if (isDelivered) {
-      statusColor = const Color(0xFF16A34A);
-      statusBg = const Color(0xFFDCFCE7);
+      statusColor = AppDesignSystem.green600;
+      statusBg = AppDesignSystem.green100;
     } else if (isCancelled) {
-      statusColor = const Color(0xFFDC2626);
-      statusBg = const Color(0xFFFEE2E2);
+      statusColor = AppDesignSystem.red600;
+      statusBg = AppDesignSystem.statusCancelled;
     }
 
     return Container(
@@ -490,7 +485,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isActive ? const Color(0xFFBFDBFE) : const Color(0xFFF1F5F9),
+          color: isActive ? AppDesignSystem.blue200 : AppDesignSystem.slate100,
           width: isActive ? 1.4 : 1.0,
         ),
         boxShadow: [
@@ -568,13 +563,13 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                         decoration: BoxDecoration(
                           color: shopName.contains('Restaurant') || shopName.contains('Cafe')
-                              ? const Color(0xFFFFF7ED)
-                              : const Color(0xFFFEF3C7),
+                              ? AppDesignSystem.orange50
+                              : AppDesignSystem.statusPending,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: shopName.contains('Restaurant') || shopName.contains('Cafe')
-                                ? const Color(0xFFFFEDD5)
-                                : const Color(0xFFFDE68A),
+                                ? AppDesignSystem.orange200
+                                : AppDesignSystem.yellow200,
                             width: 0.8,
                           ),
                         ),
@@ -583,7 +578,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                           children: [
                             Text(
                               shopName.contains('Restaurant') || shopName.contains('Cafe') ? '🍽️ ' : '🏪 ',
-                              style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 10)),
+                              style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10)),
                             ),
                             Flexible(
                               child: Text(
@@ -592,8 +587,8 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                                   fontSize: Responsive.scaledFontSize(context, 11),
                                   fontWeight: FontWeight.w800,
                                   color: shopName.contains('Restaurant') || shopName.contains('Cafe')
-                                      ? const Color(0xFFC2410C)
-                                      : const Color(0xFF92400E),
+                                      ? AppDesignSystem.orange700
+                                      : AppDesignSystem.statusPendingText,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -618,7 +613,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
             ),
           ),
 
-          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          const Divider(height: 1, color: AppDesignSystem.slate100),
 
           // Items Preview List
           Padding(
@@ -633,7 +628,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF1F5F9),
+                                  color: AppDesignSystem.slate100,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
@@ -641,7 +636,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 11),
                                     fontWeight: FontWeight.w800,
-                                    color: const Color(0xFF475569),
+                                    color: AppDesignSystem.slate600,
                                   ),
                                 ),
                               ),
@@ -681,7 +676,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
               ),
             ),
 
-          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          const Divider(height: 1, color: AppDesignSystem.slate100),
 
           // Footer: Total Bill + Actions
           Padding(
@@ -709,16 +704,16 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFCBD5E1)),
+                          border: Border.all(color: AppDesignSystem.slate300),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.refresh_rounded, size: 14, color: Color(0xFF334155)),
+                            const Icon(Icons.refresh_rounded, size: 14, color: AppDesignSystem.slate700),
                             const SizedBox(width: 4),
                             Text(
                               'Reorder',
-                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w800, color: const Color(0xFF334155)),
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w800, color: AppDesignSystem.slate700),
                             ),
                           ],
                         ),
@@ -742,7 +737,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                         decoration: BoxDecoration(
                           gradient: isActive
                               ? const LinearGradient(
-                                  colors: [Color(0xFF00A344), Color(0xFF008736)],
+                                  colors: [AppDesignSystem.green700, AppDesignSystem.accentDark],
                                 )
                               : const LinearGradient(
                                   colors: [primaryRed, primaryRedLight],
@@ -750,7 +745,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                           borderRadius: BorderRadius.circular(10),
                           boxShadow: [
                             BoxShadow(
-                              color: (isActive ? const Color(0xFF00A344) : primaryRed).withValues(alpha: 0.25),
+                              color: (isActive ? AppDesignSystem.green700 : primaryRed).withValues(alpha: 0.25),
                               blurRadius: 6,
                               offset: const Offset(0, 2),
                             ),
@@ -796,13 +791,15 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
               ? 'You don\'t have any active orders right now.\nOrder something delicious fresh!'
               : 'You haven\'t placed any orders yet.\nYour orders will appear here.',
           ctaLabel: isActive ? 'Browse Products' : 'Start Shopping',
-          bgTint: isActive ? const Color(0xFFFFF7ED) : const Color(0xFFF0F9FF),
+          bgTint: isActive ? AppDesignSystem.orange50 : AppDesignSystem.sky50,
           onCta: () {
             if (isActive) {
               Navigator.pop(context);
             } else {
               final nav = Navigator.of(context);
-              while (nav.canPop()) nav.pop();
+              while (nav.canPop()) {
+                nav.pop();
+              }
             }
           },
         ),
@@ -818,15 +815,15 @@ class OrderCardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Shimmer.fromColors(
-      baseColor: const Color(0xFFF1F5F9),
-      highlightColor: const Color(0xFFFAFAFA),
+      baseColor: AppDesignSystem.slate100,
+      highlightColor: AppDesignSystem.background,
       period: const Duration(milliseconds: 1200),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFF1F5F9)),
+          border: Border.all(color: AppDesignSystem.slate100),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

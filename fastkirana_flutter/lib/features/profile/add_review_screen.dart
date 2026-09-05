@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
 import '../../providers/restaurant_provider.dart';
 import '../../core/network/api_client.dart';
-import '../../widgets/brand_button.dart';
 
 class AddReviewScreen extends ConsumerStatefulWidget {
   final String productName;
@@ -53,9 +52,9 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Row(
-            children: const [
+            children: [
               Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
               SizedBox(width: 8),
               Text('Thank you! Your review has been published.'),
@@ -69,9 +68,9 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Row(
-              children: const [
+              children: [
                 Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
                 SizedBox(width: 8),
                 Expanded(child: Text('Review submitted! Thank you for your feedback.')),
@@ -96,7 +95,7 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+          icon: const Icon(Icons.arrow_back_rounded, color: AppDesignSystem.slate900),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -104,7 +103,7 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
           style: GoogleFonts.inter(
             fontSize: Responsive.scaledFontSize(context, 17),
             fontWeight: FontWeight.w900,
-            color: const Color(0xFF0F172A),
+            color: AppDesignSystem.slate900,
             letterSpacing: -0.3,
           ),
         ),
@@ -131,7 +130,7 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
                   const SizedBox(height: 4),
                   Text(
                     widget.productName,
-                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: AppDesignSystem.slate900),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -147,7 +146,7 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
                         child: Icon(
                           i < _rating ? Icons.star_rounded : Icons.star_outline_rounded,
                           size: 42,
-                          color: const Color(0xFFF59E0B),
+                          color: AppDesignSystem.warning,
                         ),
                       ),
                     )),
@@ -179,19 +178,19 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
                   TextField(
                     controller: _reviewController,
                     maxLines: 4,
-                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: const Color(0xFF0F172A)),
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.slate900),
                     decoration: InputDecoration(
                       hintText: 'Tell us about the taste, packaging, delivery speed...',
                       hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: AppDesignSystem.textMuted),
                       filled: true,
-                      fillColor: const Color(0xFFF8FAFC),
+                      fillColor: AppDesignSystem.slate50,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        borderSide: const BorderSide(color: AppDesignSystem.slate200),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        borderSide: const BorderSide(color: AppDesignSystem.slate200),
                       ),
                     ),
                   ),

@@ -142,23 +142,7 @@ export async function PATCH(
     const targetRestaurantId = restaurantId !== undefined ? (restaurantId || null) : product.restaurantId
     if (targetRestaurantId) {
       updateData.restaurantId = targetRestaurantId
-      // Auto-assign to restaurant-food category to prevent category missing errors
-      let restCat = await prisma.category.findFirst({
-        where: {
-          OR: [
-            { slug: 'restaurant-food' },
-            { slug: 'restaurant' },
-            { name: { contains: 'Fast Food', mode: 'insensitive' } },
-            { name: { contains: 'Restaurant', mode: 'insensitive' } }
-          ]
-        }
-      })
-      if (!restCat) {
-        restCat = await prisma.category.create({
-          data: { name: 'Fast Food & Restaurant Kitchen', slug: 'restaurant-food', imageUrl: '🍽️', sortOrder: 99 }
-        })
-      }
-      updateData.categoryId = restCat.id
+      updateData.categoryId = (categoryId && typeof categoryId === 'string' && categoryId.trim() !== '') ? categoryId : null
     } else if (categoryId !== undefined && categoryId !== '') {
       updateData.categoryId = categoryId
       updateData.restaurantId = null
@@ -231,8 +215,8 @@ export async function PATCH(
       ? Math.max(0, Math.round(((finalMrp - finalPrice) / finalMrp) * 100))
       : 0
 
-    // Ensure categoryId is valid and not empty
-    if (!updateData.categoryId) {
+    // Ensure categoryId is valid for grocery, but dishes can have null
+    if (!updateData.restaurantId && !updateData.categoryId) {
       updateData.categoryId = product.categoryId
     }
 

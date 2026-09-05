@@ -1,6 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import '../../core/services/logger_service.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,7 +10,6 @@ import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../../core/theme/design_system.dart';
-import '../../core/theme/responsive.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../core/config/app_config.dart';
 import '../../data/models/cart.dart';
@@ -26,7 +25,6 @@ import '../../core/network/api_client.dart';
 import '../profile/address_book_screen.dart';
 import '../orders/orders_screen.dart';
 import '../checkout/order_success_screen.dart';
-import '../../core/services/admin_notification_service.dart';
 import '../../core/services/location_service.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../../widgets/empty_state.dart';
@@ -50,7 +48,7 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 }
 
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
-  String _deliveryMethod = 'DELIVERY'; // 'DELIVERY' | 'PICKUP'
+  final String _deliveryMethod = 'DELIVERY'; // 'DELIVERY' | 'PICKUP'
   String _selectedPayment = 'cod'; // Default: Cash on Delivery ('cod' | 'online')
   String _selectedPackaging = 'NORMAL'; // 'NORMAL' (FREE ₹0) | 'PREMIUM' (+₹15)
   int _selectedAddressIndex = 0;
@@ -66,11 +64,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   double? _pendingGrandTotal;
   Razorpay? _razorpay;
 
-  static const Color primaryRed = Color(0xFFE20A22);
-  static const Color brandGreen = Color(0xFF00A344);
-  static const Color slateDark = Color(0xFF0F172A);
-  static const Color slateMuted = Color(0xFF64748B);
-  static const Color slateBorder = Color(0xFFE2E8F0);
+  static const Color primaryRed = AppDesignSystem.primary;
+  static const Color brandGreen = AppDesignSystem.green700;
+  static const Color slateDark = AppDesignSystem.slate900;
+  static const Color slateMuted = AppDesignSystem.slate500;
+  static const Color slateBorder = AppDesignSystem.slate300;
 
   @override
   void initState() {
@@ -139,7 +137,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: isCancelled ? const Color(0xFFF59E0B) : primaryRed,
+          backgroundColor: isCancelled ? AppDesignSystem.warning : primaryRed,
           content: Row(
             children: [
               Icon(
@@ -168,7 +166,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color(0xFF2563EB),
+          backgroundColor: AppDesignSystem.blue700,
           content: Text(
             'Redirecting to ${response.walletName ?? "external wallet"} to complete your payment...',
             style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
@@ -191,7 +189,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           setState(() => _isFetchingGps = false);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              backgroundColor: const Color(0xFFE11D48),
+              backgroundColor: AppDesignSystem.rose500,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               content: const Text(
@@ -236,7 +234,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFF047857),
+            backgroundColor: AppDesignSystem.emerald700,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             content: Row(
@@ -261,7 +259,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         setState(() => _isFetchingGps = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFFE11D48),
+            backgroundColor: AppDesignSystem.rose500,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             content: Text(
@@ -300,7 +298,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   width: 42,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFCBD5E1),
+                    color: AppDesignSystem.slate500,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -319,7 +317,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF0C2340),
+                              color: AppDesignSystem.darkNavyHeader,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -327,7 +325,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 11),
                                 fontWeight: FontWeight.w900,
-                                color: const Color(0xFF3395FF),
+                                color: AppDesignSystem.blue500,
                               ),
                             ),
                           ),
@@ -352,16 +350,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFECFDF5),
+                      color: AppDesignSystem.statusDelivered,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFA7F3D0)),
+                      border: Border.all(color: AppDesignSystem.emerald200),
                     ),
                     child: Text(
                       '₹${grandTotal.toInt()}',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 16),
                         fontWeight: FontWeight.w900,
-                        color: const Color(0xFF047857),
+                        color: AppDesignSystem.emerald700,
                       ),
                     ),
                   ),
@@ -372,7 +370,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               // Razorpay Option 1: Instant UPI (GPay / PhonePe / Paytm)
               _buildRazorpayOptionTile(
                 ctx,
-                iconWidget: const Text('⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18))),
+                iconWidget: Text('⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18))),
                 title: 'UPI Payment (GPay / PhonePe / Paytm)',
                 subtitle: 'Zero transaction charges • Fast confirmation',
                 badge: 'Popular',
@@ -386,7 +384,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               // Razorpay Option 2: Cards
               _buildRazorpayOptionTile(
                 ctx,
-                iconWidget: const Icon(Icons.credit_card_rounded, color: Color(0xFF2563EB), size: 20),
+                iconWidget: const Icon(Icons.credit_card_rounded, color: AppDesignSystem.blue700, size: 20),
                 title: 'Debit / Credit Cards',
                 subtitle: 'Visa, Mastercard, RuPay',
                 badge: null,
@@ -400,7 +398,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               // Razorpay Option 3: NetBanking
               _buildRazorpayOptionTile(
                 ctx,
-                iconWidget: const Icon(Icons.account_balance_rounded, color: Color(0xFF7C3AED), size: 20),
+                iconWidget: const Icon(Icons.account_balance_rounded, color: AppDesignSystem.indigo700, size: 20),
                 title: 'NetBanking & All Wallets',
                 subtitle: 'HDFC, ICICI, SBI, Axis & More',
                 badge: null,
@@ -430,9 +428,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
+          color: AppDesignSystem.slate50,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          border: Border.all(color: AppDesignSystem.slate300),
         ),
         child: Row(
           children: [
@@ -442,7 +440,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: AppDesignSystem.slate300),
               ),
               child: Center(child: iconWidget),
             ),
@@ -466,7 +464,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
+                            color: AppDesignSystem.green100,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -474,7 +472,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 9),
                               fontWeight: FontWeight.w800,
-                              color: const Color(0xFF16A34A),
+                              color: AppDesignSystem.green600,
                             ),
                           ),
                         ),
@@ -488,7 +486,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
+            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppDesignSystem.slate400),
           ],
         ),
       ),
@@ -501,7 +499,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: AppDesignSystem.slate900,
         duration: const Duration(seconds: 1),
         content: Row(
           children: [
@@ -527,7 +525,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   Future<void> _handlePlaceOrder(Cart cart) async {
     HapticFeedback.heavyImpact();
 
-    final settings = ref.read(storeSettingsProvider).valueOrNull ?? StoreSettings();
+    final settings = ref.read(storeSettingsProvider).valueOrNull ?? const StoreSettings();
     final hasGrocery = cart.items.any((i) => !isRestaurantProduct(i.product));
     final hasRestaurant = cart.items.any((i) => isRestaurantProduct(i.product));
 
@@ -535,7 +533,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color(0xFFE11D48),
+          backgroundColor: AppDesignSystem.rose500,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           content: const Text(
@@ -551,7 +549,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color(0xFFE11D48),
+          backgroundColor: AppDesignSystem.rose500,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           content: const Text(
@@ -573,7 +571,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color(0xFFDC2626),
+          backgroundColor: AppDesignSystem.red600,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           content: Text(
@@ -697,7 +695,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color(0xFFDC2626),
+          backgroundColor: AppDesignSystem.red600,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           content: Text(
@@ -863,7 +861,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               try {
                 final ord = Order.fromJson(raw);
                 await repo.savePlacedOrderLocally(ord);
-              } catch (_) {}
+              } catch (e, _) { LoggerService.error('CheckoutScreen: silent catch', e); }
             }
           }
         }
@@ -884,7 +882,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFFDC2626),
+            backgroundColor: AppDesignSystem.red600,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             content: Text(
@@ -902,7 +900,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     // Celebratory Haptic Feedback
     HapticFeedback.heavyImpact();
-    await Future.delayed(const Duration(milliseconds: 400));
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    // ─── CLEAR CART IMMEDIATELY AFTER ORDER IS CONFIRMED ───
+    await ref.read(cartProvider.notifier).clearCart();
+    ref.invalidate(ordersProvider(userId));
+    ref.invalidate(ordersProvider(''));
+    ref.invalidate(ordersProvider('admin'));
 
     if (!mounted) return;
 
@@ -914,16 +918,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       order: placedOrder,
     );
 
-    // Push success screen first so checkout screen never blinks empty
-    await Navigator.pushReplacement(
+    Navigator.pushReplacement(
       context,
       FadeSlideRoute(page: successPage),
     );
-
-    ref.read(cartProvider.notifier).clearCart();
-    ref.invalidate(ordersProvider(userId));
-    ref.invalidate(ordersProvider(''));
-    ref.invalidate(ordersProvider('admin'));
   }
 
   @override
@@ -939,14 +937,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           emoji: '🛒',
           title: 'Your cart is empty',
           subtitle: 'Add some items to your cart\nbefore proceeding to checkout.',
-          bgTint: Color(0xFFFFF5F6),
+          bgTint: AppDesignSystem.primaryBg,
           ctaLabel: 'Start Shopping',
         ),
       );
     }
 
     final items = cart?.items ?? [];
-    final settings = ref.watch(storeSettingsProvider).valueOrNull ?? StoreSettings();
+    final settings = ref.watch(storeSettingsProvider).valueOrNull ?? const StoreSettings();
     final subtotal = cart?.subtotal ?? 0.0;
     final addresses = ref.watch(addressesProvider).valueOrNull ?? [];
     final selectedAddress = ref.watch(selectedAddressProvider) ??
@@ -988,7 +986,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppDesignSystem.slate50,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -997,7 +995,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           icon: Container(
             padding: const EdgeInsets.all(6),
             decoration: const BoxDecoration(
-              color: Color(0xFFF1F5F9),
+              color: AppDesignSystem.slate200,
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.arrow_back_rounded, color: slateDark, size: 18),
@@ -1030,7 +1028,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         ),
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, color: Color(0xFFF1F5F9)),
+          child: Divider(height: 1, color: AppDesignSystem.slate200),
         ),
       ),
       body: SafeArea(
@@ -1054,10 +1052,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFFED7AA), width: 1.4),
+                      border: Border.all(color: AppDesignSystem.orange300, width: 1.4),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFEA580C).withValues(alpha: 0.06),
+                          color: AppDesignSystem.orange600.withValues(alpha: 0.06),
                           blurRadius: 14,
                           offset: const Offset(0, 4),
                         ),
@@ -1073,9 +1071,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFFF7ED),
+                                color: AppDesignSystem.orange50,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFFFFEDD5)),
+                                border: Border.all(color: AppDesignSystem.orange200),
                               ),
                               child: Icon(
                                 selectedAddress?.label.toLowerCase().contains('work') == true
@@ -1084,7 +1082,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                         ? Icons.my_location_rounded
                                         : Icons.home_rounded),
                                 size: 18,
-                                color: const Color(0xFFEA580C),
+                                color: AppDesignSystem.orange600,
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -1126,14 +1124,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                   Text(
                                     (selectedAddress?.area != null &&
                                             selectedAddress!.area.trim().isNotEmpty &&
-                                            selectedAddress!.area.trim() != '.' &&
-                                            selectedAddress!.area.trim().toLowerCase() != 'n/a')
-                                        ? selectedAddress!.area.trim()
+                                            selectedAddress.area.trim() != '.' &&
+                                            selectedAddress.area.trim().toLowerCase() != 'n/a')
+                                        ? selectedAddress.area.trim()
                                         : 'Ghatampur Zone',
                                     style: GoogleFonts.inter(
                                       fontSize: Responsive.scaledFontSize(context, 11.5),
                                       fontWeight: FontWeight.w700,
-                                      color: const Color(0xFFEA580C),
+                                      color: AppDesignSystem.orange600,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -1159,9 +1157,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFFF7ED),
+                                  color: AppDesignSystem.orange50,
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: const Color(0xFFFED7AA), width: 1.1),
+                                  border: Border.all(color: AppDesignSystem.orange300, width: 1.1),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -1171,12 +1169,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                       style: GoogleFonts.inter(
                                         fontSize: Responsive.scaledFontSize(context, 10.5),
                                         fontWeight: FontWeight.w900,
-                                        color: const Color(0xFFEA580C),
+                                        color: AppDesignSystem.orange600,
                                         letterSpacing: 0.3,
                                       ),
                                     ),
                                     const SizedBox(width: 2),
-                                    const Icon(Icons.keyboard_arrow_down_rounded, size: 15, color: Color(0xFFEA580C)),
+                                    const Icon(Icons.keyboard_arrow_down_rounded, size: 15, color: AppDesignSystem.orange600),
                                   ],
                                 ),
                               ),
@@ -1190,13 +1188,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
+                            color: AppDesignSystem.slate50,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.location_on_outlined, size: 16, color: Color(0xFF64748B)),
+                              const Icon(Icons.location_on_outlined, size: 16, color: AppDesignSystem.slate500),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -1209,7 +1207,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 12),
                                     fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF334155),
+                                    color: AppDesignSystem.slate700,
                                     height: 1.35,
                                   ),
                                   maxLines: 2,
@@ -1226,10 +1224,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                           decoration: BoxDecoration(
-                            color: !tier.isServiceable ? const Color(0xFFFEF2F2) : const Color(0xFFF0FDF4),
+                            color: !tier.isServiceable ? AppDesignSystem.statusCancelled : AppDesignSystem.green50,
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                              color: !tier.isServiceable ? const Color(0xFFFECDD3) : const Color(0xFFBBF7D0),
+                              color: !tier.isServiceable ? AppDesignSystem.rose200 : AppDesignSystem.green200,
                               width: 1.1,
                             ),
                           ),
@@ -1238,7 +1236,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               Icon(
                                 !tier.isServiceable ? Icons.error_outline_rounded : Icons.delivery_dining_rounded,
                                 size: 16,
-                                color: !tier.isServiceable ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+                                color: !tier.isServiceable ? AppDesignSystem.red600 : AppDesignSystem.green600,
                               ),
                               const SizedBox(width: 7),
                               Expanded(
@@ -1249,7 +1247,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 11),
                                     fontWeight: FontWeight.w800,
-                                    color: !tier.isServiceable ? const Color(0xFFDC2626) : const Color(0xFF15803D),
+                                    color: !tier.isServiceable ? AppDesignSystem.red600 : AppDesignSystem.green700,
                                   ),
                                 ),
                               ),
@@ -1267,20 +1265,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFECFDF5),
+                        color: AppDesignSystem.statusDelivered,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFA7F3D0)),
+                        border: Border.all(color: AppDesignSystem.emerald200),
                       ),
                       child: Row(
                         children: [
-                          const Text('✨', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
+                          Text('✨', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
                           const SizedBox(width: 8),
                           Text(
                             '₹${totalSavings.toStringAsFixed(0)} saved! On this order',
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 12.5),
                               fontWeight: FontWeight.w800,
-                              color: const Color(0xFF065F46),
+                              color: AppDesignSystem.statusDeliveredText,
                             ),
                           ),
                         ],
@@ -1295,7 +1293,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+                      border: Border.all(color: AppDesignSystem.slate200, width: 1.2),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.02),
@@ -1314,13 +1312,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               padding: const EdgeInsets.all(5),
                               decoration: BoxDecoration(
                                 color: _customReceiverName != null
-                                    ? const Color(0xFFFEF3C7)
-                                    : const Color(0xFFEFF6FF),
+                                    ? AppDesignSystem.statusPending
+                                    : AppDesignSystem.blue50,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 _customReceiverName != null ? '🎁' : '👤',
-                                style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 13)),
+                                style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13)),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -1338,21 +1336,21 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFFF7ED),
+                                  color: AppDesignSystem.orange50,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0xFFFED7AA), width: 1),
+                                  border: Border.all(color: AppDesignSystem.orange300, width: 1),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.edit_outlined, size: 12, color: Color(0xFFEA580C)),
+                                    const Icon(Icons.edit_outlined, size: 12, color: AppDesignSystem.orange600),
                                     const SizedBox(width: 3),
                                     Text(
                                       'Edit',
                                       style: GoogleFonts.inter(
                                         fontSize: Responsive.scaledFontSize(context, 11),
                                         fontWeight: FontWeight.w800,
-                                        color: const Color(0xFFEA580C),
+                                        color: AppDesignSystem.orange600,
                                       ),
                                     ),
                                   ],
@@ -1381,7 +1379,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 12.5),
                                   fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF475569),
+                                  color: AppDesignSystem.slate600,
                                 ),
                               ),
                             ],
@@ -1393,7 +1391,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 10.5),
                             fontWeight: FontWeight.w500,
-                            color: const Color(0xFF94A3B8),
+                            color: AppDesignSystem.slate400,
                           ),
                         ),
                       ],
@@ -1427,10 +1425,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           ],
         ),
       ),
+      ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFF1F5F9), width: 1.2)),
+          border: Border(top: BorderSide(color: AppDesignSystem.slate200, width: 1.2)),
           boxShadow: [
             BoxShadow(
               color: Color(0x0A000000),
@@ -1521,7 +1520,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 width: double.infinity,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEA580C),
+                  color: AppDesignSystem.orange600,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Center(
@@ -1584,9 +1583,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             width: double.infinity,
                             height: 75,
                             fit: BoxFit.cover,
+                            memCacheWidth: 260,
+                            memCacheHeight: 150,
+                            maxWidthDiskCache: 400,
+                            maxHeightDiskCache: 225,
                             errorWidget: (_, __, ___) => Container(
-                              color: const Color(0xFFF1F5F9),
-                              child: const Icon(Icons.fastfood_rounded, color: Color(0xFF94A3B8)),
+                              color: AppDesignSystem.slate200,
+                              child: const Icon(Icons.fastfood_rounded, color: AppDesignSystem.slate400),
                             ),
                           ),
                         ),
@@ -1613,13 +1616,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFDCFCE7),
+                                  color: AppDesignSystem.green100,
                                   borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: const Color(0xFF86EFAC)),
+                                  border: Border.all(color: AppDesignSystem.emerald200),
                                 ),
                                 child: Text(
                                   '+ ADD',
-                                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w800, color: const Color(0xFF16A34A)),
+                                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w800, color: AppDesignSystem.green600),
                                 ),
                               ),
                             ),
@@ -1664,16 +1667,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 width: 68,
                 height: 68,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDCFCE7),
+                  color: AppDesignSystem.green100,
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF86EFAC), width: 2),
+                  border: Border.all(color: AppDesignSystem.emerald200, width: 2),
                 ),
                 child: const Center(
                   child: SizedBox(
                     width: 34,
                     height: 34,
                     child: CircularProgressIndicator(
-                      color: Color(0xFF16A34A),
+                      color: AppDesignSystem.green600,
                       strokeWidth: 3.5,
                     ),
                   ),
@@ -1685,7 +1688,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 18),
                   fontWeight: FontWeight.w900,
-                  color: const Color(0xFF0F172A),
+                  color: AppDesignSystem.slate900,
                   letterSpacing: -0.3,
                 ),
               ),
@@ -1696,7 +1699,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 12.5),
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFF64748B),
+                  color: AppDesignSystem.slate500,
                 ),
               ),
             ],
@@ -1738,7 +1741,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             children: [
               Row(
                 children: [
-                  const Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
+                  Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
                   const SizedBox(width: 6),
                   Text(
                     'Order Items Review',
@@ -1753,7 +1756,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
+                  color: AppDesignSystem.slate200,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -1774,16 +1777,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
+                color: AppDesignSystem.slate50,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: AppDesignSystem.slate300),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
+                      Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
                       const SizedBox(width: 5),
                       Text(
                         'Grocery & Daily Essentials',
@@ -1804,7 +1807,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       ),
                     ],
                   ),
-                  const Divider(height: 14, thickness: 0.8, color: Color(0xFFE2E8F0)),
+                  const Divider(height: 14, thickness: 0.8, color: AppDesignSystem.slate300),
                   ...groceryItems.map((item) => _buildReviewItemRow(item)),
                 ],
               ),
@@ -1820,23 +1823,23 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF7ED),
+                color: AppDesignSystem.orange50,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFFFEDD5)),
+                border: Border.all(color: AppDesignSystem.orange200),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Text('🥘', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
+                      Text('🥘', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
                       const SizedBox(width: 5),
                       Text(
                         outletName,
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFFEA580C),
+                          color: AppDesignSystem.orange600,
                         ),
                       ),
                       const Spacer(),
@@ -1845,12 +1848,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 9.5),
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFFEA580C),
+                          color: AppDesignSystem.orange600,
                         ),
                       ),
                     ],
                   ),
-                  const Divider(height: 14, thickness: 0.8, color: Color(0xFFFFEDD5)),
+                  const Divider(height: 14, thickness: 0.8, color: AppDesignSystem.orange200),
                   ...rItems.map((item) => _buildReviewItemRow(item)),
                 ],
               ),
@@ -1882,6 +1885,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       width: 28,
                       height: 28,
                       fit: BoxFit.cover,
+                      memCacheWidth: 56,
+                      memCacheHeight: 56,
+                      maxWidthDiskCache: 84,
+                      maxHeightDiskCache: 84,
                       errorWidget: (_, __, ___) => const Icon(Icons.shopping_bag_outlined, size: 16, color: Colors.grey),
                     ),
             ),
@@ -1937,7 +1944,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: slateBorder, width: 1.2),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 3)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 3)),
         ],
       ),
       child: Column(
@@ -1948,7 +1955,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             children: [
               Row(
                 children: [
-                  const Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
+                  Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
                   const SizedBox(width: 6),
                   Text(
                     'Order Items',
@@ -1959,7 +1966,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF1F2),
+                  color: AppDesignSystem.rose50,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -1981,7 +1988,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     width: 42,
                     height: 42,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
+                      color: AppDesignSystem.slate50,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: slateBorder),
                     ),
@@ -1999,6 +2006,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               : CachedNetworkImage(
                                   imageUrl: prod.imageUrl!,
                                   fit: BoxFit.cover,
+                                  memCacheWidth: 84,
+                                  memCacheHeight: 84,
+                                  maxWidthDiskCache: 125,
+                                  maxHeightDiskCache: 125,
                                   errorWidget: (_, __, ___) => const Center(
                                     child: Icon(Icons.shopping_bag_outlined, color: Colors.grey, size: 20),
                                   ),
@@ -2072,7 +2083,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFEE2E2),
+                      color: AppDesignSystem.statusCancelled,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(Icons.location_on_rounded, color: primaryRed, size: 16),
@@ -2099,20 +2110,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                    color: AppDesignSystem.slate50,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: AppDesignSystem.slate300),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.edit_location_alt_outlined, size: 13, color: Color(0xFF0F172A)),
+                      const Icon(Icons.edit_location_alt_outlined, size: 13, color: AppDesignSystem.slate900),
                       const SizedBox(width: 4),
                       Text(
                         'Change',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF0F172A),
+                          color: AppDesignSystem.slate900,
                         ),
                       ),
                     ],
@@ -2128,10 +2139,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(13),
             decoration: BoxDecoration(
-              color: isGpsActive ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
+              color: isGpsActive ? AppDesignSystem.green50 : AppDesignSystem.slate50,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: isGpsActive ? const Color(0xFF86EFAC) : const Color(0xFFE2E8F0),
+                color: isGpsActive ? AppDesignSystem.emerald200 : AppDesignSystem.slate300,
                 width: isGpsActive ? 1.4 : 1.0,
               ),
             ),
@@ -2141,16 +2152,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: isGpsActive ? const Color(0xFFDCFCE7) : Colors.white,
+                    color: isGpsActive ? AppDesignSystem.green100 : Colors.white,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isGpsActive ? const Color(0xFF86EFAC) : const Color(0xFFE2E8F0),
+                      color: isGpsActive ? AppDesignSystem.emerald200 : AppDesignSystem.slate300,
                     ),
                   ),
                   child: Icon(
                     isGpsActive ? Icons.my_location_rounded : (selectedAddress?.label.toLowerCase() == 'home' ? Icons.home_rounded : Icons.location_on_rounded),
                     size: 18,
-                    color: isGpsActive ? const Color(0xFF16A34A) : primaryRed,
+                    color: isGpsActive ? AppDesignSystem.green600 : primaryRed,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -2168,14 +2179,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 13.5),
                                 fontWeight: FontWeight.w900,
-                                color: isGpsActive ? const Color(0xFF14532D) : slateDark,
+                                color: isGpsActive ? AppDesignSystem.green900 : slateDark,
                               ),
                             ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                             decoration: BoxDecoration(
-                              color: isGpsActive ? const Color(0xFF16A34A) : const Color(0xFFE2E8F0),
+                              color: isGpsActive ? AppDesignSystem.green600 : AppDesignSystem.slate300,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -2198,7 +2209,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w500,
-                          color: isGpsActive ? const Color(0xFF15803D) : slateMuted,
+                          color: isGpsActive ? AppDesignSystem.green700 : slateMuted,
                           height: 1.35,
                         ),
                         maxLines: 3,
@@ -2222,10 +2233,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8.5),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFFF0FDF4), Color(0xFFDCFCE7)],
+                    colors: [AppDesignSystem.green50, AppDesignSystem.green100],
                   ),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF86EFAC)),
+                  border: Border.all(color: AppDesignSystem.emerald200),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -2234,7 +2245,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       const SizedBox(
                         width: 14,
                         height: 14,
-                        child: CircularProgressIndicator(color: Color(0xFF16A34A), strokeWidth: 2),
+                        child: CircularProgressIndicator(color: AppDesignSystem.green600, strokeWidth: 2),
                       ),
                       const SizedBox(width: 8),
                       Text(
@@ -2242,18 +2253,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF15803D),
+                          color: AppDesignSystem.green700,
                         ),
                       ),
                     ] else ...[
-                      const Icon(Icons.my_location_rounded, size: 15, color: Color(0xFF16A34A)),
+                      const Icon(Icons.my_location_rounded, size: 15, color: AppDesignSystem.green600),
                       const SizedBox(width: 6),
                       Text(
                         'Auto-Detect Current GPS Location (1-Tap)',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF15803D),
+                          color: AppDesignSystem.green700,
                         ),
                       ),
                     ],
@@ -2283,10 +2294,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       margin: const EdgeInsets.only(right: 6),
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: isItemActive ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
+                        color: isItemActive ? AppDesignSystem.green100 : AppDesignSystem.slate200,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: isItemActive ? const Color(0xFF16A34A) : const Color(0xFFE2E8F0),
+                          color: isItemActive ? AppDesignSystem.green600 : AppDesignSystem.slate300,
                         ),
                       ),
                       child: Row(
@@ -2295,7 +2306,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           Icon(
                             addr.label.toLowerCase() == 'home' ? Icons.home_rounded : Icons.location_city_rounded,
                             size: 12,
-                            color: isItemActive ? const Color(0xFF16A34A) : slateMuted,
+                            color: isItemActive ? AppDesignSystem.green600 : slateMuted,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -2303,7 +2314,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 11),
                               fontWeight: isItemActive ? FontWeight.w900 : FontWeight.w600,
-                              color: isItemActive ? const Color(0xFF14532D) : slateDark,
+                              color: isItemActive ? AppDesignSystem.green900 : slateDark,
                             ),
                           ),
                         ],
@@ -2355,10 +2366,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFECFDF5) : const Color(0xFFF8FAFC),
+          color: isSelected ? AppDesignSystem.statusDelivered : AppDesignSystem.slate50,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? const Color(0xFF10B981) : const Color(0xFFE2E8F0),
+            color: isSelected ? AppDesignSystem.success : AppDesignSystem.slate300,
             width: isSelected ? 1.2 : 0.8,
           ),
         ),
@@ -2367,7 +2378,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           style: GoogleFonts.inter(
             fontSize: Responsive.scaledFontSize(context, 10),
             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-            color: isSelected ? const Color(0xFF047857) : const Color(0xFF475569),
+            color: isSelected ? AppDesignSystem.emerald700 : AppDesignSystem.slate600,
           ),
         ),
       ),
@@ -2378,27 +2389,27 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0FDF4),
+        color: AppDesignSystem.green50,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFA7F3D0)),
+        border: Border.all(color: AppDesignSystem.emerald200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Text('🏬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18))),
+              Text('🏬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18))),
               const SizedBox(width: 8),
               Text(
                 'FastKirana Darkstore Pickup Counter',
-                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w900, color: const Color(0xFF065F46)),
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w900, color: AppDesignSystem.statusDeliveredText),
               ),
             ],
           ),
           const SizedBox(height: 4),
           Text(
             'Station Road Market, Ghatampur • Ready for pickup in minutes (₹0 fee)',
-            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: const Color(0xFF047857)),
+            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: AppDesignSystem.emerald700),
           ),
         ],
       ),
@@ -2414,7 +2425,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: slateBorder, width: 1.2),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 3)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 3)),
         ],
       ),
       child: Column(
@@ -2438,8 +2449,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             title: 'Cash on Delivery (COD)',
             subtitle: 'Pay cash or UPI upon delivery',
             badge: 'Default',
-            badgeColor: const Color(0xFF059669),
-            iconWidget: const Icon(Icons.payments_outlined, size: 18, color: Color(0xFF059669)),
+            badgeColor: AppDesignSystem.emerald600,
+            iconWidget: const Icon(Icons.payments_outlined, size: 18, color: AppDesignSystem.emerald600),
           ),
           const SizedBox(height: 10),
 
@@ -2449,8 +2460,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             title: 'Online Payment (Razorpay)',
             subtitle: 'UPI, Google Pay, PhonePe, Cards & NetBanking',
             badge: '⚡ Fast & Secure',
-            badgeColor: const Color(0xFF2563EB),
-            iconWidget: const Text('💳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
+            badgeColor: AppDesignSystem.blue700,
+            iconWidget: Text('💳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
           ),
         ],
       ),
@@ -2476,10 +2487,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFFF1F2) : const Color(0xFFF8FAFC),
+          color: isSelected ? AppDesignSystem.rose50 : AppDesignSystem.slate50,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? primaryRed : const Color(0xFFE2E8F0),
+            color: isSelected ? primaryRed : AppDesignSystem.slate300,
             width: isSelected ? 1.6 : 1.0,
           ),
         ),
@@ -2488,7 +2499,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.white : const Color(0xFFF1F5F9),
+                color: isSelected ? Colors.white : AppDesignSystem.slate200,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: iconWidget,
@@ -2506,7 +2517,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 13),
                             fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
-                            color: isSelected ? const Color(0xFF991B1B) : slateDark,
+                            color: isSelected ? AppDesignSystem.statusCancelledText : slateDark,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -2516,7 +2527,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                           decoration: BoxDecoration(
-                            color: badgeColor.withOpacity(0.12),
+                            color: badgeColor.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -2544,7 +2555,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? primaryRed : const Color(0xFFCBD5E1),
+                  color: isSelected ? primaryRed : AppDesignSystem.slate500,
                   width: isSelected ? 5.5 : 1.5,
                 ),
               ),
@@ -2569,7 +2580,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: slateBorder, width: 1.2),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 3)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 3)),
         ],
       ),
       child: Column(
@@ -2577,7 +2588,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         children: [
           Row(
             children: [
-              const Text('🧾', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
+              Text('🧾', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
               const SizedBox(width: 6),
               Text(
                 'Bill Summary',
@@ -2607,7 +2618,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           _buildBillRow('Handling & Taxes', '₹0', isFree: true),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 10),
-            child: Divider(height: 1, color: Color(0xFFF1F5F9)),
+            child: Divider(height: 1, color: AppDesignSystem.slate200),
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2637,7 +2648,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       children: [
         Text(
           label,
-          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w500, color: const Color(0xFF475569)),
+          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w500, color: AppDesignSystem.slate600),
         ),
         Text(
           value,
@@ -2645,7 +2656,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             fontSize: Responsive.scaledFontSize(context, 12.5),
             fontWeight: (isFree || isDiscount) ? FontWeight.w900 : FontWeight.w700,
             color: isFree
-                ? const Color(0xFF16A34A)
+                ? AppDesignSystem.green600
                 : (isDiscount ? primaryRed : slateDark),
           ),
         ),
@@ -2659,9 +2670,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+        border: Border.all(color: AppDesignSystem.slate200, width: 1.2),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -2672,10 +2683,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFECFDF5),
+                  color: AppDesignSystem.statusDelivered,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                child: Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
               ),
               const SizedBox(width: 8),
               Text(
@@ -2700,10 +2711,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               duration: const Duration(milliseconds: 150),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
               decoration: BoxDecoration(
-                color: _selectedPackaging == 'NORMAL' ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
+                color: _selectedPackaging == 'NORMAL' ? AppDesignSystem.green50 : AppDesignSystem.slate50,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: _selectedPackaging == 'NORMAL' ? const Color(0xFF00A344) : const Color(0xFFE2E8F0),
+                  color: _selectedPackaging == 'NORMAL' ? AppDesignSystem.green700 : AppDesignSystem.slate300,
                   width: _selectedPackaging == 'NORMAL' ? 1.4 : 1.0,
                 ),
               ),
@@ -2714,9 +2725,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     height: 18,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _selectedPackaging == 'NORMAL' ? const Color(0xFF00A344) : Colors.white,
+                      color: _selectedPackaging == 'NORMAL' ? AppDesignSystem.green700 : Colors.white,
                       border: Border.all(
-                        color: _selectedPackaging == 'NORMAL' ? const Color(0xFF00A344) : const Color(0xFFCBD5E1),
+                        color: _selectedPackaging == 'NORMAL' ? AppDesignSystem.green700 : AppDesignSystem.slate500,
                         width: 1.5,
                       ),
                     ),
@@ -2747,7 +2758,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFECFDF5),
+                      color: AppDesignSystem.statusDelivered,
                       borderRadius: BorderRadius.circular(5),
                     ),
                     child: Text(
@@ -2755,7 +2766,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 11),
                         fontWeight: FontWeight.w900,
-                        color: const Color(0xFF059669),
+                        color: AppDesignSystem.emerald600,
                       ),
                     ),
                   ),
@@ -2775,10 +2786,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               duration: const Duration(milliseconds: 150),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
               decoration: BoxDecoration(
-                color: _selectedPackaging == 'PREMIUM' ? const Color(0xFFFFFBEB) : const Color(0xFFF8FAFC),
+                color: _selectedPackaging == 'PREMIUM' ? AppDesignSystem.amber50 : AppDesignSystem.slate50,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: _selectedPackaging == 'PREMIUM' ? const Color(0xFFF59E0B) : const Color(0xFFE2E8F0),
+                  color: _selectedPackaging == 'PREMIUM' ? AppDesignSystem.warning : AppDesignSystem.slate300,
                   width: _selectedPackaging == 'PREMIUM' ? 1.4 : 1.0,
                 ),
               ),
@@ -2789,9 +2800,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     height: 18,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _selectedPackaging == 'PREMIUM' ? const Color(0xFFF59E0B) : Colors.white,
+                      color: _selectedPackaging == 'PREMIUM' ? AppDesignSystem.warning : Colors.white,
                       border: Border.all(
-                        color: _selectedPackaging == 'PREMIUM' ? const Color(0xFFF59E0B) : const Color(0xFFCBD5E1),
+                        color: _selectedPackaging == 'PREMIUM' ? AppDesignSystem.warning : AppDesignSystem.slate500,
                         width: 1.5,
                       ),
                     ),
@@ -2815,7 +2826,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               ),
                             ),
                             const SizedBox(width: 4),
-                            const Text('✨', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 11))),
+                            Text('✨', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 11))),
                           ],
                         ),
                         Text(
@@ -2828,7 +2839,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFEF3C7),
+                      color: AppDesignSystem.statusPending,
                       borderRadius: BorderRadius.circular(5),
                     ),
                     child: Text(
@@ -2836,7 +2847,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 11),
                         fontWeight: FontWeight.w900,
-                        color: const Color(0xFFD97706),
+                        color: AppDesignSystem.amber600,
                       ),
                     ),
                   ),
@@ -2853,13 +2864,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFECFDF5),
+        color: AppDesignSystem.statusDelivered,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFA7F3D0)),
+        border: Border.all(color: AppDesignSystem.emerald200),
       ),
       child: Row(
         children: [
-          const Icon(Icons.verified_user_rounded, color: Color(0xFF059669), size: 16),
+          const Icon(Icons.verified_user_rounded, color: AppDesignSystem.emerald600, size: 16),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -2867,7 +2878,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 11),
                 fontWeight: FontWeight.w800,
-                color: const Color(0xFF065F46),
+                color: AppDesignSystem.statusDeliveredText,
               ),
             ),
           ),
@@ -2917,14 +2928,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 height: 44,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFF00A344), Color(0xFF008736)],
+                    colors: [AppDesignSystem.green700, AppDesignSystem.accentDark],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF00A344).withValues(alpha: 0.3),
+                      color: AppDesignSystem.green700.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     ),
@@ -2988,7 +2999,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         width: 44,
                         height: 4.5,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE2E8F0),
+                          color: AppDesignSystem.slate300,
                           borderRadius: BorderRadius.circular(3),
                         ),
                       ),
@@ -3028,10 +3039,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(6),
                             decoration: const BoxDecoration(
-                              color: Color(0xFFF1F5F9),
+                              color: AppDesignSystem.slate200,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 18),
+                            child: const Icon(Icons.close_rounded, color: AppDesignSystem.slate500, size: 18),
                           ),
                         ),
                       ],
@@ -3049,16 +3060,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         duration: const Duration(milliseconds: 180),
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: _selectedPayment == 'cod' ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
+                          color: _selectedPayment == 'cod' ? AppDesignSystem.green50 : AppDesignSystem.slate50,
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(
-                            color: _selectedPayment == 'cod' ? const Color(0xFF00A344) : const Color(0xFFE2E8F0),
+                            color: _selectedPayment == 'cod' ? AppDesignSystem.green700 : AppDesignSystem.slate300,
                             width: _selectedPayment == 'cod' ? 1.8 : 1.1,
                           ),
                           boxShadow: _selectedPayment == 'cod'
                               ? [
                                   BoxShadow(
-                                    color: const Color(0xFF00A344).withValues(alpha: 0.08),
+                                    color: AppDesignSystem.green700.withValues(alpha: 0.08),
                                     blurRadius: 10,
                                     offset: const Offset(0, 3),
                                   ),
@@ -3070,10 +3081,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFDCFCE7),
+                                color: AppDesignSystem.green100,
                                 borderRadius: BorderRadius.circular(14),
                               ),
-                              child: const Text('💵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 20))),
+                              child: Text('💵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 20))),
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -3094,7 +3105,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFDCFCE7),
+                                          color: AppDesignSystem.green100,
                                           borderRadius: BorderRadius.circular(6),
                                         ),
                                         child: Text(
@@ -3102,7 +3113,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                           style: GoogleFonts.inter(
                                             fontSize: Responsive.scaledFontSize(context, 9),
                                             fontWeight: FontWeight.w900,
-                                            color: const Color(0xFF15803D),
+                                            color: AppDesignSystem.green700,
                                             letterSpacing: 0.2,
                                           ),
                                         ),
@@ -3122,9 +3133,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               height: 22,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: _selectedPayment == 'cod' ? const Color(0xFF00A344) : Colors.white,
+                                color: _selectedPayment == 'cod' ? AppDesignSystem.green700 : Colors.white,
                                 border: Border.all(
-                                  color: _selectedPayment == 'cod' ? const Color(0xFF00A344) : const Color(0xFFCBD5E1),
+                                  color: _selectedPayment == 'cod' ? AppDesignSystem.green700 : AppDesignSystem.slate500,
                                   width: 2,
                                 ),
                               ),
@@ -3149,16 +3160,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         duration: const Duration(milliseconds: 180),
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: _selectedPayment == 'online' ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
+                          color: _selectedPayment == 'online' ? AppDesignSystem.green50 : AppDesignSystem.slate50,
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(
-                            color: _selectedPayment == 'online' ? const Color(0xFF00A344) : const Color(0xFFE2E8F0),
+                            color: _selectedPayment == 'online' ? AppDesignSystem.green700 : AppDesignSystem.slate300,
                             width: _selectedPayment == 'online' ? 1.8 : 1.1,
                           ),
                           boxShadow: _selectedPayment == 'online'
                               ? [
                                   BoxShadow(
-                                    color: const Color(0xFF00A344).withValues(alpha: 0.08),
+                                    color: AppDesignSystem.green700.withValues(alpha: 0.08),
                                     blurRadius: 10,
                                     offset: const Offset(0, 3),
                                   ),
@@ -3170,10 +3181,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFEFF6FF),
+                                color: AppDesignSystem.blue50,
                                 borderRadius: BorderRadius.circular(14),
                               ),
-                              child: const Text('💳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 20))),
+                              child: Text('💳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 20))),
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -3194,16 +3205,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFECFDF5),
+                                          color: AppDesignSystem.statusDelivered,
                                           borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(color: const Color(0xFFA7F3D0)),
+                                          border: Border.all(color: AppDesignSystem.emerald200),
                                         ),
                                         child: Text(
                                           '⚡ INSTANT',
                                           style: GoogleFonts.inter(
                                             fontSize: Responsive.scaledFontSize(context, 9),
                                             fontWeight: FontWeight.w900,
-                                            color: const Color(0xFF065F46),
+                                            color: AppDesignSystem.statusDeliveredText,
                                             letterSpacing: 0.2,
                                           ),
                                         ),
@@ -3223,9 +3234,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               height: 22,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: _selectedPayment == 'online' ? const Color(0xFF00A344) : Colors.white,
+                                color: _selectedPayment == 'online' ? AppDesignSystem.green700 : Colors.white,
                                 border: Border.all(
-                                  color: _selectedPayment == 'online' ? const Color(0xFF00A344) : const Color(0xFFCBD5E1),
+                                  color: _selectedPayment == 'online' ? AppDesignSystem.green700 : AppDesignSystem.slate500,
                                   width: 2,
                                 ),
                               ),
@@ -3243,14 +3254,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7.5),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
+                        color: AppDesignSystem.slate50,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFF1F5F9)),
+                        border: Border.all(color: AppDesignSystem.slate200),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.verified_user_outlined, size: 14, color: Color(0xFF10B981)),
+                          const Icon(Icons.verified_user_outlined, size: 14, color: AppDesignSystem.success),
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
@@ -3258,7 +3269,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 11),
                                 fontWeight: FontWeight.w700,
-                                color: const Color(0xFF475569),
+                                color: AppDesignSystem.slate600,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -3274,7 +3285,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       height: 52,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00A344),
+                          backgroundColor: AppDesignSystem.green700,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           elevation: 2,
                         ),

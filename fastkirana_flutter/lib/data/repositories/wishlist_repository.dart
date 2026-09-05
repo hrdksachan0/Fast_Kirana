@@ -1,3 +1,4 @@
+import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'package:dio/dio.dart';
 import '../models/product.dart';
 import '../../core/network/api_client.dart';
@@ -17,7 +18,7 @@ class WishlistRepository {
             .map((item) => Product.fromJson(item['product'] as Map<String, dynamic>))
             .toList();
       }
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('WishlistRepository: silent catch', e); }
     return [];
   }
 

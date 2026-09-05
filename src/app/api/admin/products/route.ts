@@ -110,11 +110,11 @@ export async function GET(request: Request) {
       isFlashDeal: p.isFlashDeal,
       isTopPick: p.isTopPick,
       isBestSeller: p.isBestSeller,
-      category: {
+      category: p.category ? {
         id: p.category.id,
         name: p.category.name,
         slug: p.category.slug,
-      },
+      } : null,
     }))
 
     return NextResponse.json({ products, total, page, limit })

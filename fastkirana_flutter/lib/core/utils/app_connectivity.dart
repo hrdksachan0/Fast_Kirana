@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 class AppConnectivityObserver extends ChangeNotifier {
   final Connectivity _connectivity = Connectivity();
-  StreamSubscription<ConnectivityResult>? _subscription;
+  StreamSubscription<List<ConnectivityResult>>? _subscription;
   bool _isOnline = true;
   bool get isOnline => _isOnline;
 
@@ -15,17 +16,21 @@ class AppConnectivityObserver extends ChangeNotifier {
   void _init() {
     _checkConnection();
     _subscription = _connectivity.onConnectivityChanged.listen(
-      (result) => _checkConnection(),
+      (results) => _updateFromResults(results),
     );
   }
 
-  Future<void> _checkConnection() async {
-    final result = await _connectivity.checkConnectivity();
+  void _updateFromResults(List<ConnectivityResult> results) {
     final wasOnline = _isOnline;
-    _isOnline = result.any((c) => c != ConnectivityResult.none);
+    _isOnline = results.any((c) => c != ConnectivityResult.none);
     if (wasOnline != _isOnline) {
       notifyListeners();
     }
+  }
+
+  Future<void> _checkConnection() async {
+    final results = await _connectivity.checkConnectivity();
+    _updateFromResults(results);
   }
 
   @override

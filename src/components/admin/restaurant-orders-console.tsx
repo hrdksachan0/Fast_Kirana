@@ -158,7 +158,12 @@ const statCardVariants = {
   }
 } as const
 
-export function RestaurantOrdersConsole() {
+export interface RestaurantOrdersConsoleProps {
+  restaurantId?: string
+  restaurant?: any
+}
+
+export function RestaurantOrdersConsole({ restaurantId, restaurant }: RestaurantOrdersConsoleProps = {}) {
   const { data: session, status } = useSession()
   const router = useRouter()
   
@@ -355,7 +360,8 @@ export function RestaurantOrdersConsole() {
     else setIsRefreshing(true)
     
     try {
-      const res = await fetch(`/api/picker/orders?type=restaurant&t=${Date.now()}`, { cache: 'no-store' })
+      const restParam = restaurantId ? `&restaurantId=${encodeURIComponent(restaurantId)}` : ''
+      const res = await fetch(`/api/picker/orders?type=restaurant${restParam}&t=${Date.now()}`, { cache: 'no-store' })
       if (res.ok) {
         const data = await res.json()
         setOrders(data)
@@ -396,14 +402,16 @@ export function RestaurantOrdersConsole() {
     
     let updateTimeout: NodeJS.Timeout | null = null
     
+    const channelName = restaurantId ? `restaurant-orders-${restaurantId}` : 'restaurant-orders-live'
     const channel = supabase
-      .channel('restaurant-orders-live')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'orders',
+          ...(restaurantId ? { filter: `restaurantId=eq.${restaurantId}` } : {})
         },
         (payload) => {
           if (payload.eventType === 'UPDATE') {
@@ -455,10 +463,13 @@ export function RestaurantOrdersConsole() {
         async (payload) => {
           const { orderId } = payload.payload || {}
           if (orderId) {
-            let orderToPrint = ordersRef.current.find((o) => o.id === orderId || o.readableId === orderId)
+            const cleanId = String(orderId).trim().replace(/^#/, '')
+            const now = Date.now()
+            
+            let orderToPrint = ordersRef.current.find((o) => o.id === orderId || o.readableId === orderId || o.id === cleanId)
             if (!orderToPrint) {
               try {
-                const res = await fetch(`/api/orders/${orderId}`)
+                const res = await fetch(`/api/orders/${cleanId}`)
                 if (res.ok) {
                   const data = await res.json()
                   orderToPrint = data.order || data
@@ -467,15 +478,34 @@ export function RestaurantOrdersConsole() {
                 console.error('Failed to fetch remote order for KOT print:', e)
               }
             }
+
+            const combinedKey = (orderToPrint as any)?.combinedId ? String((orderToPrint as any).combinedId).trim() : null
+            const baseReadableKey = String((orderToPrint as any)?.readableId || cleanId).replace(/-[GR\d]+$/i, '')
+            
+            // Client-side 10-second deduplication guard (checks cleanId, combinedId, and baseReadableId)
+            const lastPrinted = (window as any).__lastKOTPrintTimestamps?.[cleanId] ||
+              (combinedKey ? (window as any).__lastKOTPrintTimestamps?.[combinedKey] : null) ||
+              (baseReadableKey ? (window as any).__lastKOTPrintTimestamps?.[baseReadableKey] : null)
+
+            if (lastPrinted && (now - lastPrinted) < 10000) {
+              console.warn(`[Kitchen KOT Channel] 🛡️ Ignored duplicate reprint broadcast for #${cleanId} (${Math.round((10000 - (now - lastPrinted))/1000)}s cooldown active)`)
+              return
+            }
+            if (!(window as any).__lastKOTPrintTimestamps) {
+              (window as any).__lastKOTPrintTimestamps = {}
+            }
+            (window as any).__lastKOTPrintTimestamps[cleanId] = now
+            if (combinedKey) (window as any).__lastKOTPrintTimestamps[combinedKey] = now
+            if (baseReadableKey) (window as any).__lastKOTPrintTimestamps[baseReadableKey] = now
             if (orderToPrint) {
-              console.log('Received remote reprint request for Order ID:', orderId)
+              console.log('Received remote reprint request for Order ID:', cleanId)
               // Play alert so kitchen staff notices the KOT
               if (soundEnabledRef.current && !audioContextBlockedRef.current) {
                 playKitchenAlarmChime()
               }
               triggerHaptic()
               printKOTReceiptRef.current?.(orderToPrint)
-              toast.info(`🖨️ KOT #${orderToPrint.readableId || orderId.slice(0, 8)} printed!`)
+              toast.info(`🖨️ KOT #${orderToPrint.readableId || cleanId.slice(0, 8)} printed!`)
             }
           }
         }
@@ -865,7 +895,7 @@ export function RestaurantOrdersConsole() {
   }
 
   const printKOTReceipt = (order: Order) => {
-    silentPrintKOT(order, 'RESTAURANT')
+    silentPrintKOT(order, restaurant?.name || 'RESTAURANT')
   }
 
   printKOTReceiptRef.current = printKOTReceipt
@@ -1087,6 +1117,46 @@ export function RestaurantOrdersConsole() {
 
   return (
     <div className="space-y-6">
+      {/* Dedicated Restaurant Branding Header */}
+      {restaurant && (
+        <div className="bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 rounded-3xl p-4 sm:p-5 text-white shadow-md">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3.5">
+              {restaurant.logoUrl ? (
+                <img src={restaurant.logoUrl} alt={restaurant.name} className="w-12 h-12 rounded-2xl object-cover border-2 border-white/40 shadow-sm bg-white shrink-0" />
+              ) : (
+                <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center font-black text-xl border border-white/30 shrink-0">
+                  {restaurant.name?.charAt(0) || '🍽️'}
+                </div>
+              )}
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-base sm:text-lg font-black tracking-tight">{restaurant.name}</h2>
+                  {restaurant.isPureVeg && (
+                    <span className="text-[10px] font-black bg-emerald-500 text-white px-2 py-0.5 rounded-full border border-emerald-400/40">
+                      🟢 PURE VEG
+                    </span>
+                  )}
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                    restaurant.isOpen ? 'bg-white/25 text-white border border-white/30' : 'bg-red-950/80 text-red-200'
+                  }`}>
+                    {restaurant.isOpen ? '● LIVE / ACCEPTING' : '○ CLOSED'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-white/85 font-medium mt-0.5 truncate max-w-md">
+                  {restaurant.address || 'Ghatampur Market'} • {restaurant.ownerPhone || restaurant.phone || 'Verified Outlet'}
+                </p>
+              </div>
+            </div>
+            <div className="text-left sm:text-right shrink-0">
+              <span className="text-[10px] font-black uppercase tracking-wider bg-black/20 px-3 py-1.5 rounded-xl border border-white/20">
+                Outlet ID: {restaurant.id ? `${restaurant.id.slice(0, 14)}...` : 'Assigned'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Browser Autoplay Sound Unblock Notice Banner */}
       {audioContextBlocked && soundEnabled && (
         <button

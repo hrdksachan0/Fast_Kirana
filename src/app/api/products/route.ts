@@ -566,24 +566,9 @@ export async function POST(request: NextRequest) {
       : (typeof tags === 'string' ? tags.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0) : [])
 
     // ── Restaurant product hardening ──
-    // When restaurantId is present, ALWAYS force restaurant category, tags, and unlimited stock
+    // When restaurantId is present, restaurant dishes do NOT require umbrella category (categoryId is null)
     if (restaurantId) {
-      let restCat = await prisma.category.findFirst({
-        where: {
-          OR: [
-            { slug: 'restaurant-food' },
-            { slug: 'restaurant' },
-            { name: { contains: 'Fast Food', mode: 'insensitive' } },
-            { name: { contains: 'Restaurant', mode: 'insensitive' } }
-          ]
-        }
-      })
-      if (!restCat) {
-        restCat = await prisma.category.create({
-          data: { name: 'Fast Food & Restaurant Kitchen', slug: 'restaurant-food', imageUrl: '🍽️', sortOrder: 99 }
-        })
-      }
-      finalCategoryId = restCat.id
+      finalCategoryId = null
 
       // Ensure 'restaurant' tag is present
       if (!tagsList.map(t => t.toLowerCase()).includes('restaurant')) {
@@ -592,14 +577,14 @@ export async function POST(request: NextRequest) {
       // Remove 'cafe' tag to prevent cross-contamination
       tagsList = tagsList.filter(t => t.toLowerCase() !== 'cafe')
     } else if (!finalCategoryId || finalCategoryId === '') {
-      // No category specified — use first available category as fallback
+      // For grocery products, category is required — use first available category as fallback
       const firstCat = await prisma.category.findFirst()
       if (firstCat) {
         finalCategoryId = firstCat.id
       }
     }
 
-    if (!name || !finalCategoryId || mrp === undefined || price === undefined) {
+    if (!name || (!restaurantId && !finalCategoryId) || mrp === undefined || price === undefined) {
       return NextResponse.json({ error: 'Missing required fields (name, categoryId, price, mrp)' }, { status: 400 })
     }
 

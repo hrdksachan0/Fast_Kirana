@@ -150,44 +150,14 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     return products.some((p: any) => p.tags?.some((t: string) => t.toLowerCase() === 'non-veg' || t.toLowerCase() === 'nonveg'))
   }, [restaurant.isPureVeg, products])
 
-  // Determine menu sections based on restaurant type
-  const getDefaultSections = () => {
-    return isCafe ? DEFAULT_CAFE_MENU_SECTIONS : DEFAULT_RESTAURANT_MENU_SECTIONS
-  }
-
-  // Generate categories from products and menu sections
+  // Generate categories from products and menu sections (strictly restaurant-defined)
   const categories = useMemo(() => {
-    let sections = restaurant.menuSections
+    let sections: any[] = restaurant.menuSections
       ? (typeof restaurant.menuSections === 'string' ? JSON.parse(restaurant.menuSections) : restaurant.menuSections)
-      : getDefaultSections()
+      : []
 
     // Filter out disabled sections
-    sections = sections.filter((s: any) => !s.disabled)
-
-    // Ensure Chilled Drinks and Desserts sections exist
-    const hasDrinks = sections.some((s: any) => ['chilled', 'beverages', 'shakes-beverages', 'sec_chilled_drinks'].includes(s.tag || s.id))
-    if (!hasDrinks) {
-      sections.push({
-        id: 'sec_chilled_drinks',
-        tag: 'chilled',
-        title: 'Cold Drinks & Beverages',
-        emoji: '🥤',
-        matchTags: ['chilled', 'cold-drink', 'beverages', 'beverage', 'drinks', 'soda'],
-        description: 'Chilled soft drinks and coolers'
-      })
-    }
-
-    const hasDesserts = sections.some((s: any) => ['desserts', 'ice-cream', 'sec_ice_creams'].includes(s.tag || s.id))
-    if (!hasDesserts) {
-      sections.push({
-        id: 'sec_ice_creams',
-        tag: 'desserts',
-        title: 'Ice Creams & Desserts',
-        emoji: '🍦',
-        matchTags: ['desserts', 'ice-cream', 'ice cream', 'kulfi', 'sweet'],
-        description: 'Chilled premium ice creams and desserts'
-      })
-    }
+    sections = Array.isArray(sections) ? sections.filter((s: any) => !s.disabled) : []
 
     // Filter products — attach restaurant info
     let filteredProducts = products.map((p: any) => ({

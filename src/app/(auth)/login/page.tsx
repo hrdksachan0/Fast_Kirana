@@ -13,10 +13,9 @@ import { getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 const getRoleRedirect = (role: string, email: string, callbackUrl: string) => {
   const cleanEmail = (email || '').toLowerCase().trim()
   
-  if (role === 'ADMIN' || cleanEmail.startsWith('admin')) return '/admin'
-  if (cleanEmail.startsWith('restaurant')) return '/restaurant-kitchen'
+  if (role === 'ADMIN' || cleanEmail.startsWith('admin') || cleanEmail.startsWith('superadmin')) return '/admin'
+  if (cleanEmail.startsWith('restaurant') || role === 'RESTAURANT_OWNER') return '/restaurant-kitchen'
   if (role === 'CHEF' || cleanEmail.startsWith('chef')) return '/cafe-kitchen'
-  if (role === 'RESTAURANT_OWNER') return '/restaurant-kitchen'
   if (role === 'PICKER' || cleanEmail.startsWith('picker')) return '/picker'
   if (role === 'DELIVERY' || cleanEmail.startsWith('delivery')) return '/delivery'
   
@@ -89,8 +88,10 @@ function LoginForm() {
       if (!isPhoneNumber(trimmed)) return 'Please enter a valid 10-digit mobile number'
       return null
     } else {
-      if (!trimmed) return 'Email is required'
-      if (!/\S+@\S+\.\S+/.test(trimmed)) return 'Please enter a valid email address'
+      if (!trimmed) return 'Email or 10-digit mobile number is required'
+      if (!isPhoneNumber(trimmed) && !/\S+@\S+\.\S+/.test(trimmed)) {
+        return 'Please enter a valid email address or 10-digit mobile number'
+      }
       return null
     }
   }
@@ -134,7 +135,8 @@ function LoginForm() {
     setErrors({})
     setIsLoading(true)
 
-    const normalizedInput = loginType === 'WHATSAPP' ? normalizePhoneNumber(email) : email.toLowerCase().trim()
+    const isInputPhone = isPhoneNumber(email)
+    const normalizedInput = isInputPhone ? normalizePhoneNumber(email) : email.toLowerCase().trim()
 
     try {
       const res = await fetch('/api/auth/email/check', {
@@ -145,7 +147,7 @@ function LoginForm() {
 
       const json = await res.json()
 
-      const isStaffFormat = /^(admin|chef|restaurant|picker|delivery)/i.test(normalizedInput)
+      const isStaffFormat = /^(admin|superadmin|chef|restaurant|picker|delivery)/i.test(normalizedInput)
       const data = json.data || json
       const isWorkerUser = data.isWorker || (data.role && data.role !== 'USER') || isStaffFormat
 
@@ -163,25 +165,26 @@ function LoginForm() {
 
       // Store role info from response
       setIsWorker(isWorkerUser)
-      setHasPassword(data.hasPassword ?? isWorkerUser)
+      setHasPassword(Boolean(data.hasPassword))
       setNeedsProfileSetup(data.needsProfileSetup ?? false)
       setUserRole(data.role ?? '')
 
       let finalEmail = normalizedInput
-      if (data.email && loginType !== 'WHATSAPP') {
+      if (data.email && loginType !== 'WHATSAPP' && !isInputPhone) {
         finalEmail = data.email
         setEmail(data.email)
-      } else if (loginType === 'WHATSAPP') {
+      } else if (loginType === 'WHATSAPP' || isInputPhone) {
         const phoneDigits = getLast10Digits(normalizedInput)
-        finalEmail = `wa-${phoneDigits}@fastkirana.com`
-        setPhone(`+91${phoneDigits}`)
+        finalEmail = data.email || `wa-${phoneDigits}@fastkirana.com`
+        setEmail(finalEmail)
+        setPhone(data.phone || `+91${phoneDigits}`)
       }
 
-      if (isWorkerUser) {
-        // Staff/Admin/Chef → password step directly
+      if (isWorkerUser && data.hasPassword) {
+        // Staff/Admin/Chef who has a password set → password step directly
         setStep('PASSWORD')
       } else {
-        // Normal customer (Email or WhatsApp) → always send OTP
+        // Normal customer OR Staff/Admin without a password → send OTP
         await sendOtp(finalEmail)
       }
     } catch {
@@ -523,7 +526,7 @@ function LoginForm() {
 
             <div className="space-y-1.5">
               <Label htmlFor="email" className="font-bold text-xs text-text-secondary">
-                {loginType === 'WHATSAPP' ? 'WhatsApp Mobile Number' : 'Email Address'}
+                {loginType === 'WHATSAPP' ? 'WhatsApp Mobile Number' : 'Email Address or 10-digit Mobile Number'}
               </Label>
               <div className="relative group">
                 {loginType === 'WHATSAPP' ? (
@@ -533,8 +536,8 @@ function LoginForm() {
                 )}
                 <Input
                   id="email"
-                  type={loginType === 'WHATSAPP' ? 'text' : 'email'}
-                  placeholder={loginType === 'WHATSAPP' ? 'Enter 10-digit WhatsApp number' : 'name@example.com'}
+                  type="text"
+                  placeholder={loginType === 'WHATSAPP' ? 'Enter 10-digit WhatsApp number' : 'admin@fastkirana.com or 10-digit mobile'}
                   value={email}
                   onChange={(e) => {
                     let val = e.target.value
@@ -668,13 +671,27 @@ function LoginForm() {
             </Button>
 
             <div className="flex flex-col gap-2.5 mt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={async () => {
+                  setIsLoading(true)
+                  await sendOtp(email)
+                  setIsLoading(false)
+                }}
+                className="w-full h-11 border-dashed border-primary/40 text-primary hover:bg-primary/5 text-xs font-bold rounded-xl flex items-center justify-center gap-2"
+                disabled={isLoading}
+              >
+                <Phone className="h-4 w-4" />
+                Login with WhatsApp / SMS OTP instead
+              </Button>
               <button
                 type="button"
                 onClick={goBackToEmail}
-                className="text-xs font-bold text-text-muted hover:underline cursor-pointer text-center"
+                className="text-xs font-bold text-text-muted hover:underline cursor-pointer text-center mt-1"
                 disabled={isLoading}
               >
-                Use another email address
+                Use another mobile or email address
               </button>
             </div>
           </form>
@@ -735,14 +752,27 @@ function LoginForm() {
               </Button>
             </div>
 
-            <button
-              type="button"
-              onClick={handleResendOtp}
-              className="w-full text-xs font-black text-accent dark:text-emerald-400 hover:underline cursor-pointer text-center mt-1"
-              disabled={isLoading}
-            >
-              Resend OTP code
-            </button>
+            <div className="flex flex-col gap-2 mt-2">
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                className="w-full text-xs font-black text-accent dark:text-emerald-400 hover:underline cursor-pointer text-center"
+                disabled={isLoading}
+              >
+                Resend OTP code
+              </button>
+              {hasPassword && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setStep('PASSWORD')}
+                  className="w-full h-10 border-dashed border-zinc-400/60 text-zinc-700 dark:text-zinc-300 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5"
+                >
+                  <KeyRound className="h-3.5 w-3.5" />
+                  Login with Password instead
+                </Button>
+              )}
+            </div>
           </form>
         )}
 

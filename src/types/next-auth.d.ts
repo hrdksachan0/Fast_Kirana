@@ -6,6 +6,7 @@ declare module 'next-auth' {
     role?: 'USER' | 'PICKER' | 'CHEF' | 'RESTAURANT_OWNER' | 'DELIVERY' | 'ADMIN'
     phone?: string | null
     assignedRestaurantId?: string | null
+    assignedStoreId?: string | null
   }
 
   interface Session {
@@ -14,6 +15,7 @@ declare module 'next-auth' {
       role?: 'USER' | 'PICKER' | 'CHEF' | 'RESTAURANT_OWNER' | 'DELIVERY' | 'ADMIN'
       phone?: string | null
       assignedRestaurantId?: string | null
+      assignedStoreId?: string | null
     } & DefaultSession['user']
   }
 }
@@ -24,5 +26,6 @@ declare module 'next-auth/jwt' {
     role?: 'USER' | 'PICKER' | 'CHEF' | 'RESTAURANT_OWNER' | 'DELIVERY' | 'ADMIN'
     phone?: string | null
     assignedRestaurantId?: string | null
+    assignedStoreId?: string | null
   }
 }

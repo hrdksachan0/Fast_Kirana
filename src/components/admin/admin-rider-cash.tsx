@@ -36,6 +36,8 @@ interface RiderCashInfo {
   todayCodOrdersCount: number
   todayCodTotal: number
   todayDepositedTotal: number
+  assignedStoreId?: string | null
+  storeName?: string | null
 }
 
 interface SummaryInfo {
@@ -324,7 +326,12 @@ export function AdminRiderCash() {
                             {r.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-bold text-text-primary">{r.name}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-bold text-text-primary">{r.name}</p>
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-primary/10 text-primary border border-primary/20">
+                                🏢 {r.storeName || 'Ghatampur Hub'}
+                              </span>
+                            </div>
                             <p className="text-[10px] text-text-muted flex items-center gap-1">
                               <Phone className="h-3 w-3" /> {r.phone}
                             </p>

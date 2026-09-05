@@ -1,3 +1,4 @@
+import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,6 +20,7 @@ class SecureStorage {
 
   // ─── In-memory auth cache (avoids repeated I/O on every API call) ───
   static String? _cachedToken;
+  static String? _cachedRefreshToken;
   static String? _cachedUserId;
   static String? _cachedUserPhone;
   static String? _cachedUserEmail;
@@ -36,6 +38,7 @@ class SecureStorage {
     if (_isCacheLoaded) return;
     try {
       _cachedToken = await read('auth_token');
+      _cachedRefreshToken = await read('refresh_token');
       _cachedUserId = await read('user_id');
       _cachedUserPhone = await read('user_phone');
       _cachedUserEmail = await read('user_email');
@@ -50,18 +53,19 @@ class SecureStorage {
               (k, v) => MapEntry(k, v.toString()),
             ),
           );
-        } catch (_) {
+        } catch (e) { LoggerService.error('SecureStorageService: silent catch', e);
           _cachedUserData = null;
         }
       }
 
       _isCacheLoaded = true;
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('SecureStorageService: silent catch', e); }
   }
 
   /// Invalidate the cache. Call on logout or when user data changes.
   static void invalidateCache() {
     _cachedToken = null;
+    _cachedRefreshToken = null;
     _cachedUserId = null;
     _cachedUserPhone = null;
     _cachedUserEmail = null;
@@ -71,8 +75,21 @@ class SecureStorage {
     _isCacheLoaded = false;
   }
 
+  /// Quick update for new auth token in memory & storage
+  static Future<void> saveAuthToken(String token) async {
+    _cachedToken = token;
+    await write('auth_token', token);
+  }
+
+  /// Quick update for refresh token in memory & storage
+  static Future<void> saveRefreshToken(String token) async {
+    _cachedRefreshToken = token;
+    await write('refresh_token', token);
+  }
+
   // ─── Synchronous cache reads (used by the auth interceptor) ───
   static String? get cachedToken => _cachedToken;
+  static String? get cachedRefreshToken => _cachedRefreshToken;
   static String? get cachedUserId => _cachedUserId;
   static String? get cachedUserPhone => _cachedUserPhone;
   static String? get cachedUserEmail => _cachedUserEmail;
@@ -106,11 +123,11 @@ class SecureStorage {
           return legacy;
         }
       }
-    } catch (_) {
+    } catch (e) { LoggerService.error('SecureStorageService: silent catch', e);
       try {
         final prefs = await SharedPreferences.getInstance();
         return prefs.getString(key);
-      } catch (_) {}
+      } catch (e, _) { LoggerService.error('SecureStorageService: silent catch', e); }
     }
     return null;
   }
@@ -118,28 +135,28 @@ class SecureStorage {
   static Future<void> write(String key, String value) async {
     try {
       await _storage.write(key: key, value: value);
-    } catch (_) {
+    } catch (e) { LoggerService.error('SecureStorageService: silent catch', e);
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(key, value);
-      } catch (_) {}
+      } catch (e, _) { LoggerService.error('SecureStorageService: silent catch', e); }
     }
   }
 
   static Future<void> delete(String key) async {
     try {
       await _storage.delete(key: key);
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('SecureStorageService: silent catch', e); }
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(key);
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('SecureStorageService: silent catch', e); }
   }
 
   static Future<void> deleteAll() async {
     try {
       await _storage.deleteAll();
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('SecureStorageService: silent catch', e); }
   }
 
   static Future<Map<String, String>> readMany(Iterable<String> keys) async {

@@ -70,7 +70,6 @@ export async function GET(request: NextRequest) {
           isActive: true,
           surgeCharge: 0.0,
           groceryOpen: true,
-          cafeOpen: true,
           deliveryPolygon: null,
           createdAt: new Date(),
           updatedAt: new Date()

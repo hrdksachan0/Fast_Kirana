@@ -29,15 +29,26 @@ class KotPrintService {
     bool success = false;
     var cleanId = orderId.trim();
     if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
+    final cleanReadable = (readableId ?? '').replaceAll('#', '').trim();
+    final baseReadable = cleanReadable.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
 
-    // Multi-click cooldown guard (5 seconds)
+    // Multi-click cooldown guard (10 seconds)
     final now = DateTime.now();
-    final lastTime = _recentPrintTimestamps[cleanId];
-    if (lastTime != null && now.difference(lastTime).inSeconds < 5) {
-      debugPrint('[KotPrintService] ⚠️ Multi-tap ignored for #$cleanId (cooldown active)');
+    final lastTimeId = _recentPrintTimestamps[cleanId];
+    final lastTimeReadable = cleanReadable.isNotEmpty ? _recentPrintTimestamps[cleanReadable] : null;
+    final lastTimeBase = baseReadable.isNotEmpty ? _recentPrintTimestamps[baseReadable] : null;
+
+    final lastTime = (lastTimeId != null || lastTimeReadable != null || lastTimeBase != null)
+        ? [lastTimeId, lastTimeReadable, lastTimeBase].whereType<DateTime>().reduce((a, b) => a.isAfter(b) ? a : b)
+        : null;
+
+    if (lastTime != null && now.difference(lastTime).inSeconds < 10) {
+      debugPrint('[KotPrintService] ⚠️ Multi-tap ignored for #$cleanReadable / #$cleanId (cooldown active)');
       return true;
     }
     _recentPrintTimestamps[cleanId] = now;
+    if (cleanReadable.isNotEmpty) _recentPrintTimestamps[cleanReadable] = now;
+    if (baseReadable.isNotEmpty) _recentPrintTimestamps[baseReadable] = now;
 
     final payload = {
       'orderId': cleanId,
@@ -187,7 +198,7 @@ class KotPrintService {
         final filteredRestItems = allItems.where((it) {
           if (it is! Map) return false;
           final name = (it['name'] ?? (it['product'] is Map ? it['product']['name'] : '')).toString().toLowerCase();
-          if (cookedFoodWhitelists.some((cw) => name.contains(cw))) return true;
+          if (cookedFoodWhitelists.any((cw) => name.contains(cw))) return true;
           final isGroceryStaple = pureGroceryOnlyKeywords.any((k) => name.contains(k));
           return !isGroceryStaple;
         }).toList();

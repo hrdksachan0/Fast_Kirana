@@ -48,65 +48,73 @@ class PrivacyPolicyScreen extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            _buildSection('1. Information We Collect'),
+            _buildSection(context, '1. Information We Collect'),
             _buildParagraph(
+              context,
               'We collect information you provide directly to us, such as when you create an account, '
               'place an order, or contact support. This includes:',
             ),
-            _bullet('Name, phone number, and email address'),
-            _bullet('Delivery address and location data'),
-            _bullet('Order history and payment information'),
-            _bullet('Device information and app usage data'),
+            _bullet(context, 'Name, phone number, and email address'),
+            _bullet(context, 'Delivery address and location data'),
+            _bullet(context, 'Order history and payment information'),
+            _bullet(context, 'Device information and app usage data'),
 
             const SizedBox(height: 16),
-            _buildSection('2. How We Use Your Information'),
+            _buildSection(context, '2. How We Use Your Information'),
             _buildParagraph(
+              context,
               'We use the information we collect to process orders, improve our services, '
               'send order updates and notifications, provide customer support, and ensure the security of our platform.',
             ),
 
             const SizedBox(height: 16),
-            _buildSection('3. Location Data'),
+            _buildSection(context, '3. Location Data'),
             _buildParagraph(
+              context,
               'FastKirana requires location access to provide delivery services. '
               'Your location is used only to calculate delivery fees, find nearby products, '
               'and assign delivery partners. We do not store your location data beyond what is necessary for active orders.',
             ),
 
             const SizedBox(height: 16),
-            _buildSection('4. Data Sharing'),
+            _buildSection(context, '4. Data Sharing'),
             _buildParagraph(
+              context,
               'We share your data only with:',
             ),
-            _bullet('Delivery partners (name, phone, address for delivery)'),
-            _bullet('Payment processors (for transaction processing)'),
-            _bullet('Cloud service providers (for app hosting and notifications)'),
-            _buildParagraph('We never sell your personal data to third parties.'),
+            _bullet(context, 'Delivery partners (name, phone, address for delivery)'),
+            _bullet(context, 'Payment processors (for transaction processing)'),
+            _bullet(context, 'Cloud service providers (for app hosting and notifications)'),
+            _buildParagraph(context, 'We never sell your personal data to third parties.'),
 
             const SizedBox(height: 16),
-            _buildSection('5. Notifications'),
+            _buildSection(context, '5. Notifications'),
             _buildParagraph(
+              context,
               'We use Firebase Cloud Messaging (FCM) to send order updates, delivery alerts, '
               'and promotional offers. You can manage notification preferences in the app Settings.',
             ),
 
             const SizedBox(height: 16),
-            _buildSection('6. Data Security'),
+            _buildSection(context, '6. Data Security'),
             _buildParagraph(
+              context,
               'We implement industry-standard security measures to protect your personal information. '
               'All data is transmitted over encrypted connections (HTTPS).',
             ),
 
             const SizedBox(height: 16),
-            _buildSection('7. Your Rights'),
+            _buildSection(context, '7. Your Rights'),
             _buildParagraph(
+              context,
               'You have the right to access, correct, or delete your personal data. '
               'Contact us at $_supportEmail or $_supportPhone for any data-related requests.',
             ),
 
             const SizedBox(height: 16),
-            _buildSection('8. Changes to This Policy'),
+            _buildSection(context, '8. Changes to This Policy'),
             _buildParagraph(
+              context,
               'We may update this privacy policy from time to time. Changes will be posted in the app and on our website.',
             ),
 
@@ -115,7 +123,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
             Center(
               child: TextButton.icon(
                 onPressed: () => _launchSupport(context),
-                icon: Icon(Icons.email_outlined, size: 18, color: AppDesignSystem.primary),
+                icon: const Icon(Icons.email_outlined, size: 18, color: AppDesignSystem.primary),
                 label: Text(
                   'Contact us: $_supportEmail',
                   style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: AppDesignSystem.primary, fontWeight: FontWeight.w600),
@@ -129,14 +137,14 @@ class PrivacyPolicyScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSection(String title) {
+  Widget _buildSection(BuildContext context, String title) {
     return Text(
       title,
       style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary),
     );
   }
 
-  Widget _buildParagraph(String text) {
+  Widget _buildParagraph(BuildContext context, String text) {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Text(
@@ -146,7 +154,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
     );
   }
 
-  Widget _bullet(String text) {
+  Widget _bullet(BuildContext context, String text) {
     return Padding(
       padding: const EdgeInsets.only(left: 16, top: 4),
       child: Row(
@@ -181,7 +189,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
     } else {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Email us at $_supportEmail'), backgroundColor: AppDesignSystem.primary),
+          const SnackBar(content: Text('Email us at $_supportEmail'), backgroundColor: AppDesignSystem.primary),
         );
       }
     }

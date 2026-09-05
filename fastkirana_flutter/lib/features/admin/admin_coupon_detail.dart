@@ -30,7 +30,7 @@ class _AdminCouponsDetailScreenState extends State<AdminCouponsDetailScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]),
+                gradient: const LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: AppDesignSystem.shadowCard,
               ),
@@ -40,7 +40,7 @@ class _AdminCouponsDetailScreenState extends State<AdminCouponsDetailScreen> {
                   const SizedBox(height: 8),
                   Text('FLAT ₹50 OFF', style: GoogleFonts.poppins(fontSize: Responsive.scaledFontSize(context, 20), fontWeight: FontWeight.w800, color: Colors.white)),
                   const SizedBox(height: 8),
-                  Text('Min order: ₹199', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: Colors.white.withOpacity(0.9))),
+                  Text('Min order: ₹199', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: Colors.white.withValues(alpha: 0.9))),
                 ],
               ),
             ),

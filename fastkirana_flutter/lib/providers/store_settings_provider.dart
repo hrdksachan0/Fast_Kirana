@@ -1,3 +1,4 @@
+import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/api_client.dart';
 import '../data/models/store_settings.dart';
@@ -11,7 +12,7 @@ final storeSettingsProvider = FutureProvider<StoreSettings>((ref) async {
     if (response.data != null && response.data is Map) {
       return StoreSettings.fromJson(Map<String, dynamic>.from(response.data));
     }
-  } catch (_) {}
+  } catch (e, _) { LoggerService.error('StoreSettingsProvider: silent catch', e); }
 
   // 2. Try /api/public/settings
   try {
@@ -19,8 +20,8 @@ final storeSettingsProvider = FutureProvider<StoreSettings>((ref) async {
     if (response.data != null && response.data is Map) {
       return StoreSettings.fromJson(Map<String, dynamic>.from(response.data));
     }
-  } catch (_) {}
+  } catch (e, _) { LoggerService.error('StoreSettingsProvider: silent catch', e); }
 
   // 3. Fallback to default Ghatampur quick commerce store settings
-  return StoreSettings();
+  return const StoreSettings();
 });

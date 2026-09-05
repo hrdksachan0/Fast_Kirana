@@ -1,12 +1,12 @@
 'use client'
 
-import { X, ShoppingBag, Minus, Plus, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react'
+import { X, ShoppingBag, Minus, Plus, ArrowRight, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useCart } from '@/hooks/use-cart'
 import { useUIStore } from '@/stores/ui-store'
 import { formatPrice, formatTime12h } from '@/lib/utils'
 import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED_FREE_DELIVERY_THRESHOLD, FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, getOutletName } from '@/lib/constants'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ProductImage } from '@/components/product/product-image'
 import { isCafeProduct, cn, getProductLimit, isProductStoreClosed } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -32,6 +32,8 @@ export function CartDrawer() {
   const cafeOpen = useUIStore((s) => s.cafeOpen)
   const restaurantOpen = useUIStore((s) => s.restaurantOpen)
   const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
+  const isLocationServiceable = useUIStore((s) => s.isLocationServiceable)
+  const setLocationPickerOpen = useUIStore((s) => s.setLocationPickerOpen)
   
   const {
     items,
@@ -52,6 +54,16 @@ export function CartDrawer() {
   const [couponInput, setCouponInput] = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null)
   const [isCouponLoading, setIsCouponLoading] = useState(false)
+
+  const recScrollRef = useRef<HTMLDivElement>(null)
+  const couponInputRef = useRef<HTMLInputElement>(null)
+
+  const scrollRecommendations = (direction: 'left' | 'right') => {
+    if (recScrollRef.current) {
+      const scrollOffset = direction === 'left' ? -180 : 180
+      recScrollRef.current.scrollBy({ left: scrollOffset, behavior: 'smooth' })
+    }
+  }
 
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -209,7 +221,7 @@ export function CartDrawer() {
   const hasClosedGroceryItems = groceryItems.some(item => isItemClosed(item.product))
   const hasClosedCafeItems = cafeItems.some(item => isItemClosed(item.product))
   const isBelowMinOrder = false
-  const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems || hasInventoryIssues
+  const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems || hasInventoryIssues || !isLocationServiceable
 
   const handleAutoAdjust = () => {
     let adjustedCount = 0
@@ -502,11 +514,29 @@ export function CartDrawer() {
                       <span>{cafeItems.length > 0 ? '🥤' : '🛒'}</span>
                       {cafeItems.length > 0 ? 'Complete your meal!' : 'Frequently bought together'}
                     </h4>
-                    <span className="text-[10px] text-zinc-400 font-bold">Slide for more →</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => scrollRecommendations('left')}
+                        aria-label="Previous suggestions"
+                        className="w-5 h-5 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-2xs"
+                      >
+                        <ChevronLeft size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => scrollRecommendations('right')}
+                        aria-label="Next suggestions"
+                        className="w-5 h-5 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-2xs"
+                      >
+                        <ChevronRight size={12} />
+                      </button>
+                    </div>
                   </div>
 
                   <div 
-                    className="flex gap-2.5 overflow-x-auto scrollbar-none py-1 px-1 select-none"
+                    ref={recScrollRef}
+                    className="flex gap-2.5 overflow-x-auto scrollbar-none py-1 px-1 select-none scroll-smooth"
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                   >
                     {recommendations.map((prod) => {
@@ -607,6 +637,7 @@ export function CartDrawer() {
                 ) : (
                   <form onSubmit={handleApplyCoupon} className="flex gap-2">
                     <input
+                      ref={couponInputRef}
                       placeholder="Enter Coupon (e.g. CAFE50)"
                       value={couponInput}
                       onChange={(e) => setCouponInput(e.target.value)}
@@ -690,6 +721,18 @@ export function CartDrawer() {
                 </div>
               )}
 
+              {/* Location unserviceable warning */}
+              {!isLocationServiceable && (
+                <div className="flex flex-col rounded-xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 p-3 mb-3.5 text-left">
+                  <span className="text-[10px] font-black text-rose-600 flex items-center gap-1 leading-none uppercase tracking-wide">
+                    🚫 Outside Delivery Zone
+                  </span>
+                  <span className="text-[10px] text-zinc-600 dark:text-zinc-300 font-medium mt-1 leading-normal">
+                    Delivery is currently not available at your detected location. Please change your delivery address to order.
+                  </span>
+                </div>
+              )}
+
               {/* Main row: price summary + CTA button */}
               <div className="flex items-center justify-between gap-4">
                 {/* Collapsible Price Summary */}
@@ -709,7 +752,17 @@ export function CartDrawer() {
 
                 {/* Checkout Button */}
                 <div className="flex-1 max-w-[240px]">
-                  {isCheckoutBlocked ? (
+                  {!isLocationServiceable ? (
+                    <button
+                      onClick={() => {
+                        setCartOpen(false)
+                        setLocationPickerOpen(true)
+                      }}
+                      className="w-full h-12 rounded-full bg-[#e20a22] hover:bg-[#c9081e] text-[11px] sm:text-xs font-black text-white shadow-md flex items-center justify-center gap-1 cursor-pointer transition-transform active:scale-95"
+                    >
+                      <span>📍 Outside Zone (Change)</span>
+                    </button>
+                  ) : isCheckoutBlocked ? (
                     <button
                       disabled
                       className="w-full h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[11px] sm:text-xs font-black text-zinc-400 dark:text-zinc-500 cursor-not-allowed border border-zinc-200 dark:border-zinc-700/50 flex items-center justify-center gap-1"

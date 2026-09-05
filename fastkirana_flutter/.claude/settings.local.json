@@ -22,7 +22,11 @@
       "Bash(cd *)",
       "Bash(grep -v \"//\\\\|\\\\.webp\\\\|ImageByteFormat\\\\|media_\")",
       "Bash(npx prisma *)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "WebFetch(domain:www.fastkirana.in)",
+      "Bash(dart analyze *)",
+      "Bash(C:/flutter/bin/flutter.bat analyze *)",
+      "Bash(/c/src/flutter/bin/flutter.bat analyze *)"
     ]
   }
 }

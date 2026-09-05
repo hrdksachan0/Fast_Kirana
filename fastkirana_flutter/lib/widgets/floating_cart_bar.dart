@@ -1,3 +1,5 @@
+import '../core/theme/design_system.dart';
+import '../core/theme/responsive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,7 +47,7 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
       curve: Curves.easeOutCubic,
       left: 0,
       right: 0,
-      bottom: widget.bottomOffset + (bottomInset > 0 ? bottomInset * 0.5 : 0),
+      bottom: widget.bottomOffset,
       child: Align(
         alignment: Alignment.bottomCenter,
         child: SizedBox(
@@ -79,7 +81,7 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFFE20A22), Color(0xFFC00418)],
+                      colors: [AppDesignSystem.primary, AppDesignSystem.red700],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -87,14 +89,14 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                     boxShadow: _isPressed
                         ? [
                             BoxShadow(
-                              color: const Color(0xFFE20A22).withValues(alpha: 0.25),
+                              color: AppDesignSystem.primary.withValues(alpha: 0.25),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
                           ]
                         : [
                             BoxShadow(
-                              color: const Color(0xFFE20A22).withValues(alpha: 0.38),
+                              color: AppDesignSystem.primary.withValues(alpha: 0.38),
                               blurRadius: 16,
                               offset: const Offset(0, 6),
                             ),
@@ -128,7 +130,7 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: const Color(0xFFE20A22), width: 1.2),
+                                border: Border.all(color: AppDesignSystem.primary, width: 1.2),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withValues(alpha: 0.15),
@@ -143,7 +145,7 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 9.5),
                                     fontWeight: FontWeight.w900,
-                                    color: const Color(0xFFE20A22),
+                                    color: AppDesignSystem.primary,
                                   ),
                                 ),
                               ),
@@ -203,7 +205,7 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 11.5),
                                   fontWeight: FontWeight.w900,
-                                  color: const Color(0xFFE20A22),
+                                  color: AppDesignSystem.primary,
                                   letterSpacing: 0.2,
                                 ),
                               ),
@@ -214,7 +216,7 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                                 child: const Icon(
                                   Icons.arrow_forward_ios_rounded,
                                   size: 11,
-                                  color: Color(0xFFE20A22),
+                                  color: AppDesignSystem.primary,
                                 ),
                               ),
                             ],
@@ -232,3 +234,4 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
     );
   }
 }
+

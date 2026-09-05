@@ -181,7 +181,7 @@ model Product {
   slug        String    @unique
   description String?   @db.Text
   imageUrl    String?
-  categoryId  String
+  categoryId  String?
   restaurantId String?
   mrp         Float
   price       Float
@@ -205,7 +205,7 @@ model Product {
   updatedAt    DateTime  @updatedAt
   barcode      String?   @unique
 
-  category     Category       @relation(fields: [categoryId], references: [id])
+  category     Category?      @relation(fields: [categoryId], references: [id])
   restaurant   Restaurant?    @relation(fields: [restaurantId], references: [id])
   images       ProductImage[]
   cartItems    CartItem[]
@@ -549,8 +549,8 @@ model DarkStore {
   deliveryPolygon Json?    // Array of lat/lng coordinates defining the geofence
   isActive        Boolean  @default(true)
   surgeCharge     Float    @default(0.0)
+  deliveryRadiusKm Float   @default(5.0) // Admin controlled nearby radius (km)
   groceryOpen     Boolean  @default(true)
-  cafeOpen        Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -601,11 +601,14 @@ model Restaurant {
   ownerPhone      String?
   ownerEmail      String?
   isActive        Boolean   @default(true)
+  deliveryRadiusKm Float    @default(5.0) // Admin controlled nearby radius (km)
   menuSections    Json?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   products        Product[]
+  menus           RestaurantMenu[]
+  dishes          FoodDish[]
   orders          Order[]
   staff           User[]    @relation("RestaurantStaff")
   payouts         RestaurantPayout[]
@@ -694,5 +697,69 @@ model FcmToken {
 
   @@index([userId])
   @@map("fcm_tokens")
+}
+
+// ─── SYSTEMATIC V2 RELATIONAL ENTITIES (NO CRYPTIC TAGS) ───────────────────
+
+model RestaurantMenu {
+  id           String     @id @default(cuid())
+  restaurantId String
+  name         String     // e.g. "Dosa & South Indian", "Pizza's", "Burgers", "Shakes"
+  slug         String
+  emoji        String?    // e.g. "🍛", "🍕", "🍔"
+  description  String?
+  sortOrder    Int        @default(0)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  dishes       FoodDish[]
+
+  @@unique([restaurantId, slug])
+  @@index([restaurantId])
+  @@index([sortOrder])
+  @@map("restaurant_menus")
+}
+
+model FoodDish {
+  id           String         @id @default(cuid())
+  restaurantId String
+  menuId       String
+  name         String         // e.g. "Butter Masala Paneer Dosa"
+  slug         String
+  description  String?        @db.Text
+  imageUrl     String?
+  price        Float
+  mrp          Float?
+  isVeg        Boolean        @default(true)
+  isAvailable  Boolean        @default(true)
+  sortOrder    Int            @default(0)
+  tags         String[]       @default([]) // Purely for search keywords (e.g. ["dosa", "dhosa"])
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  restaurant   Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  menu         RestaurantMenu @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  variants     DishVariant[]
+
+  @@index([restaurantId])
+  @@index([menuId])
+  @@index([isAvailable])
+  @@map("food_dishes")
+}
+
+model DishVariant {
+  id        String   @id @default(cuid())
+  dishId    String
+  name      String   // e.g. "Single Butter", "Double Butter", "Half", "Full"
+  price     Float
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  dish      FoodDish @relation(fields: [dishId], references: [id], onDelete: Cascade)
+
+  @@index([dishId])
+  @@map("dish_variants")
 }
 

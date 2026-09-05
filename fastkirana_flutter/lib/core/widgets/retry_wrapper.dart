@@ -1,3 +1,5 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import '../../core/theme/responsive.dart';
 import 'package:flutter/material.dart';
 
 class RetryWrapper extends StatelessWidget {
@@ -37,7 +39,7 @@ class RetryWrapper extends StatelessWidget {
               Container(
                 width: 64, height: 64,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFEE2E2),
+                  color: AppDesignSystem.statusCancelled,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
@@ -50,7 +52,7 @@ class RetryWrapper extends StatelessWidget {
               Text(
                 error is String ? error as String : 'Something went wrong',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: Responsive.scaledFontSize(context, 14),
                   fontWeight: FontWeight.w500,
                   color: AppDesignSystem.textSecondary,
@@ -80,3 +82,4 @@ class RetryWrapper extends StatelessWidget {
     return child ?? const SizedBox.shrink();
   }
 }
+

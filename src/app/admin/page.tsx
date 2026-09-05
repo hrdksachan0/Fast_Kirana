@@ -366,25 +366,58 @@ export default async function AdminPage() {
     { label: 'Total Sales Revenue', value: formatPrice(revenue), icon: TrendingUp, color: 'text-blue-500 bg-blue-500/10' },
   ]
 
+  const userEmail = (session.user?.email || '').toLowerCase().trim()
+  const userPhone = ((session.user as any)?.phone || '').replace(/\D/g, '').slice(-10)
+  const isSuperAdmin = 
+    userEmail === 'superadmin@fastkirana.com' || 
+    userEmail.startsWith('superadmin') || 
+    userPhone === '9170942500'
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl space-y-8 bg-background animate-fade-in">
       
       {/* Title Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-border/60 pb-4 gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-black text-text-primary tracking-tight">Admin Console</h1>
-          <p className="text-xs text-text-secondary mt-0.5">Welcome, {session.user.name || 'Admin'}. Monitor finance, live order fulfillment, and store metrics.</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl md:text-2xl font-black text-text-primary tracking-tight">
+              {isSuperAdmin ? '👑 Super Admin Executive Console' : '🏢 Store Operations Manager Console'}
+            </h1>
+            <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+              isSuperAdmin 
+                ? 'bg-[#e20a22]/10 text-[#e20a22] border-[#e20a22]/20' 
+                : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+            }`}>
+              {isSuperAdmin ? 'Super Admin HQ' : 'Store Manager'}
+            </span>
+          </div>
+          <p className="text-xs text-text-secondary mt-0.5">
+            {isSuperAdmin
+              ? `Welcome, ${session.user.name || 'Super Admin'} (${userEmail || 'superadmin@fastkirana.com'}). Executive overview of multi-hub network, staff roles, and platform settings.`
+              : `Welcome, ${session.user.name || 'Store Manager'} (${userEmail || 'admin@fastkirana.com'}). Manage live order fulfillment, inventory stock, and store operations.`
+            }
+          </p>
         </div>
-        <a 
-          href="/admin/restaurants" 
-          className="inline-flex items-center justify-center text-xs font-black uppercase tracking-wider bg-[#e20a22] text-white h-9 px-4 rounded-xl hover:bg-[#c9081e] shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
-        >
-          Manage Outlets 🍽️
-        </a>
+        {isSuperAdmin && (
+          <a 
+            href="/admin/restaurants" 
+            className="inline-flex items-center justify-center text-xs font-black uppercase tracking-wider bg-[#e20a22] text-white h-9 px-4 rounded-xl hover:bg-[#c9081e] shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+          >
+            Manage Outlets 🍽️
+          </a>
+        )}
       </div>
 
       {/* Dynamic Tabbed Console */}
       <AdminDashboard
+        serverUser={{
+          id: session.user.id,
+          name: session.user.name,
+          email: session.user.email,
+          role: session.user.role,
+          phone: (session.user as any).phone || null,
+          assignedStoreId: (session.user as any).assignedStoreId || null,
+        }}
         initialOrders={orders}
         initialProducts={products}
         initialCategories={categories}

@@ -23,13 +23,13 @@ class DeliveryOrderDetailScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppDesignSystem.warning.withOpacity(0.1),
+              color: AppDesignSystem.warning.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppDesignSystem.warning.withOpacity(0.3)),
+              border: Border.all(color: AppDesignSystem.warning.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
-                Icon(Icons.timer_rounded, color: AppDesignSystem.warning, size: 20),
+                const Icon(Icons.timer_rounded, color: AppDesignSystem.warning, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -58,7 +58,7 @@ class DeliveryOrderDetailScreen extends StatelessWidget {
                 Container(
                   width: 50,
                   height: 50,
-                  decoration: BoxDecoration(gradient: LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]), borderRadius: BorderRadius.circular(25)),
+                  decoration: BoxDecoration(gradient: const LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]), borderRadius: BorderRadius.circular(25)),
                   child: Center(child: Text('AK', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: Colors.white))),
                 ),
                 const SizedBox(width: 12),
@@ -71,7 +71,7 @@ class DeliveryOrderDetailScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                IconButton(icon: Icon(Icons.phone_rounded, color: AppDesignSystem.primary), onPressed: () {}),
+                IconButton(icon: const Icon(Icons.phone_rounded, color: AppDesignSystem.primary), onPressed: () {}),
               ],
             ),
           ),
@@ -96,18 +96,18 @@ class DeliveryOrderDetailScreen extends StatelessWidget {
                 ],
               ),
             );
-          }).toList(),
+          }),
           const SizedBox(height: 24),
           // Navigation button
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppDesignSystem.primary.withOpacity(0.1),
+              color: AppDesignSystem.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
               children: [
-                Icon(Icons.navigation_rounded, color: AppDesignSystem.primary, size: 20),
+                const Icon(Icons.navigation_rounded, color: AppDesignSystem.primary, size: 20),
                 const SizedBox(width: 12),
                 Expanded(child: Text('123, Green Park, Ghatampur', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textPrimary))),
                 Container(

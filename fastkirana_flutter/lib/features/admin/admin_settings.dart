@@ -25,11 +25,11 @@ class AdminSettingsScreen extends StatelessWidget {
               decoration: BoxDecoration(color: AppDesignSystem.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppDesignSystem.borderLight), boxShadow: AppDesignSystem.shadowSm),
               child: Column(
                 children: [
-                  _switchTile('Auto-assign orders', 'Assign orders to nearest delivery boy', true, (v) {}),
+                  _switchTile(context, 'Auto-assign orders', 'Assign orders to nearest delivery boy', true, (v) {}),
                   _divider(),
-                  _switchTile('Live tracking', 'Enable real-time order tracking', true, (v) {}),
+                  _switchTile(context, 'Live tracking', 'Enable real-time order tracking', true, (v) {}),
                   _divider(),
-                  _switchTile('Cash on Delivery', 'Accept COD orders', true, (v) {}),
+                  _switchTile(context, 'Cash on Delivery', 'Accept COD orders', true, (v) {}),
                 ],
               ),
             ),
@@ -40,11 +40,11 @@ class AdminSettingsScreen extends StatelessWidget {
               decoration: BoxDecoration(color: AppDesignSystem.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppDesignSystem.borderLight), boxShadow: AppDesignSystem.shadowSm),
               child: Column(
                 children: [
-                  _switchTile('New order alerts', 'Notify when new order arrives', true, (v) {}),
+                  _switchTile(context, 'New order alerts', 'Notify when new order arrives', true, (v) {}),
                   _divider(),
-                  _switchTile('Daily reports', 'Send daily sales summary', false, (v) {}),
+                  _switchTile(context, 'Daily reports', 'Send daily sales summary', false, (v) {}),
                   _divider(),
-                  _switchTile('Low stock alerts', 'Notify when stock < 10', true, (v) {}),
+                  _switchTile(context, 'Low stock alerts', 'Notify when stock < 10', true, (v) {}),
                 ],
               ),
             ),
@@ -53,13 +53,13 @@ class AdminSettingsScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppDesignSystem.danger.withOpacity(0.08),
+                color: AppDesignSystem.danger.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppDesignSystem.danger.withOpacity(0.15)),
+                border: Border.all(color: AppDesignSystem.danger.withValues(alpha: 0.15)),
               ),
               child: TextButton.icon(
                 onPressed: () {},
-                icon: Icon(Icons.logout_rounded, color: AppDesignSystem.danger),
+                icon: const Icon(Icons.logout_rounded, color: AppDesignSystem.danger),
                 label: Text('Logout Admin', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w700, color: AppDesignSystem.danger)),
               ),
             ),
@@ -69,7 +69,7 @@ class AdminSettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _switchTile(String title, String subtitle, bool value, Function(bool) onChanged) {
+  Widget _switchTile(BuildContext context, String title, String subtitle, bool value, Function(bool) onChanged) {
     return SwitchListTile(
       value: value,
       onChanged: (v) => onChanged(v),
@@ -80,6 +80,6 @@ class AdminSettingsScreen extends StatelessWidget {
   }
 
   Widget _divider() {
-    return Divider(height: 1, indent: 16, endIndent: 16, color: AppDesignSystem.divider);
+    return const Divider(height: 1, indent: 16, endIndent: 16, color: AppDesignSystem.divider);
   }
 }

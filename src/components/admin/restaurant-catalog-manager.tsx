@@ -56,7 +56,11 @@ interface Category {
   slug: string
 }
 
-export function RestaurantCatalogManager() {
+interface RestaurantCatalogManagerProps {
+  initialRestaurantId?: string
+}
+
+export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCatalogManagerProps = {}) {
   const { data: session } = useSession()
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -199,28 +203,31 @@ export function RestaurantCatalogManager() {
   const isAdmin = session?.user?.role === 'ADMIN'
   const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId
   const [outlets, setOutlets] = useState<any[]>([])
-  const [selectedOutletId, setSelectedOutletId] = useState<string>(assignedRestaurantId || '')
+  const [selectedOutletId, setSelectedOutletId] = useState<string>(initialRestaurantId || assignedRestaurantId || '')
 
   useEffect(() => {
-    if (assignedRestaurantId) {
+    if (initialRestaurantId) {
+      setSelectedOutletId(initialRestaurantId)
+    } else if (assignedRestaurantId) {
       setSelectedOutletId(assignedRestaurantId)
     }
-  }, [assignedRestaurantId])
+  }, [initialRestaurantId, assignedRestaurantId])
 
   useEffect(() => {
     fetch('/api/restaurants')
       .then(res => res.ok ? res.json() : null)
       .then(data => {
-        if (data?.restaurants && Array.isArray(data.restaurants)) {
-          setOutlets(data.restaurants)
-          if (!selectedOutletId && !assignedRestaurantId) {
-            const defaultId = data.restaurants[0]?.id || ''
+        const list = Array.isArray(data) ? data : (data?.restaurants || [])
+        if (list.length > 0) {
+          setOutlets(list)
+          if (!selectedOutletId && !assignedRestaurantId && !initialRestaurantId) {
+            const defaultId = list[0]?.id || ''
             setSelectedOutletId(defaultId)
           }
         }
       })
       .catch(console.error)
-  }, [assignedRestaurantId])
+  }, [assignedRestaurantId, initialRestaurantId])
 
   const effectiveRestId = (!isAdmin && assignedRestaurantId) ? assignedRestaurantId : (selectedOutletId || assignedRestaurantId)
 
@@ -231,23 +238,25 @@ export function RestaurantCatalogManager() {
         ? `/api/restaurant-dashboard/products?restaurantId=${effectiveRestId}`
         : '/api/restaurant-dashboard/products'
 
-      const [prodRes, catRes] = await Promise.all([
+      const [prodRes, catRes, sectionsRes] = await Promise.all([
         fetch(url, { cache: 'no-store' }),
-        fetch('/api/categories', { cache: 'no-store' })
+        fetch('/api/categories', { cache: 'no-store' }),
+        effectiveRestId 
+          ? fetch(`/api/restaurants/${effectiveRestId}/sections`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null)
+          : Promise.resolve(null)
       ])
 
       if (!prodRes.ok) throw new Error('Failed to load products')
       const prodData = await prodRes.json()
       setProducts(prodData.products || [])
 
-      if (prodData.restaurant) {
+      if (sectionsRes && Array.isArray(sectionsRes) && sectionsRes.length > 0) {
+        setMenuSections(sectionsRes.filter((s: any) => !s.disabled))
+      } else if (prodData.restaurant) {
         const rawSecs = prodData.restaurant.menuSections
           ? (typeof prodData.restaurant.menuSections === 'string' ? JSON.parse(prodData.restaurant.menuSections) : prodData.restaurant.menuSections)
           : null
-        const isCafe = prodData.restaurant.slug?.includes('cafe') || prodData.restaurant.slug?.includes('as-')
-        const secs = rawSecs && Array.isArray(rawSecs) && rawSecs.length > 0
-          ? rawSecs
-          : (isCafe ? DEFAULT_CAFE_MENU_SECTIONS : DEFAULT_RESTAURANT_MENU_SECTIONS)
+        const secs = rawSecs && Array.isArray(rawSecs) ? rawSecs : []
         setMenuSections(secs.filter((s: any) => !s.disabled))
       }
 
@@ -303,9 +312,13 @@ export function RestaurantCatalogManager() {
     setUnit(product.unit)
     setCategoryId(product.categoryId)
     const matchSec = menuSections.find(s => 
-      product.tags.includes(s.tag) || (s.matchTags && product.tags.some(t => s.matchTags.includes(t)))
+      s.id === (product as any).sectionId ||
+      s.id === (product as any).menuSectionId ||
+      product.tags?.includes(s.id) ||
+      product.tags?.includes(s.tag) || 
+      (s.matchTags && product.tags?.some((t: string) => s.matchTags.includes(t)))
     )
-    setSelectedSectionTag(matchSec?.tag || menuSections[0]?.tag || '')
+    setSelectedSectionTag(matchSec?.id || matchSec?.tag || menuSections[0]?.id || '')
     setDescription(product.description || '')
     setImageUrl(product.imageUrl || '')
     setStock(product.stock.toString())
@@ -437,16 +450,17 @@ export function RestaurantCatalogManager() {
       ? formattedVariants.reduce((sum, v) => sum + (v.stock || 0), 0)
       : (parseInt(stock) || 999)
 
-    const selectedSec = menuSections.find(s => s.tag === selectedSectionTag)
+    const selectedSec = menuSections.find(s => s.id === selectedSectionTag || s.tag === selectedSectionTag)
+    const sectionId = selectedSec?.id || selectedSectionTag
+    const searchKeywords = selectedSec?.tags || selectedSec?.matchTags || []
+
     const tags = [
-      selectedSectionTag || 'all',
-      ...(selectedSec?.matchTags || []),
+      sectionId,
+      ...(selectedSec?.tag ? [selectedSec.tag] : []),
+      ...searchKeywords,
       isVeg ? 'veg' : 'non-veg',
       'restaurant'
     ]
-
-    // Add general restaurant tag for convenience
-    tags.push('restaurant')
 
     const payload = {
       name: name.trim(),
@@ -454,12 +468,14 @@ export function RestaurantCatalogManager() {
       mrp: mrpVal,
       unit: unit.trim() || '1 Serving',
       categoryId,
+      sectionId,
+      menuSectionId: sectionId,
       description: description.trim() || null,
       imageUrl: imageUrl.trim() || null,
       stock: stockVal,
       availableStartTime: availableStartTime.trim() || null,
       availableEndTime: availableEndTime.trim() || null,
-      tags,
+      tags: [...new Set(tags.filter(Boolean))],
       variants: formattedVariants
     }
 
@@ -804,8 +820,8 @@ export function RestaurantCatalogManager() {
 
                   <div className="flex items-center gap-1 text-[9px] sm:text-xs text-text-secondary font-bold pt-0.5 flex-wrap">
                     {(() => {
-                      const matchSec = DEFAULT_RESTAURANT_MENU_SECTIONS.find(s => 
-                        product.tags?.includes(s.tag) || (s.matchTags && product.tags?.some(t => s.matchTags.includes(t)))
+                      const matchSec = menuSections.find(s => 
+                        product.tags?.includes(s.tag) || (s.matchTags && product.tags?.some((t: string) => s.matchTags.includes(t)))
                       )
                       const label = matchSec ? matchSec.title : (product.category?.name && !['fruits & vegetables', 'fruits-vegetables'].includes(product.category.name.toLowerCase()) ? product.category.name : 'Restaurant Special')
                       return (
@@ -1140,8 +1156,8 @@ export function RestaurantCatalogManager() {
                     >
                       <option value="" disabled>Select Menu Section</option>
                       {menuSections.map(sec => (
-                        <option key={sec.tag} value={sec.tag}>
-                          {sec.emoji ? `${sec.emoji} ` : ''}{sec.title}
+                        <option key={sec.id || sec.tag} value={sec.id || sec.tag}>
+                          {sec.emoji ? `${sec.emoji} ` : ''}{sec.title} {sec.id ? `(ID: ${sec.id})` : ''}
                         </option>
                       ))}
                     </select>

@@ -8,14 +8,12 @@ import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/theme/responsive.dart';
-import '../../core/routes/page_transitions.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../../core/utils/dish_timing.dart';
 import '../../data/models/product.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/store_settings_provider.dart';
 import '../../widgets/cart_conflict_dialog.dart';
-import '../cart/cart_screen.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   final Product product;
@@ -30,8 +28,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   ProductVariant? _selectedVariant;
   bool _isFavorite = false;
   bool _isNotified = false;
-  static const Color primaryRed = Color(0xFFE20A22);
-  static const Color successGreen = Color(0xFF10B981);
+  static const Color primaryRed = AppDesignSystem.primary;
+  static const Color successGreen = AppDesignSystem.success;
 
   @override
   void initState() {
@@ -59,7 +57,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFF047857),
+            backgroundColor: AppDesignSystem.emerald700,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             content: Row(
@@ -107,7 +105,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: AppDesignSystem.background,
       body: ResponsiveContainer(
         maxWidth: Responsive.wideMaxContentWidth,
         fillHeight: true,
@@ -136,16 +134,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 imageUrl: p.imageUrl!,
                                 height: 260,
                                 fit: BoxFit.contain,
+                                memCacheWidth: 800,
+                                memCacheHeight: 800,
                                 placeholder: (_, __) => const Center(
                                   child: CircularProgressIndicator(color: primaryRed),
                                 ),
-                                errorWidget: (_, __, ___) => const Center(
-                                  child: Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 72))),
-                                ),
+                                errorWidget: (_, __, ___) => Center(child: Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 72)))),
                               )
-                            : const Center(
-                                child: Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 72))),
-                              ),
+                            : Center(child: Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 72)))),
                       ),
                     ),
                   ),
@@ -158,14 +154,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFEF2F2),
+                          color: AppDesignSystem.statusCancelled,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFFECDD3)),
+                          border: Border.all(color: AppDesignSystem.rose200),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('🔥', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
+                            Text('🔥', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
                             const SizedBox(width: 4),
                             Text(
                               '$discountPct% OFF',
@@ -192,14 +188,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFECFDF5),
+                        color: AppDesignSystem.green50,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFA7F3D0)),
+                        border: Border.all(color: AppDesignSystem.emerald200),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.bolt_rounded, size: 14, color: Color(0xFF059669)),
+                          const Icon(Icons.bolt_rounded, size: 14, color: AppDesignSystem.emerald600),
                           const SizedBox(width: 4),
                           Text(
                             'FAST DELIVERY',
@@ -207,7 +203,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                               fontSize: Responsive.scaledFontSize(context, 10),
                               fontWeight: FontWeight.w900,
                               letterSpacing: 0.5,
-                              color: const Color(0xFF047857),
+                              color: AppDesignSystem.emerald700,
                             ),
                           ),
                         ],
@@ -221,7 +217,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 20),
                         fontWeight: FontWeight.w900,
-                        color: const Color(0xFF111827),
+                        color: AppDesignSystem.gray900,
                         height: 1.25,
                         letterSpacing: -0.5,
                       ),
@@ -234,7 +230,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 13),
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF6B7280),
+                        color: AppDesignSystem.textSecondary,
                       ),
                     ).animate().fadeIn(duration: 350.ms, delay: 250.ms).slideY(begin: 0.06, end: 0, duration: 350.ms, delay: 250.ms, curve: Curves.easeOutCubic),
                     const SizedBox(height: 14),
@@ -249,7 +245,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 24),
                             fontWeight: FontWeight.w900,
-                            color: const Color(0xFF111827),
+                            color: AppDesignSystem.gray900,
                           ),
                         ),
                         if (activeMrp > activePrice) ...[
@@ -260,14 +256,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                               fontSize: Responsive.scaledFontSize(context, 16),
                               fontWeight: FontWeight.w600,
                               decoration: TextDecoration.lineThrough,
-                              color: const Color(0xFF9CA3AF),
+                              color: AppDesignSystem.textTertiary,
                             ),
                           ),
                           const SizedBox(width: 10),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFDCFCE7),
+                              color: AppDesignSystem.green100,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -275,7 +271,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 11),
                                 fontWeight: FontWeight.w800,
-                                color: const Color(0xFF15803D),
+                                color: AppDesignSystem.green700,
                               ),
                             ),
                           ),
@@ -291,7 +287,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 13.5),
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF111827),
+                          color: AppDesignSystem.gray900,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -314,10 +310,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: isSelected ? const Color(0xFFFEF2F2) : Colors.white,
+                                  color: isSelected ? AppDesignSystem.statusCancelled : Colors.white,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: isSelected ? primaryRed : const Color(0xFFE5E7EB),
+                                    color: isSelected ? primaryRed : AppDesignSystem.border,
                                     width: isSelected ? 1.5 : 1.0,
                                   ),
                                 ),
@@ -330,7 +326,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                       style: GoogleFonts.inter(
                                         fontSize: Responsive.scaledFontSize(context, 12),
                                         fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                        color: isSelected ? primaryRed : const Color(0xFF111827),
+                                        color: isSelected ? primaryRed : AppDesignSystem.gray900,
                                       ),
                                     ),
                                     Text(
@@ -338,7 +334,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                       style: GoogleFonts.inter(
                                         fontSize: Responsive.scaledFontSize(context, 11),
                                         fontWeight: FontWeight.w900,
-                                        color: isSelected ? primaryRed : const Color(0xFF4B5563),
+                                        color: isSelected ? primaryRed : AppDesignSystem.gray600,
                                       ),
                                     ),
                                   ],
@@ -357,14 +353,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                        border: Border.all(color: AppDesignSystem.border),
                       ),
                       child: Column(
                         children: [
                           _buildQualityRow('⚡ Superfast express delivery from local darkstore'),
-                          const Divider(height: 16, color: Color(0xFFF3F4F6)),
+                          const Divider(height: 16, color: AppDesignSystem.surfaceMuted),
                           _buildQualityRow('🛡️ 100% Genuine & Quality assured by FastKirana'),
-                          const Divider(height: 16, color: Color(0xFFF3F4F6)),
+                          const Divider(height: 16, color: AppDesignSystem.surfaceMuted),
                           _buildQualityRow('🔄 Hassle-free instant replacement at doorstep'),
                         ],
                       ),
@@ -378,7 +374,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 15),
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF111827),
+                          color: AppDesignSystem.gray900,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -388,14 +384,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFE5E7EB)),
+                          border: Border.all(color: AppDesignSystem.border),
                         ),
                         child: Text(
                           p.description!,
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 12.5),
                             fontWeight: FontWeight.w500,
-                            color: const Color(0xFF4B5563),
+                            color: AppDesignSystem.gray600,
                             height: 1.5,
                           ),
                         ),
@@ -424,16 +420,16 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
+                              color: Colors.black.withValues(alpha: 0.08),
                               blurRadius: 8,
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.arrow_back_rounded, size: 20, color: Color(0xFF111827)),
+                        child: const Icon(Icons.arrow_back_rounded, size: 20, color: AppDesignSystem.gray900),
                       ),
                     ),
                     Row(
@@ -446,11 +442,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.08),
+                                  color: Colors.black.withValues(alpha: 0.08),
                                   blurRadius: 8,
                                 ),
                               ],
@@ -458,7 +454,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                             child: Icon(
                               _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
                               size: 20,
-                              color: _isFavorite ? primaryRed : const Color(0xFF111827),
+                              color: _isFavorite ? primaryRed : AppDesignSystem.gray900,
                             ),
                           ),
                         ),
@@ -468,16 +464,16 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.08),
+                                  color: Colors.black.withValues(alpha: 0.08),
                                   blurRadius: 8,
                                 ),
                               ],
                             ),
-                            child: const Icon(Icons.share_outlined, size: 20, color: Color(0xFF111827)),
+                            child: const Icon(Icons.share_outlined, size: 20, color: AppDesignSystem.gray900),
                           ),
                         ),
                       ],
@@ -499,7 +495,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
+                    color: Colors.black.withValues(alpha: 0.08),
                     blurRadius: 16,
                     offset: const Offset(0, -4),
                   ),
@@ -516,7 +512,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 10.5),
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF6B7280),
+                          color: AppDesignSystem.textSecondary,
                         ),
                       ),
                       Text(
@@ -524,7 +520,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 20),
                           fontWeight: FontWeight.w900,
-                          color: const Color(0xFF111827),
+                          color: AppDesignSystem.gray900,
                         ),
                       ),
                     ],
@@ -556,12 +552,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                               ScaffoldMessenger.of(context).hideCurrentSnackBar();
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  backgroundColor: const Color(0xFF0F172A),
+                                  backgroundColor: AppDesignSystem.slate900,
                                   behavior: SnackBarBehavior.floating,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   content: Row(
                                     children: [
-                                      const Icon(Icons.notifications_active_rounded, color: Color(0xFFF59E0B), size: 20),
+                                      const Icon(Icons.notifications_active_rounded, color: AppDesignSystem.warning, size: 20),
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: Text(
@@ -577,10 +573,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                             child: Container(
                               height: 48,
                               decoration: BoxDecoration(
-                                color: _isNotified ? const Color(0xFFECFDF5) : const Color(0xFFFFFBEB),
+                                color: _isNotified ? AppDesignSystem.green50 : AppDesignSystem.amber50,
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
-                                  color: _isNotified ? const Color(0xFFA7F3D0) : const Color(0xFFFCD34D),
+                                  color: _isNotified ? AppDesignSystem.emerald200 : AppDesignSystem.yellow200,
                                   width: 1.2,
                                 ),
                               ),
@@ -591,7 +587,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                   Icon(
                                     _isNotified ? Icons.check_circle_rounded : Icons.notifications_active_outlined,
                                     size: 17,
-                                    color: _isNotified ? const Color(0xFF047857) : const Color(0xFFB45309),
+                                    color: _isNotified ? AppDesignSystem.emerald700 : AppDesignSystem.amber700,
                                   ),
                                   const SizedBox(width: 7),
                                   Text(
@@ -599,7 +595,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                     style: GoogleFonts.inter(
                                       fontSize: Responsive.scaledFontSize(context, 13),
                                       fontWeight: FontWeight.w900,
-                                      color: _isNotified ? const Color(0xFF047857) : const Color(0xFFB45309),
+                                      color: _isNotified ? AppDesignSystem.emerald700 : AppDesignSystem.amber700,
                                     ),
                                   ),
                                 ],
@@ -612,9 +608,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           return Container(
                             height: 50,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFFFBEB),
+                              color: AppDesignSystem.amber50,
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFFDE68A)),
+                              border: Border.all(color: AppDesignSystem.yellow200),
                             ),
                             alignment: Alignment.center,
                             child: Text(
@@ -624,7 +620,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 13),
                                 fontWeight: FontWeight.w800,
-                                color: const Color(0xFFD97706),
+                                color: AppDesignSystem.amber600,
                               ),
                             ),
                           );
@@ -634,9 +630,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           return Container(
                             height: 50,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
+                              color: AppDesignSystem.slate100,
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                              border: Border.all(color: AppDesignSystem.slate200),
                             ),
                             alignment: Alignment.center,
                             child: Text(
@@ -644,7 +640,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 13.5),
                                 fontWeight: FontWeight.w800,
-                                color: const Color(0xFF94A3B8),
+                                color: AppDesignSystem.slate400,
                               ),
                             ),
                           );
@@ -697,7 +693,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                               ),
                                             ],
                                           ),
-                                          backgroundColor: const Color(0xFFDC2626),
+                                          backgroundColor: AppDesignSystem.red600,
                                           behavior: SnackBarBehavior.floating,
                                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                           duration: const Duration(seconds: 2),
@@ -769,14 +765,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                             height: 50,
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
-                                colors: [primaryRed, Color(0xFFB30013)],
+                                colors: [primaryRed, AppDesignSystem.primaryDark],
                                 begin: Alignment.centerLeft,
                                 end: Alignment.centerRight,
                               ),
                               borderRadius: BorderRadius.circular(14),
                               boxShadow: [
                                 BoxShadow(
-                                  color: primaryRed.withOpacity(0.35),
+                                  color: primaryRed.withValues(alpha: 0.35),
                                   blurRadius: 12,
                                   offset: const Offset(0, 4),
                                 ),
@@ -821,7 +817,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             style: GoogleFonts.inter(
               fontSize: Responsive.scaledFontSize(context, 11.5),
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF374151),
+              color: AppDesignSystem.gray700,
             ),
           ),
         ),

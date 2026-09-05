@@ -27,6 +27,7 @@ import { SupabaseAuthBridge } from '@/components/auth/auth-bridge'
 
 
 import { JsonLdSchema } from '@/components/seo/json-ld'
+import { UnserviceableLocationBanner } from '@/components/layout/unserviceable-banner'
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -143,6 +144,7 @@ export default function RootLayout({
 
                 <div className="flex flex-col min-h-screen">
                   <Navbar />
+                  <UnserviceableLocationBanner />
                   <MainWrapper>
                     {children}
                   </MainWrapper>

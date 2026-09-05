@@ -10,9 +10,15 @@ export const DELIVERY_FEE = 25
 export const TAX_RATE = 0.00 // 0% GST
 
 export const MIN_CART_VALUE = 0  // No minimum cart value constraint
-export const OUTLET_WEDSON_ID = 'cms2p1lyx0001n0idod904lfu'
-export const OUTLET_AS_RESTAURANT_ID = 'cms2p1lap0000n0id8alldboy'
-export const OUTLET_BAL_UDYAN_ID = 'cmsbhxb6a000304if8kf1cwji'
+export const OUTLET_AS_RESTAURANT_ID = 'REST-101'
+export const OUTLET_WEDSON_ID = 'REST-102'
+export const OUTLET_BAL_UDYAN_ID = 'REST-103'
+export const OUTLET_PARI_MILK_ID = 'REST-104'
+
+// Backward compatibility legacy CUIDs
+export const LEGACY_AS_RESTAURANT_ID = 'cms2p1lap0000n0id8alldboy'
+export const LEGACY_WEDSON_ID = 'cms2p1lyx0001n0idod904lfu'
+export const LEGACY_BAL_UDYAN_ID = 'cmsbhxb6a000304if8kf1cwji'
 
 export const CATEGORIES = [
   { name: 'Fruits & Vegetables', slug: 'fruits-vegetables', emoji: '🥬' },
@@ -347,9 +353,13 @@ export const HUB_CONFIG = [
 ] as const
 
 export const OUTLET_NAMES: Record<string, string> = {
-  [OUTLET_WEDSON_ID]: 'Wedson Restaurant',
   [OUTLET_AS_RESTAURANT_ID]: 'A.S Restaurant',
+  [OUTLET_WEDSON_ID]: 'Wedson Restaurant',
   [OUTLET_BAL_UDYAN_ID]: 'Bal Udyan Restaurant',
+  [OUTLET_PARI_MILK_ID]: 'Pari Milk Dairy & Sweets',
+  [LEGACY_AS_RESTAURANT_ID]: 'A.S Restaurant',
+  [LEGACY_WEDSON_ID]: 'Wedson Restaurant',
+  [LEGACY_BAL_UDYAN_ID]: 'Bal Udyan Restaurant',
   wedson: 'Wedson Restaurant',
   'as-restaurant': 'A.S Restaurant',
   'bal-udyan-restaurant': 'Bal Udyan Restaurant',

@@ -31,13 +31,13 @@ class _RestaurantLoginScreenState extends ConsumerState<RestaurantLoginScreen> {
                 width: 90,
                 height: 90,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFFE20A22), Color(0xFFDC2626)]),
+                  gradient: const LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.red600]),
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
-                    BoxShadow(color: const Color(0xFFDC2626).withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 6)),
+                    BoxShadow(color: AppDesignSystem.red600.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 6)),
                   ],
                 ),
-                child: const Center(child: Text('👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 48)))),
+                child: Center(child: Text('👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 48)))),
               ),
               const SizedBox(height: 24),
               Text('Restaurant Kitchen Login', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 22), fontWeight: FontWeight.w900, color: AppDesignSystem.textPrimary), textAlign: TextAlign.center),
@@ -56,7 +56,7 @@ class _RestaurantLoginScreenState extends ConsumerState<RestaurantLoginScreen> {
                   children: [
                     TextField(
                       controller: _emailController,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'Email',
                         prefixIcon: Icon(Icons.email_outlined, color: AppDesignSystem.primary),
                         border: InputBorder.none,
@@ -66,7 +66,7 @@ class _RestaurantLoginScreenState extends ConsumerState<RestaurantLoginScreen> {
                     TextField(
                       controller: _passwordController,
                       obscureText: true,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'Password',
                         prefixIcon: Icon(Icons.lock_outline_rounded, color: AppDesignSystem.primary),
                         border: InputBorder.none,

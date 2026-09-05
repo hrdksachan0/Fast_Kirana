@@ -166,8 +166,7 @@ export default function FeaturedCategoryCard({
         console.error('Error parsing menu sections in FeaturedCategoryCard:', e);
       }
     }
-    const defaults = theme === 'restaurant' ? DEFAULT_RESTAURANT_MENU_SECTIONS : DEFAULT_CAFE_MENU_SECTIONS;
-    return defaults.filter((s: any) => !s.disabled && (s.disabled as any) !== 'true' && categoryStatus[s.tag] !== false && categoryStatus[s.id] !== false);
+    return [];
   }, [customSectionsStr, theme, categoryStatus]);
 
   const activeCategories = useMemo(() => {

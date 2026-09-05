@@ -58,7 +58,7 @@ class WalletScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.account_balance_wallet_outlined, size: 64, color: AppDesignSystem.textMuted),
+                    const Icon(Icons.account_balance_wallet_outlined, size: 64, color: AppDesignSystem.textMuted),
                     const SizedBox(height: 16),
                     Text('No transactions yet', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: AppDesignSystem.textSecondary)),
                   ],

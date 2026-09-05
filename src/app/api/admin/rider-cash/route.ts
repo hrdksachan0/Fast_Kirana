@@ -25,6 +25,8 @@ export async function GET(request: NextRequest) {
         email: true,
         phone: true,
         image: true,
+        assignedStoreId: true,
+        assignedStore: { select: { id: true, name: true } },
         riderWallet: true,
       },
       orderBy: { name: 'asc' }
@@ -80,6 +82,8 @@ export async function GET(request: NextRequest) {
           todayCodOrdersCount: todayCodOrders._count.id || 0,
           todayCodTotal: todayCodOrders._sum.total || 0,
           todayDepositedTotal: todayDeposits._sum.amount || 0,
+          assignedStoreId: r.assignedStoreId,
+          storeName: r.assignedStore?.name || ((r.assignedStoreId === 'hub-209206' || r.assignedStoreId === 'default-Ghatampur Market') ? 'Ghatampur Hub' : null),
         }
       })
     )

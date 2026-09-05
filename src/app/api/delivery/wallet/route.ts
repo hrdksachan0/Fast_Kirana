@@ -97,14 +97,25 @@ export async function GET(request: NextRequest) {
 
     const riderUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true, phone: true, role: true }
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        role: true,
+        assignedStoreId: true,
+        assignedStore: {
+          select: { id: true, name: true }
+        }
+      }
     })
 
     return NextResponse.json({
       rider: {
         id: riderUser?.id || userId,
         name: riderUser?.name || 'Partner',
-        phone: riderUser?.phone || ''
+        phone: riderUser?.phone || '',
+        assignedStoreId: riderUser?.assignedStoreId || null,
+        storeName: riderUser?.assignedStore?.name || ((riderUser?.assignedStoreId === 'hub-209206' || riderUser?.assignedStoreId === 'default-Ghatampur Market') ? 'Ghatampur Hub' : null)
       },
       wallet: {
         cashInHand: wallet.cashInHand,

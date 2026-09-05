@@ -16,7 +16,7 @@ interface ForecastItem {
     id: string
     name: string
     slug: string
-  }
+  } | null
   salesVelocity: number       // Average daily units sold
   weekdayVelocity: number     // Avg units sold Mon-Thu
   weekendVelocity: number     // Avg units sold Fri-Sun
@@ -176,11 +176,11 @@ export async function GET(request: NextRequest) {
         minStock: p.minStock,
         costPrice: p.costPrice || parseFloat((p.price * 0.75).toFixed(2)),
         price: p.price,
-        category: {
+        category: p.category ? {
           id: p.category.id,
           name: p.category.name,
           slug: p.category.slug
-        },
+        } : null,
         salesVelocity: dailyVelocity,
         weekdayVelocity,
         weekendVelocity,

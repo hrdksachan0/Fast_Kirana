@@ -1,1004 +1,1856 @@
 {
   "android/app/build.gradle": {
-    "mtime": 1787120996.3996313,
-    "seen": 1787202550.79014,
-    "ast_hash": "70fa05690e2a7ed1a0e6ff9b0f368ecb",
-    "semantic_hash": ""
-  },
-  "android/app/src/main/kotlin/com/example/fastkirana_flutter/MainActivity.kt": {
-    "mtime": 1786787746.1103585,
-    "seen": 1787202550.7901554,
-    "ast_hash": "a0ec29395f63c4501e6b3ebf56e2f1de",
+    "mtime": 1788067864.65417,
+    "seen": 1788593564.6480336,
+    "ast_hash": "b2d529baf4048cf1e1037daef27bb718",
     "semantic_hash": ""
   },
   "android/build.gradle": {
-    "mtime": 1786787746.4140487,
-    "seen": 1787202550.7901614,
-    "ast_hash": "df058a90e5cd11493c2ea557f598e5a4",
+    "mtime": 1788201564.367802,
+    "seen": 1788593564.6480465,
+    "ast_hash": "05cc76ec2adfbacd65f6cf4fe8b84918",
     "semantic_hash": ""
   },
   "android/settings.gradle": {
-    "mtime": 1787120991.0694988,
-    "seen": 1787202550.790165,
-    "ast_hash": "f8d830f3a05a98c9dfaf27d329374bc8",
+    "mtime": 1788067143.0712166,
+    "seen": 1788593564.648049,
+    "ast_hash": "11333352ddaf1c271a67abd5ecc1dff1",
     "semantic_hash": ""
   },
   "lib/core/config/app_config.dart": {
-    "mtime": 1787136416.355259,
-    "seen": 1787202550.7901685,
-    "ast_hash": "4fc75bba8a39003c93ab77b6af9dcc34",
+    "mtime": 1788151684.316888,
+    "seen": 1788593564.6480541,
+    "ast_hash": "1d8c5c6956a160c06d9f702f6e146d95",
     "semantic_hash": ""
   },
   "lib/core/constants/api_endpoints.dart": {
-    "mtime": 1786014155.8915467,
-    "seen": 1787202550.7901716,
-    "ast_hash": "5e63d6529a7cb7fb6156567891e98c53",
-    "semantic_hash": ""
-  },
-  "lib/core/constants/app_colors.dart": {
-    "mtime": 1786809182.8437884,
-    "seen": 1787202550.7901752,
-    "ast_hash": "378667729d904036e2eff15e9f5c8474",
+    "mtime": 1788151684.385064,
+    "seen": 1788593564.6480558,
+    "ast_hash": "4ae4185b84955de9fcbf5919273ab97d",
     "semantic_hash": ""
   },
   "lib/core/network/api_client.dart": {
-    "mtime": 1787131319.4144075,
-    "seen": 1787202550.7901778,
-    "ast_hash": "8b9a5eb0d1f67f09052a52d5641fac80",
-    "semantic_hash": ""
-  },
-  "lib/core/providers/cart_provider.dart": {
-    "mtime": 1786038499.4154136,
-    "seen": 1787202550.7901812,
-    "ast_hash": "18d4b0337d441ec39883c916de197453",
+    "mtime": 1788591876.5746953,
+    "seen": 1788593564.6480575,
+    "ast_hash": "f7260bead4d6eccc73ad8f2a710b31e1",
     "semantic_hash": ""
   },
   "lib/core/routes/app_router.dart": {
-    "mtime": 1786596708.6402042,
-    "seen": 1787202550.7901845,
-    "ast_hash": "6fe72c2350be6a0df5128a744a9447de",
+    "mtime": 1788593348.3106575,
+    "seen": 1788593564.6480594,
+    "ast_hash": "ea7aab1a681b2bfa5f8cc6c1b426c71d",
     "semantic_hash": ""
   },
   "lib/core/services/notification_service.dart": {
-    "mtime": 1787120909.0662546,
-    "seen": 1787202550.7901874,
-    "ast_hash": "bc0ff4063f5abc515ea5521a97c085ba",
+    "mtime": 1788502865.7089477,
+    "seen": 1788593564.648106,
+    "ast_hash": "10083d3c2d4651fc3b0b815fb5547335",
     "semantic_hash": ""
   },
   "lib/core/theme/app_theme.dart": {
-    "mtime": 1787202200.5399356,
-    "seen": 1787202550.7901907,
-    "ast_hash": "54d5d8373acd5ac8d0b8d3bc61ba44b7",
-    "semantic_hash": ""
-  },
-  "lib/core/theme/brand_design_system.dart": {
-    "mtime": 1786809469.4015443,
-    "seen": 1787202550.7901928,
-    "ast_hash": "844ba3f268ded59d004bb6064a9ccfcb",
+    "mtime": 1788499097.1081443,
+    "seen": 1788593564.648114,
+    "ast_hash": "71d984938b9a4bdac4b3d67cc485f99d",
     "semantic_hash": ""
   },
   "lib/core/theme/design_system.dart": {
-    "mtime": 1786809167.7015274,
-    "seen": 1787202550.7901957,
-    "ast_hash": "046fa860e63afa95f5613576c2a8e75a",
+    "mtime": 1788499888.0936754,
+    "seen": 1788593564.6481156,
+    "ast_hash": "0ebed13a5b5c98c81152dd9823163840",
     "semantic_hash": ""
   },
   "lib/core/utils/validators.dart": {
-    "mtime": 1786014116.9662957,
-    "seen": 1787202550.7901983,
-    "ast_hash": "ca91a3f07d05b36987b9138a858d3e55",
+    "mtime": 1788464356.306077,
+    "seen": 1788593564.6481266,
+    "ast_hash": "ddf3b711e267f038f643a5711bdcb81f",
     "semantic_hash": ""
   },
   "lib/data/models/address.dart": {
-    "mtime": 1786038494.6623,
-    "seen": 1787202550.790201,
-    "ast_hash": "9d250a20965e8b86dd154f18e108b5f9",
+    "mtime": 1788420911.739115,
+    "seen": 1788593564.648139,
+    "ast_hash": "20e4f091f9c30b49404a5b3c89c18164",
     "semantic_hash": ""
   },
   "lib/data/models/banner.dart": {
-    "mtime": 1786016918.8478734,
-    "seen": 1787202550.7902045,
-    "ast_hash": "03994d4d4fef0ec0a8fb7cd6661e4920",
+    "mtime": 1788419095.3939893,
+    "seen": 1788593564.6481423,
+    "ast_hash": "c0c99bc78fa1b15e4aca3c2af4103913",
     "semantic_hash": ""
   },
   "lib/data/models/cart.dart": {
-    "mtime": 1786014547.45634,
-    "seen": 1787202550.7902079,
+    "mtime": 1788151684.9629624,
+    "seen": 1788593564.6481454,
     "ast_hash": "f9c14761a78924c0866c1f52d2048742",
     "semantic_hash": ""
   },
   "lib/data/models/category.dart": {
-    "mtime": 1786712378.4745364,
-    "seen": 1787202550.7902102,
-    "ast_hash": "28314cf29be7d60a3aca6a90c1e17451",
+    "mtime": 1788419103.5479636,
+    "seen": 1788593564.648148,
+    "ast_hash": "e9135a52b74aa2e91f6e28e6955f5589",
     "semantic_hash": ""
   },
   "lib/data/models/coupon.dart": {
-    "mtime": 1786016906.8919065,
-    "seen": 1787202550.7902126,
-    "ast_hash": "477c8260e98d612954432cc07e355d11",
+    "mtime": 1788420555.5923922,
+    "seen": 1788593564.6481514,
+    "ast_hash": "906f9caba2ee6e05cdb24d33c82ef86a",
     "semantic_hash": ""
   },
   "lib/data/models/order.dart": {
-    "mtime": 1786037997.5671427,
-    "seen": 1787202550.7902157,
-    "ast_hash": "d12ffb013abe9d42da1b12eef2f4c635",
+    "mtime": 1788497211.1331158,
+    "seen": 1788593564.648155,
+    "ast_hash": "dfb6d6caf7643dd8eb6e95ec50896eea",
     "semantic_hash": ""
   },
   "lib/data/models/product.dart": {
-    "mtime": 1786774175.51894,
-    "seen": 1787202550.7902176,
-    "ast_hash": "8ad5a1caaa0d3a62ffba166c71e722f4",
+    "mtime": 1788502866.120706,
+    "seen": 1788593564.6481564,
+    "ast_hash": "1e60011ead6406f417f44172c5eb560c",
     "semantic_hash": ""
   },
   "lib/data/models/restaurant.dart": {
-    "mtime": 1786773248.8238962,
-    "seen": 1787202550.7902222,
-    "ast_hash": "5700ad6bf6170346bed30320cba64456",
+    "mtime": 1788421459.3792896,
+    "seen": 1788593564.6481583,
+    "ast_hash": "060eaf1ba700f7903b5daebc9f1b68d3",
     "semantic_hash": ""
   },
   "lib/data/models/user.dart": {
-    "mtime": 1786014234.1999052,
-    "seen": 1787202550.790224,
-    "ast_hash": "cc063a173da6bf87a41bcc9478267e10",
+    "mtime": 1788420966.4148557,
+    "seen": 1788593564.6481628,
+    "ast_hash": "f8c4d8d9d8bf9df014d439045eba55f1",
     "semantic_hash": ""
   },
   "lib/data/repositories/address_repository.dart": {
-    "mtime": 1786709022.2622995,
-    "seen": 1787202550.7902272,
-    "ast_hash": "d6b25e446e90e7180d86992e92c4e1a7",
+    "mtime": 1788500364.4119031,
+    "seen": 1788593564.648166,
+    "ast_hash": "fac91b8d306dfbed68948509c961c19a",
     "semantic_hash": ""
   },
   "lib/data/repositories/auth_repository.dart": {
-    "mtime": 1786039049.63229,
-    "seen": 1787202550.7902298,
-    "ast_hash": "461257a92479d0906a49ba4764772edd",
+    "mtime": 1788151685.2206368,
+    "seen": 1788593564.6481674,
+    "ast_hash": "56d4f4cf7f54c1a234684b4d9981ed6b",
     "semantic_hash": ""
   },
   "lib/data/repositories/cart_repository.dart": {
-    "mtime": 1786014948.2907147,
-    "seen": 1787202550.7902327,
-    "ast_hash": "e520699e72898aebdcb2d3631c1da826",
+    "mtime": 1788502076.1005478,
+    "seen": 1788593564.6481705,
+    "ast_hash": "e09082967495208ca8893b39e91ab25f",
     "semantic_hash": ""
   },
   "lib/data/repositories/order_repository.dart": {
-    "mtime": 1786014974.6758356,
-    "seen": 1787202550.7902353,
-    "ast_hash": "d5d9e25f8bfb73ccf9dd572d7e14925a",
+    "mtime": 1788526578.911775,
+    "seen": 1788593564.648174,
+    "ast_hash": "2fb51cc7b9f54c64e3b34442856116fe",
     "semantic_hash": ""
   },
   "lib/data/repositories/product_repository.dart": {
-    "mtime": 1786774717.542753,
-    "seen": 1787202550.7902381,
-    "ast_hash": "34edbf785c2b65453d8cbda0060541c9",
+    "mtime": 1788532020.215799,
+    "seen": 1788593564.6481755,
+    "ast_hash": "e2e713296d6a55639fc85bb994c8ac82",
     "semantic_hash": ""
   },
   "lib/data/repositories/restaurant_repository.dart": {
-    "mtime": 1786774779.656082,
-    "seen": 1787202550.7902405,
-    "ast_hash": "1f7153601b8f248d2d4e5f3b32c5e13d",
+    "mtime": 1788502079.2102466,
+    "seen": 1788593564.648177,
+    "ast_hash": "f77f419536a81ed28ab8f4aabffc3945",
     "semantic_hash": ""
   },
   "lib/features/about/about_screen.dart": {
-    "mtime": 1786809451.327425,
-    "seen": 1787202550.7902431,
-    "ast_hash": "e6bfbfe483f2f442436475e8e58e270f",
+    "mtime": 1788502963.5176868,
+    "seen": 1788593564.6481802,
+    "ast_hash": "43e5908afeb4d9eaa56778b5218da171",
     "semantic_hash": ""
   },
   "lib/features/admin/admin_banners.dart": {
-    "mtime": 1786596701.1309357,
-    "seen": 1787202550.7902458,
-    "ast_hash": "aa6c3591302b681dbf4bd8b549b584ed",
+    "mtime": 1788464356.3382342,
+    "seen": 1788593564.6481814,
+    "ast_hash": "7224ae171b6cde83b60e6f25a7e50bdf",
     "semantic_hash": ""
   },
   "lib/features/admin/admin_coupon_detail.dart": {
-    "mtime": 1786099895.1970844,
-    "seen": 1787202550.7902484,
-    "ast_hash": "a64cd00ee33d8efaf38a48d038f58a61",
+    "mtime": 1788502976.3397386,
+    "seen": 1788593564.648183,
+    "ast_hash": "27d66bc5e226c80d8c19edf500c857e3",
     "semantic_hash": ""
   },
   "lib/features/admin/admin_coupons.dart": {
-    "mtime": 1786099705.2289128,
-    "seen": 1787202550.7902515,
-    "ast_hash": "7aecd4c480261b81fd443f19742e48bb",
+    "mtime": 1788502992.7909484,
+    "seen": 1788593564.6481845,
+    "ast_hash": "43d9e23a27a6b42248022462c6103022",
     "semantic_hash": ""
   },
   "lib/features/admin/admin_customers.dart": {
-    "mtime": 1786099701.983971,
-    "seen": 1787202550.7902544,
-    "ast_hash": "c7f3b2cc844b1ffd225fe01b1d4f1018",
+    "mtime": 1788434600.3599384,
+    "seen": 1788593564.6481862,
+    "ast_hash": "8d8451b3a08cdba7586efafb8b0806d2",
     "semantic_hash": ""
   },
   "lib/features/admin/admin_dashboard.dart": {
-    "mtime": 1786099678.807213,
-    "seen": 1787202550.790257,
-    "ast_hash": "6c44789b63d3ff9b1438b49ab6ade345",
+    "mtime": 1788533366.861667,
+    "seen": 1788593564.6481874,
+    "ast_hash": "8d8dd08aa112cde7911edde01b948d4a",
     "semantic_hash": ""
   },
   "lib/features/admin/admin_orders_list.dart": {
-    "mtime": 1786099678.9032345,
-    "seen": 1787202550.790259,
-    "ast_hash": "1c427ae2f4c5dd584c98983d801f36a0",
+    "mtime": 1788544478.8710876,
+    "seen": 1788593564.648189,
+    "ast_hash": "10b450f17f570bb9c063cca5a04e53cc",
     "semantic_hash": ""
   },
   "lib/features/admin/admin_products.dart": {
-    "mtime": 1786099678.9822264,
-    "seen": 1787202550.790262,
-    "ast_hash": "fd94b237f65167a7e2397594d1a6c80f",
+    "mtime": 1788500298.561563,
+    "seen": 1788593564.6481907,
+    "ast_hash": "428319b0ec60653fac6a133081d02176",
     "semantic_hash": ""
   },
   "lib/features/admin/admin_reports.dart": {
-    "mtime": 1786099718.00863,
-    "seen": 1787202550.7902646,
-    "ast_hash": "acf2b09fa61f67e94de7801be3e5dd75",
+    "mtime": 1788501884.5157244,
+    "seen": 1788593564.648192,
+    "ast_hash": "faaf8554a3772fc2e91dc00ecc7521e1",
     "semantic_hash": ""
   },
   "lib/features/admin/admin_settings.dart": {
-    "mtime": 1786099718.1565864,
-    "seen": 1787202550.7902665,
-    "ast_hash": "963818e62c35060dc4ceac604d684e62",
+    "mtime": 1788501906.9044793,
+    "seen": 1788593564.6481936,
+    "ast_hash": "562d9ff6c39107b5802afa985b6d52a2",
     "semantic_hash": ""
   },
   "lib/features/auth/admin_login.dart": {
-    "mtime": 1786854920.1615927,
-    "seen": 1787202550.7902694,
-    "ast_hash": "064b1bdec925d44071956599ad3ec007",
+    "mtime": 1788499097.8110046,
+    "seen": 1788593564.648195,
+    "ast_hash": "3ee2b437a3da1b73b4b10e5473cc744d",
     "semantic_hash": ""
   },
   "lib/features/auth/delivery_login.dart": {
-    "mtime": 1786809432.165588,
-    "seen": 1787202550.7902725,
-    "ast_hash": "1440d14896718ba5c37aef878e871905",
+    "mtime": 1788501201.4696565,
+    "seen": 1788593564.6481967,
+    "ast_hash": "93b8466a17d8373a7e38aa0b882bcc51",
     "semantic_hash": ""
   },
   "lib/features/auth/login_screen.dart": {
-    "mtime": 1786854602.3532472,
-    "seen": 1787202550.790275,
-    "ast_hash": "be92c59fe170f7d0ebbcbe1ab6bc30e8",
+    "mtime": 1788499097.864071,
+    "seen": 1788593564.6481981,
+    "ast_hash": "9d40586c4747d49f3516f42e5b1b3ec1",
     "semantic_hash": ""
   },
   "lib/features/auth/onboarding_screen.dart": {
-    "mtime": 1786093511.730444,
-    "seen": 1787202550.7902796,
-    "ast_hash": "30f24deafd5859618afebc4d9c3aa24f",
+    "mtime": 1788503000.648563,
+    "seen": 1788593564.6481998,
+    "ast_hash": "624b1f4df5587628f866bc1297bf3f64",
     "semantic_hash": ""
   },
   "lib/features/auth/otp_screen.dart": {
-    "mtime": 1786809409.5619955,
-    "seen": 1787202550.7902818,
-    "ast_hash": "df9e667f2c6fa47d802383043d11c068",
+    "mtime": 1788593520.1685598,
+    "seen": 1788593564.6482015,
+    "ast_hash": "3f7ae8e5c4ad4c3811e1f035afc812a8",
     "semantic_hash": ""
   },
   "lib/features/auth/restaurant_login.dart": {
-    "mtime": 1786809436.1515455,
-    "seen": 1787202550.790285,
-    "ast_hash": "7541e7997e5eaef4574acebf67a67c2e",
+    "mtime": 1788501834.7734559,
+    "seen": 1788593564.6482034,
+    "ast_hash": "c25e34e3d3fb7c6fd0e074fd42ba0b32",
     "semantic_hash": ""
   },
   "lib/features/auth/splash_screen.dart": {
-    "mtime": 1786038017.101869,
-    "seen": 1787202550.790288,
-    "ast_hash": "8b79296e9114c13386d1cf7e61c6c2e7",
+    "mtime": 1788501851.1169753,
+    "seen": 1788593564.6482048,
+    "ast_hash": "4226164ab21d52eb972074d30deb4de0",
     "semantic_hash": ""
   },
   "lib/features/cafe/cafe_menu_screen.dart": {
-    "mtime": 1787135120.7092235,
-    "seen": 1787202550.7902908,
-    "ast_hash": "eddfc75f7863fb20fcd9e0cb5b3ada9b",
+    "mtime": 1788505400.265265,
+    "seen": 1788593564.6482072,
+    "ast_hash": "a85a506e40411c7f11f87fb8e9bd1dec",
     "semantic_hash": ""
   },
   "lib/features/cafe/restaurant_analytics.dart": {
-    "mtime": 1786099783.5738595,
-    "seen": 1787202550.790294,
-    "ast_hash": "ab33ac74ffeaaa3f7151baf159ae6251",
+    "mtime": 1788501990.6451182,
+    "seen": 1788593564.6482086,
+    "ast_hash": "d32e576f7dd5ad71dde79323ebf138bb",
     "semantic_hash": ""
   },
   "lib/features/cafe/restaurant_dashboard.dart": {
-    "mtime": 1786099767.3726692,
-    "seen": 1787202550.790299,
-    "ast_hash": "8e76792324a1b87b24630e99bf6817b6",
+    "mtime": 1788592528.685768,
+    "seen": 1788593564.6482105,
+    "ast_hash": "cd41e9649548eb58ffe5f998141d3db3",
     "semantic_hash": ""
   },
   "lib/features/cafe/restaurant_menu_management.dart": {
-    "mtime": 1786099776.2327068,
-    "seen": 1787202550.7903018,
-    "ast_hash": "310d7136f4ae01e17030ef9219cf433a",
+    "mtime": 1788500351.287849,
+    "seen": 1788593564.648214,
+    "ast_hash": "74ce95a0fc8dfa520b82cf9ee2fdebcd",
     "semantic_hash": ""
   },
   "lib/features/cafe/restaurant_order_queue.dart": {
-    "mtime": 1786099789.695585,
-    "seen": 1787202550.7903056,
-    "ast_hash": "3e7341012b662b70d607c1208b1fd52d",
+    "mtime": 1788434021.0402844,
+    "seen": 1788593564.6482158,
+    "ast_hash": "bdecb334e45cfd526ea69ccb0a5ab4a9",
     "semantic_hash": ""
   },
   "lib/features/cafe/restaurant_table_bookings_list.dart": {
-    "mtime": 1786099789.54445,
-    "seen": 1787202550.790308,
-    "ast_hash": "f349c0174c9814e9511fa366c8f1f9a2",
+    "mtime": 1788464356.5371032,
+    "seen": 1788593564.6482172,
+    "ast_hash": "6758b69aa5d7eefdd8e9769b8c55c8b4",
     "semantic_hash": ""
   },
   "lib/features/cafe/restaurants_list_screen.dart": {
-    "mtime": 1786098549.735381,
-    "seen": 1787202550.7903104,
-    "ast_hash": "bcfe00ca85a6fdc709b086b67d4ca619",
+    "mtime": 1788499098.1645918,
+    "seen": 1788593564.6482189,
+    "ast_hash": "bb53c48136c84e886ec4e3773ec0b15e",
     "semantic_hash": ""
   },
   "lib/features/cafe/table_booking_screen.dart": {
-    "mtime": 1786098445.454575,
-    "seen": 1787202550.7903135,
-    "ast_hash": "228544d266a0ca90097dfbdaf28a3349",
+    "mtime": 1788494898.4997647,
+    "seen": 1788593564.64822,
+    "ast_hash": "3cf36e7166b80890375237941f8b1dae",
     "semantic_hash": ""
   },
   "lib/features/cart/cart_screen.dart": {
-    "mtime": 1786855087.6921759,
-    "seen": 1787202550.7903168,
-    "ast_hash": "aafed25a58cb09c066c0b7bf88f49204",
+    "mtime": 1788499098.1962712,
+    "seen": 1788593564.6482234,
+    "ast_hash": "75d0bb2397872561ba9dbf5d2dc32730",
     "semantic_hash": ""
   },
   "lib/features/cart/coupons_screen.dart": {
-    "mtime": 1786096246.550941,
-    "seen": 1787202550.790322,
-    "ast_hash": "a99c5228a869909a5a857acf44bfa73f",
+    "mtime": 1788499707.6754076,
+    "seen": 1788593564.648225,
+    "ast_hash": "1200855c88ef22376137810fae13b5b2",
     "semantic_hash": ""
   },
   "lib/features/cart/empty_cart_screen.dart": {
-    "mtime": 1786099513.1577754,
-    "seen": 1787202550.7903264,
-    "ast_hash": "d7ceb96601f7cf5d6776a13b40422ddd",
+    "mtime": 1788499098.2304099,
+    "seen": 1788593564.6482265,
+    "ast_hash": "f6eb14e2a856e6068e45b3eed7408d49",
     "semantic_hash": ""
   },
   "lib/features/categories/categories_list_screen.dart": {
-    "mtime": 1786099616.6886747,
-    "seen": 1787202550.7903302,
-    "ast_hash": "704b0a06894758b093e26fed6fcac788",
+    "mtime": 1788464356.5714052,
+    "seen": 1788593564.6482284,
+    "ast_hash": "d9d80c85f884dc241f1e6db4b97997bc",
     "semantic_hash": ""
   },
   "lib/features/categories/categories_screen.dart": {
-    "mtime": 1786809368.446807,
-    "seen": 1787202550.7903342,
-    "ast_hash": "1679a25653f0ac6660a62d26f942e59b",
+    "mtime": 1788499098.264469,
+    "seen": 1788593564.64823,
+    "ast_hash": "3d79cf4197a988f4346fbedeb36be520",
     "semantic_hash": ""
   },
   "lib/features/categories/category_products_screen.dart": {
-    "mtime": 1786854544.3551352,
-    "seen": 1787202550.7903373,
-    "ast_hash": "5c859a125e14e78a82dc6ecf98941b84",
+    "mtime": 1788499098.2780972,
+    "seen": 1788593564.6482317,
+    "ast_hash": "944ee7ea5e8c78f3840498eee307a3ac",
     "semantic_hash": ""
   },
   "lib/features/categories/subcategory_screen.dart": {
-    "mtime": 1786096240.6508179,
-    "seen": 1787202550.7903402,
-    "ast_hash": "9e33ee44e2d2ab2234f296841c9f2c6b",
+    "mtime": 1788456787.3164644,
+    "seen": 1788593564.648233,
+    "ast_hash": "bdf33d8da568a40a08006c48da1dbcc0",
     "semantic_hash": ""
   },
   "lib/features/checkout/checkout_screen.dart": {
-    "mtime": 1786894526.9665067,
-    "seen": 1787202550.7903426,
-    "ast_hash": "b9a7bceac1573a550671912b9b9b024a",
+    "mtime": 1788500264.4358366,
+    "seen": 1788593564.6482346,
+    "ast_hash": "8f482e1aa0496548a665e3ed6bfb1ec9",
     "semantic_hash": ""
   },
   "lib/features/checkout/order_success_screen.dart": {
-    "mtime": 1786786256.6312983,
-    "seen": 1787202550.7903464,
-    "ast_hash": "16bd3aa50c87953878c7805c83eab880",
+    "mtime": 1788500264.4426696,
+    "seen": 1788593564.6482358,
+    "ast_hash": "218cf57ad472f73dd56e12b7e477bc6e",
     "semantic_hash": ""
   },
   "lib/features/delivery/delivery_dashboard.dart": {
-    "mtime": 1786098632.8059738,
-    "seen": 1787202550.7903497,
-    "ast_hash": "c170ce84b681ab8dad39d628c55229fb",
+    "mtime": 1788590099.276707,
+    "seen": 1788593564.6482391,
+    "ast_hash": "d55165de9b13fd8113f2234b4ff8902b",
     "semantic_hash": ""
   },
   "lib/features/delivery/delivery_earnings_screen.dart": {
-    "mtime": 1786099752.1160297,
-    "seen": 1787202550.7903528,
-    "ast_hash": "8f6af00746bba8cb5bc0264ac3aba90d",
+    "mtime": 1788502004.4441934,
+    "seen": 1788593564.6482406,
+    "ast_hash": "4bd2c1e501345ed46950d63ecd7810fb",
     "semantic_hash": ""
   },
   "lib/features/delivery/delivery_history_screen.dart": {
-    "mtime": 1786099760.7825594,
-    "seen": 1787202550.7903557,
-    "ast_hash": "5b39ecf07167b8ade37f66d26f8f1700",
+    "mtime": 1788464356.659547,
+    "seen": 1788593564.6482422,
+    "ast_hash": "783e2e1ef36c1de5754fe875ad64f989",
     "semantic_hash": ""
   },
   "lib/features/delivery/delivery_login.dart": {
-    "mtime": 1786098658.395541,
-    "seen": 1787202550.7903583,
-    "ast_hash": "08d72889172379207a7f89169e006002",
+    "mtime": 1788464356.6844087,
+    "seen": 1788593564.6482434,
+    "ast_hash": "e19441833e62fef537e1dd3d7595258f",
     "semantic_hash": ""
   },
   "lib/features/delivery/delivery_order_detail.dart": {
-    "mtime": 1786099747.5874119,
-    "seen": 1787202550.7903612,
-    "ast_hash": "016263c480da1e77a4446b69c0051a59",
+    "mtime": 1788464356.6915348,
+    "seen": 1788593564.648245,
+    "ast_hash": "8350b0b456ff19e7ad55c75b0bdd8279",
     "semantic_hash": ""
   },
   "lib/features/delivery/delivery_profile.dart": {
-    "mtime": 1786099848.535051,
-    "seen": 1787202550.7903643,
-    "ast_hash": "0dccd19df2273f9f6b133bf46bc13981",
+    "mtime": 1788502020.3210232,
+    "seen": 1788593564.6482463,
+    "ast_hash": "66e87dadfb3c191a7519fc2f8c8e60c4",
     "semantic_hash": ""
   },
   "lib/features/delivery/picker_dashboard.dart": {
-    "mtime": 1786099837.853904,
-    "seen": 1787202550.7903678,
-    "ast_hash": "c1ea63cc7f57a623b45c71dd559580db",
+    "mtime": 1788538929.7827234,
+    "seen": 1788593564.6482477,
+    "ast_hash": "f8516fd03e45ac27fa742e7da873f637",
     "semantic_hash": ""
   },
   "lib/features/delivery/picker_scan_screen.dart": {
-    "mtime": 1786099842.377566,
-    "seen": 1787202550.7903705,
-    "ast_hash": "ad3536c04f939585b4cfb9cfec493fc9",
+    "mtime": 1788464356.7073522,
+    "seen": 1788593564.6482491,
+    "ast_hash": "ebdf1a1b4974c94dbb1995ad605aae8c",
     "semantic_hash": ""
   },
   "lib/features/home/home_screen.dart": {
-    "mtime": 1786862567.4354749,
-    "seen": 1787202550.7903738,
-    "ast_hash": "a5c47ceb2237afb49b20a3ea30b35ca9",
+    "mtime": 1788585967.8214128,
+    "seen": 1788593564.648257,
+    "ast_hash": "62b941c068d9139da28f4fb9fa1845dd",
     "semantic_hash": ""
   },
   "lib/features/home/main_shell.dart": {
-    "mtime": 1787202209.3193152,
-    "seen": 1787202550.7903764,
-    "ast_hash": "42e384ca4f0358a6fdf3b2c65574b24d",
+    "mtime": 1788500264.4493456,
+    "seen": 1788593564.6482584,
+    "ast_hash": "fd65e8022807edb758be234dff358cc4",
     "semantic_hash": ""
   },
   "lib/features/orders/order_detail_screen.dart": {
-    "mtime": 1786894557.152279,
-    "seen": 1787202550.7903793,
-    "ast_hash": "16765adc4f96ee84431e5bafe6021971",
+    "mtime": 1788499707.7771504,
+    "seen": 1788593564.6482646,
+    "ast_hash": "67c3a6c0a7f6a6432fc7220ba91c68e7",
     "semantic_hash": ""
   },
   "lib/features/orders/order_tracking_screen.dart": {
-    "mtime": 1786098933.0645695,
-    "seen": 1787202550.7903821,
-    "ast_hash": "c6fb29c32698fee620e485aa8c0dadec",
+    "mtime": 1788531259.05568,
+    "seen": 1788593564.6482663,
+    "ast_hash": "d22824bc3bf528a3133be762ed91c003",
     "semantic_hash": ""
   },
   "lib/features/orders/orders_screen.dart": {
-    "mtime": 1786894893.338493,
-    "seen": 1787202550.7903852,
-    "ast_hash": "6da4e102e5b3bf61067b0c1205bf134a",
+    "mtime": 1788499098.6474955,
+    "seen": 1788593564.6482677,
+    "ast_hash": "011f1c54b3acfe154c297527465296b3",
     "semantic_hash": ""
   },
   "lib/features/products/combo_builder_screen.dart": {
-    "mtime": 1786809425.034866,
-    "seen": 1787202550.790388,
-    "ast_hash": "a298825d315ce8e7d619bea89f4b5dcb",
+    "mtime": 1788464356.726596,
+    "seen": 1788593564.6482756,
+    "ast_hash": "de4dbecf26e486ecabe9c4641891ffe8",
     "semantic_hash": ""
   },
   "lib/features/products/product_detail_screen.dart": {
-    "mtime": 1786786123.658144,
-    "seen": 1787202550.7903926,
-    "ast_hash": "0112881aed5f563a6b6523beb6b8ed02",
+    "mtime": 1788499098.7687838,
+    "seen": 1788593564.6482773,
+    "ast_hash": "667548034c4fa7fa34d54e86f58cbac5",
     "semantic_hash": ""
   },
   "lib/features/products/products_screen.dart": {
-    "mtime": 1786809420.4840326,
-    "seen": 1787202550.7904136,
-    "ast_hash": "bcd07cacb5e2172def577123e1a35a25",
+    "mtime": 1788499098.7833903,
+    "seen": 1788593564.6482785,
+    "ast_hash": "a0230c7ea6674c868a04b3cc7b4211fe",
     "semantic_hash": ""
   },
   "lib/features/profile/add_address_screen.dart": {
-    "mtime": 1786099584.138548,
-    "seen": 1787202550.7904162,
-    "ast_hash": "494ec9f545a7dda182e9b702d7e82787",
+    "mtime": 1788501913.541063,
+    "seen": 1788593564.6482801,
+    "ast_hash": "442da6ae54f676fc8d6e07d7d23e87b1",
     "semantic_hash": ""
   },
   "lib/features/profile/add_review_screen.dart": {
-    "mtime": 1786099573.9314532,
-    "seen": 1787202550.790419,
-    "ast_hash": "ccc9734dd97d27528d48ee32a492ea9b",
+    "mtime": 1788499098.8234735,
+    "seen": 1788593564.6482816,
+    "ast_hash": "d8bd3bfbda246008bd28980b5a3779c4",
     "semantic_hash": ""
   },
   "lib/features/profile/address_book_screen.dart": {
-    "mtime": 1786038756.7737823,
-    "seen": 1787202550.7904222,
-    "ast_hash": "7b4f23526ed20f74a763777f890a485a",
+    "mtime": 1788499098.8402686,
+    "seen": 1788593564.6482828,
+    "ast_hash": "7359f5338cdfc912ea04bffc1c54c578",
     "semantic_hash": ""
   },
   "lib/features/profile/addresses_screen.dart": {
-    "mtime": 1786809402.4871888,
-    "seen": 1787202550.7904255,
-    "ast_hash": "49c951794c1306c625dacb0cbac1e7a2",
+    "mtime": 1788496774.0565293,
+    "seen": 1788593564.6482844,
+    "ast_hash": "4f6c0c6653bb6904da869acd9ae50ab1",
     "semantic_hash": ""
   },
   "lib/features/profile/empty_wishlist_screen.dart": {
-    "mtime": 1786099520.264913,
-    "seen": 1787202550.7904289,
-    "ast_hash": "e1a080b4a5ffb50c300c192287d497ce",
+    "mtime": 1788499098.851375,
+    "seen": 1788593564.6482859,
+    "ast_hash": "e2fddc7ff5754eb881d6cf008101f97e",
     "semantic_hash": ""
   },
   "lib/features/profile/notifications_screen.dart": {
-    "mtime": 1786093523.1673203,
-    "seen": 1787202550.790433,
-    "ast_hash": "cc734f4a59268741a036e6e8a61d787c",
+    "mtime": 1788501201.4925025,
+    "seen": 1788593564.6482873,
+    "ast_hash": "563d9a7ae2947d82933b81260302dbbd",
     "semantic_hash": ""
   },
   "lib/features/profile/profile_screen.dart": {
-    "mtime": 1786786133.80148,
-    "seen": 1787202550.7904396,
-    "ast_hash": "57cc7a9230258616258de6dc918cb1f3",
+    "mtime": 1788500264.4593763,
+    "seen": 1788593564.6482887,
+    "ast_hash": "1198e81cc5736a91b1071ff4a7a72a0a",
     "semantic_hash": ""
   },
   "lib/features/profile/recently_viewed_screen.dart": {
-    "mtime": 1786099330.1259255,
-    "seen": 1787202550.7904432,
-    "ast_hash": "82d462d594e49645455d06cd0149f1b3",
+    "mtime": 1788456815.6466045,
+    "seen": 1788593564.6482904,
+    "ast_hash": "2148b484bc377f73b93baf1f10cdc9d9",
     "semantic_hash": ""
   },
   "lib/features/profile/refer_earn_screen.dart": {
-    "mtime": 1786809417.3026302,
-    "seen": 1787202550.7904475,
-    "ast_hash": "d34194402a928d3bf525b25971b37fd3",
+    "mtime": 1788501977.0711205,
+    "seen": 1788593564.6482918,
+    "ast_hash": "7d0d57f5f22f38660d060ab7f5bf63ba",
     "semantic_hash": ""
   },
   "lib/features/profile/subscriptions_screen.dart": {
-    "mtime": 1786093520.1918912,
-    "seen": 1787202550.7904506,
-    "ast_hash": "ae6f276437773d9ae035484093e5ef65",
+    "mtime": 1788500347.0863006,
+    "seen": 1788593564.6482935,
+    "ast_hash": "d64b5519879c3c0abc09eb28f0a7e0fe",
     "semantic_hash": ""
   },
   "lib/features/profile/wallet_screen.dart": {
-    "mtime": 1786038055.412748,
-    "seen": 1787202550.7904534,
-    "ast_hash": "8256abdbaf1de05a412cc06dbdc5c017",
+    "mtime": 1788464356.8196635,
+    "seen": 1788593564.6482947,
+    "ast_hash": "938a1da8945a4481c8970e48dafa762c",
     "semantic_hash": ""
   },
   "lib/features/profile/wishlist_screen.dart": {
-    "mtime": 1786093516.837516,
-    "seen": 1787202550.790457,
-    "ast_hash": "999018781ffe63fdf5a74443a2f8fb27",
+    "mtime": 1788499707.8462682,
+    "seen": 1788593564.648296,
+    "ast_hash": "56acdf1a9159e7bd035e1e29cdcb02a9",
     "semantic_hash": ""
   },
   "lib/features/search/search_results_screen.dart": {
-    "mtime": 1786100855.3987167,
-    "seen": 1787202550.79046,
-    "ast_hash": "54b44ce5e0ef603f9467adb721d2cc57",
+    "mtime": 1788456049.607195,
+    "seen": 1788593564.6482978,
+    "ast_hash": "33d0d86661fc8e6424d6869c1cea3eb1",
     "semantic_hash": ""
   },
   "lib/features/search/search_screen.dart": {
-    "mtime": 1787135105.285099,
-    "seen": 1787202550.7904632,
-    "ast_hash": "cf0ee9896a6ef952a258892e42058c2c",
+    "mtime": 1788586925.9772427,
+    "seen": 1788593564.648299,
+    "ast_hash": "9369baefc5dc4d8221817cc3a687b484",
     "semantic_hash": ""
   },
   "lib/features/settings/settings_screen.dart": {
-    "mtime": 1786098380.6547768,
-    "seen": 1787202550.7904663,
-    "ast_hash": "8ef217a39c23b9b154a25f301f948027",
+    "mtime": 1788501933.2575812,
+    "seen": 1788593564.648302,
+    "ast_hash": "1f3ac9f107b845f4c949ab334b0772d1",
     "semantic_hash": ""
   },
   "lib/features/splash/splash_screen.dart": {
-    "mtime": 1786809455.4037464,
-    "seen": 1787202550.7904696,
-    "ast_hash": "542e9c9d2e89a7643baa7d9c4514b254",
+    "mtime": 1788593363.314569,
+    "seen": 1788593564.6483054,
+    "ast_hash": "b9f07da0bfa6fb35386b5b35cd9d7e87",
     "semantic_hash": ""
   },
   "lib/features/subscription/subscription_screen.dart": {
-    "mtime": 1786100756.233358,
-    "seen": 1787202550.7904727,
-    "ast_hash": "ed6a25996ebeb6dcfb82a408333b0cff",
+    "mtime": 1788499707.8668437,
+    "seen": 1788593564.6483068,
+    "ast_hash": "252f30eb8f10a6e1f2e800fd827c1e78",
     "semantic_hash": ""
   },
   "lib/features/support/help_support_screen.dart": {
-    "mtime": 1786098319.7459755,
-    "seen": 1787202550.7904756,
-    "ast_hash": "4a7f7c3d91c721afb1929434d01ab218",
+    "mtime": 1788502034.5158477,
+    "seen": 1788593564.6483085,
+    "ast_hash": "88ed2510dc26e0bae46da04f95f93ca8",
     "semantic_hash": ""
   },
   "lib/features/wallet/wallet_screen.dart": {
-    "mtime": 1786809413.841434,
-    "seen": 1787202550.7904787,
-    "ast_hash": "07e347a20563d1c093b8402e03a99fff",
+    "mtime": 1788502056.2371488,
+    "seen": 1788593564.6483102,
+    "ast_hash": "aaeec68fc165403b06b3d24ca1474ea9",
     "semantic_hash": ""
   },
   "lib/main.dart": {
-    "mtime": 1787135416.4921231,
-    "seen": 1787202550.7904818,
-    "ast_hash": "db997f7d48135f9231ef3257726f9ebe",
+    "mtime": 1788582853.5873187,
+    "seen": 1788593564.6483133,
+    "ast_hash": "4982e1a70fbec0ebe66bf5905da417cd",
     "semantic_hash": ""
   },
   "lib/providers/address_provider.dart": {
-    "mtime": 1786709034.9789436,
-    "seen": 1787202550.790485,
-    "ast_hash": "9aa6fe22afa321e991e9723127ca5b63",
+    "mtime": 1788414225.8605278,
+    "seen": 1788593564.648315,
+    "ast_hash": "b7d94d8d07ae127b8b7fd146b8a50e13",
     "semantic_hash": ""
   },
   "lib/providers/auth_provider.dart": {
-    "mtime": 1787121027.4135492,
-    "seen": 1787202550.790488,
-    "ast_hash": "2eea81a9bdfe4bd26884e9d749ffc52d",
+    "mtime": 1788465530.397198,
+    "seen": 1788593564.6483166,
+    "ast_hash": "451581ab10d6b9a01ceb6dd9043e28a6",
     "semantic_hash": ""
   },
   "lib/providers/cart_provider.dart": {
-    "mtime": 1786786251.952008,
-    "seen": 1787202550.7904909,
-    "ast_hash": "0c1e8bc998d1a1e581970b64e42ab71c",
+    "mtime": 1788502867.9599464,
+    "seen": 1788593564.6483195,
+    "ast_hash": "7100ef702bf81c0bd5336a815a658e02",
     "semantic_hash": ""
   },
   "lib/providers/product_provider.dart": {
-    "mtime": 1786037890.201943,
-    "seen": 1787202550.7904935,
-    "ast_hash": "80a2a7277ef987f4956e14d81f4620d3",
-    "semantic_hash": ""
-  },
-  "lib/providers/product_providers.dart": {
-    "mtime": 1786037971.2877748,
-    "seen": 1787202550.790496,
-    "ast_hash": "0de792c0ab1805f7ebb8f18a44915c88",
+    "mtime": 1788502867.9731395,
+    "seen": 1788593564.6483228,
+    "ast_hash": "fbbb975320c5b685648aefc5df5d7c8e",
     "semantic_hash": ""
   },
   "lib/providers/restaurant_provider.dart": {
-    "mtime": 1786773265.1843407,
-    "seen": 1787202550.7904987,
-    "ast_hash": "57adbf0d22f5c70463b879a6efbe5dc7",
+    "mtime": 1788584608.3429246,
+    "seen": 1788593564.6483243,
+    "ast_hash": "68182b410f1ede429e08fc9d29e1b315",
     "semantic_hash": ""
   },
   "lib/widgets/brand_button.dart": {
-    "mtime": 1786091616.03985,
-    "seen": 1787202550.790501,
-    "ast_hash": "48aef0370ebdcf7cb2537f4b3291dc9e",
+    "mtime": 1788151688.7482815,
+    "seen": 1788593564.648332,
+    "ast_hash": "6382035c0fd9af9b7e433b43615be23c",
     "semantic_hash": ""
   },
   "lib/widgets/brand_card.dart": {
-    "mtime": 1786014839.7310846,
-    "seen": 1787202550.790505,
-    "ast_hash": "7fabfc89e52535652ce71622c6c9d13f",
+    "mtime": 1788464356.878162,
+    "seen": 1788593564.6483338,
+    "ast_hash": "19ebb5d59232bbe19f6615952447d82d",
     "semantic_hash": ""
   },
   "lib/widgets/brand_input.dart": {
-    "mtime": 1786809444.060402,
-    "seen": 1787202550.7905073,
-    "ast_hash": "f3bd744cbba532bd493918631df3bdbc",
+    "mtime": 1788433369.5417128,
+    "seen": 1788593564.6483355,
+    "ast_hash": "9cf2ac9a4e6df82554084e788134c183",
     "semantic_hash": ""
   },
   "lib/widgets/brand_logo.dart": {
-    "mtime": 1786809448.0067313,
-    "seen": 1787202550.7905095,
-    "ast_hash": "13cd15b9d69b4bbad9522a10608f8cb7",
+    "mtime": 1788499707.9058387,
+    "seen": 1788593564.6483366,
+    "ast_hash": "51395bb85ea2c52faf7d40523147a227",
     "semantic_hash": ""
   },
   "lib/widgets/product_card.dart": {
-    "mtime": 1787202515.457208,
-    "seen": 1787202550.7905128,
-    "ast_hash": "033d4d6bf84efeebe5c5c6f9101b25ea",
+    "mtime": 1788585225.4378211,
+    "seen": 1788593564.6483471,
+    "ast_hash": "e103a33e0dc2e092f63a7908aa1f4105",
     "semantic_hash": ""
   },
   "lib/widgets/restaurant_card.dart": {
-    "mtime": 1786809264.1874957,
-    "seen": 1787202550.790518,
-    "ast_hash": "ec82b2e8094f0a65ac5e64a9fc78a034",
+    "mtime": 1788586822.993723,
+    "seen": 1788593564.6483486,
+    "ast_hash": "6715d3a5e68bf59c220ab68ece809303",
     "semantic_hash": ""
   },
   "lib/widgets/shimmer_box.dart": {
-    "mtime": 1786038454.907165,
-    "seen": 1787202550.790521,
-    "ast_hash": "4096599cb34e2fefd92cf205532cdd85",
+    "mtime": 1788469720.170722,
+    "seen": 1788593564.64835,
+    "ast_hash": "d4a2d08778a414ff78f5a3628c9e9d2a",
     "semantic_hash": ""
   },
   "test/widget_test.dart": {
-    "mtime": 1786091825.2005293,
-    "seen": 1787202550.790524,
-    "ast_hash": "5ea9352ba757ff9166a38b4d26bd1ad9",
+    "mtime": 1788284546.204258,
+    "seen": 1788593564.6483707,
+    "ast_hash": "75bf2557d58eccbe94979c7ffcd7f3d3",
     "semantic_hash": ""
   },
   "web/manifest.json": {
     "mtime": 1786596576.540026,
-    "seen": 1787202550.7905266,
+    "seen": 1788593564.6483722,
     "ast_hash": "e9e1b92b71bf4b394629588803319a79",
     "semantic_hash": ""
   },
   "README.md": {
     "mtime": 1786038681.8566675,
-    "seen": 1787202550.79053,
+    "seen": 1788593564.6483757,
     "ast_hash": "1e6976ebcd52d4cf5f4d41a04684fcb6",
     "semantic_hash": ""
   },
   "analysis_options.yaml": {
-    "mtime": 1786038681.8120427,
-    "seen": 1787202550.7905328,
-    "ast_hash": "9e65f4b9beebb674c0dc252f70a5c177",
+    "mtime": 1788420579.2253375,
+    "seen": 1788593564.648379,
+    "ast_hash": "106b258f4d5b31d71465e5b40beb864d",
     "semantic_hash": ""
   },
   "pubspec.yaml": {
-    "mtime": 1787135161.5234864,
-    "seen": 1787202550.790536,
-    "ast_hash": "33249003fe7f5b475a35bf8d8860aaa6",
+    "mtime": 1788590018.509962,
+    "seen": 1788593564.6483822,
+    "ast_hash": "44b6eae04ec504408cb4505677c51540",
     "semantic_hash": ""
   },
   "web/index.html": {
-    "mtime": 1786596568.354235,
-    "seen": 1787202550.7905388,
-    "ast_hash": "8b5b395ea64ff0cc89edb1310f339602",
+    "mtime": 1788454343.1176586,
+    "seen": 1788593564.6483839,
+    "ast_hash": "402d9c491911cee6b70e16319ac01362",
     "semantic_hash": ""
   },
   "android/app/src/main/res/mipmap-hdpi/ic_launcher.png": {
-    "mtime": 1738730074.0,
-    "seen": 1787202550.7905414,
-    "ast_hash": "13e9c72ec37fac220397aa819fa1ef2d",
+    "mtime": 1788087056.674325,
+    "seen": 1788593564.6483939,
+    "ast_hash": "76951f97fa137dab3c2f7dac57359f8b",
     "semantic_hash": ""
   },
   "android/app/src/main/res/mipmap-mdpi/ic_launcher.png": {
-    "mtime": 1738730074.0,
-    "seen": 1787202550.7905443,
-    "ast_hash": "6270344430679711b81476e29878caa7",
+    "mtime": 1788087056.6211183,
+    "seen": 1788593564.6483989,
+    "ast_hash": "25000563b5265216814efbf8b31db210",
     "semantic_hash": ""
   },
   "android/app/src/main/res/mipmap-xhdpi/ic_launcher.png": {
-    "mtime": 1738730074.0,
-    "seen": 1787202550.7905471,
-    "ast_hash": "a0a8db5985280b3679d99a820ae2db79",
+    "mtime": 1788087056.738746,
+    "seen": 1788593564.6484036,
+    "ast_hash": "0cf67065c06a0a5ff2aa00ff25a3a4e6",
     "semantic_hash": ""
   },
   "android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png": {
-    "mtime": 1738730074.0,
-    "seen": 1787202550.7905505,
-    "ast_hash": "afe1b655b9f32da22f9a4301bb8e6ba8",
+    "mtime": 1788087056.8104198,
+    "seen": 1788593564.6484084,
+    "ast_hash": "aea48a10a3db8ad2969c14d9bb427350",
     "semantic_hash": ""
   },
   "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png": {
-    "mtime": 1738730074.0,
-    "seen": 1787202550.7905533,
-    "ast_hash": "57838d52c318faff743130c3fcfae0c6",
+    "mtime": 1788087056.8965185,
+    "seen": 1788593564.6484127,
+    "ast_hash": "e51972de157c53c7ac701cf3314d1249",
     "semantic_hash": ""
   },
   "assets/brand/fastkirana_app_icon.png": {
-    "mtime": 1784218306.5515587,
-    "seen": 1787202550.7905557,
-    "ast_hash": "6bc75ad676800455c43eeebebb277eb0",
+    "mtime": 1787837391.9273946,
+    "seen": 1788593564.648419,
+    "ast_hash": "798c4af41c917471b8d74aaa969c55a0",
     "semantic_hash": ""
   },
   "assets/brand/fastkirana_exact_logo.png": {
-    "mtime": 1784215459.4429653,
-    "seen": 1787202550.790558,
-    "ast_hash": "31382d59927075db0672a72b4c63a6f8",
+    "mtime": 1787837391.9549758,
+    "seen": 1788593564.6484215,
+    "ast_hash": "798c4af41c917471b8d74aaa969c55a0",
     "semantic_hash": ""
   },
   "assets/categories/all_products_badge.png": {
     "mtime": 1781633478.979465,
-    "seen": 1787202550.7905607,
+    "seen": 1788593564.6484246,
     "ast_hash": "f5ef37c5f5fa945cf5d15335f2c13c6c",
     "semantic_hash": ""
   },
   "assets/categories/all_products_category.png": {
     "mtime": 1781633521.1199596,
-    "seen": 1787202550.7905638,
+    "seen": 1788593564.6484277,
     "ast_hash": "3ca0af84316536c8b54432a6ed9cd881",
     "semantic_hash": ""
   },
   "assets/categories/atta_rice_dal_category.png": {
     "mtime": 1781331101.644928,
-    "seen": 1787202550.790566,
+    "seen": 1788593564.648431,
     "ast_hash": "02fbaa310b82302fdf76ab38c7a6576b",
     "semantic_hash": ""
   },
   "assets/categories/bakery_biscuits_category.png": {
     "mtime": 1781331083.610191,
-    "seen": 1787202550.7905684,
+    "seen": 1788593564.6484344,
     "ast_hash": "23fb6a996c4214e6257eccc8189cfc58",
     "semantic_hash": ""
   },
   "assets/categories/best_sellers_badge.png": {
     "mtime": 1781630805.1023428,
-    "seen": 1787202550.790571,
+    "seen": 1788593564.6484375,
     "ast_hash": "dce0596ecb451b33b4b4ef7f0f4ee0b0",
     "semantic_hash": ""
   },
   "assets/categories/beverages_category.png": {
     "mtime": 1781330141.9724667,
-    "seen": 1787202550.7905734,
+    "seen": 1788593564.6484408,
     "ast_hash": "79e6a807559a3825ff4f86a07290a742",
     "semantic_hash": ""
   },
   "assets/categories/breakfast_deals_badge.png": {
     "mtime": 1781641173.0282412,
-    "seen": 1787202550.7905753,
+    "seen": 1788593564.648444,
     "ast_hash": "87fe1c16bb9e03dfa01338e76dff2b0e",
     "semantic_hash": ""
   },
   "assets/categories/cafe_all_menu_category.png": {
     "mtime": 1781633185.235408,
-    "seen": 1787202550.7905781,
+    "seen": 1788593564.648447,
     "ast_hash": "d653990cdc187c86a8de357dc941edec",
     "semantic_hash": ""
   },
   "assets/categories/cafe_bombay_bites_category.png": {
     "mtime": 1781633298.221753,
-    "seen": 1787202550.790581,
+    "seen": 1788593564.6484535,
     "ast_hash": "d8de91254d400a7e31fc3b4b04b1cf0b",
     "semantic_hash": ""
   },
   "assets/categories/cafe_brews_category.png": {
     "mtime": 1781661979.4290102,
-    "seen": 1787202550.7905834,
+    "seen": 1788593564.6484563,
     "ast_hash": "218c2cf3339c6332d4707c27ae94eb36",
     "semantic_hash": ""
   },
   "assets/categories/cafe_burgers_category.png": {
     "mtime": 1781663422.842808,
-    "seen": 1787202550.7905865,
+    "seen": 1788593564.6484594,
     "ast_hash": "afd839349f7749124890f160dff59415",
     "semantic_hash": ""
   },
   "assets/categories/cafe_category.png": {
     "mtime": 1781003634.6700184,
-    "seen": 1787202550.790589,
+    "seen": 1788593564.6484623,
     "ast_hash": "8f97d6e6f1fa710fd7bfeca6442d0a16",
     "semantic_hash": ""
   },
   "assets/categories/cafe_chinese_category.png": {
     "mtime": 1781633268.2471118,
-    "seen": 1787202550.790592,
+    "seen": 1788593564.6484654,
     "ast_hash": "21305c2e764eef7e559a8c50db5663bc",
     "semantic_hash": ""
   },
   "assets/categories/cafe_coffee_category.png": {
     "mtime": 1781663078.7435114,
-    "seen": 1787202550.790594,
+    "seen": 1788593564.6484685,
     "ast_hash": "97136dbbcd5d0d10a9b499239c127ec0",
     "semantic_hash": ""
   },
   "assets/categories/cafe_cold_drinks_category.png": {
     "mtime": 1781663092.0750818,
-    "seen": 1787202550.7905967,
+    "seen": 1788593564.6484718,
     "ast_hash": "5b70ae550d6696f72741641873dc2746",
     "semantic_hash": ""
   },
   "assets/categories/cafe_desserts_category.png": {
     "mtime": 1781663454.225118,
-    "seen": 1787202550.7905986,
+    "seen": 1788593564.648475,
     "ast_hash": "05d1b7ba6c0b771c4854bc920f44e533",
     "semantic_hash": ""
   },
   "assets/categories/cafe_garlic_bread_category.png": {
     "mtime": 1781663441.0355182,
-    "seen": 1787202550.7906008,
+    "seen": 1788593564.648478,
     "ast_hash": "c6d65ce97a0a3cd7b22dd2bd3f244f34",
     "semantic_hash": ""
   },
   "assets/categories/cafe_mocktails_category.png": {
     "mtime": 1781663063.317586,
-    "seen": 1787202550.790603,
+    "seen": 1788593564.6484811,
     "ast_hash": "508c37a05e7886b89c3d39d42d50040f",
     "semantic_hash": ""
   },
   "assets/categories/cafe_pasta_category.png": {
     "mtime": 1781633282.8281803,
-    "seen": 1787202550.7906053,
+    "seen": 1788593564.648484,
     "ast_hash": "e312982946b2202204d973b22d2391e0",
     "semantic_hash": ""
   },
   "assets/categories/cafe_pizza_category.png": {
     "mtime": 1781663408.7040198,
-    "seen": 1787202550.790608,
+    "seen": 1788593564.648487,
     "ast_hash": "94e3d8447558eed3cac22d2796896ad5",
     "semantic_hash": ""
   },
   "assets/categories/cafe_rice_category.png": {
     "mtime": 1781633312.242297,
-    "seen": 1787202550.7906098,
+    "seen": 1788593564.6484902,
     "ast_hash": "a6f7d26b1eea7b30ba33b5d27fde8ad5",
     "semantic_hash": ""
   },
   "assets/categories/cafe_rolls_category.png": {
     "mtime": 1781661998.472162,
-    "seen": 1787202550.790612,
+    "seen": 1788593564.6484933,
     "ast_hash": "f0916f074d72dbc428a1f9404f3308be",
     "semantic_hash": ""
   },
   "assets/categories/cafe_sandwiches_category.png": {
     "mtime": 1781633232.9888856,
-    "seen": 1787202550.7906141,
+    "seen": 1788593564.6484966,
     "ast_hash": "23d3795452afb899d8ae0f6eb8b506ba",
     "semantic_hash": ""
   },
   "assets/categories/cafe_shakes_category.png": {
     "mtime": 1781663050.47208,
-    "seen": 1787202550.7906163,
+    "seen": 1788593564.6484997,
     "ast_hash": "d5fdafad953fe637c21b038d8afcd643",
     "semantic_hash": ""
   },
   "assets/categories/cafe_snacks_category.png": {
     "mtime": 1781633215.875875,
-    "seen": 1787202550.7906187,
+    "seen": 1788593564.6485028,
     "ast_hash": "6b376f0e8ac2a0a5b8e2240d71f85323",
     "semantic_hash": ""
   },
   "assets/categories/cafe_south_indian_category.png": {
     "mtime": 1781663037.657223,
-    "seen": 1787202550.790623,
+    "seen": 1788593564.648506,
     "ast_hash": "cf938aa2a15c151f19d23f274ae23c54",
     "semantic_hash": ""
   },
   "assets/categories/dairy_breakfast_category.png": {
     "mtime": 1780855058.4744923,
-    "seen": 1787202550.7906275,
+    "seen": 1788593564.648509,
     "ast_hash": "05c79cc29fefdafedfa286ea13e337ab",
     "semantic_hash": ""
   },
   "assets/categories/flash_deals_badge.png": {
     "mtime": 1781630787.8698318,
-    "seen": 1787202550.7906327,
+    "seen": 1788593564.648512,
     "ast_hash": "19d9be1b231ffe59c6c5235cd1db1345",
     "semantic_hash": ""
   },
   "assets/categories/fruits_vegetables_category.png": {
     "mtime": 1780855041.7580352,
-    "seen": 1787202550.790638,
+    "seen": 1788593564.648515,
     "ast_hash": "4cc1b0c20e0ed495b61b466000009436",
     "semantic_hash": ""
   },
   "assets/categories/household_category.png": {
     "mtime": 1780855132.989463,
-    "seen": 1787202550.790641,
+    "seen": 1788593564.6485183,
     "ast_hash": "d35248befaced09455a456e50de6a32d",
     "semantic_hash": ""
   },
   "assets/categories/ice_cream_category.png": {
     "mtime": 1781633497.8162398,
-    "seen": 1787202550.7906437,
+    "seen": 1788593564.6485217,
     "ast_hash": "f4ae3d3535fcb94bb112edb0b90db3c7",
     "semantic_hash": ""
   },
   "assets/categories/lunch_deals_badge.png": {
     "mtime": 1781641185.3824844,
-    "seen": 1787202550.790646,
+    "seen": 1788593564.6485248,
     "ast_hash": "fce9176b2ab8fd3762af96006c2c7e8d",
     "semantic_hash": ""
   },
   "assets/categories/night_cravings_badge.png": {
     "mtime": 1781630842.239484,
-    "seen": 1787202550.7906482,
+    "seen": 1788593564.6485279,
     "ast_hash": "5178bd7743bc48f6435e810262d32218",
     "semantic_hash": ""
   },
   "assets/categories/personal_care_category.png": {
     "mtime": 1781783678.2468362,
-    "seen": 1787202550.7906506,
+    "seen": 1788593564.6485312,
     "ast_hash": "685673638931a3182407399beb9610bf",
     "semantic_hash": ""
   },
   "assets/categories/snacks_munchies_category.png": {
     "mtime": 1781331061.4936965,
-    "seen": 1787202550.7906532,
+    "seen": 1788593564.6485348,
     "ast_hash": "fb15470301cb6f67952466f0060d08d7",
     "semantic_hash": ""
   },
   "assets/categories/tea_deals_badge.png": {
     "mtime": 1781641198.9018478,
-    "seen": 1787202550.7906554,
+    "seen": 1788593564.6485379,
     "ast_hash": "0f005cd617aa435eff3067f09ad4b685",
     "semantic_hash": ""
   },
   "web/favicon.png": {
     "mtime": 1784398469.3410711,
-    "seen": 1787202550.7906578,
+    "seen": 1788593564.6485505,
     "ast_hash": "5dcef449791fa27946b3d35ad8803796",
     "semantic_hash": ""
   },
   "web/icons/Icon-192.png": {
-    "mtime": 1784398469.3420675,
-    "seen": 1787202550.7906601,
-    "ast_hash": "ac9a721a12bbc803b44f645561ecb1e1",
+    "mtime": 1787846011.960183,
+    "seen": 1788593564.6485522,
+    "ast_hash": "40c15fac157351f0eccd2e045244d4de",
     "semantic_hash": ""
   },
   "web/icons/Icon-512.png": {
-    "mtime": 1784398469.3430676,
-    "seen": 1787202550.790677,
-    "ast_hash": "96e752610906ba2a93c65f8abe1645f1",
+    "mtime": 1787846012.040253,
+    "seen": 1788593564.6485536,
+    "ast_hash": "e715f81d75611e0f7e08398f24c16117",
     "semantic_hash": ""
   },
   "web/icons/Icon-maskable-192.png": {
-    "mtime": 1784399167.5119123,
-    "seen": 1787202550.7906792,
-    "ast_hash": "c457ef57daa1d16f64b27b786ec2ea3c",
+    "mtime": 1787846011.937637,
+    "seen": 1788593564.6485555,
+    "ast_hash": "40c15fac157351f0eccd2e045244d4de",
     "semantic_hash": ""
   },
   "web/icons/Icon-maskable-512.png": {
-    "mtime": 1784399167.4613917,
-    "seen": 1787202550.7906826,
-    "ast_hash": "301a7604d45b3e739efc881eb04896ea",
+    "mtime": 1787846012.0007515,
+    "seen": 1788593564.6485574,
+    "ast_hash": "e715f81d75611e0f7e08398f24c16117",
+    "semantic_hash": ""
+  },
+  "android/app/src/main/kotlin/com/fastkirana/app/MainActivity.kt": {
+    "mtime": 1787982935.7904496,
+    "seen": 1788593564.6480427,
+    "ast_hash": "0eff435f16940caa54a409a264fac146",
+    "semantic_hash": ""
+  },
+  "download_fonts.ps1": {
+    "mtime": 1788343435.2111049,
+    "seen": 1788593564.6480517,
+    "ast_hash": "68d3aa97e68d9ea5e315ca6db30046e2",
+    "semantic_hash": ""
+  },
+  "lib/core/routes/page_transitions.dart": {
+    "mtime": 1788333392.4658432,
+    "seen": 1788593564.6480613,
+    "ast_hash": "c145b36fcbcd5cdfe4f588e9e5ce3b22",
+    "semantic_hash": ""
+  },
+  "lib/core/services/admin_notification_service.dart": {
+    "mtime": 1788207288.7075703,
+    "seen": 1788593564.6480634,
+    "ast_hash": "83e299ada4030b45004e263c4193f767",
+    "semantic_hash": ""
+  },
+  "lib/core/services/battery_optimization_service.dart": {
+    "mtime": 1788464356.2621517,
+    "seen": 1788593564.6480653,
+    "ast_hash": "be441d668dbcd39ef75865f792bc5db5",
+    "semantic_hash": ""
+  },
+  "lib/core/services/biometric_service.dart": {
+    "mtime": 1788501201.4243388,
+    "seen": 1788593564.6480672,
+    "ast_hash": "5e00b3cc06f0a483d798e5aabf70d013",
+    "semantic_hash": ""
+  },
+  "lib/core/services/kot_print_service.dart": {
+    "mtime": 1788531498.166273,
+    "seen": 1788593564.648069,
+    "ast_hash": "4da9fd5f5a12028cadb18682aec23d5e",
+    "semantic_hash": ""
+  },
+  "lib/core/services/location_service.dart": {
+    "mtime": 1788422076.3489208,
+    "seen": 1788593564.6480703,
+    "ast_hash": "f5ed44ba93b9a9b79ccdeec12bbfb11f",
+    "semantic_hash": ""
+  },
+  "lib/core/services/logger_service.dart": {
+    "mtime": 1788465521.9812758,
+    "seen": 1788593564.648072,
+    "ast_hash": "409060e70d282e3e3a5fc0dd1f8cc6c5",
+    "semantic_hash": ""
+  },
+  "lib/core/services/offline_sync_service.dart": {
+    "mtime": 1788501201.4465785,
+    "seen": 1788593564.6481078,
+    "ast_hash": "8b8ca3450e5ae51dedd6291e85d38ed3",
+    "semantic_hash": ""
+  },
+  "lib/core/services/rider_location_service.dart": {
+    "mtime": 1788529491.8217957,
+    "seen": 1788593564.6481092,
+    "ast_hash": "83190669a65a925497ad43034db4cb10",
+    "semantic_hash": ""
+  },
+  "lib/core/services/secure_storage_service.dart": {
+    "mtime": 1788502865.729,
+    "seen": 1788593564.6481109,
+    "ast_hash": "a8f565c26e2f3dda2fca971c2ec0f3ed",
+    "semantic_hash": ""
+  },
+  "lib/core/services/supabase_service.dart": {
+    "mtime": 1788502865.7334816,
+    "seen": 1788593564.648112,
+    "ast_hash": "9a34a756e14663335dc43024f5cee87d",
+    "semantic_hash": ""
+  },
+  "lib/core/theme/responsive.dart": {
+    "mtime": 1788499707.3351321,
+    "seen": 1788593564.6481175,
+    "ast_hash": "892b228e6f800c10f8c710fcf2df841d",
+    "semantic_hash": ""
+  },
+  "lib/core/utils/app_connectivity.dart": {
+    "mtime": 1788466715.9026072,
+    "seen": 1788593564.648119,
+    "ast_hash": "db023be7750390053ae1c249c9019a57",
+    "semantic_hash": ""
+  },
+  "lib/core/utils/app_errors.dart": {
+    "mtime": 1788503030.5988955,
+    "seen": 1788593564.6481206,
+    "ast_hash": "55b9cd6fb04884f41442a5f4bc675812",
+    "semantic_hash": ""
+  },
+  "lib/core/utils/app_toast.dart": {
+    "mtime": 1788499707.3827462,
+    "seen": 1788593564.648122,
+    "ast_hash": "3b6c292a4131c8198dc15e156369191c",
+    "semantic_hash": ""
+  },
+  "lib/core/utils/dish_timing.dart": {
+    "mtime": 1788502865.826615,
+    "seen": 1788593564.6481237,
+    "ast_hash": "337575af4d989a34233eeff2fc3ecae7",
+    "semantic_hash": ""
+  },
+  "lib/core/utils/restaurant_utils.dart": {
+    "mtime": 1788347218.3114395,
+    "seen": 1788593564.6481252,
+    "ast_hash": "54ece401a7f85bd52a52fcf407c4146d",
+    "semantic_hash": ""
+  },
+  "lib/core/widgets/checkout/address_card.dart": {
+    "mtime": 1788503038.4724088,
+    "seen": 1788593564.6481283,
+    "ast_hash": "7eeb634e7668ebb7478139d20cfd11ae",
+    "semantic_hash": ""
+  },
+  "lib/core/widgets/contextual_brand_transition_screen.dart": {
+    "mtime": 1788499707.3890848,
+    "seen": 1788593564.6481297,
+    "ast_hash": "d582483d0e216b01fa3ec9a0dfcb0e34",
+    "semantic_hash": ""
+  },
+  "lib/core/widgets/empty_state.dart": {
+    "mtime": 1788503046.351574,
+    "seen": 1788593564.6481314,
+    "ast_hash": "bdf932944a5d25235197a17b2ee905ce",
+    "semantic_hash": ""
+  },
+  "lib/core/widgets/loading_widgets.dart": {
+    "mtime": 1788499707.3970544,
+    "seen": 1788593564.648133,
+    "ast_hash": "a335f430a6436b655c5db58f48cc368c",
+    "semantic_hash": ""
+  },
+  "lib/core/widgets/retry_wrapper.dart": {
+    "mtime": 1788503053.6017938,
+    "seen": 1788593564.6481347,
+    "ast_hash": "c3ad8c7a2b3cf075142cc9c2fb6d8539",
+    "semantic_hash": ""
+  },
+  "lib/core/widgets/section_header.dart": {
+    "mtime": 1788503063.4358537,
+    "seen": 1788593564.648136,
+    "ast_hash": "24acb9e5e0bd2038524dcdd61bee742d",
+    "semantic_hash": ""
+  },
+  "lib/core/widgets/widgets.dart": {
+    "mtime": 1788502927.946565,
+    "seen": 1788593564.6481376,
+    "ast_hash": "0f0ee4cc7c4910314fd2fc814929a204",
+    "semantic_hash": ""
+  },
+  "lib/data/models/address.freezed.dart": {
+    "mtime": 1788421245.8767326,
+    "seen": 1788593564.6481404,
+    "ast_hash": "00ce2a6dfe35749e6dae6812faa88a9c",
+    "semantic_hash": ""
+  },
+  "lib/data/models/banner.freezed.dart": {
+    "mtime": 1788419864.3895438,
+    "seen": 1788593564.6481438,
+    "ast_hash": "1cf2be95d94821a19952546672203edd",
+    "semantic_hash": ""
+  },
+  "lib/data/models/category.freezed.dart": {
+    "mtime": 1788419864.39054,
+    "seen": 1788593564.6481495,
+    "ast_hash": "d594f26619889eb7b08d2c25eeeeaf87",
+    "semantic_hash": ""
+  },
+  "lib/data/models/coupon.freezed.dart": {
+    "mtime": 1788420845.7664175,
+    "seen": 1788593564.6481528,
+    "ast_hash": "ab39131e013ba0159aff23d9a4dae0e1",
+    "semantic_hash": ""
+  },
+  "lib/data/models/store_settings.dart": {
+    "mtime": 1788421108.384438,
+    "seen": 1788593564.6481597,
+    "ast_hash": "8395ff54c49eb2d7a6ad6b4597e757db",
+    "semantic_hash": ""
+  },
+  "lib/data/models/store_settings.freezed.dart": {
+    "mtime": 1788421246.0250888,
+    "seen": 1788593564.6481612,
+    "ast_hash": "8dc61b1f3767417f361259ba1afbacee",
+    "semantic_hash": ""
+  },
+  "lib/data/models/user.freezed.dart": {
+    "mtime": 1788421246.0250888,
+    "seen": 1788593564.648164,
+    "ast_hash": "56b35469b27684a2a133fe0361c554ab",
+    "semantic_hash": ""
+  },
+  "lib/data/repositories/banner_repository.dart": {
+    "mtime": 1788502866.166752,
+    "seen": 1788593564.648169,
+    "ast_hash": "fed0089311ba578db1e462c4bc2f61f7",
+    "semantic_hash": ""
+  },
+  "lib/data/repositories/coupon_repository.dart": {
+    "mtime": 1788502946.7979412,
+    "seen": 1788593564.6481724,
+    "ast_hash": "587164454ce938a0d98fbaee46cff148",
+    "semantic_hash": ""
+  },
+  "lib/data/repositories/wishlist_repository.dart": {
+    "mtime": 1788502866.2363665,
+    "seen": 1788593564.6481783,
+    "ast_hash": "c5ad47e69dcad9713ad9c1e1f2f78dfe",
+    "semantic_hash": ""
+  },
+  "lib/features/cafe/restaurant_delivery_loading_screen.dart": {
+    "mtime": 1788499707.662569,
+    "seen": 1788593564.6482122,
+    "ast_hash": "4b775849f0ce7b001118ca39cb6a2a9e",
+    "semantic_hash": ""
+  },
+  "lib/features/cafe/widgets/add_restaurant_product_modal.dart": {
+    "mtime": 1788538795.6219852,
+    "seen": 1788593564.648222,
+    "ast_hash": "2a02f6f07af9c2cea3662321583d825e",
+    "semantic_hash": ""
+  },
+  "lib/features/common/order_edit_modal.dart": {
+    "mtime": 1788592459.2450328,
+    "seen": 1788593564.6482375,
+    "ast_hash": "eb4d86ae2ea2627a7d024028f93de56e",
+    "semantic_hash": ""
+  },
+  "lib/features/delivery/widgets/add_picker_product_modal.dart": {
+    "mtime": 1788538818.9391663,
+    "seen": 1788593564.6482506,
+    "ast_hash": "ac7c5f5821efc6d8ccd016f9c05fda1e",
+    "semantic_hash": ""
+  },
+  "lib/features/delivery/widgets/connectivity_banner.dart": {
+    "mtime": 1788499902.8959298,
+    "seen": 1788593564.6482525,
+    "ast_hash": "f35977f3eb4ed2a8624694b11365b708",
+    "semantic_hash": ""
+  },
+  "lib/features/delivery/widgets/delivery_header.dart": {
+    "mtime": 1788499707.7251167,
+    "seen": 1788593564.648254,
+    "ast_hash": "13b452c5f4875aa66cd46855653d3f38",
+    "semantic_hash": ""
+  },
+  "lib/features/delivery/widgets/delivery_theme.dart": {
+    "mtime": 1788499707.7400396,
+    "seen": 1788593564.6482556,
+    "ast_hash": "647cb8fbd06ac8c4684915ef687624b1",
+    "semantic_hash": ""
+  },
+  "lib/features/location/delivery_location_screen.dart": {
+    "mtime": 1788593421.9745016,
+    "seen": 1788593564.64826,
+    "ast_hash": "16a5904b8e837fcbbcedb85fe6d423e2",
+    "semantic_hash": ""
+  },
+  "lib/features/location/doorstep_details_screen.dart": {
+    "mtime": 1788499707.7569106,
+    "seen": 1788593564.6482615,
+    "ast_hash": "f606aa070167226d97043711b55ce175",
+    "semantic_hash": ""
+  },
+  "lib/features/location/map_picker_screen.dart": {
+    "mtime": 1788500264.5053315,
+    "seen": 1788593564.6482632,
+    "ast_hash": "312f29168ac1a3aa2f2b375fc8eaab9e",
+    "semantic_hash": ""
+  },
+  "lib/features/orders/widgets/eta_widget.dart": {
+    "mtime": 1788499707.8095374,
+    "seen": 1788593564.6482697,
+    "ast_hash": "14890d378604140a1ea9adba8f80db29",
+    "semantic_hash": ""
+  },
+  "lib/features/orders/widgets/rider_card.dart": {
+    "mtime": 1788499707.813586,
+    "seen": 1788593564.648271,
+    "ast_hash": "7c8982465671fe37de013f72ae908077",
+    "semantic_hash": ""
+  },
+  "lib/features/orders/widgets/stepper_card.dart": {
+    "mtime": 1788499707.8215542,
+    "seen": 1788593564.6482723,
+    "ast_hash": "232c452a694a6c263d5eb11878b5a70b",
+    "semantic_hash": ""
+  },
+  "lib/features/orders/widgets/tracking_map.dart": {
+    "mtime": 1788499707.8247285,
+    "seen": 1788593564.648274,
+    "ast_hash": "d51ff646d9a22eb5629b4b0f30fe6785",
+    "semantic_hash": ""
+  },
+  "lib/features/settings/privacy_policy_screen.dart": {
+    "mtime": 1788501956.2854745,
+    "seen": 1788593564.648301,
+    "ast_hash": "26c1fa57534d02ae3f839b1775bdb286",
+    "semantic_hash": ""
+  },
+  "lib/features/splash/grocery_delivery_loading_screen.dart": {
+    "mtime": 1788499707.8603177,
+    "seen": 1788593564.648304,
+    "ast_hash": "92b5b5abf7366d1268053de71d55520f",
+    "semantic_hash": ""
+  },
+  "lib/firebase_options.dart": {
+    "mtime": 1788151688.4831321,
+    "seen": 1788593564.6483119,
+    "ast_hash": "e58aa65e88b6d559a7e2774a3f803712",
+    "semantic_hash": ""
+  },
+  "lib/providers/banner_provider.dart": {
+    "mtime": 1788414078.5165906,
+    "seen": 1788593564.6483183,
+    "ast_hash": "4d28589837d8bc435c0d35b662dae05e",
+    "semantic_hash": ""
+  },
+  "lib/providers/coupon_provider.dart": {
+    "mtime": 1788414040.130231,
+    "seen": 1788593564.648321,
+    "ast_hash": "5285a0eb2cbf2c8463de3f768ab3eb21",
+    "semantic_hash": ""
+  },
+  "lib/providers/store_settings_provider.dart": {
+    "mtime": 1788502867.9860542,
+    "seen": 1788593564.648326,
+    "ast_hash": "1956cd8de4b7248202e18cf36f04cbe2",
+    "semantic_hash": ""
+  },
+  "lib/providers/wishlist_provider.dart": {
+    "mtime": 1788502868.000295,
+    "seen": 1788593564.6483274,
+    "ast_hash": "17b34c77f517879606c60cf5d8dd24d2",
+    "semantic_hash": ""
+  },
+  "lib/widgets/address_selector_sheet.dart": {
+    "mtime": 1788499099.2320979,
+    "seen": 1788593564.6483288,
+    "ast_hash": "8e9e3308f1a4740bc40ac1b7f97d3be1",
+    "semantic_hash": ""
+  },
+  "lib/widgets/animated_cart_badge.dart": {
+    "mtime": 1788499707.895514,
+    "seen": 1788593564.6483305,
+    "ast_hash": "c82a957a5f1cb20ef2aa1ca920e9c471",
+    "semantic_hash": ""
+  },
+  "lib/widgets/cart_conflict_dialog.dart": {
+    "mtime": 1788469677.1941047,
+    "seen": 1788593564.648338,
+    "ast_hash": "fcdd22ba99638754913a3c4d834d536a",
+    "semantic_hash": ""
+  },
+  "lib/widgets/empty_state.dart": {
+    "mtime": 1788499099.268016,
+    "seen": 1788593564.6483397,
+    "ast_hash": "e7bdccc0437215c982578addaa13e172",
+    "semantic_hash": ""
+  },
+  "lib/widgets/floating_cart_bar.dart": {
+    "mtime": 1788469130.7238646,
+    "seen": 1788593564.6483412,
+    "ast_hash": "623d12f8eb6d79adb8e82e21f022dced",
+    "semantic_hash": ""
+  },
+  "lib/widgets/floating_order_tracking_bar.dart": {
+    "mtime": 1788500264.510982,
+    "seen": 1788593564.6483428,
+    "ast_hash": "4ec7b90511b43b969b3a1c8e96fdd631",
+    "semantic_hash": ""
+  },
+  "lib/widgets/live_clock_badge.dart": {
+    "mtime": 1788331264.3068883,
+    "seen": 1788593564.6483443,
+    "ast_hash": "610253396e6c533838380d8f9a527905",
+    "semantic_hash": ""
+  },
+  "lib/widgets/live_gps_route_card.dart": {
+    "mtime": 1788499707.9148538,
+    "seen": 1788593564.6483457,
+    "ast_hash": "d2c14d0c0d5feb477a1cff061344ec5b",
+    "semantic_hash": ""
+  },
+  "lib/widgets/shimmer_loading.dart": {
+    "mtime": 1788499099.3058553,
+    "seen": 1788593564.6483514,
+    "ast_hash": "ee6bc775b2240fb629aa9edcba455c0d",
+    "semantic_hash": ""
+  },
+  "lib/widgets/sponsored_ad_card.dart": {
+    "mtime": 1788499435.2099843,
+    "seen": 1788593564.648353,
+    "ast_hash": "e6735196d2fc98fae7dde711c20afacf",
+    "semantic_hash": ""
+  },
+  "lib/widgets/variant_selector_sheet.dart": {
+    "mtime": 1788499707.9294858,
+    "seen": 1788593564.6483548,
+    "ast_hash": "92a49aad277cba1bebbf0d3c8b95f7a6",
+    "semantic_hash": ""
+  },
+  "lib/widgets/voice_search_sheet.dart": {
+    "mtime": 1788501201.509775,
+    "seen": 1788593564.6483562,
+    "ast_hash": "905bec6def6dd848bbbc36e6de79c69d",
+    "semantic_hash": ""
+  },
+  "test/cart_conflict_test.dart": {
+    "mtime": 1787659078.5146601,
+    "seen": 1788593564.6483576,
+    "ast_hash": "8c01c18b6d5fe27090aa037103337992",
+    "semantic_hash": ""
+  },
+  "test/core/services/secure_storage_test.dart": {
+    "mtime": 1788206933.7921913,
+    "seen": 1788593564.648359,
+    "ast_hash": "bae2942847537f00068292fc0e9adde5",
+    "semantic_hash": ""
+  },
+  "test/data/order_parsing_test.dart": {
+    "mtime": 1788205879.6051126,
+    "seen": 1788593564.6483605,
+    "ast_hash": "4ddcdbe2751431c1a785018fdefd7259",
+    "semantic_hash": ""
+  },
+  "test/models/order_model_test.dart": {
+    "mtime": 1788202996.2866087,
+    "seen": 1788593564.648362,
+    "ast_hash": "af675d41b20c91802693eef9c2b1df82",
+    "semantic_hash": ""
+  },
+  "test/providers/cart_provider_test.dart": {
+    "mtime": 1788206664.2713256,
+    "seen": 1788593564.6483636,
+    "ast_hash": "8f4ec43438b4a59165bfbe46a3661999",
+    "semantic_hash": ""
+  },
+  "test/services/location_tier_test.dart": {
+    "mtime": 1788203145.436439,
+    "seen": 1788593564.6483648,
+    "ast_hash": "aa5291276050628ef3a7a74f66208596",
+    "semantic_hash": ""
+  },
+  "test/unit/all_consoles_offline_sync_test.dart": {
+    "mtime": 1788494933.9645646,
+    "seen": 1788593564.648366,
+    "ast_hash": "bae482183c3dba3952c8fccbfa8faae7",
+    "semantic_hash": ""
+  },
+  "test/unit/offline_cart_sync_test.dart": {
+    "mtime": 1788470846.5680306,
+    "seen": 1788593564.6483676,
+    "ast_hash": "4163aaafe01d639a275bf231376425bf",
+    "semantic_hash": ""
+  },
+  "test/unit/security_and_microinteractions_test.dart": {
+    "mtime": 1788495818.6434197,
+    "seen": 1788593564.648369,
+    "ast_hash": "a39c651c522066cfca6ac34505b1a540",
+    "semantic_hash": ""
+  },
+  "PRODUCTION_READY.md": {
+    "mtime": 1787984500.968898,
+    "seen": 1788593564.6483743,
+    "ast_hash": "6b63d8ed3ca038573425265d13f15c3d",
+    "semantic_hash": ""
+  },
+  "all_assets.txt": {
+    "mtime": 1788582751.8410735,
+    "seen": 1788593564.6483777,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "devtools_options.yaml": {
+    "mtime": 1787579089.4277513,
+    "seen": 1788593564.6483808,
+    "ast_hash": "d1ff5187b1b67653e7357395895e8449",
+    "semantic_hash": ""
+  },
+  "android/app/src/main/res/drawable-hdpi/splash_icon.png": {
+    "mtime": 1788087056.5632432,
+    "seen": 1788593564.6483853,
+    "ast_hash": "aea48a10a3db8ad2969c14d9bb427350",
+    "semantic_hash": ""
+  },
+  "android/app/src/main/res/drawable-mdpi/splash_icon.png": {
+    "mtime": 1788087056.5970216,
+    "seen": 1788593564.6483867,
+    "ast_hash": "0cf67065c06a0a5ff2aa00ff25a3a4e6",
+    "semantic_hash": ""
+  },
+  "android/app/src/main/res/drawable-nodpi/splash_icon.png": {
+    "mtime": 1788087056.3503473,
+    "seen": 1788593564.6483884,
+    "ast_hash": "e2ee2fa21e640caa8fd6080ed8eba6b3",
+    "semantic_hash": ""
+  },
+  "android/app/src/main/res/drawable-xhdpi/splash_icon.png": {
+    "mtime": 1788087056.5195155,
+    "seen": 1788593564.6483896,
+    "ast_hash": "e51972de157c53c7ac701cf3314d1249",
+    "semantic_hash": ""
+  },
+  "android/app/src/main/res/drawable-xxhdpi/splash_icon.png": {
+    "mtime": 1788087056.4747143,
+    "seen": 1788593564.6483912,
+    "ast_hash": "0ccbf65fcb5257c844bc868afd3b7feb",
+    "semantic_hash": ""
+  },
+  "android/app/src/main/res/drawable-xxxhdpi/splash_icon.png": {
+    "mtime": 1788087056.424084,
+    "seen": 1788593564.6483924,
+    "ast_hash": "bb65113181b18946055969365e3bef84",
+    "semantic_hash": ""
+  },
+  "android/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png": {
+    "mtime": 1788087056.7106924,
+    "seen": 1788593564.6483958,
+    "ast_hash": "822753fded8269ab72dcd715d5115173",
+    "semantic_hash": ""
+  },
+  "android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png": {
+    "mtime": 1788087056.6763246,
+    "seen": 1788593564.6483972,
+    "ast_hash": "76951f97fa137dab3c2f7dac57359f8b",
+    "semantic_hash": ""
+  },
+  "android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png": {
+    "mtime": 1788087056.64823,
+    "seen": 1788593564.6484005,
+    "ast_hash": "f8b0a0149d327a984cccfaa94eb70130",
+    "semantic_hash": ""
+  },
+  "android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png": {
+    "mtime": 1788087056.623192,
+    "seen": 1788593564.6484022,
+    "ast_hash": "25000563b5265216814efbf8b31db210",
+    "semantic_hash": ""
+  },
+  "android/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png": {
+    "mtime": 1788087056.7788944,
+    "seen": 1788593564.648405,
+    "ast_hash": "0a0385cae5b1f06f52e7fd1e7a205c4c",
+    "semantic_hash": ""
+  },
+  "android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png": {
+    "mtime": 1788087056.7432923,
+    "seen": 1788593564.6484065,
+    "ast_hash": "0cf67065c06a0a5ff2aa00ff25a3a4e6",
+    "semantic_hash": ""
+  },
+  "android/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png": {
+    "mtime": 1788087056.8592958,
+    "seen": 1788593564.6484098,
+    "ast_hash": "bf7fb78d3a8a81adffe3c60d189a17ac",
+    "semantic_hash": ""
+  },
+  "android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png": {
+    "mtime": 1788087056.816015,
+    "seen": 1788593564.6484113,
+    "ast_hash": "aea48a10a3db8ad2969c14d9bb427350",
+    "semantic_hash": ""
+  },
+  "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png": {
+    "mtime": 1788087056.9588883,
+    "seen": 1788593564.6484141,
+    "ast_hash": "5be1b51d8f18c42c3e4be1bf8e2c3a03",
+    "semantic_hash": ""
+  },
+  "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png": {
+    "mtime": 1788087056.9040232,
+    "seen": 1788593564.648416,
+    "ast_hash": "e51972de157c53c7ac701cf3314d1249",
+    "semantic_hash": ""
+  },
+  "android/app/src/main/res/playstore_icon_512.png": {
+    "mtime": 1787837392.1536114,
+    "seen": 1788593564.6484172,
+    "ast_hash": "c877035d73760c4a4aebfbc18ed3ba9b",
+    "semantic_hash": ""
+  },
+  "assets/brand/fastkirana_app_icon.webp": {
+    "mtime": 1788151075.383,
+    "seen": 1788593564.64842,
+    "ast_hash": "f8237e44796b2da1fa0c647beb54ee58",
+    "semantic_hash": ""
+  },
+  "assets/brand/fastkirana_exact_logo.webp": {
+    "mtime": 1788151075.698,
+    "seen": 1788593564.6484232,
+    "ast_hash": "f8237e44796b2da1fa0c647beb54ee58",
+    "semantic_hash": ""
+  },
+  "assets/categories/all_products_badge.webp": {
+    "mtime": 1788151076.019,
+    "seen": 1788593564.6484263,
+    "ast_hash": "9ce25c1f3daf5ad78da4b18243bfaf79",
+    "semantic_hash": ""
+  },
+  "assets/categories/all_products_category.webp": {
+    "mtime": 1788151076.544,
+    "seen": 1788593564.6484296,
+    "ast_hash": "cc45846212de3a00bd09c19cb8f0ad4d",
+    "semantic_hash": ""
+  },
+  "assets/categories/atta_rice_dal_category.webp": {
+    "mtime": 1788151077.586,
+    "seen": 1788593564.6484327,
+    "ast_hash": "3245bf0d2309e7dd8e434318dd9a5604",
+    "semantic_hash": ""
+  },
+  "assets/categories/bakery_biscuits_category.webp": {
+    "mtime": 1788151078.05,
+    "seen": 1788593564.648436,
+    "ast_hash": "0e4188c817ad690f72e45f1e5ed7be87",
+    "semantic_hash": ""
+  },
+  "assets/categories/best_sellers_badge.webp": {
+    "mtime": 1788151078.319,
+    "seen": 1788593564.648439,
+    "ast_hash": "5f64b29a4d7cc0ab5cc7d423601f8064",
+    "semantic_hash": ""
+  },
+  "assets/categories/beverages_category.webp": {
+    "mtime": 1788151078.55,
+    "seen": 1788593564.6484423,
+    "ast_hash": "2d6ba1cadef774ae5999081bc8da8e25",
+    "semantic_hash": ""
+  },
+  "assets/categories/breakfast_deals_badge.webp": {
+    "mtime": 1788151078.851,
+    "seen": 1788593564.6484456,
+    "ast_hash": "7ee011acee2216c338cc98547335a235",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_all_menu_category.webp": {
+    "mtime": 1788151079.267,
+    "seen": 1788593564.6484485,
+    "ast_hash": "40a5728320d37a637fd7187fbf18e3cf",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_banner.png": {
+    "mtime": 1782543356.123603,
+    "seen": 1788593564.6484501,
+    "ast_hash": "9472b5545baaf91d0ccddbd608bba68e",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_banner.webp": {
+    "mtime": 1788151079.802,
+    "seen": 1788593564.6484518,
+    "ast_hash": "ca0a6420f420fd92cc249b415eeef4f6",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_bombay_bites_category.webp": {
+    "mtime": 1788151080.175,
+    "seen": 1788593564.648455,
+    "ast_hash": "5cc56f0aa3eea7ef34faa3153ba57bd6",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_brews_category.webp": {
+    "mtime": 1788151080.447,
+    "seen": 1788593564.648458,
+    "ast_hash": "405612507deafea21523c2951fb2edc5",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_burgers_category.webp": {
+    "mtime": 1788151080.851,
+    "seen": 1788593564.6484609,
+    "ast_hash": "4981c30d3cfc189a7c6ffccf6e5c0c4b",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_category.webp": {
+    "mtime": 1788151081.195,
+    "seen": 1788593564.648464,
+    "ast_hash": "8aca944a93b7a6699a609ee08ec40f9b",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_chinese_category.webp": {
+    "mtime": 1788151081.528,
+    "seen": 1788593564.6484673,
+    "ast_hash": "0b18a80a6377ce5942b0c669139fd61b",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_coffee_category.webp": {
+    "mtime": 1788151081.803,
+    "seen": 1788593564.6484702,
+    "ast_hash": "2a0bc687dc4eea0537216fd0dd97e615",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_cold_drinks_category.webp": {
+    "mtime": 1788151082.146,
+    "seen": 1788593564.6484733,
+    "ast_hash": "6e2ae77bf43f6c4d6ebf4f1c89eaa164",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_desserts_category.webp": {
+    "mtime": 1788151082.467,
+    "seen": 1788593564.6484764,
+    "ast_hash": "25d50a20637d78487963e3a3a67550ed",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_garlic_bread_category.webp": {
+    "mtime": 1788151082.928,
+    "seen": 1788593564.6484795,
+    "ast_hash": "7ac98c309cc322c931ba8a00fa1a8f9a",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_mocktails_category.webp": {
+    "mtime": 1788151083.343,
+    "seen": 1788593564.6484828,
+    "ast_hash": "0862f875c3fcd19f23a7860167f3dcef",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_pasta_category.webp": {
+    "mtime": 1788151083.853,
+    "seen": 1788593564.648486,
+    "ast_hash": "8cac6c15feeb097712e5faa5d97a38d2",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_pizza_category.webp": {
+    "mtime": 1788151084.094,
+    "seen": 1788593564.6484888,
+    "ast_hash": "ab65fc0a43e014d87018b6c33d2eef62",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_rice_category.webp": {
+    "mtime": 1788151084.339,
+    "seen": 1788593564.6484919,
+    "ast_hash": "37f35ccaab9fba2da50892c56832e2cf",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_rolls_category.webp": {
+    "mtime": 1788151084.612,
+    "seen": 1788593564.6484952,
+    "ast_hash": "20677e02f829ce4753ee90d1b3e87c3f",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_sandwiches_category.webp": {
+    "mtime": 1788151084.836,
+    "seen": 1788593564.648498,
+    "ast_hash": "3d25acf9d01bb127bb024d5d62184013",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_shakes_category.webp": {
+    "mtime": 1788151085.242,
+    "seen": 1788593564.6485014,
+    "ast_hash": "ee348a5c1951a29609963aefea3f9756",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_snacks_category.webp": {
+    "mtime": 1788151085.488,
+    "seen": 1788593564.6485043,
+    "ast_hash": "f8088f76bd9da6b29dcf9361abac4050",
+    "semantic_hash": ""
+  },
+  "assets/categories/cafe_south_indian_category.webp": {
+    "mtime": 1788151085.818,
+    "seen": 1788593564.6485074,
+    "ast_hash": "cd4186dac21fbf972e215a08dd0ad559",
+    "semantic_hash": ""
+  },
+  "assets/categories/dairy_breakfast_category.webp": {
+    "mtime": 1788151086.215,
+    "seen": 1788593564.6485105,
+    "ast_hash": "7a26cb6702c1dd4f3843f2deb2328651",
+    "semantic_hash": ""
+  },
+  "assets/categories/flash_deals_badge.webp": {
+    "mtime": 1788151086.664,
+    "seen": 1788593564.6485136,
+    "ast_hash": "02f2f6464f0c3d1594a507041f40ca99",
+    "semantic_hash": ""
+  },
+  "assets/categories/fruits_vegetables_category.webp": {
+    "mtime": 1788151087.068,
+    "seen": 1788593564.6485167,
+    "ast_hash": "0be79936bd65ba4e342b033990d7526b",
+    "semantic_hash": ""
+  },
+  "assets/categories/household_category.webp": {
+    "mtime": 1788151087.312,
+    "seen": 1788593564.6485198,
+    "ast_hash": "5a2fb078d1d80cf6ad5b3fe39beafb02",
+    "semantic_hash": ""
+  },
+  "assets/categories/ice_cream_category.webp": {
+    "mtime": 1788151087.634,
+    "seen": 1788593564.648523,
+    "ast_hash": "00e4fc6350e5bce5ac0e8cc614d333b3",
+    "semantic_hash": ""
+  },
+  "assets/categories/lunch_deals_badge.webp": {
+    "mtime": 1788151087.912,
+    "seen": 1788593564.6485264,
+    "ast_hash": "8661a61e96c698abda2f7e29950bf777",
+    "semantic_hash": ""
+  },
+  "assets/categories/night_cravings_badge.webp": {
+    "mtime": 1788151088.157,
+    "seen": 1788593564.6485293,
+    "ast_hash": "92668a90a7274a0644049221d0812d33",
+    "semantic_hash": ""
+  },
+  "assets/categories/personal_care_category.webp": {
+    "mtime": 1788151088.438,
+    "seen": 1788593564.648533,
+    "ast_hash": "1b66846dc81ec402c183805707dbced2",
+    "semantic_hash": ""
+  },
+  "assets/categories/snacks_munchies_category.webp": {
+    "mtime": 1788151089.06,
+    "seen": 1788593564.6485362,
+    "ast_hash": "328384bddd19828c115eac67372547f2",
+    "semantic_hash": ""
+  },
+  "assets/categories/tea_deals_badge.webp": {
+    "mtime": 1788151089.298,
+    "seen": 1788593564.6485395,
+    "ast_hash": "a84993e30446ba5b0f06d256a9f0904f",
+    "semantic_hash": ""
+  },
+  "assets/categories/wedson_restaurant_banner.png": {
+    "mtime": 1784054209.310946,
+    "seen": 1788593564.648541,
+    "ast_hash": "ca5870d00b4c0076f1bfe12877829bab",
+    "semantic_hash": ""
+  },
+  "assets/categories/wedson_restaurant_banner.webp": {
+    "mtime": 1788151089.743,
+    "seen": 1788593564.6485426,
+    "ast_hash": "db7068e980594df5115586db219b1d74",
+    "semantic_hash": ""
+  },
+  "assets/categories/wedson_restaurant_bg.png": {
+    "mtime": 1784054356.1319942,
+    "seen": 1788593564.648544,
+    "ast_hash": "dbeb31befa25ecbf2b3346f314ac2f1c",
+    "semantic_hash": ""
+  },
+  "assets/categories/wedson_restaurant_bg.webp": {
+    "mtime": 1788151090.298,
+    "seen": 1788593564.6485457,
+    "ast_hash": "d9890e26290c09253bcd7f1f4c604312",
+    "semantic_hash": ""
+  },
+  "assets/icon/app_icon.png": {
+    "mtime": 1787845984.251458,
+    "seen": 1788593564.6485474,
+    "ast_hash": "6955295d7c34bae0942779fc161c8db0",
+    "semantic_hash": ""
+  },
+  "assets/icon/app_icon.webp": {
+    "mtime": 1788151090.559,
+    "seen": 1788593564.6485488,
+    "ast_hash": "b07c0ae9435c6ce5cdd91895036e219d",
+    "semantic_hash": ""
+  },
+  "web/icons/favicon.png": {
+    "mtime": 1787846012.059033,
+    "seen": 1788593564.6485589,
+    "ast_hash": "c75466ef01c8485c85a467d26d62d1d5",
+    "semantic_hash": ""
+  },
+  "android/app/src/main/res/raw/order_chime.mp3": {
+    "mtime": 1788590008.3429015,
+    "seen": 1788593564.64856,
+    "ast_hash": "41bcd6b84430e92d9a06aa20e9db5970",
+    "semantic_hash": ""
+  },
+  "assets/sounds/order_chime.mp3": {
+    "mtime": 1788589994.3174388,
+    "seen": 1788593564.6485617,
+    "ast_hash": "41bcd6b84430e92d9a06aa20e9db5970",
     "semantic_hash": ""
   }
 }

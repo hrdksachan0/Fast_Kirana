@@ -167,7 +167,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
           } catch (e) {}
         }
 
-        const rawCategories = parsedSections || ((experienceMode as string) === 'restaurant' ? DEFAULT_RESTAURANT_MENU_SECTIONS : DEFAULT_CAFE_MENU_SECTIONS)
+        const rawCategories = parsedSections || []
         const PREDEFINED_CATEGORIES = rawCategories.filter(cat => {
           if (cat.disabled === true || (cat.disabled as any) === 'true') return false
           if (categoryStatus[cat.tag] === false) return false

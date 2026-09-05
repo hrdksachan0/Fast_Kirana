@@ -11,12 +11,18 @@ export async function GET(request: NextRequest) {
     const headerPhone = request.headers.get('x-user-phone')
     const cleanPhone = headerPhone ? getLast10Digits(headerPhone) : ''
 
-    let effectiveRestId = paramRestId || (session?.user as any)?.assignedRestaurantId
+    const isPlatformAdmin = session?.user?.role === 'ADMIN'
+    const sessionRestId = (session?.user as any)?.assignedRestaurantId
+
+    let effectiveRestId = (!isPlatformAdmin && sessionRestId)
+      ? sessionRestId
+      : (paramRestId || sessionRestId)
 
     if (!effectiveRestId && cleanPhone) {
-      if (cleanPhone === '8112849854') effectiveRestId = 'cms2p1lap0000n0id8alldboy'
-      else if (cleanPhone === '9250138656') effectiveRestId = 'cms2p1lyx0001n0idod904lfu'
-      else if (cleanPhone === '7991488783') effectiveRestId = 'cmsbhxb6a000304if8kf1cwji'
+      if (cleanPhone === '8112849854') effectiveRestId = 'REST-101'
+      else if (cleanPhone === '9250138656') effectiveRestId = 'REST-102'
+      else if (cleanPhone === '7991488783') effectiveRestId = 'REST-103'
+      else if (cleanPhone === '9900112233') effectiveRestId = 'REST-104'
     }
 
     // If still not resolved and session user is restaurant owner
@@ -30,9 +36,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Default fallback to Wedson if no specific outlet requested
+    // Default fallback to A.S. Restaurant if no specific outlet requested
     if (!effectiveRestId) {
-      effectiveRestId = 'cms2p1lyx0001n0idod904lfu'
+      effectiveRestId = 'REST-101'
     }
 
     let commissionRate = 0.25

@@ -8,6 +8,7 @@ import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/network/api_client.dart';
 import '../../core/routes/page_transitions.dart';
+import '../../core/theme/design_system.dart';
 import '../../core/theme/responsive.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../widgets/brand_logo.dart';
@@ -27,11 +28,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   String? _errorMessage;
   bool _isFocused = false;
 
-  static const Color primaryRed = Color(0xFFE20A22);
-  static const Color primaryRedLight = Color(0xFFFF2D4B);
-  static const Color slateDark = Color(0xFF0F172A);
-  static const Color slateMuted = Color(0xFF64748B);
-  static const Color slateBorder = Color(0xFFE2E8F0);
+  static const Color primaryRed = AppDesignSystem.primary;
+  static const Color primaryRedLight = AppDesignSystem.primaryLight;
+  static const Color slateDark = AppDesignSystem.slate900;
+  static const Color slateMuted = AppDesignSystem.slate500;
+  static const Color slateBorder = AppDesignSystem.slate300;
 
   @override
   void initState() {
@@ -121,7 +122,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final isValidPhone = _phoneController.text.trim().length == 10;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF9FB),
+      backgroundColor: AppDesignSystem.stone50,
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const ClampingScrollPhysics(),
@@ -144,7 +145,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(color: AppDesignSystem.slate300),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withValues(alpha: 0.03),
@@ -161,14 +162,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 12),
                                 fontWeight: FontWeight.w700,
-                                color: const Color(0xFF0F172A),
+                                color: AppDesignSystem.slate900,
                               ),
                             ),
                             const SizedBox(width: 4),
                             const Icon(
                               Icons.chevron_right_rounded,
                               size: 16,
-                              color: Color(0xFF64748B),
+                              color: AppDesignSystem.slate500,
                             ),
                           ],
                         ),
@@ -192,7 +193,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 28),
                         fontWeight: FontWeight.w900,
-                        color: const Color(0xFF0F172A),
+                        color: AppDesignSystem.slate900,
                         letterSpacing: -0.8,
                       ),
                     ),
@@ -205,21 +206,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFF1F2),
+                        color: AppDesignSystem.rose50,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFFFE4E6)),
+                        border: Border.all(color: AppDesignSystem.rose100alt),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
+                          Text('⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
                           const SizedBox(width: 5),
                           Text(
                             "Superfast Grocery & Food Delivery",
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 11.5),
                               fontWeight: FontWeight.w700,
-                              color: const Color(0xFF991B1B),
+                              color: AppDesignSystem.statusCancelledText,
                             ),
                           ),
                         ],
@@ -235,7 +236,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+                      border: Border.all(color: AppDesignSystem.slate200, width: 1.2),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.03),
@@ -256,7 +257,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 13.5),
                                 fontWeight: FontWeight.w800,
-                                color: const Color(0xFF0F172A),
+                                color: AppDesignSystem.slate900,
                               ),
                             ),
                             Row(
@@ -267,7 +268,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   height: 6,
                                   decoration: const BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: Color(0xFF16A34A),
+                                    color: AppDesignSystem.green600,
                                   ),
                                 ),
                                 const SizedBox(width: 5),
@@ -276,7 +277,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 11.5),
                                     fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF16A34A),
+                                    color: AppDesignSystem.green600,
                                   ),
                                 ),
                               ],
@@ -290,12 +291,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         Container(
                           height: 52,
                           decoration: BoxDecoration(
-                            color: _isFocused ? Colors.white : const Color(0xFFF8FAFC),
+                            color: _isFocused ? Colors.white : AppDesignSystem.slate50,
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
                               color: _isFocused
                                   ? primaryRed
-                                  : const Color(0xFFE2E8F0),
+                                  : AppDesignSystem.slate300,
                               width: _isFocused ? 1.5 : 1.2,
                             ),
                             boxShadow: [
@@ -315,14 +316,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Text('🇮🇳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
+                                    Text('🇮🇳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
                                     const SizedBox(width: 6),
                                     Text(
                                       '+91',
                                       style: GoogleFonts.inter(
                                         fontSize: Responsive.scaledFontSize(context, 15),
                                         fontWeight: FontWeight.w800,
-                                        color: const Color(0xFF0F172A),
+                                        color: AppDesignSystem.slate900,
                                       ),
                                     ),
                                   ],
@@ -333,7 +334,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               Container(
                                 width: 1,
                                 height: 22,
-                                color: const Color(0xFFE2E8F0),
+                                color: AppDesignSystem.slate300,
                               ),
 
                               // Pure Seamless Text Input Area
@@ -351,7 +352,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 15.5),
                                     fontWeight: FontWeight.w800,
-                                    color: const Color(0xFF0F172A),
+                                    color: AppDesignSystem.slate900,
                                     letterSpacing: 0.8,
                                   ),
                                   decoration: InputDecoration(
@@ -359,7 +360,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     hintStyle: GoogleFonts.inter(
                                       fontSize: Responsive.scaledFontSize(context, 13.5),
                                       fontWeight: FontWeight.w500,
-                                      color: const Color(0xFF94A3B8),
+                                      color: AppDesignSystem.slate400,
                                       letterSpacing: 0.2,
                                     ),
                                     border: InputBorder.none,
@@ -384,7 +385,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     height: 22,
                                     decoration: const BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: Color(0xFF16A34A),
+                                      color: AppDesignSystem.green600,
                                     ),
                                     child: const Icon(
                                       Icons.check_rounded,
@@ -418,7 +419,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             height: 52,
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
-                                colors: [Color(0xFFE20A22), Color(0xFFDC2626)],
+                                colors: [AppDesignSystem.primary, AppDesignSystem.red600],
                               ),
                               borderRadius: BorderRadius.circular(14),
                               boxShadow: [
@@ -478,7 +479,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           text: TextSpan(
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 11.5),
-                              color: const Color(0xFF94A3B8),
+                              color: AppDesignSystem.slate400,
                             ),
                             children: [
                               const TextSpan(text: 'By continuing, you agree to our '),
@@ -486,9 +487,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 text: 'Terms & Privacy Policy',
                                 style: GoogleFonts.inter(
                                   fontWeight: FontWeight.w800,
-                                  color: const Color(0xFF0F172A),
+                                  color: AppDesignSystem.slate900,
                                   decoration: TextDecoration.underline,
-                                  decorationColor: const Color(0xFF64748B),
+                                  decorationColor: AppDesignSystem.slate500,
                                 ),
                               ),
                             ],
@@ -527,7 +528,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               width: 44,
               height: 4.5,
               decoration: BoxDecoration(
-                color: const Color(0xFFCBD5E1),
+                color: AppDesignSystem.slate300,
                 borderRadius: BorderRadius.circular(3),
               ),
             ),
@@ -546,7 +547,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 18),
                           fontWeight: FontWeight.w900,
-                          color: const Color(0xFF0F172A),
+                          color: AppDesignSystem.slate900,
                           letterSpacing: -0.3,
                         ),
                       ),
@@ -555,7 +556,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 12),
                           fontWeight: FontWeight.w500,
-                          color: const Color(0xFF64748B),
+                          color: AppDesignSystem.slate500,
                         ),
                       ),
                     ],
@@ -565,17 +566,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     icon: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: const BoxDecoration(
-                        color: Color(0xFFF1F5F9),
+                        color: AppDesignSystem.slate200,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF0F172A)),
+                      child: const Icon(Icons.close_rounded, size: 18, color: AppDesignSystem.slate900),
                     ),
                   ),
                 ],
               ),
             ),
 
-            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            const Divider(height: 1, color: AppDesignSystem.slate200),
 
             // Content
             Expanded(
@@ -628,7 +629,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(ctx),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0F172A),
+                    backgroundColor: AppDesignSystem.slate900,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     elevation: 0,
                   ),
@@ -660,7 +661,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             style: GoogleFonts.inter(
               fontSize: Responsive.scaledFontSize(context, 13.5),
               fontWeight: FontWeight.w800,
-              color: const Color(0xFF0F172A),
+              color: AppDesignSystem.slate900,
             ),
           ),
           const SizedBox(height: 5),
@@ -669,7 +670,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             style: GoogleFonts.inter(
               fontSize: Responsive.scaledFontSize(context, 12),
               fontWeight: FontWeight.w500,
-              color: const Color(0xFF475569),
+              color: AppDesignSystem.slate600,
               height: 1.45,
             ),
           ),

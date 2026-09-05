@@ -1,3 +1,4 @@
+import 'package:fastkirana_flutter/core/services/logger_service.dart';
 class DishTimingStatus {
   final bool isAvailableNow;
   final String? formattedTimeSlot;
@@ -21,7 +22,7 @@ String formatTime12h(String timeStr) {
     final h12 = hours % 12 == 0 ? 12 : hours % 12;
     final mStr = minutes.toString().padLeft(2, '0');
     return '$h12:$mStr $period';
-  } catch (_) {
+  } catch (e) { LoggerService.error('DishTiming: silent catch', e);
     return timeStr;
   }
 }
@@ -72,7 +73,7 @@ DishTimingStatus checkDishTimeAvailability(String? startTime, String? endTime) {
       formattedTimeSlot: '$formattedStart - $formattedEnd',
       nextAvailableTimeStr: formattedStart,
     );
-  } catch (_) {
+  } catch (e) { LoggerService.error('DishTiming: silent catch', e);
     return const DishTimingStatus(
       isAvailableNow: true,
       formattedTimeSlot: null,

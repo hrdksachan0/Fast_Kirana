@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../core/theme/design_system.dart';
+import '../core/theme/responsive.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -62,7 +64,7 @@ class AddressSelectorSheet extends ConsumerWidget {
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 17),
                     fontWeight: FontWeight.w800,
-                    color: const Color(0xFF0F172A),
+                    color: AppDesignSystem.slate900,
                     letterSpacing: -0.3,
                   ),
                 ),
@@ -71,17 +73,17 @@ class AddressSelectorSheet extends ConsumerWidget {
                   icon: Container(
                     padding: const EdgeInsets.all(5),
                     decoration: const BoxDecoration(
-                      color: Color(0xFFF1F5F9),
+                      color: AppDesignSystem.slate100,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF64748B)),
+                    child: const Icon(Icons.close_rounded, size: 18, color: AppDesignSystem.slate500),
                   ),
                 ),
               ],
             ),
           ),
 
-          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          const Divider(height: 1, color: AppDesignSystem.slate100),
 
           // + Add New Address Action Button (Swiggy Style)
           Padding(
@@ -103,10 +105,10 @@ class AddressSelectorSheet extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFFED7AA), width: 1.2),
+                  border: Border.all(color: AppDesignSystem.orange200, width: 1.2),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFEA580C).withValues(alpha: 0.04),
+                      color: AppDesignSystem.orange600.withValues(alpha: 0.04),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -117,13 +119,13 @@ class AddressSelectorSheet extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFF7ED),
+                        color: AppDesignSystem.orange50,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(
                         Icons.add_rounded,
                         size: 20,
-                        color: Color(0xFFEA580C),
+                        color: AppDesignSystem.orange600,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -132,7 +134,7 @@ class AddressSelectorSheet extends ConsumerWidget {
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 14.5),
                         fontWeight: FontWeight.w800,
-                        color: const Color(0xFFEA580C),
+                        color: AppDesignSystem.orange600,
                       ),
                     ),
                   ],
@@ -141,7 +143,7 @@ class AddressSelectorSheet extends ConsumerWidget {
             ),
           ),
 
-          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          const Divider(height: 1, color: AppDesignSystem.slate100),
 
           // Saved Addresses List
           Flexible(
@@ -154,14 +156,14 @@ class AddressSelectorSheet extends ConsumerWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.location_off_outlined, size: 40, color: Color(0xFF94A3B8)),
+                          const Icon(Icons.location_off_outlined, size: 40, color: AppDesignSystem.slate400),
                           const SizedBox(height: 10),
                           Text(
                             'No saved addresses yet',
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 14),
                               fontWeight: FontWeight.w700,
-                              color: const Color(0xFF64748B),
+                              color: AppDesignSystem.slate500,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -169,7 +171,7 @@ class AddressSelectorSheet extends ConsumerWidget {
                             'Add your delivery address to proceed with order',
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 12),
-                              color: const Color(0xFF94A3B8),
+                              color: AppDesignSystem.slate400,
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -184,7 +186,7 @@ class AddressSelectorSheet extends ConsumerWidget {
                   shrinkWrap: true,
                   physics: const BouncingScrollPhysics(),
                   itemCount: addresses.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  separatorBuilder: (_, __) => const Divider(height: 1, color: AppDesignSystem.slate100),
                   itemBuilder: (context, idx) {
                     final addr = addresses[idx];
                     final isSelected = activeAddress != null &&
@@ -211,16 +213,16 @@ class AddressSelectorSheet extends ConsumerWidget {
                               height: 38,
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? const Color(0xFFDCFCE7)
-                                    : const Color(0xFFF1F5F9),
+                                    ? AppDesignSystem.green100
+                                    : AppDesignSystem.slate100,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
                                 _getAddressIcon(addr.label),
                                 size: 18,
                                 color: isSelected
-                                    ? const Color(0xFF16A34A)
-                                    : const Color(0xFF475569),
+                                    ? AppDesignSystem.green600
+                                    : AppDesignSystem.slate600,
                               ),
                             ),
                             const SizedBox(width: 14),
@@ -237,7 +239,7 @@ class AddressSelectorSheet extends ConsumerWidget {
                                         style: GoogleFonts.inter(
                                           fontSize: Responsive.scaledFontSize(context, 14.5),
                                           fontWeight: FontWeight.w800,
-                                          color: const Color(0xFF0F172A),
+                                          color: AppDesignSystem.slate900,
                                         ),
                                       ),
                                       if (isSelected) ...[
@@ -245,16 +247,16 @@ class AddressSelectorSheet extends ConsumerWidget {
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFFDCFCE7),
+                                            color: AppDesignSystem.green100,
                                             borderRadius: BorderRadius.circular(6),
-                                            border: Border.all(color: const Color(0xFF86EFAC)),
+                                            border: Border.all(color: AppDesignSystem.emerald200),
                                           ),
                                           child: Text(
                                             'SELECTED',
                                             style: GoogleFonts.inter(
                                               fontSize: Responsive.scaledFontSize(context, 9.5),
                                               fontWeight: FontWeight.w900,
-                                              color: const Color(0xFF16A34A),
+                                              color: AppDesignSystem.green600,
                                               letterSpacing: 0.4,
                                             ),
                                           ),
@@ -270,7 +272,7 @@ class AddressSelectorSheet extends ConsumerWidget {
                                     style: GoogleFonts.inter(
                                       fontSize: Responsive.scaledFontSize(context, 12),
                                       fontWeight: FontWeight.w500,
-                                      color: const Color(0xFF64748B),
+                                      color: AppDesignSystem.slate500,
                                       height: 1.35,
                                     ),
                                     maxLines: 2,
@@ -291,7 +293,7 @@ class AddressSelectorSheet extends ConsumerWidget {
                 child: Center(
                   child: CircularProgressIndicator(
                     strokeWidth: 2.5,
-                    color: Color(0xFFEA580C),
+                    color: AppDesignSystem.orange600,
                   ),
                 ),
               ),
@@ -300,7 +302,7 @@ class AddressSelectorSheet extends ConsumerWidget {
                 child: Center(
                   child: Text(
                     'Failed to load saved addresses',
-                    style: GoogleFonts.inter(color: const Color(0xFFEF4444)),
+                    style: GoogleFonts.inter(color: AppDesignSystem.danger),
                   ),
                 ),
               ),

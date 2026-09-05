@@ -22,8 +22,9 @@ class Validators {
   }
 
   static String? otp(String? value) {
-    if (value == null || value.length != 6)
+    if (value == null || value.length != 6) {
       return 'Please enter the 6-digit OTP';
+    }
     return null;
   }
 

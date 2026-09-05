@@ -1,3 +1,5 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import '../../core/theme/responsive.dart';
 import 'package:flutter/material.dart';
 
 class SectionHeader extends StatelessWidget {
@@ -23,7 +25,7 @@ class SectionHeader extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: Responsive.scaledFontSize(context, 17),
                     fontWeight: FontWeight.w800,
                     color: AppDesignSystem.textPrimary,
@@ -34,7 +36,7 @@ class SectionHeader extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     subtitle!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: Responsive.scaledFontSize(context, 12),
                       fontWeight: FontWeight.w500,
                       color: AppDesignSystem.textSecondary,
@@ -52,7 +54,7 @@ class SectionHeader extends StatelessWidget {
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              child: const Text(
+              child: Text(
                 'See All',
                 style: TextStyle(
                   fontSize: Responsive.scaledFontSize(context, 12),
@@ -66,3 +68,4 @@ class SectionHeader extends StatelessWidget {
     );
   }
 }
+

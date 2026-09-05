@@ -204,11 +204,9 @@ export function ProductsTab({
   handleReplenishCsv,
   renderPagination,
 }: ProductsTabProps) {
-  const RESTAURANT_MENU_SECTIONS = DEFAULT_RESTAURANT_MENU_SECTIONS
-
-  // Resolve dynamic menu sections for new product based on selected restaurant
+  // Resolve dynamic menu sections for new product strictly based on selected restaurant
   const resolvedNewMenuSections = useMemo(() => {
-    if (!newProduct.restaurantId) return RESTAURANT_MENU_SECTIONS
+    if (!newProduct.restaurantId) return []
     const restaurant = restaurantsList.find((r: any) => r.id === newProduct.restaurantId) as any
     if (restaurant?.menuSections) {
       try {
@@ -222,8 +220,8 @@ export function ProductsTab({
         console.error('Error parsing restaurant menuSections for new product:', e)
       }
     }
-    return RESTAURANT_MENU_SECTIONS
-  }, [newProduct.restaurantId, restaurantsList, RESTAURANT_MENU_SECTIONS])
+    return []
+  }, [newProduct.restaurantId, restaurantsList])
 
   const isNewRestaurantMode = !!newProduct.restaurantId
   const selectedNewRestaurant = useMemo(() => {
@@ -814,7 +812,11 @@ export function ProductsTab({
                     }}
                     className="w-full px-3 py-2 text-xs rounded-xl border border-amber-500/40 bg-card focus:outline-none focus:border-amber-500 font-black text-amber-600 dark:text-amber-400 cursor-pointer shadow-xs"
                   >
-                    <option value="">-- Select Menu Section --</option>
+                    <option value="">
+                      {resolvedNewMenuSections.length === 0
+                        ? '-- No Sections (Add in Restaurant Menu Manager) --'
+                        : '-- Select Menu Section --'}
+                    </option>
                     {resolvedNewMenuSections.map((sec: any) => (
                       <option key={sec.tag} value={sec.tag}>
                         {sec.emoji} {sec.title}

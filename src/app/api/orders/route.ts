@@ -1166,50 +1166,11 @@ export async function POST(request: NextRequest) {
             }).catch((err: any) => console.error('Error sending push notification to grocery staff:', err))
           }
 
-          // Send FCM Push Notification directly to Customer Phone & User Topic
+          // Send FCM Push Notification to Staff (Admin, Delivery, Picker, Restaurant)
           try {
-            const customerPhone = order.address?.phone || order.user?.phone || body.phone || ''
-            const cleanPhone = getLast10Digits(customerPhone)
             const { fcmMessaging } = await import('@/lib/firebase-admin')
             if (fcmMessaging) {
-              const dataPayload: Record<string, string> = {
-                title: isOnlinePaid ? '💳 Order Confirmed & Paid!' : '📦 Order Placed Successfully!',
-                body: `Your FastKirana order #${displayId} (₹${order.total}) is confirmed and being prepared.`,
-                orderId: order.id,
-                status: order.status,
-                screen: 'order-tracking',
-                url: `/orders/${order.id}`,
-                timestamp: Date.now().toString(),
-              }
-              const custPayload = buildOrderFcmPayload(
-                isOnlinePaid ? '💳 Order Confirmed & Paid!' : '📦 Order Placed Successfully!',
-                `Your FastKirana order #${displayId} (₹${order.total}) is confirmed and being prepared.`,
-                dataPayload,
-              )
-
-              // 1. Direct device token push to customer's latest active device (Exact 1 push)
-              const customerTokens = await prisma.fcmToken.findMany({
-                where: {
-                  OR: [
-                    ...(order.userId ? [{ userId: order.userId }] : []),
-                    ...(cleanPhone ? [{ user: { phone: { contains: cleanPhone } } }] : []),
-                  ],
-                },
-                select: { token: true },
-                orderBy: { createdAt: 'desc' },
-                take: 1,
-              })
-
-              if (customerTokens.length > 0) {
-                fcmMessaging.send({ token: customerTokens[0].token, ...custPayload }).catch(() => {})
-              } else {
-                // Fallback to topic only if no active token found in DB
-                if (cleanPhone && cleanPhone.length === 10) {
-                  await sendTopicWithRetry(fcmMessaging, { topic: `phone_${cleanPhone}`, ...custPayload }).catch(() => {})
-                }
-              }
-
-              // 2. Direct device token push to Admin & Grocery Staff (Admin, Delivery, Picker)
+              // 1. Direct device token push to Admin & Grocery Staff (Admin, Delivery, Picker)
               const staffRoles = isRestaurant ? ['ADMIN', 'DELIVERY'] : ['ADMIN', 'PICKER', 'DELIVERY']
               const staffPayload = buildOrderFcmPayload(
                 isOnlinePaid ? '💳 New PAID Order Received!' : '🛎️ New Order Received!',
@@ -1270,9 +1231,16 @@ export async function POST(request: NextRequest) {
                   orderBy: { createdAt: 'desc' },
                   take: 10,
                 })
-                const uniqueRestTokens = Array.from(new Set(restTokens.map(t => t.token)))
                 for (const token of uniqueRestTokens) {
                   fcmMessaging.send({ token, ...restaurantPayload }).catch(() => {})
+                }
+                // Broadcast to restaurant and phone topics for 100% reliable wake-up
+                if (order.restaurantId) {
+                  sendTopicWithRetry(fcmMessaging, { topic: `restaurant_${order.restaurantId}`, ...restaurantPayload }).catch(() => {})
+                  sendTopicWithRetry(fcmMessaging, { topic: `kitchen_${order.restaurantId}`, ...restaurantPayload }).catch(() => {})
+                }
+                if (cleanRestPhone && cleanRestPhone.length === 10) {
+                  sendTopicWithRetry(fcmMessaging, { topic: `phone_${cleanRestPhone}`, ...restaurantPayload }).catch(() => {})
                 }
               }
             }
@@ -1305,6 +1273,63 @@ export async function POST(request: NextRequest) {
           if (whatsappPromises.length > 0) {
             await Promise.allSettled(whatsappPromises)
           }
+        }
+
+        // =========================================================================
+        // Send EXACTLY 1 Customer Notification for the entire checkout
+        // Consolidates Combined Orders (Grocery + Food) into a single notification!
+        // =========================================================================
+        try {
+          const primaryOrder = createdOrders.find((o) => !o.restaurantId) || createdOrders[0]
+          const isCombined = createdOrders.length > 1
+          const baseDisplayId = (primaryOrder.readableId || primaryOrder.id).replace(/-[GR]\d*$/i, '')
+          const combinedTotal = createdOrders.reduce((sum, o) => sum + Number(o.total || 0), 0)
+          const customerPhone = primaryOrder.address?.phone || primaryOrder.user?.phone || body.phone || ''
+          const cleanPhone = getLast10Digits(customerPhone)
+
+          const { fcmMessaging } = await import('@/lib/firebase-admin')
+          if (fcmMessaging) {
+            const notifTitle = isOnlinePaid
+              ? (isCombined ? '💳 Combined Order Confirmed & Paid!' : '💳 Order Confirmed & Paid!')
+              : (isCombined ? '📦 Combined Order Placed Successfully!' : '📦 Order Placed Successfully!')
+            const notifBody = isCombined
+              ? `Your FastKirana combined order #${baseDisplayId} (₹${combinedTotal.toFixed(0)}) is confirmed and being prepared.`
+              : `Your FastKirana order #${primaryOrder.readableId || primaryOrder.id} (₹${Number(primaryOrder.total).toFixed(0)}) is confirmed and being prepared.`
+
+            const dataPayload: Record<string, string> = {
+              title: notifTitle,
+              body: notifBody,
+              orderId: primaryOrder.id,
+              readableId: baseDisplayId,
+              status: primaryOrder.status,
+              screen: 'order-tracking',
+              url: `/orders/${primaryOrder.id}`,
+              timestamp: Date.now().toString(),
+            }
+
+            const custPayload = buildOrderFcmPayload(notifTitle, notifBody, dataPayload)
+
+            // Direct device token push to customer's latest active device (Exact 1 push)
+            const customerTokens = await prisma.fcmToken.findMany({
+              where: {
+                OR: [
+                  ...(primaryOrder.userId ? [{ userId: primaryOrder.userId }] : []),
+                  ...(cleanPhone ? [{ user: { phone: { contains: cleanPhone } } }] : []),
+                ],
+              },
+              select: { token: true },
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+            })
+
+            if (customerTokens.length > 0) {
+              fcmMessaging.send({ token: customerTokens[0].token, ...custPayload }).catch((e) => console.error('Error sending customer FCM:', e))
+            } else if (cleanPhone && cleanPhone.length === 10) {
+              await sendTopicWithRetry(fcmMessaging, { topic: `phone_${cleanPhone}`, ...custPayload }).catch((e) => console.error('Error sending customer topic FCM:', e))
+            }
+          }
+        } catch (custNotifErr) {
+          console.error('Unified customer order FCM notification error:', custNotifErr)
         }
       } catch (sseErr) {
         console.error('Failed to emit SSE/notifications for new orders:', sseErr)

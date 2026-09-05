@@ -43,6 +43,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const city = searchParams.get('city')
+    if (city && city !== 'ALL') {
+      where.city = {
+        contains: city.trim(),
+        mode: 'insensitive'
+      }
+    }
+
     const restaurants = await prisma.restaurant.findMany({
       where,
       orderBy: [
@@ -118,7 +126,7 @@ export async function POST(request: NextRequest) {
     }
 
     const allowedKeys = [
-      'description', 'logoUrl', 'bannerUrl', 'address', 'city',
+      'id', 'description', 'logoUrl', 'bannerUrl', 'address', 'city',
       'cuisineTags', 'deliveryTime', 'distance', 'lat', 'lng', 'isVeg',
       'isPureVeg', 'isOpen', 'openTime', 'closeTime', 'sortOrder',
       'discountOffer', 'discountBadge', 'commissionRate', 'ownerPhone',
@@ -133,6 +141,37 @@ export async function POST(request: NextRequest) {
       if (rest[key] !== undefined) {
         createData[key] = rest[key]
       }
+    }
+
+    // Auto-generate Series ID (REST-1xx for Ghatampur, REST-2xx for Hamirpur, etc.)
+    if (!createData.id) {
+      let seriesBase = 100
+      const cityLower = (createData.city || '').toLowerCase()
+      if (cityLower.includes('hamirpur') || cityLower.includes('210301')) seriesBase = 200
+      else if (cityLower.includes('pukhrayan') || cityLower.includes('209111')) seriesBase = 300
+      else if (cityLower.includes('kanpur') || cityLower.includes('208001')) seriesBase = 400
+
+      const existingInSeries = await prisma.restaurant.findMany({
+        where: { id: { startsWith: `REST-${seriesBase.toString().slice(0, 1)}` } },
+        select: { id: true }
+      })
+
+      const numbers = existingInSeries
+        .map(r => parseInt(r.id.replace('REST-', '')))
+        .filter(n => !isNaN(n))
+      
+      const maxNum = numbers.length > 0 ? Math.max(...numbers) : seriesBase
+      const nextNum = maxNum + 1
+      createData.id = `REST-${nextNum}`
+    }
+
+    if (!createData.menuSections || (Array.isArray(createData.menuSections) && createData.menuSections.length === 0)) {
+      const shortCode = createData.id.replace('REST-', '')
+      createData.menuSections = [
+        { id: `SEC-${shortCode}-01`, title: "Chef's Special", emoji: "⭐", matchTags: ["special", "recommended"] },
+        { id: `SEC-${shortCode}-02`, title: "Main Dishes", emoji: "🍽️", matchTags: ["main", "dishes"] },
+        { id: `SEC-${shortCode}-03`, title: "Drinks & Beverages", emoji: "🥤", matchTags: ["beverages", "drinks"] }
+      ]
     }
 
     if (createData.lat !== undefined && createData.lat !== null) {
@@ -160,7 +199,7 @@ export async function POST(request: NextRequest) {
       data: createData
     })
 
-    // Assign owner if ownerUserId provided
+    // Assign owner by ownerUserId or ownerPhone
     if (ownerUserId) {
       await prisma.user.update({
         where: { id: ownerUserId },
@@ -169,6 +208,39 @@ export async function POST(request: NextRequest) {
           role: 'RESTAURANT_OWNER'
         }
       }).catch(err => console.error('Failed to assign owner user:', err))
+    } else if (createData.ownerPhone) {
+      const cleanPhone = createData.ownerPhone.replace(/\D/g, '').slice(-10)
+      if (cleanPhone.length === 10) {
+        const formattedPhone = `+91${cleanPhone}`
+        const existingStaff = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { phone: formattedPhone },
+              { phone: cleanPhone },
+              { phone: { endsWith: cleanPhone } }
+            ]
+          }
+        })
+        if (existingStaff) {
+          await prisma.user.update({
+            where: { id: existingStaff.id },
+            data: {
+              role: 'RESTAURANT_OWNER',
+              assignedRestaurantId: restaurant.id
+            }
+          })
+        } else {
+          await prisma.user.create({
+            data: {
+              phone: formattedPhone,
+              name: `${createData.name} Owner`,
+              email: `kitchen.${restaurant.id.toLowerCase()}@fastkirana.in`,
+              role: 'RESTAURANT_OWNER',
+              assignedRestaurantId: restaurant.id
+            }
+          })
+        }
+      }
     }
 
     revalidateStorefront('restaurants')

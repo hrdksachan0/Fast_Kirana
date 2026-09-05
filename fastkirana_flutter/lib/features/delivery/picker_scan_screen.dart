@@ -30,7 +30,7 @@ class PickerScanScreen extends StatelessWidget {
                 ),
                 child: Stack(
                   children: [
-                    Center(child: Icon(Icons.qr_code_2_rounded, size: 120, color: AppDesignSystem.textMuted)),
+                    const Center(child: Icon(Icons.qr_code_2_rounded, size: 120, color: AppDesignSystem.textMuted)),
                     Positioned(top: 0, left: 0, child: _corner(true, true)),
                     Positioned(top: 0, right: 0, child: _corner(true, false)),
                     Positioned(bottom: 0, left: 0, child: _corner(false, true)),
@@ -43,10 +43,10 @@ class PickerScanScreen extends StatelessWidget {
               const SizedBox(height: 32),
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: AppDesignSystem.success.withOpacity(0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: AppDesignSystem.success)),
+                decoration: BoxDecoration(color: AppDesignSystem.success.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: AppDesignSystem.success)),
                 child: Row(
                   children: [
-                    Icon(Icons.check_circle_rounded, color: AppDesignSystem.success),
+                    const Icon(Icons.check_circle_rounded, color: AppDesignSystem.success),
                     const SizedBox(width: 12),
                     Expanded(child: Text('Last scanned: Amul Milk 1L', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: AppDesignSystem.textPrimary))),
                   ],
@@ -65,10 +65,10 @@ class PickerScanScreen extends StatelessWidget {
       height: 30,
       decoration: BoxDecoration(
         border: Border(
-          top: top ? BorderSide(color: AppDesignSystem.success, width: 4) : BorderSide.none,
-          left: left ? BorderSide(color: AppDesignSystem.success, width: 4) : BorderSide.none,
-          right: !left ? BorderSide(color: AppDesignSystem.success, width: 4) : BorderSide.none,
-          bottom: !top ? BorderSide(color: AppDesignSystem.success, width: 4) : BorderSide.none,
+          top: top ? const BorderSide(color: AppDesignSystem.success, width: 4) : BorderSide.none,
+          left: left ? const BorderSide(color: AppDesignSystem.success, width: 4) : BorderSide.none,
+          right: !left ? const BorderSide(color: AppDesignSystem.success, width: 4) : BorderSide.none,
+          bottom: !top ? const BorderSide(color: AppDesignSystem.success, width: 4) : BorderSide.none,
         ),
       ),
     );

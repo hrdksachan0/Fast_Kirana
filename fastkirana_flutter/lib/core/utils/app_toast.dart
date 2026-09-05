@@ -1,3 +1,5 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import '../../core/theme/responsive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -56,23 +58,23 @@ class AppToast {
 
     switch (type) {
       case ToastType.success:
-        primaryColor = const Color(0xFF10B981);
-        iconBg = const Color(0xFFECFDF5);
+        primaryColor = AppDesignSystem.success;
+        iconBg = AppDesignSystem.green50;
         icon = Icons.check_circle_rounded;
         break;
       case ToastType.error:
-        primaryColor = const Color(0xFFEF4444);
-        iconBg = const Color(0xFFFEF2F2);
+        primaryColor = AppDesignSystem.danger;
+        iconBg = AppDesignSystem.statusCancelled;
         icon = Icons.error_rounded;
         break;
       case ToastType.info:
-        primaryColor = const Color(0xFF3B82F6);
-        iconBg = const Color(0xFFEFF6FF);
+        primaryColor = AppDesignSystem.info;
+        iconBg = AppDesignSystem.blue50;
         icon = Icons.info_rounded;
         break;
       case ToastType.warning:
-        primaryColor = const Color(0xFFF59E0B);
-        iconBg = const Color(0xFFFFFBEB);
+        primaryColor = AppDesignSystem.warning;
+        iconBg = AppDesignSystem.amber50;
         icon = Icons.warning_amber_rounded;
         break;
     }
@@ -91,9 +93,9 @@ class AppToast {
         content: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: const Color(0xFF0F172A),
+            color: AppDesignSystem.slate900,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFF334155), width: 1),
+            border: Border.all(color: AppDesignSystem.slate700, width: 1),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.25),
@@ -135,7 +137,7 @@ class AppToast {
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11),
                           fontWeight: FontWeight.w500,
-                          color: const Color(0xFF94A3B8),
+                          color: AppDesignSystem.slate400,
                         ),
                       ),
                     ],
@@ -149,3 +151,4 @@ class AppToast {
     );
   }
 }
+

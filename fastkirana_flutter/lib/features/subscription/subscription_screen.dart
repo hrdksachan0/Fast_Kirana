@@ -1,3 +1,5 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import '../../core/theme/responsive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,10 +13,10 @@ class SubscriptionScreen extends ConsumerStatefulWidget {
 }
 
 class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
-  static const Color primaryRed = Color(0xFFE20A22);
-  static const Color brandGreen = Color(0xFF00A344);
-  static const Color slateDark = Color(0xFF0F172A);
-  static const Color slateMuted = Color(0xFF64748B);
+  static const Color primaryRed = AppDesignSystem.primary;
+  static const Color brandGreen = AppDesignSystem.green700;
+  static const Color slateDark = AppDesignSystem.slate900;
+  static const Color slateMuted = AppDesignSystem.slate500;
 
   final List<Map<String, dynamic>> _subscriptions = [
     {
@@ -119,7 +121,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
     final name = _subscriptions[index]['name'];
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: const Color(0xFF334155),
+        backgroundColor: AppDesignSystem.slate700,
         content: Text('⏭️ Skipped tomorrow for $name. Resumes day after tomorrow!'),
         behavior: SnackBarBehavior.floating,
       ),
@@ -152,7 +154,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                       width: 42,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE2E8F0),
+                        color: AppDesignSystem.slate200,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -164,10 +166,10 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
+                          color: AppDesignSystem.slate100,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Center(child: Text(item['icon'], style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
+                        child: Center(child: Text(item['icon'], style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -207,10 +209,10 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                             margin: const EdgeInsets.only(right: 6),
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFFFFF1F2) : const Color(0xFFF8FAFC),
+                              color: isSelected ? AppDesignSystem.rose50 : AppDesignSystem.slate50,
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: isSelected ? primaryRed : const Color(0xFFE2E8F0),
+                                color: isSelected ? primaryRed : AppDesignSystem.slate200,
                                 width: 1.2,
                               ),
                             ),
@@ -245,10 +247,10 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                             margin: const EdgeInsets.only(right: 6),
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFFECFDF5) : const Color(0xFFF8FAFC),
+                              color: isSelected ? AppDesignSystem.green50 : AppDesignSystem.slate50,
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: isSelected ? brandGreen : const Color(0xFFE2E8F0),
+                                color: isSelected ? brandGreen : AppDesignSystem.slate200,
                                 width: 1.2,
                               ),
                             ),
@@ -319,7 +321,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
     final activeCount = _subscriptions.where((s) => s['status'] == 'active').length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppDesignSystem.slate50,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -341,14 +343,14 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFFE20A22), Color(0xFFFF4742)],
+                colors: [AppDesignSystem.primary, AppDesignSystem.red300],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: primaryRed.withOpacity(0.3),
+                  color: primaryRed.withValues(alpha: 0.3),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),
@@ -359,7 +361,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(Icons.alarm_on_rounded, size: 28, color: Colors.white),
@@ -376,7 +378,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                       const SizedBox(height: 3),
                       Text(
                         'Fresh milk & bread delivered daily by 6:30 AM',
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: Colors.white.withOpacity(0.9)),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: Colors.white.withValues(alpha: 0.9)),
                       ),
                     ],
                   ),
@@ -413,10 +415,10 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                border: Border.all(color: AppDesignSystem.slate200, width: 1.2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
+                    color: Colors.black.withValues(alpha: 0.02),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -431,11 +433,11 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
+                          color: AppDesignSystem.slate50,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(color: AppDesignSystem.slate200),
                         ),
-                        child: Center(child: Text(sub['icon'], style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
+                        child: Center(child: Text(sub['icon'], style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -459,7 +461,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: isActive ? const Color(0xFFECFDF5) : const Color(0xFFFEF3C7),
+                          color: isActive ? AppDesignSystem.green50 : AppDesignSystem.statusPending,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -467,13 +469,13 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 9.5),
                             fontWeight: FontWeight.w900,
-                            color: isActive ? const Color(0xFF059669) : const Color(0xFFD97706),
+                            color: isActive ? AppDesignSystem.emerald600 : AppDesignSystem.amber600,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const Divider(height: 18, color: Color(0xFFF1F5F9)),
+                  const Divider(height: 18, color: AppDesignSystem.slate100),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -494,7 +496,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF1F5F9),
+                                color: AppDesignSystem.slate100,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
@@ -509,7 +511,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: isActive ? const Color(0xFFFEF2F2) : const Color(0xFFECFDF5),
+                                color: isActive ? AppDesignSystem.statusCancelled : AppDesignSystem.green50,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
@@ -536,7 +538,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
           // 3. Daily Essentials Catalog (Add to subscription)
           Row(
             children: [
-              const Text('🥛', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
+              Text('🥛', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
               const SizedBox(width: 6),
               Text(
                 'Subscribe to Daily Essentials',
@@ -553,7 +555,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: AppDesignSystem.slate200),
               ),
               child: Row(
                 children: [
@@ -561,10 +563,10 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
+                      color: AppDesignSystem.slate50,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Center(child: Text(item['icon'], style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 20)))),
+                    child: Center(child: Text(item['icon'], style: TextStyle(fontSize: Responsive.scaledFontSize(context, 20)))),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -585,7 +587,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                   ElevatedButton(
                     onPressed: () => _showNewSubscriptionModal(item),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFFF1F2),
+                      backgroundColor: AppDesignSystem.rose50,
                       foregroundColor: primaryRed,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

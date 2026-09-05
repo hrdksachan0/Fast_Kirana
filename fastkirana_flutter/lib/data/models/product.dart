@@ -1,3 +1,4 @@
+import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'dart:convert';
 
 class Product {
@@ -6,7 +7,7 @@ class Product {
   final String slug;
   final String? description;
   final String? imageUrl;
-  final String categoryId;
+  final String? categoryId;
   final String? restaurantId;
   final double mrp;
   final double price;
@@ -37,7 +38,7 @@ class Product {
     required this.slug,
     this.description,
     this.imageUrl,
-    required this.categoryId,
+    this.categoryId,
     this.restaurantId,
     required this.mrp,
     required this.price,
@@ -83,7 +84,7 @@ class Product {
       parsedCreated = json['createdAt'] != null
           ? DateTime.parse(json['createdAt'].toString())
           : DateTime.now();
-    } catch (_) {
+    } catch (e) { LoggerService.error('Product: silent catch', e);
       parsedCreated = DateTime.now();
     }
 
@@ -91,7 +92,7 @@ class Product {
     if (json['expiryDate'] != null) {
       try {
         parsedExpiry = DateTime.parse(json['expiryDate'].toString());
-      } catch (_) {}
+      } catch (e, _) { LoggerService.error('Product: silent catch', e); }
     }
 
     final mrpVal = double.tryParse(json['mrp']?.toString() ?? '0') ?? 0.0;
@@ -105,7 +106,7 @@ class Product {
       slug: json['slug']?.toString() ?? '',
       description: json['description']?.toString(),
       imageUrl: json['imageUrl']?.toString(),
-      categoryId: json['categoryId']?.toString() ?? '',
+      categoryId: json['categoryId']?.toString(),
       restaurantId: json['restaurantId']?.toString(),
       mrp: mrpVal,
       price: priceVal,
@@ -180,7 +181,7 @@ class Product {
     if (variants is String) {
       try {
         listData = jsonDecode(variants as String);
-      } catch (_) {
+      } catch (e) { LoggerService.error('Product: silent catch', e);
         return [];
       }
     }

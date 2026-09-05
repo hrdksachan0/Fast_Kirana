@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../core/theme/responsive.dart';
+import '../core/theme/design_system.dart';
 
 class SponsoredAdCard extends StatelessWidget {
   final String? title;
@@ -25,26 +27,27 @@ class SponsoredAdCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFFBEB), Color(0xFFFEF3C7)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFFFDE68A),
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFD97706).withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
+    return RepaintBoundary(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppDesignSystem.amber50, AppDesignSystem.statusPending],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-        ],
-      ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppDesignSystem.yellow200,
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppDesignSystem.amber600.withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -62,7 +65,7 @@ class SponsoredAdCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFD97706),
+                        color: AppDesignSystem.amber600,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Row(
@@ -86,16 +89,16 @@ class SponsoredAdCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFEF2F2),
+                          color: AppDesignSystem.statusCancelled,
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: const Color(0xFFFECDD3)),
+                          border: Border.all(color: AppDesignSystem.rose200),
                         ),
                         child: Text(
                           discountText!,
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 9.5),
                             fontWeight: FontWeight.w900,
-                            color: const Color(0xFFE11D48),
+                            color: AppDesignSystem.rose600,
                             letterSpacing: 0.3,
                           ),
                         ),
@@ -119,7 +122,7 @@ class SponsoredAdCard extends StatelessWidget {
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 13.5),
                               fontWeight: FontWeight.w900,
-                              color: const Color(0xFF78350F),
+                              color: AppDesignSystem.statusPendingText,
                               height: 1.25,
                             ),
                           ),
@@ -129,7 +132,7 @@ class SponsoredAdCard extends StatelessWidget {
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 11),
                               fontWeight: FontWeight.w500,
-                              color: const Color(0xFF92400E),
+                              color: AppDesignSystem.statusPendingText,
                               height: 1.3,
                             ),
                           ),
@@ -146,9 +149,11 @@ class SponsoredAdCard extends StatelessWidget {
                           width: 60,
                           height: 60,
                           fit: BoxFit.cover,
+                          memCacheWidth: 150,
+                          memCacheHeight: 150,
                           placeholder: (context, url) => Container(
-                            color: Colors.white.withOpacity(0.5),
-                            child: const Center(child: Icon(Icons.restaurant_rounded, size: 20, color: Color(0xFFD97706))),
+                            color: Colors.white.withValues(alpha: 0.5),
+                            child: const Center(child: Icon(Icons.restaurant_rounded, size: 20, color: AppDesignSystem.amber600)),
                           ),
                           errorWidget: (context, url, error) => Container(
                             width: 60,
@@ -157,7 +162,7 @@ class SponsoredAdCard extends StatelessWidget {
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.restaurant_menu_rounded, color: Color(0xFFD97706)),
+                            child: const Icon(Icons.restaurant_menu_rounded, color: AppDesignSystem.amber600),
                           ),
                         ),
                       ),
@@ -178,7 +183,7 @@ class SponsoredAdCard extends StatelessWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Copied coupon code "$promoCode" to clipboard!'),
-                              backgroundColor: const Color(0xFF00A344),
+                              backgroundColor: AppDesignSystem.accent,
                               duration: const Duration(seconds: 2),
                               behavior: SnackBarBehavior.floating,
                             ),
@@ -189,7 +194,7 @@ class SponsoredAdCard extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFFFBBF24), style: BorderStyle.solid),
+                            border: Border.all(color: AppDesignSystem.warning, style: BorderStyle.solid),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -199,7 +204,7 @@ class SponsoredAdCard extends StatelessWidget {
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 9.5),
                                   fontWeight: FontWeight.w700,
-                                  color: const Color(0xFFB45309),
+                                  color: AppDesignSystem.amber700,
                                 ),
                               ),
                               Text(
@@ -207,12 +212,12 @@ class SponsoredAdCard extends StatelessWidget {
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 10.5),
                                   fontWeight: FontWeight.w900,
-                                  color: const Color(0xFF92400E),
+                                  color: AppDesignSystem.statusPendingText,
                                   letterSpacing: 0.5,
                                 ),
                               ),
                               const SizedBox(width: 4),
-                              const Icon(Icons.copy_rounded, size: 11, color: Color(0xFFB45309)),
+                              const Icon(Icons.copy_rounded, size: 11, color: AppDesignSystem.amber700),
                             ],
                           ),
                         ),
@@ -224,11 +229,11 @@ class SponsoredAdCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFD97706),
+                        color: AppDesignSystem.amber600,
                         borderRadius: BorderRadius.circular(8),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFD97706).withOpacity(0.2),
+                            color: AppDesignSystem.amber600.withValues(alpha: 0.2),
                             blurRadius: 4,
                             offset: const Offset(0, 1.5),
                           ),
@@ -257,6 +262,7 @@ class SponsoredAdCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

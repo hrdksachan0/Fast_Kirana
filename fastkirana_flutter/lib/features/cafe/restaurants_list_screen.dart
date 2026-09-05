@@ -3,10 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
-import '../../data/models/restaurant.dart';
 import '../../providers/restaurant_provider.dart';
 import '../../widgets/restaurant_card.dart';
 import '../../widgets/floating_cart_bar.dart';
+import '../../widgets/unserviceable_location_banner.dart';
 
 class RestaurantsListScreen extends ConsumerStatefulWidget {
   const RestaurantsListScreen({super.key});
@@ -82,6 +82,9 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
         children: [
           Column(
             children: [
+              // 0. Location Unserviceable Banner
+              const UnserviceableLocationBanner(),
+
               // 1. Search Bar Header
               Container(
                 color: Colors.white,
@@ -89,7 +92,7 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
                 child: Container(
                   height: 42,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
+                    color: AppDesignSystem.surfaceMuted,
                     borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
                     border: Border.all(color: AppDesignSystem.border),
                   ),
@@ -106,7 +109,7 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
                         fontWeight: FontWeight.w500,
                         color: AppDesignSystem.textMuted,
                       ),
-                      prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFFEA580C)),
+                      prefixIcon: const Icon(Icons.search_rounded, size: 18, color: AppDesignSystem.orange600),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
                               icon: const Icon(Icons.close_rounded, size: 16, color: AppDesignSystem.textSecondary),
@@ -147,23 +150,23 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
                         duration: const Duration(milliseconds: 200),
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: isSelected ? const Color(0xFFEA580C) : const Color(0xFFFFF7ED),
+                          color: isSelected ? AppDesignSystem.orange600 : AppDesignSystem.orange50,
                           borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
                           border: Border.all(
-                            color: isSelected ? const Color(0xFFEA580C) : const Color(0xFFFFEDD5),
+                            color: isSelected ? AppDesignSystem.orange600 : AppDesignSystem.orange200,
                           ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(cat['emoji']!, style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
+                            Text(cat['emoji']!, style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
                             const SizedBox(width: 5),
                             Text(
                               cat['label']!,
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 11.5),
                                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
-                                color: isSelected ? Colors.white : const Color(0xFFC2410C),
+                                color: isSelected ? Colors.white : AppDesignSystem.orange700,
                               ),
                             ),
                           ],
@@ -212,7 +215,7 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
                   ),
                 ),
               ),
-              const Divider(height: 1, color: Color(0xFFF3F4F6)),
+              const Divider(height: 1, color: AppDesignSystem.surfaceMuted),
 
               // 4. Restaurant Listing View
               Expanded(
@@ -223,7 +226,7 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 48))),
+                            Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 48))),
                             const SizedBox(height: 12),
                             Text(
                               'No restaurants match your filters',
@@ -257,13 +260,13 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
                     );
                   },
                   loading: () => const Center(
-                    child: CircularProgressIndicator(color: Color(0xFFEA580C)),
+                    child: CircularProgressIndicator(color: AppDesignSystem.orange600),
                   ),
                   error: (err, _) => Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text('⚠️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 48))),
+                        Text('⚠️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 48))),
                         const SizedBox(height: 12),
                         Text(
                           'Failed to load restaurants',
@@ -276,7 +279,7 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
                         const SizedBox(height: 8),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFEA580C),
+                            backgroundColor: AppDesignSystem.orange600,
                           ),
                           onPressed: () => ref.invalidate(restaurantsProvider),
                           child: const Text('Try Again'),
@@ -303,10 +306,10 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFFFFF7ED) : Colors.white,
+          color: isActive ? AppDesignSystem.orange50 : Colors.white,
           borderRadius: BorderRadius.circular(AppDesignSystem.radiusSm),
           border: Border.all(
-            color: isActive ? const Color(0xFFEA580C) : const Color(0xFFE5E7EB),
+            color: isActive ? AppDesignSystem.orange600 : AppDesignSystem.border,
             width: isActive ? 1.5 : 1.0,
           ),
         ),
@@ -315,7 +318,7 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
           style: GoogleFonts.inter(
             fontSize: Responsive.scaledFontSize(context, 11),
             fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
-            color: isActive ? const Color(0xFFEA580C) : const Color(0xFF4B5563),
+            color: isActive ? AppDesignSystem.orange600 : AppDesignSystem.gray600,
           ),
         ),
       ),

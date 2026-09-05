@@ -1,3 +1,5 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import '../../../core/theme/responsive.dart';
 import 'package:flutter/material.dart';
 
 class AddressCard extends StatelessWidget {
@@ -56,7 +58,7 @@ class AddressCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(fullAddress,
                     maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 11.5), color: AppDesignSystem.textSecondary),
+                    style: TextStyle(fontSize: Responsive.scaledFontSize(context, 11.5), color: AppDesignSystem.textSecondary),
                   ),
                 ],
               ),
@@ -67,3 +69,4 @@ class AddressCard extends StatelessWidget {
     );
   }
 }
+

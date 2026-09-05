@@ -7,7 +7,6 @@ import '../../core/theme/responsive.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../data/models/address.dart';
 import '../../providers/address_provider.dart';
-import '../../providers/auth_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../location/map_picker_screen.dart';
 
@@ -19,7 +18,7 @@ class AddressBookScreen extends ConsumerStatefulWidget {
 }
 
 class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
-  static const Color primaryRed = Color(0xFFEA580C);
+  static const Color primaryRed = AppDesignSystem.orange600;
 
   @override
   void initState() {
@@ -33,12 +32,12 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
     final selectedAddress = ref.watch(selectedAddressProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppDesignSystem.slate50,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+          icon: const Icon(Icons.arrow_back_rounded, color: AppDesignSystem.slate900),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -46,13 +45,13 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
           style: GoogleFonts.inter(
             fontSize: Responsive.scaledFontSize(context, 17),
             fontWeight: FontWeight.w900,
-            color: const Color(0xFF0F172A),
+            color: AppDesignSystem.slate900,
             letterSpacing: -0.3,
           ),
         ),
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, color: Color(0xFFF1F5F9)),
+          child: Divider(height: 1, color: AppDesignSystem.slate100),
         ),
       ),
       body: ResponsiveContainer(
@@ -92,12 +91,12 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: isSelected ? primaryRed : const Color(0xFFE2E8F0),
+                              color: isSelected ? primaryRed : AppDesignSystem.slate200,
                               width: isSelected ? 1.5 : 1.0,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: isSelected ? primaryRed.withOpacity(0.08) : Colors.black.withOpacity(0.04),
+                                color: isSelected ? primaryRed.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.04),
                                 blurRadius: 12,
                                 offset: const Offset(0, 3),
                               ),
@@ -110,10 +109,10 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   color: isHome
-                                      ? const Color(0xFFFEF2F2)
+                                      ? AppDesignSystem.statusCancelled
                                       : isWork
-                                          ? const Color(0xFFEFF6FF)
-                                          : const Color(0xFFF0FDF4),
+                                          ? AppDesignSystem.blue50
+                                          : AppDesignSystem.green50,
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: Icon(
@@ -124,10 +123,10 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                           : Icons.location_on_rounded,
                                   size: 22,
                                   color: isHome
-                                      ? const Color(0xFFDC2626)
+                                      ? AppDesignSystem.red600
                                       : isWork
-                                          ? const Color(0xFF2563EB)
-                                          : const Color(0xFF16A34A),
+                                          ? AppDesignSystem.blue600
+                                          : AppDesignSystem.green600,
                                 ),
                               ),
                               const SizedBox(width: 14),
@@ -142,7 +141,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                           style: GoogleFonts.inter(
                                             fontWeight: FontWeight.w900,
                                             fontSize: Responsive.scaledFontSize(context, 14.5),
-                                            color: const Color(0xFF0F172A),
+                                            color: AppDesignSystem.slate900,
                                           ),
                                         ),
                                         if (addr.isDefault || isSelected) ...[
@@ -150,7 +149,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                             decoration: BoxDecoration(
-                                              color: isSelected ? primaryRed.withOpacity(0.1) : const Color(0xFFF1F5F9),
+                                              color: isSelected ? primaryRed.withValues(alpha: 0.1) : AppDesignSystem.slate100,
                                               borderRadius: BorderRadius.circular(6),
                                             ),
                                             child: Text(
@@ -158,7 +157,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                               style: GoogleFonts.inter(
                                                 fontSize: Responsive.scaledFontSize(context, 9),
                                                 fontWeight: FontWeight.w800,
-                                                color: isSelected ? primaryRed : const Color(0xFF64748B),
+                                                color: isSelected ? primaryRed : AppDesignSystem.slate500,
                                               ),
                                             ),
                                           ),
@@ -171,7 +170,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                       style: GoogleFonts.inter(
                                         fontSize: Responsive.scaledFontSize(context, 12),
                                         fontWeight: FontWeight.w500,
-                                        color: const Color(0xFF475569),
+                                        color: AppDesignSystem.slate600,
                                         height: 1.3,
                                       ),
                                     ),
@@ -179,14 +178,14 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                     Row(
                                       children: [
                                         if (addr.phone.isNotEmpty) ...[
-                                          const Icon(Icons.phone_outlined, size: 12, color: Color(0xFF94A3B8)),
+                                          const Icon(Icons.phone_outlined, size: 12, color: AppDesignSystem.slate400),
                                           const SizedBox(width: 4),
                                           Text(
                                             addr.phone,
                                             style: GoogleFonts.inter(
                                               fontSize: Responsive.scaledFontSize(context, 11),
                                               fontWeight: FontWeight.w600,
-                                              color: const Color(0xFF64748B),
+                                              color: AppDesignSystem.slate500,
                                             ),
                                           ),
                                           const SizedBox(width: 10),
@@ -196,7 +195,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                           style: GoogleFonts.inter(
                                             fontSize: Responsive.scaledFontSize(context, 11),
                                             fontWeight: FontWeight.w600,
-                                            color: const Color(0xFF0284C7),
+                                            color: AppDesignSystem.cyan600,
                                           ),
                                         ),
                                       ],
@@ -205,7 +204,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                 ),
                               ),
                               PopupMenuButton<String>(
-                                icon: const Icon(Icons.more_vert_rounded, size: 18, color: Color(0xFF64748B)),
+                                icon: const Icon(Icons.more_vert_rounded, size: 18, color: AppDesignSystem.slate500),
                                 onSelected: (val) async {
                                   if (val == 'edit') {
                                     final updated = await Navigator.push<Address>(
@@ -231,7 +230,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                     value: 'select',
                                     child: Row(
                                       children: [
-                                        Icon(Icons.check_circle_outline_rounded, size: 16, color: Color(0xFF10B981)),
+                                        Icon(Icons.check_circle_outline_rounded, size: 16, color: AppDesignSystem.success),
                                         SizedBox(width: 8),
                                         Text('Set Active Delivery'),
                                       ],
@@ -241,7 +240,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                     value: 'edit',
                                     child: Row(
                                       children: [
-                                        Icon(Icons.edit_outlined, size: 16, color: Color(0xFF64748B)),
+                                        Icon(Icons.edit_outlined, size: 16, color: AppDesignSystem.slate500),
                                         SizedBox(width: 8),
                                         Text('Edit Address'),
                                       ],
@@ -251,9 +250,9 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                     value: 'delete',
                                     child: Row(
                                       children: [
-                                        Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFEF4444)),
+                                        Icon(Icons.delete_outline_rounded, size: 16, color: AppDesignSystem.danger),
                                         SizedBox(width: 8),
-                                        Text('Delete Address', style: TextStyle(color: Color(0xFFEF4444))),
+                                        Text('Delete Address', style: TextStyle(color: AppDesignSystem.danger)),
                                       ],
                                     ),
                                   ),
@@ -276,17 +275,17 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.error_outline_rounded, size: 48, color: Color(0xFFEF4444)),
+                      const Icon(Icons.error_outline_rounded, size: 48, color: AppDesignSystem.danger),
                       const SizedBox(height: 12),
                       Text(
                         'Failed to load saved addresses',
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w800, color: AppDesignSystem.slate900),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         err.toString().replaceAll('Exception: ', ''),
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF64748B)),
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate500),
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
@@ -311,7 +310,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, -4),
                 ),
@@ -367,7 +366,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
       title: 'No Saved Addresses Yet',
       subtitle: 'Add your delivery address in Ghatampur\nfor fast grocery and food deliveries.',
       ctaLabel: 'Add Address',
-      bgTint: const Color(0xFFFFF0F0),
+      bgTint: AppDesignSystem.rose50,
       onCta: () async {
         HapticFeedback.lightImpact();
         final newAddr = await Navigator.push<Address>(
@@ -393,7 +392,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+            style: ElevatedButton.styleFrom(backgroundColor: AppDesignSystem.danger),
             onPressed: () async {
               Navigator.pop(ctx);
               try {

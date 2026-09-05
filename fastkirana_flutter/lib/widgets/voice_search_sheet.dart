@@ -1,8 +1,11 @@
+import 'package:fastkirana_flutter/core/theme/design_system.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../core/services/logger_service.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../core/theme/responsive.dart';
 
 class VoiceSearchSheet extends StatefulWidget {
   final Function(String query) onVoiceResult;
@@ -104,7 +107,7 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
           });
         }
       }
-    } catch (_) {
+    } catch (e) { LoggerService.error('VoiceSearchSheet: silent catch', e);
       if (mounted) {
         setState(() {
           _liveTranscript = 'Tap mic to speak';
@@ -122,7 +125,7 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
 
     try {
       await _voiceChannel.invokeMethod('startListening');
-    } catch (_) {
+    } catch (e) { LoggerService.error('VoiceSearchSheet: silent catch', e);
       setState(() => _isListening = false);
     }
   }
@@ -131,7 +134,7 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
     setState(() => _isListening = false);
     try {
       await _voiceChannel.invokeMethod('stopListening');
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('VoiceSearchSheet: silent catch', e); }
   }
 
   void _finishWithResult(String query) {
@@ -167,7 +170,7 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
             width: 44,
             height: 4.5,
             decoration: BoxDecoration(
-              color: const Color(0xFFCBD5E1),
+              color: AppDesignSystem.slate300,
               borderRadius: BorderRadius.circular(10),
             ),
           ),
@@ -177,14 +180,14 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('🎙️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22))),
+              Text('🎙️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22))),
               const SizedBox(width: 8),
               Text(
                 'Voice Search',
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 18),
                   fontWeight: FontWeight.w900,
-                  color: const Color(0xFF0F172A),
+                  color: AppDesignSystem.slate900,
                 ),
               ),
             ],
@@ -194,7 +197,7 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
             'Speak product or grocery name in Hindi or English',
             style: GoogleFonts.inter(
               fontSize: Responsive.scaledFontSize(context, 12.5),
-              color: const Color(0xFF64748B),
+              color: AppDesignSystem.slate500,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -224,7 +227,7 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
                           height: 80 + (_waveController.value * 50),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: const Color(0xFFE20A22).withValues(
+                            color: AppDesignSystem.primary.withValues(
                               alpha: (1.0 - _waveController.value).clamp(0.0, 0.4),
                             ),
                           ),
@@ -239,13 +242,13 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: const LinearGradient(
-                        colors: [Color(0xFFE20A22), Color(0xFFFF2D4B)],
+                        colors: [AppDesignSystem.primary, AppDesignSystem.primaryLight],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFE20A22).withValues(alpha: 0.35),
+                          color: AppDesignSystem.primary.withValues(alpha: 0.35),
                           blurRadius: 18,
                           offset: const Offset(0, 6),
                         ),
@@ -269,10 +272,10 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
+              color: AppDesignSystem.slate50,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: _isListening ? const Color(0xFFFECDD3) : const Color(0xFFE2E8F0),
+                color: _isListening ? AppDesignSystem.rose200 : AppDesignSystem.slate200,
                 width: 1.2,
               ),
             ),
@@ -282,7 +285,7 @@ class _VoiceSearchSheetState extends State<VoiceSearchSheet> with SingleTickerPr
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 14.5),
                 fontWeight: FontWeight.w700,
-                color: _isListening ? const Color(0xFFBE123C) : const Color(0xFF0F172A),
+                color: _isListening ? AppDesignSystem.rose600 : AppDesignSystem.slate900,
               ),
             ),
           ),

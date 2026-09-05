@@ -1,3 +1,4 @@
+import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/product.dart';
 import '../data/repositories/wishlist_repository.dart';
@@ -18,7 +19,7 @@ class WishlistNotifier extends StateNotifier<List<Product>> {
     try {
       final items = await _repo.getWishlist();
       state = items;
-    } catch (_) {}
+    } catch (e, _) { LoggerService.error('WishlistProvider: silent catch', e); }
   }
 
   bool isInWishlist(String productId) {
@@ -31,7 +32,7 @@ class WishlistNotifier extends StateNotifier<List<Product>> {
       state = state.where((p) => p.id != product.id).toList();
       try {
         await _repo.removeFromWishlist(product.id);
-      } catch (_) {
+      } catch (e) { LoggerService.error('WishlistProvider: silent catch', e);
         // Rollback
         state = [...state, product];
       }
@@ -39,7 +40,7 @@ class WishlistNotifier extends StateNotifier<List<Product>> {
       state = [...state, product];
       try {
         await _repo.addToWishlist(product.id);
-      } catch (_) {
+      } catch (e) { LoggerService.error('WishlistProvider: silent catch', e);
         // Rollback
         state = state.where((p) => p.id != product.id).toList();
       }

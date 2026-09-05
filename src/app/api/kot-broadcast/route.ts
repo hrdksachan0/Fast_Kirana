@@ -8,6 +8,9 @@ import { createClient } from '@supabase/supabase-js'
  * Creates a server-side Supabase client, subscribes to the channel,
  * sends the broadcast, then cleans up.
  */
+// Server-side deduplication window (10 seconds) to prevent duplicate KOT ticket prints
+const recentBroadcastTimestamps = new Map<string, number>()
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -16,6 +19,24 @@ export async function POST(request: NextRequest) {
     if (!orderId) {
       return NextResponse.json({ error: 'orderId is required' }, { status: 400 })
     }
+
+    const cleanId = String(orderId).trim().replace(/^#/, '')
+    const cleanReadable = readableId ? String(readableId).trim().replace(/^#/, '') : ''
+    const baseReadable = cleanReadable.replace(/-[GR\d]+$/i, '')
+    const now = Date.now()
+
+    const lastBroadcastId = recentBroadcastTimestamps.get(cleanId)
+    const lastBroadcastReadable = cleanReadable ? recentBroadcastTimestamps.get(cleanReadable) : undefined
+    const lastBroadcastBase = baseReadable ? recentBroadcastTimestamps.get(baseReadable) : undefined
+    const lastBroadcast = Math.max(lastBroadcastId || 0, lastBroadcastReadable || 0, lastBroadcastBase || 0)
+
+    if (lastBroadcast > 0 && (now - lastBroadcast) < 10000) {
+      console.log(`[KOT Broadcast API] 🛡️ Ignored duplicate broadcast for #${cleanReadable || cleanId} (${Math.round((10000 - (now - lastBroadcast)) / 1000)}s cooldown active)`)
+      return NextResponse.json({ success: true, orderId: cleanId, deduped: true })
+    }
+    recentBroadcastTimestamps.set(cleanId, now)
+    if (cleanReadable) recentBroadcastTimestamps.set(cleanReadable, now)
+    if (baseReadable) recentBroadcastTimestamps.set(baseReadable, now)
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bberzasmxwioxjynbuaf.supabase.co'
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''

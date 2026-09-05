@@ -83,7 +83,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           child: Center(
                             child: Text(
                               item['emoji']!,
-                              style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 64)),
+                              style: TextStyle(fontSize: Responsive.scaledFontSize(context, 64)),
                             ),
                           ),
                         ),

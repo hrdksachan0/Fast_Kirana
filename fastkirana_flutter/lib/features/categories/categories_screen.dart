@@ -26,91 +26,91 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
     'fruits-vegetables': {
       'tagline': '100% Farm-Fresh Organic',
       'items': 33,
-      'btnColor': Color(0xFF059669),
+      'btnColor': AppDesignSystem.emerald600,
       'asset': 'assets/categories/fruits_vegetables_category.webp',
       'webImage': 'https://www.fastkirana.in/fruits-vegetables.png',
     },
     'healthy-foods': {
       'tagline': 'Essential Products',
       'items': 11,
-      'btnColor': Color(0xFFDC2626),
+      'btnColor': AppDesignSystem.red600,
       'asset': 'assets/categories/fruits_vegetables_category.webp',
       'webImage': 'https://www.fastkirana.in/healthy-foods.png',
     },
     'kitchen-needs': {
       'tagline': 'Fortune Oil, Atta & Dal',
       'items': 42,
-      'btnColor': Color(0xFF059669),
+      'btnColor': AppDesignSystem.emerald600,
       'asset': 'assets/categories/atta_rice_dal_category.webp',
       'webImage': 'https://www.fastkirana.in/kitchen-needs.png',
     },
     'atta-rice-dal': {
       'tagline': 'Fortune Oil, Atta & Dal',
       'items': 42,
-      'btnColor': Color(0xFF059669),
+      'btnColor': AppDesignSystem.emerald600,
       'asset': 'assets/categories/atta_rice_dal_category.webp',
       'webImage': 'https://www.fastkirana.in/kitchen-needs.png',
     },
     'snacks-munchies': {
       'tagline': 'Crisps, Namkeen & Chips',
       'items': 28,
-      'btnColor': Color(0xFFDC2626),
+      'btnColor': AppDesignSystem.red600,
       'asset': 'assets/categories/snacks_munchies_category.webp',
       'webImage': 'https://www.fastkirana.in/snacks-munchies.png',
     },
     'beverages': {
       'tagline': 'Cold Drinks & Real Juices',
       'items': 19,
-      'btnColor': Color(0xFF0284C7),
+      'btnColor': AppDesignSystem.cyan600,
       'asset': 'assets/categories/beverages_category.webp',
       'webImage': 'https://www.fastkirana.in/beverages.png',
     },
     'ice-cream': {
       'tagline': 'Cool Tubs, Cones & Treats',
       'items': 15,
-      'btnColor': Color(0xFFDC2626),
+      'btnColor': AppDesignSystem.red600,
       'asset': 'assets/categories/ice_cream_category.webp',
       'webImage': 'https://www.fastkirana.in/ice-cream.png',
     },
     'chocolates': {
       'tagline': 'Silk, Bars & Confectionery',
       'items': 24,
-      'btnColor': Color(0xFF7C3AED),
+      'btnColor': AppDesignSystem.violet600,
       'asset': 'assets/categories/bakery_biscuits_category.webp',
       'webImage': 'https://www.fastkirana.in/chocolates.png',
     },
     'bakery': {
       'tagline': 'Fresh Cookies & Rusks',
       'items': 16,
-      'btnColor': Color(0xFFEA580C),
+      'btnColor': AppDesignSystem.orange600,
       'asset': 'assets/categories/bakery_biscuits_category.webp',
       'webImage': 'https://www.fastkirana.in/bakery.png',
     },
     'packaged-foods': {
       'tagline': 'Instant Maggi & Ready Meals',
       'items': 18,
-      'btnColor': Color(0xFFDC2626),
+      'btnColor': AppDesignSystem.red600,
       'asset': 'assets/categories/snacks_munchies_category.webp',
       'webImage': 'https://www.fastkirana.in/packaged-foods.png',
     },
     'personal-care': {
       'tagline': 'Soaps, Shampoos & Skincare',
       'items': 22,
-      'btnColor': Color(0xFF0D9488),
+      'btnColor': AppDesignSystem.teal600,
       'asset': 'assets/categories/personal_care_category.webp',
       'webImage': 'https://www.fastkirana.in/personal-care.png',
     },
     'home-needs-and-cleaning': {
       'tagline': 'Detergents & Home Cleaners',
       'items': 20,
-      'btnColor': Color(0xFF0284C7),
+      'btnColor': AppDesignSystem.cyan600,
       'asset': 'assets/categories/household_category.webp',
       'webImage': 'https://www.fastkirana.in/home-cleaning.png',
     },
     'restaurant-food': {
       'tagline': 'Hot Burgers, Rolls & Meals',
       'items': 35,
-      'btnColor': Color(0xFFEA580C),
+      'btnColor': AppDesignSystem.orange600,
       'asset': 'assets/categories/cafe_category.webp',
       'webImage': 'https://www.fastkirana.in/restaurant-food.png',
     },
@@ -127,7 +127,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
     final categoriesAsync = ref.watch(categoriesProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppDesignSystem.slate50,
       body: SafeArea(
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
@@ -148,9 +148,9 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFDF2F8),
+                              color: AppDesignSystem.rose50,
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFFCE7F3), width: 0.8),
+                              border: Border.all(color: AppDesignSystem.rose100, width: 0.8),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -160,19 +160,19 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 9.5),
                                     fontWeight: FontWeight.w800,
-                                    color: const Color(0xFF475569),
+                                    color: AppDesignSystem.slate600,
                                     letterSpacing: 0.4,
                                   ),
                                 ),
                                 const SizedBox(width: 4),
-                                const Icon(Icons.arrow_forward_ios_rounded, size: 8, color: Color(0xFF94A3B8)),
+                                const Icon(Icons.arrow_forward_ios_rounded, size: 8, color: AppDesignSystem.slate400),
                                 const SizedBox(width: 4),
                                 Text(
                                   'CATEGORIES DIRECTORY',
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 9.5),
                                     fontWeight: FontWeight.w900,
-                                    color: const Color(0xFFE11D48),
+                                    color: AppDesignSystem.rose600,
                                     letterSpacing: 0.4,
                                   ),
                                 ),
@@ -187,7 +187,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 23),
                               fontWeight: FontWeight.w900,
-                              color: const Color(0xFF0F172A),
+                              color: AppDesignSystem.slate900,
                               letterSpacing: -0.5,
                             ),
                           ),
@@ -199,7 +199,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 11.5),
                               fontWeight: FontWeight.w500,
-                              color: const Color(0xFF64748B),
+                              color: AppDesignSystem.slate500,
                               height: 1.3,
                             ),
                           ),
@@ -216,7 +216,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
+                            color: Colors.black.withValues(alpha: 0.04),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -230,7 +230,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                           errorBuilder: (_, __, ___) => Image.asset(
                             'assets/categories/fruits_vegetables_category.webp',
                             fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => const Center(
+                            errorBuilder: (_, __, ___) => Center(
                               child: Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 36))),
                             ),
                           ),
@@ -251,10 +251,10 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: AppDesignSystem.slate200),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.02),
+                        color: Colors.black.withValues(alpha: 0.02),
                         blurRadius: 6,
                         offset: const Offset(0, 2),
                       ),
@@ -269,12 +269,12 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                       hintStyle: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 12.5),
                         fontWeight: FontWeight.w500,
-                        color: const Color(0xFF94A3B8),
+                        color: AppDesignSystem.slate400,
                       ),
-                      prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF94A3B8)),
+                      prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppDesignSystem.slate400),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(Icons.close_rounded, size: 16, color: Color(0xFF64748B)),
+                              icon: const Icon(Icons.close_rounded, size: 16, color: AppDesignSystem.slate500),
                               onPressed: () {
                                 _searchController.clear();
                                 setState(() => _searchQuery = '');
@@ -308,20 +308,20 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text('🔍', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 48))),
+                          Text('🔍', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 48))),
                           const SizedBox(height: 12),
                           Text(
                             'No categories found',
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 15),
                               fontWeight: FontWeight.w800,
-                              color: const Color(0xFF0F172A),
+                              color: AppDesignSystem.slate900,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Try searching with another keyword',
-                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF64748B)),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate500),
                           ),
                         ],
                       ),
@@ -358,7 +358,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
               },
               loading: () => const SliverFillRemaining(
                 child: Center(
-                  child: CircularProgressIndicator(color: Color(0xFFDC2626)),
+                  child: CircularProgressIndicator(color: AppDesignSystem.red600),
                 ),
               ),
               error: (_, __) => SliverFillRemaining(
@@ -366,7 +366,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.wifi_off_rounded, size: 44, color: Color(0xFFDC2626)),
+                      const Icon(Icons.wifi_off_rounded, size: 44, color: AppDesignSystem.red600),
                       const SizedBox(height: 10),
                       Text(
                         'Failed to load categories',
@@ -376,7 +376,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                       ElevatedButton(
                         onPressed: () => ref.invalidate(categoriesProvider),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFDC2626),
+                          backgroundColor: AppDesignSystem.red600,
                           foregroundColor: Colors.white,
                         ),
                         child: const Text('Retry'),
@@ -398,13 +398,13 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
         {
           'tagline': 'Essential Products',
           'items': category.productCount ?? 15,
-          'btnColor': const Color(0xFFDC2626),
+          'btnColor': AppDesignSystem.red600,
           'asset': 'assets/categories/fruits_vegetables_category.webp',
           'webImage': category.imageUrl ?? 'https://www.fastkirana.in/fruits-vegetables.png',
         };
 
     final int itemCount = (meta['items'] as int?) ?? (category.productCount ?? 20);
-    final Color btnColor = (meta['btnColor'] as Color?) ?? const Color(0xFFDC2626);
+    final Color btnColor = (meta['btnColor'] as Color?) ?? AppDesignSystem.red600;
     final String tagline = (meta['tagline'] as String?) ?? '100% Quality Checked';
     final String assetPath = (meta['asset'] as String?) ?? 'assets/categories/fruits_vegetables_category.webp';
     final String? webUrl = category.imageUrl ?? (meta['webImage'] as String?);
@@ -424,7 +424,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+          border: Border.all(color: AppDesignSystem.slate100, width: 1.2),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.035),
@@ -441,9 +441,9 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
               child: Container(
                 width: double.infinity,
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
+                color: AppDesignSystem.slate50,
                 borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: const Color(0xFFF1F5F9)),
+                border: Border.all(color: AppDesignSystem.slate100),
               ),
               child: Stack(
                 fit: StackFit.expand,
@@ -462,7 +462,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                             errorWidget: (_, __, ___) => Image.asset(
                               assetPath,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Center(
+                              errorBuilder: (_, __, ___) => Center(
                                 child: Text('🥬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 38))),
                               ),
                             ),
@@ -470,7 +470,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                         : Image.asset(
                             assetPath,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Center(
+                            errorBuilder: (_, __, ___) => Center(
                               child: Text('🥬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 38))),
                             ),
                           ),
@@ -496,14 +496,14 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.inventory_2_outlined, size: 10, color: Color(0xFFE11D48)),
+                          const Icon(Icons.inventory_2_outlined, size: 10, color: AppDesignSystem.rose600),
                           const SizedBox(width: 3),
                           Text(
                             '$itemCount ITEMS',
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 8.5),
                               fontWeight: FontWeight.w900,
-                              color: const Color(0xFFE11D48),
+                              color: AppDesignSystem.rose600,
                               letterSpacing: 0.2,
                             ),
                           ),
@@ -524,8 +524,8 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                 fontSize: context.isCompact ? 11.5 : 13,
                 fontWeight: FontWeight.w900,
                 color: category.slug.contains('fruit')
-                    ? const Color(0xFF059669)
-                    : const Color(0xFF0F172A),
+                    ? AppDesignSystem.emerald600
+                    : AppDesignSystem.slate900,
                 letterSpacing: -0.2,
               ),
               maxLines: 1,
@@ -539,7 +539,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
               style: GoogleFonts.inter(
                 fontSize: context.isCompact ? 9 : 10,
                 fontWeight: FontWeight.w500,
-                color: const Color(0xFF64748B),
+                color: AppDesignSystem.slate500,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

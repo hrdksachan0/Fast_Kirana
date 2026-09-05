@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,11 +41,11 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
   late AnimationController _pinPulseController;
   late Animation<double> _pinScaleAnimation;
 
-  static const Color primaryRed = Color(0xFFE20A22);
-  static const Color brandGreen = Color(0xFF00A344);
-  static const Color slateDark = Color(0xFF0F172A);
-  static const Color slateMuted = Color(0xFF64748B);
-  static const Color slateBorder = Color(0xFFE2E8F0);
+  static const Color primaryRed = AppDesignSystem.primary;
+  static const Color brandGreen = AppDesignSystem.green700;
+  static const Color slateDark = AppDesignSystem.slate900;
+  static const Color slateMuted = AppDesignSystem.slate500;
+  static const Color slateBorder = AppDesignSystem.slate200;
 
   final List<Map<String, dynamic>> _addressTypes = const [
     {'label': 'Home', 'icon': Icons.home_rounded, 'tag': 'Home'},
@@ -232,7 +231,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppDesignSystem.slate50,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -240,7 +239,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
           icon: Container(
             padding: const EdgeInsets.all(6),
             decoration: const BoxDecoration(
-              color: Color(0xFFF1F5F9),
+              color: AppDesignSystem.slate100,
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.arrow_back_rounded, color: slateDark, size: 18),
@@ -412,7 +411,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
       height: 230,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
+        color: AppDesignSystem.slate900,
         border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2))),
       ),
       child: Stack(
@@ -434,12 +433,12 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.85),
+                    color: Colors.black.withValues(alpha: 0.85),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.2)),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                     boxShadow: [
                       BoxShadow(
-                        color: primaryRed.withOpacity(0.3),
+                        color: primaryRed.withValues(alpha: 0.3),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -453,7 +452,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                         height: 6,
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Color(0xFF22C55E),
+                          color: AppDesignSystem.lime500,
                         ),
                       ),
                       const SizedBox(width: 6),
@@ -479,7 +478,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                     color: primaryRed,
                     boxShadow: [
                       BoxShadow(
-                        color: primaryRed.withOpacity(0.6),
+                        color: primaryRed.withValues(alpha: 0.6),
                         blurRadius: 16,
                         offset: const Offset(0, 6),
                       ),
@@ -495,7 +494,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                   width: 12,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.4),
+                    color: Colors.black.withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -511,11 +510,11 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.95),
+                color: Colors.white.withValues(alpha: 0.95),
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
+                    color: Colors.black.withValues(alpha: 0.15),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -541,7 +540,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDCFCE7),
+                      color: AppDesignSystem.green100,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
@@ -549,7 +548,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 9.5),
                         fontWeight: FontWeight.w900,
-                        color: const Color(0xFF15803D),
+                        color: AppDesignSystem.green700,
                       ),
                     ),
                   ),
@@ -571,7 +570,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -628,7 +627,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                 duration: const Duration(milliseconds: 160),
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFFFFF1F2) : Colors.transparent,
+                  color: isSelected ? AppDesignSystem.rose50 : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: isSelected ? primaryRed : Colors.transparent,
@@ -706,7 +705,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
               hintStyle: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 12.5),
                 fontWeight: FontWeight.w500,
-                color: const Color(0xFF94A3B8),
+                color: AppDesignSystem.slate400,
               ),
               prefixText: prefixText,
               prefixStyle: GoogleFonts.inter(
@@ -714,7 +713,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                 fontWeight: FontWeight.w800,
                 color: slateDark,
               ),
-              suffixIcon: Icon(icon, size: 18, color: const Color(0xFF94A3B8)),
+              suffixIcon: Icon(icon, size: 18, color: AppDesignSystem.slate400),
               suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
             ),
           ),
@@ -730,7 +729,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, -4),
           ),
@@ -781,7 +780,7 @@ class _RadarGridPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2 + 10);
     final paintGrid = Paint()
-      ..color = const Color(0xFF334155).withOpacity(0.35)
+      ..color = AppDesignSystem.slate700.withValues(alpha: 0.35)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 

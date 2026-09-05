@@ -37,9 +37,9 @@ class AppException implements Exception {
 
 void showAppErrorSnackBar(BuildContext context, AppException error) {
   final color = error.code == 'NETWORK'
-      ? const Color(0xFFF59E0B)
+      ? AppDesignSystem.warning
       : error.code == 'SERVER'
-          ? const Color(0xFFEF4444)
+          ? AppDesignSystem.danger
           : AppDesignSystem.info;
 
   ScaffoldMessenger.of(context).showSnackBar(
@@ -55,7 +55,7 @@ void showAppErrorSnackBar(BuildContext context, AppException error) {
           Expanded(
             child: Text(
               error.userMessage,
-              style: const TextStyle(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w500),
+              style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w500),
             ),
           ),
         ],

@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ShoppingBag, Package, TrendingUp, Zap, Ticket, Utensils, Users } from 'lucide-react'
 
@@ -47,6 +47,20 @@ export function DashboardHubNav({
   hubs,
   tabConfig,
 }: DashboardHubNavProps) {
+  const tabsContainerRef = useRef<HTMLDivElement>(null)
+  const activeTabRef = useRef<HTMLButtonElement | null>(null)
+
+  // Auto-scroll active tab into view smoothly
+  useEffect(() => {
+    if (activeTabRef.current) {
+      activeTabRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      })
+    }
+  }, [activeTab])
+
   return (
     <div className="space-y-4">
       {/* Consolidated Operational Hub Selection Grid */}
@@ -94,7 +108,10 @@ export function DashboardHubNav({
       </div>
 
       {/* Sub-Tab Navigation inside active Hub */}
-      <div className="flex border-b border-border/60 overflow-x-auto whitespace-nowrap scrollbar-none gap-1.5 p-1 bg-muted/30 rounded-xl max-w-max relative">
+      <div 
+        ref={tabsContainerRef}
+        className="flex border-b border-border/60 overflow-x-auto whitespace-nowrap scrollbar-none gap-1.5 p-1 bg-muted/30 rounded-xl max-w-max relative scroll-smooth"
+      >
         {(() => {
           const activeHubData = hubs.find((h) => h.key === activeHub)
           const activeHubSubTabs = activeHubData
@@ -107,6 +124,7 @@ export function DashboardHubNav({
             return (
               <button
                 key={tab.key}
+                ref={isActive ? (el) => { activeTabRef.current = el } : undefined}
                 onClick={() => setActiveTab(tab.key)}
                 className={`relative flex items-center gap-1.5 px-3 py-2 text-[11px] font-extrabold rounded-lg transition-all cursor-pointer select-none ${
                   isActive ? 'text-primary' : 'text-text-secondary hover:text-text-primary'

@@ -1,3 +1,4 @@
+import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/product.dart';
 import '../data/models/category.dart';
@@ -25,10 +26,13 @@ final trendingProductsProvider = FutureProvider<List<Product>>((ref) async {
 final productsProvider = FutureProvider.family<List<Product>, String?>((ref, categoryId) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
-  // Home page (null category) needs more products to fill all category sections.
-  // Category-specific screens only need ~30.
-  final limit = categoryId == null ? 100 : 30;
-  return repo.getProducts(category: categoryId, limit: limit);
+  return repo.getProducts(category: categoryId, limit: 500);
+});
+
+final productsByRestaurantProvider = FutureProvider.family<List<Product>, String>((ref, restaurantId) async {
+  ref.keepAlive();
+  final repo = ref.watch(productRepositoryProvider);
+  return repo.getProducts(restaurantId: restaurantId, limit: 500);
 });
 
 // Single shared product catalog for home screen — fetches ALL products once,
@@ -36,7 +40,7 @@ final productsProvider = FutureProvider.family<List<Product>, String?>((ref, cat
 final homeProductCatalogProvider = FutureProvider<List<Product>>((ref) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
-  return repo.getProducts(limit: 300);
+  return repo.getProducts(limit: 500);
 });
 
 final cartUpsellProductsProvider = FutureProvider.family<List<Product>, List<String>>((ref, productIds) async {
@@ -98,7 +102,7 @@ final cartUpsellProductsProvider = FutureProvider.family<List<Product>, List<Str
     } else {
       all = await repo.getProducts(limit: 80);
     }
-  } catch (_) {
+  } catch (e) { LoggerService.error('ProductProvider: silent catch', e);
     all = await repo.getProducts(limit: 80);
   }
 
