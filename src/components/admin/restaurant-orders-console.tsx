@@ -355,12 +355,14 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
     return () => clearInterval(timer)
   }, [])
 
+  const effectiveRestaurantId = restaurantId || (session?.user as any)?.assignedRestaurantId || 'REST-101'
+
   const fetchOrders = useCallback(async (silent = false) => {
     if (!silent) setIsLoading(true)
     else setIsRefreshing(true)
     
     try {
-      const restParam = restaurantId ? `&restaurantId=${encodeURIComponent(restaurantId)}` : ''
+      const restParam = `&restaurantId=${encodeURIComponent(effectiveRestaurantId)}`
       const res = await fetch(`/api/picker/orders?type=restaurant${restParam}&t=${Date.now()}`, { cache: 'no-store' })
       if (res.ok) {
         const data = await res.json()
@@ -394,7 +396,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }, [])
+  }, [effectiveRestaurantId])
 
   // Connect to Supabase Realtime for order notifications
   useEffect(() => {
@@ -402,7 +404,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
     
     let updateTimeout: NodeJS.Timeout | null = null
     
-    const channelName = restaurantId ? `restaurant-orders-${restaurantId}` : 'restaurant-orders-live'
+    const channelName = effectiveRestaurantId ? `restaurant-orders-${effectiveRestaurantId}` : 'restaurant-orders-live'
     const channel = supabase
       .channel(channelName)
       .on(
@@ -411,7 +413,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
           event: '*',
           schema: 'public',
           table: 'orders',
-          ...(restaurantId ? { filter: `restaurantId=eq.${restaurantId}` } : {})
+          ...(effectiveRestaurantId ? { filter: `restaurantId=eq.${effectiveRestaurantId}` } : {})
         },
         (payload) => {
           if (payload.eventType === 'UPDATE') {

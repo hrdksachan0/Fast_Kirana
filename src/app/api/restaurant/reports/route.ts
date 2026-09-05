@@ -22,6 +22,17 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const startDateParam = searchParams.get('startDate')
     const endDateParam = searchParams.get('endDate')
+    const paramRestId = searchParams.get('restaurantId')
+
+    const isPlatformAdmin = role === 'ADMIN'
+    let effectiveRestId = (!isPlatformAdmin && assignedRestId) 
+      ? assignedRestId 
+      : (paramRestId || assignedRestId || 'REST-101')
+    
+    if (effectiveRestId === 'cms2p1lap0000n0id8alldboy' || effectiveRestId === 'as-restaurant') effectiveRestId = 'REST-101'
+    else if (effectiveRestId === 'cms2p1lyx0001n0idod904lfu' || effectiveRestId === 'wedson-restaurant' || effectiveRestId === 'wedson') effectiveRestId = 'REST-102'
+    else if (effectiveRestId === 'cmsbhxb6a000304if8kf1cwji' || effectiveRestId === 'bal-udyan-restaurant' || effectiveRestId === 'bal-udyan') effectiveRestId = 'REST-103'
+    else if (effectiveRestId === 'cmtn66nhy000004k0fu84b7ke' || effectiveRestId === 'pari-milk-dairy-sweets' || effectiveRestId === 'pari-milk') effectiveRestId = 'REST-104'
 
     const now = new Date()
     let start: Date
@@ -41,7 +52,7 @@ export async function GET(request: NextRequest) {
       end.setHours(23, 59, 59, 999)
     }
 
-    // 1. Fetch delivered orders for Restaurant Kitchen within range
+    // 1. Fetch delivered orders strictly for the specific Restaurant within range
     type OrderRow = {
       id: string
       total: number
@@ -68,66 +79,35 @@ export async function GET(request: NextRequest) {
       selectedVariant: string | null
     }
 
-    let orders: OrderRow[] = []
-    let orderItems: ItemRow[] = []
+    const orders = await prisma.$queryRaw<OrderRow[]>`
+      SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "deliveryMethod", "createdAt"
+      FROM orders
+      WHERE status::text = 'DELIVERED'
+        AND "restaurantId" = ${effectiveRestId}
+        AND ("shopName" IS NULL OR ("shopName" != 'FastKirana Dark Store' AND "shopName" != 'FastKirana Grocery'))
+        AND "createdAt" >= ${start}
+        AND "createdAt" <= ${end}
+      ORDER BY "createdAt" ASC
+    `
 
-    if (assignedRestId) {
-      // Dynamic: query strictly by restaurantId — works for any restaurant, no hardcoded names
-      orders = await prisma.$queryRaw<OrderRow[]>`
-        SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "deliveryMethod", "createdAt"
-        FROM orders
-        WHERE status::text = 'DELIVERED'
-          AND "restaurantId" = ${assignedRestId}
-          AND "createdAt" >= ${start}
-          AND "createdAt" <= ${end}
-        ORDER BY "createdAt" ASC
-      `
-      orderItems = await prisma.$queryRaw<ItemRow[]>`
-        SELECT oi."orderId", oi."productId", oi.price, oi.quantity, oi.name, 
-               COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
-               c.name as "categoryName",
-               c.slug as "categorySlug",
-               p."restaurantId" as "restaurantId",
-               COALESCE(oi.variants, p.variants) as "variants", 
-               oi."selectedVariant"
-        FROM order_items oi
-        JOIN products p ON oi."productId" = p.id
-        JOIN categories c ON p."categoryId" = c.id
-        JOIN orders o ON oi."orderId" = o.id
-        WHERE o.status::text = 'DELIVERED'
-          AND o."restaurantId" = ${assignedRestId}
-          AND o."createdAt" >= ${start}
-          AND o."createdAt" <= ${end}
-      `
-    } else {
-      // Admin fallback: all restaurant orders (excludes grocery-only orders)
-      orders = await prisma.$queryRaw<OrderRow[]>`
-        SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "deliveryMethod", "createdAt"
-        FROM orders
-        WHERE status::text = 'DELIVERED'
-          AND "restaurantId" IS NOT NULL
-          AND "createdAt" >= ${start}
-          AND "createdAt" <= ${end}
-        ORDER BY "createdAt" ASC
-      `
-      orderItems = await prisma.$queryRaw<ItemRow[]>`
-        SELECT oi."orderId", oi."productId", oi.price, oi.quantity, oi.name, 
-               COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
-               c.name as "categoryName",
-               c.slug as "categorySlug",
-               p."restaurantId" as "restaurantId",
-               COALESCE(oi.variants, p.variants) as "variants", 
-               oi."selectedVariant"
-        FROM order_items oi
-        JOIN products p ON oi."productId" = p.id
-        JOIN categories c ON p."categoryId" = c.id
-        JOIN orders o ON oi."orderId" = o.id
-        WHERE o.status::text = 'DELIVERED'
-          AND o."restaurantId" IS NOT NULL
-          AND o."createdAt" >= ${start}
-          AND o."createdAt" <= ${end}
-      `
-    }
+    const orderItems = await prisma.$queryRaw<ItemRow[]>`
+      SELECT oi."orderId", oi."productId", oi.price, oi.quantity, oi.name, 
+             COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
+             c.name as "categoryName",
+             c.slug as "categorySlug",
+             p."restaurantId" as "restaurantId",
+             COALESCE(oi.variants, p.variants) as "variants", 
+             oi."selectedVariant"
+      FROM order_items oi
+      JOIN products p ON oi."productId" = p.id
+      JOIN categories c ON p."categoryId" = c.id
+      JOIN orders o ON oi."orderId" = o.id
+      WHERE o.status::text = 'DELIVERED'
+        AND o."restaurantId" = ${effectiveRestId}
+        AND ("shopName" IS NULL OR ("shopName" != 'FastKirana Dark Store' AND "shopName" != 'FastKirana Grocery'))
+        AND o."createdAt" >= ${start}
+        AND o."createdAt" <= ${end}
+    `
 
     // Map order items by order ID for easier processing
     const itemsByOrder: Record<string, typeof orderItems> = {}
@@ -148,13 +128,13 @@ export async function GET(request: NextRequest) {
     
     // Parse rates (fallback to global setting)
     let commissionRate = parseFloat(dbSettingsMap.get('restaurant_commission') || '10') / 100
-    if (assignedRestId) {
+    if (effectiveRestId) {
       const restObj = await prisma.restaurant.findUnique({
-        where: { id: assignedRestId },
+        where: { id: effectiveRestId },
         select: { commissionRate: true }
       })
       if (restObj && restObj.commissionRate !== null && restObj.commissionRate !== undefined) {
-        commissionRate = restObj.commissionRate
+        commissionRate = restObj.commissionRate > 1.0 ? restObj.commissionRate / 100 : restObj.commissionRate
       }
     }
     const profitShareRate = parseFloat(dbSettingsMap.get('restaurant_profit_share') || '15') / 100

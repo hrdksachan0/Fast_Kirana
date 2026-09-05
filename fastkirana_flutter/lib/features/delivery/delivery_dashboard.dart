@@ -557,8 +557,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       // Build base readableId (strip -G/-R suffix)
       final baseId = (primary['readableId'] ?? '').toString().replaceAll(RegExp(r'-[GR]\d*$', caseSensitive: false), '');
 
-      // Determine payment: if ANY sub is COD, the combined is COD
-      final anyCod = subOrders.any((o) => o['paymentMethod'] == 'COD');
+      // Determine payment: if ANY sub is unpaid COD, the combined is COD; if all paid or UPI, it's ONLINE
+      final anyUnpaidCod = subOrders.any((o) {
+        final pm = (o['paymentMethod'] ?? '').toString().toUpperCase().trim();
+        final ps = (o['paymentStatus'] ?? '').toString().toUpperCase().trim();
+        return (pm == 'COD' || pm.isEmpty) && ps != 'PAID';
+      });
 
       // Build sub-order type labels for display
       final subLabels = subOrders.map((o) {
@@ -573,7 +577,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       merged['items'] = allItems;
       merged['total'] = combinedTotal;
       merged['status'] = combinedStatus(statuses);
-      merged['paymentMethod'] = anyCod ? 'COD' : (primary['paymentMethod'] ?? 'ONLINE');
+      merged['paymentMethod'] = anyUnpaidCod ? 'COD' : 'UPI';
+      merged['paymentStatus'] = anyUnpaidCod ? (primary['paymentStatus'] ?? 'PENDING') : 'PAID';
       merged['isCombined'] = true;
       merged['subOrders'] = subOrders;
       merged['subOrderIds'] = subOrders.map((o) => o['id']?.toString()).where((id) => id != null).toList();
@@ -598,7 +603,9 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     final todayStart = DateTime(today.year, today.month, today.day);
 
     final todayCodOrders = ordersList.where((o) {
-      final isCod = o['paymentMethod'] == 'COD';
+      final pm = (o['paymentMethod'] ?? '').toString().toUpperCase().trim();
+      final isOnlinePaid = pm == 'UPI' || pm == 'ONLINE' || pm == 'RAZORPAY';
+      final isCod = (pm == 'COD' || pm.isEmpty) && !isOnlinePaid;
       final isPaid = o['paymentStatus'] == 'PAID' || o['status'] == 'DELIVERED';
       final createdStr = o['createdAt']?.toString();
       final created = createdStr != null ? DateTime.tryParse(createdStr) : null;
@@ -747,6 +754,9 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           }
         }
 
+        final isOnlineExtra = extra?['paymentMethod'] == 'UPI' || extra?['paymentMethod'] == 'ONLINE' || extra?['paymentCollectedBy'] == 'ONLINE' || extra?['isRiderCash'] == false;
+        final effectivePayMethod = isOnlineExtra ? 'UPI' : (subIsCod ? 'COD' : 'ONLINE');
+
         try {
           final response = await dio.patch(
             '/api/orders/$currentId',
@@ -754,12 +764,17 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
               'status': newStatus,
               if (_currentUserId != null) 'deliveryUserId': _currentUserId,
               if (newStatus == 'DELIVERED') 'paymentStatus': 'PAID',
-              if (newStatus == 'DELIVERED' && subIsCod && (extra?['paymentMethod'] != 'UPI'))
+              if (newStatus == 'DELIVERED') 'paymentMethod': effectivePayMethod,
+              if (newStatus == 'DELIVERED' && subIsCod && !isOnlineExtra)
                 'isRiderCash': true,
-              if (newStatus == 'DELIVERED' && subIsCod && (extra?['paymentMethod'] != 'UPI'))
+              if (newStatus == 'DELIVERED' && subIsCod && !isOnlineExtra)
                 'paymentCollectedBy': 'RIDER',
-              if (newStatus == 'DELIVERED' && subIsCod && (extra?['paymentMethod'] != 'UPI'))
+              if (newStatus == 'DELIVERED' && subIsCod && !isOnlineExtra)
                 'cashAmount': subTotal,
+              if (newStatus == 'DELIVERED' && isOnlineExtra)
+                'isRiderCash': false,
+              if (newStatus == 'DELIVERED' && isOnlineExtra)
+                'paymentCollectedBy': 'ONLINE',
               // Only spread extra on the first sub-order (avoid duplicate deliveryPhoto etc.)
               if (isFirstSub) ...?extra,
             },
@@ -937,6 +952,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                 await _updateOrderStatus(orderId, 'DELIVERED', extra: {
                   'paymentMethod': 'UPI',
                   'paymentStatus': 'PAID',
+                  'paymentCollectedBy': 'ONLINE',
+                  'isRiderCash': false,
                   'notes': 'Paid via Doorstep QR scan',
                 });
               },
@@ -2898,7 +2915,10 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
               final orderId = item['id']?.toString() ?? '';
               final orderNum = item['readableId'] ?? orderId.substring(0, math.min(6, orderId.length));
               final totalAmt = (item['total'] as num?)?.toInt() ?? 0;
-              final isCod = item['paymentMethod'] == 'COD';
+              final rawPm = (item['paymentMethod'] ?? '').toString().toUpperCase().trim();
+              final rawPs = (item['paymentStatus'] ?? '').toString().toUpperCase().trim();
+              final isOnlinePaid = rawPm == 'UPI' || rawPm == 'ONLINE' || rawPm == 'RAZORPAY' || (rawPs == 'PAID' && rawPm != 'COD');
+              final isCod = !isOnlinePaid && (rawPm == 'COD' || rawPm.isEmpty);
               final userObj = item['user'] is Map ? item['user'] : null;
               final userName = userObj?['name'] ?? item['userName'] ?? 'Customer';
               final addrObj = item['address'] is Map ? item['address'] : null;
@@ -3021,7 +3041,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Text(
-                                        isCod ? '💵 COD' : '💳 ONLINE',
+                                        isCod ? '💵 COD' : (rawPm == 'UPI' ? '⚡ UPI RECEIVED' : '💳 ONLINE RECEIVED'),
                                         style: GoogleFonts.inter(
                                           fontSize: Responsive.scaledFontSize(context, 8.5),
                                           fontWeight: FontWeight.w900,

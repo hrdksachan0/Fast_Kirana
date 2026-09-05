@@ -22,8 +22,10 @@ export async function GET(request: NextRequest) {
     else if (effectiveRestId === 'cmtn66nhy000004k0fu84b7ke' || effectiveRestId === 'pari-milk-dairy-sweets' || effectiveRestId === 'pari-milk') effectiveRestId = 'REST-104'
 
     const where: any = {}
-    if (effectiveRestId && effectiveRestId !== 'ALL') {
-      where.restaurantId = effectiveRestId
+    if (effectiveRestId === 'ALL') {
+      where.restaurantId = { not: null }
+    } else {
+      where.restaurantId = effectiveRestId || 'REST-101'
     }
 
     const [products, restaurant] = await Promise.all([

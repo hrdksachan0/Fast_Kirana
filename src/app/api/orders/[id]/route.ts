@@ -480,8 +480,18 @@ export async function PATCH(
         safePhoto = null
       }
 
-      const isOwnerOrOnlinePayment = paymentCollectedBy === 'OWNER' || paymentCollectedBy === 'ONLINE' || isRiderCash === false
-      const newPaymentMethod = isOwnerOrOnlinePayment ? 'UPI' : (['COD', 'UPI', 'CARD', 'WALLET'].includes(existingOrder.paymentMethod) ? existingOrder.paymentMethod : 'COD')
+      const isDoorstepQrOrOnline = 
+        paymentMethod === 'UPI' || 
+        paymentMethod === 'ONLINE' || 
+        paymentCollectedBy === 'ONLINE' || 
+        paymentCollectedBy === 'OWNER' || 
+        isRiderCash === false
+
+      const newPaymentMethod = isDoorstepQrOrOnline 
+        ? 'UPI' 
+        : (paymentMethod && ['COD', 'UPI', 'CARD', 'WALLET'].includes(paymentMethod) 
+            ? paymentMethod 
+            : (['COD', 'UPI', 'CARD', 'WALLET'].includes(existingOrder.paymentMethod) ? existingOrder.paymentMethod : 'COD'))
 
       if (shouldUpdateAllCombined && existingOrder.combinedId) {
         await prisma.$executeRaw`
@@ -520,7 +530,7 @@ export async function PATCH(
           let actualCashChange = 0
           if (cashAmount !== undefined && cashAmount !== null && !isNaN(parseFloat(cashAmount))) {
             actualCashChange = parseFloat(cashAmount)
-          } else if (!isOwnerOrOnlinePayment && (isRiderCash !== false) && (paymentCollectedBy === 'RIDER' || !paymentCollectedBy)) {
+          } else if (!isDoorstepQrOrOnline && (isRiderCash !== false) && (paymentCollectedBy === 'RIDER' || !paymentCollectedBy)) {
             actualCashChange = orderTotal
           }
 

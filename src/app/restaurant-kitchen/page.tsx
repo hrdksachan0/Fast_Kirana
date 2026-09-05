@@ -172,6 +172,11 @@ export default function RestaurantKitchenPage() {
   }
 
   const isAdmin = session?.user?.role === 'ADMIN'
+  const userAssignedId = (session?.user as any)?.assignedRestaurantId
+  const effectiveRestId = (!isAdmin && userAssignedId)
+    ? userAssignedId
+    : (selectedRestaurantId || userAssignedId || restaurants[0]?.id || 'REST-101')
+  const currentRestaurant = restaurants.find(r => r.id === effectiveRestId)
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950/20 py-3 sm:py-6 px-3 sm:px-6 lg:px-8">
@@ -201,162 +206,167 @@ export default function RestaurantKitchenPage() {
                       <select
                         value={selectedRestaurantId}
                         onChange={(e) => handleRestaurantChange(e.target.value)}
-                        className="appearance-none bg-muted/60 border border-border/80 font-black text-xs sm:text-base text-text-primary uppercase tracking-tight py-1 pl-2.5 pr-8 rounded-xl cursor-pointer focus:outline-none focus:border-red-500"
+                        className="text-base sm:text-lg font-black tracking-tight text-text-primary bg-muted/40 hover:bg-muted/70 border border-border/80 rounded-xl px-2.5 py-1 pr-8 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
                       >
-                        {restaurants.map(r => (
-                          <option key={r.id} value={r.id} className="bg-card text-text-primary">
-                            {r.name} Console
+                        {restaurants.map((r) => (
+                          <option key={r.id} value={r.id} className="bg-card text-text-primary font-bold">
+                            {r.name}
                           </option>
                         ))}
                       </select>
-                      <ChevronDown className="absolute right-2 pointer-events-none h-3.5 w-3.5 text-text-muted" />
+                      <ChevronDown className="w-4 h-4 text-text-secondary absolute right-2 pointer-events-none" />
                     </div>
                   ) : (
-                    <h1 className="text-xs sm:text-lg font-black text-text-primary uppercase tracking-tight truncate">{restaurantName}</h1>
+                    <h1 className="text-base sm:text-lg font-black tracking-tight text-text-primary truncate">
+                      {restaurantName}
+                    </h1>
                   )}
-
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider shrink-0 ${
-                    restaurantOpen
-                      ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
-                      : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
-                  }`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${restaurantOpen ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                    {restaurantOpen ? 'OPEN' : 'CLOSED'}
+                  <span className="text-[10px] font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full shrink-0">
+                    Live Kitchen
                   </span>
                 </div>
-
-                <p className="text-[9px] sm:text-xs text-text-secondary mt-0.5 flex items-center gap-1 font-medium truncate">
-                  <ShieldCheck className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-emerald-500 shrink-0" />
-                  <span className="truncate">{session?.user?.email}</span>
-                </p>
+                <div className="flex items-center gap-2 text-xs text-text-secondary font-medium">
+                  <span className="truncate">
+                    Outlet ID: <span className="font-mono text-text-primary font-bold">{effectiveRestId}</span>
+                  </span>
+                  <span>•</span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className={`w-2 h-2 rounded-full ${restaurantOpen ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                    <span className={`font-bold ${restaurantOpen ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
+                      {restaurantOpen ? 'Accepting Orders' : 'Store Paused'}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Action Header Buttons */}
-          <div className="flex items-center justify-between md:justify-end gap-2 shrink-0 border-t md:border-t-0 border-border/40 pt-2.5 md:pt-0">
-            {/* Quick 86 Stock Drawer Trigger */}
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             <button
               onClick={() => setIsStockModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 text-[11px] sm:text-xs font-black rounded-xl transition-all cursor-pointer border border-rose-500/25 active:scale-95 shadow-xs"
-              title="Quick 86 Out of Stock toggle"
+              className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-black bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
-              <Utensils className="h-3.5 w-3.5" />
-              <span>Quick 86 Stock</span>
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>Menu 86 / Stock</span>
             </button>
 
-            {/* Fullscreen Mode */}
+            <button
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className={`p-2 sm:p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                soundEnabled 
+                  ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/20' 
+                  : 'bg-muted text-text-secondary border-border hover:bg-muted/80'
+              }`}
+              title={soundEnabled ? 'Kitchen alarms active' : 'Kitchen alarms muted'}
+            >
+              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
+
             <button
               onClick={toggleFullscreen}
-              className="p-2 bg-muted/50 hover:bg-muted text-text-secondary hover:text-text-primary rounded-xl transition-all cursor-pointer border border-border/50 hidden sm:inline-flex"
-              title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen KDS Mode'}
+              className="p-2 sm:p-2.5 rounded-xl bg-muted/60 hover:bg-muted border border-border/80 text-text-secondary transition-all cursor-pointer"
+              title="Toggle Fullscreen"
             >
-              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </button>
 
-            {/* Live Clock */}
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-muted/40 rounded-xl border border-border/40 text-[11px] font-mono font-bold text-text-secondary select-none shadow-inner">
-              <Clock className="h-3.5 w-3.5 text-text-muted" />
-              <span>{formatDate(currentTime, 'hh:mm:ss a')}</span>
-            </div>
+            {isAdmin && (
+              <button
+                onClick={() => router.push('/admin')}
+                className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-black bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Admin HQ</span>
+              </button>
+            )}
 
-            {/* Home button */}
-            <button
-              onClick={() => router.push('/')}
-              className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 bg-red-500/5 hover:bg-red-500/10 text-red-600 hover:text-red-700 text-[11px] sm:text-xs font-black rounded-xl transition-all cursor-pointer border border-red-500/10 hover:border-red-500/20 shadow-xs active:scale-95 shrink-0"
-            >
-              <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span>Home</span>
-            </button>
-
-            {/* Logout */}
             <button
               onClick={() => signOut({ callbackUrl: '/restaurant-login' })}
-              className="p-2 bg-muted/40 hover:bg-rose-500/10 text-text-secondary hover:text-rose-600 rounded-xl transition-all cursor-pointer border border-border/40"
-              title="Logout"
+              className="p-2 sm:p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 border border-rose-500/20 transition-all cursor-pointer"
+              title="Sign Out"
             >
-              <LogOut className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Tab Navigation Segmented Controls */}
-        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 scrollbar-none border-b border-border/40">
+        {/* Tabs Bar */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar border-b border-border/60">
           <button
             onClick={() => setActiveTab('orders')}
-            className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
-              activeTab === 'orders' 
-                ? 'bg-red-600 text-white shadow-xs' 
-                : 'bg-card hover:bg-muted border border-border/60 text-text-secondary'
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+              activeTab === 'orders'
+                ? 'bg-[#e20a22] text-white shadow-sm'
+                : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
             }`}
           >
-            <ChefHat className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            Live Orders
+            <ChefHat className="w-3.5 h-3.5" />
+            Live Kitchen Queue
           </button>
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
-              activeTab === 'analytics' 
-                ? 'bg-red-600 text-white shadow-xs' 
-                : 'bg-card hover:bg-muted border border-border/60 text-text-secondary'
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+              activeTab === 'analytics'
+                ? 'bg-[#e20a22] text-white shadow-sm'
+                : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
             }`}
           >
-            <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            Sales Report
+            <BarChart3 className="w-3.5 h-3.5" />
+            Sales & Analytics
           </button>
           <button
             onClick={() => setActiveTab('catalog')}
-            className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
-              activeTab === 'catalog' 
-                ? 'bg-red-600 text-white shadow-xs' 
-                : 'bg-card hover:bg-muted border border-border/60 text-text-secondary'
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+              activeTab === 'catalog'
+                ? 'bg-[#e20a22] text-white shadow-sm'
+                : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
             }`}
           >
-            <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <Utensils className="w-3.5 h-3.5" />
             Menu Catalog
           </button>
           <button
             onClick={() => setActiveTab('sections')}
-            className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
-              activeTab === 'sections' 
-                ? 'bg-red-600 text-white shadow-xs' 
-                : 'bg-card hover:bg-muted border border-border/60 text-text-secondary'
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+              activeTab === 'sections'
+                ? 'bg-[#e20a22] text-white shadow-sm'
+                : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
             }`}
           >
-            <Layers className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            Categories
+            <Layers className="w-3.5 h-3.5" />
+            Menu Sections & Tabs
           </button>
           <button
             onClick={() => setActiveTab('payouts')}
-            className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
-              activeTab === 'payouts' 
-                ? 'bg-red-600 text-white shadow-xs' 
-                : 'bg-card hover:bg-muted border border-border/60 text-text-secondary'
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+              activeTab === 'payouts'
+                ? 'bg-[#e20a22] text-white shadow-sm'
+                : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
             }`}
           >
-            <IndianRupee className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            Payouts
+            <IndianRupee className="w-3.5 h-3.5" />
+            Settlements Ledger
           </button>
           <button
             onClick={() => setActiveTab('reviews')}
-            className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
-              activeTab === 'reviews' 
-                ? 'bg-red-600 text-white shadow-xs' 
-                : 'bg-card hover:bg-muted border border-border/60 text-text-secondary'
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+              activeTab === 'reviews'
+                ? 'bg-[#e20a22] text-white shadow-sm'
+                : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
             }`}
           >
-            <Star className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-400 fill-amber-400" />
-            Reviews & Ratings
+            <Star className="w-3.5 h-3.5" />
+            Customer Ratings
           </button>
           <button
             onClick={() => setActiveTab('settings')}
-            className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
-              activeTab === 'settings' 
-                ? 'bg-red-600 text-white shadow-xs' 
-                : 'bg-card hover:bg-muted border border-border/60 text-text-secondary'
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+              activeTab === 'settings'
+                ? 'bg-[#e20a22] text-white shadow-sm'
+                : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
             }`}
           >
-            <SlidersHorizontal className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <Settings className="w-3.5 h-3.5" />
             Settings
           </button>
         </div>
@@ -365,31 +375,46 @@ export default function RestaurantKitchenPage() {
         <div className="bg-card border border-border/60 rounded-2xl sm:rounded-3xl p-3 sm:p-6 shadow-xs">
           {activeTab === 'orders' && (
             <RestaurantOrdersConsole 
-              restaurantId={selectedRestaurantId || (session?.user as any)?.assignedRestaurantId || ''} 
-              restaurant={restaurants.find(r => r.id === (selectedRestaurantId || (session?.user as any)?.assignedRestaurantId))}
+              key={`orders-${effectiveRestId}`}
+              restaurantId={effectiveRestId} 
+              restaurant={currentRestaurant}
             />
           )}
-          {activeTab === 'analytics' && <RestaurantSalesConsole />}
+          {activeTab === 'analytics' && (
+            <RestaurantSalesConsole 
+              key={`analytics-${effectiveRestId}`}
+              restaurantId={effectiveRestId}
+            />
+          )}
           {activeTab === 'catalog' && (
             <RestaurantCatalogManager 
-              initialRestaurantId={selectedRestaurantId || (session?.user as any)?.assignedRestaurantId || ''} 
+              key={`catalog-${effectiveRestId}`}
+              initialRestaurantId={effectiveRestId} 
             />
           )}
           {activeTab === 'sections' && (
             <RestaurantMenuSectionsEditor 
-              assignedRestaurantId={selectedRestaurantId || (session?.user as any)?.assignedRestaurantId || ''} 
+              key={`sections-${effectiveRestId}`}
+              assignedRestaurantId={effectiveRestId} 
               isCafe={isCafe} 
             />
           )}
-          {activeTab === 'payouts' && <RestaurantPayoutsLedger isAdmin={isAdmin} />}
+          {activeTab === 'payouts' && (
+            <RestaurantPayoutsLedger 
+              key={`payouts-${effectiveRestId}`}
+              isAdmin={isAdmin} 
+            />
+          )}
           {activeTab === 'reviews' && (
             <RestaurantReviewsTab 
-              restaurantId={selectedRestaurantId || (session?.user as any)?.assignedRestaurantId} 
+              key={`reviews-${effectiveRestId}`}
+              restaurantId={effectiveRestId} 
             />
           )}
           {activeTab === 'settings' && (
             <RestaurantSettingsTab 
-              restaurantId={selectedRestaurantId || (session?.user as any)?.assignedRestaurantId} 
+              key={`settings-${effectiveRestId}`}
+              restaurantId={effectiveRestId} 
             />
           )}
         </div>

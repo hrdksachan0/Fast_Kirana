@@ -443,6 +443,10 @@ export function AdminDashboard({
     let sseSource: EventSource | null = null
     try {
       sseSource = new EventSource('/api/sse/orders')
+      sseSource.onerror = () => {
+        // Gracefully ignore SSE disconnects
+        try { sseSource?.close() } catch (_) {}
+      }
       sseSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
@@ -463,6 +467,9 @@ export function AdminDashboard({
     let railwayWs: WebSocket | null = null
     try {
       railwayWs = new WebSocket('wss://fastkirana-production-a4b8.up.railway.app/ws')
+      railwayWs.onerror = () => {
+        // Gracefully ignore WebSocket drops without tripping error boundaries
+      }
       railwayWs.onmessage = (event) => {
         try {
           const payload = JSON.parse(event.data)

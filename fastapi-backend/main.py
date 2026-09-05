@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 import os
 import time
 from config import settings
-from routers import products, delivery, admin, admin_extended, forecast, orders, websockets, auth, cart, addresses, payments, restaurant, picker, profile, settings as store_settings_router, orders_helper, products_helper, public, paytm, fcm, categories, banners, restaurants, coupons, health
+from routers import products, delivery, admin, admin_extended, forecast, orders, websockets, auth, cart, addresses, payments, restaurant, picker, profile, settings as store_settings_router, orders_helper, products_helper, public, paytm, fcm, categories, banners, restaurants, coupons, health, upload
 
 try:
     import sentry_sdk
@@ -96,6 +96,7 @@ app.include_router(categories.router, prefix="/api")
 
 from routers import razorpay_router
 app.include_router(razorpay_router.router, prefix="/api")
+app.include_router(upload.router, prefix="/api")
 app.include_router(health.health_router)
 
 @app.get("/")

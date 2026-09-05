@@ -55,69 +55,39 @@ export async function GET(request: Request) {
     let orders: any[] = []
     
     if (type === 'cafe') {
-      if (assignedRestaurantId) {
-        orders = await prisma.$queryRaw`
-          SELECT o.id, o."userId", o."addressId", o."readableId",
-                 o.status::text as status,
-                 o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
-                 o."paymentMethod"::text as "paymentMethod",
-                 o."paymentStatus"::text as "paymentStatus",
-                 o."estimatedDelivery", o."createdAt", o."deliveryMethod",
-                 o."shopName", o."assignedPickerId", o."assignedChefId", o.notes,
-                 o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId"
-          FROM orders o
-          WHERE o.status IN ('PENDING', 'CONFIRMED')
-            AND o."restaurantId" = ${assignedRestaurantId}
-          ORDER BY o."createdAt" ASC
-        `
-      } else {
-        orders = await prisma.$queryRaw`
-          SELECT o.id, o."userId", o."addressId", o."readableId",
-                 o.status::text as status,
-                 o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
-                 o."paymentMethod"::text as "paymentMethod",
-                 o."paymentStatus"::text as "paymentStatus",
-                 o."estimatedDelivery", o."createdAt", o."deliveryMethod",
-                 o."shopName", o."assignedPickerId", o."assignedChefId", o.notes,
-                 o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId"
-          FROM orders o
-          WHERE o.status IN ('PENDING', 'CONFIRMED')
-            AND (o."restaurantId" IS NOT NULL OR o."orderType"::text = 'RESTAURANT')
-          ORDER BY o."createdAt" ASC
-        `
-      }
+      const targetRestId = assignedRestaurantId || paramRestId || 'REST-101'
+      orders = await prisma.$queryRaw`
+        SELECT o.id, o."userId", o."addressId", o."readableId",
+               o.status::text as status,
+               o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+               o."paymentMethod"::text as "paymentMethod",
+               o."paymentStatus"::text as "paymentStatus",
+               o."estimatedDelivery", o."createdAt", o."deliveryMethod",
+               o."shopName", o."assignedPickerId", o."assignedChefId", o.notes,
+               o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId"
+        FROM orders o
+        WHERE o.status IN ('PENDING', 'CONFIRMED')
+          AND o."restaurantId" = ${targetRestId}
+          AND ("shopName" IS NULL OR ("shopName" != 'FastKirana Dark Store' AND "shopName" != 'FastKirana Grocery'))
+        ORDER BY o."createdAt" ASC
+      `
     } else if (type === 'restaurant') {
-      if (assignedRestaurantId) {
-        orders = await prisma.$queryRaw`
-          SELECT o.id, o."userId", o."addressId", o."readableId",
-                 o.status::text as status,
-                 o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
-                 o."paymentMethod"::text as "paymentMethod",
-                 o."paymentStatus"::text as "paymentStatus",
-                 o."estimatedDelivery", o."createdAt", o."deliveryMethod",
-                 o."shopName", o."assignedPickerId", o."assignedChefId", o.notes,
-                 o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId"
-          FROM orders o
-          WHERE o.status IN ('PENDING', 'CONFIRMED')
-            AND o."restaurantId" = ${assignedRestaurantId}
-          ORDER BY o."createdAt" ASC
-        `
-      } else {
-        orders = await prisma.$queryRaw`
-          SELECT o.id, o."userId", o."addressId", o."readableId",
-                 o.status::text as status,
-                 o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
-                 o."paymentMethod"::text as "paymentMethod",
-                 o."paymentStatus"::text as "paymentStatus",
-                 o."estimatedDelivery", o."createdAt", o."deliveryMethod",
-                 o."shopName", o."assignedPickerId", o."assignedChefId", o.notes,
-                 o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId"
-          FROM orders o
-          WHERE o.status IN ('PENDING', 'CONFIRMED')
-            AND (o."restaurantId" IS NOT NULL OR o."orderType"::text = 'RESTAURANT')
-          ORDER BY o."createdAt" ASC
-        `
-      }
+      const targetRestId = assignedRestaurantId || paramRestId || 'REST-101'
+      orders = await prisma.$queryRaw`
+        SELECT o.id, o."userId", o."addressId", o."readableId",
+               o.status::text as status,
+               o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+               o."paymentMethod"::text as "paymentMethod",
+               o."paymentStatus"::text as "paymentStatus",
+               o."estimatedDelivery", o."createdAt", o."deliveryMethod",
+               o."shopName", o."assignedPickerId", o."assignedChefId", o.notes,
+               o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId"
+        FROM orders o
+        WHERE o.status IN ('PENDING', 'CONFIRMED')
+          AND o."restaurantId" = ${targetRestId}
+          AND ("shopName" IS NULL OR ("shopName" != 'FastKirana Dark Store' AND "shopName" != 'FastKirana Grocery'))
+        ORDER BY o."createdAt" ASC
+      `
     } else {
       orders = await prisma.$queryRaw`
         SELECT o.id, o."userId", o."addressId", o."readableId",

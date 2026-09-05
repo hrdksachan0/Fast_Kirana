@@ -15,6 +15,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../core/network/api_client.dart';
+import '../../core/network/network_retry_helper.dart';
 import '../../core/services/supabase_service.dart';
 import '../../core/services/offline_sync_service.dart';
 import '../../core/services/logger_service.dart';
@@ -47,7 +48,7 @@ class RestaurantDashboard extends ConsumerStatefulWidget {
   ConsumerState<RestaurantDashboard> createState() => _RestaurantDashboardState();
 }
 
-class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
+class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with WidgetsBindingObserver {
   int _activeTab = 0; // 0: Live Orders, 1: Quick 86 Menu, 2: Sales Report, 3: Settings
   static List<Map<String, dynamic>> _cachedOrders = [];
   bool _isLoading = _cachedOrders.isEmpty;
@@ -116,6 +117,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initAudioPlayer();
     _loadLocalCachedData();
     _initConnectivityAndOfflineQueue();
@@ -257,6 +259,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _stopPendingAlarm();
     _autoRefreshTimer?.cancel();
     _connectivitySubscription?.cancel();
@@ -268,6 +271,18 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
     }
     _audioPlayer.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Re-verify connectivity & sync on app resume
+      if (!_isDeviceOffline) {
+        _fetchOrders(silent: true);
+        _flushOfflineRestaurantQueue();
+        _initSupabaseRealtime();
+      }
+    }
   }
 
   Future<void> _initOutletDetails() async {
@@ -780,7 +795,10 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
         body['prepTime'] = prepTime;
       }
 
-      await dio.patch('/api/orders/$orderId', data: body);
+      await NetworkRetryHelper.retry(
+        operationName: 'update_order_status',
+        action: () => dio.patch('/api/orders/$orderId', data: body),
+      );
 
       // Background sync to Supabase and OrderRepository cache
       try {
@@ -837,15 +855,18 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
       }
 
       final dio = ref.read(dioProvider);
-      await dio.patch(
-        '/api/restaurant-dashboard/products/$itemId',
-        data: {'isAvailable': newStatus},
-        options: Options(
-          headers: {
-            'x-user-role': 'RESTAURANT_OWNER',
-            if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty)
-              'x-restaurant-id': _assignedRestaurantId,
-          },
+      await NetworkRetryHelper.retry(
+        operationName: 'toggle_item_availability',
+        action: () => dio.patch(
+          '/api/restaurant-dashboard/products/$itemId',
+          data: {'isAvailable': newStatus},
+          options: Options(
+            headers: {
+              'x-user-role': 'RESTAURANT_OWNER',
+              if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty)
+                'x-restaurant-id': _assignedRestaurantId,
+            },
+          ),
         ),
       );
       if (mounted) {

@@ -46,7 +46,11 @@ interface TopProduct {
   profit: number
 }
 
-export function RestaurantSalesConsole() {
+interface RestaurantSalesConsoleProps {
+  restaurantId?: string
+}
+
+export function RestaurantSalesConsole({ restaurantId }: RestaurantSalesConsoleProps = {}) {
   const [loading, setLoading] = useState(true)
   const [selectedChannel, setSelectedChannel] = useState<'all' | 'delivery' | 'pickup'>('all')
   const [summary, setSummary] = useState<Summary>({
@@ -104,7 +108,8 @@ export function RestaurantSalesConsole() {
   const fetchReports = async () => {
     setLoading(true)
     try {
-      const url = `/api/restaurant/reports?startDate=${startDate}&endDate=${endDate}&t=${Date.now()}`
+      const restParam = restaurantId ? `&restaurantId=${encodeURIComponent(restaurantId)}` : ''
+      const url = `/api/restaurant/reports?startDate=${startDate}&endDate=${endDate}${restParam}&t=${Date.now()}`
       const res = await fetch(url)
       if (!res.ok) throw new Error('Failed to load restaurant financials')
       
@@ -122,7 +127,7 @@ export function RestaurantSalesConsole() {
 
   useEffect(() => {
     fetchReports()
-  }, [startDate, endDate])
+  }, [startDate, endDate, restaurantId])
 
   // Custom SVG line chart generation
   const chartData = useMemo(() => {

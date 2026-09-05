@@ -229,14 +229,14 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
       .catch(console.error)
   }, [assignedRestaurantId, initialRestaurantId])
 
-  const effectiveRestId = (!isAdmin && assignedRestaurantId) ? assignedRestaurantId : (selectedOutletId || assignedRestaurantId)
+  const effectiveRestId = (!isAdmin && assignedRestaurantId) 
+    ? assignedRestaurantId 
+    : (selectedOutletId || initialRestaurantId || assignedRestaurantId || 'REST-101')
 
   const fetchCatalogAndCategories = async () => {
     try {
       setLoading(true)
-      const url = effectiveRestId
-        ? `/api/restaurant-dashboard/products?restaurantId=${effectiveRestId}`
-        : '/api/restaurant-dashboard/products'
+      const url = `/api/restaurant-dashboard/products?restaurantId=${effectiveRestId}`
 
       const [prodRes, catRes, sectionsRes] = await Promise.all([
         fetch(url, { cache: 'no-store' }),

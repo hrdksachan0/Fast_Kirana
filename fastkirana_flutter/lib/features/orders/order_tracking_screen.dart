@@ -336,10 +336,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           _isLoading = false;
         });
 
-        if (order.status == OrderStatus.delivered && prevStatus != OrderStatus.delivered) {
-          _confettiController.play();
-          HapticFeedback.heavyImpact();
-        }
+        _triggerStatusHaptic(order.status, prevStatus);
 
         _setupCoordinatesFromOrder(order);
 
@@ -353,6 +350,30 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
   }
 
+  void _triggerStatusHaptic(OrderStatus? newStatus, OrderStatus? oldStatus) {
+    if (newStatus == null || oldStatus == newStatus) return;
+    switch (newStatus) {
+      case OrderStatus.confirmed:
+        HapticFeedback.lightImpact();
+        break;
+      case OrderStatus.packed:
+        HapticFeedback.mediumImpact();
+        break;
+      case OrderStatus.shipped:
+        HapticFeedback.heavyImpact();
+        break;
+      case OrderStatus.delivered:
+        HapticFeedback.heavyImpact();
+        _confettiController.play();
+        break;
+      case OrderStatus.cancelled:
+        HapticFeedback.vibrate();
+        break;
+      default:
+        HapticFeedback.selectionClick();
+    }
+  }
+
   Future<void> _silentPollOrder() async {
     try {
       final repo = OrderRepository(ref.read(dioProvider));
@@ -361,7 +382,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
       final order = await repo.getOrder(cleanId);
       if (mounted) {
+        final prevStatus = _order?.status;
         setState(() => _order = order);
+
+        _triggerStatusHaptic(order.status, prevStatus);
 
         // Stale-data protection: if live GPS arrived in last 15 seconds,
         // don't let polled DB coordinates snap the rider marker backwards
@@ -2049,9 +2073,26 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Live Order Status',
-                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w900, color: slateDark),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Live Order Status',
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w900, color: slateDark),
+                  ),
+                  if (!isDelivered && _etaText.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        'Estimated: $_etaText${_distanceText.isNotEmpty ? " • $_distanceText" : ""}',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 11),
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF00A344),
+                        ),
+                      ),
+                    ),
+                ],
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -2175,55 +2216,70 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
               children: [
                 Column(
                   children: [
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isCompleted
-                            ? (isCurrent ? primaryRed : brandGreen)
-                            : const Color(0xFFF1F5F9),
-                        border: Border.all(
-                          color: isCompleted ? Colors.transparent : const Color(0xFFCBD5E1),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          item['icon'] as IconData,
-                          size: 14,
-                          color: isCompleted ? Colors.white : slateMuted,
-                        ),
-                      ),
+                    _AnimatedStepNode(
+                      isCompleted: isCompleted,
+                      isCurrent: isCurrent,
+                      icon: item['icon'] as IconData,
+                      activeColor: brandGreen,
+                      completedColor: brandGreen,
                     ),
                     if (idx < steps.length - 1)
                       Container(
-                        width: 2,
-                        height: 24,
-                        color: isCompleted ? brandGreen : const Color(0xFFE2E8F0),
+                        width: 2.5,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: isCompleted ? brandGreen : const Color(0xFFE2E8F0),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                   ],
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 2, bottom: 8),
+                    padding: const EdgeInsets.only(top: 2, bottom: 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          item['title'] as String,
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 13),
-                            fontWeight: isCurrent ? FontWeight.w900 : FontWeight.w700,
-                            color: isCurrent ? slateDark : (isCompleted ? const Color(0xFF1E293B) : slateMuted),
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              item['title'] as String,
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 13),
+                                fontWeight: isCurrent ? FontWeight.w900 : (isCompleted ? FontWeight.w700 : FontWeight.w600),
+                                color: isCurrent ? slateDark : (isCompleted ? const Color(0xFF1E293B) : slateMuted),
+                              ),
+                            ),
+                            if (isCurrent && !isDelivered) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDCFCE7),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: const Color(0xFF86EFAC)),
+                                ),
+                                child: Text(
+                                  'IN PROGRESS',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 8.5),
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFF15803D),
+                                    letterSpacing: 0.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
+                        const SizedBox(height: 2),
                         Text(
                           item['subtitle'] as String,
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 11),
-                            color: slateMuted,
+                            fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
+                            color: isCurrent ? const Color(0xFF475569) : slateMuted,
                           ),
                         ),
                       ],
@@ -2750,6 +2806,134 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AnimatedStepNode extends StatefulWidget {
+  final bool isCompleted;
+  final bool isCurrent;
+  final IconData icon;
+  final Color activeColor;
+  final Color completedColor;
+
+  const _AnimatedStepNode({
+    required this.isCompleted,
+    required this.isCurrent,
+    required this.icon,
+    this.activeColor = const Color(0xFF00A344),
+    this.completedColor = const Color(0xFF00A344),
+  });
+
+  @override
+  State<_AnimatedStepNode> createState() => _AnimatedStepNodeState();
+}
+
+class _AnimatedStepNodeState extends State<_AnimatedStepNode>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.35).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    if (widget.isCurrent) {
+      _pulseController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnimatedStepNode oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isCurrent && !_pulseController.isAnimating) {
+      _pulseController.repeat(reverse: true);
+    } else if (!widget.isCurrent && _pulseController.isAnimating) {
+      _pulseController.stop();
+      _pulseController.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.isCurrent) {
+      return Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: widget.isCompleted ? widget.completedColor : const Color(0xFFF1F5F9),
+          border: Border.all(
+            color: widget.isCompleted ? Colors.transparent : const Color(0xFFCBD5E1),
+            width: 1.5,
+          ),
+        ),
+        child: Center(
+          child: Icon(
+            widget.icon,
+            size: 14,
+            color: widget.isCompleted ? Colors.white : const Color(0xFF64748B),
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      width: 38,
+      height: 38,
+      child: AnimatedBuilder(
+        animation: _pulseAnimation,
+        builder: (context, child) {
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 28 * _pulseAnimation.value,
+                height: 28 * _pulseAnimation.value,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: widget.activeColor.withValues(alpha: (1.35 - _pulseAnimation.value).clamp(0.08, 0.35)),
+                ),
+              ),
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: widget.activeColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: widget.activeColor.withValues(alpha: 0.35),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Icon(
+                    widget.icon,
+                    size: 14,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

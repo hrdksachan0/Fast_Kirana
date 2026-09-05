@@ -1,6 +1,24 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
+import sharp from 'sharp'
+
+async function optimizeImageToWebP(inputBuffer: Buffer): Promise<{ buffer: Buffer; isWebP: boolean }> {
+  try {
+    const optimized = await sharp(inputBuffer)
+      .resize({
+        width: 800,
+        withoutEnlargement: true,
+        fit: 'inside',
+      })
+      .webp({ quality: 80, effort: 4 })
+      .toBuffer()
+    return { buffer: optimized, isWebP: true }
+  } catch (err) {
+    console.warn('[WebP Optimization] Compression fallback to original:', err)
+    return { buffer: inputBuffer, isWebP: false }
+  }
+}
 
 async function uploadToCloudinary(
   base64Image: string,
@@ -9,7 +27,7 @@ async function uploadToCloudinary(
 ): Promise<string> {
   let fileData = base64Image
   if (!fileData.startsWith('data:')) {
-    fileData = `data:image/jpeg;base64,${base64Image}`
+    fileData = `data:image/webp;base64,${base64Image}`
   }
 
   const formData = new FormData()
@@ -38,7 +56,7 @@ export async function POST(req: Request) {
     }
 
     const contentType = req.headers.get('content-type') || ''
-    let base64Data = ''
+    let inputBuffer: Buffer | null = null
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData()
@@ -46,17 +64,26 @@ export async function POST(req: Request) {
       if (!file) {
         return NextResponse.json({ error: 'No file provided' }, { status: 400 })
       }
-      const buffer = await file.arrayBuffer()
-      const mime = file.type || 'image/jpeg'
-      base64Data = `data:${mime};base64,${Buffer.from(buffer).toString('base64')}`
+      const arrayBuffer = await file.arrayBuffer()
+      inputBuffer = Buffer.from(arrayBuffer)
     } else {
       const body = await req.json()
-      base64Data = body.file || body.image || ''
+      const rawData = body.file || body.image || ''
+      if (rawData) {
+        // Strip data URL prefix if present
+        const base64Clean = rawData.includes(',') ? rawData.split(',')[1] : rawData
+        inputBuffer = Buffer.from(base64Clean, 'base64')
+      }
     }
 
-    if (!base64Data) {
+    if (!inputBuffer || inputBuffer.length === 0) {
       return NextResponse.json({ error: 'No image data provided' }, { status: 400 })
     }
+
+    // Auto-compress to WebP (max 800px width, quality 80)
+    const { buffer: optimizedBuffer, isWebP } = await optimizeImageToWebP(inputBuffer)
+    const mime = isWebP ? 'image/webp' : 'image/jpeg'
+    const base64Data = `data:${mime};base64,${optimizedBuffer.toString('base64')}`
 
     // Try Cloudinary if configured in Settings
     try {

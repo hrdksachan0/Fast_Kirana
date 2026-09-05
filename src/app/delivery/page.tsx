@@ -656,11 +656,14 @@ export default function DeliveryDashboard() {
     setUpdatingId(orderId)
     try {
       const coords = await getCurrentCoords()
+      const isOnline = paymentCollectedBy === 'ONLINE' || !isRiderCash
       const success = await handleUpdateStatus(orderId, 'DELIVERED', {
         deliveryLat: coords?.lat || null,
         deliveryLng: coords?.lng || null,
         isRiderCash,
         paymentCollectedBy,
+        paymentMethod: isOnline ? 'UPI' : 'COD',
+        paymentStatus: 'PAID',
       })
 
       if (success) {
