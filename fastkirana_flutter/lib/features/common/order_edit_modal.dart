@@ -577,7 +577,7 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                                         ),
                                       ),
                                       const SizedBox(width: 4),
-                                      const Icon(Icons.edit_outlined, size: 12, color: themeColor),
+                                      Icon(Icons.edit_outlined, size: 12, color: themeColor),
                                     ],
                                   ),
                                 ),
