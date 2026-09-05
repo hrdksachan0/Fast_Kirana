@@ -44,6 +44,11 @@ export default function Error({
     )
   }
 
+  const isNotFound =
+    error?.message?.includes('NEXT_NOT_FOUND') ||
+    error?.digest?.includes('NEXT_NOT_FOUND') ||
+    error?.message?.toLowerCase().includes('not found')
+
   return (
     <div className="min-h-[75vh] flex flex-col items-center justify-center px-4 py-16 text-center select-none bg-background">
       
@@ -51,18 +56,20 @@ export default function Error({
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] rounded-full bg-primary/5 blur-[100px] pointer-events-none z-0" />
 
       <div className="relative z-10 max-w-md w-full space-y-6">
-        {/* Warning Icon */}
-        <div className="mx-auto h-14 w-14 rounded-full bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 flex items-center justify-center shadow-md">
-          <RefreshCw className="h-7 w-7 text-amber-500 stroke-[2.2]" />
+        {/* Warning / Not Found Icon */}
+        <div className={`mx-auto h-14 w-14 rounded-full ${isNotFound ? 'bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/40' : 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40'} border flex items-center justify-center shadow-md`}>
+          <RefreshCw className={`h-7 w-7 ${isNotFound ? 'text-rose-500' : 'text-amber-500'} stroke-[2.2]`} />
         </div>
 
         {/* Heading & description */}
         <div className="space-y-2">
           <h1 className="text-lg sm:text-xl font-black text-text-primary tracking-tight">
-            Connection Hiccup
+            {isNotFound ? 'Page or Outlet Not Found' : 'Connection Hiccup'}
           </h1>
           <p className="text-xs font-bold text-text-secondary leading-relaxed px-4">
-            A temporary network issue occurred. Tap retry to reconnect instantly.
+            {isNotFound
+              ? 'The page or restaurant you requested does not exist or may have moved.'
+              : 'A temporary network issue occurred. Tap retry to reconnect instantly.'}
           </p>
         </div>
 
