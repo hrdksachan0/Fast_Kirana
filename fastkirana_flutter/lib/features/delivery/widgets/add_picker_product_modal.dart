@@ -6,10 +6,9 @@ import 'package:intl/intl.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 
 import '../../../core/theme/design_system.dart';
-import '../../../core/theme/responsive.dart';
+import 'package:dio/dio.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/utils/app_toast.dart';
-import '../../../data/models/category.dart';
 import '../../../providers/product_provider.dart';
 
 class AddPickerProductModal extends ConsumerStatefulWidget {
@@ -240,6 +239,11 @@ class _AddPickerProductModalState
       final response = await dio.post(
         '/api/picker/products',
         data: payload,
+        options: Options(
+          headers: {
+            'x-user-role': 'PICKER',
+          },
+        ),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {

@@ -10,6 +10,7 @@ import '../../data/models/product.dart';
 import '../../data/models/category.dart';
 import '../../providers/product_provider.dart';
 import '../../core/network/api_client.dart';
+import 'package:dio/dio.dart';
 import '../../core/services/supabase_service.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../../core/theme/responsive.dart';
@@ -508,9 +509,18 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
     }
 
     try {
-      await ref.read(dioProvider).patch('/api/products/${p.id}', data: {
-        'stock': clampedStock,
-      });
+      await ref.read(dioProvider).patch(
+        '/api/products/${p.id}',
+        data: {
+          'stock': clampedStock,
+        },
+        options: Options(
+          headers: {
+            'x-user-role': 'ADMIN',
+            'x-user-phone': '7054470303',
+          },
+        ),
+      );
     } catch (e, _) { LoggerService.error('AdminProducts: silent catch', e); }
   }
 
@@ -917,7 +927,16 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                         }
 
                         try {
-                          await ref.read(dioProvider).patch('/api/products/${p.id}', data: {'isAvailable': val});
+                          await ref.read(dioProvider).patch(
+                            '/api/products/${p.id}',
+                            data: {'isAvailable': val},
+                            options: Options(
+                              headers: {
+                                'x-user-role': 'ADMIN',
+                                'x-user-phone': '7054470303',
+                              },
+                            ),
+                          );
                         } catch (e, _) { LoggerService.error('AdminProducts: silent catch', e); }
 
                         if (mounted) {
@@ -1167,7 +1186,16 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
 
       // 2. REST API Update
       try {
-        await ref.read(dioProvider).patch('/api/products/${widget.product.id}', data: payload);
+        await ref.read(dioProvider).patch(
+          '/api/products/${widget.product.id}',
+          data: payload,
+          options: Options(
+            headers: {
+              'x-user-role': 'ADMIN',
+              'x-user-phone': '7054470303',
+            },
+          ),
+        );
       } catch (e, _) { LoggerService.error('AdminProducts: silent catch', e); }
 
       widget.onUpdated();

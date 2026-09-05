@@ -10,6 +10,7 @@ import { revalidateStorefront } from '@/lib/revalidate'
 import { getCachedSearch, setCachedSearch } from '@/lib/search-cache'
 import { OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID } from '@/lib/constants'
 import { getSemanticAiScore } from '@/lib/vector-search'
+import { normalizeRestaurantId } from '@/lib/restaurant-ids'
 
 const SYNONYM_DICTIONARY: Record<string, string[]> = {
   'aalu': ['potato', 'aloo'],
@@ -567,7 +568,9 @@ export async function POST(request: NextRequest) {
 
     // ── Restaurant product hardening ──
     // When restaurantId is present, restaurant dishes do NOT require umbrella category (categoryId is null)
+    let finalRestaurantId: string | null = null
     if (restaurantId) {
+      finalRestaurantId = normalizeRestaurantId(restaurantId)
       finalCategoryId = null
 
       // Ensure 'restaurant' tag is present
@@ -654,12 +657,12 @@ export async function POST(request: NextRequest) {
         description: description || '',
         imageUrl: imageUrl || '📦',
         categoryId: finalCategoryId,
-        restaurantId: restaurantId || null,
+        restaurantId: finalRestaurantId || null,
         mrp: finalMrp,
         price: finalPrice,
         discount: calculatedDiscount,
         unit: finalUnit,
-        stock: restaurantId ? 99999 : Number(stock || 0),
+        stock: finalRestaurantId ? 99999 : Number(stock || 0),
         isAvailable: isAvailable !== undefined ? !!isAvailable : true,
         tags: tagsList,
         variants: (sortedVariants && Array.isArray(sortedVariants) && sortedVariants.length > 0) ? sortedVariants : undefined,

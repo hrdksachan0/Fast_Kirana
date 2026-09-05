@@ -383,6 +383,40 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
     _initSupabaseRealtime();
   }
 
+  Future<void> _initNotificationSubscriptions() async {
+    try {
+      final notif = NotificationService();
+      await notif.init();
+      await notif.requestPermissions();
+      final dio = ref.read(dioProvider);
+      await notif.registerDeviceToken(dio);
+
+      // Subscribe to restaurant topics for instant order buzz
+      final outletId = _assignedRestaurantId ?? widget.initialRestaurantId;
+      if (outletId != null && outletId.isNotEmpty) {
+        await notif.subscribeToTopic('restaurant_$outletId');
+        await notif.subscribeToTopic('kitchen_$outletId');
+        String? legacyId;
+        if (outletId == outletAsRestaurantId) legacyId = legacyAsRestaurantId;
+        if (outletId == outletWedsonId) legacyId = legacyWedsonId;
+        if (outletId == outletBalUdyanId) legacyId = legacyBalUdyanId;
+        if (outletId == outletPariMilkId) legacyId = legacyPariMilkId;
+        if (legacyId != null && legacyId.isNotEmpty && legacyId != outletId) {
+          await notif.subscribeToTopic('restaurant_$legacyId');
+          await notif.subscribeToTopic('kitchen_$legacyId');
+        }
+      }
+      final prefs = await SharedPreferences.getInstance();
+      final phone = prefs.getString('user_phone') ?? '';
+      final clean = phone.replaceAll('+91', '').replaceAll(' ', '').trim();
+      if (clean.length == 10) {
+        await notif.subscribeToTopic('phone_$clean');
+      }
+    } catch (e, _) {
+      LoggerService.error('RestaurantDashboard: notification init error', e);
+    }
+  }
+
   // Lazy tab loading flags
   bool _menuTabLoaded = false;
   bool _salesTabLoaded = false;
@@ -806,7 +840,17 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> {
       }
 
       final dio = ref.read(dioProvider);
-      await dio.patch('/api/restaurant-dashboard/products/$itemId', data: {'isAvailable': newStatus});
+      await dio.patch(
+        '/api/restaurant-dashboard/products/$itemId',
+        data: {'isAvailable': newStatus},
+        options: Options(
+          headers: {
+            'x-user-role': 'RESTAURANT_OWNER',
+            if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty)
+              'x-restaurant-id': _assignedRestaurantId,
+          },
+        ),
+      );
       if (mounted) {
         if (newStatus) {
           AppToast.showSuccess(

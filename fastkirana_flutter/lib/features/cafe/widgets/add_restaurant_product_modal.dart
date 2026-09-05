@@ -5,11 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 
 import '../../../core/theme/design_system.dart';
-import '../../../core/theme/responsive.dart';
 import 'package:dio/dio.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/utils/app_toast.dart';
-import '../../../data/models/category.dart';
 import '../../../providers/product_provider.dart';
 
 class AddRestaurantProductModal extends ConsumerStatefulWidget {
@@ -181,6 +179,12 @@ class _AddRestaurantProductModalState
       final response = await dio.post(
         '/api/restaurant-dashboard/products',
         data: payload,
+        options: Options(
+          headers: {
+            'x-user-role': 'RESTAURANT_OWNER',
+            if (widget.restaurantId.isNotEmpty) 'x-restaurant-id': widget.restaurantId,
+          },
+        ),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -739,4 +743,8 @@ class _AddRestaurantProductModalState
               ),
             ],
           ),
-  
+        ),
+      ),
+    );
+  }
+}

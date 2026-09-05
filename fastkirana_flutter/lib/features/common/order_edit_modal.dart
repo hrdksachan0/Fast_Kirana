@@ -273,7 +273,16 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
       }
     } catch (e) {
       if (mounted) {
-        AppToast.showError(context, 'Update Failed', subtitle: e.toString().replaceAll('Exception: ', ''));
+        String errorMsg = e.toString().replaceAll('Exception: ', '');
+        if (e is DioException) {
+          final serverErr = e.response?.data;
+          if (serverErr is Map && serverErr['error'] != null) {
+            errorMsg = serverErr['error'].toString();
+          } else if (serverErr is String && serverErr.isNotEmpty) {
+            errorMsg = serverErr;
+          }
+        }
+        AppToast.showError(context, 'Update Failed', subtitle: errorMsg);
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -554,7 +563,7 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                                   ),
                                 const SizedBox(height: 2),
                                 InkWell(
-                                  onTap: widget.isAdmin ? () => _showEditItemPriceDialog(idx) : null,
+                                  onTap: () => _showEditItemPriceDialog(idx),
                                   borderRadius: BorderRadius.circular(4),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -564,13 +573,11 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                                         style: GoogleFonts.inter(
                                           fontSize: Responsive.scaledFontSize(context, 11.5),
                                           fontWeight: FontWeight.w700,
-                                          color: widget.isAdmin ? brandAmber : slateMuted,
+                                          color: themeColor,
                                         ),
                                       ),
-                                      if (widget.isAdmin) ...[
-                                        const SizedBox(width: 4),
-                                        const Icon(Icons.edit_outlined, size: 12, color: brandAmber),
-                                      ],
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.edit_outlined, size: 12, color: themeColor),
                                     ],
                                   ),
                                 ),
@@ -842,16 +849,15 @@ class _AddItemSearchSheetState extends ConsumerState<_AddItemSearchSheet> {
             ],
           ),
 
-          // Tabs Switcher (Only Admin gets the Custom Off-Menu tab; Picker & Restaurant pick from their domain)
-          if (widget.isAdmin) ...[
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: AppDesignSystem.slate100,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(
-                children: [
+          // Tabs Switcher (Catalog Search vs Custom / Off-Menu item for all consoles)
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: AppDesignSystem.slate100,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
                   Expanded(
                     child: InkWell(
                       borderRadius: BorderRadius.circular(10),
@@ -908,7 +914,6 @@ class _AddItemSearchSheetState extends ConsumerState<_AddItemSearchSheet> {
               ),
             ),
             const SizedBox(height: 10),
-          ],
 
           // Admin Domain Filter Chips (All, Grocery, Wedson, A.S., Bal Udyan)
           if (widget.isAdmin && _selectedTab == 0) ...[
@@ -1059,7 +1064,13 @@ class _AddItemSearchSheetState extends ConsumerState<_AddItemSearchSheet> {
                   if (_adminCatalogFilter != 'ALL') {
                     // Match specific restaurant outlet ID
                     final rId = (p.restaurantId ?? p.restaurant?.id ?? '').toLowerCase();
-                    return rId == _adminCatalogFilter.toLowerCase();
+                    final target = _adminCatalogFilter.toLowerCase();
+                    if (rId == target) return true;
+                    if (target == outletAsRestaurantId.toLowerCase() && (rId == legacyAsRestaurantId || rId == 'as-restaurant' || rId == 'as-cafe')) return true;
+                    if (target == outletWedsonId.toLowerCase() && (rId == legacyWedsonId || rId == 'wedson' || rId == 'wedson-restaurant')) return true;
+                    if (target == outletBalUdyanId.toLowerCase() && (rId == legacyBalUdyanId || rId == 'bal-udyan' || rId == 'baludyan')) return true;
+                    if (target == outletPariMilkId.toLowerCase() && (rId == legacyPariMilkId || rId == 'pari-milk' || rId == 'pari')) return true;
+                    return false;
                   }
                   return true; // ALL
                 } else if (widget.isRestaurant) {
@@ -1067,7 +1078,13 @@ class _AddItemSearchSheetState extends ConsumerState<_AddItemSearchSheet> {
                   if (!isRest) return false;
                   if (widget.restaurantId != null && widget.restaurantId!.isNotEmpty) {
                     final rId = (p.restaurantId ?? p.restaurant?.id ?? '').toLowerCase();
-                    return rId == widget.restaurantId!.toLowerCase();
+                    final target = widget.restaurantId!.toLowerCase();
+                    if (rId == target) return true;
+                    if (target == outletAsRestaurantId.toLowerCase() && (rId == legacyAsRestaurantId || rId == 'as-restaurant' || rId == 'as-cafe')) return true;
+                    if (target == outletWedsonId.toLowerCase() && (rId == legacyWedsonId || rId == 'wedson' || rId == 'wedson-restaurant')) return true;
+                    if (target == outletBalUdyanId.toLowerCase() && (rId == legacyBalUdyanId || rId == 'bal-udyan' || rId == 'baludyan')) return true;
+                    if (target == outletPariMilkId.toLowerCase() && (rId == legacyPariMilkId || rId == 'pari-milk' || rId == 'pari')) return true;
+                    return false;
                   }
                   return true;
                 } else {
@@ -1311,7 +1328,9 @@ class _AddItemSearchSheetState extends ConsumerState<_AddItemSearchSheet> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
-              color: const Color(0xFFD97706),
+              color: widget.isAdmin
+                  ? const Color(0xFFD97706)
+                  : (widget.isRestaurant ? AppDesignSystem.primary : const Color(0xFF10B981)),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Center(

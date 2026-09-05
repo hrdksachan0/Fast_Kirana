@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
             { email: trimmed.toLowerCase() }
           ]
         },
-        select: { email: true, name: true, phone: true, role: true, passwordHash: true }
+        select: { email: true, name: true, phone: true, role: true, passwordHash: true, assignedRestaurantId: true }
       })
 
       // Prioritize canonical staff & restaurant accounts:

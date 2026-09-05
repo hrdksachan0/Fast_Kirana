@@ -4,6 +4,7 @@ import { auth } from '@/auth'
 import { requireAdmin } from '@/lib/auth-guard'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { invalidateProductCache } from '@/lib/search-cache'
+import { normalizeRestaurantId } from '@/lib/restaurant-ids'
 
 export async function GET(
   request: Request,
@@ -127,7 +128,10 @@ export async function PATCH(
       userEmail.startsWith('admin') || 
       userEmail.includes('hrdk')
 
-    if (!isSuper && assignedRestaurantId && product.restaurantId && product.restaurantId !== assignedRestaurantId) {
+    const normAssigned = assignedRestaurantId ? normalizeRestaurantId(assignedRestaurantId) : null
+    const normProductRest = product.restaurantId ? normalizeRestaurantId(product.restaurantId) : null
+
+    if (!isSuper && normAssigned && normProductRest && normProductRest !== normAssigned) {
       return NextResponse.json({ error: 'You can only edit products for your assigned restaurant' }, { status: 403 })
     }
 
@@ -139,7 +143,7 @@ export async function PATCH(
     if (imageUrl !== undefined) updateData.imageUrl = imageUrl || '📦'
     
     // Restaurant ID & Category ID auto-alignment
-    const targetRestaurantId = restaurantId !== undefined ? (restaurantId || null) : product.restaurantId
+    const targetRestaurantId = restaurantId !== undefined ? (restaurantId ? normalizeRestaurantId(restaurantId) : null) : (product.restaurantId ? normalizeRestaurantId(product.restaurantId) : null)
     if (targetRestaurantId) {
       updateData.restaurantId = targetRestaurantId
       updateData.categoryId = (categoryId && typeof categoryId === 'string' && categoryId.trim() !== '') ? categoryId : null
