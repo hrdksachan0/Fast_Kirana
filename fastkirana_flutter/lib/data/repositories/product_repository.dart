@@ -418,18 +418,29 @@ class ProductRepository {
   }
 
   static const Map<String, List<String>> _categoryAliases = {
-    'cmqh1haw30000zcid4vj7i1yj': ['fruits-vegetables', 'fruits & vegetables', 'fruits', 'vegetables', 'fresh', 'farm'],
-    'cmt76olwr000104l18kcelx0i': ['healthy-foods', 'healthy foods', 'healthy', 'diet', 'dry-fruits', 'oats'],
-    'cmsfuzs73000404l7q139nk61': ['kitchen-needs', 'kitchen needs', 'atta-rice-dal', 'atta', 'rice', 'dal', 'oil', 'grocery', 'spices'],
-    'cmqh1hb920002zcidoywpi240': ['snacks-munchies', 'snacks & munchies', 'snacks', 'munchies', 'chips', 'namkeen', 'biscuits'],
-    'cmqgzqfz20008vkidoycqg5u2': ['beverages', 'beverages & drinks', 'drinks', 'cold drinks', 'juices', 'soda', 'tea', 'coffee'],
-    'cmqgzqfv70007vkider7h6e4j': ['ice-cream', 'ice cream & desserts', 'ice cream', 'desserts', 'kulfi', 'cones'],
-    'cmseowmy7000004i562szts34': ['chocolates', 'chocolates & sweets', 'sweets', 'chocolate', 'silk', 'cadbury'],
-    'cmqh1hbyc0005zcidr45bj1ac': ['bakery', 'bakery & biscuits', 'biscuits', 'cookies', 'bread', 'rusk'],
-    'cmt74ypjp000004laoi3athcy': ['packaged-foods', 'packaged foods', 'instant', 'noodles', 'maggie', 'pasta'],
-    'cmqh1hblj0003zcidm9gq5net': ['personal-care', 'personal care & hygiene', 'personal care', 'soap', 'shampoo', 'creams'],
-    'cmrv2psby000004ldl25xjrlt': ['home-needs-and-cleaning', 'home needs & cleaning', 'cleaning', 'household', 'detergent', 'cleaner'],
-    'cmt59fuss0000tgidoc35458x': ['restaurant-food', 'fast food & restaurant kitchen', 'cafe', 'food', 'restaurant'],
+    'CAT-101': ['fruits-vegetables', 'fruits & vegetables', 'fruits', 'vegetables', 'fresh', 'farm'],
+    'CAT-102': ['snacks-munchies', 'snacks & munchies', 'snacks', 'munchies', 'chips', 'namkeen', 'biscuits'],
+    'CAT-103': ['kitchen-needs', 'kitchen needs', 'atta-rice-dal', 'atta', 'rice', 'dal', 'oil', 'grocery', 'spices'],
+    'CAT-104': ['packaged-foods', 'packaged foods', 'instant', 'noodles', 'maggie', 'pasta'],
+    'CAT-105': ['ice-cream', 'ice cream & desserts', 'ice cream', 'desserts', 'kulfi', 'cones'],
+    'CAT-106': ['chocolates', 'chocolates & sweets', 'sweets', 'chocolate', 'silk', 'cadbury'],
+    'CAT-107': ['home-needs-and-cleaning', 'home needs & cleaning', 'cleaning', 'household', 'detergent', 'cleaner'],
+    'CAT-108': ['beverages', 'beverages & drinks', 'drinks', 'cold drinks', 'juices', 'soda'],
+    'CAT-109': ['personal-care', 'personal care & hygiene', 'personal care', 'soap', 'shampoo', 'creams'],
+    'CAT-110': ['healthy-foods', 'healthy foods', 'healthy', 'diet', 'dry-fruits', 'oats'],
+    'CAT-111': ['bakery', 'bakery & biscuits', 'biscuits', 'cookies', 'bread', 'rusk'],
+    // Legacy CUID mappings for backwards compatibility
+    'cmqh1haw30000zcid4vj7i1yj': ['fruits-vegetables'],
+    'cmt76olwr000104l18kcelx0i': ['healthy-foods'],
+    'cmsfuzs73000404l7q139nk61': ['kitchen-needs'],
+    'cmqh1hb920002zcidoywpi240': ['snacks-munchies'],
+    'cmqgzqfz20008vkidoycqg5u2': ['beverages'],
+    'cmqgzqfv70007vkider7h6e4j': ['ice-cream'],
+    'cmseowmy7000004i562szts34': ['chocolates'],
+    'cmqh1hbyc0005zcidr45bj1ac': ['bakery'],
+    'cmt74ypjp000004laoi3athcy': ['packaged-foods'],
+    'cmqh1hblj0003zcidm9gq5net': ['personal-care'],
+    'cmrv2psby000004ldl25xjrlt': ['home-needs-and-cleaning'],
   };
 
   List<Product> _filterProducts(
@@ -582,16 +593,17 @@ class ProductRepository {
     } catch (e, _) { LoggerService.error('ProductRepository: silent catch', e); }
 
     final fallbacks = [
-      const Category(id: 'cmqh1haw30000zcid4vj7i1yj', name: 'Fruits & Vegetables', slug: 'fruits-vegetables', imageUrl: '/fruits_vegetables_category.png', sortOrder: 0),
-      const Category(id: 'cmsfuzs73000404l7q139nk61', name: 'Atta, Rice & Dal', slug: 'atta-rice-dal', imageUrl: '/atta_rice_dal_category.png', sortOrder: 1),
-      const Category(id: 'cmqgzqfz20008vkidoycqg5u2', name: 'Cold Drinks & Juices', slug: 'beverages', imageUrl: '/beverages_category.png', sortOrder: 2),
-      const Category(id: 'cmqh1hb920002zcidoywpi240', name: 'Snacks & Munchies', slug: 'snacks-munchies', imageUrl: '/snacks_munchies_category.png', sortOrder: 3),
-      const Category(id: 'cmqgzqfv70007vkider7h6e4j', name: 'Ice Creams & More', slug: 'ice-cream', imageUrl: '/ice_cream_category.png', sortOrder: 4),
-      const Category(id: 'cmseowmy7000004i562szts34', name: 'Chocolates & Sweets', slug: 'chocolates', imageUrl: '/chocolates_category.png', sortOrder: 5),
-      const Category(id: 'cmqh1hbyc0005zcidr45bj1ac', name: 'Bakery & Biscuits', slug: 'bakery', imageUrl: '/bakery_biscuits_category.png', sortOrder: 6),
-      const Category(id: 'cmqh1hblj0003zcidm9gq5net', name: 'Personal Care', slug: 'personal-care', imageUrl: '/personal_care_category.png', sortOrder: 7),
-      const Category(id: 'cmrv2psby000004ldl25xjrlt', name: 'Home & Cleaning', slug: 'home-needs-and-cleaning', imageUrl: '/household_category.png', sortOrder: 8),
-      const Category(id: 'cmt59fuss0000tgidoc35458x', name: 'Cafe & Fast Food', slug: 'restaurant-food', imageUrl: '/cafe_category.png', sortOrder: 9),
+      const Category(id: 'CAT-101', name: 'Fruits & Vegetables', slug: 'fruits-vegetables', imageUrl: '/fruits_vegetables_category.png', sortOrder: 0),
+      const Category(id: 'CAT-102', name: 'Snacks & Munchies', slug: 'snacks-munchies', imageUrl: '/snacks_munchies_category.png', sortOrder: 1),
+      const Category(id: 'CAT-103', name: 'Kitchen Needs', slug: 'kitchen-needs', imageUrl: '/atta_rice_dal_category.png', sortOrder: 2),
+      const Category(id: 'CAT-104', name: 'Packaged Foods', slug: 'packaged-foods', imageUrl: '/packaged_foods_category.png', sortOrder: 3),
+      const Category(id: 'CAT-105', name: 'Ice Cream & Desserts', slug: 'ice-cream', imageUrl: '/ice_cream_category.png', sortOrder: 4),
+      const Category(id: 'CAT-106', name: 'Chocolates & Sweets', slug: 'chocolates', imageUrl: '/chocolates_category.png', sortOrder: 5),
+      const Category(id: 'CAT-107', name: 'Home Needs & Cleaning', slug: 'home-needs-and-cleaning', imageUrl: '/household_category.png', sortOrder: 6),
+      const Category(id: 'CAT-108', name: 'Cold Drinks & Juices', slug: 'beverages', imageUrl: '/beverages_category.png', sortOrder: 7),
+      const Category(id: 'CAT-109', name: 'Personal Care', slug: 'personal-care', imageUrl: '/personal_care_category.png', sortOrder: 8),
+      const Category(id: 'CAT-110', name: 'Healthy Foods', slug: 'healthy-foods', imageUrl: '/healthy_foods_category.png', sortOrder: 9),
+      const Category(id: 'CAT-111', name: 'Bakery & Biscuits', slug: 'bakery', imageUrl: '/bakery_biscuits_category.png', sortOrder: 10),
     ];
     _cachedCategories = fallbacks;
     return fallbacks;
