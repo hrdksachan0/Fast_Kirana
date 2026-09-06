@@ -290,7 +290,25 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
             // 3. 2-Column Grid of Beautiful Category Cards
             categoriesAsync.when(
               data: (categories) {
-                var filtered = categories.where((c) => c.slug != 'restaurant').toList();
+                var filtered = categories.where((c) {
+                  final slug = c.slug.toLowerCase();
+                  final name = c.name.toLowerCase();
+                  if (slug == 'restaurant' ||
+                      slug == 'restaurant-food' ||
+                      slug == 'fast-food-kitchen' ||
+                      slug == 'cafe' ||
+                      slug.contains('restaurant') ||
+                      slug.contains('fastfood')) {
+                    return false;
+                  }
+                  if (name.contains('restaurant') ||
+                      name.contains('kitchen') ||
+                      name.contains('fast food') ||
+                      name.contains('cafe')) {
+                    return false;
+                  }
+                  return true;
+                }).toList();
                 if (_searchQuery.isNotEmpty) {
                   filtered = filtered.where((c) {
                     return c.name.toLowerCase().contains(_searchQuery) ||

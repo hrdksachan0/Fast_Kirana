@@ -786,15 +786,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       customerAddress: selectedAddr,
       notes: orderNotes,
       createdAt: DateTime.now(),
-      items: cart.items.map<OrderItem>((i) => OrderItem(
-        id: 'item_${i.product.id}',
-        productId: i.product.id,
-        name: i.product.name,
-        price: i.product.price,
-        quantity: i.quantity,
-        imageUrl: i.product.imageUrl,
-        selectedVariant: i.selectedVariant,
-      )).toList(),
+      items: cart.items.map<OrderItem>((i) {
+        final rawId = i.product.id;
+        final cleanId = rawId.startsWith('item_') ? rawId.replaceFirst('item_', '') : rawId;
+        final baseProductId = cleanId.contains('_') ? cleanId.split('_')[0] : cleanId;
+        return OrderItem(
+          id: 'item_${i.product.id}',
+          productId: baseProductId,
+          name: i.product.name,
+          price: i.product.price,
+          quantity: i.quantity,
+          imageUrl: i.product.imageUrl,
+          selectedVariant: i.selectedVariant,
+        );
+      }).toList(),
     );
 
     // 1. Post to backend Next.js API for Web App Admin & Database sync
