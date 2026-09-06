@@ -13,7 +13,6 @@ import '../../core/network/api_client.dart';
 import 'package:dio/dio.dart';
 import '../../core/services/supabase_service.dart';
 import '../../core/utils/restaurant_utils.dart';
-import '../../core/theme/responsive.dart';
 
 class AdminProductsScreen extends ConsumerStatefulWidget {
   final bool showAppBar;
@@ -42,6 +41,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
     {'id': outletWedsonId, 'name': 'Wedson Restaurant'},
     {'id': outletAsRestaurantId, 'name': 'A.S. Restaurant'},
     {'id': outletBalUdyanId, 'name': 'Bal Udyan Restaurant'},
+    {'id': outletPariMilkId, 'name': 'Pari Milk Dairy & Sweets'},
   ];
 
   @override

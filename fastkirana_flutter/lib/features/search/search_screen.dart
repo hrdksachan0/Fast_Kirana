@@ -561,7 +561,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         }).toList();
 
         final isRestaurantQuery = matchedRestaurants.isNotEmpty ||
-            ['wedson', 'bal udyan', 'baludyan', 'a.s', 'as restaurant', 'as cafe', 'cafe', 'restaurant', 'dhaba'].any((r) => queryClean.contains(r));
+            ['wedson', 'bal udyan', 'baludyan', 'a.s', 'as restaurant', 'as cafe', 'pari', 'pari milk', 'pari dairy', 'cafe', 'restaurant', 'dhaba'].any((r) => queryClean.contains(r));
 
         final filtered = products.where((p) {
           final pName = p.name.toLowerCase();
@@ -729,6 +729,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   } else if (outletName.contains('Bal Udyan')) {
                     chipColor = AppDesignSystem.violet600;
                     chipBg = AppDesignSystem.violet50;
+                  } else if (outletName.contains('Pari') || outletName.contains('Dairy')) {
+                    chipColor = AppDesignSystem.emerald700;
+                    chipBg = AppDesignSystem.green50;
                   } else if (outletName.contains('A.S')) {
                     chipColor = AppDesignSystem.cyan600;
                     chipBg = AppDesignSystem.sky50;

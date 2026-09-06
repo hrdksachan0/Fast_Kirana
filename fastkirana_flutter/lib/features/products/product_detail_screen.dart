@@ -4,10 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/theme/design_system.dart';
-import '../../core/theme/responsive.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../../core/utils/dish_timing.dart';
 import '../../data/models/product.dart';
@@ -27,9 +25,7 @@ class ProductDetailScreen extends ConsumerStatefulWidget {
 class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   ProductVariant? _selectedVariant;
   bool _isFavorite = false;
-  bool _isNotified = false;
   static const Color primaryRed = AppDesignSystem.primary;
-  static const Color successGreen = AppDesignSystem.success;
 
   @override
   void initState() {
@@ -58,18 +54,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: AppDesignSystem.emerald700,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             content: Row(
               children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                const Icon(Icons.check_circle_outline, color: Colors.white),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    groceryCount > 0
-                        ? 'Switched to $newOutlet. $groceryCount grocery item(s) kept safe in cart! 🛒'
-                        : 'Switched to $newOutlet! 🍽️',
-                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w700, color: Colors.white),
+                    'Switched to $newOutlet order',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white),
                   ),
                 ),
               ],
@@ -83,7 +75,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   void _shareProduct(Product p, double activePrice) {
     HapticFeedback.lightImpact();
     final priceStr = '₹${activePrice.toStringAsFixed(0)}';
-    final shareText = '''🛒 Check out ${p.name} ($priceStr) on FastKirana!\n\n⚡ Instant 10-Min Delivery in Ghatampur!\nOrder now: https://www.fastkirana.in/products/${p.slug ?? p.id}''';
+    final productSlug = p.slug != null && p.slug!.isNotEmpty ? p.slug : p.id;
+    final shareText = '''🛒 Check out ${p.name} ($priceStr) on FastKirana!\n\n⚡ Instant 10-Min Delivery in Ghatampur!\nOrder now: https://www.fastkirana.in/products/$productSlug''';
     Share.share(shareText, subject: 'Buy ${p.name} on FastKirana');
   }
 
@@ -184,30 +177,81 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Delivery Speed Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: AppDesignSystem.green50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppDesignSystem.emerald200),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.bolt_rounded, size: 14, color: AppDesignSystem.emerald600),
-                          const SizedBox(width: 4),
-                          Text(
-                            'FAST DELIVERY',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 10),
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.5,
-                              color: AppDesignSystem.emerald700,
-                            ),
+                    // Delivery Speed & Outlet Badge Row
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: AppDesignSystem.green50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppDesignSystem.emerald200),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.bolt_rounded, size: 14, color: AppDesignSystem.emerald600),
+                              const SizedBox(width: 4),
+                              Text(
+                                'FAST DELIVERY',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 10),
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.5,
+                                  color: AppDesignSystem.emerald700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (isRestaurantProduct(p)) ...[
+                          const SizedBox(width: 8),
+                          Builder(
+                            builder: (context) {
+                              final outletName = getOutletName(p);
+                              Color chipColor = AppDesignSystem.amber600;
+                              Color chipBg = AppDesignSystem.amber50;
+                              if (outletName.contains('Wedson')) {
+                                chipColor = AppDesignSystem.orange600;
+                                chipBg = AppDesignSystem.orange50;
+                              } else if (outletName.contains('Bal Udyan')) {
+                                chipColor = AppDesignSystem.violet600;
+                                chipBg = AppDesignSystem.violet50;
+                              } else if (outletName.contains('Pari') || outletName.contains('Dairy')) {
+                                chipColor = AppDesignSystem.emerald700;
+                                chipBg = AppDesignSystem.green50;
+                              } else if (outletName.contains('A.S')) {
+                                chipColor = AppDesignSystem.cyan600;
+                                chipBg = AppDesignSystem.sky50;
+                              }
+
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: chipBg,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: chipColor.withValues(alpha: 0.35)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.storefront_rounded, size: 13, color: chipColor),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      outletName,
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 10),
+                                        fontWeight: FontWeight.w800,
+                                        color: chipColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
                         ],
-                      ),
+                      ],
                     ),
                     const SizedBox(height: 12),
 

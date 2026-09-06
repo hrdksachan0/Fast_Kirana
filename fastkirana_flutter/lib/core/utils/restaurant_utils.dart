@@ -12,10 +12,14 @@ const String legacyBalUdyanId = 'cmsbhxb6a000304if8kf1cwji';
 const String legacyPariMilkId = 'cmtn66nhy000004k0fu84b7ke';
 
 const Map<String, String> outletNamesMap = {
+  'rest-104': 'Pari Milk Dairy & Sweets',
+  'rest-101': 'A.S. Restaurant',
+  'rest-102': 'Wedson Restaurant',
+  'rest-103': 'Bal Udyan Restaurant',
+  outletPariMilkId: 'Pari Milk Dairy & Sweets',
   outletAsRestaurantId: 'A.S. Restaurant',
   outletWedsonId: 'Wedson Restaurant',
   outletBalUdyanId: 'Bal Udyan Restaurant',
-  outletPariMilkId: 'Pari Milk Dairy & Sweets',
   legacyAsRestaurantId: 'A.S. Restaurant',
   legacyWedsonId: 'Wedson Restaurant',
   legacyBalUdyanId: 'Bal Udyan Restaurant',
@@ -29,6 +33,7 @@ const Map<String, String> outletNamesMap = {
   'baludyan': 'Bal Udyan Restaurant',
   'pari-milk-dairy-sweets': 'Pari Milk Dairy & Sweets',
   'pari-milk': 'Pari Milk Dairy & Sweets',
+  'pari-dairy': 'Pari Milk Dairy & Sweets',
   'pari': 'Pari Milk Dairy & Sweets',
   'cafe': 'Restaurant',
   'restaurant-kitchen': 'Wedson Restaurant',
@@ -67,6 +72,9 @@ bool isRestaurantProduct(Product product) {
         'bal-udyan',
         'bal-udyan-restaurant',
         'baludyan',
+        'pari-milk-dairy-sweets',
+        'pari-milk',
+        'pari',
         'cafe',
         'cooked',
         'dish',
@@ -80,7 +88,7 @@ bool isRestaurantProduct(Product product) {
 /// Backward compatible alias
 bool isCafeProduct(Product product) => isRestaurantProduct(product);
 
-/// Returns the normalized outlet name for a product (e.g. "Bal Udyan Restaurant", "A.S. Restaurant", "Wedson Restaurant")
+/// Returns the normalized outlet name for a product (e.g. "Bal Udyan Restaurant", "A.S. Restaurant", "Wedson Restaurant", "Pari Milk Dairy & Sweets")
 String getOutletName(Product product) {
   // Direct name if provided in restaurant object
   final rName = product.restaurant?.name;
@@ -93,8 +101,22 @@ String getOutletName(Product product) {
   final tags = product.tags.map((t) => t.toLowerCase()).toList();
   final pName = product.name.toLowerCase();
 
-  // 1. Explicit Bal Udyan Restaurant checks
-  if (rId == outletBalUdyanId ||
+  // 1. Explicit Pari Milk Dairy & Sweets checks
+  if (rId == outletPariMilkId.toLowerCase() ||
+      rId == legacyPariMilkId.toLowerCase() ||
+      rId == 'pari-milk-dairy-sweets' ||
+      rId == 'pari-milk' ||
+      rId == 'pari' ||
+      rSlug.contains('pari') ||
+      tags.any((t) => t.contains('pari') || t == 'pari-milk' || t == 'pari-milk-dairy-sweets') ||
+      pName.contains('pari milk') ||
+      pName.contains('pari dairy')) {
+    return 'Pari Milk Dairy & Sweets';
+  }
+
+  // 2. Explicit Bal Udyan Restaurant checks
+  if (rId == outletBalUdyanId.toLowerCase() ||
+      rId == legacyBalUdyanId.toLowerCase() ||
       rId == 'bal-udyan-restaurant' ||
       rId == 'bal-udyan' ||
       rId == 'baludyan' ||
@@ -104,8 +126,9 @@ String getOutletName(Product product) {
     return 'Bal Udyan Restaurant';
   }
 
-  // 2. Explicit A.S. Restaurant checks
-  if (rId == outletAsRestaurantId ||
+  // 3. Explicit A.S. Restaurant checks
+  if (rId == outletAsRestaurantId.toLowerCase() ||
+      rId == legacyAsRestaurantId.toLowerCase() ||
       rId == 'as-restaurant' ||
       rId == 'as-cafe' ||
       rSlug == 'as-restaurant' ||
@@ -116,8 +139,9 @@ String getOutletName(Product product) {
     return 'A.S. Restaurant';
   }
 
-  // 3. Explicit Wedson Restaurant checks
-  if (rId == outletWedsonId ||
+  // 4. Explicit Wedson Restaurant checks
+  if (rId == outletWedsonId.toLowerCase() ||
+      rId == legacyWedsonId.toLowerCase() ||
       rId == 'wedson' ||
       rId == 'wedson-restaurant' ||
       rSlug == 'wedson' ||
@@ -128,7 +152,7 @@ String getOutletName(Product product) {
     return 'Wedson Restaurant';
   }
 
-  // 4. Known ID / Tag mappings
+  // 5. Known ID / Tag mappings
   if (outletNamesMap.containsKey(rId)) {
     return outletNamesMap[rId]!;
   }
@@ -138,9 +162,12 @@ String getOutletName(Product product) {
     }
   }
 
-  // 5. Fallback if product has restaurant ID
+  // 6. Dynamic Fallback if product has restaurant info
+  if (product.restaurant?.name != null && product.restaurant!.name.trim().isNotEmpty) {
+    return product.restaurant!.name.trim();
+  }
   if (rId.isNotEmpty) {
-    return 'A.S. Restaurant';
+    return 'Restaurant';
   }
 
   return 'FastKirana Store';
@@ -303,21 +330,35 @@ OutletLocation getOutletLocation({
       final itemName = (it is Map ? it['name'] : (it.name ?? '')).toString().toLowerCase();
       final itemRestId = (it is Map ? it['restaurantId'] : null)?.toString().toLowerCase().trim();
 
-      if (itemRestId == outletBalUdyanId || itemName.contains('bal udyan')) {
+      if (itemRestId == outletPariMilkId.toLowerCase() ||
+          itemRestId == legacyPariMilkId.toLowerCase() ||
+          itemName.contains('pari milk') ||
+          itemName.contains('pari dairy') ||
+          itemName.contains('rasgulla') ||
+          itemName.contains('gulab jamun') ||
+          itemName.contains('chena') ||
+          itemName.contains('curd')) {
+        return pariMilkLocation;
+      }
+      if (itemRestId == outletBalUdyanId.toLowerCase() ||
+          itemRestId == legacyBalUdyanId.toLowerCase() ||
+          itemName.contains('bal udyan')) {
         return balUdyanLocation;
       }
-      if (itemRestId == outletWedsonId || itemName.contains('wedson')) {
+      if (itemRestId == outletWedsonId.toLowerCase() ||
+          itemRestId == legacyWedsonId.toLowerCase() ||
+          itemName.contains('wedson')) {
         return wedsonLocation;
       }
-      if (itemRestId == outletAsRestaurantId ||
+      if (itemRestId == outletAsRestaurantId.toLowerCase() ||
+          itemRestId == legacyAsRestaurantId.toLowerCase() ||
           itemName.contains('a.s') ||
           itemName.contains('pizza') ||
           itemName.contains('dal fry') ||
           itemName.contains('naan') ||
           itemName.contains('tandoori') ||
           itemName.contains('burger') ||
-          itemName.contains('chowmein') ||
-          itemName.contains('paneer')) {
+          itemName.contains('chowmein')) {
         return asRestaurantLocation;
       }
     }
