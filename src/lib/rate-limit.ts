@@ -186,3 +186,6 @@ export const apiWriteLimiter = rateLimit({ interval: 60_000, limit: 20 })
 
 /** For coupon validation: 15 requests per minute (prevent brute-force enumeration) */
 export const couponLimiter = rateLimit({ interval: 60_000, limit: 15 })
+
+/** For order creation: 10 requests per minute (prevent checkout spam and duplicate orders) */
+export const orderLimiter = rateLimit({ interval: 60_000, limit: 10 })

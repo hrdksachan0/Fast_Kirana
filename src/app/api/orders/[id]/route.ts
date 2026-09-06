@@ -7,6 +7,7 @@ import { sendTopicWithRetry, cleanupInvalidTokens, buildOrderFcmPayload } from '
 import { Role } from '@prisma/client'
 import { sseEmitter } from '@/lib/sse-emitter'
 import { getLast10Digits } from '@/lib/phone'
+import { validateBodyLegacy, updateOrderStatusSchema } from '@/lib/validation'
 
 const STAFF_ROLES = ['ADMIN', 'DELIVERY', 'PICKER', 'CHEF', 'RESTAURANT_OWNER']
 const VALID_STATUSES = ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED']
@@ -278,12 +279,15 @@ export async function PATCH(
     ? 'ADMIN'
     : ((session?.user as any)?.role || headerUserRole || 'ADMIN')
 
+  const validation = await validateBodyLegacy(request, updateOrderStatusSchema)
+  if (!validation.success) return validation.error
+
   try {
-    const body = await request.json()
+    const body = validation.data
     const { status, paymentStatus, paymentMethod, deliveryPhoto, deliveryLat, deliveryLng, prepTime, isRiderCash, paymentCollectedBy, cashAmount } = body
 
-    if ((!status || !VALID_STATUSES.includes(status)) && !paymentStatus) {
-      return NextResponse.json({ error: 'Invalid order status or payment status' }, { status: 400 })
+    if (!status && !paymentStatus) {
+      return NextResponse.json({ error: 'Either status or paymentStatus is required' }, { status: 400 })
     }
 
     // Check order exists and ownership
@@ -479,8 +483,8 @@ export async function PATCH(
               "paymentStatus" = 'PAID'::"PaymentStatus",
               "paymentMethod" = ${newPaymentMethod}::"PaymentMethod",
               "deliveryPhoto" = ${safePhoto}, 
-              "deliveryLat" = ${deliveryLat !== undefined && deliveryLat !== null ? parseFloat(deliveryLat) : null}, 
-              "deliveryLng" = ${deliveryLng !== undefined && deliveryLng !== null ? parseFloat(deliveryLng) : null}, 
+              "deliveryLat" = ${deliveryLat !== undefined && deliveryLat !== null ? parseFloat(String(deliveryLat)) : null}, 
+              "deliveryLng" = ${deliveryLng !== undefined && deliveryLng !== null ? parseFloat(String(deliveryLng)) : null}, 
               "deliveredAt" = COALESCE("deliveredAt", NOW()),
               "updatedAt" = NOW() 
           WHERE "combinedId" = ${existingOrder.combinedId}
@@ -492,8 +496,8 @@ export async function PATCH(
               "paymentStatus" = 'PAID'::"PaymentStatus",
               "paymentMethod" = ${newPaymentMethod}::"PaymentMethod",
               "deliveryPhoto" = ${safePhoto}, 
-              "deliveryLat" = ${deliveryLat !== undefined && deliveryLat !== null ? parseFloat(deliveryLat) : null}, 
-              "deliveryLng" = ${deliveryLng !== undefined && deliveryLng !== null ? parseFloat(deliveryLng) : null}, 
+              "deliveryLat" = ${deliveryLat !== undefined && deliveryLat !== null ? parseFloat(String(deliveryLat)) : null}, 
+              "deliveryLng" = ${deliveryLng !== undefined && deliveryLng !== null ? parseFloat(String(deliveryLng)) : null}, 
               "deliveredAt" = COALESCE("deliveredAt", NOW()),
               "updatedAt" = NOW() 
           WHERE id = ${existingOrder.id}
@@ -507,9 +511,9 @@ export async function PATCH(
           const orderTotal = parseFloat(existingOrder.total) || 0
 
           let actualCashChange = 0
-          if (cashAmount !== undefined && cashAmount !== null && !isNaN(parseFloat(cashAmount))) {
-            actualCashChange = parseFloat(cashAmount)
-          } else if (!isDoorstepQrOrOnline && (isRiderCash !== false) && (paymentCollectedBy === 'RIDER' || !paymentCollectedBy)) {
+          if (cashAmount !== undefined && cashAmount !== null && !isNaN(parseFloat(String(cashAmount)))) {
+            actualCashChange = parseFloat(String(cashAmount))
+          } else if (!isDoorstepQrOrOnline && (paymentCollectedBy === 'RIDER' || !paymentCollectedBy)) {
             actualCashChange = orderTotal
           }
 
@@ -540,8 +544,8 @@ export async function PATCH(
         }
       }
     } else if (status === 'SHIPPED') {
-      const latVal = deliveryLat !== undefined && deliveryLat !== null ? parseFloat(deliveryLat) : null
-      const lngVal = deliveryLng !== undefined && deliveryLng !== null ? parseFloat(deliveryLng) : null
+      const latVal = deliveryLat !== undefined && deliveryLat !== null ? parseFloat(String(deliveryLat)) : null
+      const lngVal = deliveryLng !== undefined && deliveryLng !== null ? parseFloat(String(deliveryLng)) : null
 
       const defaultDeliveryRider = await prisma.user.findFirst({
         where: { OR: [{ email: 'delivery@fastkirana.com' }, { role: 'DELIVERY' }] },
@@ -614,8 +618,8 @@ export async function PATCH(
       }
     } else if (status === 'CONFIRMED') {
       let estimatedDeliveryVal: Date | null = null
-      if (prepTime && !isNaN(parseInt(prepTime))) {
-        estimatedDeliveryVal = new Date(Date.now() + parseInt(prepTime) * 60 * 1000)
+      if (prepTime && !isNaN(parseInt(String(prepTime)))) {
+        estimatedDeliveryVal = new Date(Date.now() + parseInt(String(prepTime)) * 60 * 1000)
       }
 
       if (shouldUpdateAllCombined && existingOrder.combinedId) {
@@ -787,8 +791,9 @@ export async function PATCH(
         ? String(existingOrder.readableId).replace(/-[GR\d]+$/i, '')
         : id.slice(-6).toUpperCase()
 
-      const statusTitle = `Order #${baseOrderNo}: ${statusLabels[status] || status}`
-      const statusBody = `Your FastKirana order #${baseOrderNo} is now ${statusLabels[status] || status}.`
+      const displayStatus = status ? (statusLabels[status] || status) : 'Updated'
+      const statusTitle = `Order #${baseOrderNo}: ${displayStatus}`
+      const statusBody = `Your FastKirana order #${baseOrderNo} is now ${displayStatus}.`
 
       const origin = request.headers.get('origin') || 'https://fastkirana.com'
 
@@ -806,7 +811,7 @@ export async function PATCH(
       // Notify workers/staff of the update
       sendPushNotificationToRoles([Role.ADMIN, Role.CHEF, Role.DELIVERY, Role.PICKER], {
         title: `Order #${baseOrderNo} Updated 🔄`,
-        body: `Order #${baseOrderNo} status changed to ${statusLabels[status] || status}.`,
+        body: `Order #${baseOrderNo} status changed to ${displayStatus}.`,
         icon: `${origin}/icons/icon-192.png`,
         badge: `${origin}/icons/icon-192.png`,
         tag: `order-${existingOrder.id}-update`,

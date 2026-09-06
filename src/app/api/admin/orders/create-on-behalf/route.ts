@@ -7,13 +7,16 @@ import { sendPushNotificationToRoles } from '@/lib/push-notification'
 import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { getLast10Digits } from '@/lib/phone'
+import { validateBodyLegacy, createOnBehalfOrderSchema } from '@/lib/validation'
 
 export async function POST(request: Request) {
   const adminResult = await requireAdmin()
   if (adminResult.error) return adminResult.error
 
+  const validation = await validateBodyLegacy(request, createOnBehalfOrderSchema)
+  if (!validation.success) return validation.error
+
   try {
-    const body = await request.json()
     const {
       customerId,
       phone,
@@ -29,11 +32,7 @@ export async function POST(request: Request) {
       customDeliveryFee = null,
       customDiscount = 0,
       notes = null
-    } = body
-
-    if (!items || items.length === 0) {
-      return NextResponse.json({ error: 'Order must contain at least one item' }, { status: 400 })
-    }
+    } = validation.data
 
     // 1. Resolve Customer (By customerId, phone, or auto-create)
     let customer: any = null

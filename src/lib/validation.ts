@@ -172,6 +172,44 @@ export const createOrderSchema = z.object({
   customerAddress: z.string().nullable().optional(),
 })
 
+export const createOnBehalfOrderSchema = z.object({
+  customerId: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  customerName: z.string().nullable().optional(),
+  addressId: z.string().nullable().optional(),
+  paymentMethod: z.enum(['COD', 'UPI', 'CARD', 'WALLET', 'ONLINE']).optional().default('COD'),
+  items: z.array(z.object({
+    productId: z.string().min(1),
+    name: z.string().optional(),
+    price: z.coerce.number().nonnegative(),
+    quantity: z.coerce.number().int().positive().default(1),
+    selectedVariant: z.string().nullable().optional(),
+  })).min(1, 'Order must contain at least one item'),
+  couponCode: z.string().nullable().optional(),
+  deliveryMethod: z.enum(['DELIVERY', 'PICKUP']).optional().default('DELIVERY'),
+  isB2B: z.boolean().optional().default(false),
+  scheduledSlot: z.string().optional().default('INSTANT'),
+  shopName: z.string().nullable().optional(),
+  customDeliveryFee: z.coerce.number().nonnegative().nullable().optional(),
+  customDiscount: z.coerce.number().nonnegative().optional().default(0),
+  notes: z.string().nullable().optional(),
+})
+
+export const updateOrderStatusSchema = z.object({
+  status: z.enum(['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED']).optional(),
+  paymentStatus: z.enum(['PENDING', 'PAID', 'FAILED', 'REFUNDED']).optional(),
+  paymentMethod: z.string().optional(),
+  deliveryPhoto: z.string().nullable().optional(),
+  deliveryLat: z.union([z.number(), z.string()]).nullable().optional(),
+  deliveryLng: z.union([z.number(), z.string()]).nullable().optional(),
+  prepTime: z.union([z.number(), z.string()]).nullable().optional(),
+  isRiderCash: z.boolean().optional(),
+  paymentCollectedBy: z.string().optional(),
+  cashAmount: z.union([z.number(), z.string()]).nullable().optional(),
+  scope: z.string().optional(),
+  updateCombined: z.boolean().optional(),
+})
+
 // ── Payment Schema ──────────────────────────────────────────────────
 
 export const createRazorpayOrderSchema = z.object({
