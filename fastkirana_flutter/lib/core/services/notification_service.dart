@@ -263,10 +263,10 @@ class NotificationService {
         title.toString().toLowerCase().contains('kitchen') ||
         title.toString().toLowerCase().contains('new order');
 
-    final notifId = (orderId != null && orderId.toString().isNotEmpty)
-        ? (orderId.toString().hashCode & 0x7FFFFFFF)
+    final notifId = (cleanOrderId != null && cleanOrderId.isNotEmpty)
+        ? (cleanOrderId.hashCode & 0x7FFFFFFF)
         : message.hashCode;
-    final tag = (orderId != null && orderId.toString().isNotEmpty) ? 'order_$orderId' : null;
+    final tag = (cleanOrderId != null && cleanOrderId.isNotEmpty) ? 'order_$cleanOrderId' : null;
 
     _localNotifications?.show(
       notifId,
