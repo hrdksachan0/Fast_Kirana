@@ -369,9 +369,15 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                               final visibleProducts = list.take(_visibleCount).toList();
                               final hasMore = _visibleCount < list.length;
 
-                              return CustomScrollView(
-                                controller: _scrollController,
-                                physics: const BouncingScrollPhysics(),
+                          return RefreshIndicator(
+                            color: AppDesignSystem.primary,
+                            onRefresh: () async {
+                              await ProductRepository.invalidateAllCache();
+                              ref.invalidate(productsProvider(widget.category.slug));
+                            },
+                            child: CustomScrollView(
+                              controller: _scrollController,
+                              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                                 slivers: [
                                   SliverPadding(
                                     padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
@@ -423,9 +429,10 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                                     child: SizedBox(height: cartCount > 0 ? 80 : 20),
                                   ),
                                 ],
-                              );
-                            },
-                          );
+                              ),
+                            );
+                          },
+                        );
                         },
                         loading: () => GridView.builder(
                           padding: const EdgeInsets.fromLTRB(6, 6, 6, 20),
