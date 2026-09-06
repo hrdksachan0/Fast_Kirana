@@ -228,35 +228,34 @@ export async function GET(
   }
 }
 
-async function uploadToCloudinary(
-  base64Image: string,
-  cloudName: string,
-  uploadPreset: string
-): Promise<string> {
-  let fileData = base64Image
-  if (!fileData.startsWith('data:')) {
-    fileData = `data:image/jpeg;base64,${base64Image}`
+async function uploadDeliveryPhoto(base64Image: string, orderId: string): Promise<string> {
+  const { uploadToSupabaseStorage } = await import('@/lib/supabase-storage')
+  const sharp = (await import('sharp')).default
+
+  // Clean base64
+  let rawBase64 = base64Image
+  if (rawBase64.includes(',')) {
+    rawBase64 = rawBase64.split(',')[1]
+  }
+  const inputBuffer = Buffer.from(rawBase64, 'base64')
+
+  // Optimize to WebP
+  let finalBuffer: Buffer
+  let contentType = 'image/webp'
+  let ext = 'webp'
+  try {
+    finalBuffer = await sharp(inputBuffer)
+      .resize({ width: 800, withoutEnlargement: true, fit: 'inside' })
+      .webp({ quality: 75, effort: 4 })
+      .toBuffer()
+  } catch {
+    finalBuffer = inputBuffer
+    contentType = 'image/jpeg'
+    ext = 'jpg'
   }
 
-  const formData = new FormData()
-  formData.append('file', fileData)
-  formData.append('upload_preset', uploadPreset)
-
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-    method: 'POST',
-    body: formData,
-  })
-
-  if (!res.ok) {
-    const errText = await res.text()
-    throw new Error(`Cloudinary upload failed: ${res.statusText} - ${errText}`)
-  }
-
-  const data = await res.json()
-  if (!data.secure_url) {
-    throw new Error('Cloudinary response did not contain secure_url')
-  }
-  return data.secure_url
+  const path = `delivery-photos/${orderId}.${ext}`
+  return uploadToSupabaseStorage(finalBuffer, path, contentType)
 }
 
 export async function PATCH(
@@ -444,30 +443,10 @@ export async function PATCH(
       
       if (isBase64) {
         try {
-          // Fetch Cloudinary settings
-          const settings = await prisma.storeSetting.findMany({
-            where: {
-              key: {
-                in: ['cloudinary_cloud_name', 'cloudinary_upload_preset']
-              }
-            }
-          })
-          const settingsMap = settings.reduce((acc, s) => {
-            acc[s.key] = s.value
-            return acc
-          }, {} as Record<string, string>)
-
-          const cloudName = settingsMap['cloudinary_cloud_name']
-          const uploadPreset = settingsMap['cloudinary_upload_preset']
-
-          if (cloudName && uploadPreset) {
-            const cloudinaryUrl = await uploadToCloudinary(deliveryPhoto, cloudName, uploadPreset)
-            finalDeliveryPhoto = cloudinaryUrl
-          } else {
-            console.warn('[Cloudinary Upload] Cloudinary is not configured. Falling back to raw base64 photo.')
-          }
+          const supabaseUrl = await uploadDeliveryPhoto(deliveryPhoto, id)
+          finalDeliveryPhoto = supabaseUrl
         } catch (uploadErr) {
-          console.error('[Cloudinary Upload] Error uploading photo to Cloudinary, falling back to base64:', uploadErr)
+          console.error('[Supabase Storage] Error uploading delivery photo, falling back to base64:', uploadErr)
         }
       }
     }

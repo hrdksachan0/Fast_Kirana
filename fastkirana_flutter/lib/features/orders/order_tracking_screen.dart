@@ -14,6 +14,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:confetti/confetti.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
 import '../../core/theme/responsive.dart';
 import '../../core/config/app_config.dart';
@@ -86,6 +87,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   // Confetti for Delivery Celebration
   late ConfettiController _confettiController;
 
+  // Audio Player for Order Chimes & Arrival Alerts
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _hasPlayedArrivalChime = false;
+
   static const Color primaryRed = Color(0xFFE20A22);
   static const Color brandGreen = Color(0xFF00A344);
   static const Color slateDark = Color(0xFF0F172A);
@@ -137,6 +142,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     _confettiController.dispose();
     _mapController?.dispose();
     _razorpay?.clear();
+    _audioPlayer.dispose();
     for (final ch in _supabaseChannels) {
       SupabaseService.unsubscribe(ch);
     }
@@ -350,20 +356,36 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
   }
 
+  void _playStatusChime() {
+    try {
+      _audioPlayer.stop();
+      _audioPlayer.play(
+        AssetSource('sounds/order_chime.mp3'),
+        volume: 0.9,
+      );
+    } catch (_) {
+      SystemSound.play(SystemSoundType.alert);
+    }
+  }
+
   void _triggerStatusHaptic(OrderStatus? newStatus, OrderStatus? oldStatus) {
     if (newStatus == null || oldStatus == newStatus) return;
     switch (newStatus) {
       case OrderStatus.confirmed:
         HapticFeedback.lightImpact();
+        _playStatusChime();
         break;
       case OrderStatus.packed:
         HapticFeedback.mediumImpact();
+        _playStatusChime();
         break;
       case OrderStatus.shipped:
         HapticFeedback.heavyImpact();
+        _playStatusChime();
         break;
       case OrderStatus.delivered:
         HapticFeedback.heavyImpact();
+        _playStatusChime();
         _confettiController.play();
         break;
       case OrderStatus.cancelled:
@@ -575,6 +597,32 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       if (_order?.status == OrderStatus.delivered) {
         _etaText = 'Delivered 🎉';
       } else if (_order?.status == OrderStatus.shipped) {
+        // Check proximity: when rider is within 120m of customer gate, trigger Arrival chime
+        if (distanceKm <= 0.12 && !_hasPlayedArrivalChime) {
+          _hasPlayedArrivalChime = true;
+          _playStatusChime();
+          HapticFeedback.heavyImpact();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: brandGreen,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 4),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              content: Row(
+                children: [
+                  const Text('🛵 ', style: TextStyle(fontSize: 18)),
+                  Expanded(
+                    child: Text(
+                      'Rider is arriving at your door!',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
         // Average speed 22 km/h in city + 3 min buffer
         final estMinutes = math.max(3, ((distanceKm / 22.0) * 60).round() + 3);
         _etaText = '$estMinutes mins';

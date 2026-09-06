@@ -82,7 +82,8 @@ function LoginForm() {
   }
 
   const validateIdentifier = (val: string) => {
-    const trimmed = val.trim()
+    const trimmed = val.trim().toLowerCase()
+    if (trimmed === 'superadmin' || trimmed === 'admin') return null
     if (loginType === 'WHATSAPP') {
       if (!trimmed) return 'Mobile number is required'
       if (!isPhoneNumber(trimmed)) return 'Please enter a valid 10-digit mobile number'
@@ -136,7 +137,9 @@ function LoginForm() {
     setIsLoading(true)
 
     const isInputPhone = isPhoneNumber(email)
-    const normalizedInput = isInputPhone ? normalizePhoneNumber(email) : email.toLowerCase().trim()
+    let normalizedInput = isInputPhone ? normalizePhoneNumber(email) : email.toLowerCase().trim()
+    if (normalizedInput === 'superadmin') normalizedInput = 'superadmin@fastkirana.com'
+    if (normalizedInput === 'admin') normalizedInput = 'admin@fastkirana.com'
 
     try {
       const res = await fetch('/api/auth/email/check', {
@@ -537,7 +540,7 @@ function LoginForm() {
                 <Input
                   id="email"
                   type="text"
-                  placeholder={loginType === 'WHATSAPP' ? 'Enter 10-digit WhatsApp number' : 'admin@fastkirana.com or 10-digit mobile'}
+                  placeholder={loginType === 'WHATSAPP' ? 'Enter 10-digit WhatsApp number' : 'superadmin, admin@fastkirana.com or 10-digit mobile'}
                   value={email}
                   onChange={(e) => {
                     let val = e.target.value

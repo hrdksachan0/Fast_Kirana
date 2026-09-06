@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import sharp from 'sharp'
+import { uploadToSupabaseStorage, generateStoragePath } from '@/lib/supabase-storage'
 
 async function optimizeImageToWebP(inputBuffer: Buffer): Promise<{ buffer: Buffer; isWebP: boolean }> {
   try {
@@ -18,34 +18,6 @@ async function optimizeImageToWebP(inputBuffer: Buffer): Promise<{ buffer: Buffe
     console.warn('[WebP Optimization] Compression fallback to original:', err)
     return { buffer: inputBuffer, isWebP: false }
   }
-}
-
-async function uploadToCloudinary(
-  base64Image: string,
-  cloudName: string,
-  uploadPreset: string
-): Promise<string> {
-  let fileData = base64Image
-  if (!fileData.startsWith('data:')) {
-    fileData = `data:image/webp;base64,${base64Image}`
-  }
-
-  const formData = new FormData()
-  formData.append('file', fileData)
-  formData.append('upload_preset', uploadPreset)
-
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-    method: 'POST',
-    body: formData,
-  })
-
-  if (!res.ok) {
-    const errText = await res.text()
-    throw new Error(`Cloudinary upload failed: ${res.statusText} - ${errText}`)
-  }
-
-  const data = await res.json()
-  return data.secure_url || data.url
 }
 
 export async function POST(req: Request) {
@@ -83,23 +55,19 @@ export async function POST(req: Request) {
     // Auto-compress to WebP (max 800px width, quality 80)
     const { buffer: optimizedBuffer, isWebP } = await optimizeImageToWebP(inputBuffer)
     const mime = isWebP ? 'image/webp' : 'image/jpeg'
-    const base64Data = `data:${mime};base64,${optimizedBuffer.toString('base64')}`
+    const ext = isWebP ? 'webp' : 'jpg'
 
-    // Try Cloudinary if configured in Settings
+    // Upload to Supabase Storage
     try {
-      const settings = await prisma.storeSetting.findMany({
-        where: { key: { in: ['cloudinary_cloud_name', 'cloudinary_upload_preset'] } }
-      })
-      const map = settings.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {} as Record<string, string>)
-      if (map.cloudinary_cloud_name && map.cloudinary_upload_preset) {
-        const cloudinaryUrl = await uploadToCloudinary(base64Data, map.cloudinary_cloud_name, map.cloudinary_upload_preset)
-        return NextResponse.json({ success: true, url: cloudinaryUrl })
-      }
-    } catch (e) {
-      console.warn('Cloudinary upload skipped, using fallback:', e)
+      const storagePath = generateStoragePath('products', ext)
+      const publicUrl = await uploadToSupabaseStorage(optimizedBuffer, storagePath, mime)
+      return NextResponse.json({ success: true, url: publicUrl })
+    } catch (storageErr) {
+      console.error('[Supabase Storage] Upload failed, falling back to data URL:', storageErr)
     }
 
-    // Return Data URL (works instantly everywhere)
+    // Fallback: Return Data URL (works instantly everywhere)
+    const base64Data = `data:${mime};base64,${optimizedBuffer.toString('base64')}`
     return NextResponse.json({ success: true, url: base64Data })
   } catch (err: any) {
     console.error('Image Upload API Error:', err)

@@ -36,10 +36,13 @@ export async function POST(request: NextRequest) {
 
     const getNormalizedPhone = (val: string) => normalizePhone(val)
 
+    if (normalizedEmail === 'superadmin') normalizedEmail = 'superadmin@fastkirana.com'
+    if (normalizedEmail === 'admin') normalizedEmail = 'admin@fastkirana.com'
+
     if (isPhoneNumber(trimmed)) {
       const normalizedPhone = getNormalizedPhone(trimmed)
       const phoneDigits = getLast10Digits(trimmed)
-      const existingUser = await prisma.user.findFirst({
+      const matchingUsers = await prisma.user.findMany({
         where: {
           OR: [
             { phone: normalizedPhone },
@@ -50,14 +53,19 @@ export async function POST(request: NextRequest) {
             { email: trimmed.toLowerCase() }
           ]
         },
-        select: { email: true }
+        select: { email: true, role: true }
       })
+      const canonicalUser = matchingUsers.find(u =>
+        (phoneDigits === '9170942500' && u.email === 'superadmin@fastkirana.com') ||
+        (phoneDigits === '7054470303' && u.email === 'admin@fastkirana.com')
+      )
+      const existingUser = canonicalUser || matchingUsers.find(u => u.role !== 'USER') || matchingUsers[0]
       if (existingUser) {
         normalizedEmail = existingUser.email
       } else {
         normalizedEmail = `wa-${phoneDigits}@fastkirana.com`
       }
-    } else if (!trimmed.includes('@')) {
+    } else if (!normalizedEmail.includes('@')) {
       return NextResponse.json({ error: 'Please enter a valid email address or 10-digit mobile number' }, { status: 400 })
     }
 

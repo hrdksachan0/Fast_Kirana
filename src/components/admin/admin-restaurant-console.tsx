@@ -766,7 +766,7 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-text-secondary block mb-1">Dish Photo URL (Cloudinary / Library)</label>
+                <label className="text-[10px] font-bold text-text-secondary block mb-1">Dish Photo URL (Upload / Library)</label>
                 <div className="flex gap-2">
                   <input
                     type="text"

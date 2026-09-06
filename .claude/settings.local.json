@@ -10,7 +10,8 @@
       "Bash(python3 -c ' *)",
       "Bash(python3)",
       "Bash(timeout 180 npx tsc --noEmit --skipLibCheck)",
-      "Bash(node -e \"const z = require\\('zod'\\); console.log\\(z.version\\)\")"
+      "Bash(node -e \"const z = require\\('zod'\\); console.log\\(z.version\\)\")",
+      "Bash(npx tsc *)"
     ]
   }
 }

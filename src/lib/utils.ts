@@ -51,6 +51,10 @@ export function isCafeProduct(p: any): boolean {
 
 export function getOptimizedImageUrl(url: string | null | undefined, width = 300): string | null {
   if (!url) return null
+  // Supabase Storage images are already WebP-optimized at upload time
+  if (url.includes('supabase.co/storage/')) {
+    return url
+  }
   if (url.includes('cloudinary.com') && url.includes('/image/upload/')) {
     if (url.includes('/image/upload/f_auto') || url.includes('/image/upload/w_')) {
       return url

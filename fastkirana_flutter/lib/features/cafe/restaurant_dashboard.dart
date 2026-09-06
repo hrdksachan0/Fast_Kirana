@@ -205,6 +205,15 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
           _menuItems = menuList.map((e) => Map<String, dynamic>.from(e)).toList();
         });
       }
+
+      final savedOpen = prefs.getBool('store_open_${_assignedRestaurantId ?? "default"}');
+      if (savedOpen != null && mounted) {
+        setState(() => _isStoreOpen = savedOpen);
+      }
+      final savedBusy = prefs.getBool('busy_mode_${_assignedRestaurantId ?? "default"}');
+      if (savedBusy != null && mounted) {
+        setState(() => _isBusyMode = savedBusy);
+      }
     } catch (e, _) { LoggerService.error('RestaurantDashboard: silent catch', e); }
   }
 
@@ -2569,20 +2578,46 @@ $formattedItems
           subtitle: Text(_isStoreOpen ? 'Accepting online orders' : 'Closed for online orders', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
           value: _isStoreOpen,
           activeColor: brandGreen,
-          onChanged: (val) {
+          onChanged: (val) async {
             setState(() => _isStoreOpen = val);
             HapticFeedback.lightImpact();
+            try {
+              final prefs = await SharedPreferences.getInstance();
+              final outletKey = _assignedRestaurantId ?? 'default';
+              await prefs.setBool('store_open_$outletKey', val);
+              
+              if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty && _assignedRestaurantId != 'ALL') {
+                final dio = ref.read(dioProvider);
+                await dio.patch('/api/restaurants/$_assignedRestaurantId', data: {'isOpen': val});
+              }
+            } catch (e) {
+              LoggerService.error('Store open toggle error: $e');
+            }
           },
         ),
         const Divider(height: 1, color: slateBorder),
         SwitchListTile.adaptive(
-          title: Text('Busy Mode (+15m prep delay)', style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: slateDark)),
-          subtitle: Text('Adds extra cooking time during rush', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
+          title: Text('Kitchen Busy / High Rush Mode', style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: slateDark)),
+          subtitle: Text('Displays "Kitchen in High Demand" notice on restaurant menu', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
           value: _isBusyMode,
           activeColor: brandAmber,
-          onChanged: (val) {
+          onChanged: (val) async {
             setState(() => _isBusyMode = val);
             HapticFeedback.lightImpact();
+            try {
+              final prefs = await SharedPreferences.getInstance();
+              final outletKey = _assignedRestaurantId ?? 'default';
+              await prefs.setBool('busy_mode_$outletKey', val);
+              
+              if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty && _assignedRestaurantId != 'ALL') {
+                final dio = ref.read(dioProvider);
+                await dio.patch('/api/restaurants/$_assignedRestaurantId', data: {
+                  'discountBadge': val ? 'HIGH RUSH' : null,
+                });
+              }
+            } catch (e) {
+              LoggerService.error('Busy mode toggle error: $e');
+            }
           },
         ),
       ],

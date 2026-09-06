@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
 import { requireAdmin } from '@/lib/auth-guard'
 import { apiReadLimiter, apiWriteLimiter } from '@/lib/rate-limit'
-import { revalidateStorefront } from '@/lib/revalidate'
+import { revalidateStorefront, revalidateRestaurant } from '@/lib/revalidate'
 
 import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
 
@@ -243,7 +243,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    revalidateStorefront('restaurants')
+    revalidateRestaurant(restaurant.slug)
 
     return NextResponse.json(restaurant, { status: 201 })
   } catch (error: any) {

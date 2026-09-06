@@ -26,6 +26,7 @@ import '../../widgets/shimmer_box.dart';
 import '../auth/login_screen.dart';
 import '../checkout/checkout_screen.dart';
 import 'coupons_screen.dart';
+import '../../widgets/unserviceable_location_banner.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
@@ -1504,7 +1505,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         'slug': 'fresh-coriander-dhaniya',
         'price': 10.0,
         'mrp': 15.0,
-        'imageUrl': 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1785554730/e3eq2j9dyuwaxlspl6hb.png',
+        'imageUrl': 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/cmqktxom8000004ibncjatoqx.webp',
         'categoryId': 'fruits-vegetables',
         'unit': '100 g',
         'stock': 50,
@@ -1515,7 +1516,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         'slug': 'fresh-green-chilli-mirchi',
         'price': 10.0,
         'mrp': 15.0,
-        'imageUrl': 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1785554728/mdtjwibywbkjqmo3q2sw.jpg',
+        'imageUrl': 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/cmqktjc3n000004ldxa279qoe.webp',
         'categoryId': 'fruits-vegetables',
         'unit': '100 g',
         'stock': 50,
@@ -1526,7 +1527,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         'slug': 'fresh-lemon-nimbu',
         'price': 15.0,
         'mrp': 20.0,
-        'imageUrl': 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1785554730/e3eq2j9dyuwaxlspl6hb.png',
+        'imageUrl': 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/cmqkw3x24000004l1iaczr6wx.webp',
         'categoryId': 'fruits-vegetables',
         'unit': '2 pcs',
         'stock': 50,
@@ -1537,7 +1538,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         'slug': 'maggi-masala-e-magic',
         'price': 6.0,
         'mrp': 6.0,
-        'imageUrl': 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1785554728/mdtjwibywbkjqmo3q2sw.jpg',
+        'imageUrl': 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/cmsdlmtfi000904l1plhv5bds.webp',
         'categoryId': 'masalas-spices',
         'unit': '1 sachet',
         'stock': 100,
@@ -1548,7 +1549,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         'slug': 'homelites-safety-matchbox',
         'price': 5.0,
         'mrp': 10.0,
-        'imageUrl': 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1785554730/e3eq2j9dyuwaxlspl6hb.png',
+        'imageUrl': 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/cmqktxom8000004ibncjatoqx.webp',
         'categoryId': 'household-care',
         'unit': '1 pack',
         'stock': 100,

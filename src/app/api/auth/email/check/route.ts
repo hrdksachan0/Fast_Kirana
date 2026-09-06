@@ -17,6 +17,8 @@ export async function POST(request: NextRequest) {
 
     const trimmed = rawEmail.trim()
     let normalizedEmail = trimmed.toLowerCase()
+    if (normalizedEmail === 'superadmin') normalizedEmail = 'superadmin@fastkirana.com'
+    if (normalizedEmail === 'admin') normalizedEmail = 'admin@fastkirana.com'
     let isPhone = false
     let normalizedPhone = ''
 
@@ -72,7 +74,7 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Validate email format
-      if (!trimmed.includes('@')) {
+      if (!normalizedEmail.includes('@')) {
         return ApiResponder.error('Please enter a valid email address or 10-digit mobile number', 400)
       }
     }

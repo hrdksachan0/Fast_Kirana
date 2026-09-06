@@ -540,7 +540,7 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(authProvider);
     final user = userAsync.valueOrNull;
-    final userId = user?.id ?? 'cmqgzqeud0000vkid7hd6mti4';
+    final userId = user?.id ?? '';
     final ordersAsync = ref.watch(ordersProvider(userId));
     final wishlist = ref.watch(wishlistProvider);
     final addresses = ref.watch(addressesProvider).valueOrNull ?? [];
@@ -1012,8 +1012,14 @@ class ProfileScreen extends ConsumerWidget {
                         child: const Icon(Icons.receipt_long_rounded, color: AppDesignSystem.blue600, size: 20),
                       ),
                       title: 'My Orders',
-                      subtitle: ordersCount > 0 ? '$ordersCount Placed' : 'No Orders',
-                      onTap: () => Navigator.push(context, FadeSlideRoute(page: const OrdersScreen())),
+                      subtitle: (user != null && ordersCount > 0) ? '$ordersCount Placed' : 'No Orders',
+                      onTap: () {
+                        if (user == null) {
+                          Navigator.push(context, FadeSlideRoute(page: const LoginScreen()));
+                        } else {
+                          Navigator.push(context, FadeSlideRoute(page: const OrdersScreen()));
+                        }
+                      },
                     ),
                     const SizedBox(width: 10),
                     _buildShortcutCard(
@@ -1092,7 +1098,13 @@ class ProfileScreen extends ConsumerWidget {
                             iconColor: AppDesignSystem.indigo700,
                             title: 'Notifications & Alerts',
                             subtitle: 'Order tracking, offers & dispatch updates',
-                            onTap: () => Navigator.push(context, FadeSlideRoute(page: const NotificationsScreen())),
+                            onTap: () {
+                              if (user == null) {
+                                Navigator.push(context, FadeSlideRoute(page: const LoginScreen()));
+                              } else {
+                                Navigator.push(context, FadeSlideRoute(page: const NotificationsScreen()));
+                              }
+                            },
                           ),
                           if (user != null) ...[
                             const Divider(height: 1, color: AppDesignSystem.slate100),

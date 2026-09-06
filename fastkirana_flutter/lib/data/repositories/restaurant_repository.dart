@@ -106,8 +106,8 @@ class RestaurantRepository {
         deliveryTime: '20-25 mins',
         cuisineTags: ['NORTH INDIAN', 'CHINESE', 'SNACKS'],
         isOpen: true,
-        logoUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1785657216/pvftayp9lqp9vvmziwaw.jpg',
-        bannerUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1785657558/u9oke6c5baqpfed68fct.jpg',
+        logoUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-103-logo.webp',
+        bannerUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-103-banner.webp',
       ),
       Restaurant(
         id: 'REST-104',
@@ -120,9 +120,11 @@ class RestaurantRepository {
         totalRatings: 45,
         deliveryTime: '15-20 mins',
         cuisineTags: ['SWEETS', 'DAIRY', 'MILK', 'PANEER'],
-        isOpen: false,
-        logoUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1788539204/ztjqxnydec1x2jlxgklg.png',
-        bannerUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1788539733/ivqp3nsp36dp8svdskyu.png',
+        isOpen: true,
+        lat: 26.1534,
+        lng: 80.1714,
+        logoUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-104-logo.webp',
+        bannerUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-104-banner.webp',
       ),
     ];
   }

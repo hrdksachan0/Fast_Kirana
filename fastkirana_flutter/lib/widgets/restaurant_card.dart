@@ -81,9 +81,9 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
         ),
       );
     } else if (lower.contains('bal udyan') || lower.contains('bal-udyan')) {
-      // Bal Udyan exact banner from Cloudinary (NOT logo!)
+      // Bal Udyan exact banner from Supabase Storage
       return CachedNetworkImage(
-        imageUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1785657558/u9oke6c5baqpfed68fct.jpg',
+        imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-103-banner.webp',
         fit: BoxFit.cover,
         memCacheWidth: 600,
         memCacheHeight: 400,
@@ -102,7 +102,7 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
       );
     } else if (lower.contains('pari') || lower.contains('dairy') || lower.contains('sweet')) {
       return CachedNetworkImage(
-        imageUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1788539733/ivqp3nsp36dp8svdskyu.png',
+        imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-104-banner.webp',
         fit: BoxFit.cover,
         memCacheWidth: 600,
         memCacheHeight: 400,

@@ -201,36 +201,29 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
     const file = e.target.files?.[0]
     if (!file) return
 
-    const cloudName = settingsMap['cloudinary_cloud_name']
-    const uploadPreset = settingsMap['cloudinary_upload_preset']
-
-    if (!cloudName || !uploadPreset) {
-      toast.error('Cloudinary not configured! Go to the "Store Settings" tab to set Cloudinary Cloud Name and Preset first.')
-      return
-    }
-
     setIsUploading(true)
     const formData = new FormData()
     formData.append('file', file)
-    formData.append('upload_preset', uploadPreset)
 
     try {
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      const res = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       })
 
       if (res.ok) {
         const data = await res.json()
-        setImageUrl(data.secure_url)
-        toast.success('Banner image uploaded to Cloudinary successfully!')
+        if (data.url) {
+          setImageUrl(data.url)
+          toast.success('Banner image uploaded successfully!')
+        }
       } else {
-        const errData = await res.json()
-        toast.error(`Cloudinary upload failed: ${errData.error?.message || 'Check credentials'}`)
+        const errData = await res.json().catch(() => ({}))
+        toast.error(`Upload failed: ${errData.error || 'Unknown error'}`)
       }
     } catch (err) {
       console.error(err)
-      toast.error('Could not connect to Cloudinary.')
+      toast.error('Could not upload image.')
     } finally {
       setIsUploading(false)
       e.target.value = ''
@@ -721,7 +714,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                     <label className="text-[9px] font-extrabold uppercase tracking-wider text-text-secondary">Or Paste Image URL</label>
                     <input
                       type="url"
-                      placeholder="https://res.cloudinary.com/.../image.jpg"
+                      placeholder="https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/..."
                       value={imageUrl}
                       onChange={(e) => setImageUrl(e.target.value)}
                       className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"

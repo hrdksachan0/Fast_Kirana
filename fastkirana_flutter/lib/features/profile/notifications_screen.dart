@@ -32,6 +32,17 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final userId = prefs.getString('user_id') ?? '';
     final phone = prefs.getString('user_phone') ?? '';
 
+    // If user is logged out, clear notifications completely
+    if (userId.isEmpty && phone.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _userOrders = [];
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
     // Auto-enable all notifications in background
     await prefs.setBool('notif_order_updates', true);
     await prefs.setBool('notif_offers_promos', true);

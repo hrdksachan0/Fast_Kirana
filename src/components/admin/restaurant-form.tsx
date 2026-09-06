@@ -11,6 +11,7 @@ import {
   UserCheck, UserPlus, ShieldCheck, User, Activity, Check, Search,
   Navigation, Globe
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface RestaurantFormProps {
   restaurant?: any
@@ -397,15 +398,23 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
             Back to Restaurants
           </button>
           <div className="flex items-center gap-2">
-            {formData.isActive ? (
-              <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 rounded-full text-[10px] font-black">
-                <Eye className="h-3 w-3" /> Active
-              </span>
-            ) : (
-              <span className="flex items-center gap-1.5 px-3 py-1 bg-rose-500/10 text-rose-600 border border-rose-500/20 rounded-full text-[10px] font-black">
-                <EyeOff className="h-3 w-3" /> Inactive
-              </span>
-            )}
+            <button
+              type="button"
+              onClick={() => setFormData(prev => ({ ...prev, isActive: !prev.isActive }))}
+              title="Click to toggle Active status"
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black border transition-all cursor-pointer shadow-sm select-none",
+                formData.isActive
+                  ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/25"
+                  : "bg-rose-500/15 text-rose-600 border-rose-500/30 hover:bg-rose-500/25"
+              )}
+            >
+              {formData.isActive ? (
+                <><Eye className="h-3.5 w-3.5" /> Live on App: Active (Click to toggle)</>
+              ) : (
+                <><EyeOff className="h-3.5 w-3.5" /> Live on App: Inactive (Click to toggle)</>
+              )}
+            </button>
           </div>
         </div>
       )}

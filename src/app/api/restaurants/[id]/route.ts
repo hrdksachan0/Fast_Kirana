@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { requireAdmin } from '@/lib/auth-guard'
-import { revalidateStorefront } from '@/lib/revalidate'
+import { revalidateStorefront, revalidateRestaurant } from '@/lib/revalidate'
 import { clearSettingsCache } from '@/lib/settings-cache'
 
 import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
@@ -302,7 +302,7 @@ export async function PATCH(
       }
     })
 
-    revalidateStorefront('restaurants')
+    revalidateRestaurant(finalUpdatedRestaurant?.slug || restaurant.slug)
 
     return NextResponse.json(finalUpdatedRestaurant)
   } catch (error: any) {
@@ -341,7 +341,7 @@ export async function DELETE(
       data: { isActive: false },
     })
 
-    revalidateStorefront('restaurants')
+    revalidateRestaurant(restaurant.slug)
 
     return NextResponse.json({ message: 'Restaurant successfully deactivated' })
   } catch (error: any) {

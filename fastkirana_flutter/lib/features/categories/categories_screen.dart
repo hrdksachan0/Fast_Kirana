@@ -225,14 +225,10 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(16),
                         child: Image.asset(
-                          'assets/categories/hero_welcome.webp',
+                          'assets/categories/fruits_vegetables_category.webp',
                           fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => Image.asset(
-                            'assets/categories/fruits_vegetables_category.webp',
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => Center(
-                              child: Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 36))),
-                            ),
+                          errorBuilder: (_, __, ___) => Center(
+                            child: Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 36))),
                           ),
                         ),
                       ),

@@ -477,7 +477,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
       );
     } else if (lower.contains('bal') || lower.contains('udyan')) {
       return CachedNetworkImage(
-        imageUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1785657558/u9oke6c5baqpfed68fct.jpg',
+        imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-103-banner.webp',
         fit: BoxFit.cover,
         memCacheWidth: 800,
         memCacheHeight: 400,
@@ -485,7 +485,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
       );
     } else if (lower.contains('pari') || lower.contains('dairy') || lower.contains('sweet')) {
       return CachedNetworkImage(
-        imageUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1788539733/ivqp3nsp36dp8svdskyu.png',
+        imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-104-banner.webp',
         fit: BoxFit.cover,
         memCacheWidth: 800,
         memCacheHeight: 400,
@@ -558,7 +558,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
       );
     } else if (lower.contains('bal') || lower.contains('udyan')) {
       return CachedNetworkImage(
-        imageUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1785657216/pvftayp9lqp9vvmziwaw.jpg',
+        imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-103-logo.webp',
         fit: BoxFit.cover,
         memCacheWidth: 200,
         memCacheHeight: 200,
@@ -566,7 +566,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
       );
     } else if (lower.contains('pari') || lower.contains('dairy') || lower.contains('sweet')) {
       return CachedNetworkImage(
-        imageUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1788539204/ztjqxnydec1x2jlxgklg.png',
+        imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-104-logo.webp',
         fit: BoxFit.cover,
         memCacheWidth: 200,
         memCacheHeight: 200,
@@ -816,7 +816,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                 ),
               ),
 
-              // ─── 2. RATING STRIP ───
+              // ─── 2. RATING STRIP & HIGH RUSH BADGE ───
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
@@ -845,6 +845,34 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                         '($totalReviews reviews)',
                         style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: AppDesignSystem.textSecondary),
                       ),
+                      if (currentRestaurant?.discountBadge?.toUpperCase().contains('RUSH') == true ||
+                          currentRestaurant?.discountBadge?.toUpperCase().contains('BUSY') == true) ...[
+                        const SizedBox(width: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFF59E0B), width: 1),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('🔥', style: TextStyle(fontSize: 12)),
+                              const SizedBox(width: 4),
+                              Text(
+                                'HIGH RUSH',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 10.5),
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFFB45309),
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

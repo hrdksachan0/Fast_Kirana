@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/theme/responsive.dart';
 import '../../core/routes/page_transitions.dart';
@@ -20,6 +21,11 @@ import '../cart/cart_screen.dart';
 import 'order_tracking_screen.dart';
 
 final ordersProvider = FutureProvider.family<List<Order>, String>((ref, userId) async {
+  if (userId.isEmpty) {
+    final prefs = await SharedPreferences.getInstance();
+    final phone = prefs.getString('user_phone') ?? prefs.getString('auth_phone') ?? '';
+    if (phone.isEmpty) return [];
+  }
   return OrderRepository(ref.read(dioProvider)).getOrders(userId);
 });
 

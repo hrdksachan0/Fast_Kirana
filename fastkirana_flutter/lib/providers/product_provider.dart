@@ -40,7 +40,7 @@ final productsByRestaurantProvider = FutureProvider.family<List<Product>, String
 final homeProductCatalogProvider = FutureProvider<List<Product>>((ref) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
-  return repo.getProducts(limit: 500);
+  return repo.getProducts(limit: 1000);
 });
 
 final cartUpsellProductsProvider = FutureProvider.family<List<Product>, List<String>>((ref, productIds) async {

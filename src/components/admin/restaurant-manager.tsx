@@ -69,6 +69,31 @@ export function RestaurantManager({ initialRestaurants }: RestaurantManagerProps
     }
   }
 
+  const toggleActive = async (id: string, currentActive: boolean) => {
+    try {
+      setIsUpdating(id)
+      const res = await fetch(`/api/restaurants/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !currentActive })
+      })
+
+      if (!res.ok) throw new Error('Failed to update active status')
+
+      setRestaurants(restaurants.map(r => 
+        r.id === id ? { ...r, isActive: !currentActive } : r
+      ))
+      
+      toast.success(!currentActive ? 'Restaurant activated & live on Web & App! 🚀' : 'Restaurant deactivated (hidden from apps)')
+      router.refresh()
+    } catch (error) {
+      toast.error('Failed to update active status')
+      console.error(error)
+    } finally {
+      setIsUpdating(null)
+    }
+  }
+
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) return
 
@@ -128,12 +153,24 @@ export function RestaurantManager({ initialRestaurants }: RestaurantManagerProps
                   </div>
                 )}
                 <div className="absolute top-3 right-3 flex gap-2">
-                  <Badge variant="outline" className={cn(
-                    "font-bold shadow-sm backdrop-blur-md border-0",
-                    restaurant.isActive ? "bg-emerald-500/90 text-white" : "bg-zinc-500/90 text-white"
-                  )}>
-                    {restaurant.isActive ? 'Active' : 'Inactive'}
-                  </Badge>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      toggleActive(restaurant.id, restaurant.isActive)
+                    }}
+                    disabled={isUpdating === restaurant.id}
+                    title="Click to toggle Active/Inactive on Apps"
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black shadow-md backdrop-blur-md transition-all cursor-pointer border",
+                      restaurant.isActive 
+                        ? "bg-emerald-600/90 hover:bg-emerald-700 text-white border-emerald-400/50" 
+                        : "bg-rose-600/90 hover:bg-rose-700 text-white border-rose-400/50"
+                    )}
+                  >
+                    <span className={cn("h-2 w-2 rounded-full", restaurant.isActive ? "bg-white animate-pulse" : "bg-white/80")} />
+                    {restaurant.isActive ? 'Active (Live)' : 'Inactive (Hidden)'}
+                  </button>
                 </div>
                 
                 {/* Logo overlapping banner */}
@@ -211,23 +248,52 @@ export function RestaurantManager({ initialRestaurants }: RestaurantManagerProps
                     </div>
                   </div>
                   
+                  {/* Live on Apps Toggle */}
                   <div className="flex items-center justify-between py-2 border-t border-border/50">
-                    <span className="text-sm font-medium text-text-secondary">Accepting Orders</span>
+                    <div>
+                      <span className="text-xs font-bold text-text-primary block">Live on Apps</span>
+                      <span className="text-[10px] text-text-secondary">Visible in Storefront & Flutter</span>
+                    </div>
+                    <button
+                      onClick={() => toggleActive(restaurant.id, restaurant.isActive)}
+                      disabled={isUpdating === restaurant.id}
+                      className={cn(
+                        "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer",
+                        restaurant.isActive 
+                          ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300" 
+                          : "bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-900/40 dark:text-rose-300",
+                        isUpdating === restaurant.id && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      {restaurant.isActive ? (
+                        <><ToggleRight className="h-4 w-4 text-emerald-600" /> Active</>
+                      ) : (
+                        <><ToggleLeft className="h-4 w-4 text-rose-500" /> Inactive</>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Accepting Orders Toggle */}
+                  <div className="flex items-center justify-between py-2 border-t border-border/50">
+                    <div>
+                      <span className="text-xs font-bold text-text-primary block">Accepting Orders</span>
+                      <span className="text-[10px] text-text-secondary">Kitchen operating status</span>
+                    </div>
                     <button
                       onClick={() => toggleStatus(restaurant.id, restaurant.isOpen)}
                       disabled={isUpdating === restaurant.id}
                       className={cn(
-                        "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold transition-colors",
+                        "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer",
                         restaurant.isOpen 
                           ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400" 
-                          : "bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400",
+                          : "bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400",
                         isUpdating === restaurant.id && "opacity-50 cursor-not-allowed"
                       )}
                     >
                       {restaurant.isOpen ? (
-                        <><ToggleRight className="h-5 w-5" /> Open</>
+                        <><ToggleRight className="h-4 w-4" /> Open</>
                       ) : (
-                        <><ToggleLeft className="h-5 w-5" /> Closed</>
+                        <><ToggleLeft className="h-4 w-4" /> Closed</>
                       )}
                     </button>
                   </div>

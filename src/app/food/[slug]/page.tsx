@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 import { RestaurantStorefront } from '@/components/food/restaurant-storefront'
-import { OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID, OUTLET_BAL_UDYAN_ID } from '@/lib/constants'
+import { OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID, OUTLET_BAL_UDYAN_ID, OUTLET_PARI_MILK_ID } from '@/lib/constants'
 import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
 
 async function findRestaurantBySlug(rawSlug: string) {
@@ -33,6 +33,10 @@ async function findRestaurantBySlug(rawSlug: string) {
     decodedSlug.includes('bal') ||
     decodedSlug.includes('udyan')
 
+  const isPariDairy =
+    decodedSlug.includes('pari') ||
+    decodedSlug.includes('dairy')
+
   // 1. Primary search: exact slug, ID, or known alias ID
   const restaurant = await prisma.restaurant.findFirst({
     where: {
@@ -59,6 +63,13 @@ async function findRestaurantBySlug(rawSlug: string) {
               { id: OUTLET_BAL_UDYAN_ID },
               { slug: { in: ['bal-udyan', 'bal-udyan-restaurant', 'baludyan'] } },
               { name: { contains: 'Bal Udyan', mode: 'insensitive' as const } },
+            ]
+          : []),
+        ...(isPariDairy
+          ? [
+              { id: OUTLET_PARI_MILK_ID },
+              { slug: { in: ['pari-milk-dairy-sweets', 'pari-dairy', 'pari-milk-dairy', 'pari'] } },
+              { name: { contains: 'Pari', mode: 'insensitive' as const } },
             ]
           : []),
         // Fuzzy startsWith fallback

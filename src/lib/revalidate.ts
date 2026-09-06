@@ -16,8 +16,8 @@ export function revalidateStorefront(
       return
     }
 
-    if (restaurantSlug) {
-      revalidateRestaurant(restaurantSlug)
+    if (categorySlug === 'restaurants' || restaurantSlug) {
+      revalidateRestaurant(restaurantSlug || null)
       return
     }
 
@@ -45,13 +45,16 @@ export function revalidateCategory(categorySlug: string) {
   }
 }
 
-export function revalidateRestaurant(restaurantSlug: string) {
+export function revalidateRestaurant(restaurantSlug?: string | null) {
   try {
     revalidateTag('restaurants', 'max')
-    revalidatePath(`/food/${restaurantSlug}`)
-    revalidatePath(`/restaurant/${restaurantSlug}`)
+    revalidatePath('/')
     revalidatePath('/food')
     revalidatePath('/cafe')
+    if (restaurantSlug) {
+      revalidatePath(`/food/${restaurantSlug}`)
+      revalidatePath(`/restaurant/${restaurantSlug}`)
+    }
   } catch (err) {
     console.error(`Failed to revalidate restaurant ${restaurantSlug}:`, err)
   }

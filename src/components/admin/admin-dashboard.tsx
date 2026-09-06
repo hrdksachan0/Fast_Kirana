@@ -296,36 +296,29 @@ export function AdminDashboard({
   }
 
   const handleCloudinaryUpload = async (file: File, onUploadSuccess: (url: string) => void) => {
-    const cloudName = settingsMap['cloudinary_cloud_name']
-    const uploadPreset = settingsMap['cloudinary_upload_preset']
-
-    if (!cloudName || !uploadPreset) {
-      toast.error('Cloudinary not configured! Go to the "Store Settings" tab to set Cloudinary Cloud Name and Preset first.')
-      return
-    }
-
     setIsUploading(true)
     const formData = new FormData()
     formData.append('file', file)
-    formData.append('upload_preset', uploadPreset)
 
     try {
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      const res = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       })
 
       if (res.ok) {
         const data = await res.json()
-        onUploadSuccess(data.secure_url)
-        toast.success('Image uploaded to Cloudinary successfully!')
+        if (data.url) {
+          onUploadSuccess(data.url)
+          toast.success('Image uploaded successfully!')
+        }
       } else {
-        const errData = await res.json()
-        toast.error(`Cloudinary upload failed: ${errData.error?.message || 'Check credentials'}`)
+        const errData = await res.json().catch(() => ({}))
+        toast.error(`Upload failed: ${errData.error || 'Unknown error'}`)
       }
     } catch (err) {
       console.error(err)
-      toast.error('Could not connect to Cloudinary.')
+      toast.error('Could not upload image.')
     } finally {
       setIsUploading(false)
     }

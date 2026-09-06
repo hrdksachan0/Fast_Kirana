@@ -25,8 +25,6 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [deliveryRadius, setDeliveryRadius] = useState('5')
   const [restaurantEmails, setRestaurantEmails] = useState('')
   const [storeUpiVpa, setStoreUpiVpa] = useState('7054470303@paytm')
-  const [cloudinaryCloudName, setCloudinaryCloudName] = useState('')
-  const [cloudinaryUploadPreset, setCloudinaryUploadPreset] = useState('')
   const [storeLat, setStoreLat] = useState('26.1534185')
   const [storeLng, setStoreLng] = useState('80.1714024')
   const [avgDeliveryTime, setAvgDeliveryTime] = useState('Fast')
@@ -112,8 +110,6 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         if (data.only_cod !== undefined) setOnlyCod(data.only_cod === 'true')
         if (data.delivery_radius !== undefined) setDeliveryRadius(data.delivery_radius)
         if (data.store_upi_vpa) setStoreUpiVpa(data.store_upi_vpa)
-        if (data.cloudinary_cloud_name) setCloudinaryCloudName(data.cloudinary_cloud_name)
-        if (data.cloudinary_upload_preset) setCloudinaryUploadPreset(data.cloudinary_upload_preset)
         if (data.store_lat) setStoreLat(data.store_lat)
         if (data.store_lng) setStoreLng(data.store_lng)
         if (data.avg_delivery_time) setAvgDeliveryTime(data.avg_delivery_time)
@@ -220,8 +216,6 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           only_cod: onlyCod ? 'true' : 'false',
           delivery_radius: deliveryRadius.trim(),
           store_upi_vpa: storeUpiVpa.trim(),
-          cloudinary_cloud_name: cloudinaryCloudName.trim(),
-          cloudinary_upload_preset: cloudinaryUploadPreset.trim(),
           store_lat: storeLat.trim(),
           store_lng: storeLng.trim(),
           avg_delivery_time: avgDeliveryTime.trim(),
@@ -807,37 +801,18 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                   </div>
                 </div>
 
-                {/* Cloudinary Configuration */}
+                {/* Image Storage Configuration */}
                 <div className="border-t border-border/40 pt-4 mt-2">
-                  <h4 className="text-xs font-black text-text-primary mb-3">☁️ Cloudinary Configurations (Direct Image Uploads)</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Cloud Name */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Cloudinary Cloud Name</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. your_cloud_name"
-                        value={cloudinaryCloudName}
-                        onChange={(e) => setCloudinaryCloudName(e.target.value)}
-                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                      />
+                  <h4 className="text-xs font-black text-text-primary mb-3">📦 Image Storage (Supabase Storage)</h4>
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-xs font-bold text-emerald-600">Active — Supabase Storage</span>
                     </div>
-
-                    {/* Upload Preset */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Cloudinary Upload Preset (Unsigned)</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. unsigned_preset"
-                        value={cloudinaryUploadPreset}
-                        onChange={(e) => setCloudinaryUploadPreset(e.target.value)}
-                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                      />
-                    </div>
+                    <p className="text-[9px] text-text-secondary mt-1.5 font-semibold">
+                      All product images, delivery photos, and uploads are automatically stored in Supabase Storage. No configuration needed.
+                    </p>
                   </div>
-                  <p className="text-[9px] text-text-secondary mt-1.5 font-semibold">
-                    To enable direct uploads for product images from your computer, create a free account on <a href="https://cloudinary.com" target="_blank" rel="noreferrer" className="text-primary hover:underline">Cloudinary.com</a> and configure an Unsigned upload preset.
-                  </p>
                 </div>
               </div>
             )}

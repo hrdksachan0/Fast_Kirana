@@ -1,4 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +13,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../data/models/product.dart';
@@ -44,12 +49,85 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with SingleTickerProviderStateMixin {
   bool _isGrocerySelected = true;
   int _selectedFilterIndex = 0;
   int _searchPlaceholderIndex = 0;
   Timer? _searchTimer;
   Timer? _orderSyncTimer;
+
+  // Infinite Product Feed Scroll & Pagination State (Zepto/Blinkit architecture)
+  final ScrollController _homeScrollController = ScrollController();
+  int _visibleGridCount = 20;
+  bool _isLoadingMoreGrid = false;
+
+  // High-contrast vector SVG emojis (Twemoji-style crisp vector paths with clean shadows)
+  static const String _grocerySvg = '''
+<svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <!-- Background Bag (Purple / Teal accent) -->
+  <g filter="url(#shadow)">
+    <!-- Back shopping bag -->
+    <path d="M22 24c0-5.5 4.5-10 10-10s10 4.5 10 10" fill="none" stroke="#FBBF24" stroke-width="4" stroke-linecap="round"/>
+    <path d="M16 26h32l-3 34H19L16 26z" fill="#8B5CF6"/>
+    <path d="M19 26l3 4 3-4 3 4 3-4 3 4 3-4 3 4 3-4 3 4 3-4" stroke="#7C3AED" stroke-width="1.5" fill="none"/>
+    <!-- Front Bright Red/Orange bag -->
+    <path d="M34 20c0-6 5-11 11-11s11 5 11 11" fill="none" stroke="#FDE047" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M28 22h34l-3 38H31L28 22z" fill="#EF4444"/>
+    <path d="M31 22l3 4 3-4 3 4 3-4 3 4 3-4 3 4 3-4 3 4 3-4" stroke="#DC2626" stroke-width="1.5" fill="none"/>
+    <!-- Fresh greens sticking out -->
+    <path d="M42 12c-2-4 1-8 6-7 4 1 5 6 2 9-2 2-6 1-8-2z" fill="#22C55E"/>
+    <path d="M48 9c1-3 5-4 7-1 2 2 1 6-2 7-3 1-5-3-5-6z" fill="#4ADE80"/>
+    <!-- White contrast badge/sparkle -->
+    <circle cx="58" cy="18" r="3" fill="#FFFFFF"/>
+    <circle cx="26" cy="36" r="2.5" fill="#F87171"/>
+  </g>
+</svg>
+''';
+
+  static const String _burgerSvg = '''
+<svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="burgerShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="2.5" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <g filter="url(#burgerShadow)">
+    <!-- Top Bun -->
+    <path d="M12 36c0-13.25 10.75-24 24-24s24 10.75 24 24H12z" fill="#F59E0B"/>
+    <path d="M16 34c2-9 10-17 20-17s18 8 20 17H16z" fill="#FBBF24" opacity="0.35"/>
+    <!-- Sesame Seeds (High Contrast White) -->
+    <ellipse cx="26" cy="23" rx="1.8" ry="2.8" transform="rotate(-25 26 23)" fill="#FEF3C7"/>
+    <ellipse cx="36" cy="19" rx="1.8" ry="2.8" fill="#FEF3C7"/>
+    <ellipse cx="46" cy="24" rx="1.8" ry="2.8" transform="rotate(25 46 24)" fill="#FEF3C7"/>
+    <ellipse cx="31" cy="28" rx="1.5" ry="2.5" transform="rotate(15 31 28)" fill="#FEF3C7"/>
+    <ellipse cx="41" cy="29" rx="1.5" ry="2.5" transform="rotate(-15 41 29)" fill="#FEF3C7"/>
+    <!-- Lettuce (Vibrant Green Wavy) -->
+    <path d="M10 37c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0 4 1.5 6 0 4-1.5 6 0 4 1.5 6 0 4-1.5 6 0 4 1.5 6 0v4H10v-4z" fill="#10B981"/>
+    <!-- Tomato Slices (Vibrant Red) -->
+    <rect x="13" y="40" width="22" height="4.5" rx="2.2" fill="#EF4444"/>
+    <rect x="37" y="40" width="22" height="4.5" rx="2.2" fill="#EF4444"/>
+    <!-- Cheese (Melted Golden Yellow) -->
+    <path d="M12 43.5h48l-6 7-18-2-18 2-6-7z" fill="#FACC15"/>
+    <!-- Patty (Rich Savory Brown) -->
+    <rect x="11" y="48" width="50" height="9" rx="4.5" fill="#78350F"/>
+    <rect x="14" y="50" width="44" height="2" rx="1" fill="#92400E" opacity="0.6"/>
+    <!-- Bottom Bun -->
+    <path d="M13 56h46c0 4.5-3.5 8-8 8H21c-4.5 0-8-3.5-8-8z" fill="#F59E0B"/>
+    <path d="M16 57h40c0 2-2 4-5 4H21c-3 0-5-2-5-4z" fill="#D97706" opacity="0.3"/>
+  </g>
+</svg>
+''';
+
+  // Pulse & shimmer controller to attract attention to the switchable tab
+  late final AnimationController _toggleNudgeController;
+  late final Animation<double> _toggleNudgeAnim;
+  late final Animation<double> _toggleGlowAnim;
 
   static const List<String> _searchPlaceholders = [
     'Search "atta"',
@@ -104,6 +182,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
+
+    // Rhythmic subtle bounce/glow every 2.4s to guide the customer that this is interactive
+    _toggleNudgeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    )..repeat();
+
+    _toggleNudgeAnim = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 1.14).chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 15,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.14, end: 0.96).chain(CurveTween(curve: Curves.easeInOutCubic)),
+        weight: 15,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.96, end: 1.04).chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 12,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.04, end: 1.0).chain(CurveTween(curve: Curves.easeInCubic)),
+        weight: 10,
+      ),
+      TweenSequenceItem(
+        tween: ConstantTween<double>(1.0),
+        weight: 48, // Resting pause between cycles
+      ),
+    ]).animate(_toggleNudgeController);
+
+    _toggleGlowAnim = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeOut)),
+        weight: 25,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 0.0).chain(CurveTween(curve: Curves.easeIn)),
+        weight: 25,
+      ),
+      TweenSequenceItem(
+        tween: ConstantTween<double>(0.0),
+        weight: 50,
+      ),
+    ]).animate(_toggleNudgeController);
+
     // Rotate search placeholders every 3 seconds
     _searchTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (mounted) {
@@ -119,13 +242,103 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ref.invalidate(ordersProvider(''));
       }
     });
+    // Infinite scroll listener for seamless product pagination (Blinkit / Zepto)
+    _homeScrollController.addListener(_onHomeScroll);
   }
 
   @override
   void dispose() {
+    _homeScrollController.removeListener(_onHomeScroll);
+    _homeScrollController.dispose();
+    _toggleNudgeController.dispose();
     _searchTimer?.cancel();
     _orderSyncTimer?.cancel();
     super.dispose();
+  }
+
+  void _onHomeScroll() {
+    if (!_homeScrollController.hasClients || _isLoadingMoreGrid) return;
+    final pos = _homeScrollController.position;
+    // Auto-fetch next 20 products seamlessly when user is 450px from bottom
+    if (pos.pixels >= pos.maxScrollExtent - 450) {
+      _loadMoreGridProducts();
+    }
+  }
+
+  void _loadMoreGridProducts() {
+    if (_isLoadingMoreGrid) return;
+    final catalog = ref.read(homeProductCatalogProvider).valueOrNull ?? [];
+    final filtered = _getFilteredGridProducts(catalog);
+    if (_visibleGridCount >= filtered.length) return;
+
+    setState(() {
+      _isLoadingMoreGrid = true;
+    });
+
+    // Buttery-smooth micro-delay before revealing next 20 items
+    Future.delayed(const Duration(milliseconds: 180), () {
+      if (mounted) {
+        setState(() {
+          _visibleGridCount = math.min(_visibleGridCount + 20, filtered.length);
+          _isLoadingMoreGrid = false;
+        });
+      }
+    });
+  }
+
+  List<Product> _getFilteredGridProducts(List<Product> all) {
+    // Strictly isolate grocery items (exclude restaurant dishes)
+    final groceryItems = all.where((p) => p.restaurantId == null && p.restaurant == null).toList();
+
+    if (_selectedFilterIndex == 1) {
+      // Dynamic Craving / Meal Slot (Breakfast, Lunch, Snacks, Late Night)
+      final timeTab = _getTimeBasedTab().toLowerCase();
+      return groceryItems.where((p) {
+        final name = p.name.toLowerCase();
+        final cat = (p.category?.name ?? '').toLowerCase();
+        final slug = (p.category?.slug ?? '').toLowerCase();
+        final tags = p.tags.map((t) => t.toLowerCase()).toList();
+        if (timeTab == 'breakfast') {
+          return cat.contains('dairy') || cat.contains('bakery') || slug.contains('breakfast') ||
+              name.contains('milk') || name.contains('bread') || name.contains('egg') ||
+              name.contains('tea') || name.contains('coffee') || name.contains('oats') ||
+              name.contains('butter') || tags.contains('breakfast');
+        } else if (timeTab == 'lunch') {
+          return cat.contains('atta') || cat.contains('rice') || cat.contains('dal') ||
+              cat.contains('kitchen') || slug.contains('atta') || name.contains('rice') ||
+              name.contains('dal') || name.contains('oil') || name.contains('flour') || tags.contains('lunch');
+        } else if (timeTab == 'snacks') {
+          return cat.contains('snack') || cat.contains('biscuit') || cat.contains('beverage') ||
+              name.contains('chip') || name.contains('namkeen') || name.contains('maggi') ||
+              tags.contains('snacks');
+        } else {
+          return cat.contains('ice') || cat.contains('sweet') || cat.contains('choco') ||
+              cat.contains('snack') || name.contains('maggi') || name.contains('noodle');
+        }
+      }).toList();
+    } else if (_selectedFilterIndex == 2) {
+      // Trending & Bestsellers
+      return groceryItems.where((p) {
+        return p.isBestsellerProduct ||
+            p.isBestSeller ||
+            p.isTopPick ||
+            p.tags.any((t) => t.toLowerCase().contains('trending') || t.toLowerCase().contains('best'));
+      }).toList();
+    } else if (_selectedFilterIndex == 3) {
+      // Snacks & Munchies Hub
+      return groceryItems.where((p) {
+        final cat = (p.category?.name ?? '').toLowerCase();
+        final slug = (p.category?.slug ?? '').toLowerCase();
+        final name = p.name.toLowerCase();
+        return cat.contains('snack') || slug.contains('snack') ||
+            cat.contains('choco') || cat.contains('biscuit') ||
+            cat.contains('munch') || name.contains('chips') ||
+            name.contains('namkeen') || name.contains('kurkure') ||
+            name.contains('lay') || name.contains('biscuit');
+      }).toList();
+    }
+
+    return groceryItems;
   }
 
   String _getTimeBasedTab() {
@@ -161,8 +374,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 for (final slug in _sectionCategorySlugs.values) {
                   ref.invalidate(productsProvider(slug));
                 }
+                ref.invalidate(homeProductCatalogProvider);
+                if (mounted) {
+                  setState(() {
+                    _visibleGridCount = 20;
+                    _isLoadingMoreGrid = false;
+                  });
+                }
               },
               child: CustomScrollView(
+                controller: _homeScrollController,
                 physics: const BouncingScrollPhysics(),
                 slivers: [
                   // 1. Pinned Header & Search
@@ -187,10 +408,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     // 6. Curated For You Filter Tabs
                     SliverToBoxAdapter(child: _buildCuratedForYouFilter()),
 
-                    // 7. Dynamic Product Sections
+                    // 7. Dynamic Category Carousel Sections (Top Categories)
                     ..._buildApiProductSections(),
 
-                    // 8. Footer
+                    // 8. Infinite Scroll Product Feed (Batch-loaded 20 items at a time, Blinkit/Zepto style)
+                    ..._buildInfiniteProductFeed(),
+
+                    // 9. Footer
                     SliverToBoxAdapter(child: _buildFooter()),
                   ] else ...[
                     // Food & Cafe Mode — directly show restaurants
@@ -1045,212 +1269,281 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  // 2. Grocery / Food Mode Switcher (100% Exact Match to Reference Screenshot)
+  // 2. Reference Match Mode Switcher (Exact 1:1 Design from media_1788694883819.png)
   Widget _buildCategoryToggle() {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.92, end: 1.0),
-      duration: const Duration(milliseconds: 600),
-      curve: Curves.elasticOut,
-      builder: (context, value, child) {
-        return Transform.scale(
-          scale: value,
-          child: child,
-        );
-      },
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-        child: Container(
-          height: 52,
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: AppDesignSystem.background,
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: AppDesignSystem.border, width: 1),
-          ),
-          child: Row(
-            children: [
-              // Grocery Option (Active Red Gradient Pill)
-              Expanded(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    if (_isGrocerySelected) return;
-                    HapticFeedback.selectionClick();
-                    setState(() => _isGrocerySelected = true);
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 320),
-                    curve: Curves.easeInOutCubic,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      gradient: _isGrocerySelected
-                          ? const LinearGradient(
-                              colors: [AppDesignSystem.primary, AppDesignSystem.red300],
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                            )
-                          : null,
-                      borderRadius: BorderRadius.circular(26),
-                      boxShadow: _isGrocerySelected
-                          ? [
-                              BoxShadow(
-                                color: AppDesignSystem.primary.withValues(alpha: 0.35),
-                                blurRadius: 10,
-                                offset: const Offset(0, 3),
-                              ),
-                            ]
-                          : null,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+      child: AnimatedBuilder(
+        animation: _toggleNudgeController,
+        builder: (context, child) {
+          final glowVal = _toggleGlowAnim.value;
+          final nudgeScale = _toggleNudgeAnim.value;
+
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final outerWidth = constraints.maxWidth;
+              const outerHeight = 60.0;
+              const innerPadding = 4.0;
+              final pillWidth = (outerWidth - (innerPadding * 2)) / 2;
+
+              return Container(
+                height: outerHeight,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(32),
+                  border: Border.all(
+                    color: const Color(0xFFE2E8F0),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 14,
+                      offset: const Offset(0, 3),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 300),
-                          transitionBuilder: (child, animation) {
-                            return RotationTransition(
-                              turns: Tween<double>(begin: -0.5, end: 0.0).animate(
-                                CurvedAnimation(parent: animation, curve: Curves.elasticOut),
+                    BoxShadow(
+                      color: (_isGrocerySelected ? const Color(0xFFE20A22) : const Color(0xFFEA580C))
+                          .withValues(alpha: 0.06),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // ── Active Sliding Pill with Glowing Ambient Light ──
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 320),
+                      curve: const Cubic(0.25, 1.0, 0.4, 1.0), // Smooth Apple-like spring
+                      left: _isGrocerySelected ? innerPadding : (innerPadding + pillWidth),
+                      top: innerPadding,
+                      bottom: innerPadding,
+                      width: pillWidth,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: _isGrocerySelected
+                                ? const [Color(0xFFE20A22), Color(0xFFF43F5E)]
+                                : const [Color(0xFFEA580C), Color(0xFFF97316)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(26),
+                          boxShadow: [
+                            // Vibrant Ambient Glow matching reference
+                            BoxShadow(
+                              color: (_isGrocerySelected ? const Color(0xFFE20A22) : const Color(0xFFEA580C))
+                                  .withValues(alpha: 0.45 + (glowVal * 0.1)),
+                              blurRadius: 18,
+                              spreadRadius: 1,
+                              offset: const Offset(0, 4),
+                            ),
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        // Subtle specular top highlight
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: Container(
+                            height: 1.5,
+                            margin: const EdgeInsets.symmetric(horizontal: 20),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.white.withValues(alpha: 0.4),
+                                  Colors.transparent,
+                                ],
                               ),
-                              child: FadeTransition(opacity: animation, child: child),
-                            );
-                          },
-                          child: Icon(
-                            _isGrocerySelected ? Icons.shopping_bag_rounded : Icons.shopping_bag_outlined,
-                            key: ValueKey<bool>(_isGrocerySelected),
-                            size: 20,
-                            color: _isGrocerySelected ? Colors.white : AppDesignSystem.textSecondary,
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                      ),
+                    ),
+
+                    // ── Two Tap Targets (Grocery vs Food & Cafe) ──
+                    Row(
+                      children: [
+                        // 1. Grocery Tab Target
                         Expanded(
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 200),
-                            child: Column(
-                              key: ValueKey<bool>(_isGrocerySelected),
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Grocery',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 13),
-                                    fontWeight: FontWeight.w800,
-                                    color: _isGrocerySelected ? Colors.white : AppDesignSystem.gray700,
-                                    height: 1.1,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              if (_isGrocerySelected) return;
+                              HapticFeedback.mediumImpact();
+                              setState(() => _isGrocerySelected = true);
+                            },
+                            child: Center(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      // 3D Grocery Basket with gentle float animation when inactive
+                                      Transform.scale(
+                                        scale: !_isGrocerySelected ? nudgeScale : 1.0,
+                                        child: Transform.translate(
+                                          offset: Offset(0, !_isGrocerySelected ? (-2 * glowVal) : 0),
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black.withValues(alpha: 0.12),
+                                                  blurRadius: 6,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: SvgPicture.string(
+                                              _grocerySvg,
+                                              width: 32,
+                                              height: 32,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 9),
+                                      // 2-Line Typography
+                                      Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          AnimatedDefaultTextStyle(
+                                            duration: const Duration(milliseconds: 220),
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 16.5,
+                                              fontWeight: FontWeight.w900,
+                                              color: _isGrocerySelected
+                                                  ? Colors.white
+                                                  : const Color(0xFF0F172A),
+                                              letterSpacing: -0.3,
+                                            ),
+                                            child: const Text('Grocery'),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          AnimatedDefaultTextStyle(
+                                            duration: const Duration(milliseconds: 220),
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 8.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: _isGrocerySelected
+                                                  ? Colors.white.withValues(alpha: 0.9)
+                                                  : const Color(0xFF94A3B8),
+                                              letterSpacing: 1.4,
+                                            ),
+                                            child: const Text('FAST DELIVERY'),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                Text(
-                                  'FAST DELIVERY',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 7.5),
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.5,
-                                    color: _isGrocerySelected ? Colors.white.withValues(alpha: 0.95) : AppDesignSystem.textTertiary,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // 2. Food Tab Target
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              if (!_isGrocerySelected) return;
+                              HapticFeedback.mediumImpact();
+                              setState(() => _isGrocerySelected = false);
+                            },
+                            child: Center(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      // 3D Burger with gentle float animation when inactive
+                                      Transform.scale(
+                                        scale: _isGrocerySelected ? nudgeScale : 1.0,
+                                        child: Transform.translate(
+                                          offset: Offset(0, _isGrocerySelected ? (-2 * glowVal) : 0),
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black.withValues(alpha: 0.12),
+                                                  blurRadius: 6,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: SvgPicture.string(
+                                              _burgerSvg,
+                                              width: 32,
+                                              height: 32,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 9),
+                                      // 2-Line Typography
+                                      Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          AnimatedDefaultTextStyle(
+                                            duration: const Duration(milliseconds: 220),
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 16.5,
+                                              fontWeight: FontWeight.w900,
+                                              color: !_isGrocerySelected
+                                                  ? Colors.white
+                                                  : const Color(0xFF0F172A),
+                                              letterSpacing: -0.3,
+                                            ),
+                                            child: const Text('Food'),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          AnimatedDefaultTextStyle(
+                                            duration: const Duration(milliseconds: 220),
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 8.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: !_isGrocerySelected
+                                                  ? Colors.white.withValues(alpha: 0.9)
+                                                  : const Color(0xFF94A3B8),
+                                              letterSpacing: 1.4,
+                                            ),
+                                            child: const Text('RESTAURANTS'),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
+                              ),
                             ),
                           ),
                         ),
                       ],
                     ),
-                  ),
+                  ],
                 ),
-              ),
-
-              const SizedBox(width: 4),
-
-              // Food Option (Inactive / Active Switch)
-              Expanded(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    if (!_isGrocerySelected) return;
-                    HapticFeedback.selectionClick();
-                    setState(() => _isGrocerySelected = false);
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 320),
-                    curve: Curves.easeInOutCubic,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      gradient: !_isGrocerySelected
-                          ? const LinearGradient(
-                              colors: [AppDesignSystem.orange600, AppDesignSystem.orange500],
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                            )
-                          : null,
-                      borderRadius: BorderRadius.circular(26),
-                      boxShadow: !_isGrocerySelected
-                          ? [
-                              BoxShadow(
-                                color: AppDesignSystem.orange600.withValues(alpha: 0.35),
-                                blurRadius: 10,
-                                offset: const Offset(0, 3),
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 300),
-                          transitionBuilder: (child, animation) {
-                            return RotationTransition(
-                              turns: Tween<double>(begin: -0.5, end: 0.0).animate(
-                                CurvedAnimation(parent: animation, curve: Curves.elasticOut),
-                              ),
-                              child: FadeTransition(opacity: animation, child: child),
-                            );
-                          },
-                          child: Icon(
-                            !_isGrocerySelected ? Icons.restaurant_rounded : Icons.restaurant_outlined,
-                            key: ValueKey<bool>(!_isGrocerySelected),
-                            size: 20,
-                            color: !_isGrocerySelected ? Colors.white : AppDesignSystem.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 200),
-                            child: Column(
-                              key: ValueKey<bool>(!_isGrocerySelected),
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Food',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 13),
-                                    fontWeight: FontWeight.w800,
-                                    color: !_isGrocerySelected ? Colors.white : AppDesignSystem.gray700,
-                                    height: 1.1,
-                                  ),
-                                ),
-                                Text(
-                                  'FOOD & RESTAURANTS',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 7.5),
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.5,
-                                    color: !_isGrocerySelected ? Colors.white.withValues(alpha: 0.95) : AppDesignSystem.textTertiary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -1907,7 +2200,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 return GestureDetector(
                   onTap: () {
                     HapticFeedback.selectionClick();
-                    setState(() => _selectedFilterIndex = index);
+                    setState(() {
+                      _selectedFilterIndex = index;
+                      _visibleGridCount = 20;
+                    });
                   },
                   child: Column(
                     children: [
@@ -1974,8 +2270,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  // 7. Dynamic Product Sections (All Categories 10+ Products like Webapp)
+  // 7. Dynamic Product Sections (Top Categories as Quick Carousels)
   List<Widget> _buildApiProductSections() {
+    // When a specific curated filter is selected, jump directly to the curated infinite grid
+    if (_selectedFilterIndex != 0) {
+      return [const SliverToBoxAdapter(child: SizedBox.shrink())];
+    }
+
     // Use shared catalog — single fetch, filter locally per section
     final catalogAsync = ref.watch(homeProductCatalogProvider);
     final categoriesAsync = ref.watch(categoriesProvider);
@@ -2011,28 +2312,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (groceryCategories.isEmpty) return [const SliverToBoxAdapter(child: SizedBox.shrink())];
 
     return catalogAsync.when(
-      loading: () => groceryCategories.map((cat) =>
+      loading: () => groceryCategories.take(3).map((cat) =>
         SliverToBoxAdapter(child: _buildHorizontalProductSection(cat, [], totalCount: 0))
       ).toList(),
-      error: (_, __) => groceryCategories.map((cat) =>
+      error: (_, __) => groceryCategories.take(3).map((cat) =>
         SliverToBoxAdapter(child: _buildHorizontalProductSection(cat, [], totalCount: 0))
       ).toList(),
       data: (allProducts) {
-        return groceryCategories.map((cat) {
-          // Filter locally from the shared catalog
+        final slivers = <Widget>[];
+        for (final cat in groceryCategories.take(4)) {
           final categoryProducts = allProducts
               .where((p) => p.category?.slug == cat.slug || p.categoryId == cat.id || p.category?.id == cat.id)
               .where((p) => p.restaurantId == null && p.restaurant == null)
               .toList();
+          if (categoryProducts.isEmpty) continue;
           final displayProducts = categoryProducts.take(6).toList();
-          return SliverToBoxAdapter(
-            child: _buildHorizontalProductSection(
-              cat,
-              displayProducts,
-              totalCount: categoryProducts.length,
+          slivers.add(
+            SliverToBoxAdapter(
+              child: _buildHorizontalProductSection(
+                cat,
+                displayProducts,
+                totalCount: categoryProducts.length,
+              ),
             ),
           );
-        }).toList();
+        }
+        return slivers;
       },
     );
   }
@@ -2262,7 +2567,332 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  // 8. Footer
+  // 8. Infinite Scroll Product Feed (Batch-loaded 20 items at a time, virtualized 60/120 FPS)
+  List<Widget> _buildInfiniteProductFeed() {
+    final catalogAsync = ref.watch(homeProductCatalogProvider);
+
+    return catalogAsync.when(
+      loading: () => [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 26, 16, 12),
+            child: _buildInfiniteFeedHeader(0, isLoading: true),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          sliver: SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: Responsive.isTablet(context) ? 3 : 2,
+              childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: true),
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 12,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => const ProductCardSkeleton(),
+              childCount: 4,
+            ),
+          ),
+        ),
+      ],
+      error: (_, __) => [const SliverToBoxAdapter(child: SizedBox.shrink())],
+      data: (allProducts) {
+        final filteredProducts = _getFilteredGridProducts(allProducts);
+        if (filteredProducts.isEmpty) {
+          return [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+                child: Center(
+                  child: Column(
+                    children: [
+                      const Text('🛍️', style: TextStyle(fontSize: 36)),
+                      const SizedBox(height: 8),
+                      Text(
+                        'No products found in this collection',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppDesignSystem.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Try picking another category tab above',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppDesignSystem.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ];
+        }
+
+        final visibleProducts = filteredProducts.take(_visibleGridCount).toList();
+        final hasMore = _visibleGridCount < filteredProducts.length;
+
+        return [
+          // Section Title Header with Dynamic Total Count Badge
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 26, 16, 14),
+              child: _buildInfiniteFeedHeader(filteredProducts.length, isLoading: false),
+            ),
+          ),
+
+          // 2-Column Virtualized SliverGrid (Ultra-smooth, zero jank, only on-screen items kept in memory)
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            sliver: SliverGrid(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: Responsive.isTablet(context) ? 3 : 2,
+                childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: true),
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 12,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final product = visibleProducts[index];
+                  return ProductCard(
+                    key: ValueKey('infinite_grid_${product.id}'),
+                    product: product,
+                    isCompact: true,
+                  );
+                },
+                childCount: visibleProducts.length,
+              ),
+            ),
+          ),
+
+          // Bottom Load More Indicator or Catalog Completion Badge
+          SliverToBoxAdapter(
+            child: _buildInfiniteFeedFooter(
+              visibleCount: visibleProducts.length,
+              totalCount: filteredProducts.length,
+              hasMore: hasMore,
+            ),
+          ),
+        ];
+      },
+    );
+  }
+
+  Widget _buildInfiniteFeedHeader(int totalCount, {required bool isLoading}) {
+    String title;
+    String subtitle;
+    IconData icon;
+
+    switch (_selectedFilterIndex) {
+      case 1:
+        final timeTab = _getTimeBasedTab();
+        title = '$timeTab Specials';
+        subtitle = 'Fresh picks for your $timeTab craving';
+        icon = Icons.wb_sunny_rounded;
+        break;
+      case 2:
+        title = 'Trending & Best Sellers';
+        subtitle = 'Fastest moving items in Ghatampur';
+        icon = Icons.local_fire_department_rounded;
+        break;
+      case 3:
+        title = 'Snacks & Munchies Hub';
+        subtitle = 'Chips, namkeen, cookies & bites';
+        icon = Icons.fastfood_rounded;
+        break;
+      default:
+        title = 'All Groceries & Essentials';
+        subtitle = '10-15 Min Delivery from local dark store';
+        icon = Icons.auto_awesome_rounded;
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, size: 18, color: AppDesignSystem.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 16.5),
+                      fontWeight: FontWeight.w900,
+                      color: AppDesignSystem.textPrimary,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 11),
+                  fontWeight: FontWeight.w500,
+                  color: AppDesignSystem.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (!isLoading)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+            decoration: BoxDecoration(
+              color: AppDesignSystem.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppDesignSystem.primary.withValues(alpha: 0.22),
+                width: 0.8,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.inventory_2_outlined, size: 12, color: AppDesignSystem.primary),
+                const SizedBox(width: 4),
+                Text(
+                  '$totalCount Items',
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 10.5),
+                    fontWeight: FontWeight.w800,
+                    color: AppDesignSystem.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildInfiniteFeedFooter({
+    required int visibleCount,
+    required int totalCount,
+    required bool hasMore,
+  }) {
+    if (hasMore) {
+      return Container(
+        margin: const EdgeInsets.fromLTRB(16, 18, 16, 6),
+        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppDesignSystem.radiusMd),
+          border: Border.all(color: AppDesignSystem.borderLight),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(
+              width: 15,
+              height: 15,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppDesignSystem.primary,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Loading next 20 products... ($visibleCount of $totalCount)',
+              style: GoogleFonts.inter(
+                fontSize: Responsive.scaledFontSize(context, 11.5),
+                fontWeight: FontWeight.w600,
+                color: AppDesignSystem.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // When all items have been reached in the feed
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 22, 16, 6),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+      decoration: BoxDecoration(
+        color: AppDesignSystem.slate50,
+        borderRadius: BorderRadius.circular(AppDesignSystem.radiusMd),
+        border: Border.all(color: AppDesignSystem.border),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('🎉', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15))),
+              const SizedBox(width: 6),
+              Text(
+                'You\'ve explored all $totalCount items!',
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 12),
+                  fontWeight: FontWeight.w800,
+                  color: AppDesignSystem.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              _homeScrollController.animateTo(
+                0,
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.easeOutCubic,
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppDesignSystem.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.arrow_upward_rounded, size: 13, color: AppDesignSystem.primary),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Back to top',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 11),
+                      fontWeight: FontWeight.w700,
+                      color: AppDesignSystem.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 9. Footer
   Widget _buildFooter() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
