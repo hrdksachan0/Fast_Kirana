@@ -476,16 +476,30 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
         ),
       );
     } else if (lower.contains('bal') || lower.contains('udyan')) {
-      return Image.asset(
-        'assets/categories/cafe_banner.webp',
+      return CachedNetworkImage(
+        imageUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1785657558/u9oke6c5baqpfed68fct.jpg',
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Container(color: AppDesignSystem.gray800),
+        memCacheWidth: 800,
+        memCacheHeight: 400,
+        errorWidget: (_, __, ___) => Container(color: AppDesignSystem.gray800),
+      );
+    } else if (lower.contains('pari') || lower.contains('dairy') || lower.contains('sweet')) {
+      return CachedNetworkImage(
+        imageUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1788539733/ivqp3nsp36dp8svdskyu.png',
+        fit: BoxFit.cover,
+        memCacheWidth: 800,
+        memCacheHeight: 400,
+        errorWidget: (_, __, ___) => Container(color: AppDesignSystem.gray800),
       );
     }
     return Image.asset(
-      'assets/categories/cafe_banner.webp',
+      'assets/categories/food_banner_bg.webp',
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => Container(color: AppDesignSystem.gray800),
+      errorBuilder: (_, __, ___) => Image.asset(
+        'assets/categories/food_promo_banner_premium.webp',
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(color: AppDesignSystem.gray800),
+      ),
     );
   }
 
@@ -533,10 +547,20 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
         errorBuilder: (_, __, ___) => Center(child: Text('☕', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
       );
     } else if (lower.contains('bal') || lower.contains('udyan')) {
-      return Image.asset(
-        'assets/categories/cafe_category.webp',
+      return CachedNetworkImage(
+        imageUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1785657216/pvftayp9lqp9vvmziwaw.jpg',
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Center(child: Text('🍲', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
+        memCacheWidth: 200,
+        memCacheHeight: 200,
+        errorWidget: (_, __, ___) => Center(child: Text('🍲', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
+      );
+    } else if (lower.contains('pari') || lower.contains('dairy') || lower.contains('sweet')) {
+      return CachedNetworkImage(
+        imageUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1788539204/ztjqxnydec1x2jlxgklg.png',
+        fit: BoxFit.cover,
+        memCacheWidth: 200,
+        memCacheHeight: 200,
+        errorWidget: (_, __, ___) => Center(child: Text('🥛', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
       );
     }
     return Image.asset(

@@ -29,7 +29,29 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
   bool _isFavorite = false;
 
   Widget _buildRestaurantImage(Restaurant r) {
-    // 1. Check if logoUrl is a remote URL
+    // 1. Check if bannerUrl is a remote URL (PRIORITY: Banner goes into card hero, matching Web app!)
+    if (r.bannerUrl != null && r.bannerUrl!.isNotEmpty && r.bannerUrl!.startsWith('http')) {
+      return CachedNetworkImage(
+        imageUrl: r.bannerUrl!,
+        fit: BoxFit.cover,
+        memCacheWidth: 600,
+        memCacheHeight: 400,
+        placeholder: (_, __) => _buildImagePlaceholder(),
+        errorWidget: (_, __, ___) => _buildLocalOrFallbackImage(r),
+      );
+    }
+
+    // 2. If bannerUrl is a local asset path starting with '/'
+    if (r.bannerUrl != null && r.bannerUrl!.isNotEmpty && r.bannerUrl!.startsWith('/')) {
+      final assetName = r.bannerUrl!.substring(1);
+      return Image.asset(
+        'assets/categories/$assetName',
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _buildLocalOrFallbackImage(r),
+      );
+    }
+
+    // 3. Check if logoUrl is a remote URL (only if bannerUrl is not available)
     if (r.logoUrl != null && r.logoUrl!.isNotEmpty && r.logoUrl!.startsWith('http')) {
       return CachedNetworkImage(
         imageUrl: r.logoUrl!,
@@ -41,32 +63,14 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
       );
     }
 
-    // 2. Check if bannerUrl is a remote URL and logoUrl is not available
-    if (r.logoUrl == null && r.bannerUrl != null && r.bannerUrl!.isNotEmpty && r.bannerUrl!.startsWith('http')) {
-      return CachedNetworkImage(
-        imageUrl: r.bannerUrl!,
-        fit: BoxFit.cover,
-        memCacheWidth: 400,
-        memCacheHeight: 400,
-        placeholder: (_, __) => _buildImagePlaceholder(),
-        errorWidget: (_, __, ___) => _buildLocalOrFallbackImage(r),
-      );
-    }
-
-    // 3. Check local uploaded assets from Manage Outlets
+    // 4. Check local uploaded assets or fallbacks
     return _buildLocalOrFallbackImage(r);
   }
 
   Widget _buildLocalOrFallbackImage(Restaurant r) {
     final lower = '${r.name} ${r.slug} ${r.logoUrl ?? ""} ${r.bannerUrl ?? ""}'.toLowerCase();
 
-    if (lower.contains('a.s') || lower.contains('as-restaurant') || lower.contains('cafe_all_menu')) {
-      return Image.asset(
-        'assets/categories/cafe_all_menu_category.webp',
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _buildDefaultFallback(),
-      );
-    } else if (lower.contains('wedson')) {
+    if (lower.contains('wedson')) {
       return Image.asset(
         'assets/categories/wedson_restaurant_bg.webp',
         fit: BoxFit.cover,
@@ -76,17 +80,38 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
           errorBuilder: (_, __, ___) => _buildDefaultFallback(),
         ),
       );
-    } else if (lower.contains('bal udyan') || lower.contains('thali')) {
-      return Image.asset(
-        'assets/categories/cafe_category.webp',
+    } else if (lower.contains('bal udyan') || lower.contains('bal-udyan')) {
+      // Bal Udyan exact banner from Cloudinary (NOT logo!)
+      return CachedNetworkImage(
+        imageUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1785657558/u9oke6c5baqpfed68fct.jpg',
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _buildDefaultFallback(),
+        memCacheWidth: 600,
+        memCacheHeight: 400,
+        placeholder: (_, __) => _buildImagePlaceholder(),
+        errorWidget: (_, __, ___) => _buildDefaultFallback(),
+      );
+    } else if (lower.contains('a.s') || lower.contains('as-restaurant') || lower.contains('cafe_all_menu') || lower.contains('food_banner')) {
+      return Image.asset(
+        'assets/categories/food_banner_bg.webp',
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Image.asset(
+          'assets/categories/food_promo_banner_premium.webp',
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildDefaultFallback(),
+        ),
       );
     } else if (lower.contains('pari') || lower.contains('dairy') || lower.contains('sweet')) {
-      return Image.asset(
-        'assets/categories/dairy_breakfast_category.webp',
+      return CachedNetworkImage(
+        imageUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1788539733/ivqp3nsp36dp8svdskyu.png',
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _buildDefaultFallback(),
+        memCacheWidth: 600,
+        memCacheHeight: 400,
+        placeholder: (_, __) => _buildImagePlaceholder(),
+        errorWidget: (_, __, ___) => Image.asset(
+          'assets/categories/dairy_breakfast_category.webp',
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildDefaultFallback(),
+        ),
       );
     }
 

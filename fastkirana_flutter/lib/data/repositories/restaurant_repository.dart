@@ -77,7 +77,7 @@ class RestaurantRepository {
         cuisineTags: ['BURGERS', 'SHAKES', 'PIZZA', 'FAST FOOD'],
         isOpen: true,
         logoUrl: '/cafe_all_menu_category.webp',
-        bannerUrl: '/cafe_banner.webp',
+        bannerUrl: '/food_banner_bg.webp',
       ),
       Restaurant(
         id: 'REST-102',
@@ -106,8 +106,8 @@ class RestaurantRepository {
         deliveryTime: '20-25 mins',
         cuisineTags: ['NORTH INDIAN', 'CHINESE', 'SNACKS'],
         isOpen: true,
-        logoUrl: '/cafe_category.webp',
-        bannerUrl: '/cafe_banner.webp',
+        logoUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1785657216/pvftayp9lqp9vvmziwaw.jpg',
+        bannerUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1785657558/u9oke6c5baqpfed68fct.jpg',
       ),
       Restaurant(
         id: 'REST-104',
@@ -121,8 +121,8 @@ class RestaurantRepository {
         deliveryTime: '15-20 mins',
         cuisineTags: ['SWEETS', 'DAIRY', 'MILK', 'PANEER'],
         isOpen: false,
-        logoUrl: '/dairy.webp',
-        bannerUrl: '/cafe_banner.webp',
+        logoUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1788539204/ztjqxnydec1x2jlxgklg.png',
+        bannerUrl: 'https://res.cloudinary.com/dbf3lhk94/image/upload/v1788539733/ivqp3nsp36dp8svdskyu.png',
       ),
     ];
   }
