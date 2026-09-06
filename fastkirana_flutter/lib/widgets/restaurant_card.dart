@@ -90,12 +90,12 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
         placeholder: (_, __) => _buildImagePlaceholder(),
         errorWidget: (_, __, ___) => _buildDefaultFallback(),
       );
-    } else if (lower.contains('a.s') || lower.contains('as-restaurant') || lower.contains('cafe_all_menu') || lower.contains('food_banner')) {
+    } else if (lower.contains('a.s') || lower.contains('as-restaurant') || lower.contains('as_restaurant') || lower.contains('cafe_all_menu')) {
       return Image.asset(
-        'assets/categories/food_banner_bg.webp',
+        'assets/categories/as_restaurant_banner.webp',
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => Image.asset(
-          'assets/categories/food_promo_banner_premium.webp',
+          'assets/categories/cafe_banner.webp',
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => _buildDefaultFallback(),
         ),

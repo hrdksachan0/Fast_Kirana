@@ -491,6 +491,16 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
         memCacheHeight: 400,
         errorWidget: (_, __, ___) => Container(color: AppDesignSystem.gray800),
       );
+    } else if (lower.contains('a.s') || lower.contains('as-restaurant') || lower.contains('as restaurant') || lower.contains('as_restaurant')) {
+      return Image.asset(
+        'assets/categories/as_restaurant_banner.webp',
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Image.asset(
+          'assets/categories/cafe_banner.webp',
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(color: AppDesignSystem.gray800),
+        ),
+      );
     }
     return Image.asset(
       'assets/categories/food_banner_bg.webp',

@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 }
 
 // Revalidate home page every 30s with ISR for lightning-fast loads
-export const revalidate = 30
+export const revalidate = 120
 
 const productSelect = {
   id: true,
@@ -120,7 +120,7 @@ const getCachedFlashDeals = unstable_cache(
         { sortOrder: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 300,
+      take: 200,
       select: productSelect,
     })
   },
@@ -140,7 +140,7 @@ const getCachedBestSellers = unstable_cache(
         { sortOrder: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 300,
+      take: 200,
       select: productSelect,
     })
   },
@@ -159,7 +159,7 @@ const getCachedBreakfastDeals = unstable_cache(
           { category: { slug: { in: ['dairy-breakfast', 'beverages', 'fruits-vegetables'] } } },
         ],
       },
-      take: 100,
+      take: 80,
       select: productSelect,
     })
   },
@@ -178,7 +178,7 @@ const getCachedLunchDeals = unstable_cache(
           { category: { slug: { in: ['kitchen-needs', 'grocery-essential', 'beverages'] } } },
         ],
       },
-      take: 100,
+      take: 80,
       select: productSelect,
     })
   },
@@ -197,7 +197,7 @@ const getCachedTeaDeals = unstable_cache(
           { category: { slug: { in: ['snacks-munchies', 'beverages', 'ice-cream', 'chocolates', 'bakery'] } } },
         ],
       },
-      take: 100,
+      take: 80,
       select: productSelect,
     })
   },
@@ -220,7 +220,7 @@ const getCachedNightCravings = unstable_cache(
         { isBestSeller: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 200,
+      take: 150,
       select: productSelect,
     })
   },

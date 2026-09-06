@@ -2,10 +2,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  transpilePackages: ['@supabase/supabase-js'],
+  compress: true,
+  reactStrictMode: true,
+  output: 'standalone',
   experimental: {
+    typedRoutes: true,
     staleTimes: {
-      dynamic: 30,
+      dynamic: 10,
       static: 60,
     },
   },

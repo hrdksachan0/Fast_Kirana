@@ -1,20 +1,10 @@
-import { LRUCache } from 'lru-cache'
+import { getRedis, CACHE_KEYS } from './redis-client'
 
-const settingsCache = new LRUCache<string, any>({
-  max: 50,
-  ttl: 3 * 60 * 1000,
-})
-
-const KEY = 'settings'
-
-export function getCachedSettings(): any {
-  return settingsCache.get(KEY) ?? null
-}
-
-export function setCachedSettings(settings: any) {
-  settingsCache.set(KEY, settings)
-}
-
-export function clearSettingsCache() {
-  settingsCache.delete(KEY)
+export async function clearSettingsCache(): Promise<void> {
+  try {
+    const redis = getRedis()
+    await redis.del(CACHE_KEYS.SETTINGS)
+  } catch (_err) {
+    // Gracefully ignore if Redis is not configured or throws
+  }
 }

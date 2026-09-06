@@ -141,17 +141,26 @@ export function RestaurantDetailClient({ restaurant, products }: RestaurantDetai
       {/* Header / Hero Section */}
       <div className="relative w-full h-[220px] md:h-[280px]">
         {/* Banner Image */}
-        {restaurant.bannerUrl ? (
-          <Image
-            src={restaurant.bannerUrl}
-            alt={restaurant.name}
-            fill
-            className="object-cover"
-            priority
-          />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-orange-500" />
-        )}
+        {(() => {
+          const effectiveBanner = restaurant.bannerUrl || 
+            (restaurant.slug?.includes('as-') || restaurant.name?.toLowerCase().includes('a.s') 
+              ? '/as_restaurant_banner.webp' 
+              : restaurant.slug?.includes('wedson') 
+                ? '/wedson_restaurant_banner.webp' 
+                : null);
+
+          return effectiveBanner ? (
+            <Image
+              src={effectiveBanner}
+              alt={restaurant.name}
+              fill
+              className="object-cover"
+              priority
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-orange-500" />
+          )
+        })()}
         {/* Gradient Overlay for Text Readability */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
         

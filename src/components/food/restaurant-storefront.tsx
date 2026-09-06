@@ -423,18 +423,27 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
 
       {/* Restaurant Hero Banner */}
       <div className="relative w-full h-[180px] sm:h-[220px] overflow-hidden">
-        {restaurant.bannerUrl ? (
-          <Image
-            src={restaurant.bannerUrl}
-            alt={restaurant.name}
-            fill
-            className="object-cover"
-            sizes="100vw"
-            priority
-          />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-orange-500 via-red-500 to-pink-500" />
-        )}
+        {(() => {
+          const effectiveBanner = restaurant.bannerUrl || 
+            (restaurant.slug?.includes('as-') || restaurant.name?.toLowerCase().includes('a.s') 
+              ? '/as_restaurant_banner.webp' 
+              : restaurant.slug?.includes('wedson') 
+                ? '/wedson_restaurant_banner.webp' 
+                : null);
+
+          return effectiveBanner ? (
+            <Image
+              src={effectiveBanner}
+              alt={restaurant.name}
+              fill
+              className="object-cover"
+              sizes="100vw"
+              priority
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-orange-500 via-red-500 to-pink-500" />
+          )
+        })()}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
         {/* Restaurant Info Overlay */}

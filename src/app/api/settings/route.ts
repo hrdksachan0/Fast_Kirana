@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getCachedSettings, setCachedSettings } from '@/lib/settings-cache'
 import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
+import { getRedis, CACHE_KEYS, DEFAULT_TTL } from '@/lib/redis-client'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 10
 
-const DEFAULT_SETTINGS = {
+const DEFAULT_SETTINGS: Record<string, string> = {
   deliveries_count: '10,000+',
   rating_value: '4.8',
   happy_families: '5,000+',
@@ -47,22 +47,22 @@ const DEFAULT_SETTINGS = {
   contact_address: 'NH34, Ghatampur, Kanpur Nagar',
   hero_greeting_closed: "We're resting right now 💤",
   hero_subtitle_closed: "FastKirana Cafe & Mart are resting. We will be back to serve you fresh & hot goodies soon!",
-  hero_greeting_morning: "Good morning, let's get breakfast! 🌅",
-  hero_subtitle_morning_mart_closed: "Grocery Mart is resting, but our Cafe is firing up fresh hot brews and breakfast specials! ☕✨",
-  hero_subtitle_morning_cafe_closed: "Cafe is taking a break, but Grocery Mart is wide open and delivering fresh milk & fruits! 🥛📦",
-  hero_subtitle_morning_both_open: "Fresh milk, fruits, hot brews, and breakfast essentials delivered in minutes.",
-  hero_greeting_afternoon: "Good afternoon! Ready for lunch? 🍛",
-  hero_subtitle_afternoon_mart_closed: "Grocery Mart is resting, but our Cafe is cooking delicious hot lunch dishes and rolls! 🥡✨",
-  hero_subtitle_afternoon_cafe_closed: "Cafe is taking a break, but Grocery Mart is delivering lunch staples, dal, and rice! 🌾📦",
-  hero_subtitle_afternoon_both_open: "Atta, rice, dal, fresh vegetables, and delicious hot rolls delivered fast.",
+  hero_greeting_morning: 'Good morning, let\'s get breakfast! 🌅',
+  hero_subtitle_morning_mart_closed: 'Grocery Mart is resting, but our Cafe is firing up fresh hot brews and breakfast specials! ☕✨',
+  hero_subtitle_morning_cafe_closed: 'Cafe is taking a break, but our Grocery Mart is wide open and delivering fresh milk & fruits! 🥛📦',
+  hero_subtitle_morning_both_open: 'Fresh milk, fruits, hot brews, and breakfast essentials delivered in minutes.',
+  hero_greeting_afternoon: 'Good afternoon! Ready for lunch? 🍛',
+  hero_subtitle_afternoon_mart_closed: 'Grocery Mart is resting, but our Cafe is cooking delicious hot lunch dishes and rolls! 🥡✨',
+  hero_subtitle_afternoon_cafe_closed: 'Cafe is taking a break, but our Grocery Mart is delivering lunch staples, dal, and rice! 🌾📦',
+  hero_subtitle_afternoon_both_open: 'Atta, rice, dal, fresh vegetables, and delicious hot rolls delivered fast.',
   hero_greeting_evening: "It's snack o'clock! Tea & snacks are ready ☕",
-  hero_subtitle_evening_mart_closed: "Grocery Mart is taking a break, but our Cafe is steaming hot chai & fresh samosas! ☕🥟",
-  hero_subtitle_evening_cafe_closed: "Cafe is resting, but Grocery Mart is delivering chips, biscuits, and munchies! 🍿📦",
-  hero_subtitle_evening_both_open: "Samosas, munchies, chips, and chilled soft drinks ready for tea time.",
-  hero_greeting_night: "Late night cravings? We got you! 🌙",
-  hero_subtitle_night_mart_closed: "Grocery Mart is closed. Cafe is open to deliver hot night snacks & dessert cravings! 🍧✨",
-  hero_subtitle_night_cafe_closed: "Cafe kitchen is resting, but Grocery Mart is active for ice cream, drinks & munchies! 🍦📦",
-  hero_subtitle_night_both_open: "Indulge in ice creams, chocolates, late night munchies, and cafe specialties.",
+  hero_subtitle_evening_mart_closed: 'Grocery Mart is taking a break, but our Cafe is steaming hot chai & fresh samosas! ☕🥟',
+  hero_subtitle_evening_cafe_closed: 'Cafe is resting, but our Grocery Mart is delivering chips, biscuits, and munchies! 🍿📦',
+  hero_subtitle_evening_both_open: 'Samosas, munchies, chips, and chilled soft drinks ready for tea time.',
+  hero_greeting_night: 'Late night cravings? We got you! 🌙',
+  hero_subtitle_night_mart_closed: 'Grocery Mart is closed. Cafe is open to deliver hot night snacks & dessert cravings! 🍧✨',
+  hero_subtitle_night_cafe_closed: 'Cafe kitchen is resting, but our Grocery Mart is active for ice cream, drinks & munchies! 🍦📦',
+  hero_subtitle_night_both_open: 'Indulge in ice creams, chocolates, late night munchies, and cafe specialties.',
   restaurant_commission: '10',
   restaurant_profit_share: '15',
   cafe_commission: '10',
@@ -72,35 +72,27 @@ const DEFAULT_SETTINGS = {
 }
 
 export function checkIsStoreOpen(settingsMap: Record<string, string>, prefix: 'grocery' | 'cafe' | 'restaurant'): boolean {
-  const isManuallyOpen = prefix === 'grocery' 
+  const isManuallyOpen = prefix === 'grocery'
     ? settingsMap['grocery_mart_open'] !== 'false'
     : prefix === 'cafe'
     ? settingsMap['cafe_open'] !== 'false'
     : settingsMap['restaurant_open'] !== 'false'
 
-  // If manual toggle is explicitly turned OFF by admin, force closed
   if (!isManuallyOpen) return false
 
   const autoTiming = settingsMap[`${prefix}_auto_timing`] === 'true'
-  // If auto timing is disabled, manual open toggle rules 100%!
-  if (!autoTiming) {
-    return isManuallyOpen
-  }
+  if (!autoTiming) return isManuallyOpen
 
   const openTime = settingsMap[`${prefix}_open_time`] || '00:00'
   const closeTime = settingsMap[`${prefix}_close_time`] || '23:59'
 
-  // Full 24-hour schedule check
-  if ((openTime === '00:00' || openTime === '0:00') && (closeTime === '23:59' || closeTime === '24:00')) {
-    return true
-  }
+  if ((openTime === '00:00' || openTime === '0:00') && (closeTime === '23:59' || closeTime === '24:00')) return true
 
-  // Get current Indian Standard Time (IST) (UTC + 5:30)
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Kolkata',
     hour: 'numeric',
     minute: 'numeric',
-    hour12: false
+    hour12: false,
   })
   const parts = formatter.formatToParts(new Date())
   const currentHours = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10)
@@ -115,78 +107,73 @@ export function checkIsStoreOpen(settingsMap: Record<string, string>, prefix: 'g
 
   if (closeTotal >= openTotal) {
     return currentTotal >= openTotal && currentTotal <= closeTotal
-  } else {
-    // Cross-midnight timing (e.g. 10:00 AM to 02:00 AM)
-    return currentTotal >= openTotal || currentTotal <= closeTotal
   }
+  return currentTotal >= openTotal || currentTotal <= closeTotal
+}
+
+async function buildSettingsMap(): Promise<Record<string, string>> {
+  const [settings, activeRestaurants] = await Promise.all([
+    prisma.storeSetting.findMany({
+      select: { key: true, value: true },
+    }),
+    prisma.restaurant.findMany({
+      where: { isActive: true },
+      select: { id: true, slug: true, name: true, isOpen: true, openTime: true, closeTime: true },
+    }),
+  ])
+
+  const settingsMap = { ...DEFAULT_SETTINGS }
+  settings.forEach((s) => { settingsMap[s.key] = s.value })
+
+  for (const r of activeRestaurants) {
+    const opStatus = checkStoreOperatingStatus(r)
+    settingsMap[`outlet_open_${r.id}`] = opStatus.isOpen ? 'true' : 'false'
+    if (r.slug) settingsMap[`outlet_open_${r.slug}`] = opStatus.isOpen ? 'true' : 'false'
+  }
+
+  const wedson = activeRestaurants.find(r => r.slug?.includes('wedson') || r.name?.toLowerCase().includes('wedson'))
+  if (wedson) {
+    const st = checkStoreOperatingStatus(wedson)
+    settingsMap['restaurant_open'] = st.isOpen ? 'true' : 'false'
+    if (wedson.openTime) settingsMap['restaurant_open_time'] = wedson.openTime
+    if (wedson.closeTime) settingsMap['restaurant_close_time'] = wedson.closeTime
+  }
+
+  const cafe = activeRestaurants.find(r => r.slug?.includes('as-restaurant') || r.slug?.includes('cafe') || r.name?.toLowerCase().includes('a.s.'))
+  if (cafe) {
+    const st = checkStoreOperatingStatus(cafe)
+    settingsMap['cafe_open'] = st.isOpen ? 'true' : 'false'
+    if (cafe.openTime) settingsMap['cafe_open_time'] = cafe.openTime
+    if (cafe.closeTime) settingsMap['cafe_close_time'] = cafe.closeTime
+  }
+
+  settingsMap['grocery_mart_open'] = checkIsStoreOpen(settingsMap, 'grocery') ? 'true' : 'false'
+  return settingsMap
 }
 
 export async function GET() {
   try {
-    const cached = getCachedSettings()
-    let settingsMap: Record<string, string>
+    const redis = getRedis()
+    const cached = await redis.get<Record<string, string>>(CACHE_KEYS.SETTINGS)
 
     if (cached) {
-      settingsMap = { ...cached }
-    } else {
-      const settings = await prisma.storeSetting.findMany()
-      settingsMap = { ...DEFAULT_SETTINGS }
-
-      settings.forEach((s) => {
-        settingsMap[s.key] = s.value
+      return NextResponse.json(cached, {
+        headers: {
+          'Cache-Control': 'public, max-age=3, stale-while-revalidate=10',
+        },
       })
-
-      setCachedSettings(settingsMap)
     }
 
-    // 1. Grocery Mart status is derived from dark store schedule/manual toggle
-    settingsMap['grocery_mart_open'] = checkIsStoreOpen(settingsMap, 'grocery') ? 'true' : 'false'
-
-    // 2. Restaurant & Cafe statuses are derived DIRECTLY from the single source of truth: Manage Outlets (Restaurant records)
-    try {
-      const activeRestaurants = await prisma.restaurant.findMany({
-        where: { isActive: true },
-        select: { id: true, slug: true, name: true, isOpen: true, openTime: true, closeTime: true }
-      })
-
-      // Set individual outlet open/closed keys for every active outlet
-      for (const r of activeRestaurants) {
-        const opStatus = checkStoreOperatingStatus(r)
-        settingsMap[`outlet_open_${r.id}`] = opStatus.isOpen ? 'true' : 'false'
-        if (r.slug) {
-          settingsMap[`outlet_open_${r.slug}`] = opStatus.isOpen ? 'true' : 'false'
-        }
-      }
-
-      const wedson = activeRestaurants.find(r => r.slug?.includes('wedson') || r.name?.toLowerCase().includes('wedson'))
-      if (wedson) {
-        const wedsonStatus = checkStoreOperatingStatus(wedson)
-        settingsMap['restaurant_open'] = wedsonStatus.isOpen ? 'true' : 'false'
-        if (wedson.openTime) settingsMap['restaurant_open_time'] = wedson.openTime
-        if (wedson.closeTime) settingsMap['restaurant_close_time'] = wedson.closeTime
-      }
-
-      const cafe = activeRestaurants.find(r => r.slug?.includes('as-restaurant') || r.slug?.includes('cafe') || r.name?.toLowerCase().includes('a.s.'))
-      if (cafe) {
-        const cafeStatus = checkStoreOperatingStatus(cafe)
-        settingsMap['cafe_open'] = cafeStatus.isOpen ? 'true' : 'false'
-        if (cafe.openTime) settingsMap['cafe_open_time'] = cafe.openTime
-        if (cafe.closeTime) settingsMap['cafe_close_time'] = cafe.closeTime
-      }
-    } catch (restErr) {
-      console.error('Error deriving outlet status in settings route:', restErr)
-      settingsMap['cafe_open'] = checkIsStoreOpen(settingsMap, 'cafe') ? 'true' : 'false'
-      settingsMap['restaurant_open'] = checkIsStoreOpen(settingsMap, 'restaurant') ? 'true' : 'false'
-    }
+    const settingsMap = await buildSettingsMap()
+    await redis.set(CACHE_KEYS.SETTINGS, settingsMap, { ex: DEFAULT_TTL.SETTINGS })
 
     return NextResponse.json(settingsMap, {
       headers: {
-        'Cache-Control': 'public, max-age=5, stale-while-revalidate=30',
-      }
+        'Cache-Control': 'public, max-age=3, stale-while-revalidate=10',
+      },
     })
   } catch (error) {
     console.error('Settings API error:', error)
-    
     const settingsMap = { ...DEFAULT_SETTINGS }
     settingsMap['grocery_mart_open'] = checkIsStoreOpen(settingsMap, 'grocery') ? 'true' : 'false'
     settingsMap['cafe_open'] = checkIsStoreOpen(settingsMap, 'cafe') ? 'true' : 'false'
@@ -194,8 +181,8 @@ export async function GET() {
 
     return NextResponse.json(settingsMap, {
       headers: {
-        'Cache-Control': 'public, max-age=5, stale-while-revalidate=30',
-      }
+        'Cache-Control': 'public, max-age=3, stale-while-revalidate=10',
+      },
     })
   }
 }

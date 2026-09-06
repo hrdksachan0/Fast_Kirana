@@ -74,10 +74,10 @@ class RestaurantRepository {
         rating: 4.8,
         totalRatings: 120,
         deliveryTime: '15-20 mins',
-        cuisineTags: ['BURGERS', 'SHAKES', 'PIZZA', 'FAST FOOD'],
+        cuisineTags: ['CHINESE', 'BURGERS', 'SHAKES', 'PIZZA', 'FAST FOOD'],
         isOpen: true,
         logoUrl: '/cafe_all_menu_category.webp',
-        bannerUrl: '/food_banner_bg.webp',
+        bannerUrl: '/as_restaurant_banner.webp',
       ),
       Restaurant(
         id: 'REST-102',

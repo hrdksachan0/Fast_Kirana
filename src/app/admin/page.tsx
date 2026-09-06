@@ -379,33 +379,17 @@ export default async function AdminPage() {
       {/* Title Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-border/60 pb-4 gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl md:text-2xl font-black text-text-primary tracking-tight">
-              {isSuperAdmin ? '👑 Super Admin Executive Console' : '🏢 Store Operations Manager Console'}
-            </h1>
-            <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
-              isSuperAdmin 
-                ? 'bg-[#e20a22]/10 text-[#e20a22] border-[#e20a22]/20' 
-                : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-            }`}>
-              {isSuperAdmin ? 'Super Admin HQ' : 'Store Manager'}
-            </span>
-          </div>
+          <h1 className="text-xl md:text-2xl font-black text-text-primary tracking-tight">Admin Console</h1>
           <p className="text-xs text-text-secondary mt-0.5">
-            {isSuperAdmin
-              ? `Welcome, ${session.user.name || 'Super Admin'} (${userEmail || 'superadmin@fastkirana.com'}). Executive overview of multi-hub network, staff roles, and platform settings.`
-              : `Welcome, ${session.user.name || 'Store Manager'} (${userEmail || 'admin@fastkirana.com'}). Manage live order fulfillment, inventory stock, and store operations.`
-            }
+            Welcome, {session.user.name || 'Admin'} ({userEmail || 'admin@fastkirana.com'}). Full zone control, live orders, catalog, and store settings.
           </p>
         </div>
-        {isSuperAdmin && (
-          <a 
-            href="/admin/restaurants" 
-            className="inline-flex items-center justify-center text-xs font-black uppercase tracking-wider bg-[#e20a22] text-white h-9 px-4 rounded-xl hover:bg-[#c9081e] shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
-          >
-            Manage Outlets 🍽️
-          </a>
-        )}
+        <a 
+          href="/admin/restaurants" 
+          className="inline-flex items-center justify-center text-xs font-black uppercase tracking-wider bg-[#e20a22] text-white h-9 px-4 rounded-xl hover:bg-[#c9081e] shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+        >
+          Manage Outlets 🍽️
+        </a>
       </div>
 
       {/* Dynamic Tabbed Console */}

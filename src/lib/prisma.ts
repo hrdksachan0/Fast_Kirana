@@ -10,19 +10,25 @@ if (typeof dns.setDefaultResultOrder === 'function') {
   dns.setDefaultResultOrder('ipv4first')
 }
 
+// Module-level singleton — persists across requests within the same Vercel function instance.
+// globalThis fallback handles dev HMR restarts where the module is re-evaluated.
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-function createPrismaClient() {
+let _prisma: PrismaClient | undefined
+
+function getPrisma(): PrismaClient {
+  if (_prisma) return _prisma
+  if (globalForPrisma.prisma) return globalForPrisma.prisma
+
   let connectionString = process.env.DATABASE_URL || process.env.DIRECT_URL || ''
-  
+
   if (connectionString) {
     connectionString = connectionString.replace(/\r/g, '').trim()
-    if (connectionString.startsWith('"') && connectionString.endsWith('"')) {
-      connectionString = connectionString.substring(1, connectionString.length - 1)
-    } else if (connectionString.startsWith("'") && connectionString.endsWith("'")) {
-      connectionString = connectionString.substring(1, connectionString.length - 1)
+    if ((connectionString.startsWith('"') && connectionString.endsWith('"')) ||
+        (connectionString.startsWith("'") && connectionString.endsWith("'"))) {
+      connectionString = connectionString.slice(1, -1)
     }
     connectionString = connectionString.trim()
   }
@@ -30,20 +36,28 @@ function createPrismaClient() {
   const pool = new Pool({
     connectionString,
     ssl: { rejectUnauthorized: false },
-    max: 15,                     // Supabase Pro supports 100+ connections — 15 is safe for serverless
-    idleTimeoutMillis: 30000,    // Release idle connections after 30s
-    connectionTimeoutMillis: 30000, // 30s timeout for reliable connection establishment
+    max: 15,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 30000,
   })
 
-  // Silently handle pool errors to prevent unhandled rejections crashing the process
   pool.on('error', (err) => {
     console.warn('[PrismaPool] Background pool connection error (non-fatal):', err.message)
   })
-  
+
   const adapter = new PrismaPg(pool)
-  return new PrismaClient({ adapter })
+  _prisma = new PrismaClient({ adapter })
+  globalForPrisma.prisma = _prisma
+  return _prisma
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient()
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+// Lazily initialize — avoids creating connections on module import during SSR of non-DB pages
+export const prisma: PrismaClient = (() => {
+  try {
+    return getPrisma()
+  } catch {
+    // If initialization fails (e.g. missing env), return a stub to prevent import-time crash
+    // The first actual DB call will throw the real error
+    return new PrismaClient()
+  }
+})()

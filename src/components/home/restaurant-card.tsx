@@ -47,19 +47,28 @@ export function RestaurantCard({ restaurant, index = 0 }: RestaurantCardProps) {
           <div className="flex gap-3 p-3">
             {/* Left: Restaurant Image with Offer Overlay */}
             <div className="relative w-[110px] h-[130px] sm:w-[140px] sm:h-[145px] flex-shrink-0 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800">
-              {restaurant.bannerUrl || restaurant.logoUrl ? (
-                <Image
-                  src={restaurant.bannerUrl || restaurant.logoUrl || ''}
-                  alt={restaurant.name}
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
-                  sizes="140px"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-4xl bg-gradient-to-br from-orange-50 to-amber-100 dark:from-zinc-800 dark:to-zinc-700">
-                  🍽️
-                </div>
-              )}
+              {(() => {
+                const effectiveImage = restaurant.bannerUrl || 
+                  (restaurant.slug?.includes('as-') || restaurant.name?.toLowerCase().includes('a.s') 
+                    ? '/as_restaurant_banner.webp' 
+                    : restaurant.slug?.includes('wedson') 
+                      ? '/wedson_restaurant_banner.webp' 
+                      : restaurant.logoUrl || '');
+
+                return effectiveImage ? (
+                  <Image
+                    src={effectiveImage}
+                    alt={restaurant.name}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    sizes="140px"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-4xl bg-gradient-to-br from-orange-50 to-amber-100 dark:from-zinc-800 dark:to-zinc-700">
+                    🍽️
+                  </div>
+                )
+              })()}
 
               {/* Favourite Heart */}
               <button
