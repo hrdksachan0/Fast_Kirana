@@ -306,10 +306,14 @@ export async function POST(request: NextRequest) {
     // 2. Normalize items from both Web App and Flutter Mobile App
     const normalizedItems = (items || []).map((i: any) => {
       const p = i.product || i
-      const pid = (p.id || i.productId || i.id || '').toString()
+      let rawId = (i.productId || p.productId || p.id || i.id || '').toString().trim()
+      // Strip 'item_' prefix if passed from Flutter / cart item ID
+      if (rawId.startsWith('item_')) {
+        rawId = rawId.replace(/^item_/, '')
+      }
       return {
         product: {
-          id: pid,
+          id: rawId,
           name: p.name || i.name || 'FastKirana Item',
           price: typeof p.price === 'number' ? p.price : (parseFloat(p.price || i.price || '0') || 0),
           slug: p.slug || i.slug,
@@ -321,7 +325,10 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    const productIds = normalizedItems.map((i: any) => i.product.id.split('_')[0])
+    const productIds = normalizedItems.map((i: any) => {
+      const rawId = i.product.id
+      return rawId.includes('_') ? rawId.split('_')[0] : rawId
+    }).filter(Boolean)
     const productSlugs = normalizedItems.map((i: any) => i.product.slug).filter(Boolean)
 
     const dbProducts = await prisma.product.findMany({
@@ -341,19 +348,25 @@ export async function POST(request: NextRequest) {
     const restaurantGroups: Record<string, { restaurant: any; items: any[] }> = {}
 
     for (const item of normalizedItems) {
-      const isVariant = item.product.id.includes('_')
-      const [productId, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
+      const rawId = item.product.id
+      const isVariant = rawId.includes('_')
+      const [productId, variantNameFromId] = isVariant ? rawId.split('_') : [rawId, null]
+      const variantName = item.selectedVariant || variantNameFromId
 
       let dbProduct: any = dbProducts.find((p) => p.id === productId)
       if (!dbProduct && item.product.slug) {
         dbProduct = dbProducts.find((p) => p.slug === item.product.slug)
       }
       if (!dbProduct) {
+        // Strip variant suffix like " (Small)" or " (250g)" from item name for fuzzy lookup
+        const cleanName = item.product.name.replace(/\s*\([^)]*\)\s*$/, '').trim()
         dbProduct = await prisma.product.findFirst({
           where: {
             OR: [
-              { name: { contains: item.product.name, mode: 'insensitive' } },
               { id: productId },
+              { name: { equals: item.product.name, mode: 'insensitive' } },
+              { name: { equals: cleanName, mode: 'insensitive' } },
+              { name: { contains: cleanName, mode: 'insensitive' } },
             ]
           },
           include: { category: true, restaurant: true }
@@ -722,12 +735,14 @@ export async function POST(request: NextRequest) {
           }
         }
         const orderItemsData = orderInfo.items.map((item: any) => {
-          const isVariant = item.product.id.includes('_')
-          const [_, variantName] = isVariant ? item.product.id.split('_') : [item.product.id, null]
+          const rawId = item.product.id || ''
+          const isVariant = rawId.includes('_')
+          const [_, variantNameFromId] = isVariant ? rawId.split('_') : [rawId, null]
+          const variantName = item.selectedVariant || variantNameFromId
           
           let itemPrice = item.dbProduct.price
           let itemCostPrice = item.dbProduct.costPrice || 0
-          if (isVariant && item.dbProduct.variants && Array.isArray(item.dbProduct.variants)) {
+          if (variantName && item.dbProduct.variants && Array.isArray(item.dbProduct.variants)) {
             const variant = (item.dbProduct.variants as any[]).find((v) => v.name === variantName)
             if (variant) {
               itemPrice = variant.price
