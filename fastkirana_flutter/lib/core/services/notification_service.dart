@@ -24,7 +24,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final body = notification?.body ?? data['body'] ?? data['message'];
 
   // Trigger system notification when app is killed or phone screen is off
-  if (body != null) {
+  if (body != null && body.toString().trim().isNotEmpty) {
     try {
       final isKitchen = data['screen'] == 'restaurant-console' ||
           data['restaurantId'] != null ||
@@ -37,6 +37,12 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       const InitializationSettings initSettings = InitializationSettings(android: androidInit);
       await localNotifications.initialize(initSettings);
 
+      final orderId = data['orderId'] ?? data['readableId'] ?? data['id'];
+      final notifId = (orderId != null && orderId.toString().isNotEmpty)
+          ? (orderId.toString().hashCode & 0x7FFFFFFF)
+          : message.hashCode;
+      final tag = (orderId != null && orderId.toString().isNotEmpty) ? 'order_$orderId' : null;
+
       final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
         isKitchen ? 'fastkirana_kitchen_alerts' : 'fastkirana_alerts',
         isKitchen ? 'Kitchen & Order Buzz Alerts' : 'FastKirana Alerts',
@@ -46,6 +52,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         icon: '@mipmap/ic_launcher',
         importance: Importance.max,
         priority: Priority.high,
+        tag: tag,
         fullScreenIntent: isKitchen,
         playSound: true,
         sound: isKitchen ? const RawResourceAndroidNotificationSound('order_chime') : null,
@@ -59,7 +66,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       );
 
       await localNotifications.show(
-        message.hashCode,
+        notifId,
         title.toString(),
         body.toString(),
         NotificationDetails(android: androidDetails),
@@ -218,56 +225,80 @@ class NotificationService {
     }
   }
 
-  final Set<String> _recentMessageIds = {};
+  final Map<String, int> _recentMessageTimes = {};
 
   void _handleForegroundMessage(RemoteMessage message) {
-    final msgId = message.messageId ?? '${message.sentTime?.millisecondsSinceEpoch}_${message.data['orderId']}';
-    if (_recentMessageIds.contains(msgId)) {
-      return; // Dedup across simultaneous topic and token multicast
-    }
-    _recentMessageIds.add(msgId);
-    if (_recentMessageIds.length > 50) {
-      _recentMessageIds.remove(_recentMessageIds.first);
-    }
-
     final title = message.notification?.title ?? message.data['title'] ?? '⚡ FastKirana Express';
     final body = message.notification?.body ?? message.data['body'] ?? message.data['message'];
 
-    if (body != null && body.toString().trim().isNotEmpty) {
-      final data = message.data;
-      final category = data['category'] as String? ?? 'order';
-      if (!_shouldShowNotification(category)) {
-        print("Notification suppressed by user preference: $category");
-        return;
-      }
+    if (body == null || body.toString().trim().isEmpty) return;
 
-      _localNotifications?.show(
-        message.hashCode,
-        title.toString(),
-        body.toString(),
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            'fastkirana_alerts',
-            'FastKirana Alerts',
-            channelDescription: 'Notifications for order updates and tracking.',
-            icon: '@mipmap/ic_launcher',
-            importance: Importance.max,
-            priority: Priority.high,
-            showWhen: true,
-            when: DateTime.now().millisecondsSinceEpoch,
-            playSound: true,
-            enableVibration: true,
-          ),
-          iOS: const DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-            interruptionLevel: InterruptionLevel.timeSensitive,
-          ),
-        ),
-        payload: message.data.toString(),
-      );
+    final data = message.data;
+    final orderId = data['orderId'] ?? data['readableId'] ?? data['id'];
+    final status = data['status'] ?? title.toString();
+    final dedupKey = (orderId != null && orderId.toString().isNotEmpty)
+        ? 'order_${orderId}_$status'
+        : (message.messageId ?? '${message.sentTime?.millisecondsSinceEpoch}_$title');
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    _recentMessageTimes.removeWhere((_, time) => now - time > 15000);
+    if (_recentMessageTimes.containsKey(dedupKey)) {
+      debugPrint("NotificationService: Suppressed duplicate foreground notification for $dedupKey");
+      return;
     }
+    _recentMessageTimes[dedupKey] = now;
+
+    final category = data['category'] as String? ?? 'order';
+    if (!_shouldShowNotification(category)) {
+      print("Notification suppressed by user preference: $category");
+      return;
+    }
+
+    final isKitchen = data['screen'] == 'restaurant-console' ||
+        data['restaurantId'] != null ||
+        title.toString().contains('👨‍🍳') ||
+        title.toString().toLowerCase().contains('kitchen') ||
+        title.toString().toLowerCase().contains('new order');
+
+    final notifId = (orderId != null && orderId.toString().isNotEmpty)
+        ? (orderId.toString().hashCode & 0x7FFFFFFF)
+        : message.hashCode;
+    final tag = (orderId != null && orderId.toString().isNotEmpty) ? 'order_$orderId' : null;
+
+    _localNotifications?.show(
+      notifId,
+      title.toString(),
+      body.toString(),
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          isKitchen ? 'fastkirana_kitchen_alerts' : 'fastkirana_alerts',
+          isKitchen ? 'Kitchen & Order Buzz Alerts' : 'FastKirana Alerts',
+          channelDescription: isKitchen
+              ? 'Loud alarm for kitchen orders even when phone is locked.'
+              : 'Notifications for order updates and tracking.',
+          icon: '@mipmap/ic_launcher',
+          importance: Importance.max,
+          priority: Priority.high,
+          tag: tag,
+          showWhen: true,
+          when: DateTime.now().millisecondsSinceEpoch,
+          playSound: true,
+          sound: isKitchen ? const RawResourceAndroidNotificationSound('order_chime') : null,
+          audioAttributesUsage: isKitchen ? AudioAttributesUsage.alarm : AudioAttributesUsage.notification,
+          enableVibration: true,
+          vibrationPattern: isKitchen
+              ? Int64List.fromList([0, 1000, 500, 1000, 500, 1000, 500, 1000])
+              : null,
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          interruptionLevel: InterruptionLevel.timeSensitive,
+        ),
+      ),
+      payload: message.data.toString(),
+    );
   }
 
   bool _shouldShowNotification(String category) {
@@ -400,6 +431,16 @@ class NotificationService {
     try {
       await _fcm?.unsubscribeFromTopic(topic);
     } catch (e, _) { LoggerService.error('NotificationService: silent catch', e); }
+  }
+
+  /// Cancel all active notifications in system tray (used on logout)
+  Future<void> clearAllNotifications() async {
+    if (kIsWeb) return;
+    try {
+      await _localNotifications?.cancelAll();
+    } catch (e, _) {
+      LoggerService.error('NotificationService: clearAllNotifications', e);
+    }
   }
 
   // ─── Notification Preferences ───────────────────────────────────────────

@@ -1626,7 +1626,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   /// 3. Redesigned Premium Delivery Partner (Rider) Profile Card
   Widget _buildRiderCard() {
     final riderName = _order?.deliveryUser?.name?.isNotEmpty == true ? _order!.deliveryUser!.name! : 'Aryan';
-    final riderPhone = _order?.deliveryUser?.phone?.isNotEmpty == true ? _order!.deliveryUser!.phone! : '+918112849854';
+    final riderPhone = _order?.deliveryUser?.phone?.isNotEmpty == true ? _order!.deliveryUser!.phone! : '+919696503759';
     final cleanPhone = riderPhone.replaceAll(RegExp(r'[^0-9]'), '');
 
     return Container(

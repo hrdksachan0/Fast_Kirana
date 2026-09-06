@@ -1232,16 +1232,14 @@ export async function POST(request: NextRequest) {
                   take: 10,
                 })
                 const uniqueRestTokens = Array.from(new Set(restTokens.map(t => t.token)))
-                for (const token of uniqueRestTokens) {
-                  fcmMessaging.send({ token, ...restaurantPayload }).catch(() => {})
-                }
-                // Broadcast to restaurant and phone topics for 100% reliable wake-up
-                if (order.restaurantId) {
+                if (uniqueRestTokens.length > 0) {
+                  // Direct token delivery to registered restaurant devices (Fastest, exactly 1 delivery per device)
+                  for (const token of uniqueRestTokens) {
+                    fcmMessaging.send({ token, ...restaurantPayload }).catch(() => {})
+                  }
+                } else if (order.restaurantId) {
+                  // Fallback to canonical restaurant topic ONLY if no direct registered tokens exist
                   sendTopicWithRetry(fcmMessaging, { topic: `restaurant_${order.restaurantId}`, ...restaurantPayload }).catch(() => {})
-                  sendTopicWithRetry(fcmMessaging, { topic: `kitchen_${order.restaurantId}`, ...restaurantPayload }).catch(() => {})
-                }
-                if (cleanRestPhone && cleanRestPhone.length === 10) {
-                  sendTopicWithRetry(fcmMessaging, { topic: `phone_${cleanRestPhone}`, ...restaurantPayload }).catch(() => {})
                 }
               }
             }

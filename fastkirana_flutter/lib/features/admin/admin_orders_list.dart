@@ -106,10 +106,36 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   bool _isDeviceOffline = false;
 
+  List<Map<String, String>> _availableRiders = [
+    {'id': 'cmqgzqf630003vkiderv1r9ur', 'name': 'Aryan', 'phone': '+919696503759'},
+  ];
+
+  Future<void> _fetchDeliveryRiders() async {
+    try {
+      final dio = ref.read(dioProvider);
+      final res = await dio.get('/api/admin/riders');
+      if (res.data != null && res.data['riders'] is List) {
+        final List list = res.data['riders'];
+        if (mounted && list.isNotEmpty) {
+          setState(() {
+            _availableRiders = list.map<Map<String, String>>((r) => {
+              'id': r['id']?.toString() ?? '',
+              'name': r['name']?.toString() ?? 'Rider',
+              'phone': r['phone']?.toString() ?? '',
+            }).toList();
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('[Admin] Failed to fetch riders: $e');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _initConnectivityAndOfflineQueue();
+    _fetchDeliveryRiders();
 
     _loadDiskOrders();
     if (_cachedOrders.isNotEmpty) {
@@ -2327,19 +2353,19 @@ $formattedItems
                                 ],
                               ),
                             ),
-                            DropdownMenuItem(
-                              value: 'ARYAN',
+                            ..._availableRiders.map((rider) => DropdownMenuItem(
+                              value: rider['id'],
                               child: Row(
                                 children: [
                                   const Icon(Icons.two_wheeler_rounded, size: 16, color: AppDesignSystem.cyan600),
                                   const SizedBox(width: 6),
                                   Text(
-                                    'Aryan (+91 8112849854)',
+                                    '${rider['name']} (${rider['phone']})',
                                     style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w800, color: AppDesignSystem.cyan600),
                                   ),
                                 ],
                               ),
-                            ),
+                            )),
                             DropdownMenuItem(
                               value: 'STORE_PARTNER',
                               child: Row(
@@ -2356,10 +2382,14 @@ $formattedItems
                           ],
                           onChanged: (val) {
                             if (val != null) {
-                              if (val == 'ARYAN') {
-                                _assignRider(order, 'rider_aryan_1', 'Aryan', '+918112849854');
-                              } else if (val == 'STORE_PARTNER') {
+                              if (val == 'STORE_PARTNER') {
                                 _assignRider(order, 'store_admin_self', 'Store Partner', '+917054470303');
+                              } else {
+                                final rider = _availableRiders.firstWhere(
+                                  (r) => r['id'] == val,
+                                  orElse: () => _availableRiders.first,
+                                );
+                                _assignRider(order, rider['id']!, rider['name']!, rider['phone']!);
                               }
                             }
                           },

@@ -40,6 +40,10 @@ class AddressesNotifier extends StateNotifier<AsyncValue<List<Address>>> {
     await _repo.deleteAddress(id);
     await loadAddresses();
   }
+
+  void clear() {
+    state = const AsyncValue.data([]);
+  }
 }
 
 final addressesProvider = StateNotifierProvider.autoDispose<AddressesNotifier, AsyncValue<List<Address>>>((ref) {

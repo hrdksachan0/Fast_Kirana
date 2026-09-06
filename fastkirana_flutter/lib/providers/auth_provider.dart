@@ -6,6 +6,11 @@ import '../core/network/api_client.dart';
 import '../core/services/logger_service.dart';
 import '../core/services/notification_service.dart';
 import '../core/services/secure_storage_service.dart';
+import '../data/repositories/address_repository.dart';
+import '../data/repositories/order_repository.dart';
+import 'address_provider.dart';
+import 'cart_provider.dart';
+import '../features/orders/orders_screen.dart';
 
 /// Holds the currently authenticated user, loaded from SharedPreferences.
 /// Stored as a JSON string under the `user_data` key after OTP verification.
@@ -67,10 +72,10 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
 
   Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
-    final phone = prefs.getString('user_phone') ?? '';
+    final phone = prefs.getString('user_phone') ?? prefs.getString('auth_phone') ?? '';
     final userId = prefs.getString('user_id') ?? '';
 
-    // Unsubscribe from customer-specific topics on logout
+    // 1. Unsubscribe from customer-specific topics on logout
     if (phone.isNotEmpty) {
       final cleanPhone = phone.replaceAll('+91', '').replaceAll(' ', '').trim();
       NotificationService().unsubscribeFromTopic('phone_$cleanPhone');
@@ -79,18 +84,44 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       NotificationService().unsubscribeFromTopic('user_$userId');
     }
 
-    await prefs.remove('user_data');
-    await prefs.remove('auth_token');
-    await prefs.remove('user_id');
-    await prefs.remove('user_phone');
-    await SecureStorage.delete('user_data');
-    await SecureStorage.delete('auth_token');
-    await SecureStorage.delete('user_id');
-    await SecureStorage.delete('user_phone');
-    await SecureStorage.delete('user_role');
-    await SecureStorage.delete('user_name');
-    await SecureStorage.delete('user_email');
+    // 2. Clear all active push notifications from Android notification tray
+    await NotificationService().clearAllNotifications();
+
+    // 3. Clear all cached addresses and orders from disk
+    await AddressRepository.clearCache();
+    await OrderRepository.clearCache();
+
+    // 4. Wipe all user-scoped and session keys from SharedPreferences
+    final allKeys = prefs.getKeys().toList();
+    for (final key in allKeys) {
+      if (key.startsWith('user_') ||
+          key.startsWith('auth_') ||
+          key.startsWith('cart_') ||
+          key.startsWith('local_restaurant_') ||
+          key.startsWith('cached_admin_') ||
+          key == 'has_chosen_location' ||
+          key == 'selected_address' ||
+          key == 'pending_cart_sync' ||
+          key == 'offline_location_queue') {
+        await prefs.remove(key);
+      }
+    }
+
+    // 5. Delete all secure credentials
+    await SecureStorage.deleteAll();
     SecureStorage.invalidateCache();
+
+    // 6. Reset in-memory Riverpod providers so old data does not leak into other accounts
+    try {
+      _ref.read(addressesProvider.notifier).clear();
+      _ref.invalidate(addressesProvider);
+      _ref.read(selectedAddressProvider.notifier).state = null;
+      await _ref.read(cartProvider.notifier).clearCart();
+      _ref.invalidate(ordersProvider);
+    } catch (e) {
+      LoggerService.error('AuthProvider: error clearing state on logout', e);
+    }
+
     state = const AsyncValue.data(null);
   }
 

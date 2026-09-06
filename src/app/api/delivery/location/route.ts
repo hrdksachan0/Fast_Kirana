@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       rider: {
         name: rider?.name || 'Delivery Partner',
-        phone: rider?.phone || '+918112849854',
+        phone: rider?.phone || '+919696503759',
         lat,
         lng,
       },

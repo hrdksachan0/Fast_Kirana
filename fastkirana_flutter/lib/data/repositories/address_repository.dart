@@ -6,7 +6,6 @@ import '../models/address.dart';
 
 class AddressRepository {
   final Dio dio;
-  static const String _cacheKey = 'user_saved_addresses_cache';
 
   AddressRepository(this.dio);
 
@@ -199,5 +198,20 @@ class AddressRepository {
     final cacheKey = await _getCacheKey();
     final jsonList = addresses.map((a) => a.toJson()).toList();
     await prefs.setString(cacheKey, jsonEncode(jsonList));
+  }
+
+  /// Wipe all cached addresses on logout
+  static Future<void> clearCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final allKeys = prefs.getKeys().toList();
+      for (final k in allKeys) {
+        if (k.startsWith('user_saved_addresses_cache')) {
+          await prefs.remove(k);
+        }
+      }
+    } catch (e, _) {
+      LoggerService.error('AddressRepository: clearCache', e);
+    }
   }
 }

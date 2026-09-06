@@ -32,6 +32,9 @@ import '../location/delivery_location_screen.dart';
 import '../orders/orders_screen.dart';
 import '../../widgets/voice_search_sheet.dart';
 import '../../widgets/unserviceable_location_banner.dart';
+import '../../widgets/address_selector_sheet.dart';
+import '../../core/services/location_service.dart';
+import '../../core/config/app_config.dart';
 import 'main_shell.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -238,9 +241,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     return GestureDetector(
                       onTap: () {
                         HapticFeedback.lightImpact();
-                        Navigator.push(
+                        AddressSelectorSheet.show(
                           context,
-                          FadeSlideRoute(page: const DeliveryLocationScreen()),
+                          activeAddress: selectedAddress,
+                          onAddressSelected: (addr) {
+                            final distKm = (addr.latitude != null && addr.longitude != null)
+                                ? LocationService.getDistanceKm(addr.latitude!, addr.longitude!)
+                                : 0.0;
+                            if (distKm > LocationService.maxDeliveryRadiusKm) {
+                              UnserviceableLocationBanner.showUnserviceableModal(context, ref, distKm);
+                            }
+                          },
                         );
                       },
                       child: Column(

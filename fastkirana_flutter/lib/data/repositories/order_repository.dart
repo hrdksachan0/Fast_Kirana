@@ -459,4 +459,19 @@ class OrderRepository {
     }
     return ApiException('Network error. Please check your connection.');
   }
+
+  /// Wipe all cached user orders on logout
+  static Future<void> clearCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final allKeys = prefs.getKeys().toList();
+      for (final k in allKeys) {
+        if (k.startsWith('user_placed_orders_cache')) {
+          await prefs.remove(k);
+        }
+      }
+    } catch (e, _) {
+      LoggerService.error('OrderRepository: clearCache', e);
+    }
+  }
 }
