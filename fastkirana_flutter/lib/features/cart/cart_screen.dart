@@ -1003,18 +1003,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     HapticFeedback.mediumImpact();
 
                     if (!tier.isServiceable) {
-                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: AppDesignSystem.red600,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          content: Text(
-                            'Delivery is currently limited to a maximum of 5.0 km from our central hub. (Selected address is ${tier.distanceKm.toStringAsFixed(1)} km away)',
-                            style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
-                          ),
-                        ),
-                      );
+                      HapticFeedback.heavyImpact();
+                      UnserviceableLocationBanner.showUnserviceableModal(context, ref, tier.distanceKm);
                       return;
                     }
 
