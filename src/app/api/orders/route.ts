@@ -928,7 +928,7 @@ export async function POST(request: NextRequest) {
               estimatedDelivery,
               deliveryMethod,
               isB2B: Boolean(isB2B),
-              storeId,
+              storeId: storeId || 'hub-209206',
               couponCode: couponCode ? couponCode.toUpperCase() : null,
               shopName: orderInfo.type === 'RESTAURANT'
                 ? (orderInfo.restaurant?.name || 'Restaurant')

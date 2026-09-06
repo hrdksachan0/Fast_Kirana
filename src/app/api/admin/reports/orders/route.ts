@@ -106,9 +106,9 @@ export async function GET(request: NextRequest) {
              r.name as "restaurantName",
              c.name as "categoryName"
       FROM order_items oi
-      JOIN products p ON oi."productId" = p.id
-      JOIN categories c ON p."categoryId" = c.id
       JOIN orders o ON oi."orderId" = o.id
+      LEFT JOIN products p ON oi."productId" = p.id
+      LEFT JOIN categories c ON p."categoryId" = c.id
       LEFT JOIN restaurants r ON COALESCE(p."restaurantId", o."restaurantId") = r.id
       WHERE oi."orderId" = ANY(${orderIds}::text[])
     ` : []

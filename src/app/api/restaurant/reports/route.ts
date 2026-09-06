@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { formatDate } from '@/lib/date-helpers'
 
+import { getLast10Digits } from '@/lib/phone'
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()
@@ -12,7 +14,17 @@ export async function GET(request: NextRequest) {
 
     const role = session.user.role
     const email = session.user.email || ''
-    const assignedRestId = (session.user as any).assignedRestaurantId
+    const phone = (session.user as any).phone || ''
+    const cleanPhone = phone ? getLast10Digits(phone) : ''
+    let assignedRestId = (session.user as any).assignedRestaurantId
+
+    if (!assignedRestId && cleanPhone) {
+      if (cleanPhone === '8112849854') assignedRestId = 'REST-101'
+      else if (cleanPhone === '9250138656') assignedRestId = 'REST-102'
+      else if (cleanPhone === '7991488783') assignedRestId = 'REST-103'
+      else if (cleanPhone === '9900112233') assignedRestId = 'REST-104'
+    }
+
     const isAllowed = role === 'ADMIN' || role === 'RESTAURANT_OWNER' || role === 'CHEF'
     
     if (!isAllowed) {
@@ -29,10 +41,11 @@ export async function GET(request: NextRequest) {
       ? assignedRestId 
       : (paramRestId || assignedRestId || 'REST-101')
     
-    if (effectiveRestId === 'cms2p1lap0000n0id8alldboy' || effectiveRestId === 'as-restaurant') effectiveRestId = 'REST-101'
-    else if (effectiveRestId === 'cms2p1lyx0001n0idod904lfu' || effectiveRestId === 'wedson-restaurant' || effectiveRestId === 'wedson') effectiveRestId = 'REST-102'
-    else if (effectiveRestId === 'cmsbhxb6a000304if8kf1cwji' || effectiveRestId === 'bal-udyan-restaurant' || effectiveRestId === 'bal-udyan') effectiveRestId = 'REST-103'
-    else if (effectiveRestId === 'cmtn66nhy000004k0fu84b7ke' || effectiveRestId === 'pari-milk-dairy-sweets' || effectiveRestId === 'pari-milk') effectiveRestId = 'REST-104'
+    const norm = (effectiveRestId || '').toLowerCase().trim()
+    if (norm === 'cms2p1lap0000n0id8alldboy' || norm === 'as-restaurant' || norm === 'as-cafe' || norm === 'rest-101') effectiveRestId = 'REST-101'
+    else if (norm === 'cms2p1lyx0001n0idod904lfu' || norm === 'wedson-restaurant' || norm === 'wedson' || norm === 'rest-102') effectiveRestId = 'REST-102'
+    else if (norm === 'cmsbhxb6a000304if8kf1cwji' || norm === 'bal-udyan-restaurant' || norm === 'bal-udyan' || norm === 'bal udyan' || norm === 'rest-103') effectiveRestId = 'REST-103'
+    else if (norm === 'cmtn66nhy000004k0fu84b7ke' || norm === 'pari-milk-dairy-sweets' || norm === 'pari-milk' || norm === 'pari' || norm === 'rest-104') effectiveRestId = 'REST-104'
 
     const now = new Date()
     let start: Date
@@ -99,9 +112,9 @@ export async function GET(request: NextRequest) {
              COALESCE(oi.variants, p.variants) as "variants", 
              oi."selectedVariant"
       FROM order_items oi
-      JOIN products p ON oi."productId" = p.id
-      JOIN categories c ON p."categoryId" = c.id
       JOIN orders o ON oi."orderId" = o.id
+      LEFT JOIN products p ON oi."productId" = p.id
+      LEFT JOIN categories c ON p."categoryId" = c.id
       WHERE o.status::text = 'DELIVERED'
         AND o."restaurantId" = ${effectiveRestId}
         AND ("shopName" IS NULL OR ("shopName" != 'FastKirana Dark Store' AND "shopName" != 'FastKirana Grocery'))
@@ -214,27 +227,39 @@ export async function GET(request: NextRequest) {
       totalMisc += o.miscFee || 0
 
       const items = itemsByOrder[o.id] || []
-      const orderRestSalesRaw = items.reduce((sum, item) => {
-        if (isPureGroceryItem(item)) return sum
-        return sum + (item.price * item.quantity)
-      }, 0)
+      const orderRestSalesRaw = items.length > 0
+        ? items.reduce((sum, item) => {
+            if (isPureGroceryItem(item)) return sum
+            return sum + (item.price * item.quantity)
+          }, 0)
+        : (o.subtotal || o.total || 0)
 
       const discountShare = o.subtotal > 0 ? (o.discount * (orderRestSalesRaw / o.subtotal)) : 0
-      const foodSales = orderRestSalesRaw - discountShare
+      const foodSales = Math.max(0, orderRestSalesRaw - discountShare)
       totalSales += foodSales
 
       let orderRestProfit = 0
       let orderAdmProfit = 0
-      items.forEach(item => {
-        if (isPureGroceryItem(item)) return
-        
-        const metrics = getItemMetrics(item)
-        orderRestProfit += metrics.restaurantProfit
-        orderAdmProfit += metrics.adminProfit
-        totalRestaurantProfit += metrics.restaurantProfit
-        totalAdminProfit += metrics.adminProfit
-        totalCost += metrics.cost
-      })
+      if (items.length > 0) {
+        items.forEach(item => {
+          if (isPureGroceryItem(item)) return
+          
+          const metrics = getItemMetrics(item)
+          orderRestProfit += metrics.restaurantProfit
+          orderAdmProfit += metrics.adminProfit
+          totalRestaurantProfit += metrics.restaurantProfit
+          totalAdminProfit += metrics.adminProfit
+          totalCost += metrics.cost
+        })
+      } else {
+        const admProfit = foodSales * commissionRate
+        const restProfit = foodSales - admProfit
+        orderRestProfit += restProfit
+        orderAdmProfit += admProfit
+        totalRestaurantProfit += restProfit
+        totalAdminProfit += admProfit
+        totalCost += foodSales * (1 - restaurantDefaultMargin / 100)
+      }
 
       if (isPickup) {
         pickupOrdersCount++
@@ -264,22 +289,30 @@ export async function GET(request: NextRequest) {
       dayData.orders++
       
       const items = itemsByOrder[o.id] || []
-      const orderRestSalesRaw = items.reduce((sum, item) => {
-        if (isPureGroceryItem(item)) return sum
-        return sum + (item.price * item.quantity)
-      }, 0)
+      const orderRestSalesRaw = items.length > 0
+        ? items.reduce((sum, item) => {
+            if (isPureGroceryItem(item)) return sum
+            return sum + (item.price * item.quantity)
+          }, 0)
+        : (o.subtotal || o.total || 0)
       const discountShare = o.subtotal > 0 ? (o.discount * (orderRestSalesRaw / o.subtotal)) : 0
-      const foodSales = orderRestSalesRaw - discountShare
+      const foodSales = Math.max(0, orderRestSalesRaw - discountShare)
       dayData.sales += foodSales
 
       let orderRestaurantProfit = 0
       let orderAdminProfit = 0
-      items.forEach(item => {
-        if (isPureGroceryItem(item)) return
-        const metrics = getItemMetrics(item)
-        orderRestaurantProfit += metrics.restaurantProfit
-        orderAdminProfit += metrics.adminProfit
-      })
+      if (items.length > 0) {
+        items.forEach(item => {
+          if (isPureGroceryItem(item)) return
+          const metrics = getItemMetrics(item)
+          orderRestaurantProfit += metrics.restaurantProfit
+          orderAdminProfit += metrics.adminProfit
+        })
+      } else {
+        const admProfit = foodSales * commissionRate
+        orderRestaurantProfit += (foodSales - admProfit)
+        orderAdminProfit += admProfit
+      }
       dayData.profit += orderRestaurantProfit // Restaurant Margin
       dayData.adminProfit += orderAdminProfit // FastKirana Margin
     })
@@ -316,7 +349,7 @@ export async function GET(request: NextRequest) {
 
     const latestPayout = await prisma.restaurantPayout.findFirst({
       where: {
-        ...(assignedRestId ? { restaurantId: assignedRestId } : {}),
+        restaurantId: effectiveRestId,
         status: 'PAID'
       },
       orderBy: { paidAt: 'desc' }

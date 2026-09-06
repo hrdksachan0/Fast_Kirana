@@ -86,9 +86,9 @@ export async function GET(request: NextRequest) {
                COALESCE(oi.variants, p.variants) as "variants", 
                oi."selectedVariant"
         FROM order_items oi
-        JOIN products p ON oi."productId" = p.id
-        JOIN categories c ON p."categoryId" = c.id
         JOIN orders o ON oi."orderId" = o.id
+        LEFT JOIN products p ON oi."productId" = p.id
+        LEFT JOIN categories c ON p."categoryId" = c.id
         WHERE o.status::text = 'DELIVERED'
           AND o."restaurantId" = ${assignedRestId}
           AND o."createdAt" >= ${start}
@@ -112,9 +112,9 @@ export async function GET(request: NextRequest) {
                COALESCE(oi.variants, p.variants) as "variants", 
                oi."selectedVariant"
         FROM order_items oi
-        JOIN products p ON oi."productId" = p.id
-        JOIN categories c ON p."categoryId" = c.id
         JOIN orders o ON oi."orderId" = o.id
+        LEFT JOIN products p ON oi."productId" = p.id
+        LEFT JOIN categories c ON p."categoryId" = c.id
         WHERE o.status::text = 'DELIVERED'
           AND o."restaurantId" IS NOT NULL
           AND o."createdAt" >= ${start}

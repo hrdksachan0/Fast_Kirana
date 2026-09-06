@@ -91,9 +91,9 @@ export async function GET(request: NextRequest) {
              r."commissionRate" as "restaurantCommissionRate",
              o."orderType"::text as "orderType"
       FROM order_items oi
-      JOIN products p ON oi."productId" = p.id
-      JOIN categories c ON p."categoryId" = c.id
       JOIN orders o ON oi."orderId" = o.id
+      LEFT JOIN products p ON oi."productId" = p.id
+      LEFT JOIN categories c ON p."categoryId" = c.id
       LEFT JOIN restaurants r ON COALESCE(p."restaurantId", o."restaurantId") = r.id
       WHERE o.status::text = 'DELIVERED'
         AND o."createdAt" >= ${start}
