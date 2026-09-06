@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/utils/restaurant_utils.dart';
@@ -25,6 +26,7 @@ class ProductDetailScreen extends ConsumerStatefulWidget {
 class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   ProductVariant? _selectedVariant;
   bool _isFavorite = false;
+  bool _isNotified = false;
   static const Color primaryRed = AppDesignSystem.primary;
 
   @override
