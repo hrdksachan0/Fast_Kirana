@@ -6,7 +6,6 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: 'standalone',
   experimental: {
-    typedRoutes: true,
     staleTimes: {
       dynamic: 10,
       static: 60,

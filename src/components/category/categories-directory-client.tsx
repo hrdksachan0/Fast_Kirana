@@ -385,7 +385,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
             }
             const itemCount = c._count?.products ?? 0
             const isCafe = c.slug === 'cafe'
-            const destinationHref = isCafe ? '/food/as-cafe' : `/category/${c.slug}`
+            const destinationHref = (isCafe ? '/food/as-cafe' : `/category/${c.slug}`) as any
 
             return (
               <motion.div
@@ -406,7 +406,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
                 <div className="flex flex-col space-y-3 relative z-10 w-full">
                   {/* Image Section inside Light Container */}
                   <Link
-                    href={destinationHref}
+                    href={destinationHref as any}
                     className="relative w-full aspect-square sm:aspect-[4/3] rounded-xl overflow-hidden block border border-zinc-100 dark:border-zinc-900 bg-[#F8FAFC] dark:bg-zinc-900/40"
                   >
                     {/* Floating Badge in Top Left */}
@@ -457,7 +457,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
                   {/* Custom Shop Now Button */}
                   <div className="w-full">
                     <Link
-                      href={destinationHref}
+                      href={destinationHref as any}
                       className={cn(
                         'flex items-center justify-between text-[10px] sm:text-[11px] font-black px-3 py-2 sm:py-2.5 rounded-full transition-all duration-300 uppercase w-full text-white cursor-pointer active:scale-95 select-none border border-white/10 shadow-xs hover:shadow-md group/btn',
                         config.btnBg
