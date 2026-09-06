@@ -234,11 +234,14 @@ class NotificationService {
     if (body == null || body.toString().trim().isEmpty) return;
 
     final data = message.data;
-    final orderId = data['orderId'] ?? data['readableId'] ?? data['id'];
-    final status = data['status'] ?? title.toString();
-    final dedupKey = (orderId != null && orderId.toString().isNotEmpty)
-        ? 'order_${orderId}_$status'
-        : (message.messageId ?? '${message.sentTime?.millisecondsSinceEpoch}_$title');
+    final rawOrderId = data['orderId'] ?? data['readableId'] ?? data['id'];
+    final cleanOrderId = (rawOrderId != null && rawOrderId.toString().trim().isNotEmpty)
+        ? rawOrderId.toString().trim().replaceAll('#', '').replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '')
+        : null;
+
+    final dedupKey = (cleanOrderId != null && cleanOrderId.isNotEmpty)
+        ? 'order_$cleanOrderId'
+        : (message.messageId ?? '${title}_${body.hashCode}');
 
     final now = DateTime.now().millisecondsSinceEpoch;
     _recentMessageTimes.removeWhere((_, time) => now - time > 15000);

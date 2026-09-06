@@ -284,6 +284,24 @@ async function handlePrintRequest(orderId, isForceReprint = false, broadcastPayl
       };
     }
 
+    const readable = (order.readableId || '').toString().trim().toUpperCase();
+    const baseReadable = readable.replace(/-[GR\d]+$/i, '');
+    const idKey = (order.id || '').toString().trim().toUpperCase();
+
+    const lastPrintByReadable = readable ? recentPrintTimestamps.get(readable) : null;
+    const lastPrintByBase = baseReadable ? recentPrintTimestamps.get(baseReadable) : null;
+    const lastPrintById = idKey ? recentPrintTimestamps.get(idKey) : null;
+    const effectiveLastPrint = Math.max(lastPrintByReadable || 0, lastPrintByBase || 0, lastPrintById || 0);
+
+    if (effectiveLastPrint > 0 && (now - effectiveLastPrint) < 15000) {
+      console.log(`[Bridge] 🛡️ Ignored duplicate print request for #${readable || idKey} (${Math.round((15000 - (now - effectiveLastPrint)) / 1000)}s cooldown active)`);
+      return;
+    }
+
+    recentPrintTimestamps.set(idKey, now);
+    if (readable) recentPrintTimestamps.set(readable, now);
+    if (baseReadable) recentPrintTimestamps.set(baseReadable, now);
+
     // Filter by Restaurant ID if configured
     if (RESTAURANT_ID && order.restaurantId && order.restaurantId !== RESTAURANT_ID) {
       return;

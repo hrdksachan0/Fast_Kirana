@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { OrderStatus, PaymentStatus, PaymentMethod, Role } from '@prisma/client'
 import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED_FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, TAX_RATE } from '@/lib/constants'
 import { STORE_PINCODE, GROCERY_PICKUP_ADDRESS, RESTAURANT_PICKUP_ADDRESS, resolvePincode } from '@/lib/store-config'
-import { apiWriteLimiter, apiReadLimiter } from '@/lib/rate-limit'
+import { orderLimiter, apiReadLimiter } from '@/lib/rate-limit'
 import { sseEmitter } from '@/lib/sse-emitter'
 import { sendPushNotificationToRoles, sendPushNotificationToRestaurant } from '@/lib/push-notification'
 import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
@@ -15,7 +15,7 @@ import { getLast10Digits } from '@/lib/phone'
 import { checkIsStoreOpen } from '@/app/api/settings/route'
 import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
 export async function POST(request: NextRequest) {
-  const limited = await apiWriteLimiter.check(request)
+  const limited = await orderLimiter.check(request)
   if (limited) return limited
 
   let body: any = {}
@@ -1120,6 +1120,9 @@ export async function POST(request: NextRequest) {
           if (clean && !adminPhones.includes(clean)) adminPhones.push(clean)
         }
 
+        const sentFcmTokensThisCheckout = new Set<string>()
+        const notifiedWebRoles = new Set<string>()
+
         for (const order of createdOrders) {
           const displayId = order.readableId || order.id.slice(-6).toUpperCase()
           const isRestaurant = !!order.restaurantId
@@ -1139,15 +1142,19 @@ export async function POST(request: NextRequest) {
             restaurantId: order.restaurantId,
           })
 
-          // Send push notifications to workers
+          // Send push notifications to workers (deduplicated per checkout across combined orders)
           if (isRestaurant) {
             // 1. Notify Admin & Delivery with full info
-            sendPushNotificationToRoles([Role.ADMIN, Role.DELIVERY], {
-              title: isOnlinePaid ? '💳 Online Payment Order Confirmed!' : notificationTitle,
-              body: isOnlinePaid ? `Order #${displayId} of ₹${order.total} — PAID Online ✅` : `Order #${displayId} of ₹${order.total} has been placed.`,
-              tag: `order-${order.id}`,
-              data: { orderId: order.id }
-            }).catch((err: any) => console.error('Error sending push notification to admins:', err))
+            const rolesToNotify = [Role.ADMIN, Role.DELIVERY].filter(r => !notifiedWebRoles.has(r))
+            if (rolesToNotify.length > 0) {
+              rolesToNotify.forEach(r => notifiedWebRoles.add(r))
+              sendPushNotificationToRoles(rolesToNotify, {
+                title: isOnlinePaid ? '💳 Online Payment Order Confirmed!' : notificationTitle,
+                body: isOnlinePaid ? `Order #${displayId} of ₹${order.total} — PAID Online ✅` : `Order #${displayId} of ₹${order.total} has been placed.`,
+                tag: `order-${order.id}`,
+                data: { orderId: order.id }
+              }).catch((err: any) => console.error('Error sending push notification to admins:', err))
+            }
 
             // 2. Notify ONLY the specific Restaurant Owner / Chef WITHOUT ANY AMOUNT
             sendPushNotificationToRestaurant(order.restaurantId, {
@@ -1158,15 +1165,20 @@ export async function POST(request: NextRequest) {
             }).catch((err: any) => console.error('Error sending push notification to restaurant:', err))
           } else {
             // Pure Grocery order — ONLY notify Admin, Picker, Delivery. (CHEF/RESTAURANT NEVER NOTIFIED)
-            sendPushNotificationToRoles([Role.ADMIN, Role.PICKER, Role.DELIVERY], {
-              title: isOnlinePaid ? '💳 Online Payment Order Confirmed!' : notificationTitle,
-              body: isOnlinePaid ? `Order #${displayId} of ₹${order.total} — PAID Online ✅` : `Order #${displayId} of ₹${order.total} has been placed.`,
-              tag: `order-${order.id}`,
-              data: { orderId: order.id }
-            }).catch((err: any) => console.error('Error sending push notification to grocery staff:', err))
+            const rolesToNotify = [Role.ADMIN, Role.PICKER, Role.DELIVERY].filter(r => !notifiedWebRoles.has(r))
+            if (rolesToNotify.length > 0) {
+              rolesToNotify.forEach(r => notifiedWebRoles.add(r))
+              sendPushNotificationToRoles(rolesToNotify, {
+                title: isOnlinePaid ? '💳 Online Payment Order Confirmed!' : notificationTitle,
+                body: isOnlinePaid ? `Order #${displayId} of ₹${order.total} — PAID Online ✅` : `Order #${displayId} of ₹${order.total} has been placed.`,
+                tag: `order-${order.id}`,
+                data: { orderId: order.id }
+              }).catch((err: any) => console.error('Error sending push notification to grocery staff:', err))
+            }
           }
 
           // Send FCM Push Notification to Staff (Admin, Delivery, Picker, Restaurant)
+          // Strictly deduplicated: each physical device token receives at most ONE notification per checkout
           try {
             const { fcmMessaging } = await import('@/lib/firebase-admin')
             if (fcmMessaging) {
@@ -1193,7 +1205,10 @@ export async function POST(request: NextRequest) {
               })
               const uniqueStaffTokens = Array.from(new Set(staffTokens.map(t => t.token)))
               for (const token of uniqueStaffTokens) {
-                fcmMessaging.send({ token, ...staffPayload }).catch(() => {})
+                if (!sentFcmTokensThisCheckout.has(token)) {
+                  sentFcmTokensThisCheckout.add(token)
+                  fcmMessaging.send({ token, ...staffPayload }).catch(() => {})
+                }
               }
 
               // 3. Direct device token push STRICTLY to the specific restaurant owner ONLY (WITHOUT AMOUNT)
@@ -1235,7 +1250,10 @@ export async function POST(request: NextRequest) {
                 if (uniqueRestTokens.length > 0) {
                   // Direct token delivery to registered restaurant devices (Fastest, exactly 1 delivery per device)
                   for (const token of uniqueRestTokens) {
-                    fcmMessaging.send({ token, ...restaurantPayload }).catch(() => {})
+                    if (!sentFcmTokensThisCheckout.has(token)) {
+                      sentFcmTokensThisCheckout.add(token)
+                      fcmMessaging.send({ token, ...restaurantPayload }).catch(() => {})
+                    }
                   }
                 } else if (order.restaurantId) {
                   // Fallback to canonical restaurant topic ONLY if no direct registered tokens exist

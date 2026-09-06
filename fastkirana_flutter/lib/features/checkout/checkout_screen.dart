@@ -523,6 +523,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 
   Future<void> _handlePlaceOrder(Cart cart) async {
+    if (_isPlacingOrder) return;
+    setState(() => _isPlacingOrder = true);
     HapticFeedback.heavyImpact();
 
     final settings = ref.read(storeSettingsProvider).valueOrNull ?? const StoreSettings();
@@ -530,6 +532,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final hasRestaurant = cart.items.any((i) => isRestaurantProduct(i.product));
 
     if (hasGrocery && !settings.groceryMartOpen) {
+      setState(() => _isPlacingOrder = false);
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -546,6 +549,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     }
 
     if (hasRestaurant && !settings.restaurantOpen) {
+      setState(() => _isPlacingOrder = false);
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -568,6 +572,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final tier = LocationService.getTierForAddress(selectedAddress, subtotal);
 
     if (_deliveryMethod == 'DELIVERY' && !tier.isServiceable) {
+      setState(() => _isPlacingOrder = false);
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -3289,10 +3294,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           elevation: 2,
                         ),
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          _handlePlaceOrder(cart);
-                        },
+                        onPressed: _isPlacingOrder
+                            ? null
+                            : () {
+                                Navigator.pop(ctx);
+                                _handlePlaceOrder(cart);
+                              },
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [

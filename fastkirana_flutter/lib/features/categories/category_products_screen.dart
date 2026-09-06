@@ -8,6 +8,7 @@ import '../../core/routes/page_transitions.dart';
 import '../../data/models/product.dart';
 import '../../data/models/category.dart';
 import '../../providers/product_provider.dart';
+import '../../data/repositories/product_repository.dart';
 import '../../providers/cart_provider.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/floating_cart_bar.dart';
