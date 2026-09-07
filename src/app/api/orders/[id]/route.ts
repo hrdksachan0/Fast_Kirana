@@ -424,7 +424,7 @@ export async function PATCH(
         body.updateCombined === true ||
         status === 'SHIPPED' || 
         status === 'DELIVERED' ||
-        (isAdmin && body.scope !== 'SINGLE' && (status === 'CANCELLED' || status === 'DELIVERED'))
+        (isAdmin && body.scope !== 'SINGLE' && status === 'CANCELLED')
       )
     )
 
