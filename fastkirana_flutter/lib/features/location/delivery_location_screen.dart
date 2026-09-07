@@ -1,3 +1,4 @@
+import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -100,7 +101,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
         );
         return;
       }
-    } catch (_) {}
+    } catch (e) { LoggerService.error("Bare catch", e); }
 
     if (mounted) {
       setState(() => _isFetchingGps = false);
@@ -116,7 +117,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri);
       }
-    } catch (_) {}
+    } catch (e) { LoggerService.error("Bare catch", e); }
   }
 
   void _handleBack() async {

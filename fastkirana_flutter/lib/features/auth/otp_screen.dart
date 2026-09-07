@@ -1,3 +1,4 @@
+import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -85,7 +86,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
           setState(() => _clipboardOtp = digits);
         }
       }
-    } catch (_) {}
+    } catch (e) { LoggerService.error("Bare catch", e); }
   }
 
   String get _currentOtp => _controllers.map((c) => c.text).join();
@@ -240,7 +241,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
 
         try {
           NotificationService().registerDeviceToken(ref.read(dioProvider));
-        } catch (_) {}
+        } catch (e) { LoggerService.error("Bare catch", e); }
 
         ref.read(authProvider.notifier).setUser(user);
         HapticFeedback.heavyImpact();

@@ -1,3 +1,4 @@
+import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'package:flutter/material.dart';
 import '../core/theme/design_system.dart';
 import '../core/theme/responsive.dart';
@@ -94,7 +95,7 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
         }
         return;
       }
-    } catch (_) {}
+    } catch (e) { LoggerService.error("Bare catch", e); }
 
     if (mounted) {
       setState(() => _isLocatingGps = false);

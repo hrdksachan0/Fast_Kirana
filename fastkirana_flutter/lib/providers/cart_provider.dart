@@ -284,6 +284,8 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
     await r.syncPendingCartIfNeeded();
   }
 
+  Future<void> syncPendingCart([CartRepository? repo]) => syncPending(repo);
+
   /// Backward-compatible wrapper used by AddToCartButton
   Future<void> addItem(String productId, int quantity) async {
     final cart = state.value;

@@ -1,3 +1,4 @@
+import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -131,7 +132,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       if (permission == LocationPermission.denied) {
         await Geolocator.requestPermission();
       }
-    } catch (_) {}
+    } catch (e) { LoggerService.error("Bare catch", e); }
   }
 
   @override
@@ -426,7 +427,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           _setupCoordinatesFromOrder(order);
         }
       }
-    } catch (_) {}
+    } catch (e) { LoggerService.error("Bare catch", e); }
   }
 
   void _setupCoordinatesFromOrder(Order order) {
@@ -467,8 +468,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         rawOrder: restSub.toJson(),
       );
       _restaurantPosition = LatLng(_restaurantOutlet!.lat, _restaurantOutlet!.lng);
-      // Darkstore location for Grocery Sub-Order
-      _storePosition = LatLng(darkstoreLocation.lat, darkstoreLocation.lng);
+      // Darkstore location for Grocery Sub-Order (dynamic via AppConfig)
+      _storePosition = LatLng(AppConfig.darkstoreLat, AppConfig.darkstoreLng);
     } else {
       _restaurantPosition = null;
       _restaurantOutlet = null;
@@ -678,7 +679,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           _refreshMapElements();
         });
       }
-    } catch (_) {}
+    } catch (e) { LoggerService.error("Bare catch", e); }
   }
 
   Future<BitmapDescriptor> _createCustomMarkerBitmap({
@@ -822,7 +823,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           }
         }
       }
-    } catch (_) {}
+    } catch (e) { LoggerService.error("Bare catch", e); }
 
     _isFetchingRoute = false;
   }

@@ -1,3 +1,4 @@
+import 'logger_service.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -36,7 +37,7 @@ class BatteryOptimizationService {
       debugPrint('[BatteryOptimizationService] request error: $e');
       try {
         await openAppSettings();
-      } catch (_) {}
+      } catch (e) { LoggerService.error("Bare catch", e); }
       return false;
     }
   }
@@ -46,6 +47,6 @@ class BatteryOptimizationService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_prefKeyDismissed, permanent);
-    } catch (_) {}
+    } catch (e) { LoggerService.error("Bare catch", e); }
   }
 }

@@ -1,3 +1,4 @@
+import 'logger_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -93,7 +94,7 @@ class KotPrintService {
             'kot_sent': true,
             'kotPrintedAt': DateTime.now().toIso8601String(),
           }).eq('id', cleanId);
-        } catch (_) {}
+        } catch (e) { LoggerService.error("Bare catch", e); }
 
         // If the backend API already broadcasted, DO NOT send a duplicate broadcast!
         if (!apiSuccess) {
