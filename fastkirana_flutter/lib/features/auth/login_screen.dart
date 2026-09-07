@@ -71,7 +71,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleContinue() async {
-    final phone = _phoneController.text.trim();
+    final rawPhone = _phoneController.text.replaceAll(RegExp(r'\D'), '').trim();
+    final phone = rawPhone.length > 10 ? rawPhone.substring(rawPhone.length - 10) : rawPhone;
 
     if (phone.length != 10) {
       setState(() => _errorMessage = 'Please enter a valid 10-digit mobile number');
@@ -95,9 +96,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
     } on DioException catch (e) {
       if (mounted) {
-        final msg = e.response?.data?['detail'] ??
-            e.response?.data?['message'] ??
-            'Failed to send OTP. Please check connection.';
+        final data = e.response?.data;
+        String msg = 'Failed to send OTP. Please check connection.';
+        if (data is Map) {
+          msg = data['error']?.toString() ??
+              data['detail']?.toString() ??
+              data['message']?.toString() ??
+              'Failed to send OTP. Please check connection.';
+        }
         setState(() => _errorMessage = msg);
       }
     } catch (e) {

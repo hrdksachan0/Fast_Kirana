@@ -1355,7 +1355,11 @@ export async function POST(request: NextRequest) {
             })
 
             if (customerTokens.length > 0) {
-              fcmMessaging.send({ token: customerTokens[0].token, ...custPayload }).catch((e) => console.error('Error sending customer FCM:', e))
+              const custToken = customerTokens[0].token
+              if (!sentFcmTokensThisCheckout.has(custToken)) {
+                sentFcmTokensThisCheckout.add(custToken)
+                fcmMessaging.send({ token: custToken, ...custPayload }).catch((e) => console.error('Error sending customer FCM:', e))
+              }
             } else if (cleanPhone && cleanPhone.length === 10) {
               await sendTopicWithRetry(fcmMessaging, { topic: `phone_${cleanPhone}`, ...custPayload }).catch((e) => console.error('Error sending customer topic FCM:', e))
             }

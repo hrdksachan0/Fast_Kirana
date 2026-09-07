@@ -12,6 +12,7 @@ import {
   Navigation, Globe
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { compressImageClient } from '@/lib/image-compression'
 
 interface RestaurantFormProps {
   restaurant?: any
@@ -203,21 +204,30 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
     else setUploadingBanner(true)
 
     try {
+      const compressedFile = await compressImageClient(file)
       const data = new FormData()
-      data.append('file', file)
+      data.append('file', compressedFile)
       const res = await fetch('/api/upload', {
         method: 'POST',
+        headers: {
+          ...(session?.user?.id ? { 'x-user-id': session.user.id, 'x-user-role': session.user.role } : {})
+        },
         body: data
       })
-      if (!res.ok) throw new Error('Upload failed')
+      if (!res.ok) {
+        if (res.status === 413) throw new Error('Photo too large (max 4.5MB)')
+        if (res.status === 401) throw new Error('Unauthorized: Please log in again')
+        const jsonErr = await res.json().catch(() => ({}))
+        throw new Error(jsonErr.error || res.statusText || 'Upload failed')
+      }
       const json = await res.json()
       if (json.url) {
         setFormData(prev => ({ ...prev, [type]: json.url }))
         toast.success(`${type === 'logoUrl' ? 'Logo' : 'Banner'} uploaded successfully!`)
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      toast.error('Failed to upload image')
+      toast.error(err.message || 'Failed to upload image')
     } finally {
       if (type === 'logoUrl') setUploadingLogo(false)
       else setUploadingBanner(false)

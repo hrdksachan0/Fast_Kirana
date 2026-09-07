@@ -7,6 +7,8 @@ import { formatOrderTime, formatDate } from '@/lib/date-helpers'
 import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS, PRODUCT_TEMPLATES, HUB_CONFIG } from '@/lib/constants'
 import { DashboardHubNav } from '@/components/admin/dashboard/hub-nav'
 import { DashboardStatsCards } from '@/components/admin/dashboard/stats-cards'
+import { BottleneckBanner } from '@/components/admin/dashboard/bottleneck-banner'
+import { StoreControlBar } from '@/components/admin/dashboard/store-control-bar'
 import { OrdersTab } from '@/components/admin/dashboard/orders-tab'
 import { LiveCartsPanel } from '@/components/admin/dashboard/live-carts-panel'
 import { CategoriesTab } from '@/components/admin/categories-tab'
@@ -34,6 +36,7 @@ import { WhatsAppAlertModal } from '@/components/admin/dashboard/whatsapp-alert-
 import { printKOTReceipt, printCustomerInvoice } from '@/lib/kot-print'
 import { toast } from 'sonner'
 import { PRESET_KITCHEN_PHOTOS } from '@/lib/preset-photos'
+import { compressImageClient } from '@/lib/image-compression'
 import { 
   Loader2, 
   Search, 
@@ -297,12 +300,16 @@ export function AdminDashboard({
 
   const handleCloudinaryUpload = async (file: File, onUploadSuccess: (url: string) => void) => {
     setIsUploading(true)
-    const formData = new FormData()
-    formData.append('file', file)
-
     try {
+      const compressedFile = await compressImageClient(file)
+      const formData = new FormData()
+      formData.append('file', compressedFile)
+
       const res = await fetch('/api/upload', {
         method: 'POST',
+        headers: {
+          ...(sessionUserId ? { 'x-user-id': sessionUserId, 'x-user-role': sessionUserRole } : {})
+        },
         body: formData,
       })
 
@@ -313,12 +320,18 @@ export function AdminDashboard({
           toast.success('Image uploaded successfully!')
         }
       } else {
-        const errData = await res.json().catch(() => ({}))
-        toast.error(`Upload failed: ${errData.error || 'Unknown error'}`)
+        if (res.status === 413) {
+          toast.error('Photo is too large (max 4.5MB). Please choose a smaller photo.')
+        } else if (res.status === 401) {
+          toast.error('Unauthorized: Please log in again.')
+        } else {
+          const errData = await res.json().catch(() => ({}))
+          toast.error(`Upload failed: ${errData.error || res.statusText || 'Server error'}`)
+        }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      toast.error('Could not upload image.')
+      toast.error(`Could not upload image: ${err.message || 'Network error'}`)
     } finally {
       setIsUploading(false)
     }
@@ -2503,225 +2516,29 @@ export function AdminDashboard({
   return (
     <div className="space-y-6">
       
-      {/* Delayed Action Warning Alert Banner */}
-      {delayedOrders.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-2xl border border-rose-500/20 bg-gradient-to-r from-rose-500/10 via-amber-500/5 to-rose-500/10 p-5 shadow-lg backdrop-blur-md animate-glow-pulse"
-        >
-          {/* Decorative glowing pulse */}
-          <div className="absolute right-0 top-0 -mr-6 -mt-6 h-24 w-24 rounded-full bg-rose-500/10 blur-xl animate-pulse" />
-          
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-start gap-3.5">
-              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500">
-                <AlertCircle className="h-5 w-5 animate-bounce-subtle" />
-                <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
-                </span>
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-rose-500 flex items-center gap-2">
-                  Operational Bottlenecks Detected
-                  <span className="rounded-full bg-rose-500/10 px-2.5 py-0.5 text-xs font-bold text-rose-600">
-                    {delayedOrders.length} {delayedOrders.length === 1 ? 'order' : 'orders'} delayed
-                  </span>
-                </h3>
-                <p className="text-xs text-text-secondary mt-0.5 max-w-2xl font-medium">
-                  The following orders have exceeded the queue limit. Please coordinate with staff immediately to prevent service level degradation.
-                </p>
-              </div>
-            </div>
-            
-            {/* Control buttons */}
-            <div className="flex items-center gap-2 self-end md:self-center">
-              <button
-                onClick={() => setIsChimeMuted(!isChimeMuted)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${
-                  isChimeMuted 
-                    ? 'bg-muted/80 border-border/80 text-text-secondary hover:text-text-primary hover:bg-muted' 
-                    : 'bg-rose-500/10 border-rose-500/30 text-rose-600 hover:bg-rose-500/20'
-                }`}
-              >
-                {isChimeMuted ? (
-                  <>
-                    <VolumeX className="h-3.5 w-3.5" />
-                    <span>Muted</span>
-                  </>
-                ) : (
-                  <>
-                    <Volume2 className="h-3.5 w-3.5 animate-pulse" />
-                    <span>Alert Active</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
+      <BottleneckBanner
+        delayedOrders={delayedOrders}
+        pickerDelays={pickerDelays}
+        chefDelays={chefDelays}
+        riderDelays={riderDelays}
+        livePendingOrders={livePendingOrders}
+        isChimeMuted={isChimeMuted}
+        onToggleChime={() => setIsChimeMuted(!isChimeMuted)}
+        onInspectOrder={(orderId) => {
+          setActiveTab('orders')
+          setOrderStatusFilter('ALL')
+          setOrderSearchQuery(orderId)
+        }}
+      />
 
-          {/* Breakdown Pills */}
-          <div className="flex flex-wrap gap-2 mt-4">
-            {pickerDelays.length > 0 && (
-              <div className="flex items-center gap-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 text-xs font-semibold text-amber-600">
-                <ShoppingBag className="h-3.5 w-3.5" />
-                <span>Grocery Picker Delay: {pickerDelays.length}</span>
-              </div>
-            )}
-            {chefDelays.length > 0 && (
-              <div className="flex items-center gap-1.5 rounded-lg bg-orange-500/10 border border-orange-500/20 px-2.5 py-1 text-xs font-semibold text-orange-600">
-                <Utensils className="h-3.5 w-3.5" />
-                <span>Cafe Chef Delay: {chefDelays.length}</span>
-              </div>
-            )}
-            {riderDelays.length > 0 && (
-              <div className="flex items-center gap-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 text-xs font-semibold text-rose-600">
-                <Clock className="h-3.5 w-3.5" />
-                <span>Rider Dispatch Delay: {riderDelays.length}</span>
-              </div>
-            )}
-          </div>
-
-          {/* List of delayed orders */}
-          <div className="mt-4 border-t border-rose-500/10 pt-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1 scrollbar-none">
-              {delayedOrders.map((order) => {
-                const isRestaurant = !!order.restaurantId || order.orderType === 'RESTAURANT'
-                const isPacked = order.status === 'PACKED'
-                const baseTime = order.status === 'PENDING' ? order.createdAt : (order.updatedAt || order.createdAt)
-                const delayMin = Math.floor((new Date().getTime() - new Date(baseTime).getTime()) / 60000)
-                
-                let delayType = 'Grocery Picker'
-                let delayColor = 'border-amber-500/20 bg-amber-500/5 text-amber-700 dark:text-amber-400'
-                if (isPacked) {
-                  delayType = 'Rider Delivery'
-                  delayColor = 'border-rose-500/20 bg-rose-500/5 text-rose-700 dark:text-rose-400'
-                } else if (isRestaurant) {
-                  delayType = 'Kitchen Chef'
-                  delayColor = 'border-orange-500/20 bg-orange-500/5 text-orange-700 dark:text-orange-400'
-                }
-
-                const pendingIdx = livePendingOrders.findIndex((po) => po.id === order.id)
-                const fifoRank = pendingIdx !== -1 ? pendingIdx + 1 : null
-
-                return (
-                  <div 
-                    key={order.id}
-                    className={`flex items-center justify-between rounded-xl border p-2.5 text-xs font-medium ${delayColor}`}
-                  >
-                    <div className="flex flex-col gap-0.5">
-                      <span className="font-bold flex items-center gap-1.5">
-                        Order #{order.readableId || order.id.slice(0, 8)}
-                        {fifoRank && (
-                          <span className={`text-[8px] font-black px-1.5 py-0.2 rounded-full ${
-                            fifoRank === 1 
-                              ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20' 
-                              : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800/40 dark:text-zinc-400 border border-border/40'
-                          }`}>
-                            {fifoRank === 1 ? '👑 FIFO #1' : `FIFO #${fifoRank}`}
-                          </span>
-                        )}
-                      </span>
-                      <span className="text-[10px] opacity-80">{delayType} • {order.userName || order.userEmail || 'Guest'}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded bg-black/5 px-1.5 py-0.5 text-[10px] font-black">
-                        {delayMin}m delay
-                      </span>
-                      <button
-                        onClick={() => {
-                          setActiveTab('orders')
-                          setOrderStatusFilter('ALL')
-                          setOrderSearchQuery(order.id)
-                        }}
-                        className="rounded-lg bg-card p-1 text-text-primary shadow-sm hover:bg-muted transition-colors border border-border/40"
-                        title="View order"
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* 🏪 STORE & MART OPERATING CONTROL BAR */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-card border border-border/80 p-4 sm:p-5 rounded-3xl shadow-sm">
-        <div className="flex items-center gap-3.5">
-          <div className={`h-12 w-12 rounded-2xl flex items-center justify-center font-black text-xl shadow-md transition-all ${
-            groceryMartOpen
-              ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 shadow-emerald-500/10'
-              : 'bg-rose-500/10 text-rose-600 border border-rose-500/20 shadow-rose-500/10'
-          }`}>
-            🏪
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-black uppercase tracking-wider text-text-secondary">
-                Store Operations • {activeStoreHub?.name || 'Ghatampur Central Hub'}
-              </span>
-              <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-                groceryMartOpen
-                  ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                  : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
-              }`}>
-                {groceryMartOpen ? '● Grocery Mart OPEN' : '○ Grocery Mart CLOSED'}
-              </span>
-              {groceryAutoTiming && (
-                <span className="text-[10px] font-bold text-amber-600 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                  ⏰ Auto-Schedule Active
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-text-secondary mt-0.5 font-medium">
-              {groceryMartOpen
-                ? 'Grocery store is online and accepting checkout & doorstep orders.'
-                : 'Grocery store is temporarily closed. Checkout is paused for customers.'}
-            </p>
-          </div>
-        </div>
-
-        {/* 1-Click Operating Toggles */}
-        <div className="flex items-center gap-2 self-stretch sm:self-auto">
-          <button
-            type="button"
-            disabled={isTogglingStore}
-            onClick={handleToggleGroceryMart}
-            className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 ${
-              groceryMartOpen
-                ? 'bg-rose-600 hover:bg-rose-700 text-white'
-                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-            }`}
-          >
-            {isTogglingStore ? (
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-            ) : groceryMartOpen ? (
-              <>
-                <ToggleLeft className="w-4 h-4" />
-                <span>Close Grocery Mart</span>
-              </>
-            ) : (
-              <>
-                <ToggleRight className="w-4 h-4" />
-                <span>Open Grocery Mart</span>
-              </>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('settings')}
-            className="px-3.5 py-2.5 rounded-xl bg-muted hover:bg-muted/80 text-text-primary text-xs font-bold transition-all border border-border flex items-center gap-1.5 cursor-pointer shrink-0"
-            title="Configure store operating hours and delivery timings"
-          >
-            <Settings className="w-3.5 h-3.5" />
-            <span>Store Settings</span>
-          </button>
-        </div>
-      </div>
+      <StoreControlBar
+        storeHubName={activeStoreHub?.name || 'Ghatampur Central Hub'}
+        groceryMartOpen={groceryMartOpen}
+        groceryAutoTiming={groceryAutoTiming}
+        isTogglingStore={isTogglingStore}
+        onToggleGroceryMart={handleToggleGroceryMart}
+        onOpenSettings={() => setActiveTab('settings')}
+      />
 
       <DashboardStatsCards
         stats={{

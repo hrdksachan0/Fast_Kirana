@@ -5,6 +5,7 @@ import { Loader2, Navigation, Search, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { loadGoogleMapsScript } from '@/lib/google-maps'
 import { DEFAULT_STORE_PINCODE } from '@/lib/checkout'
+import { FreeMapPicker } from '@/components/shared/free-map-picker'
 
 interface LocationData {
   lat: number
@@ -279,6 +280,26 @@ export default function MapPicker({
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
         <span className="ml-2 text-xs font-bold text-text-secondary">Loading Map Engine...</span>
       </div>
+    )
+  }
+
+  if (!apiKey) {
+    return (
+      <FreeMapPicker
+        initialLat={initialLat || storeLat}
+        initialLng={initialLng || storeLng}
+        storeLat={storeLat}
+        storeLng={storeLng}
+        onLocationSelect={(data) => {
+          onLocationSelect({
+            lat: data.lat,
+            lng: data.lng,
+            street: data.street || data.address || '',
+            city: data.city || 'Ghatampur',
+            pincode: data.pincode || DEFAULT_STORE_PINCODE,
+          })
+        }}
+      />
     )
   }
 

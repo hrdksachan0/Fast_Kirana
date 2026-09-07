@@ -5,6 +5,7 @@ import { Search, ToggleLeft, ToggleRight, Check, X, Sparkles, SlidersHorizontal,
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
 import { RestaurantPayoutsLedger } from './restaurant-payouts-ledger'
+import { compressImageClient } from '@/lib/image-compression'
 
 interface Product {
   id: string
@@ -239,20 +240,26 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
   const handleCloudinaryUpload = async (file: File) => {
     setIsUploading(true)
     try {
+      const compressedFile = await compressImageClient(file)
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('file', compressedFile)
       const res = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       })
-      if (!res.ok) throw new Error('Upload failed')
+      if (!res.ok) {
+        if (res.status === 413) throw new Error('Photo too large (max 4.5MB)')
+        if (res.status === 401) throw new Error('Unauthorized: Please log in again')
+        const jsonErr = await res.json().catch(() => ({}))
+        throw new Error(jsonErr.error || res.statusText || 'Upload failed')
+      }
       const data = await res.json()
       if (data.url) {
         setDishForm(prev => ({ ...prev, imageUrl: data.url }))
         toast.success('Photo uploaded successfully! 📸')
       }
-    } catch (err) {
-      toast.error('Failed to upload image')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to upload image')
     } finally {
       setIsUploading(false)
     }

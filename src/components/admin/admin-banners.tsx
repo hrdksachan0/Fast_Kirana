@@ -19,6 +19,7 @@ import {
   Power
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { compressImageClient } from '@/lib/image-compression'
 
 interface PromoBanner {
   id: string
@@ -202,10 +203,11 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
     if (!file) return
 
     setIsUploading(true)
-    const formData = new FormData()
-    formData.append('file', file)
-
     try {
+      const compressedFile = await compressImageClient(file)
+      const formData = new FormData()
+      formData.append('file', compressedFile)
+
       const res = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
@@ -218,12 +220,18 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
           toast.success('Banner image uploaded successfully!')
         }
       } else {
-        const errData = await res.json().catch(() => ({}))
-        toast.error(`Upload failed: ${errData.error || 'Unknown error'}`)
+        if (res.status === 413) {
+          toast.error('Banner is too large (max 4.5MB). Please choose a smaller image.')
+        } else if (res.status === 401) {
+          toast.error('Unauthorized: Please log in again.')
+        } else {
+          const errData = await res.json().catch(() => ({}))
+          toast.error(`Upload failed: ${errData.error || res.statusText || 'Server error'}`)
+        }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      toast.error('Could not upload image.')
+      toast.error(`Could not upload image: ${err.message || 'Network error'}`)
     } finally {
       setIsUploading(false)
       e.target.value = ''

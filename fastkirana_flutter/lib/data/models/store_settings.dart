@@ -95,4 +95,10 @@ class StoreSettings with _$StoreSettings {
       raw['trust_badge_3']?.toString() ??
       raw['happy_customers']?.toString() ??
       '1000+';
+
+  String get minAppVersion => raw['min_app_version']?.toString() ?? '1.0.0';
+  String get latestAppVersion => raw['latest_app_version']?.toString() ?? '1.0.0';
+  String get appUpdateUrl => raw['app_update_url']?.toString() ?? 'https://fastkirana.in/app-release.apk';
+  String get appUpdateMessage => raw['app_update_message']?.toString() ?? 'FastKirana ka naya update available hai! Faster performance, bug fixes aur smooth ordering ke liye abhi update karein.';
+  bool get appForceUpdate => (raw['app_force_update']?.toString().toLowerCase() == 'true');
 }

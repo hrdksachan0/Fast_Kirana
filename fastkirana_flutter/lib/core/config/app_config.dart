@@ -61,6 +61,8 @@ class AppConfig {
 
   // ─── Build Information ──────────────────────────────────────────
   static const String appName = 'FastKirana';
+  static const String appVersion = '1.0.0';
+  static const int buildNumber = 1;
   static const String buildFlavor = String.fromEnvironment(
     'BUILD_FLAVOR',
     defaultValue: 'prod',
@@ -68,4 +70,26 @@ class AppConfig {
 
   static bool get isProduction => buildFlavor == 'prod';
   static bool get isDebug => !isProduction;
+
+  /// Compare two semantic versions (e.g. "1.0.0" vs "1.0.1")
+  /// Returns true if [current] is strictly lower than [target].
+  static bool isVersionLower(String current, String target) {
+    try {
+      final cleanCurrent = current.replaceAll(RegExp(r'[^0-9.]'), '').split('.');
+      final cleanTarget = target.replaceAll(RegExp(r'[^0-9.]'), '').split('.');
+
+      final maxLen = cleanCurrent.length > cleanTarget.length ? cleanCurrent.length : cleanTarget.length;
+
+      for (int i = 0; i < maxLen; i++) {
+        final curPart = i < cleanCurrent.length ? int.tryParse(cleanCurrent[i]) ?? 0 : 0;
+        final targetPart = i < cleanTarget.length ? int.tryParse(cleanTarget[i]) ?? 0 : 0;
+
+        if (curPart < targetPart) return true;
+        if (curPart > targetPart) return false;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
 }

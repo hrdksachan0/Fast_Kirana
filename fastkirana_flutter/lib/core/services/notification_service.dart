@@ -23,25 +23,36 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final title = notification?.title ?? data['title'] ?? '⚡ FastKirana Express';
   final body = notification?.body ?? data['body'] ?? data['message'];
 
-  // Trigger system notification when app is killed or phone screen is off
+  // If the message already has a notification payload, Android system tray handles it automatically
+  // Calling localNotifications.show here would create a duplicate notification on the user's phone!
+  // We ONLY show a local notification in background if it's a data-only payload OR kitchen alert with custom alarm sound.
+  final isKitchen = data['screen'] == 'restaurant-console' ||
+      data['restaurantId'] != null ||
+      title.toString().contains('👨‍🍳') ||
+      title.toString().toLowerCase().contains('kitchen') ||
+      title.toString().toLowerCase().contains('new order');
+
+  if (notification != null && !isKitchen) {
+    // Android OS has already displayed the standard notification. Do NOT show a 2nd notification!
+    return;
+  }
+
+  // Trigger system notification for data-only messages or custom kitchen alarm
   if (body != null && body.toString().trim().isNotEmpty) {
     try {
-      final isKitchen = data['screen'] == 'restaurant-console' ||
-          data['restaurantId'] != null ||
-          title.toString().contains('👨‍🍳') ||
-          title.toString().toLowerCase().contains('kitchen') ||
-          title.toString().toLowerCase().contains('new order');
-
       final localNotifications = FlutterLocalNotificationsPlugin();
       const AndroidInitializationSettings androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
       const InitializationSettings initSettings = InitializationSettings(android: androidInit);
       await localNotifications.initialize(initSettings);
 
-      final orderId = data['orderId'] ?? data['readableId'] ?? data['id'];
-      final notifId = (orderId != null && orderId.toString().isNotEmpty)
-          ? (orderId.toString().hashCode & 0x7FFFFFFF)
-          : message.hashCode;
-      final tag = (orderId != null && orderId.toString().isNotEmpty) ? 'order_$orderId' : null;
+      final rawOrderId = data['orderId'] ?? data['readableId'] ?? data['id'];
+      final cleanOrderId = (rawOrderId != null && rawOrderId.toString().trim().isNotEmpty)
+          ? rawOrderId.toString().trim().replaceAll('#', '').replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '')
+          : null;
+      final notifId = (cleanOrderId != null && cleanOrderId.isNotEmpty)
+          ? (cleanOrderId.hashCode & 0x7FFFFFFF)
+          : (message.messageId?.hashCode ?? message.hashCode);
+      final tag = (cleanOrderId != null && cleanOrderId.isNotEmpty) ? 'order_$cleanOrderId' : null;
 
       final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
         isKitchen ? 'fastkirana_kitchen_alerts' : 'fastkirana_alerts',

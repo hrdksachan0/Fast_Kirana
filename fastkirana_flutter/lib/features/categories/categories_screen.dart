@@ -291,8 +291,8 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
             categoriesAsync.when(
               data: (categories) {
                 var filtered = categories.where((c) {
-                  final slug = c.slug.toLowerCase();
-                  final name = c.name.toLowerCase();
+                  final slug = c.slug.toLowerCase().trim();
+                  final name = c.name.toLowerCase().trim();
                   if (slug == 'restaurant' ||
                       slug == 'restaurant-food' ||
                       slug == 'fast-food-kitchen' ||
@@ -301,10 +301,10 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                       slug.contains('fastfood')) {
                     return false;
                   }
-                  if (name.contains('restaurant') ||
-                      name.contains('kitchen') ||
-                      name.contains('fast food') ||
-                      name.contains('cafe')) {
+                  if (name.contains('restaurant kitchen') ||
+                      name.contains('restaurant') ||
+                      name.contains('cafe') ||
+                      name.startsWith('fast food')) {
                     return false;
                   }
                   return true;

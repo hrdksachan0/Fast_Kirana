@@ -33,6 +33,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
   late final List<FocusNode> _focusNodes;
 
   bool _isLoading = false;
+  bool _isVerifying = false;
   int _resendCooldown = 0;
   String? _errorMessage;
   String? _clipboardOtp;
@@ -102,7 +103,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
     HapticFeedback.mediumImpact();
     if (clean.length >= 6) {
       _focusNodes[5].requestFocus();
-      _handleVerifyOtp();
+      if (!_isLoading && !_isVerifying) {
+        _handleVerifyOtp();
+      }
     } else if (clean.isNotEmpty) {
       _focusNodes[clean.length.clamp(0, 5)].requestFocus();
     }
@@ -134,7 +137,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
         _focusNodes[index + 1].requestFocus();
       } else {
         _focusNodes[index].unfocus();
-        if (_currentOtp.length == 6) {
+        if (_currentOtp.length == 6 && !_isLoading && !_isVerifying) {
           _handleVerifyOtp();
         }
       }
@@ -156,12 +159,15 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
   }
 
   Future<void> _handleVerifyOtp() async {
+    if (_isLoading || _isVerifying) return;
+
     final otp = _currentOtp.replaceAll(RegExp(r'\D'), '');
     if (otp.length != 6) {
       setState(() => _errorMessage = 'Please enter all 6 digits');
       HapticFeedback.heavyImpact();
       return;
     }
+    _isVerifying = true;
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -196,6 +202,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
         final rawName = (user.name ?? '').trim();
         final isExistingUser = rawName.isNotEmpty &&
             !rawName.toLowerCase().startsWith('user ') &&
+            !rawName.toLowerCase().startsWith('customer ') &&
+            rawName.toLowerCase() != 'customer' &&
             rawName != 'FastKirana Customer';
 
         // If new customer -> Prompt Full Name (Skip for Staff)
@@ -206,11 +214,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
             final validName = enteredName.trim();
             user = user.copyWith(name: validName);
             try {
-              final dio = ref.read(dioProvider);
-              await dio.post('/api/auth/profile/update', data: {
-                'name': validName,
-                'phone': widget.identifier,
-              });
+              await authRepo.updateName(validName);
             } catch (e) {
               debugPrint('Profile update failed: $e');
             }
@@ -312,16 +316,28 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
         HapticFeedback.heavyImpact();
       }
     } on DioException catch (e) {
-      final msg = e.response?.data?['detail'] ??
-          e.response?.data?['message'] ??
-          'Invalid or expired OTP code.';
+      final data = e.response?.data;
+      String msg = 'Invalid or expired OTP code.';
+      if (data is Map) {
+        msg = data['error']?.toString() ??
+            data['detail']?.toString() ??
+            data['message']?.toString() ??
+            'Invalid or expired OTP code.';
+      }
       setState(() => _errorMessage = msg);
       HapticFeedback.heavyImpact();
     } catch (e) {
       setState(() => _errorMessage = 'Verification error. Please try again.');
       HapticFeedback.heavyImpact();
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isVerifying = false;
+        });
+      } else {
+        _isVerifying = false;
+      }
     }
   }
 

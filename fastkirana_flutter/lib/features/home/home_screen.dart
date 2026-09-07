@@ -39,7 +39,7 @@ import '../../widgets/voice_search_sheet.dart';
 import '../../widgets/unserviceable_location_banner.dart';
 import '../../widgets/address_selector_sheet.dart';
 import '../../core/services/location_service.dart';
-import '../../core/config/app_config.dart';
+import '../../widgets/app_update_dialog.dart';
 import 'main_shell.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -244,6 +244,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     });
     // Infinite scroll listener for seamless product pagination (Blinkit / Zepto)
     _homeScrollController.addListener(_onHomeScroll);
+
+    // Check for app version updates from Admin Settings
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        AppUpdateDialog.checkAndShow(context, ref);
+      }
+    });
   }
 
   @override
@@ -1787,25 +1794,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           categoriesAsync.when(
             data: (categories) {
               final groceryCategories = categories.where((c) {
-                final slug = c.slug.toLowerCase();
-                final name = c.name.toLowerCase();
-                if (slug.contains('restaurant') ||
-                    slug.contains('kitchen') ||
-                    slug.contains('fast-food') ||
-                    slug.contains('fastfood') ||
-                    slug.contains('cafe') ||
-                    slug.contains('food-restaurant') ||
-                    slug.contains('thali') ||
-                    slug.contains('pizza') ||
-                    slug.contains('burger') ||
-                    slug == 'restaurant-food') {
+                final slug = c.slug.toLowerCase().trim();
+                final name = c.name.toLowerCase().trim();
+                if (slug == 'restaurant-food' ||
+                    slug == 'restaurant' ||
+                    slug == 'cafe' ||
+                    slug == 'fast-food-kitchen' ||
+                    slug.contains('restaurant') ||
+                    slug.contains('fastfood')) {
                   return false;
                 }
-                if (name.contains('restaurant') ||
-                    name.contains('kitchen') ||
-                    name.contains('fast food') ||
+                if (name.contains('restaurant kitchen') ||
+                    name.contains('restaurant') ||
                     name.contains('cafe') ||
-                    name.contains('thali')) {
+                    name.startsWith('fast food')) {
                   return false;
                 }
                 return true;
@@ -2270,13 +2272,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  // 7. Dynamic Product Sections (Top Categories as Quick Carousels)
+  // 7. Dynamic Product Sections (All Categories 10+ Products like Blinkit/Zepto)
   List<Widget> _buildApiProductSections() {
-    // When a specific curated filter is selected, jump directly to the curated infinite grid
-    if (_selectedFilterIndex != 0) {
-      return [const SliverToBoxAdapter(child: SizedBox.shrink())];
-    }
-
     // Use shared catalog — single fetch, filter locally per section
     final catalogAsync = ref.watch(homeProductCatalogProvider);
     final categoriesAsync = ref.watch(categoriesProvider);
@@ -2285,25 +2282,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final categories = categoriesAsync.valueOrNull!;
 
     final groceryCategories = categories.where((c) {
-      final slug = c.slug.toLowerCase();
-      final name = c.name.toLowerCase();
-      if (slug.contains('restaurant') ||
-          slug.contains('kitchen') ||
-          slug.contains('fast-food') ||
-          slug.contains('fastfood') ||
-          slug.contains('cafe') ||
-          slug.contains('food-restaurant') ||
-          slug.contains('thali') ||
-          slug.contains('pizza') ||
-          slug.contains('burger') ||
-          slug == 'restaurant-food') {
+      final slug = c.slug.toLowerCase().trim();
+      final name = c.name.toLowerCase().trim();
+      if (slug == 'restaurant-food' ||
+          slug == 'restaurant' ||
+          slug == 'cafe' ||
+          slug == 'fast-food-kitchen' ||
+          slug.contains('restaurant') ||
+          slug.contains('fastfood')) {
         return false;
       }
-      if (name.contains('restaurant') ||
-          name.contains('kitchen') ||
-          name.contains('fast food') ||
+      if (name.contains('restaurant kitchen') ||
+          name.contains('restaurant') ||
           name.contains('cafe') ||
-          name.contains('thali')) {
+          name.startsWith('fast food')) {
         return false;
       }
       return true;
@@ -2312,21 +2304,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     if (groceryCategories.isEmpty) return [const SliverToBoxAdapter(child: SizedBox.shrink())];
 
     return catalogAsync.when(
-      loading: () => groceryCategories.take(3).map((cat) =>
+      loading: () => groceryCategories.take(4).map((cat) =>
         SliverToBoxAdapter(child: _buildHorizontalProductSection(cat, [], totalCount: 0))
       ).toList(),
-      error: (_, __) => groceryCategories.take(3).map((cat) =>
+      error: (_, __) => groceryCategories.take(4).map((cat) =>
         SliverToBoxAdapter(child: _buildHorizontalProductSection(cat, [], totalCount: 0))
       ).toList(),
       data: (allProducts) {
         final slivers = <Widget>[];
-        for (final cat in groceryCategories.take(4)) {
+
+        // If a specific curated tab is selected (e.g. Snacks), prioritize relevant categories
+        var targetCategories = groceryCategories;
+        if (_selectedFilterIndex == 4) {
+          // Snacks tab
+          targetCategories = groceryCategories.where((c) =>
+            c.slug.contains('snack') || c.slug.contains('biscuit') || c.slug.contains('choco') || c.slug.contains('pack')
+          ).toList();
+        }
+
+        for (final cat in targetCategories) {
           final categoryProducts = allProducts
-              .where((p) => p.category?.slug == cat.slug || p.categoryId == cat.id || p.category?.id == cat.id)
-              .where((p) => p.restaurantId == null && p.restaurant == null)
+              .where((p) => _isProductInCategory(p, cat))
               .toList();
           if (categoryProducts.isEmpty) continue;
-          final displayProducts = categoryProducts.take(6).toList();
+          final displayProducts = categoryProducts.take(8).toList();
           slivers.add(
             SliverToBoxAdapter(
               child: _buildHorizontalProductSection(
@@ -2340,6 +2341,52 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         return slivers;
       },
     );
+  }
+
+  bool _isProductInCategory(Product p, Category cat) {
+    if (p.restaurantId != null && p.restaurantId!.isNotEmpty) return false;
+    if (p.restaurant != null) return false;
+
+    final catSlug = cat.slug.toLowerCase().trim();
+    final catId = cat.id.toLowerCase().trim();
+    final catName = cat.name.toLowerCase().trim();
+
+    final pCatSlug = (p.category?.slug ?? '').toLowerCase().trim();
+    final pCatId = (p.category?.id ?? p.categoryId ?? '').toLowerCase().trim();
+    final pCatName = (p.category?.name ?? '').toLowerCase().trim();
+
+    // 1. Direct ID / Slug / Name match
+    if (pCatId.isNotEmpty && pCatId == catId) return true;
+    if (pCatSlug.isNotEmpty && pCatSlug == catSlug) return true;
+    if (pCatName.isNotEmpty && pCatName == catName) return true;
+
+    // 2. Normalized slug match
+    final normCat = catSlug.replaceAll(RegExp(r'[-_ &]'), '');
+    final normPCat = pCatSlug.replaceAll(RegExp(r'[-_ &]'), '');
+    if (normCat.isNotEmpty && normPCat.isNotEmpty &&
+        (normCat == normPCat || normCat.contains(normPCat) || normPCat.contains(normCat))) {
+      return true;
+    }
+
+    // 3. Robust Category Aliases
+    if ((catSlug == 'kitchen-needs' || catSlug == 'atta-rice-dal') &&
+        (pCatSlug == 'kitchen-needs' || pCatSlug == 'atta-rice-dal' || pCatId == 'cat-103' || pCatName.contains('atta') || pCatName.contains('kitchen'))) {
+      return true;
+    }
+    if ((catSlug == 'bakery' || catSlug == 'bakery-biscuits') &&
+        (pCatSlug == 'bakery' || pCatSlug == 'bakery-biscuits' || pCatId == 'cat-111' || pCatName.contains('bakery') || pCatName.contains('biscuit'))) {
+      return true;
+    }
+    if ((catSlug == 'packaged-foods' || catSlug == 'instant-foods') &&
+        (pCatSlug == 'packaged-foods' || pCatSlug == 'instant-foods' || pCatId == 'cat-104' || pCatName.contains('pack') || pCatName.contains('instant'))) {
+      return true;
+    }
+    if ((catSlug == 'home-needs-and-cleaning' || catSlug == 'household' || catSlug == 'home-cleaning') &&
+        (pCatSlug == 'home-needs-and-cleaning' || pCatSlug == 'household' || pCatSlug == 'home-cleaning' || pCatId == 'cat-107' || pCatName.contains('home') || pCatName.contains('clean'))) {
+      return true;
+    }
+
+    return false;
   }
 
   String _getCategorySubtitle(String name) {

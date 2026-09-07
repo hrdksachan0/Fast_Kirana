@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Plus, Trash2, Edit2, ArrowUp, ArrowDown, Save, Loader2, ListCollapse, Upload } from 'lucide-react'
 import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS, CafeMenuSection } from '@/lib/constants'
 import Image from 'next/image'
+import { compressImageClient } from '@/lib/image-compression'
 
 const getCafeSectionImage = (tag: string) => {
   const mapping: Record<string, string> = {
@@ -56,21 +57,27 @@ export function RestaurantMenuSectionsEditor({ assignedRestaurantId }: Restauran
     if (!file) return
     setUploadingSecImage(true)
     try {
+      const compressedFile = await compressImageClient(file)
       const data = new FormData()
-      data.append('file', file)
+      data.append('file', compressedFile)
       const res = await fetch('/api/upload', {
         method: 'POST',
         body: data
       })
-      if (!res.ok) throw new Error('Upload failed')
+      if (!res.ok) {
+        if (res.status === 413) throw new Error('Photo too large (max 4.5MB)')
+        if (res.status === 401) throw new Error('Unauthorized: Please log in again')
+        const jsonErr = await res.json().catch(() => ({}))
+        throw new Error(jsonErr.error || res.statusText || 'Upload failed')
+      }
       const json = await res.json()
       if (json.url) {
         setSecImageUrl(json.url)
         toast.success('Category icon uploaded successfully!')
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      toast.error('Failed to upload category image')
+      toast.error(err.message || 'Failed to upload category image')
     } finally {
       setUploadingSecImage(false)
     }

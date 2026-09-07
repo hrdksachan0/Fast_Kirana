@@ -284,7 +284,7 @@ function LoginForm() {
       const res = await fetch('/api/auth/otp/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.toLowerCase().trim(), otp }),
+        body: JSON.stringify({ email: email.toLowerCase().trim(), otp, forNextAuth: true }),
       })
 
       const data = await res.json()

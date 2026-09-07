@@ -85,12 +85,57 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     await prefs.remove(_recentSearchesKey);
   }
 
+  // Common Hindi / Hinglish grocery and food synonyms
+  static const Map<String, List<String>> _hinglishSynonyms = {
+    'doodh': ['milk', 'dairy', 'doodh'],
+    'milk': ['doodh', 'dairy', 'milk'],
+    'dahi': ['curd', 'yogurt', 'dahi'],
+    'curd': ['dahi', 'yogurt', 'curd'],
+    'makhan': ['butter', 'makhan'],
+    'butter': ['makhan', 'butter', 'amul'],
+    'paneer': ['paneer', 'cottage cheese'],
+    'tel': ['oil', 'mustard', 'refined', 'fortune', 'tel'],
+    'oil': ['tel', 'fortune', 'mustard', 'refined', 'oil'],
+    'ghee': ['ghee', 'amul ghee', 'ananda', 'desi ghee'],
+    'aata': ['atta', 'flour', 'chakki', 'gehu', 'aata'],
+    'atta': ['aata', 'flour', 'chakki', 'gehu', 'ashirvaad', 'fortune'],
+    'chawal': ['rice', 'basmati', 'chawal'],
+    'rice': ['chawal', 'basmati', 'rice'],
+    'daal': ['dal', 'daal', 'pulses', 'arhar', 'chana', 'moong'],
+    'dal': ['daal', 'dal', 'pulses', 'arhar', 'chana', 'moong'],
+    'cheeni': ['sugar', 'cheeni', 'shakkar'],
+    'sugar': ['cheeni', 'sugar'],
+    'namak': ['salt', 'tata salt', 'namak'],
+    'salt': ['namak', 'salt'],
+    'chai': ['tea', 'chai', 'patti', 'taj mahal', 'red label'],
+    'tea': ['chai', 'tea', 'patti'],
+    'aloo': ['potato', 'aloo', 'batata'],
+    'potato': ['aloo', 'potato'],
+    'pyaz': ['onion', 'pyaz', 'kanda'],
+    'onion': ['pyaz', 'onion'],
+    'tamatar': ['tomato', 'tamatar'],
+    'tomato': ['tamatar', 'tomato'],
+    'biscuit': ['biscuits', 'parle', 'good day', 'oreo', 'cookies'],
+    'chips': ['lays', 'kurkure', 'chips', 'crisps', 'bingo'],
+    'maggie': ['maggi', 'maggie', 'noodles', 'instant noodles'],
+    'maggi': ['maggie', 'maggi', 'noodles', 'instant noodles'],
+    'cold drink': ['coke', 'pepsi', 'thums up', 'sprite', 'fanta', 'beverages', 'soda'],
+    'drink': ['coke', 'pepsi', 'thums up', 'sprite', 'fanta', 'beverages', 'cold drink'],
+    'sabzi': ['vegetables', 'fresh', 'farm'],
+    'fal': ['fruits', 'apple', 'banana', 'mango', 'orange'],
+    'fruits': ['fal', 'fruits', 'apple', 'banana'],
+    'meetha': ['sweets', 'chocolates', 'dessert', 'ice cream', 'mithai'],
+    'chocolate': ['chocolates', 'cadbury', 'kitkat', 'silk', 'dairy milk'],
+    'icecream': ['ice cream', 'desserts', 'amul', 'cone', 'cup'],
+  };
+
   void _selectCategory(String categoryId, String categoryName) {
     HapticFeedback.selectionClick();
     _controller.text = categoryName;
     setState(() {
       _query = categoryName;
     });
+    _saveRecentSearch(categoryName);
   }
 
   @override
@@ -201,7 +246,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               autofocus: widget.initialQuery == null || widget.initialQuery!.isEmpty,
                               onChanged: (val) {
                                 _debounce?.cancel();
-                                _debounce = Timer(const Duration(milliseconds: 300), () {
+                                _debounce = Timer(const Duration(milliseconds: 120), () {
                                   if (mounted) setState(() => _query = val.trim());
                                 });
                               },
@@ -424,8 +469,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       return GestureDetector(
                         onTap: () {
                           _selectCategory(cat.id, cat.name);
-                          _controller.text = '';
-                          setState(() => _query = '');
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -563,68 +606,109 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         final isRestaurantQuery = matchedRestaurants.isNotEmpty ||
             ['wedson', 'bal udyan', 'baludyan', 'a.s', 'as restaurant', 'as cafe', 'pari', 'pari milk', 'pari dairy', 'cafe', 'restaurant', 'dhaba'].any((r) => queryClean.contains(r));
 
-        final filtered = products.where((p) {
+        // 2. Build expanded query terms using Hinglish synonyms
+        final Set<String> expandedTerms = {queryClean, ...queryWords};
+        for (final word in queryWords) {
+          if (_hinglishSynonyms.containsKey(word)) {
+            expandedTerms.addAll(_hinglishSynonyms[word]!);
+          }
+        }
+        if (_hinglishSynonyms.containsKey(queryClean)) {
+          expandedTerms.addAll(_hinglishSynonyms[queryClean]!);
+        }
+
+        // 3. Relevance scored product filtering
+        final scoredProducts = <MapEntry<Product, int>>[];
+
+        for (final p in products) {
           final pName = p.name.toLowerCase();
           final outlet = getOutletName(p).toLowerCase();
+          final catName = (p.category?.name ?? '').toLowerCase();
+          final catSlug = (p.category?.slug ?? '').toLowerCase();
+          final desc = (p.description ?? '').toLowerCase();
+          final tags = p.tags.map((t) => t.toLowerCase()).toList();
+          final unit = p.unit.toLowerCase();
 
-          // 1. If user typed restaurant name specifically (e.g. "wedson", "bal udyan", "A.S.")
+          int score = 0;
+
+          // If searching for a specific restaurant/outlet
           if (isRestaurantQuery) {
-            // If matched specific restaurants, show dishes from those outlets
             if (matchedRestaurants.isNotEmpty) {
               final matchesMatchedOutlet = matchedRestaurants.any((r) =>
                   p.restaurantId == r.id ||
                   (p.restaurant?.name.toLowerCase() ?? '').contains(r.name.toLowerCase()) ||
                   outlet.contains(r.name.toLowerCase()));
-              if (matchesMatchedOutlet) return true;
+              if (matchesMatchedOutlet) score += 100;
             }
-            return outlet.contains(queryClean) || pName.contains(queryClean);
+            if (outlet.contains(queryClean)) score += 80;
           }
 
-          // 2. Strict Category / Dish Type Exclusion
-          // If searching "burger", product MUST contain "burger"
+          // Exact full name match
+          if (pName == queryClean) {
+            score += 150;
+          } else if (pName.startsWith(queryClean)) {
+            score += 100;
+          } else if (pName.contains(queryClean)) {
+            score += 60;
+          }
+
+          // Category name or slug match (e.g. searching "kitchen", "atta", "bakery", "fruits")
+          if (catName.contains(queryClean) || catSlug.contains(queryClean)) {
+            score += 50;
+          }
+
+          // Check individual query words and expanded synonyms
+          for (final term in expandedTerms) {
+            if (term.isEmpty) continue;
+
+            if (pName.contains(term)) {
+              score += 40;
+            }
+            if (tags.any((t) => t.contains(term) || term.contains(t))) {
+              score += 35;
+            }
+            if (catName.contains(term) || catSlug.contains(term)) {
+              score += 25;
+            }
+            if (desc.contains(term) || unit.contains(term)) {
+              score += 15;
+            }
+
+            // Word-level prefix match (e.g. "am" matches "amul")
+            final nameWords = pName.split(RegExp(r'\s+'));
+            if (nameWords.any((nw) => nw.startsWith(term))) {
+              score += 30;
+            }
+          }
+
+          // Strict Exclusion Guards for distinct dish types when explicitly typed
           if (queryWords.any((w) => w == 'burger' || w == 'burgers') && !pName.contains('burger')) {
-            return false;
+            score = 0;
           }
-          // If searching "pizza", product MUST contain "pizza"
           if (queryWords.any((w) => w == 'pizza' || w == 'pizzas') && !pName.contains('pizza')) {
-            return false;
+            score = 0;
           }
-          // If searching "sandwich", product MUST contain "sandwich"
           if (queryWords.any((w) => w.contains('sandwich')) && !pName.contains('sandwich')) {
-            return false;
+            score = 0;
           }
-          // If searching "roll", product MUST contain "roll" or "wrap"
           if (queryWords.any((w) => w == 'roll' || w == 'rolls' || w == 'wrap') && !pName.contains('roll') && !pName.contains('wrap')) {
-            return false;
+            score = 0;
           }
-          // If searching "momo" / "momos"
           if (queryWords.any((w) => w.startsWith('momo')) && !pName.contains('momo')) {
-            return false;
-          }
-          // If searching "noodle" / "maggi" / "chowmein"
-          if (queryWords.any((w) => w.contains('noodle') || w == 'maggi' || w.contains('chowmein')) &&
-              !pName.contains('noodle') && !pName.contains('maggi') && !pName.contains('chowmein') && !pName.contains('pasta')) {
-            return false;
+            score = 0;
           }
 
-          // 3. Multi-word match in name
-          final isVeg = !p.tags.any((t) => t.toLowerCase().contains('non-veg') || t.toLowerCase() == 'egg') &&
-              !pName.contains('chicken') && !pName.contains('egg') && !pName.contains('mutton');
+          if (score > 0) {
+            // Prioritize in-stock and available products
+            if (p.isAvailable && p.stock > 0) score += 20;
+            if (p.isBestSeller) score += 10;
+            scoredProducts.add(MapEntry(p, score));
+          }
+        }
 
-          final matchesWords = queryWords.every((word) {
-            if (word == 'veg' || word == 'veggie') {
-              return pName.contains('veg') || isVeg;
-            }
-            return pName.contains(word);
-          });
-
-          if (matchesWords) return true;
-
-          // 4. Exact substring match in name or outlet
-          if (pName.contains(queryClean) || outlet.contains(queryClean)) return true;
-
-          return false;
-        }).toList();
+        // Sort by relevance score descending
+        scoredProducts.sort((a, b) => b.value.compareTo(a.value));
+        final filtered = scoredProducts.map((e) => e.key).toList();
 
         if (filtered.isEmpty && matchedRestaurants.isEmpty) {
           return EmptyState(

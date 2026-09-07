@@ -69,6 +69,11 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   cafe_profit_share: '15',
   cafe_default_margin: '30',
   restaurant_default_margin: '30',
+  min_app_version: '1.0.0',
+  latest_app_version: '1.0.1',
+  app_update_url: 'https://fastkirana.in/app-release.apk',
+  app_update_message: 'FastKirana ka naya update available hai! Faster performance, bug fixes aur smooth ordering ke liye abhi update karein.',
+  app_force_update: 'false',
 }
 
 export function checkIsStoreOpen(settingsMap: Record<string, string>, prefix: 'grocery' | 'cafe' | 'restaurant'): boolean {

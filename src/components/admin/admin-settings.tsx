@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { Sliders, Save, Loader2, Eye, Heart, Star, Package, FileText, MessageSquare } from 'lucide-react'
+import { Sliders, Save, Loader2, Eye, Heart, Star, Package, FileText, MessageSquare, Smartphone, Download, AlertCircle, RefreshCw } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { STORE_PINCODE, STORE_ADDRESS, STORE_PHONE, GROCERY_PICKUP_ADDRESS, CAFE_PICKUP_ADDRESS, RESTAURANT_PICKUP_ADDRESS, SERVICE_AREA_NAME } from '@/lib/store-config'
 
@@ -11,8 +11,13 @@ interface AdminSettingsProps {
 }
 
 export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
-  const [settingsTab, setSettingsTab] = useState<'ops' | 'cosmetics' | 'finance' | 'greetings'>('ops')
+  const [settingsTab, setSettingsTab] = useState<'ops' | 'cosmetics' | 'finance' | 'greetings' | 'app'>('ops')
   const [greetingsSubTab, setGreetingsSubTab] = useState<'closed' | 'morning' | 'afternoon' | 'evening' | 'night'>('morning')
+  const [minAppVersion, setMinAppVersion] = useState('1.0.0')
+  const [latestAppVersion, setLatestAppVersion] = useState('1.0.1')
+  const [appUpdateUrl, setAppUpdateUrl] = useState('https://fastkirana.in/app-release.apk')
+  const [appUpdateMessage, setAppUpdateMessage] = useState('FastKirana ka naya update available hai! Faster performance, bug fixes aur smooth ordering ke liye abhi update karein.')
+  const [appForceUpdate, setAppForceUpdate] = useState(false)
   const [deliveriesCount, setDeliveriesCount] = useState('10,000+')
   const [ratingValue, setRatingValue] = useState('4.8')
   const [happyFamilies, setHappyFamilies] = useState('5,000+')
@@ -157,6 +162,11 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         if (data.hero_subtitle_night_mart_closed) setHeroSubtitleNightMartClosed(data.hero_subtitle_night_mart_closed)
         if (data.hero_subtitle_night_cafe_closed) setHeroSubtitleNightCafeClosed(data.hero_subtitle_night_cafe_closed)
         if (data.hero_subtitle_night_both_open) setHeroSubtitleNightBothOpen(data.hero_subtitle_night_both_open)
+        if (data.min_app_version) setMinAppVersion(data.min_app_version)
+        if (data.latest_app_version) setLatestAppVersion(data.latest_app_version)
+        if (data.app_update_url) setAppUpdateUrl(data.app_update_url)
+        if (data.app_update_message) setAppUpdateMessage(data.app_update_message)
+        if (data.app_force_update !== undefined) setAppForceUpdate(data.app_force_update === 'true')
 
         // Parse category statuses
         const catStatusMap: Record<string, boolean> = {}
@@ -253,6 +263,11 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           hero_subtitle_night_mart_closed: heroSubtitleNightMartClosed.trim(),
           hero_subtitle_night_cafe_closed: heroSubtitleNightCafeClosed.trim(),
           hero_subtitle_night_both_open: heroSubtitleNightBothOpen.trim(),
+          min_app_version: minAppVersion.trim(),
+          latest_app_version: latestAppVersion.trim(),
+          app_update_url: appUpdateUrl.trim(),
+          app_update_message: appUpdateMessage.trim(),
+          app_force_update: appForceUpdate ? 'true' : 'false',
           ...categorySettingsPayload,
         }),
       })
@@ -305,7 +320,8 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                 { id: 'ops', label: '🚚 Operations' },
                 { id: 'cosmetics', label: '🎨 Branding' },
                 { id: 'greetings', label: '👋 Greetings' },
-                { id: 'finance', label: '🔑 Financials' }
+                { id: 'finance', label: '🔑 Financials' },
+                { id: 'app', label: '📲 App Updates' }
               ].map(t => (
                 <button
                   key={t.id}
@@ -1048,6 +1064,119 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {settingsTab === 'app' && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-start gap-3">
+                  <Smartphone className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-xs font-bold text-text-primary">In-App Version & Remote Update System</h4>
+                    <p className="text-[11px] text-text-secondary mt-0.5">
+                      Controls which app versions customers are using. When you release a new APK, update the version and APK link here to prompt all active users to upgrade instantly.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Latest App Version */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+                      <RefreshCw className="h-3.5 w-3.5 text-primary" />
+                      Latest App Version (Target) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 1.0.1"
+                      value={latestAppVersion}
+                      onChange={(e) => setLatestAppVersion(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                    />
+                    <p className="text-[9px] text-text-muted">Customers below this version will see the &quot;Update Available&quot; popup.</p>
+                  </div>
+
+                  {/* Minimum Required Version */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+                      <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                      Minimum Supported Version *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 1.0.0"
+                      value={minAppVersion}
+                      onChange={(e) => setMinAppVersion(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                    />
+                    <p className="text-[9px] text-text-muted">Older versions below this floor are automatically forced to update.</p>
+                  </div>
+                </div>
+
+                {/* APK Download URL */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+                      <Download className="h-3.5 w-3.5 text-accent" />
+                      Direct APK Download URL *
+                    </label>
+                    {appUpdateUrl && (
+                      <a
+                        href={appUpdateUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[10px] text-accent hover:underline font-bold"
+                      >
+                        Test Link ↗
+                      </a>
+                    )}
+                  </div>
+                  <input
+                    type="url"
+                    required
+                    placeholder="https://fastkirana.in/app-release.apk or Supabase/Drive download URL"
+                    value={appUpdateUrl}
+                    onChange={(e) => setAppUpdateUrl(e.target.value)}
+                    className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-mono text-[11px]"
+                  />
+                  <p className="text-[9px] text-text-muted">Tapping &quot;Update Now&quot; in the mobile app opens this link directly in the user&apos;s browser to start the download.</p>
+                </div>
+
+                {/* Force Update Toggle */}
+                <div className="flex items-center justify-between p-4 bg-muted/30 border border-border/60 rounded-xl">
+                  <div>
+                    <h5 className="text-xs font-bold text-text-primary">Enforce Mandatory Update (Force Update)</h5>
+                    <p className="text-[10px] text-text-secondary mt-0.5">
+                      If enabled, customers cannot dismiss the popup or use the app until they install the latest APK.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={appForceUpdate}
+                      onChange={(e) => setAppForceUpdate(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                  </label>
+                </div>
+
+                {/* Update Announcement / Release Notes */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
+                    Update Message / Release Notes for Customers *
+                  </label>
+                  <textarea
+                    required
+                    rows={3}
+                    placeholder="Describe new features or improvements..."
+                    value={appUpdateMessage}
+                    onChange={(e) => setAppUpdateMessage(e.target.value)}
+                    className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                  />
+                </div>
               </div>
             )}
 

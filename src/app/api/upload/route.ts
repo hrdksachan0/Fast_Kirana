@@ -1,17 +1,20 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import sharp from 'sharp'
 import { uploadToSupabaseStorage, generateStoragePath } from '@/lib/supabase-storage'
 
 async function optimizeImageToWebP(inputBuffer: Buffer): Promise<{ buffer: Buffer; isWebP: boolean }> {
   try {
-    const optimized = await sharp(inputBuffer)
+    const sharpModule = await import('sharp').then((m) => m.default || m).catch(() => null)
+    if (!sharpModule) {
+      return { buffer: inputBuffer, isWebP: false }
+    }
+    const optimized = await sharpModule(inputBuffer)
       .resize({
-        width: 800,
+        width: 1200,
         withoutEnlargement: true,
         fit: 'inside',
       })
-      .webp({ quality: 80, effort: 4 })
+      .webp({ quality: 82, effort: 4 })
       .toBuffer()
     return { buffer: optimized, isWebP: true }
   } catch (err) {
@@ -22,13 +25,20 @@ async function optimizeImageToWebP(inputBuffer: Buffer): Promise<{ buffer: Buffe
 
 export async function POST(req: Request) {
   try {
-    const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const session = await auth().catch(() => null)
+    // Fallback: check headers if session cookie not passed (e.g. mobile or reverse proxy)
+    const headerUserId = req.headers.get('x-user-id')
+    const headerRole = req.headers.get('x-user-role')
+    const isStaffOrAdmin = headerRole === 'ADMIN' || headerRole === 'RESTAURANT_STAFF' || headerRole === 'DELIVERY'
+
+    if (!session?.user && !(headerUserId && isStaffOrAdmin)) {
+      return NextResponse.json({ error: 'Unauthorized: Staff or admin login required' }, { status: 401 })
     }
 
     const contentType = req.headers.get('content-type') || ''
     let inputBuffer: Buffer | null = null
+    let originalMime = 'image/jpeg'
+    let originalExt = 'jpg'
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData()
@@ -36,12 +46,22 @@ export async function POST(req: Request) {
       if (!file) {
         return NextResponse.json({ error: 'No file provided' }, { status: 400 })
       }
+      if (file.type) {
+        originalMime = file.type
+        if (file.name && file.name.includes('.')) {
+          originalExt = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+        }
+      }
       const arrayBuffer = await file.arrayBuffer()
       inputBuffer = Buffer.from(arrayBuffer)
     } else {
-      const body = await req.json()
+      const body = await req.json().catch(() => ({}))
       const rawData = body.file || body.image || ''
       if (rawData) {
+        if (rawData.startsWith('data:')) {
+          const match = rawData.match(/^data:([^;]+);base64,/)
+          if (match) originalMime = match[1]
+        }
         // Strip data URL prefix if present
         const base64Clean = rawData.includes(',') ? rawData.split(',')[1] : rawData
         inputBuffer = Buffer.from(base64Clean, 'base64')
@@ -52,10 +72,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No image data provided' }, { status: 400 })
     }
 
-    // Auto-compress to WebP (max 800px width, quality 80)
+    // Auto-compress to WebP if sharp is available
     const { buffer: optimizedBuffer, isWebP } = await optimizeImageToWebP(inputBuffer)
-    const mime = isWebP ? 'image/webp' : 'image/jpeg'
-    const ext = isWebP ? 'webp' : 'jpg'
+    const mime = isWebP ? 'image/webp' : originalMime
+    const ext = isWebP ? 'webp' : originalExt
 
     // Upload to Supabase Storage
     try {

@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   compress: true,
   reactStrictMode: true,
   output: 'standalone',
+  serverExternalPackages: ['sharp'],
   experimental: {
     staleTimes: {
       dynamic: 10,
