@@ -5,11 +5,19 @@ import { sendWhatsAppOtp } from '@/lib/whatsapp'
 import { otpLimiter } from '@/lib/rate-limit'
 import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 
-export async function OPTIONS() {
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('origin') || ''
+  const isAllowed = 
+    origin.endsWith('fastkirana.in') ||
+    origin.endsWith('fastkirana.com') ||
+    origin.startsWith('http://localhost:') ||
+    origin.startsWith('capacitor://') ||
+    origin.startsWith('ionic://')
+
   return new NextResponse(null, {
     status: 200,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': isAllowed ? origin : 'https://www.fastkirana.in',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },

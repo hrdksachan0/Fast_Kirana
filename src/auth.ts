@@ -5,6 +5,8 @@ import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { authConfig } from './auth.config'
 import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
+import { isDevBypassActive, getDevBypassPassword } from '@/lib/auth-bypass-config'
+import { findCanonicalUser, getCanonicalEmail, getAssignedRestaurantId } from '@/lib/superadmin-config'
 
 const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -126,16 +128,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
         let input = (credentials.email as string).trim()
         const password = credentials.password as string
 
-        if (input.toLowerCase() === 'superadmin') {
-          input = 'superadmin@fastkirana.com'
-        } else if (input.toLowerCase() === 'admin') {
-          input = 'admin@fastkirana.com'
-        }
-
-        const isDev = process.env.NODE_ENV !== 'production'
-        const bypassEnabled = isDev && process.env.ENABLE_DEV_BYPASS === '1'
-        const bypassPassword = process.env.DEV_BYPASS_PASSWORD
-        const isBypass = bypassEnabled && !!bypassPassword && password === bypassPassword
+        const isBypass = isDevBypassActive() && password === getDevBypassPassword()
 
         // Check if input is a phone number or email
         const normPhone = normalizePhone(input)
@@ -155,19 +148,8 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
               ]
             }
           })
-          // Prioritize canonical staff & restaurant accounts:
-          // 9170942500 -> superadmin@fastkirana.com (Super Admin HQ)
-          // 7054470303 -> admin@fastkirana.com (Store Operations Manager)
-          // 8112849854 -> asrestaurant3@gmail.com (A.S. Restaurant Owner REST-101)
-          // 9250138656 -> restaurant@fastkirana.com (Wedson Restaurant Owner REST-102)
-          // 7991488783 -> baludyanhotelrestaurant@gmail.com (Bal Udyan Restaurant Owner REST-103)
-          const canonicalUser = matchingUsers.find(u => 
-            (cleanPhoneDigits === '9170942500' && u.email === 'superadmin@fastkirana.com') ||
-            (cleanPhoneDigits === '7054470303' && u.email === 'admin@fastkirana.com') ||
-            (cleanPhoneDigits === '8112849854' && (u.email === 'asrestaurant3@gmail.com' || u.assignedRestaurantId === 'REST-101')) ||
-            (cleanPhoneDigits === '9250138656' && (u.email === 'restaurant@fastkirana.com' || u.assignedRestaurantId === 'REST-102')) ||
-            (cleanPhoneDigits === '7991488783' && (u.email === 'baludyanhotelrestaurant@gmail.com' || u.assignedRestaurantId === 'REST-103'))
-          )
+          // Canonical staff accounts resolved from database-backed superadmin config
+          const canonicalUser = findCanonicalUser(matchingUsers, cleanPhoneDigits)
           user = canonicalUser || matchingUsers.find(u => u.role !== 'USER' || !!u.passwordHash) || matchingUsers[0]
         } else {
           user = await prisma.user.findUnique({
@@ -194,7 +176,8 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
             const name = baseName.charAt(0).toUpperCase() + baseName.slice(1)
 
             // Auto-create password hash for consistency
-            const passwordHash = await bcrypt.hash(bypassPassword!, 12)
+            const bypassPasswordValue = getDevBypassPassword()!
+            const passwordHash = await bcrypt.hash(bypassPasswordValue, 12)
 
             user = await prisma.user.create({
               data: {
@@ -221,14 +204,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
 
         if (!user || !user.passwordHash) return null
 
-        let isValid = await bcrypt.compare(password, user.passwordHash)
-        if (!isValid && (user.email === 'superadmin@fastkirana.com' || user.email === 'admin@fastkirana.com' || user.role === 'ADMIN')) {
-          const masterPasswords = ['Tuktuk@26']
-          if (masterPasswords.includes(password)) {
-            isValid = true
-          }
-        }
-
+        const isValid = await bcrypt.compare(password, user.passwordHash)
         if (!isValid) return null
 
         return {
@@ -278,22 +254,10 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
           candidateEmails.add(`91${cleanDigits}`)
           candidateEmails.add(`+91${cleanDigits}`)
 
-          // Add known canonical emails
-          if (cleanDigits === '9170942500') {
-            candidateEmails.add('superadmin@fastkirana.com')
-          }
-          if (cleanDigits === '7054470303') {
-            candidateEmails.add('admin@fastkirana.com')
-            candidateEmails.add('admin@fastkirana.in')
-          }
-          if (cleanDigits === '8112849854') {
-            candidateEmails.add('asrestaurant3@gmail.com')
-          }
-          if (cleanDigits === '9250138656') {
-            candidateEmails.add('restaurant@fastkirana.com')
-          }
-          if (cleanDigits === '7991488783') {
-            candidateEmails.add('baludyanhotelrestaurant@gmail.com')
+          // Add canonical email for superadmin/staff phones (from DB-backed config)
+          const canonicalEmail = getCanonicalEmail(cleanDigits)
+          if (canonicalEmail) {
+            candidateEmails.add(canonicalEmail)
           }
 
           const matchingUsers = await prisma.user.findMany({
@@ -314,13 +278,13 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
             if (u.email) candidateEmails.add(u.email.toLowerCase())
           }
 
-          canonicalUser = matchingUsers.find(u =>
-            (cleanDigits === '9170942500' && u.email === 'superadmin@fastkirana.com') ||
-            (cleanDigits === '7054470303' && u.email === 'admin@fastkirana.com') ||
-            (cleanDigits === '8112849854' && (u.email === 'asrestaurant3@gmail.com' || u.assignedRestaurantId === 'REST-101')) ||
-            (cleanDigits === '9250138656' && (u.email === 'restaurant@fastkirana.com' || u.assignedRestaurantId === 'REST-102')) ||
-            (cleanDigits === '7991488783' && (u.email === 'baludyanhotelrestaurant@gmail.com' || u.assignedRestaurantId === 'REST-103'))
-          )
+          const canonical = findCanonicalUser(matchingUsers, cleanDigits)
+          if (canonical) {
+            canonicalUser = matchingUsers.find(u =>
+              u.email?.toLowerCase() === canonical.email.toLowerCase() &&
+              (u.assignedRestaurantId === canonical.assignedRestaurantId || !u.assignedRestaurantId)
+            )
+          }
 
           const existingUser = canonicalUser || matchingUsers.find(u => u.role !== 'USER' || !!u.passwordHash) || matchingUsers[0]
           if (existingUser && existingUser.email && !existingUser.email.startsWith('wa-')) {
@@ -336,27 +300,20 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
         }
 
         // 1. Verify OTP in database across all candidate identifier formats
-        let otpRecord: { id: string; token: string } | null = null
-        if (otp === '123456') {
-          otpRecord = { id: 'bypass', token: '123456' }
-        } else {
-          otpRecord = await prisma.otpToken.findFirst({
-            where: {
-              email: { in: Array.from(candidateEmails) },
-              token: otp,
-              expiresAt: { gt: new Date() }
-            }
-          })
-        }
+        const otpRecord = await prisma.otpToken.findFirst({
+          where: {
+            email: { in: Array.from(candidateEmails) },
+            token: otp,
+            expiresAt: { gt: new Date() }
+          }
+        })
 
         if (!otpRecord) return null
 
         // 2. Delete used OTP token
-        if (otpRecord.id !== 'bypass') {
-          await prisma.otpToken.delete({
-            where: { id: otpRecord.id }
-          }).catch(() => {})
-        }
+        await prisma.otpToken.delete({
+          where: { id: otpRecord.id }
+        }).catch(() => {})
 
         // 3. Find or create user
         const matchingUsersPostOtp = await prisma.user.findMany({
@@ -372,10 +329,10 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
             ]
           }
         })
-        const canonicalUserPostOtp = matchingUsersPostOtp.find(u =>
-          (cleanDigits === '9170942500' && u.email === 'superadmin@fastkirana.com') ||
-          (cleanDigits === '7054470303' && u.email === 'admin@fastkirana.com')
-        )
+        const canonicalPostOtp = cleanDigits ? findCanonicalUser(matchingUsersPostOtp, cleanDigits) : null
+        const canonicalUserPostOtp = canonicalPostOtp
+          ? matchingUsersPostOtp.find(u => u.email?.toLowerCase() === canonicalPostOtp.email.toLowerCase())
+          : undefined
         let user = canonicalUserPostOtp || canonicalUser || matchingUsersPostOtp.find(u => u.role !== 'USER' || !!u.passwordHash) || matchingUsersPostOtp[0] || null
 
         if (user && user.isBlocked) {
@@ -447,69 +404,48 @@ export async function auth(...args: any[]) {
     }
 
     const userId = headersList.get('x-user-id')
-    const userEmail = headersList.get('x-user-email')
-    const userName = headersList.get('x-user-name')
-    const userRole = headersList.get('x-user-role')
-    const userPhone = headersList.get('x-user-phone')
 
     if (!userId) return null;
 
-      let resolvedUserId = userId;
-      if (userId.startsWith('mock-id-') || !userId.includes('-')) {
-        try {
-          const email = userEmail || 'admin@fastkirana.com';
-          let dbUser = await prisma.user.findUnique({
-            where: { email }
-          });
-          if (dbUser && dbUser.isBlocked) {
-            return null;
-          }
-          if (dbUser) {
-            resolvedUserId = dbUser.id;
-          } else {
-            dbUser = await prisma.user.create({
-              data: {
-                email,
-                name: userName || 'Mock User',
-                role: userRole as any,
-                phone: userPhone || '+919999900000',
-              }
-            });
-            resolvedUserId = dbUser.id;
-          }
-        } catch (dbErr) {
-          console.error('Failed to resolve mock user in db:', dbErr);
-        }
+    // SECURITY: Reject mock-id prefix and ensure user exists in database
+    if (userId.startsWith('mock-id-')) {
+      console.warn('[auth] Rejecting header-based auth with mock-id prefix')
+      return null
+    }
+
+    let assignedStoreId: string | null = headersList.get('x-user-store-id') || null
+    let assignedRestaurantId: string | null = null
+    let dbRole: string | null = null
+
+    try {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { assignedStoreId: true, assignedRestaurantId: true, role: true, isBlocked: true }
+      })
+      if (dbUser) {
+        if (dbUser.isBlocked) return null
+        if (dbUser.assignedStoreId) assignedStoreId = dbUser.assignedStoreId
+        if (dbUser.assignedRestaurantId) assignedRestaurantId = dbUser.assignedRestaurantId
+        dbRole = dbUser.role
+      } else {
+        return null
       }
+    } catch (e) {
+      return null
+    }
 
-      let assignedStoreId: string | null = headersList.get('x-user-store-id') || null
-      let assignedRestaurantId: string | null = null
-
-      if (resolvedUserId) {
-        try {
-          const dbUser = await prisma.user.findUnique({
-            where: { id: resolvedUserId },
-            select: { assignedStoreId: true, assignedRestaurantId: true, role: true }
-          })
-          if (dbUser) {
-            if (dbUser.assignedStoreId) assignedStoreId = dbUser.assignedStoreId
-            if (dbUser.assignedRestaurantId) assignedRestaurantId = dbUser.assignedRestaurantId
-          }
-        } catch (e) {}
-      }
-
-      return {
-        user: {
-          id: resolvedUserId,
-          role: userRole as any,
-          email: userEmail,
-          name: userName,
-          phone: userPhone,
-          assignedStoreId,
-          assignedRestaurantId,
-        },
-        expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      };
+    return {
+      user: {
+        id: userId,
+        role: dbRole as any,
+        email: headersList.get('x-user-email'),
+        name: headersList.get('x-user-name'),
+        phone: headersList.get('x-user-phone'),
+        assignedStoreId,
+        assignedRestaurantId,
+      },
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    };
   } catch (err) {
     // Suppress errors (not inside request context)
   }

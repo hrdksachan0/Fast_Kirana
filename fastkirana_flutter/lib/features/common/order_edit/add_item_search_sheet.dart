@@ -211,6 +211,8 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
                   _buildAdminFilterChip(outletAsRestaurantId, '☕ A.S. Rest.'),
                   const SizedBox(width: 6),
                   _buildAdminFilterChip(outletBalUdyanId, '🌳 Bal Udyan'),
+                  const SizedBox(width: 6),
+                  _buildAdminFilterChip(outletPariMilkId, '🥛 Pari Milk'),
                 ],
               ),
             ),

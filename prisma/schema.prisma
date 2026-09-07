@@ -493,6 +493,19 @@ model PromoBanner {
   @@map("promo_banners")
 }
 
+model SuperAdmin {
+  id                   String   @id @default(cuid())
+  phone                String   @unique
+  email                String
+  label                String
+  assignedRestaurantId String?
+  isActive             Boolean  @default(true)
+  grantedBy            String?
+  createdAt            DateTime @default(now())
+
+  @@map("super_admins")
+}
+
 model StoreSetting {
   id        String   @id @default(cuid())
   key       String   @unique

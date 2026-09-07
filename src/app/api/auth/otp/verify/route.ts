@@ -118,25 +118,20 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Find the OTP token across all candidate identifiers
-    let otpRecord = null
-    if (otp === '123456') {
-      otpRecord = { id: 'bypass', token: '123456' }
-    } else {
-      otpRecord = await prisma.otpToken.findFirst({
-        where: {
-          token: otp,
-          email: { in: Array.from(candidateEmails) },
-          expiresAt: { gt: new Date() }
-        }
-      })
-    }
+    const otpRecord = await prisma.otpToken.findFirst({
+      where: {
+        token: otp,
+        email: { in: Array.from(candidateEmails) },
+        expiresAt: { gt: new Date() }
+      }
+    })
 
     if (!otpRecord) {
       return NextResponse.json({ error: 'Invalid or expired OTP code' }, { status: 400 })
     }
 
     // Delete used OTP token only if not preserved for NextAuth sign-in
-    if (!preserveToken && otpRecord.id !== 'bypass') {
+    if (!preserveToken) {
       await prisma.otpToken.delete({
         where: { id: otpRecord.id }
       }).catch(() => {})

@@ -241,8 +241,8 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
           'selectedVariant': it['selectedVariant'],
           'notes': it['notes'],
           'imageUrl': it['imageUrl'],
-          'restaurantId': it['restaurantId'] ?? widget.restaurantId ?? widget.order['restaurantId'],
-          'shopName': it['shopName'] ?? widget.order['shopName'],
+          'restaurantId': it['restaurantId'],
+          'shopName': it['shopName'],
         }).toList(),
         'outOfStockProductIds': _outOfStockProductIds.toList(),
       };
@@ -506,6 +506,18 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                           ? (it['price'] as num).toDouble()
                           : (double.tryParse(it['price']?.toString() ?? '0') ?? 0.0);
                       final qty = (it['quantity'] is num) ? (it['quantity'] as num).toInt() : 1;
+                      final itemRestId = it['restaurantId']?.toString();
+                      final itemShopName = it['shopName']?.toString();
+                      final isRestItem = itemRestId != null && itemRestId.isNotEmpty;
+                      final domainLabel = isRestItem
+                          ? '🍽️ ${itemShopName ?? 'Restaurant'}'
+                          : '🛒 Grocery';
+                      final domainColor = isRestItem
+                          ? const Color(0xFFFFF7ED)
+                          : const Color(0xFFF0FDF4);
+                      final domainTextColor = isRestItem
+                          ? const Color(0xFFC2410C)
+                          : const Color(0xFF15803D);
 
                       return Row(
                         children: [
@@ -541,6 +553,22 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                                           ),
                                         ),
                                       ),
+                                    const SizedBox(width: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                      decoration: BoxDecoration(
+                                        color: domainColor,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        domainLabel,
+                                        style: GoogleFonts.inter(
+                                          fontSize: Responsive.scaledFontSize(context, 8),
+                                          fontWeight: FontWeight.w700,
+                                          color: domainTextColor,
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
                                 if (variant != null && variant.isNotEmpty)

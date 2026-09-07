@@ -5,6 +5,7 @@
 
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { isSuperadminPhone } from '@/lib/superadmin-config'
 
 /**
  * Requires an authenticated user with one of the given roles.
@@ -30,9 +31,7 @@ export async function requireRole(allowedRoles: string[], request?: Request) {
     if (jwtPayload) {
       const userRole = jwtPayload.role?.toUpperCase() || 'USER'
       const phoneDigits = (jwtPayload.phone || '').replace(/\D/g, '').slice(-10)
-      const isSuper = phoneDigits === '8112849854' || 
-        phoneDigits === '9170942500' || 
-        phoneDigits === '7054470303' || 
+      const isSuper = isSuperadminPhone(phoneDigits) || 
         (userRole === 'ADMIN' && !jwtPayload.assignedStoreId)
 
       if (isSuper || allowedRoles.includes(userRole) || userRole === 'ADMIN') {
@@ -63,9 +62,7 @@ export async function requireRole(allowedRoles: string[], request?: Request) {
 
   const isSuper = userEmail.startsWith('admin') || 
     userEmail.includes('hrdk') || 
-    phoneDigits === '8112849854' || 
-    phoneDigits === '9170942500' || 
-    phoneDigits === '7054470303' ||
+    isSuperadminPhone(phoneDigits) ||
     (sessionRole === 'ADMIN' && !assignedStoreId)
 
   if (isSuper || (sessionRole && (allowedRoles.includes(sessionRole) || sessionRole === 'ADMIN'))) {

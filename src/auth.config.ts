@@ -19,12 +19,14 @@ const googleClientId = getCleanEnv('GOOGLE_CLIENT_ID')
 const googleClientSecret = getCleanEnv('GOOGLE_CLIENT_SECRET')
 
 export const authConfig = {
-  trustHost: true,
+  // trustHost must be set via NEXTAUTH_URL env var, not trustHost: true.
+  // Production deployments MUST set NEXTAUTH_URL to validate Host headers.
   providers: [
     Google({
       clientId: googleClientId || 'placeholder',
       clientSecret: googleClientSecret || 'placeholder',
-      allowDangerousEmailAccountLinking: true,
+      // SECURITY: removed allowDangerousEmailAccountLinking — a compromised
+      // Google account at the same email could otherwise hijack the local account.
       authorization: {
         params: {
           prompt: 'select_account',

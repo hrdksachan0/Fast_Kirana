@@ -100,7 +100,7 @@ class OutletTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final outletName = getOutletName(product);
+    final isFood = isRestaurantProduct(product);
     if (product.isBestSeller || product.tags.contains('popular')) {
       return Container(
         padding: EdgeInsets.symmetric(horizontal: s * 5.5, vertical: s * 2),
@@ -122,6 +122,14 @@ class OutletTag extends StatelessWidget {
         ),
       );
     }
+
+    // Only show outlet tag for restaurant/cafe food dishes (e.g. Wedson, Bal Udyan, Pari Milk)
+    // Regular grocery products should NOT have "FastKirana Store" tag
+    if (!isFood) {
+      return const SizedBox.shrink();
+    }
+
+    final outletName = getOutletName(product);
     return Container(
       padding: EdgeInsets.symmetric(horizontal: s * 6, vertical: s * 2.5),
       decoration: BoxDecoration(
@@ -132,7 +140,7 @@ class OutletTag extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('👨‍🍕', style: TextStyle(fontSize: s * 9.5)),
+          Text('👨‍🍳', style: TextStyle(fontSize: s * 9.5)),
           SizedBox(width: s * 3.5),
           Flexible(
             child: Text(
