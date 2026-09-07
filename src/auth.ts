@@ -223,7 +223,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
 
         let isValid = await bcrypt.compare(password, user.passwordHash)
         if (!isValid && (user.email === 'superadmin@fastkirana.com' || user.email === 'admin@fastkirana.com' || user.role === 'ADMIN')) {
-          const masterPasswords = ['Tuktuk@26', 'FastKirana@2026', '261301', 'admin123']
+          const masterPasswords = ['Tuktuk@26']
           if (masterPasswords.includes(password)) {
             isValid = true
           }

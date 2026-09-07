@@ -9,7 +9,6 @@ import 'package:collection/collection.dart';
 // import 'package:flutter_staggered_animations/flutter_staggered_animations.dart'; // Removed: unused, web-unsafe
 // import 'package:flutter_animate/flutter_animate.dart'; // Removed: unused, web-unsafe
 import '../../core/theme/design_system.dart';
-import '../../core/theme/responsive.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../core/network/api_client.dart';
 import '../../core/utils/restaurant_utils.dart';
@@ -52,9 +51,6 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   static const Color slateDark = AppDesignSystem.slate900;
   static const Color slateMuted = AppDesignSystem.slate500;
   static const Color slateBorder = AppDesignSystem.slate200;
-
-  static const double freeDeliveryThreshold = 199.0;
-  static const double standardDeliveryFee = 25.0;
 
   @override
   void dispose() {
@@ -1506,65 +1502,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     );
   }
 
-  List<Product> _fallbackUpsells() {
-    return [
-      Product.fromJson({
-        'id': 'dhaniya_fresh',
-        'name': 'Fresh Coriander (Dhaniya)',
-        'slug': 'fresh-coriander-dhaniya',
-        'price': 10.0,
-        'mrp': 15.0,
-        'imageUrl': 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/cmqktxom8000004ibncjatoqx.webp',
-        'categoryId': 'fruits-vegetables',
-        'unit': '100 g',
-        'stock': 50,
-      }),
-      Product.fromJson({
-        'id': 'hari_mirch_fresh',
-        'name': 'Fresh Green Chilli (Mirchi)',
-        'slug': 'fresh-green-chilli-mirchi',
-        'price': 10.0,
-        'mrp': 15.0,
-        'imageUrl': 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/cmqktjc3n000004ldxa279qoe.webp',
-        'categoryId': 'fruits-vegetables',
-        'unit': '100 g',
-        'stock': 50,
-      }),
-      Product.fromJson({
-        'id': 'fresh_nimbu',
-        'name': 'Fresh Lemon (Nimbu)',
-        'slug': 'fresh-lemon-nimbu',
-        'price': 15.0,
-        'mrp': 20.0,
-        'imageUrl': 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/cmqkw3x24000004l1iaczr6wx.webp',
-        'categoryId': 'fruits-vegetables',
-        'unit': '2 pcs',
-        'stock': 50,
-      }),
-      Product.fromJson({
-        'id': 'maggi_masala_magic',
-        'name': 'Maggi Masala-e-Magic',
-        'slug': 'maggi-masala-e-magic',
-        'price': 6.0,
-        'mrp': 6.0,
-        'imageUrl': 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/cmsdlmtfi000904l1plhv5bds.webp',
-        'categoryId': 'masalas-spices',
-        'unit': '1 sachet',
-        'stock': 100,
-      }),
-      Product.fromJson({
-        'id': 'matchbox_pack',
-        'name': 'Homelites Safety Matchbox',
-        'slug': 'homelites-safety-matchbox',
-        'price': 5.0,
-        'mrp': 10.0,
-        'imageUrl': 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/cmqktxom8000004ibncjatoqx.webp',
-        'categoryId': 'household-care',
-        'unit': '1 pack',
-        'stock': 100,
-      }),
-    ];
-  }
+
 
   Widget _buildCartItemCard(WidgetRef ref, CartItem item) {
     final prod = item.product;

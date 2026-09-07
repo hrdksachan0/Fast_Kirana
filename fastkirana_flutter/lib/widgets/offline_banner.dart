@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/theme/design_system.dart';
-import '../core/theme/responsive.dart';
 import '../core/utils/app_connectivity.dart';
 
 class OfflineBanner extends ConsumerStatefulWidget {

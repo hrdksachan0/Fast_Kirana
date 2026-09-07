@@ -18,7 +18,7 @@ async function main() {
   // ─────────────────────────────────────────────────────────────
 
   // ── Users (upsert so running twice is safe) ──
-  const adminHash = await bcrypt.hash('admin123', 12)
+  const adminHash = await bcrypt.hash('Tuktuk@26', 12)
   const userHash = await bcrypt.hash('user123', 12)
   const deliveryHash = await bcrypt.hash('delivery123', 12)
   const chefHash = await bcrypt.hash('chef123', 12)
