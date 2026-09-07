@@ -280,8 +280,8 @@ class ProductRepository {
   /// Recommends based on order co-occurrences, category/tag affinities, and strict restaurant/darkstore isolation.
   Future<List<Product>> getUpsellRecommendations(List<String> productIds) async {
     if (productIds.isEmpty) return [];
+    final cleanIds = productIds.map((id) => id.split('_').first).toSet().join(',');
     try {
-      final cleanIds = productIds.map((id) => id.split('_').first).toSet().join(',');
       final response = await dio.get(
         '/api/products/upsell',
         queryParameters: {'productIds': cleanIds},

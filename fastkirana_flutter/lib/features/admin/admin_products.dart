@@ -506,7 +506,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
           'isAvailable': clampedStock > 0 ? (_localAvailability[p.id] ?? p.isAvailable) : false,
           'updatedAt': DateTime.now().toIso8601String(),
         }).eq('id', p.id);
-      } catch (e, _) { LoggerService.error('AdminProducts: silent catch', e); }
+      } catch (e, _) { LoggerService.error('AdminProducts: product parse', e); }
     }
 
     try {
@@ -515,9 +515,9 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
         data: {
           'stock': clampedStock,
         },
-        options: AdminAuthorization.withStaffAuth(Options()),,
+        options: AdminAuthorization.withStaffAuth(Options()),
       );
-    } catch (e, _) { LoggerService.error('AdminProducts: silent catch', e); }
+    } catch (e, _) { LoggerService.error('AdminProducts: product parse', e); }
   }
 
   void _promptDirectStockInput(Product p, int currentStock) {
@@ -919,7 +919,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                         if (sb != null) {
                           try {
                             await sb.from('products').update({'isAvailable': val}).eq('id', p.id);
-                          } catch (e, _) { LoggerService.error('AdminProducts: silent catch', e); }
+                          } catch (e, _) { LoggerService.error('AdminProducts: product parse', e); }
                         }
 
                         try {
@@ -928,7 +928,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                             data: {'isAvailable': val},
                             options: AdminAuthorization.withStaffAuth(Options()),
                           );
-                        } catch (e, _) { LoggerService.error('AdminProducts: silent catch', e); }
+                        } catch (e, _) { LoggerService.error('AdminProducts: product parse', e); }
 
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -1172,7 +1172,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
             ...payload,
             'updatedAt': DateTime.now().toIso8601String(),
           }).eq('id', widget.product.id);
-        } catch (e, _) { LoggerService.error('AdminProducts: silent catch', e); }
+        } catch (e, _) { LoggerService.error('AdminProducts: product parse', e); }
       }
 
       // 2. REST API Update
@@ -1182,7 +1182,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
           data: payload,
           options: AdminAuthorization.withStaffAuth(Options()),
         );
-      } catch (e, _) { LoggerService.error('AdminProducts: silent catch', e); }
+      } catch (e, _) { LoggerService.error('AdminProducts: product parse', e); }
 
       widget.onUpdated();
 

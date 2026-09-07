@@ -23,6 +23,8 @@ import '../../core/services/rider_location_service.dart';
 import '../../core/services/supabase_service.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/store_settings_provider.dart';
+import '../../core/utils/app_toast.dart';
 import 'widgets/connectivity_banner.dart';
 import 'widgets/delivery_header.dart';
 

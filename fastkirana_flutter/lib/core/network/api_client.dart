@@ -1,7 +1,7 @@
 import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'dart:async';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_config.dart';
 import '../services/secure_storage_service.dart';
