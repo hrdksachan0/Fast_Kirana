@@ -384,12 +384,22 @@ export default async function AdminPage() {
             Welcome, {session.user.name || 'Admin'} ({userEmail || 'admin@fastkirana.com'}). Full zone control, live orders, catalog, and store settings.
           </p>
         </div>
-        <a 
-          href="/admin/restaurants" 
-          className="inline-flex items-center justify-center text-xs font-black uppercase tracking-wider bg-[#e20a22] text-white h-9 px-4 rounded-xl hover:bg-[#c9081e] shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
-        >
-          Manage Outlets 🍽️
-        </a>
+        <div className="flex items-center gap-2">
+          {isSuperAdmin && (
+            <a 
+              href="/superadmin" 
+              className="inline-flex items-center justify-center text-xs font-black uppercase tracking-wider bg-card border-2 border-[#e20a22]/30 text-[#e20a22] h-9 px-4 rounded-xl hover:bg-[#e20a22]/5 shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+            >
+              🏛️ HQ Dashboard
+            </a>
+          )}
+          <a 
+            href="/admin/restaurants" 
+            className="inline-flex items-center justify-center text-xs font-black uppercase tracking-wider bg-[#e20a22] text-white h-9 px-4 rounded-xl hover:bg-[#c9081e] shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+          >
+            Manage Outlets 🍽️
+          </a>
+        </div>
       </div>
 
       {/* Dynamic Tabbed Console */}

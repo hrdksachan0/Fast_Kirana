@@ -25,6 +25,7 @@ import '../../data/models/order.dart';
 import '../../data/repositories/order_repository.dart';
 import '../../providers/banner_provider.dart';
 import '../../widgets/sponsored_ad_card.dart';
+import '../../widgets/offline_banner.dart';
 import '../profile/add_review_screen.dart';
 
 class OrderTrackingScreen extends ConsumerStatefulWidget {
@@ -335,6 +336,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
 
       final order = await repo.getOrder(cleanId);
+      if (order == null) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+        return;
+      }
       if (mounted) {
         final prevStatus = _order?.status;
         setState(() {
@@ -403,6 +410,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
 
       final order = await repo.getOrder(cleanId);
+      if (order == null) return;
       if (mounted) {
         final prevStatus = _order?.status;
         setState(() => _order = order);
@@ -1116,6 +1124,14 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        // Offline Network Recovery Banner
+                        OfflineBanner(
+                          onRetry: () {
+                            _fetchLiveOrder();
+                          },
+                          offlineText: 'Offline • Connecting to live delivery tracker...',
+                        ),
+
                         // 0. Cancelled Order Alert Card
                         if (isCancelled) ...[
                           _buildCancelledOrderCard(),

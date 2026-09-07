@@ -22,8 +22,8 @@ class StoreSettings with _$StoreSettings {
     @Default(true) bool cafeOpen,
     @Default(true) bool restaurantOpen,
     @Default('Fast') String avgDeliveryTime,
-    @Default('7054470303') String adminWhatsappPhone,
-    @Default('+917054470303') String contactPhone,
+    @Default('') String adminWhatsappPhone,
+    @Default('') String contactPhone,
     @Default('8112849854') String supportPhone,
     @Default({}) Map<String, dynamic> raw,
   }) = _StoreSettings;
@@ -68,8 +68,8 @@ class StoreSettings with _$StoreSettings {
           ? json['admin_whatsapp_phone'].toString()
           : (json['admin_phone']?.toString().isNotEmpty == true
               ? json['admin_phone'].toString()
-              : '7054470303'),
-      contactPhone: json['contact_phone']?.toString() ?? '+917054470303',
+              : ''),
+      contactPhone: json['contact_phone']?.toString() ?? '',
       supportPhone: json['support_phone']?.toString() ?? '8112849854',
       raw: json,
     );

@@ -323,12 +323,12 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
           )
 
           const existingUser = canonicalUser || matchingUsers.find(u => u.role !== 'USER' || !!u.passwordHash) || matchingUsers[0]
-          if (existingUser) {
+          if (existingUser && existingUser.email && !existingUser.email.startsWith('wa-')) {
             email = existingUser.email
             candidateEmails.add(existingUser.email.toLowerCase())
             if (!phone && existingUser.phone) phone = existingUser.phone
           } else {
-            email = `wa-${cleanDigits}@fastkirana.com`
+            email = `${cleanDigits}@users.fastkirana.in`
           }
           if (!phone) {
             phone = normalizedPhone
@@ -362,13 +362,13 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
         const matchingUsersPostOtp = await prisma.user.findMany({
           where: {
             OR: [
-              { email },
               ...(cleanDigits ? [
                 { phone: normalizedPhone },
                 { phone: cleanDigits },
+                { phone: `+91${cleanDigits}` },
                 { phone: `91${cleanDigits}` },
-                { email: `wa-${cleanDigits}@fastkirana.com` }
-              ] : [])
+              ] : []),
+              { email },
             ]
           }
         })
@@ -387,7 +387,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
           user = await prisma.user.create({
             data: {
               email,
-              name: name || null,
+              name: name || (cleanDigits ? `Customer ${cleanDigits.slice(-4)}` : null),
               phone: userPhone,
               role: 'USER'
             }
@@ -422,11 +422,30 @@ export async function auth(...args: any[]) {
   const session = await (nextAuthAuth as any)(...args)
   if (session) return session
 
-  // 2. Native Mobile Header-based authentication fallback
+  // 2. Cryptographic JWT Authorization Bearer token verification
   try {
     const { headers } = require('next/headers')
     const result = headers()
     const headersList = result instanceof Promise ? await result : result
+    const authHeader = headersList.get('authorization') || headersList.get('Authorization')
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const { verifyFastKiranaJWT } = await import('@/lib/jwt')
+      const jwtPayload = await verifyFastKiranaJWT(authHeader)
+      if (jwtPayload) {
+        return {
+          user: {
+            id: jwtPayload.userId,
+            role: jwtPayload.role as any,
+            phone: jwtPayload.phone,
+            email: jwtPayload.email,
+            assignedStoreId: jwtPayload.assignedStoreId,
+            assignedRestaurantId: jwtPayload.assignedRestaurantId,
+          },
+          expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        }
+      }
+    }
+
     const userId = headersList.get('x-user-id')
     const userEmail = headersList.get('x-user-email')
     const userName = headersList.get('x-user-name')

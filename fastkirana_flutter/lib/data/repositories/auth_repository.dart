@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import '../models/user.dart';
 import '../../core/network/api_client.dart';
+import '../../core/services/logger_service.dart';
 
 class AuthRepository {
   final Dio dio;
@@ -8,19 +9,28 @@ class AuthRepository {
 
   Future<AuthResponse> sendOtp(String identifier) async {
     final clean = identifier.trim();
-    final response = await dio.post(
-      '/api/auth/otp/send',
-      data: {
-        'phone': clean,
-        'email': clean,
-      },
-    );
-    // FastAPI / Next.js returns success
-    return AuthResponse(
-      success: true,
-      user: null,
-      token: null,
-    );
+    try {
+      final response = await dio.post(
+        '/api/auth/otp/send',
+        data: {
+          'phone': clean,
+          'email': clean,
+        },
+      );
+      // Return actual server result so the UI can react to failures
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        return AuthResponse(
+          success: data['success'] == true || data['message'] != null || response.statusCode == 200,
+          user: null,
+          token: data['token']?.toString(),
+        );
+      }
+      return AuthResponse(success: true, user: null, token: null);
+    } on DioException catch (e) {
+      LoggerService.error('AuthRepository: sendOtp failed', e);
+      throw _handleError(e);
+    }
   }
 
   Future<AuthResponse> verifyOtp(String identifier, String otp) async {

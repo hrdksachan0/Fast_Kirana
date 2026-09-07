@@ -1,13 +1,13 @@
 import 'package:fastkirana_flutter/core/theme/design_system.dart';
 import '../../core/theme/responsive.dart';
 import 'package:flutter/material.dart';
-import '../../core/services/logger_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../core/network/api_client.dart';
+import 'package:dio/dio.dart';
 import '../../core/services/secure_storage_service.dart';
 import '../../data/models/user.dart';
 import '../../providers/auth_provider.dart';
@@ -33,9 +33,6 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
   static const Color slateDark = AppDesignSystem.slate900;
   static const Color slateMuted = AppDesignSystem.slate500;
 
-  // Rider master password
-  static const String _masterRiderPassword = 'Aryan@2026';
-
   @override
   void dispose() {
     _phoneController.dispose();
@@ -57,13 +54,6 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
       return;
     }
 
-    // Verify Rider Master Password
-    if (password != _masterRiderPassword) {
-      HapticFeedback.lightImpact();
-      setState(() => _errorMessage = 'Incorrect password. Please enter the correct partner password.');
-      return;
-    }
-
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -71,78 +61,77 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
 
     try {
       final dio = ref.read(dioProvider);
-      // Try logging in via backend API
-      try {
-        final res = await dio.post('/api/auth/login', data: {
-          'phone': phone,
-          'password': password,
-          'role': 'DELIVERY',
-        });
-
-        if (res.statusCode == 200 && res.data != null) {
-          final data = res.data;
-          final token = data['token'] ?? data['accessToken'] ?? 'rider_jwt_token';
-          final userMap = data['user'] is Map ? data['user'] : null;
-
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('auth_token', token);
-          await prefs.setString('user_phone', phone);
-          await prefs.setString('user_id', userMap?['id'] ?? 'rider_$phone');
-          await prefs.setString('user_role', 'DELIVERY');
-
-          // Mirror to secure storage so the Dio interceptor finds it there.
-          await SecureStorage.write('auth_token', token.toString());
-          await SecureStorage.write('user_phone', phone);
-          await SecureStorage.write('user_id', (userMap?['id'] ?? 'rider_$phone').toString());
-          await SecureStorage.write('user_role', 'DELIVERY');
-          await SecureStorage.loadCache();  // Refresh interceptor cache
-
-          if (userMap != null) {
-            final user = User.fromJson(Map<String, dynamic>.from(userMap));
-            await ref.read(authProvider.notifier).setUser(user);
-          }
-        }
-      } catch (e) { LoggerService.error('DeliveryLogin: silent catch', e);
-        // Master password bypass allows instant access even if backend auth service is in offline/custom mode
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('auth_token', 'rider_token_$phone');
-        await prefs.setString('user_phone', phone);
-        await prefs.setString('user_id', 'rider_$phone');
-        await prefs.setString('user_role', 'DELIVERY');
-        await prefs.setString('user_name', 'FastKirana Rider ($phone)');
-
-        await SecureStorage.write('auth_token', 'rider_token_$phone');
-        await SecureStorage.write('user_phone', phone);
-        await SecureStorage.write('user_id', 'rider_$phone');
-        await SecureStorage.write('user_role', 'DELIVERY');
-        await SecureStorage.write('user_name', 'FastKirana Rider ($phone)');
-        await SecureStorage.loadCache();  // Refresh interceptor cache
-      }
-
-      if (mounted) {
-        HapticFeedback.heavyImpact();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Text('Welcome Rider +91 $phone! 🛵', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white)),
-              ],
-            ),
-            backgroundColor: brandGreen,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-
-        Navigator.pushReplacement(context, FadeSlideRoute(page: const DeliveryDashboard()));
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Login failed. Please try again.';
-        _isLoading = false;
+      final res = await dio.post('/api/auth/login', data: {
+        'phone': phone,
+        'password': password,
+        'role': 'DELIVERY',
       });
+
+      if (res.statusCode == 200 && res.data != null) {
+        final data = res.data;
+        final token = data['token'] ?? data['accessToken'] ?? 'rider_jwt_token';
+        final userMap = data['user'] is Map ? data['user'] : null;
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('auth_token', token);
+        await prefs.setString('user_phone', phone);
+        await prefs.setString('user_id', userMap?['id'] ?? 'rider_$phone');
+        await prefs.setString('user_role', 'DELIVERY');
+
+        await SecureStorage.write('auth_token', token.toString());
+        await SecureStorage.write('user_phone', phone);
+        await SecureStorage.write('user_id', (userMap?['id'] ?? 'rider_$phone').toString());
+        await SecureStorage.write('user_role', 'DELIVERY');
+        await SecureStorage.loadCache();
+
+        if (userMap != null) {
+          final user = User.fromJson(Map<String, dynamic>.from(userMap));
+          await ref.read(authProvider.notifier).setUser(user);
+        }
+      }
+    } on DioException catch (e) {
+      String message = 'Login failed. Please try again.';
+      if (e.response?.data is Map) {
+        final detail = e.response?.data['detail'] ?? e.response?.data['error'] ?? e.response?.data['message'];
+        if (detail != null) message = detail.toString();
+      } else if (e.type == DioExceptionType.connectionError || e.type == DioExceptionType.connectionTimeout) {
+        message = 'Cannot reach server. Check your connection and try again.';
+      }
+      if (mounted) {
+        setState(() {
+          _errorMessage = message;
+          _isLoading = false;
+        });
+      }
+      return;
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Login failed. Please try again.';
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
+    if (mounted) {
+      HapticFeedback.heavyImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Text('Welcome Rider +91 $phone! 🛵', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white)),
+            ],
+          ),
+          backgroundColor: brandGreen,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+
+      Navigator.pushReplacement(context, FadeSlideRoute(page: const DeliveryDashboard()));
     }
   }
 

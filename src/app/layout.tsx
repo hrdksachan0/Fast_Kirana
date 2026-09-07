@@ -28,6 +28,7 @@ import { SupabaseAuthBridge } from '@/components/auth/auth-bridge'
 
 import { JsonLdSchema } from '@/components/seo/json-ld'
 import { UnserviceableLocationBanner } from '@/components/layout/unserviceable-banner'
+import { PhoneEnforcementModal } from '@/components/auth/phone-enforcement-modal'
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -161,6 +162,7 @@ export default function RootLayout({
                 <SoftPromptDialog />
                 <CartConflictDialog />
                 <SwipeToBack />
+                <PhoneEnforcementModal />
 
                 </PushNotificationProvider>
               </CartSyncProvider>

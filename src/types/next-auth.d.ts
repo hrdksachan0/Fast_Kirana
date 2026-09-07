@@ -7,6 +7,7 @@ declare module 'next-auth' {
     phone?: string | null
     assignedRestaurantId?: string | null
     assignedStoreId?: string | null
+    needsPhoneVerification?: boolean
   }
 
   interface Session {
@@ -16,6 +17,7 @@ declare module 'next-auth' {
       phone?: string | null
       assignedRestaurantId?: string | null
       assignedStoreId?: string | null
+      needsPhoneVerification?: boolean
     } & DefaultSession['user']
   }
 }
@@ -27,5 +29,6 @@ declare module 'next-auth/jwt' {
     phone?: string | null
     assignedRestaurantId?: string | null
     assignedStoreId?: string | null
+    needsPhoneVerification?: boolean
   }
 }

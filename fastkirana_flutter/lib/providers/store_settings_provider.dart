@@ -12,7 +12,7 @@ final storeSettingsProvider = FutureProvider<StoreSettings>((ref) async {
     if (response.data != null && response.data is Map) {
       return StoreSettings.fromJson(Map<String, dynamic>.from(response.data));
     }
-  } catch (e, _) { LoggerService.error('StoreSettingsProvider: silent catch', e); }
+  } catch (e, st) { LoggerService.error('StoreSettingsProvider: /api/settings fetch failed', e, st); }
 
   // 2. Try /api/public/settings
   try {
@@ -20,7 +20,7 @@ final storeSettingsProvider = FutureProvider<StoreSettings>((ref) async {
     if (response.data != null && response.data is Map) {
       return StoreSettings.fromJson(Map<String, dynamic>.from(response.data));
     }
-  } catch (e, _) { LoggerService.error('StoreSettingsProvider: silent catch', e); }
+  } catch (e, st) { LoggerService.error('StoreSettingsProvider: /api/public/settings fetch failed', e, st); }
 
   // 3. Fallback to default Ghatampur quick commerce store settings
   return const StoreSettings();

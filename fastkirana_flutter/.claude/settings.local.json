@@ -26,7 +26,9 @@
       "WebFetch(domain:www.fastkirana.in)",
       "Bash(dart analyze *)",
       "Bash(C:/flutter/bin/flutter.bat analyze *)",
-      "Bash(/c/src/flutter/bin/flutter.bat analyze *)"
+      "Bash(/c/src/flutter/bin/flutter.bat analyze *)",
+      "Bash(/d/flutter/bin/flutter analyze *)",
+      "Bash(/d/flutter/bin/dart analyze *)"
     ]
   }
 }

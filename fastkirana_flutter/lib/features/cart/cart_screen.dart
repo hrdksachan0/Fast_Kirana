@@ -27,6 +27,7 @@ import '../auth/login_screen.dart';
 import '../checkout/checkout_screen.dart';
 import 'coupons_screen.dart';
 import '../../widgets/unserviceable_location_banner.dart';
+import '../../widgets/offline_banner.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
@@ -493,6 +494,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Offline Network Recovery Banner
+              OfflineBanner(
+                onRetry: () {
+                  ref.read(cartProvider.notifier).loadCart();
+                },
+                offlineText: 'Offline • Reconnecting cart sync...',
+              ),
+
               // 0. Dynamic Distance-Tiered Delivery Progress Bar
               _buildFreeDeliveryProgressBar(subtotal, tier),
 

@@ -85,44 +85,12 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
         FadeSlideRoute(page: const AdminDashboard()),
       );
     } catch (e) {
-      // Fallback to local admin master credentials if offline
-      final cleanDigits = input.replaceAll(RegExp(r'\D'), '');
-      if ((input.toLowerCase() == 'superadmin@fastkirana.com' || input.toLowerCase() == 'admin@fastkirana.in' || input.toLowerCase() == 'admin@fastkirana.com' || cleanDigits.endsWith('9170942500') || cleanDigits.endsWith('7054470303')) &&
-          (password == 'Tuktuk@26' || password == 'FastKirana@2026' || password == 'admin123')) {
-        final prefs = await SharedPreferences.getInstance();
-        final adminUser = User(
-          id: 'admin_master',
-          name: 'FastKirana Admin',
-          email: input.toLowerCase(),
-          phone: AppConfig.supportPhone,
-          role: 'ADMIN',
-          isBlocked: false,
-        );
-        await prefs.setString('user_data', jsonEncode(adminUser.toJson()));
-        await prefs.setString('auth_token', 'token_admin_master_${DateTime.now().millisecondsSinceEpoch}');
-        await prefs.setString('user_role', 'ADMIN');
-
-        await SecureStorage.write('user_data', jsonEncode(adminUser.toJson()));
-        await SecureStorage.write('auth_token', 'token_admin_master_${DateTime.now().millisecondsSinceEpoch}');
-        await SecureStorage.write('user_role', 'ADMIN');
-        ref.read(authProvider.notifier).setUser(adminUser);
-
-        HapticFeedback.heavyImpact();
-        if (!mounted) return;
-        setState(() => _isLoading = false);
-
-        Navigator.pushReplacement(
-          context,
-          FadeSlideRoute(page: const AdminDashboard()),
-        );
-        return;
-      }
-
+      // Admin login requires online authentication. No offline fallback.
       HapticFeedback.vibrate();
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Invalid admin credentials.';
+        _errorMessage = 'Invalid admin credentials or network unavailable.';
       });
     }
   }
@@ -278,7 +246,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                       decoration: const InputDecoration(
                         icon: Icon(Icons.person_outline_rounded, size: 18, color: AppDesignSystem.textTertiary),
                         border: InputBorder.none,
-                        hintText: 'admin@fastkirana.in or 7054470303',
+                        hintText: 'admin@fastkirana.in',
                       ),
                     ),
                   ),

@@ -102,7 +102,7 @@ final cartUpsellProductsProvider = FutureProvider.family<List<Product>, List<Str
     } else {
       all = await repo.getProducts(limit: 80);
     }
-  } catch (e) { LoggerService.error('ProductProvider: silent catch', e);
+  } catch (e, st) { LoggerService.error('ProductProvider: upsell fallback fetch failed', e, st);
     all = await repo.getProducts(limit: 80);
   }
 

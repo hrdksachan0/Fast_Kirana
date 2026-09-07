@@ -48,12 +48,24 @@ export async function GET(request: NextRequest) {
           })
         }
 
-        // Today's delivered COD orders for this rider
+        // Today's delivered COD orders for this rider (Cash in Rider's Pocket)
         const todayCodOrders = await prisma.order.aggregate({
           where: {
             deliveryUserId: r.id,
             status: 'DELIVERED',
             paymentMethod: 'COD',
+            deliveredAt: { gte: todayStart }
+          },
+          _sum: { total: true },
+          _count: { id: true }
+        })
+
+        // Today's delivered Online/UPI orders for this rider (Paid Direct to Store Bank)
+        const todayOnlineOrders = await prisma.order.aggregate({
+          where: {
+            deliveryUserId: r.id,
+            status: 'DELIVERED',
+            paymentMethod: { in: ['UPI', 'CARD', 'WALLET'] },
             deliveredAt: { gte: todayStart }
           },
           _sum: { total: true },
@@ -81,6 +93,8 @@ export async function GET(request: NextRequest) {
           totalDeposited: wallet.totalDeposited,
           todayCodOrdersCount: todayCodOrders._count.id || 0,
           todayCodTotal: todayCodOrders._sum.total || 0,
+          todayOnlineOrdersCount: todayOnlineOrders._count.id || 0,
+          todayOnlineTotal: todayOnlineOrders._sum.total || 0,
           todayDepositedTotal: todayDeposits._sum.amount || 0,
           assignedStoreId: r.assignedStoreId,
           storeName: r.assignedStore?.name || ((r.assignedStoreId === 'hub-209206' || r.assignedStoreId === 'default-Ghatampur Market') ? 'Ghatampur Hub' : null),

@@ -21,23 +21,58 @@ export async function requireRole(allowedRoles: string[], request?: Request) {
   } catch (e) {
     // ignore request-scope auth errors
   }
-  const userRole = session?.user?.role || (request ? request.headers.get('x-user-role') : null)
-  const userEmail = (session?.user?.email || (request ? request.headers.get('x-user-email') : '') || '').toLowerCase()
-  const userPhone = ((session?.user as any)?.phone || (request ? request.headers.get('x-user-phone') : '') || '')
+
+  // 1. First priority: Check cryptographic JWT Authorization Bearer Token
+  const authHeader = request?.headers?.get('authorization') || request?.headers?.get('Authorization')
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const { verifyFastKiranaJWT } = await import('@/lib/jwt')
+    const jwtPayload = await verifyFastKiranaJWT(authHeader)
+    if (jwtPayload) {
+      const userRole = jwtPayload.role?.toUpperCase() || 'USER'
+      const phoneDigits = (jwtPayload.phone || '').replace(/\D/g, '').slice(-10)
+      const isSuper = phoneDigits === '8112849854' || 
+        phoneDigits === '9170942500' || 
+        phoneDigits === '7054470303' || 
+        (userRole === 'ADMIN' && !jwtPayload.assignedStoreId)
+
+      if (isSuper || allowedRoles.includes(userRole) || userRole === 'ADMIN') {
+        return {
+          error: null,
+          session: {
+            user: {
+              id: jwtPayload.userId,
+              role: userRole,
+              phone: jwtPayload.phone,
+              email: jwtPayload.email,
+              assignedStoreId: jwtPayload.assignedStoreId,
+              assignedRestaurantId: jwtPayload.assignedRestaurantId,
+            }
+          } as any
+        }
+      }
+      return { error: NextResponse.json({ error: 'Forbidden: Insufficient permissions' }, { status: 403 }), session: null }
+    }
+  }
+
+  // 2. Second priority: Standard verified NextAuth Session
+  const sessionRole = session?.user?.role?.toUpperCase()
+  const userEmail = (session?.user?.email || '').toLowerCase()
+  const userPhone = ((session?.user as any)?.phone || '')
   const phoneDigits = userPhone.replace(/\D/g, '').slice(-10)
-  const assignedStoreId = (session?.user as any)?.assignedStoreId || (request ? request.headers.get('x-user-store-id') : null)
-  
+  const assignedStoreId = (session?.user as any)?.assignedStoreId
+
   const isSuper = userEmail.startsWith('admin') || 
     userEmail.includes('hrdk') || 
     phoneDigits === '8112849854' || 
     phoneDigits === '9170942500' || 
-    ((userRole?.toUpperCase() === 'ADMIN' || session?.user?.role?.toUpperCase() === 'ADMIN') && !assignedStoreId)
+    phoneDigits === '7054470303' ||
+    (sessionRole === 'ADMIN' && !assignedStoreId)
 
-  if (isSuper || (userRole && (allowedRoles.includes(userRole.toUpperCase()) || userRole.toUpperCase() === 'ADMIN'))) {
-    return { error: null, session: session || ({ user: { role: userRole?.toUpperCase() || 'ADMIN', id: request?.headers.get('x-user-id') || 'admin', assignedStoreId } } as any) }
+  if (isSuper || (sessionRole && (allowedRoles.includes(sessionRole) || sessionRole === 'ADMIN'))) {
+    return { error: null, session }
   }
 
-  if (!session?.user && !userRole) {
+  if (!session?.user) {
     return { error: NextResponse.json({ error: 'Unauthorized: Staff login required' }, { status: 401 }), session: null }
   }
   return { error: NextResponse.json({ error: 'Forbidden: Insufficient permissions' }, { status: 403 }), session: null }
@@ -54,14 +89,55 @@ export async function requireAdmin(request?: Request) {
  * Returns the session if authorized, or a NextResponse error if not.
  *
  * Usage:
- *   const { error, session } = await requireOrderAccess(order.userId)
+ *   const { error, session } = await requireOrderAccess(order.userId, [], request)
  *   if (error) return error
  */
-export async function requireOrderAccess(orderUserId: string, extraRoles: string[] = []) {
-  const session = await auth()
+export async function requireOrderAccess(orderUserId: string, extraRoles: string[] = [], request?: Request) {
+  // 1. Check Bearer token first
+  const authHeader = request?.headers?.get('authorization') || request?.headers?.get('Authorization')
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const { verifyFastKiranaJWT } = await import('@/lib/jwt')
+    const jwtPayload = await verifyFastKiranaJWT(authHeader)
+    if (jwtPayload) {
+      const { prisma } = await import('@/lib/prisma')
+      const dbUser = await prisma.user.findUnique({
+        where: { id: jwtPayload.userId },
+        select: { id: true, role: true, phone: true, email: true, isBlocked: true, assignedStoreId: true, assignedRestaurantId: true }
+      })
+      if (dbUser && !dbUser.isBlocked) {
+        const staffRoles = ['ADMIN', 'DELIVERY', 'PICKER', 'CHEF', 'RESTAURANT_OWNER', ...extraRoles]
+        const isOwner = orderUserId === dbUser.id
+        const isStaff = staffRoles.includes(dbUser.role)
+        if (isOwner || isStaff) {
+          return {
+            error: null,
+            session: {
+              user: {
+                id: dbUser.id,
+                role: dbUser.role,
+                phone: dbUser.phone,
+                email: dbUser.email,
+                assignedStoreId: dbUser.assignedStoreId,
+                assignedRestaurantId: dbUser.assignedRestaurantId,
+              }
+            } as any
+          }
+        }
+        return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }), session: null }
+      }
+    }
+  }
+
+  // 2. NextAuth Session
+  let session = null
+  try {
+    session = await auth()
+  } catch (e) {}
+
   if (!session?.user) {
     return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }), session: null }
   }
+
   const staffRoles = ['ADMIN', 'DELIVERY', 'PICKER', 'CHEF', 'RESTAURANT_OWNER', ...extraRoles]
   const isOwner = orderUserId === session.user.id
   const isStaff = staffRoles.includes(session.user.role)

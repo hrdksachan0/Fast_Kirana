@@ -7,18 +7,17 @@ import '../core/network/api_client.dart';
 import '../core/utils/restaurant_utils.dart';
 import '../core/utils/app_connectivity.dart';
 
+// ─── Providers ─────────────────────────────────────────────────────────────
+
 final cartRepoProvider = Provider<CartRepository>((ref) {
   return CartRepository(ref.read(dioProvider));
 });
 
-class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
-  final CartRepository repository;
+// ─── Mixins ────────────────────────────────────────────────────────────────
 
-  CartNotifier(this.repository) : super(const AsyncValue.loading()) {
-    loadCart();
-  }
-
-  Cart _buildCartFromItems(List<CartItem> items, {String? couponCode, double discount = 0.0}) {
+/// Shared cart builder and initial load logic.
+mixin _CartBuilder on StateNotifier<AsyncValue<Cart>> {
+  Cart buildCart(List<CartItem> items, {String? couponCode, double discount = 0.0}) {
     return Cart(
       id: 'cart_active',
       userId: 'user_active',
@@ -30,30 +29,33 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
     );
   }
 
-  Future<void> loadCart() async {
+  Future<void> loadCart(CartRepository repo) async {
     try {
-      final localItems = await repository.getLocalCart();
+      final localItems = await repo.getLocalCart();
       if (localItems.isNotEmpty) {
-        state = AsyncValue.data(_buildCartFromItems(localItems));
+        state = AsyncValue.data(buildCart(localItems));
       } else {
-        state = AsyncValue.data(_buildCartFromItems([]));
+        state = AsyncValue.data(buildCart([]));
       }
-
-      // Try background sync from server if connected
       try {
-        final serverCart = await repository.getCart();
+        final serverCart = await repo.getCart();
         if (serverCart.items.isNotEmpty) {
           state = AsyncValue.data(serverCart);
-          await repository.saveLocalCart(serverCart.items);
+          await repo.saveLocalCart(serverCart.items);
         }
-      } catch (e, _) { LoggerService.error('CartProvider: silent catch', e); }
+      } catch (e, st) { LoggerService.error('CartProvider: background cart sync failed', e, st); }
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
   }
+}
+
+/// Read-only queries on the current cart state.
+mixin _CartQueries on StateNotifier<AsyncValue<Cart>> {
+  Cart? get _cart => state.value;
 
   int getQuantity(String productId) {
-    final cart = state.value;
+    final cart = _cart;
     if (cart == null) return 0;
     final item = cart.items.cast<CartItem?>().firstWhere(
       (i) => i?.productId == productId || i?.product.id == productId,
@@ -62,161 +64,162 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
     return item?.quantity ?? 0;
   }
 
-  /// Check if adding this product causes a conflict with dishes already in cart from another restaurant.
-  /// Returns the name of the conflicting restaurant if conflict exists, otherwise null.
   String? checkRestaurantConflict(Product product) {
-    // 1. Grocery items can mix freely with anything
-    if (!isCafeProduct(product)) {
-      return null;
-    }
-
-    final currentCart = state.value;
-    if (currentCart == null || currentCart.items.isEmpty) {
-      return null;
-    }
-
+    if (!isCafeProduct(product)) return null;
+    final cart = _cart;
+    if (cart == null || cart.items.isEmpty) return null;
     final newOutlet = getOutletName(product);
-
-    // 2. Look for any existing restaurant items
-    for (final item in currentCart.items) {
+    for (final item in cart.items) {
       if (isCafeProduct(item.product)) {
         final existOutlet = getOutletName(item.product);
-        if (newOutlet != existOutlet) {
-          return existOutlet;
-        }
+        if (newOutlet != existOutlet) return existOutlet;
       }
     }
-
     return null;
   }
 
-  /// Get current restaurant name from items in cart, if any
   String? get currentRestaurantName {
-    final currentCart = state.value;
-    if (currentCart == null) return null;
-    final restaurantItem = currentCart.items.cast<CartItem?>().firstWhere(
+    final cart = _cart;
+    if (cart == null) return null;
+    final item = cart.items.cast<CartItem?>().firstWhere(
       (i) => i != null && isCafeProduct(i.product),
       orElse: () => null,
     );
-    if (restaurantItem != null) {
-      return getOutletName(restaurantItem.product);
-    }
+    if (item != null) return getOutletName(item.product);
     return null;
   }
 
-  /// Get number of grocery items in cart
   int get groceryItemsCount {
-    final currentCart = state.value;
-    if (currentCart == null) return 0;
-    return currentCart.items.where((i) => !isCafeProduct(i.product)).fold(0, (sum, i) => sum + i.quantity);
+    final cart = _cart;
+    if (cart == null) return 0;
+    return cart.items.where((i) => !isCafeProduct(i.product)).fold(0, (sum, i) => sum + i.quantity);
   }
 
-  /// Get number of restaurant dishes in cart
   int get restaurantItemsCount {
-    final currentCart = state.value;
-    if (currentCart == null) return 0;
-    return currentCart.items.where((i) => isCafeProduct(i.product)).fold(0, (sum, i) => sum + i.quantity);
+    final cart = _cart;
+    if (cart == null) return 0;
+    return cart.items.where((i) => isCafeProduct(i.product)).fold(0, (sum, i) => sum + i.quantity);
+  }
+}
+
+/// Conflict resolution: clear or swap restaurant items.
+mixin _CartConflictResolution on StateNotifier<AsyncValue<Cart>> {
+  Future<void> clearRestaurantItems(CartRepository repo) async {
+    final cart = _currentCart;
+    if (cart == null) return;
+    final groceryItems = cart.items.where((i) => !isCafeProduct(i.product)).toList();
+    _setState(groceryItems, cart);
+    await repo.saveLocalCart(groceryItems);
+    repo.syncCart(groceryItems);
   }
 
-  /// Add real Product to cart with instant UI update
-  /// Add real Product to cart with instant UI update
-  /// Returns true if added successfully, false if exceeds available stock.
-  bool addProduct(Product product, [int quantity = 1, String? selectedVariant]) {
-    final currentCart = state.value ?? _buildCartFromItems([]);
-    final items = List<CartItem>.from(currentCart.items);
-    final idx = items.indexWhere((i) => i.productId == product.id || i.product.id == product.id);
-
-    final maxStock = product.stock > 0 ? product.stock : 999;
-    final currentQty = idx >= 0 ? items[idx].quantity : 0;
-    final targetQty = currentQty + quantity;
-
-    if (targetQty > maxStock) {
-      return false; // Reached stock limit
-    }
-
-    if (idx >= 0) {
-      final item = items[idx];
-      items[idx] = CartItem(
-        id: item.id,
-        cartId: item.cartId,
-        productId: product.id,
-        product: product,
-        quantity: targetQty,
-        selectedVariant: selectedVariant ?? item.selectedVariant,
-      );
-    } else {
-      items.add(CartItem(
-        id: 'item_${product.id}_${DateTime.now().millisecondsSinceEpoch}',
-        cartId: 'cart_active',
-        productId: product.id,
-        product: product,
-        quantity: quantity,
-        selectedVariant: selectedVariant,
-      ));
-    }
-
-    // Instant optimistic state update
-    state = AsyncValue.data(_buildCartFromItems(
-      items,
-      couponCode: currentCart.appliedCouponCode,
-      discount: currentCart.couponDiscount,
-    ));
-    repository.saveLocalCart(items);
-    repository.syncCart(items);
-    return true;
+  Future<void> replaceRestaurantItemsWith(CartRepository repo, Product product, {int quantity = 1, String? selectedVariant}) async {
+    final cart = _currentCart ?? _emptyCart;
+    final items = cart.items.where((i) => !isCafeProduct(i.product)).toList();
+    items.add(_newCartItem(product, quantity, selectedVariant));
+    _setState(items, cart);
+    await repo.saveLocalCart(items);
+    repo.syncCart(items);
   }
 
-  /// Clear ONLY dishes from the previous restaurant — keep all grocery items intact!
-  Future<void> clearRestaurantItems() async {
-    final currentCart = state.value;
-    if (currentCart == null) return;
+  Future<void> showConflictAndReplace(BuildContext context, WidgetRef ref, Product product) async {
+    final repo = ref.read(cartRepoProvider);
+    CartConflictDialog.show(
+      context,
+      product: product,
+      existingOutletName: currentRestaurantName ?? '',
+      groceryItemsCount: groceryItemsCount,
+      onConfirm: () => replaceRestaurantItemsWith(repo, product, quantity: 1),
+    );
+  }
+}
 
-    final groceryItems = currentCart.items.where((i) => !isCafeProduct(i.product)).toList();
-    state = AsyncValue.data(_buildCartFromItems(
-      groceryItems,
-      couponCode: currentCart.appliedCouponCode,
-      discount: currentCart.couponDiscount,
-    ));
-    await repository.saveLocalCart(groceryItems);
-    repository.syncCart(groceryItems);
+/// Item CRUD: add, increment, decrement, remove, update, clear.
+mixin _CartCrud on StateNotifier<AsyncValue<Cart>> {
+  Cart? get _currentCart;
+  Cart get _emptyCart;
+
+  void _setState(List<CartItem> items, Cart oldCart) {
+    state = AsyncValue.data(_buildCartFromItems_(items, couponCode: oldCart.appliedCouponCode, discount: oldCart.couponDiscount));
   }
 
-  /// Atomically clear old restaurant items and add the new restaurant product
-  Future<void> replaceRestaurantItemsWith(Product product, [int quantity = 1, String? selectedVariant]) async {
-    final currentCart = state.value ?? _buildCartFromItems([]);
-    // Keep only grocery items
-    final items = currentCart.items.where((i) => !isCafeProduct(i.product)).toList();
+  Cart _buildCartFromItems_(List<CartItem> items, {String? couponCode, double discount = 0.0}) {
+    return Cart(
+      id: 'cart_active',
+      userId: 'user_active',
+      items: items,
+      appliedCouponCode: couponCode,
+      couponDiscount: discount,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
 
-    // Add new restaurant item
-    items.add(CartItem(
+  CartItem _newCartItem(Product product, int quantity, String? selectedVariant) {
+    return CartItem(
       id: 'item_${product.id}_${DateTime.now().millisecondsSinceEpoch}',
       cartId: 'cart_active',
       productId: product.id,
       product: product,
       quantity: quantity,
       selectedVariant: selectedVariant,
-    ));
-
-    state = AsyncValue.data(_buildCartFromItems(
-      items,
-      couponCode: currentCart.appliedCouponCode,
-      discount: currentCart.couponDiscount,
-    ));
-    await repository.saveLocalCart(items);
-    repository.syncCart(items);
+    );
   }
 
-  /// Increment product quantity (returns false if stock limit reached)
-  bool increment(Product product) {
-    return addProduct(product, 1);
+  bool addProduct(CartRepository repo, Product product, [int quantity = 1, String? selectedVariant]) {
+    final cart = _currentCart ?? _emptyCart;
+    final items = List<CartItem>.from(cart.items);
+    final idx = items.indexWhere((i) => i.productId == product.id || i.product.id == product.id);
+
+    final maxStock = product.stock > 0 ? product.stock : 999;
+    final currentQty = idx >= 0 ? items[idx].quantity : 0;
+    final targetQty = currentQty + quantity;
+
+    if (targetQty > maxStock) return false;
+
+    if (idx >= 0) {
+      final item = items[idx];
+      items[idx] = CartItem(
+        id: item.id, cartId: item.cartId, productId: product.id, product: product,
+        quantity: targetQty, selectedVariant: selectedVariant ?? item.selectedVariant,
+      );
+    } else {
+      items.add(_newCartItem(product, quantity, selectedVariant));
+    }
+
+    state = AsyncValue.data(_buildCartFromItems_(items, couponCode: cart.appliedCouponCode, discount: cart.couponDiscount));
+    repo.saveLocalCart(items);
+    repo.syncCart(items);
+    return true;
   }
 
-  /// Decrement product quantity (removes when reaches 0)
-  Future<void> decrement(String productId) async {
-    final currentCart = state.value;
-    if (currentCart == null) return;
+  Future<void> increment(CartRepository repo, Product product) async {
+    final cart = _currentCart;
+    if (cart == null) return;
+    final items = List<CartItem>.from(cart.items);
+    final idx = items.indexWhere((i) => i.productId == product.id || i.product.id == product.id);
 
-    final items = List<CartItem>.from(currentCart.items);
+    if (idx >= 0) {
+      final item = items[idx];
+      items[idx] = CartItem(
+        id: item.id, cartId: item.cartId, productId: item.productId, product: item.product,
+        quantity: item.quantity + 1, selectedVariant: item.selectedVariant,
+      );
+      _setState(items, cart);
+      await repo.saveLocalCart(items);
+      repo.syncCart(items);
+    } else {
+      items.add(_newCartItem(product, 1, null));
+      _setState(items, cart);
+      await repo.saveLocalCart(items);
+      repo.syncCart(items);
+    }
+  }
+
+  Future<void> decrement(CartRepository repo, String productId) async {
+    final cart = _currentCart;
+    if (cart == null) return;
+    final items = List<CartItem>.from(cart.items);
     final idx = items.indexWhere((i) => i.productId == productId || i.product.id == productId);
 
     if (idx >= 0) {
@@ -225,111 +228,96 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
         items.removeAt(idx);
       } else {
         items[idx] = CartItem(
-          id: item.id,
-          cartId: item.cartId,
-          productId: item.productId,
-          product: item.product,
-          quantity: item.quantity - 1,
-          selectedVariant: item.selectedVariant,
+          id: item.id, cartId: item.cartId, productId: item.productId, product: item.product,
+          quantity: item.quantity - 1, selectedVariant: item.selectedVariant,
         );
       }
-
-      state = AsyncValue.data(_buildCartFromItems(
-        items,
-        couponCode: currentCart.appliedCouponCode,
-        discount: currentCart.couponDiscount,
-      ));
-      await repository.saveLocalCart(items);
-      repository.syncCart(items);
+      _setState(items, cart);
+      await repo.saveLocalCart(items);
+      repo.syncCart(items);
     }
   }
 
-  /// Update item quantity directly
-  bool updateQuantity(String productId, int quantity, [int? maxStock]) {
+  bool updateQuantity(CartRepository repo, String productId, int quantity, [int? maxStock]) {
     if (quantity <= 0) {
-      removeItem(productId);
+      removeItem(repo, productId);
       return true;
-    } else {
-      final currentCart = state.value;
-      if (currentCart == null) return false;
-      final items = List<CartItem>.from(currentCart.items);
-      final idx = items.indexWhere((i) => i.productId == productId || i.id == productId || i.product.id == productId);
-      if (idx >= 0) {
-        final item = items[idx];
-        final effectiveStock = maxStock ?? (item.product.stock > 0 ? item.product.stock : 999);
-        if (quantity > effectiveStock) {
-          return false;
-        }
-        items[idx] = CartItem(
-          id: item.id,
-          cartId: item.cartId,
-          productId: item.productId,
-          product: item.product,
-          quantity: quantity,
-          selectedVariant: item.selectedVariant,
-        );
-        state = AsyncValue.data(_buildCartFromItems(
-          items,
-          couponCode: currentCart.appliedCouponCode,
-          discount: currentCart.couponDiscount,
-        ));
-        repository.saveLocalCart(items);
-        repository.syncCart(items);
-        return true;
-      }
-      return false;
     }
+    final cart = _currentCart;
+    if (cart == null) return false;
+    final items = List<CartItem>.from(cart.items);
+    final idx = items.indexWhere((i) => i.productId == productId || i.id == productId || i.product.id == productId);
+    if (idx >= 0) {
+      final item = items[idx];
+      final effectiveStock = maxStock ?? (item.product.stock > 0 ? item.product.stock : 999);
+      if (quantity > effectiveStock) return false;
+      items[idx] = CartItem(
+        id: item.id, cartId: item.cartId, productId: item.productId, product: item.product,
+        quantity: quantity, selectedVariant: item.selectedVariant,
+      );
+      _setState(items, cart);
+      repo.saveLocalCart(items);
+      repo.syncCart(items);
+      return true;
+    }
+    return false;
   }
 
-  /// Remove item from cart
-  Future<void> removeItem(String productId) async {
-    final currentCart = state.value;
-    if (currentCart == null) return;
-
-    final items = currentCart.items.where((i) => i.productId != productId && i.id != productId && i.product.id != productId).toList();
-    state = AsyncValue.data(_buildCartFromItems(
-      items,
-      couponCode: currentCart.appliedCouponCode,
-      discount: currentCart.couponDiscount,
-    ));
-    await repository.saveLocalCart(items);
-    repository.syncCart(items);
+  Future<void> removeItem(CartRepository repo, String productId) async {
+    final cart = _currentCart;
+    if (cart == null) return;
+    final items = cart.items.where((i) => i.productId != productId && i.id != productId && i.product.id != productId).toList();
+    _setState(items, cart);
+    await repo.saveLocalCart(items);
+    repo.syncCart(items);
   }
 
-  /// Clear entire cart
-  Future<void> clearCart() async {
-    state = AsyncValue.data(_buildCartFromItems([]));
-    await repository.saveLocalCart([]);
-    repository.clearCart();
+  Future<void> clearCart(CartRepository repo) async {
+    state = AsyncValue.data(_emptyCart);
+    await repo.saveLocalCart([]);
+    repo.clearCart();
   }
 
-  /// Automatically sync offline pending items to server
-  Future<void> syncPendingCart() async {
-    await repository.syncPendingCartIfNeeded();
+  Future<void> syncPending(CartRepository repo) async {
+    await repo.syncPendingCartIfNeeded();
+  }
+}
+
+// ─── CartNotifier ──────────────────────────────────────────────────────────
+
+class CartNotifier extends StateNotifier<AsyncValue<Cart>> with _CartBuilder, _CartQueries, _CartConflictResolution, _CartCrud {
+  final CartRepository repository;
+
+  CartNotifier(this.repository) : super(const AsyncValue.loading()) {
+    loadCart(repository);
   }
 
-  /// Backward compatible addItem
+  @override
+  Cart? get _currentCart => state.value;
+
+  @override
+  Cart get _emptyCart => buildCart([]);
+
+  /// Backward-compatible wrapper used by AddToCartButton
   Future<void> addItem(String productId, int quantity) async {
-    final currentCart = state.value;
-    if (currentCart != null) {
-      final existing = currentCart.items.cast<CartItem?>().firstWhere((i) => i?.productId == productId, orElse: () => null);
+    final cart = state.value;
+    if (cart != null) {
+      final existing = cart.items.cast<CartItem?>().firstWhere((i) => i?.productId == productId, orElse: () => null);
       if (existing != null) {
-        updateQuantity(productId, existing.quantity + quantity);
-        return;
+        updateQuantity(repository, productId, existing.quantity + quantity);
       }
     }
   }
 }
 
+// ─── Provider ──────────────────────────────────────────────────────────────
+
 final cartProvider = StateNotifierProvider<CartNotifier, AsyncValue<Cart>>((ref) {
   final repo = ref.watch(cartRepoProvider);
   final notifier = CartNotifier(repo);
 
-  // Auto-sync offline cart when device reconnects to internet
   ref.listen<AppConnectivityObserver>(connectivityProvider, (previous, next) {
-    if (next.isOnline) {
-      notifier.syncPendingCart();
-    }
+    if (next.isOnline) notifier.syncPending(repo);
   });
 
   return notifier;

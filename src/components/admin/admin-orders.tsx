@@ -111,7 +111,7 @@ export function AdminOrders({ initialOrders }: AdminOrdersProps) {
               <th className="py-3 px-4">Order ID</th>
               <th className="py-3 px-4">Customer</th>
               <th className="py-3 px-4">Address</th>
-              <th className="py-3 px-4">Total</th>
+              <th className="py-3 px-4">Payment</th>
               <th className="py-3 px-4">Status</th>
               <th className="py-3 px-4">Actions</th>
             </tr>
@@ -178,7 +178,26 @@ export function AdminOrders({ initialOrders }: AdminOrdersProps) {
                       )}
                     </div>
                   </td>
-                  <td className="py-3 px-4 font-bold text-text-primary">{formatPrice(o.total)}</td>
+                  <td className="py-3 px-4 whitespace-nowrap">
+                    <div className="font-bold text-text-primary text-xs">{formatPrice(o.total)}</div>
+                    {o.paymentStatus === 'PAID' ? (
+                      o.paymentMethod === 'COD' ? (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full mt-1 shadow-2xs">
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                          💵 CASH RECEIVED
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full mt-1 shadow-2xs">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          📱 ONLINE / UPI
+                        </span>
+                      )
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-rose-700 dark:text-rose-300 bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 rounded-full mt-1">
+                        ⏳ {o.paymentMethod || 'COD'} (UNPAID)
+                      </span>
+                    )}
+                  </td>
                   <td className="py-3 px-4">
                     <select
                       value={o.status}

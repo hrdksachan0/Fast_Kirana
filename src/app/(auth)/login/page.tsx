@@ -178,7 +178,7 @@ function LoginForm() {
         setEmail(data.email)
       } else if (loginType === 'WHATSAPP' || isInputPhone) {
         const phoneDigits = getLast10Digits(normalizedInput)
-        finalEmail = data.email || `wa-${phoneDigits}@fastkirana.com`
+        finalEmail = data.email || phoneDigits
         setEmail(finalEmail)
         setPhone(data.phone || `+91${phoneDigits}`)
       }

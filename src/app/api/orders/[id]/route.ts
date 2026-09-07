@@ -42,7 +42,7 @@ export async function GET(
     const order = orders[0]
 
     // Check ownership (order owner) or staff role
-    const { error: authError, session } = await requireOrderAccess(order.userId)
+    const { error: authError, session } = await requireOrderAccess(order.userId, [], request)
     if (authError) return authError
 
     // Fetch address
@@ -264,20 +264,45 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const session = await auth()
+  let session = await auth().catch(() => null)
+  let verifiedUserId: string | null = session?.user?.id || null
+  let verifiedUserRole: string | null = (session?.user as any)?.role || null
+  let verifiedUserPhone: string | null = (session?.user as any)?.phone || null
+  let assignedRestaurantId: string | null = (session?.user as any)?.assignedRestaurantId || null
+
+  // Cryptographic Bearer JWT verification (Flutter app & API clients)
+  const authHeader = request.headers.get('authorization') || request.headers.get('Authorization')
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const { verifyFastKiranaJWT } = await import('@/lib/jwt')
+    const jwtPayload = await verifyFastKiranaJWT(authHeader)
+    if (jwtPayload) {
+      const { prisma } = await import('@/lib/prisma')
+      const dbUser = await prisma.user.findUnique({
+        where: { id: jwtPayload.userId },
+        select: { id: true, role: true, phone: true, isBlocked: true, assignedRestaurantId: true }
+      })
+      if (dbUser && !dbUser.isBlocked) {
+        verifiedUserId = dbUser.id
+        verifiedUserRole = dbUser.role
+        verifiedUserPhone = dbUser.phone
+        assignedRestaurantId = dbUser.assignedRestaurantId
+      }
+    }
+  }
+
   const headerUserId = request.headers.get('x-user-id')
   const headerUserRole = request.headers.get('x-user-role')
   const headerUserPhone = request.headers.get('x-user-phone')
   const headerUserEmail = request.headers.get('x-user-email')
 
-  const isSuperPhone = Boolean(headerUserPhone && (headerUserPhone.includes('7054470303') || headerUserPhone.includes('8112849854')))
+  const isSuperPhone = Boolean((verifiedUserPhone || headerUserPhone) && ((verifiedUserPhone || headerUserPhone)!.includes('7054470303') || (verifiedUserPhone || headerUserPhone)!.includes('8112849854')))
   const isSuperEmail = Boolean(headerUserEmail && (headerUserEmail.startsWith('admin') || headerUserEmail.includes('hrdk')))
   const isAdminHeader = (headerUserRole || '').toUpperCase() === 'ADMIN'
 
-  const userId = session?.user?.id || headerUserId || 'admin'
+  const userId = verifiedUserId || headerUserId || 'admin'
   const userRole = (isSuperPhone || isSuperEmail || isAdminHeader)
     ? 'ADMIN'
-    : ((session?.user as any)?.role || headerUserRole || 'ADMIN')
+    : (verifiedUserRole || headerUserRole || 'ADMIN')
 
   const validation = await validateBodyLegacy(request, updateOrderStatusSchema)
   if (!validation.success) return validation.error
@@ -329,7 +354,6 @@ export async function PATCH(
       }
       return NextResponse.json({ success: true, paymentStatus, paymentMethod: validPm })
     }
-    const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId
     const isRestaurantOrder = Boolean(existingOrder.restaurantId || existingOrder.orderType === 'RESTAURANT')
 
     const isDelivery = userRole === 'DELIVERY'
@@ -390,15 +414,17 @@ export async function PATCH(
       }
     }
 
+    // Sub-order isolation for combined orders:
+    // When a single outlet cancels or packs an order, only that outlet's order updates
+    // unless the caller explicitly passes scope: 'ALL' or updateCombined: true.
+    const isSingleSubOrderAction = body.scope === 'SINGLE' || (!body.scope && (status === 'CANCELLED' || status === 'PACKED' || status === 'CONFIRMED') && !isAdmin)
     const shouldUpdateAllCombined = Boolean(
-      existingOrder.combinedId && (
-        isAdmin || 
+      existingOrder.combinedId && !isSingleSubOrderAction && (
         body.scope === 'ALL' || 
         body.updateCombined === true ||
         status === 'SHIPPED' || 
         status === 'DELIVERED' ||
-        status === 'CANCELLED' ||
-        (status === 'PACKED' && (isAdmin || body.scope === 'ALL' || body.updateCombined !== false))
+        (isAdmin && body.scope !== 'SINGLE' && (status === 'CANCELLED' || status === 'DELIVERED'))
       )
     )
 

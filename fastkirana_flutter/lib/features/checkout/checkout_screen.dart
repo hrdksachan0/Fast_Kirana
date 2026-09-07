@@ -739,7 +739,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         ? _customReceiverPhone!
         : (user?.phone?.isNotEmpty == true
             ? user!.phone!
-            : (phoneFromPrefs.isNotEmpty ? phoneFromPrefs : (selectedAddress?.phone.isNotEmpty == true ? selectedAddress!.phone : '7054470303')));
+            : (phoneFromPrefs.isNotEmpty ? phoneFromPrefs : (selectedAddress?.phone.isNotEmpty == true ? selectedAddress!.phone : '')));
 
     String orderNotes = _deliveryInstruction;
     if (_customReceiverName?.isNotEmpty == true || _customReceiverPhone?.isNotEmpty == true) {

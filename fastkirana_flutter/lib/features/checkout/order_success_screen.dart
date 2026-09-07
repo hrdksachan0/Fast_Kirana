@@ -155,12 +155,16 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
     try {
       final repo = OrderRepository(ref.read(dioProvider));
       final order = await repo.getOrder(displayId);
+      if (order == null) {
+        LoggerService.error('OrderSuccessScreen: order $displayId not found');
+        return;
+      }
       if (mounted) {
         setState(() {
           _liveOrder = order;
         });
       }
-    } catch (e, _) { LoggerService.error('OrderSuccessScreen: silent catch', e); }
+    } catch (e, _) { LoggerService.error('OrderSuccessScreen: fetch failed', e); }
   }
 
   // Map backend OrderStatus to 5-stage integer step (0 to 4)

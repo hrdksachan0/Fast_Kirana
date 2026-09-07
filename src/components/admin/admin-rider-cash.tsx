@@ -35,6 +35,8 @@ interface RiderCashInfo {
   totalDeposited: number
   todayCodOrdersCount: number
   todayCodTotal: number
+  todayOnlineOrdersCount?: number
+  todayOnlineTotal?: number
   todayDepositedTotal: number
   assignedStoreId?: string | null
   storeName?: string | null
@@ -304,9 +306,10 @@ export function AdminRiderCash() {
               <thead className="bg-muted/40 text-text-secondary uppercase text-[10px] tracking-wider font-extrabold border-b border-border">
                 <tr>
                   <th className="py-3 px-4">Rider Details</th>
-                  <th className="py-3 px-4">Cash in Hand</th>
+                  <th className="py-3 px-4">Cash to Collect (Pocket)</th>
+                  <th className="py-3 px-4">Online / UPI (Store Bank)</th>
                   <th className="py-3 px-4">Limit Status</th>
-                  <th className="py-3 px-4">Today Delivered COD</th>
+                  <th className="py-3 px-4">Today Cash Orders</th>
                   <th className="py-3 px-4">Today Deposited</th>
                   <th className="py-3 px-4 text-right">Action</th>
                 </tr>
@@ -346,10 +349,23 @@ export function AdminRiderCash() {
                         }`}>
                           {formatPrice(r.cashInHand)}
                         </span>
+                        <p className="text-[10px] text-amber-700/80 dark:text-amber-400 font-bold">
+                          💵 Rider Pocket
+                        </p>
+                      </td>
+
+                      {/* Online / UPI in Bank */}
+                      <td className="py-3.5 px-4">
+                        <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                          {formatPrice(r.todayOnlineTotal || 0)}
+                        </span>
+                        <p className="text-[10px] text-emerald-700/80 dark:text-emerald-400 font-bold">
+                          📱 {r.todayOnlineOrdersCount || 0} QR / Bank Orders
+                        </p>
                       </td>
 
                       {/* Limit Status Progress Bar */}
-                      <td className="py-3.5 px-4 min-w-[150px]">
+                      <td className="py-3.5 px-4 min-w-[140px]">
                         <div className="space-y-1">
                           <div className="flex justify-between text-[10px] font-bold">
                             <span className={isLocked ? 'text-danger font-black' : (isWarning ? 'text-amber-500' : 'text-text-muted')}>
@@ -486,14 +502,25 @@ export function AdminRiderCash() {
                 </button>
               </div>
 
-              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-3.5 rounded-2xl flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase">Rider Current Cash in Hand</p>
-                  <p className="text-xl font-black text-amber-900 dark:text-amber-100">{formatPrice(selectedRider.cashInHand)}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-400/40 p-3.5 rounded-2xl">
+                  <p className="text-[10px] font-black text-amber-800 dark:text-amber-300 uppercase tracking-wider">💵 Cash to Collect</p>
+                  <p className="text-2xl font-black text-amber-900 dark:text-amber-100 mt-0.5">{formatPrice(selectedRider.cashInHand)}</p>
+                  <p className="text-[10px] text-amber-700 dark:text-amber-400 font-bold mt-1">
+                    {selectedRider.todayCodOrdersCount} Cash Orders • Rider se lo
+                  </p>
                 </div>
-                <span className="text-xs font-extrabold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-3 py-1 rounded-xl">
-                  {selectedRider.phone}
-                </span>
+                <div className="bg-emerald-50 dark:bg-emerald-950/30 border-2 border-emerald-400/40 p-3.5 rounded-2xl">
+                  <p className="text-[10px] font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">📱 Online / UPI (Bank)</p>
+                  <p className="text-2xl font-black text-emerald-900 dark:text-emerald-100 mt-0.5">{formatPrice(selectedRider.todayOnlineTotal || 0)}</p>
+                  <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold mt-1">
+                    {selectedRider.todayOnlineOrdersCount || 0} QR Orders • Bank me check karo
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-center text-[11px] font-bold text-text-muted">
+                Total Deliveries Today: <strong className="text-text-primary">{selectedRider.todayCodOrdersCount + (selectedRider.todayOnlineOrdersCount || 0)} Orders</strong> (Value: {formatPrice((selectedRider.todayCodTotal || 0) + (selectedRider.todayOnlineTotal || 0))})
               </div>
 
               <form onSubmit={handleConfirmSettlement} className="space-y-4">

@@ -42,7 +42,7 @@ class CartRepository {
       });
       await setPendingSync(false);
       return true;
-    } catch (e) { LoggerService.error('CartRepository: silent catch', e);
+    } catch (e) { LoggerService.error('CartRepository: syncCart failed', e);
       // Offline / network failure -> mark for auto-sync when online
       await setPendingSync(true);
       return false;
@@ -62,7 +62,7 @@ class CartRepository {
       await setPendingSync(false);
       await saveLocalCart([]);
       await dio.delete('/api/cart');
-    } catch (e) { LoggerService.error('CartRepository: silent catch', e);
+    } catch (e) { LoggerService.error('CartRepository: clearCart failed', e);
       // Network error on server cart delete shouldn't block local cart wipe
     }
   }
@@ -116,7 +116,7 @@ class CartRepository {
         await saveLocalCart(items);
       }
       return items;
-    } catch (e) { LoggerService.error('CartRepository: silent catch', e);
+    } catch (e) { LoggerService.error('CartRepository: getLocalCart failed', e);
       return [];
     }
   }

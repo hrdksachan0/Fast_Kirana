@@ -18,7 +18,7 @@ class BannerRepository {
       if (data is List) {
         return data.map((json) => Banner.fromJson(json as Map<String, dynamic>)).toList();
       }
-    } catch (e, _) { LoggerService.error('BannerRepository', e); }
+    } catch (e, st) { LoggerService.error('BannerRepository: getBanners failed', e, st); }
     return [];
   }
 }

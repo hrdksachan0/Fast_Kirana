@@ -33,7 +33,7 @@ class RestaurantRepository {
       final list = await _inFlightRestaurantsFetch!;
       _inFlightRestaurantsFetch = null;
       return list;
-    } catch (e, _) { LoggerService.error('RestaurantRepository: silent catch', e);
+    } catch (e, st) { LoggerService.error('RestaurantRepository: getRestaurants failed', e, st);
       _inFlightRestaurantsFetch = null;
       if (_cachedRestaurants != null && _cachedRestaurants!.isNotEmpty) {
         return _cachedRestaurants!;
@@ -196,7 +196,7 @@ class RestaurantRepository {
       final result = await future;
       _inFlightMenuFetches.remove(restaurantId);
       return result;
-    } catch (e, _) { LoggerService.error('RestaurantRepository: silent catch', e);
+    } catch (e, st) { LoggerService.error('RestaurantRepository: getRestaurantMenu failed', e, st);
       _inFlightMenuFetches.remove(restaurantId);
       if (_cachedMenus.containsKey(restaurantId)) {
         return _cachedMenus[restaurantId]!;
@@ -214,7 +214,7 @@ class RestaurantRepository {
       if (data is Map<String, dynamic> && data['reviews'] is List && (data['reviews'] as List).isNotEmpty) {
         return data;
       }
-    } catch (e, _) { LoggerService.error('RestaurantRepository: silent catch', e); }
+    } catch (e, st) { LoggerService.error('RestaurantRepository: getRestaurantReviews failed', e, st); }
 
     final upperId = restaurantId.toUpperCase();
     final isAs = restaurantId.contains('as') || restaurantId.contains('cms2p1lap') || upperId == 'REST-101';

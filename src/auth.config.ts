@@ -78,7 +78,7 @@ export const authConfig = {
             token.role = dbUser.role
             token.assignedRestaurantId = dbUser.assignedRestaurantId
             token.assignedStoreId = dbUser.assignedStoreId
-            if (dbUser.phone && !token.phone) token.phone = dbUser.phone
+            if (dbUser.phone) token.phone = dbUser.phone
           } else if (!token.role) {
             token.role = 'USER'
           }
@@ -86,6 +86,9 @@ export const authConfig = {
           if (!token.role) token.role = 'USER'
         }
       }
+
+      // Flag users who logged in via Email/Google without an attached phone number
+      token.needsPhoneVerification = !token.phone || String(token.phone).trim() === ''
 
       return token
     },
@@ -96,6 +99,7 @@ export const authConfig = {
         session.user.phone = token.phone as string
         session.user.assignedRestaurantId = token.assignedRestaurantId as string
         session.user.assignedStoreId = token.assignedStoreId as string
+        session.user.needsPhoneVerification = Boolean(token.needsPhoneVerification)
         if (token.email) {
           session.user.email = token.email as string
         }

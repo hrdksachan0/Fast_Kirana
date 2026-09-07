@@ -248,7 +248,15 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
   }
 
   void _checkAndTriggerNewOrderAlert(List<Map<String, dynamic>> ordersList) {
-    final pending = ordersList.where((o) => ['CONFIRMED', 'PREPARING', 'PACKED', 'PENDING'].contains(o['status'])).toList();
+    final pending = ordersList.where((o) {
+      if (!['CONFIRMED', 'PREPARING', 'PACKED', 'PENDING'].contains(o['status'])) return false;
+      if (_isSelfPickupOrder(o)) return false;
+      if (_currentUserId != null && _currentUserId!.isNotEmpty) {
+        final dId = o['deliveryUserId']?.toString();
+        if (dId != null && dId.isNotEmpty && dId != _currentUserId) return false;
+      }
+      return true;
+    }).toList();
     if (pending.isEmpty) return;
 
     final currentIds = pending.map((o) => o['id']?.toString() ?? '').where((id) => id.isNotEmpty).toSet();
@@ -603,6 +611,10 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     final todayStart = DateTime(today.year, today.month, today.day);
 
     final todayCodOrders = ordersList.where((o) {
+      if (_currentUserId != null && _currentUserId!.isNotEmpty) {
+        final dId = o['deliveryUserId']?.toString();
+        if (dId != null && dId.isNotEmpty && dId != _currentUserId) return false;
+      }
       final pm = (o['paymentMethod'] ?? '').toString().toUpperCase().trim();
       final isOnlinePaid = pm == 'UPI' || pm == 'ONLINE' || pm == 'RAZORPAY';
       final isCod = (pm == 'COD' || pm.isEmpty) && !isOnlinePaid;
@@ -678,7 +690,14 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
   }
 
   void _manageGpsTrackingLifecycle(List<Map<String, dynamic>> ordersList) {
-    final activeShipped = ordersList.where((o) => o['status'] == 'SHIPPED').toList();
+    final activeShipped = ordersList.where((o) {
+      if (o['status'] != 'SHIPPED') return false;
+      if (_currentUserId != null && _currentUserId!.isNotEmpty) {
+        final dId = o['deliveryUserId']?.toString();
+        return dId == null || dId == _currentUserId;
+      }
+      return true;
+    }).toList();
 
     if (activeShipped.isNotEmpty && _isOnline) {
       final activeOrder = activeShipped.first;
@@ -875,7 +894,14 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     final orderId = order['id']?.toString() ?? '';
     final orderNum = order['readableId'] ?? orderId.substring(0, math.min(8, orderId.length));
     final total = (order['total'] as num?)?.toDouble() ?? 0.0;
-    const upiVpa = '7054470303-2@ibl';
+    final settings = ref.read(storeSettingsProvider).valueOrNull;
+    final upiVpa = settings?.adminWhatsappPhone.isNotEmpty == true
+        ? '${settings!.adminWhatsappPhone}@ibl'
+        : '';
+    if (upiVpa.isEmpty) {
+      AppToast.showError(context, 'UPI not configured', subtitle: 'Store UPI ID is not set. Contact admin.');
+      return;
+    }
     final payeeName = Uri.encodeComponent('FastKirana Store');
     final note = Uri.encodeComponent('Payment for Order #$orderNum');
     final amount = total.toStringAsFixed(2);
@@ -1023,7 +1049,14 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     final todayStart = DateTime(now.year, now.month, now.day);
 
     final activeDeliveries = _orders
-        .where((o) => o['status'] == 'SHIPPED' && !_isSelfPickupOrder(o))
+        .where((o) {
+          if (o['status'] != 'SHIPPED' || _isSelfPickupOrder(o)) return false;
+          if (_currentUserId != null && _currentUserId!.isNotEmpty) {
+            final dId = o['deliveryUserId']?.toString();
+            return dId == null || dId == _currentUserId;
+          }
+          return true;
+        })
         .toList()
       ..sort((a, b) {
         final aDate = DateTime.tryParse(a['shippedAt']?.toString() ?? a['createdAt']?.toString() ?? '') ?? DateTime(2000);
@@ -1032,7 +1065,18 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       });
 
     final pendingPickups = _orders
-        .where((o) => ['CONFIRMED', 'PREPARING', 'PACKED', 'PENDING'].contains(o['status']) && !_isSelfPickupOrder(o))
+        .where((o) {
+          if (!['CONFIRMED', 'PREPARING', 'PACKED', 'PENDING'].contains(o['status']) || _isSelfPickupOrder(o)) {
+            return false;
+          }
+          if (_currentUserId != null && _currentUserId!.isNotEmpty) {
+            final dId = o['deliveryUserId']?.toString();
+            if (dId != null && dId.isNotEmpty && dId != _currentUserId) {
+              return false;
+            }
+          }
+          return true;
+        })
         .toList()
       ..sort((a, b) {
         final aDate = DateTime.tryParse(a['createdAt']?.toString() ?? '') ?? DateTime(2000);
@@ -1042,6 +1086,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
     final completedToday = _orders.where((o) {
       if (o['status'] != 'DELIVERED' || _isSelfPickupOrder(o)) return false;
+      if (_currentUserId != null && _currentUserId!.isNotEmpty) {
+        final dId = o['deliveryUserId']?.toString();
+        if (dId != null && dId.isNotEmpty && dId != _currentUserId) {
+          return false;
+        }
+      }
       final dateStr = o['deliveredAt'] ?? o['createdAt'];
       if (dateStr == null) return false;
       final dt = DateTime.tryParse(dateStr.toString())?.toLocal();

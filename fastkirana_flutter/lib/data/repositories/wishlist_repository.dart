@@ -18,7 +18,7 @@ class WishlistRepository {
             .map((item) => Product.fromJson(item['product'] as Map<String, dynamic>))
             .toList();
       }
-    } catch (e, _) { LoggerService.error('WishlistRepository: silent catch', e); }
+    } catch (e, st) { LoggerService.error('WishlistRepository: getWishlist failed', e, st); }
     return [];
   }
 

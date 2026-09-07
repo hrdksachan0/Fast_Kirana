@@ -43,7 +43,7 @@ class AddressRepository {
       try {
         final List<dynamic> decoded = jsonDecode(rawJson) as List<dynamic>;
         localAddresses = decoded.map((j) => Address.fromJson(j as Map<String, dynamic>)).toList();
-      } catch (e, _) { LoggerService.error('AddressRepository', e); }
+      } catch (e, st) { LoggerService.error('AddressRepository: cache decode failed', e, st); }
     }
 
     try {
@@ -56,7 +56,7 @@ class AddressRepository {
           return apiAddresses;
         }
       }
-    } catch (e, _) { LoggerService.error('AddressRepository', e); }
+    } catch (e, st) { LoggerService.error('AddressRepository: fetchAddresses failed', e, st); }
 
     return localAddresses;
   }
@@ -109,7 +109,7 @@ class AddressRepository {
       if (response.data is Map<String, dynamic>) {
         return Address.fromJson(response.data as Map<String, dynamic>);
       }
-    } catch (e, _) { LoggerService.error('AddressRepository', e); }
+    } catch (e, st) { LoggerService.error('AddressRepository: createAddress failed', e, st); }
 
     return newAddress;
   }
@@ -143,7 +143,7 @@ class AddressRepository {
       if (response.data is Map<String, dynamic>) {
         return Address.fromJson(response.data as Map<String, dynamic>);
       }
-    } catch (e, _) { LoggerService.error('AddressRepository', e); }
+    } catch (e, st) { LoggerService.error('AddressRepository: updateAddress failed', e, st); }
 
     return updated.firstWhere((a) => a.id == id, orElse: () => defaultGhatampurAddress);
   }
@@ -158,7 +158,7 @@ class AddressRepository {
 
     try {
       await dio.delete('/api/addresses', data: {'id': id});
-    } catch (e, _) { LoggerService.error('AddressRepository', e); }
+    } catch (e, st) { LoggerService.error('AddressRepository: deleteAddress failed', e, st); }
   }
 
   Future<void> updateCoordinates(String id, double lat, double lng) async {
@@ -190,7 +190,7 @@ class AddressRepository {
         'lat': lat,
         'lng': lng,
       });
-    } catch (e, _) { LoggerService.error('AddressRepository', e); }
+    } catch (e, st) { LoggerService.error('AddressRepository: updateCoordinates failed', e, st); }
   }
 
   Future<void> _saveToCache(List<Address> addresses) async {
@@ -210,8 +210,8 @@ class AddressRepository {
           await prefs.remove(k);
         }
       }
-    } catch (e, _) {
-      LoggerService.error('AddressRepository: clearCache', e);
+    } catch (e, st) {
+        LoggerService.error('AddressRepository: clearCache failed', e, st);
     }
   }
 }

@@ -92,11 +92,17 @@ class AdminNotificationService {
     return buffer.toString();
   }
 
-  /// Fire WhatsApp message directly to Admin WhatsApp number
-  static Future<bool> fireAdminWhatsAppAlert(Order order, {String? targetPhone}) async {
-    final phone = (targetPhone != null && targetPhone.trim().isNotEmpty)
-        ? targetPhone.trim()
-        : '7054470303';
+  /// Fire WhatsApp message directly to Admin WhatsApp number.
+  ///
+  /// [targetPhone] is REQUIRED — always load it from StoreSettings
+  /// (the `adminWhatsappPhone` field fetched from the server). Do NOT
+  /// hardcode fallback phone numbers here.
+  static Future<bool> fireAdminWhatsAppAlert(Order order, {required String targetPhone}) async {
+    final phone = targetPhone.trim();
+    if (phone.isEmpty) {
+      LoggerService.error('AdminNotificationService: targetPhone is empty — cannot send WhatsApp alert');
+      return false;
+    }
     final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
     final msg = formatOrderWhatsAppMessage(order);
     final encodedMsg = Uri.encodeComponent(msg);

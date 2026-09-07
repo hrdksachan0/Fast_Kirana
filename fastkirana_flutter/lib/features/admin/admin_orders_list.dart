@@ -20,6 +20,8 @@ import '../../core/services/supabase_service.dart';
 import '../../core/services/offline_sync_service.dart';
 import '../../core/services/logger_service.dart';
 import '../../core/services/kot_print_service.dart';
+import '../../core/config/app_config.dart';
+import '../../core/services/admin_authorization.dart';
 import '../../core/utils/app_toast.dart';
 import '../../providers/store_settings_provider.dart';
 import '../../core/theme/responsive.dart';
@@ -284,10 +286,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
             final response = await dio.get(
               '/api/admin/orders',
               queryParameters: {'limit': 100},
-              options: Options(headers: {
-                'x-user-role': 'ADMIN',
-                'x-user-phone': '7054470303',
-              }),
+              options: AdminAuthorization.options(),
             );
             final data = response.data;
             List rawList = [];
@@ -474,10 +473,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
             final response = await dio.get(
               '/api/admin/orders',
               queryParameters: {'limit': 100},
-              options: Options(headers: {
-                'x-user-role': 'ADMIN',
-                'x-user-phone': '7054470303',
-              }),
+              options: AdminAuthorization.options(),
             );
             final data = response.data;
             List rawList = [];
@@ -1151,7 +1147,13 @@ $formattedItems
     final whatsappMessage = AdminNotificationService.formatRestaurantKOTMessage(order);
 
     final settings = ref.read(storeSettingsProvider).valueOrNull;
-    final targetPhone = (settings?.adminWhatsappPhone ?? '7054470303').replaceAll(RegExp(r'[^0-9]'), '');
+    final targetPhone = (settings?.adminWhatsappPhone ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+    if (targetPhone.isEmpty) {
+      if (mounted) {
+        AppToast.showWarning(context, 'Admin WhatsApp number not configured. Please set it in Store Settings.');
+      }
+      return;
+    }
     final uri = Uri.parse('https://wa.me/91$targetPhone?text=${Uri.encodeComponent(whatsappMessage)}');
 
     if (await canLaunchUrl(uri)) {
@@ -1734,7 +1736,7 @@ $formattedItems
   Widget _buildAdminOrderCard(Order order) {
     final statusColor = _getStatusColor(order.status);
     final custName = order.customerName?.isNotEmpty == true ? order.customerName! : 'Customer';
-    final custPhone = (order.customerPhone != null && order.customerPhone!.trim().isNotEmpty && order.customerPhone != '7054470303')
+    final custPhone = (order.customerPhone != null && order.customerPhone!.trim().isNotEmpty)
         ? order.customerPhone!.trim()
         : (order.addressRaw?['phone']?.toString().isNotEmpty == true
             ? order.addressRaw!['phone'].toString().trim()
@@ -2383,7 +2385,11 @@ $formattedItems
                           onChanged: (val) {
                             if (val != null) {
                               if (val == 'STORE_PARTNER') {
-                                _assignRider(order, 'store_admin_self', 'Store Partner', '+917054470303');
+                                final settings = ref.read(storeSettingsProvider).valueOrNull;
+                                final storePhone = settings?.contactPhone.isNotEmpty == true
+                                    ? settings!.contactPhone
+                                    : AppConfig.supportPhone;
+                                _assignRider(order, 'store_admin_self', 'Store Partner', storePhone);
                               } else {
                                 final rider = _availableRiders.firstWhere(
                                   (r) => r['id'] == val,

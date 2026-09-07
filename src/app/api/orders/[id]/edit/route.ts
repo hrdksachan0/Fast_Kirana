@@ -203,10 +203,14 @@ export async function POST(
         }
       })
 
+      const itemRestId = item.restaurantId ? String(item.restaurantId).trim() : null
+      const itemShopName = item.shopName ? String(item.shopName).trim() : null
+
       if (product) {
         const isRestaurantItem = Boolean(
           product.restaurantId ||
           product.restaurant?.id ||
+          itemRestId ||
           product.category?.slug === 'cafe' ||
           product.category?.slug === 'restaurant' ||
           product.category?.slug === 'restaurant-food' ||
@@ -216,8 +220,8 @@ export async function POST(
         if (isRestaurantItem) {
           hasRestaurantItems = true
           if (!detectedRestaurantId) {
-            detectedRestaurantId = product.restaurantId || product.restaurant?.id || null
-            detectedShopName = product.restaurant?.name || null
+            detectedRestaurantId = product.restaurantId || product.restaurant?.id || itemRestId || null
+            detectedShopName = product.restaurant?.name || itemShopName || null
             detectedShopPhone = product.restaurant?.ownerPhone || (product.restaurant as any)?.phone || null
           }
         } else {
@@ -251,8 +255,22 @@ export async function POST(
           })
         }
       } else {
-        // Custom items default to grocery unless specified
-        hasGroceryItems = true
+        // Custom items: check if explicitly assigned to a restaurant or if order was already restaurant
+        if (itemRestId) {
+          hasRestaurantItems = true
+          if (!detectedRestaurantId) {
+            detectedRestaurantId = itemRestId
+            detectedShopName = itemShopName || (itemRestId.includes('101') ? 'A.S. Restaurant' : itemRestId.includes('102') ? 'Wedson Restaurant' : itemRestId.includes('103') ? 'Bal Udyan Restaurant' : 'Restaurant')
+          }
+        } else if (order.restaurantId && !hasGroceryItems) {
+          hasRestaurantItems = true
+          if (!detectedRestaurantId) {
+            detectedRestaurantId = order.restaurantId
+            detectedShopName = order.shopName
+          }
+        } else {
+          hasGroceryItems = true
+        }
       }
     }
 
@@ -298,7 +316,45 @@ export async function POST(
     let calculatedMiscFee = 0
 
     if (order.deliveryMethod === 'DELIVERY') {
-      calculatedDeliveryFee = subtotalVal < threshold ? deliveryFeeSetting : 0
+      // Delivery fee logic with combined order & existing zero delivery fee protection:
+      let companionHasDelivery = false
+      let combinedSubtotal = subtotalVal
+
+      if (order.combinedId) {
+        const companions = await prisma.order.findMany({
+          where: {
+            combinedId: order.combinedId,
+            id: { not: order.id }
+          },
+          select: { id: true, subtotal: true, deliveryFee: true }
+        })
+        companionHasDelivery = companions.some(c => c.deliveryFee > 0)
+        combinedSubtotal = companions.reduce((sum, c) => sum + c.subtotal, 0) + subtotalVal
+      } else {
+        const companions = await prisma.order.findMany({
+          where: {
+            userId: order.userId,
+            id: { not: order.id },
+            createdAt: {
+              gte: new Date(new Date(order.createdAt).getTime() - 5000),
+              lte: new Date(new Date(order.createdAt).getTime() + 5000),
+            }
+          },
+          select: { id: true, subtotal: true, deliveryFee: true }
+        })
+        companionHasDelivery = companions.some(c => c.deliveryFee > 0)
+        combinedSubtotal = companions.reduce((sum, c) => sum + c.subtotal, 0) + subtotalVal
+      }
+
+      // If companion already paid delivery fee OR combined subtotal qualifies for free delivery, delivery fee is 0
+      if (companionHasDelivery || combinedSubtotal >= threshold) {
+        calculatedDeliveryFee = 0
+      } else if (order.deliveryFee === 0 && subtotalVal > 0) {
+        // Customer was already given free delivery at checkout; don't penalize them if items were removed by admin/staff
+        calculatedDeliveryFee = 0
+      } else {
+        calculatedDeliveryFee = deliveryFeeSetting
+      }
       
       let companionHasMisc = false
       if (order.combinedId) {

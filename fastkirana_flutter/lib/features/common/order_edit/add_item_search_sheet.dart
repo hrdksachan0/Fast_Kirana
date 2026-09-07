@@ -37,14 +37,29 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
   String _searchQuery = '';
   final _searchController = TextEditingController();
 
-  // Admin filter chip: 'ALL', 'GROCERY', 'WEDSON', 'AS_REST', 'BAL_UDYAN'
-  String _adminCatalogFilter = 'ALL';
+  // Admin filter chip: 'ALL', 'GROCERY', 'REST-101', 'REST-102', 'REST-103', 'REST-104'
+  late String _adminCatalogFilter;
 
   // Custom Item Form Controllers
   final _customNameController = TextEditingController();
   final _customPriceController = TextEditingController();
   final _customQtyController = TextEditingController(text: '1');
   final _customNotesController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Default filter to current order's outlet domain so admin/staff is immediately scoped
+    if (widget.restaurantId != null && widget.restaurantId!.isNotEmpty) {
+      _adminCatalogFilter = widget.restaurantId!;
+    } else if (widget.isRestaurant) {
+      _adminCatalogFilter = outletWedsonId; // Default restaurant fallback
+    } else if (!widget.isAdmin) {
+      _adminCatalogFilter = 'GROCERY';
+    } else {
+      _adminCatalogFilter = 'ALL';
+    }
+  }
 
   @override
   void dispose() {
@@ -453,6 +468,8 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
                         elevation: 0,
                       ),
                       onPressed: () {
+                        final restId = p.restaurantId ?? p.restaurant?.id;
+                        final outletName = isRest ? getOutletName(p) : 'FastKirana Grocery';
                         widget.onProductSelected({
                           'productId': p.id,
                           'name': p.name,
@@ -460,6 +477,8 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
                           'quantity': 1,
                           'imageUrl': p.imageUrl,
                           'isCustom': false,
+                          'restaurantId': isRest ? restId : null,
+                          'shopName': outletName,
                         });
                         Navigator.pop(context);
                       },
@@ -579,6 +598,12 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
               return;
             }
 
+            final customRestId = widget.isRestaurant
+                ? (widget.restaurantId ?? outletWedsonId)
+                : (_adminCatalogFilter != 'ALL' && _adminCatalogFilter != 'GROCERY'
+                    ? _adminCatalogFilter
+                    : null);
+
             widget.onProductSelected({
               'productId': 'custom_${DateTime.now().millisecondsSinceEpoch}',
               'name': name,
@@ -586,6 +611,8 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
               'quantity': qty,
               'notes': notes.isNotEmpty ? notes : null,
               'isCustom': true,
+              'restaurantId': customRestId,
+              'shopName': customRestId != null ? (outletNamesMap[customRestId.toLowerCase()] ?? 'Restaurant') : 'FastKirana Grocery',
             });
             Navigator.pop(context);
           },

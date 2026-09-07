@@ -68,9 +68,9 @@ export async function POST(request: NextRequest) {
           phone: existingUser.phone || normalizedPhone,
         })
       } else {
-        // Generate placeholder email for the phone number
+        // Pure phone identifier for new users: no fake wa- email domain
         const phoneDigits = getLast10Digits(normalizedPhone)
-        normalizedEmail = `wa-${phoneDigits}@fastkirana.com`
+        normalizedEmail = `phone:${phoneDigits}`
       }
     } else {
       // Validate email format

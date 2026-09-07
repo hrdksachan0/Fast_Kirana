@@ -12,6 +12,7 @@ import '../../providers/product_provider.dart';
 import '../../core/network/api_client.dart';
 import 'package:dio/dio.dart';
 import '../../core/services/supabase_service.dart';
+import '../../core/services/admin_authorization.dart';
 import '../../core/utils/restaurant_utils.dart';
 
 class AdminProductsScreen extends ConsumerStatefulWidget {
@@ -514,12 +515,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
         data: {
           'stock': clampedStock,
         },
-        options: Options(
-          headers: {
-            'x-user-role': 'ADMIN',
-            'x-user-phone': '7054470303',
-          },
-        ),
+        options: AdminAuthorization.withStaffAuth(Options()),,
       );
     } catch (e, _) { LoggerService.error('AdminProducts: silent catch', e); }
   }
@@ -930,12 +926,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                           await ref.read(dioProvider).patch(
                             '/api/products/${p.id}',
                             data: {'isAvailable': val},
-                            options: Options(
-                              headers: {
-                                'x-user-role': 'ADMIN',
-                                'x-user-phone': '7054470303',
-                              },
-                            ),
+                            options: AdminAuthorization.withStaffAuth(Options()),
                           );
                         } catch (e, _) { LoggerService.error('AdminProducts: silent catch', e); }
 
@@ -1189,12 +1180,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
         await ref.read(dioProvider).patch(
           '/api/products/${widget.product.id}',
           data: payload,
-          options: Options(
-            headers: {
-              'x-user-role': 'ADMIN',
-              'x-user-phone': '7054470303',
-            },
-          ),
+          options: AdminAuthorization.withStaffAuth(Options()),
         );
       } catch (e, _) { LoggerService.error('AdminProducts: silent catch', e); }
 

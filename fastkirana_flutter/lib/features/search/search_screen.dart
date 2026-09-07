@@ -17,6 +17,7 @@ import '../../widgets/voice_search_sheet.dart';
 import '../../data/models/product.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/restaurant_card.dart';
+import '../../widgets/variant_selector_sheet.dart';
 import '../products/product_detail_screen.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
@@ -628,6 +629,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           final desc = (p.description ?? '').toLowerCase();
           final tags = p.tags.map((t) => t.toLowerCase()).toList();
           final unit = p.unit.toLowerCase();
+          final variantNames = p.parsedVariants.map((v) => v.name.toLowerCase()).toList();
 
           int score = 0;
 
@@ -652,6 +654,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             score += 60;
           }
 
+          // Variant name match with query
+          if (variantNames.any((vn) => vn == queryClean || vn.contains(queryClean) || queryClean.contains(vn))) {
+            score += 45;
+          }
+
           // Category name or slug match (e.g. searching "kitchen", "atta", "bakery", "fruits")
           if (catName.contains(queryClean) || catSlug.contains(queryClean)) {
             score += 50;
@@ -662,6 +669,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             if (term.isEmpty) continue;
 
             if (pName.contains(term)) {
+              score += 40;
+            }
+            if (variantNames.any((vn) => vn.contains(term) || term.contains(vn))) {
               score += 40;
             }
             if (tags.any((t) => t.contains(term) || term.contains(t))) {
@@ -921,6 +931,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     bool isStoreOpen,
     bool isVeg,
   ) {
+    final variants = product.parsedVariants;
+    final hasVariants = variants.isNotEmpty;
+    final startingPrice = hasVariants
+        ? variants.map((v) => v.price).reduce((a, b) => a < b ? a : b)
+        : product.price;
+    final startingMrp = hasVariants
+        ? (variants.firstWhere((v) => v.price == startingPrice, orElse: () => variants.first).mrp)
+        : product.mrp;
+
     return Row(
       children: [
         // 1. Thumbnail
@@ -999,7 +1018,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ),
               const SizedBox(height: 3),
 
-              // Respective Restaurant Badge on Card
+              // Respective Restaurant Badge on Card or Category
               if (outletName != null)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -1035,11 +1054,59 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ),
               const SizedBox(height: 4),
 
+              // Pack size / Options Pill
+              if (hasVariants)
+                GestureDetector(
+                  onTap: () {
+                    if (!isClosed) {
+                      VariantSelectorSheet.show(context, product);
+                    }
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFCBD5E1), width: 0.8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${variants.length} Options',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 9.5),
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF334155),
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        const Icon(Icons.keyboard_arrow_down_rounded, size: 13, color: Color(0xFF64748B)),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    product.unit.isNotEmpty && product.unit != '1 unit'
+                        ? product.unit
+                        : (isFood ? 'Serves 1' : '1 pc'),
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 10),
+                      fontWeight: FontWeight.w500,
+                      color: AppDesignSystem.slate500,
+                    ),
+                  ),
+                ),
+
               // Price
               Row(
                 children: [
                   Text(
-                    '₹${product.price.toInt()}',
+                    '₹${startingPrice.toInt()}',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 14),
                       fontWeight: FontWeight.w900,
@@ -1047,10 +1114,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       letterSpacing: -0.3,
                     ),
                   ),
-                  if (product.mrp > product.price) ...[
+                  if (startingMrp > startingPrice) ...[
                     const SizedBox(width: 5),
                     Text(
-                      '₹${product.mrp.toInt()}',
+                      '₹${startingMrp.toInt()}',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 10.5),
                         fontWeight: FontWeight.w500,
@@ -1088,17 +1155,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           Consumer(
             builder: (context, ref, _) {
               final cart = ref.watch(cartProvider).valueOrNull;
-              final inCart = cart?.items.any((i) => i.productId == product.id || i.product.id == product.id) ?? false;
+              final matchingItems = cart?.items.where((i) {
+                    final pId = i.productId;
+                    return pId == product.id ||
+                        pId.startsWith('${product.id}_') ||
+                        i.product.id == product.id;
+                  }).toList() ??
+                  [];
+              final inCartQty = matchingItems.fold<int>(0, (s, i) => s + i.quantity);
 
-              if (inCart) {
-                final qty = cart?.items
-                        .firstWhere(
-                          (i) => i.productId == product.id || i.product.id == product.id,
-                          orElse: () => cart.items.first,
-                        )
-                        .quantity ??
-                    1;
-
+              if (inCartQty > 0) {
                 return Container(
                   height: 30,
                   decoration: BoxDecoration(
@@ -1123,8 +1189,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     children: [
                       InkWell(
                         onTap: () {
-                          HapticFeedback.lightImpact();
-                          ref.read(cartProvider.notifier).decrement(product.id);
+                          if (hasVariants) {
+                            VariantSelectorSheet.show(context, product);
+                          } else {
+                            HapticFeedback.lightImpact();
+                            ref.read(cartProvider.notifier).decrement(product.id);
+                          }
                         },
                         child: const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 7, vertical: 5),
@@ -1134,7 +1204,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 3),
                         child: Text(
-                          '$qty',
+                          '$inCartQty',
                           style: GoogleFonts.inter(
                             color: Colors.white,
                             fontWeight: FontWeight.w900,
@@ -1144,25 +1214,29 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       ),
                       InkWell(
                         onTap: () {
-                          if (qty >= product.stock) {
-                            HapticFeedback.heavyImpact();
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Only ${product.stock} units available in stock!',
-                                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: Colors.white),
+                          if (hasVariants) {
+                            VariantSelectorSheet.show(context, product);
+                          } else {
+                            if (inCartQty >= product.stock) {
+                              HapticFeedback.heavyImpact();
+                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Only ${product.stock} units available in stock!',
+                                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: Colors.white),
+                                  ),
+                                  backgroundColor: AppDesignSystem.red600,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  duration: const Duration(seconds: 2),
                                 ),
-                                backgroundColor: AppDesignSystem.red600,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                duration: const Duration(seconds: 2),
-                              ),
-                            );
-                            return;
+                              );
+                              return;
+                            }
+                            HapticFeedback.lightImpact();
+                            ref.read(cartProvider.notifier).increment(product);
                           }
-                          HapticFeedback.lightImpact();
-                          ref.read(cartProvider.notifier).increment(product);
                         },
                         child: const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 7, vertical: 5),
@@ -1177,10 +1251,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               return GestureDetector(
                 onTap: () {
                   HapticFeedback.mediumImpact();
-                  ref.read(cartProvider.notifier).addProduct(product);
+                  if (hasVariants) {
+                    VariantSelectorSheet.show(context, product);
+                  } else {
+                    ref.read(cartProvider.notifier).addProduct(product);
+                  }
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(8),
@@ -1193,14 +1271,27 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       ),
                     ],
                   ),
-                  child: Text(
-                    'ADD',
-                    style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 11),
-                      fontWeight: FontWeight.w900,
-                      color: chipColor,
-                      letterSpacing: 0.5,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'ADD',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 11),
+                          fontWeight: FontWeight.w900,
+                          color: chipColor,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      if (hasVariants) ...[
+                        const SizedBox(width: 3),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 13,
+                          color: chipColor,
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               );

@@ -1,12 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import '../data/models/store_hub.dart';
+import '../core/services/logger_service.dart';
 import '../core/services/supabase_service.dart';
 import '../core/network/api_client.dart';
 import 'address_provider.dart';
 
 /// Fetches all active store hubs from Supabase / REST API
 final activeStoreHubsProvider = FutureProvider<List<StoreHub>>((ref) async {
+  // 1. Try Supabase direct (fastest, real-time)
   try {
     final sb = SupabaseService.client;
     if (sb != null) {
@@ -18,9 +20,11 @@ final activeStoreHubsProvider = FutureProvider<List<StoreHub>>((ref) async {
         return data.map((json) => StoreHub.fromJson(Map<String, dynamic>.from(json))).toList();
       }
     }
-  } catch (_) {}
+  } catch (e, st) {
+    LoggerService.error('StoreHubProvider: Supabase fetch failed', e, st);
+  }
 
-  // Fallback to Dio REST
+  // 2. Fallback to Dio REST
   try {
     final dio = ref.read(dioProvider);
     final response = await dio.get('/api/stores/hubs');
@@ -30,9 +34,11 @@ final activeStoreHubsProvider = FutureProvider<List<StoreHub>>((ref) async {
         return list.map((json) => StoreHub.fromJson(Map<String, dynamic>.from(json))).toList();
       }
     }
-  } catch (_) {}
+  } catch (e, st) {
+    LoggerService.error('StoreHubProvider: REST fetch failed', e, st);
+  }
 
-  // Offline default fallback
+  // 3. Offline default fallback
   return [StoreHub.defaultGhatampur];
 });
 

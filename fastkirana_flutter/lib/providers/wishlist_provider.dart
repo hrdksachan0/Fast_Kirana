@@ -19,7 +19,7 @@ class WishlistNotifier extends StateNotifier<List<Product>> {
     try {
       final items = await _repo.getWishlist();
       state = items;
-    } catch (e, _) { LoggerService.error('WishlistProvider: silent catch', e); }
+    } catch (e, st) { LoggerService.error('WishlistProvider: loadWishlist failed', e, st); }
   }
 
   bool isInWishlist(String productId) {
@@ -32,7 +32,7 @@ class WishlistNotifier extends StateNotifier<List<Product>> {
       state = state.where((p) => p.id != product.id).toList();
       try {
         await _repo.removeFromWishlist(product.id);
-      } catch (e) { LoggerService.error('WishlistProvider: silent catch', e);
+      } catch (e) { LoggerService.error('WishlistProvider: removeFromWishlist failed', e);
         // Rollback
         state = [...state, product];
       }
@@ -40,7 +40,7 @@ class WishlistNotifier extends StateNotifier<List<Product>> {
       state = [...state, product];
       try {
         await _repo.addToWishlist(product.id);
-      } catch (e) { LoggerService.error('WishlistProvider: silent catch', e);
+      } catch (e) { LoggerService.error('WishlistProvider: addToWishlist failed', e);
         // Rollback
         state = state.where((p) => p.id != product.id).toList();
       }

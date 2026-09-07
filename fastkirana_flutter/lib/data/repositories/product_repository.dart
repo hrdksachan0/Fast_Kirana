@@ -58,7 +58,7 @@ class ProductRepository {
       }
 
       _preloadComplete = true;
-    } catch (e) { LoggerService.error('ProductRepository: preload failed', e); }
+    } catch (e) { LoggerService.error('ProductRepository: disk preload failed', e); }
   }
 
   /// Returns true if the on-disk product cache is still fresh (within TTL).
@@ -122,7 +122,7 @@ class ProductRepository {
       return jsonList
           .map((j) => Category.fromJson(j as Map<String, dynamic>))
           .toList();
-    } catch (e) { LoggerService.error('ProductRepository: disk cat load failed', e);
+    } catch (e) { LoggerService.error('ProductRepository: disk category load failed', e);
       return null;
     }
   }
@@ -134,7 +134,7 @@ class ProductRepository {
       final jsonList = categories.map((c) => c.toJson()).toList();
       await prefs.setString(_diskCategoriesKey, jsonEncode(jsonList));
       await prefs.setInt(_diskCategoryTimestampKey, DateTime.now().millisecondsSinceEpoch);
-    } catch (e) { LoggerService.error('ProductRepository: disk cat save failed', e); }
+    } catch (e) { LoggerService.error('ProductRepository: disk category save failed', e); }
   }
 
   /// Invalidate all cached data (call on pull-to-refresh or force refresh).
@@ -216,7 +216,8 @@ class ProductRepository {
       _inFlightFetches.remove(key);
 
       return _filterProducts(liveProducts, category: category, search: search, restaurantId: restaurantId);
-    } catch (e) {
+    } catch (e, st) {
+      LoggerService.error('ProductRepository: fetchProducts failed ($search, cat=$category, rid=$restaurantId)', e, st);
       _inFlightFetches.remove(_cacheKey(search: search, restaurantId: restaurantId, category: category));
       // 5. Fallback chain: in-memory → disk → hardcoded static
       if (_cachedProducts != null && _cachedProducts!.isNotEmpty) {
@@ -297,7 +298,8 @@ class ProductRepository {
       return productsJson
           .map((json) => Product.fromJson(json as Map<String, dynamic>))
           .toList();
-    } catch (e) {
+    } catch (e, st) {
+      LoggerService.error('ProductRepository: getUpsellProducts failed for $cleanIds', e, st);
       return [];
     }
   }
@@ -521,7 +523,7 @@ class ProductRepository {
         return Product.fromJson(data);
       }
       throw ApiException('Product not found');
-    } catch (e) { LoggerService.error('ProductRepository: silent catch', e);
+    } catch (e, st) { LoggerService.error('ProductRepository: getProduct failed', e, st);
       if (_cachedProducts != null) {
         return _cachedProducts!.firstWhere(
           (p) => p.id == id,
@@ -562,7 +564,7 @@ class ProductRepository {
           return cats;
         }
       }
-    } catch (e, _) { LoggerService.error('ProductRepository: categories fetch failed', e); }
+    } catch (e, st) { LoggerService.error('ProductRepository: getCategories failed', e, st); }
 
     try {
       final allProducts = await getProducts(limit: 30);
@@ -590,7 +592,7 @@ class ProductRepository {
         _saveCategoriesToDisk(list);
         return list;
       }
-    } catch (e, _) { LoggerService.error('ProductRepository: silent catch', e); }
+    } catch (e, st) { LoggerService.error('ProductRepository: categories fallback failed', e, st); }
 
     final fallbacks = [
       const Category(id: 'CAT-101', name: 'Fruits & Vegetables', slug: 'fruits-vegetables', imageUrl: '/fruits_vegetables_category.png', sortOrder: 0),

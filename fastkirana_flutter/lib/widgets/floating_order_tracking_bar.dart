@@ -53,6 +53,7 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
           final repo = OrderRepository(ref.read(dioProvider));
           final cleanId = (topOrder.readableId ?? topOrder.id).replaceAll('#', '').trim();
           final liveOrder = await repo.getOrder(cleanId);
+          if (liveOrder == null) return;
           if (liveOrder.status == OrderStatus.cancelled || liveOrder.status == OrderStatus.delivered) {
             await repo.updateOrderStatus(cleanId, liveOrder.status);
             if (mounted) ref.invalidate(ordersProvider(''));

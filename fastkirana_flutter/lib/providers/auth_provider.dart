@@ -45,10 +45,15 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   }
 
   Future<void> setUser(User user) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_data', jsonEncode(user.toJson()));
+    // Write user data ONLY to SecureStorage (the durable encrypted store).
+    // SharedPreferences is legacy -- no longer needed and creates split-brain risk
+    // if one write succeeds and the other fails.
     await SecureStorage.write('user_data', jsonEncode(user.toJson()));
-    await SecureStorage.write('auth_token', prefs.getString('auth_token') ?? '');
+    final prefs = await SharedPreferences.getInstance();
+    final existingToken = prefs.getString('auth_token') ?? '';
+    if (existingToken.isNotEmpty) {
+      await SecureStorage.write('auth_token', existingToken);
+    }
     await SecureStorage.write('user_id', user.id);
     if (user.phone != null && user.phone!.isNotEmpty) await SecureStorage.write('user_phone', user.phone!);
     if (user.email.isNotEmpty) await SecureStorage.write('user_email', user.email);

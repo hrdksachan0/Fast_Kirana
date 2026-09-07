@@ -13,7 +13,7 @@ class CouponRepository {
       if (data is List) {
         return data.map((json) => Coupon.fromJson(json as Map<String, dynamic>)).toList();
       }
-    } catch (e, _) { LoggerService.error('CouponRepository: silent catch', e); }
+    } catch (e, st) { LoggerService.error('CouponRepository: getCoupons failed', e, st); }
     return [];
   }
 }

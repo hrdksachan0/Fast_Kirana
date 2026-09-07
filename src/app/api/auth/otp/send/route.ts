@@ -47,9 +47,8 @@ export async function POST(request: NextRequest) {
           OR: [
             { phone: normalizedPhone },
             { phone: phoneDigits },
-            { phone: `91${phoneDigits}` },
             { phone: `+91${phoneDigits}` },
-            { email: `wa-${phoneDigits}@fastkirana.com` },
+            { phone: `91${phoneDigits}` },
             { email: trimmed.toLowerCase() }
           ]
         },
@@ -60,10 +59,11 @@ export async function POST(request: NextRequest) {
         (phoneDigits === '7054470303' && u.email === 'admin@fastkirana.com')
       )
       const existingUser = canonicalUser || matchingUsers.find(u => u.role !== 'USER') || matchingUsers[0]
-      if (existingUser) {
+      if (existingUser && existingUser.email && !existingUser.email.startsWith('wa-')) {
         normalizedEmail = existingUser.email
       } else {
-        normalizedEmail = `wa-${phoneDigits}@fastkirana.com`
+        // Pure phone identifier: do not generate fake email domain
+        normalizedEmail = `phone:${phoneDigits}`
       }
     } else if (!normalizedEmail.includes('@')) {
       return NextResponse.json({ error: 'Please enter a valid email address or 10-digit mobile number' }, { status: 400 })
@@ -99,9 +99,10 @@ export async function POST(request: NextRequest) {
       where: {
         OR: [
           { email: normalizedEmail },
-          phoneDigits ? { email: `wa-${phoneDigits}@fastkirana.com` } : null,
-          phoneDigits ? { email: phoneDigits } : null,
+          phoneDigits ? { email: `phone:${phoneDigits}` } : null,
           phoneDigits ? { email: `+91${phoneDigits}` } : null,
+          phoneDigits ? { email: phoneDigits } : null,
+          phoneDigits ? { email: `wa-${phoneDigits}@fastkirana.com` } : null,
         ].filter(Boolean) as any
       }
     })
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
     })
 
     // 5. Send OTP via Meta WhatsApp Cloud API or Email
-    const recipientPhoneDigits = phoneDigits || (normalizedEmail.startsWith('wa-') ? normalizedEmail.split('@')[0].replace('wa-', '') : null)
+    const recipientPhoneDigits = phoneDigits || (normalizedEmail.startsWith('phone:') ? normalizedEmail.replace('phone:', '') : null)
 
     if (recipientPhoneDigits) {
       const recipientPhone = `+91${recipientPhoneDigits}`

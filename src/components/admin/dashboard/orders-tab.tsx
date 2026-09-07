@@ -845,13 +845,20 @@ export function OrdersTab({
                             title="Click to toggle between PAID and UNPAID / COD"
                           >
                             {o.paymentStatus === 'PAID' ? (
-                              <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full mt-1 shadow-2xs hover:bg-emerald-500/25">
-                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                PAID ONLINE ✅
-                              </span>
+                              o.paymentMethod === 'COD' ? (
+                                <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full mt-1 shadow-2xs hover:bg-amber-500/25">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                  💵 CASH RECEIVED
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full mt-1 shadow-2xs hover:bg-emerald-500/25">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                  📱 ONLINE / UPI ✅
+                                </span>
+                              )
                             ) : (
-                              <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full mt-1 hover:bg-amber-500/25">
-                                💰 {o.paymentMethod || 'COD'} (UNPAID)
+                              <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-rose-700 dark:text-rose-300 bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 rounded-full mt-1 hover:bg-rose-500/25">
+                                ⏳ {o.paymentMethod || 'COD'} (UNPAID)
                               </span>
                             )}
                           </button>
@@ -1251,13 +1258,19 @@ export function OrdersTab({
                             title="Click to toggle between PAID and UNPAID / COD"
                           >
                             {o.paymentStatus === 'PAID' ? (
-                              <span className="inline-flex items-center gap-1 text-[8.5px] font-black uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded-full mt-0.5 shadow-2xs hover:bg-emerald-500/25">
-                                <span className="h-1 w-1 rounded-full bg-emerald-500" />
-                                PAID ✅
-                              </span>
+                              o.paymentMethod === 'COD' ? (
+                                <span className="inline-flex items-center gap-1 text-[8.5px] font-black uppercase text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded-full mt-0.5 shadow-2xs">
+                                  💵 CASH RECEIVED
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[8.5px] font-black uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded-full mt-0.5 shadow-2xs hover:bg-emerald-500/25">
+                                  <span className="h-1 w-1 rounded-full bg-emerald-500" />
+                                  📱 ONLINE / UPI ✅
+                                </span>
+                              )
                             ) : (
-                              <span className="inline-flex items-center gap-1 text-[8.5px] font-black uppercase text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded-full mt-0.5 hover:bg-amber-500/25">
-                                💰 {o.paymentMethod || 'COD'}
+                              <span className="inline-flex items-center gap-1 text-[8.5px] font-black uppercase text-rose-700 dark:text-rose-300 bg-rose-500/15 border border-rose-500/30 px-1.5 py-0.5 rounded-full mt-0.5 hover:bg-rose-500/25">
+                                ⏳ {o.paymentMethod || 'COD'} (UNPAID)
                               </span>
                             )}
                           </button>

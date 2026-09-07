@@ -21,7 +21,7 @@ export async function GET(
   const order = orders[0]
 
   // Verify access authorization (order owner OR staff role)
-  const { error: authError } = await requireOrderAccess(order.userId)
+  const { error: authError } = await requireOrderAccess(order.userId, [], request)
   if (authError) return new Response('Unauthorized', { status: 401 })
 
   const encoder = new TextEncoder()

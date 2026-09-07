@@ -1,7 +1,7 @@
 import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'dart:async';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_config.dart';
 import '../services/secure_storage_service.dart';
@@ -14,6 +14,19 @@ final dioProvider = Provider<Dio>((ref) {
     sendTimeout: const Duration(seconds: 20),
     headers: {'Content-Type': 'application/json'},
   ));
+
+  // ─── Request/Response Logging (debug builds only) ───────────────────
+  if (kDebugMode) {
+    dio.interceptors.add(LogInterceptor(
+      request: true,
+      requestHeader: false,
+      requestBody: true,
+      responseHeader: false,
+      responseBody: true,
+      error: true,
+      logPrint: (obj) => LoggerService.debug(obj),
+    ));
+  }
 
   dio.interceptors.add(InterceptorsWrapper(
     onRequest: (options, handler) async {
@@ -71,7 +84,7 @@ final dioProvider = Provider<Dio>((ref) {
             options.headers.putIfAbsent('x-user-role', () => userRole);
           }
         }
-      } catch (e, _) { LoggerService.error('ApiClient: silent catch', e); }
+      } catch (e, _) { LoggerService.error('ApiClient: request interceptor', e); }
 
       return handler.next(options);
     },
@@ -93,11 +106,11 @@ final dioProvider = Provider<Dio>((ref) {
               final retryResponse = await dio.fetch(requestOptions);
               return handler.resolve(retryResponse);
             }
-          } catch (e, _) { LoggerService.error('ApiClient: silent catch', e); }
+          } catch (e, _) { LoggerService.error('ApiClient: token refresh', e); }
         }
       }
 
-      // ─── 2. Connection Fallback ─────────────────────────────────────────
+      // ─── 2. Connection Fallback to secondary URL ─────────────────────
       // NEVER auto-retry KOT broadcast or order mutations to prevent duplicate prints/actions
       final isKOTRequest = error.requestOptions.path.contains('kot-broadcast') ||
           error.requestOptions.path.contains('broadcast');
@@ -109,13 +122,11 @@ final dioProvider = Provider<Dio>((ref) {
           error.type == DioExceptionType.connectionTimeout ||
           error.type == DioExceptionType.unknown;
 
-      const fallbackUrl = 'https://www.fastkirana.in';
-
       if (isConnectionError && !error.requestOptions.extra.containsKey('retried_fallback')) {
         try {
           final targetPath = error.requestOptions.path.startsWith('http')
               ? error.requestOptions.path
-              : '$fallbackUrl${error.requestOptions.path}';
+              : '${AppConfig.secondaryApiUrl}${error.requestOptions.path}';
 
           final fallbackDio = Dio(BaseOptions(
             connectTimeout: const Duration(seconds: 15),
@@ -134,7 +145,7 @@ final dioProvider = Provider<Dio>((ref) {
             ),
           );
           return handler.resolve(retryResponse);
-        } catch (e, _) { LoggerService.error('ApiClient: silent catch', e); }
+        } catch (e, _) { LoggerService.error('ApiClient: fallback URL retry', e); }
       }
       return handler.next(error);
     },
@@ -192,7 +203,7 @@ Future<String?> _refreshToken() async {
         return newToken;
       }
     }
-  } catch (e, _) { LoggerService.error('ApiClient: silent catch', e); } finally {
+  } catch (e, _) { LoggerService.error('ApiClient: token refresh', e); } finally {
     _isRefreshingToken = false;
   }
 

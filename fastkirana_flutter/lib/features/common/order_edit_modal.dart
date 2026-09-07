@@ -9,6 +9,7 @@ import '../../core/network/api_client.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/utils/app_toast.dart';
 import '../../core/services/admin_notification_service.dart';
+import '../../core/services/admin_authorization.dart';
 import 'order_edit/add_item_search_sheet.dart';
 
 class OrderEditModal extends ConsumerStatefulWidget {
@@ -228,7 +229,6 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
 
     try {
       final dio = ref.read(dioProvider);
-      final roleHeader = widget.isAdmin ? 'ADMIN' : (widget.isRestaurant ? 'CHEF' : 'PICKER');
 
       final payload = {
         'updatedItems': _items.map((it) => {
@@ -241,19 +241,22 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
           'selectedVariant': it['selectedVariant'],
           'notes': it['notes'],
           'imageUrl': it['imageUrl'],
+          'restaurantId': it['restaurantId'] ?? widget.restaurantId ?? widget.order['restaurantId'],
+          'shopName': it['shopName'] ?? widget.order['shopName'],
         }).toList(),
         'outOfStockProductIds': _outOfStockProductIds.toList(),
       };
 
+      final staffHeaders = AdminAuthorization.currentStaffHeaders() ?? <String, String>{};
+      final mergedHeaders = <String, String>{
+        ...staffHeaders,
+        if (widget.restaurantId != null && widget.restaurantId!.isNotEmpty)
+          'x-restaurant-id': widget.restaurantId!,
+      };
       final response = await dio.post(
         '/api/orders/$orderId/edit',
         data: payload,
-        options: Options(headers: {
-          'x-user-role': roleHeader,
-          if (widget.restaurantId != null && widget.restaurantId!.isNotEmpty)
-            'x-restaurant-id': widget.restaurantId,
-          'x-user-phone': '7054470303',
-        }),
+        options: Options(headers: mergedHeaders),
       );
 
       if (response.statusCode == 200) {

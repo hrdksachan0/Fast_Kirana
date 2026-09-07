@@ -45,21 +45,22 @@ export async function POST(request: NextRequest) {
     let existingUser = null
 
     if (isPhone && phoneDigits) {
-      candidateEmails.add(`wa-${phoneDigits}@fastkirana.com`)
+      candidateEmails.add(`phone:${phoneDigits}`)
       candidateEmails.add(phoneDigits)
       candidateEmails.add(normalizedPhone)
       candidateEmails.add(`91${phoneDigits}`)
       candidateEmails.add(`+91${phoneDigits}`)
+      candidateEmails.add(`wa-${phoneDigits}@fastkirana.com`) // legacy OTP lookup backward compat
 
       const matchingUsers = await prisma.user.findMany({
         where: {
           OR: [
             { phone: normalizedPhone },
             { phone: phoneDigits },
-            { phone: `91${phoneDigits}` },
             { phone: `+91${phoneDigits}` },
-            { email: `wa-${phoneDigits}@fastkirana.com` },
-            { email: trimmed.toLowerCase() }
+            { phone: `91${phoneDigits}` },
+            { email: trimmed.toLowerCase() },
+            { email: `wa-${phoneDigits}@fastkirana.com` }
           ]
         },
         select: {
@@ -87,7 +88,6 @@ export async function POST(request: NextRequest) {
       }
       if (phoneDigits === '7054470303') {
         candidateEmails.add('admin@fastkirana.com')
-        candidateEmails.add('admin@fastkirana.in')
       }
       if (phoneDigits === '8112849854') {
         candidateEmails.add('asrestaurant3@gmail.com')
@@ -109,11 +109,11 @@ export async function POST(request: NextRequest) {
 
       existingUser = canonicalUser || matchingUsers.find(u => u.role !== 'USER' || !!u.passwordHash) || matchingUsers[0] || null
 
-      if (existingUser) {
+      if (existingUser && existingUser.email && !existingUser.email.startsWith('wa-')) {
         normalizedEmail = existingUser.email
         candidateEmails.add(existingUser.email.toLowerCase())
       } else {
-        normalizedEmail = `wa-${phoneDigits}@fastkirana.com`
+        normalizedEmail = `phone:${phoneDigits}`
       }
     }
 
@@ -148,11 +148,11 @@ export async function POST(request: NextRequest) {
       user = await prisma.user.findFirst({
         where: {
           OR: [
-            { email: normalizedEmail },
             phoneDigits ? { phone: normalizedPhone } : null,
             phoneDigits ? { phone: phoneDigits } : null,
+            phoneDigits ? { phone: `+91${phoneDigits}` } : null,
             phoneDigits ? { phone: `91${phoneDigits}` } : null,
-            phoneDigits ? { email: `wa-${phoneDigits}@fastkirana.com` } : null,
+            { email: normalizedEmail },
           ].filter(Boolean) as any
         }
       })
@@ -166,10 +166,11 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       const phoneFormatted = phoneDigits ? `+91${phoneDigits}` : null
+      // Create user with phone as primary identity and NO synthetic fake email
       user = await prisma.user.create({
         data: {
           phone: phoneFormatted,
-          email: normalizedEmail,
+          email: normalizedEmail.startsWith('phone:') ? `${phoneDigits}@users.fastkirana.in` : normalizedEmail,
           name: phoneDigits ? `Customer ${phoneDigits.slice(-4)}` : 'Customer',
           role: 'USER',
         }
@@ -185,16 +186,27 @@ export async function POST(request: NextRequest) {
 
     const needsProfileSetup = isNewOrUnnamedUser
 
-    const cleanEmail = (user.email && !user.email.startsWith('wa-') && !user.email.endsWith('@fastkirana.com') && !user.email.endsWith('@fastkirana.in')) ? user.email : ''
+    const cleanEmail = (user.email && !user.email.startsWith('wa-') && !user.email.includes('@users.fastkirana.in') && !user.email.endsWith('@fastkirana.com') && !user.email.endsWith('@fastkirana.in')) ? user.email : ''
+
+    // Generate cryptographic signed JWT token (valid for 30 days)
+    const { signFastKiranaJWT } = await import('@/lib/jwt')
+    const signedToken = await signFastKiranaJWT({
+      userId: user.id,
+      phone: user.phone || (phoneDigits ? `+91${phoneDigits}` : null),
+      email: cleanEmail || null,
+      role: user.role || 'USER',
+      assignedStoreId: user.assignedStoreId || null,
+      assignedRestaurantId: user.assignedRestaurantId || null,
+    })
 
     return NextResponse.json({
       success: true,
       needsProfileSetup,
-      token: `token_${user.id}_${Date.now()}`,
+      token: signedToken,
       id: user.id,
       name: user.name || '',
       email: cleanEmail,
-      phone: user.phone || trimmed,
+      phone: user.phone || (phoneDigits ? `+91${phoneDigits}` : trimmed),
       role: user.role || 'USER',
       assignedStoreId: user.assignedStoreId || null,
       assignedRestaurantId: user.assignedRestaurantId || null,
@@ -202,7 +214,7 @@ export async function POST(request: NextRequest) {
         id: user.id,
         name: user.name || '',
         email: cleanEmail,
-        phone: user.phone || trimmed,
+        phone: user.phone || (phoneDigits ? `+91${phoneDigits}` : trimmed),
         role: user.role || 'USER',
         assignedStoreId: user.assignedStoreId || null,
         assignedRestaurantId: user.assignedRestaurantId || null,
