@@ -15,6 +15,7 @@ import '../../widgets/floating_order_tracking_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/notification_service.dart';
+import '../../core/services/secure_storage_service.dart';
 import 'home_screen.dart';
 import '../search/search_screen.dart';
 import '../categories/categories_screen.dart';
@@ -45,7 +46,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
       if (!kIsWeb) {
         try {
           NotificationService().registerDeviceToken(ref.read(dioProvider));
-        } catch (e, _) { LoggerService.error('MainShell: silent catch', e); }
+        } catch (e, _) { LoggerService.error('MainShell: _reRegisterPendingToken', e); }
       }
     });
   }
@@ -67,7 +68,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
       final pending = prefs.getString('pending_fcm_token');
       if (pending == null || pending.isEmpty) return;
 
-      final authToken = prefs.getString('auth_token');
+      final authToken = await SecureStorage.read('auth_token');
       if (authToken == null) return;
 
       final dio = ref.read(dioProvider);
@@ -79,7 +80,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
       if (response.statusCode == 200) {
         await prefs.remove('pending_fcm_token');
       }
-    } catch (e, _) { LoggerService.error('MainShell: silent catch', e); }
+    } catch (e, _) { LoggerService.error('MainShell: _reRegisterPendingToken', e); }
   }
 
   @override

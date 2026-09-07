@@ -16,7 +16,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (kIsWeb) return;
   try {
     await Firebase.initializeApp();
-  } catch (e, _) { LoggerService.error('NotificationService: silent catch', e); }
+  } catch (e, _) { LoggerService.error('NotificationService: error', e); }
 
   final notification = message.notification;
   final data = message.data;
@@ -98,7 +98,7 @@ class NotificationService {
     if (kIsWeb) return null;
     try {
       return FirebaseMessaging.instance;
-    } catch (e) { LoggerService.error('NotificationService: silent catch', e);
+    } catch (e) { LoggerService.error('NotificationService: error', e);
       return null;
     }
   }
@@ -107,7 +107,7 @@ class NotificationService {
     if (kIsWeb) return null;
     try {
       return FlutterLocalNotificationsPlugin();
-    } catch (e) { LoggerService.error('NotificationService: silent catch', e);
+    } catch (e) { LoggerService.error('NotificationService: error', e);
       return null;
     }
   }
@@ -147,7 +147,7 @@ class NotificationService {
         await _localNotifications
             ?.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
             ?.requestNotificationsPermission();
-      } catch (e, _) { LoggerService.error('NotificationService: silent catch', e); }
+      } catch (e, _) { LoggerService.error('NotificationService: error', e); }
 
       // 3. Setup local notification channel for Android with MAX priority
       const AndroidNotificationChannel channel = AndroidNotificationChannel(
@@ -437,14 +437,14 @@ class NotificationService {
     if (kIsWeb) return;
     try {
       await _fcm?.subscribeToTopic(topic);
-    } catch (e, _) { LoggerService.error('NotificationService: silent catch', e); }
+    } catch (e, _) { LoggerService.error('NotificationService: error', e); }
   }
 
   Future<void> unsubscribeFromTopic(String topic) async {
     if (kIsWeb) return;
     try {
       await _fcm?.unsubscribeFromTopic(topic);
-    } catch (e, _) { LoggerService.error('NotificationService: silent catch', e); }
+    } catch (e, _) { LoggerService.error('NotificationService: error', e); }
   }
 
   /// Cancel all active notifications in system tray (used on logout)

@@ -12,7 +12,7 @@ class SupabaseService {
     if (_isInitialized) {
       try {
         return Supabase.instance.client;
-      } catch (e) { LoggerService.error('SupabaseService: silent catch', e);
+      } catch (e) { LoggerService.error('SupabaseService: error', e);
         return _client;
       }
     }

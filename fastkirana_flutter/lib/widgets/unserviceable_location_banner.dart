@@ -16,7 +16,8 @@ class UnserviceableLocationBanner extends ConsumerWidget {
 
   static void resetToActiveHub(WidgetRef ref, BuildContext context) {
     HapticFeedback.mediumImpact();
-    const defaultHub = Address(
+    // NOTE: cannot be const — AppConfig.darkstoreLat/Lng are now static (mutable)
+    final defaultHub = Address(
       id: 'hub_active_default',
       userId: 'current',
       label: 'FastKirana Active Store Hub',

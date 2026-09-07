@@ -84,7 +84,7 @@ class Product {
       parsedCreated = json['createdAt'] != null
           ? DateTime.parse(json['createdAt'].toString())
           : DateTime.now();
-    } catch (e) { LoggerService.error('Product: silent catch', e);
+    } catch (e) { LoggerService.error('Product: error', e);
       parsedCreated = DateTime.now();
     }
 
@@ -92,7 +92,7 @@ class Product {
     if (json['expiryDate'] != null) {
       try {
         parsedExpiry = DateTime.parse(json['expiryDate'].toString());
-      } catch (e, _) { LoggerService.error('Product: silent catch', e); }
+      } catch (e, _) { LoggerService.error('Product: error', e); }
     }
 
     final mrpVal = double.tryParse(json['mrp']?.toString() ?? '0') ?? 0.0;
@@ -181,7 +181,7 @@ class Product {
     if (variants is String) {
       try {
         listData = jsonDecode(variants as String);
-      } catch (e) { LoggerService.error('Product: silent catch', e);
+      } catch (e) { LoggerService.error('Product: error', e);
         return [];
       }
     }

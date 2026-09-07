@@ -4,6 +4,7 @@ import '../data/models/store_hub.dart';
 import '../core/services/logger_service.dart';
 import '../core/services/supabase_service.dart';
 import '../core/network/api_client.dart';
+import '../core/config/app_config.dart';
 import 'address_provider.dart';
 
 /// Fetches all active store hubs from Supabase / REST API
@@ -90,6 +91,16 @@ final nearestHubResultProvider = Provider<NearestHubResult>((ref) {
   }
 
   final isServiceable = minDistanceKm <= nearest.deliveryRadiusKm;
+
+  // Sync AppConfig so all non-provider call sites read the live hub coords.
+  // This runs on every rebuild: initial build uses StoreHub.defaultGhatampur
+  // (same coords as current defaults), then updates to the real hub once
+  // activeStoreHubsProvider resolves from the API.
+  AppConfig.updateDarkstore(
+    lat: nearest.latitude,
+    lng: nearest.longitude,
+    address: '${nearest.name}, ${nearest.city}',
+  );
 
   return NearestHubResult(
     hub: nearest,

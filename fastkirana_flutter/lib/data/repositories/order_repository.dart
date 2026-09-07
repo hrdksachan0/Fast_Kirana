@@ -40,7 +40,7 @@ class OrderRepository {
             .whereType<Map<String, dynamic>>()
             .map((j) => Order.fromJson(j))
             .toList();
-      } catch (e, _) { LoggerService.error('OrderRepository: map Orders', e); }
+      } catch (e, st) { LoggerService.error('OrderRepository: map Orders', e, st); }
     }
 
     try {
@@ -102,7 +102,7 @@ class OrderRepository {
         await _saveToCache(combined);
         return combined;
       }
-    } catch (e, _) { LoggerService.error('OrderRepository: getOrders combine', e); }
+    } catch (e, st) { LoggerService.error('OrderRepository: getOrders combine', e, st); }
 
     // Fallback: Direct Supabase query for real-time status - STRICTLY filtered by customer
     try {
@@ -131,7 +131,7 @@ class OrderRepository {
                 .ilike('shopPhone', '%$last10%')
                 .order('createdAt', ascending: false)
                 .limit(30);
-          } catch (e, _) { LoggerService.error('OrderRepository: map Orders', e); }
+          } catch (e, st) { LoggerService.error('OrderRepository: map Orders', e, st); }
         }
 
         if (sbData.isNotEmpty) {
@@ -150,7 +150,7 @@ class OrderRepository {
           }
         }
       }
-    } catch (e, _) { LoggerService.error('OrderRepository: getOrders combine', e); }
+    } catch (e, st) { LoggerService.error('OrderRepository: getOrders combine', e, st); }
 
     localOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return localOrders;
@@ -169,7 +169,7 @@ class OrderRepository {
             .whereType<Map<String, dynamic>>()
             .map((j) => Order.fromJson(j))
             .toList();
-      } catch (e, _) { LoggerService.error('OrderRepository: map Orders', e); }
+      } catch (e, st) { LoggerService.error('OrderRepository: map Orders', e, st); }
     }
 
     localOrders.removeWhere((o) => o.id == newOrder.id || (o.readableId != null && o.readableId == newOrder.readableId));
@@ -190,7 +190,7 @@ class OrderRepository {
           return Order.fromJson(orderData);
         }
       }
-    } catch (e, _) { LoggerService.error('OrderRepository: getOrder fetch', e); }
+    } catch (e, st) { LoggerService.error('OrderRepository: getOrder fetch', e, st); }
 
     // Fallback: search local cache by id, readableId, displayId, or suffix
     final orders = await getOrders('');
@@ -241,8 +241,8 @@ class OrderRepository {
         options: Options(headers: adminHeaders),
       );
       primarySucceeded = res.statusCode != null && (res.statusCode! < 300);
-    } catch (e, _) {
-      LoggerService.error('OrderRepository: primary status update failed', e);
+    } catch (e, st) {
+      LoggerService.error('OrderRepository: primary status update failed', e, st);
     }
 
     // Try admin fallback endpoint
@@ -254,8 +254,8 @@ class OrderRepository {
           options: Options(headers: adminHeaders),
         );
         fallbackSucceeded = res.statusCode != null && (res.statusCode! < 300);
-      } catch (e, _) {
-        LoggerService.error('OrderRepository: fallback status update failed', e);
+      } catch (e, st) {
+        LoggerService.error('OrderRepository: fallback status update failed', e, st);
       }
     }
 
@@ -263,8 +263,8 @@ class OrderRepository {
     if (primarySucceeded || fallbackSucceeded) {
       try {
         await _updateOrderStatusInCache(orderId, statusStr);
-      } catch (e, _) {
-        LoggerService.error('OrderRepository: cache update failed after successful API call', e);
+      } catch (e, st) {
+        LoggerService.error('OrderRepository: cache update failed after successful API call', e, st);
       }
     }
 
@@ -362,7 +362,7 @@ class OrderRepository {
           final jsonList = localOrders.map((o) => o.toJson()).toList();
           await prefs.setString(key, jsonEncode(jsonList));
         }
-      } catch (e, _) { LoggerService.error('OrderRepository: cancel cache update', e); }
+      } catch (e, st) { LoggerService.error('OrderRepository: cancel cache update', e, st); }
     }
 
     // ── Restore stock for cancelled items ──
@@ -474,8 +474,8 @@ class OrderRepository {
           await prefs.remove(k);
         }
       }
-    } catch (e, _) {
-      LoggerService.error('OrderRepository: clearCache', e);
+    } catch (e, st) {
+      LoggerService.error('OrderRepository: clearCache', e, st);
     }
   }
 }

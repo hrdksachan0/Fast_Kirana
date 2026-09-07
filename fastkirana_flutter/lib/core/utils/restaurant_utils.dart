@@ -1,4 +1,5 @@
 import '../../data/models/product.dart';
+import '../config/app_config.dart';
 
 const String outletAsRestaurantId = 'REST-101';
 const String outletWedsonId = 'REST-102';

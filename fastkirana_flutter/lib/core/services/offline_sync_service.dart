@@ -42,7 +42,7 @@ class OfflineSyncService {
       if (raw == null || raw.isEmpty) return 0;
       final List list = jsonDecode(raw);
       return list.length;
-    } catch (e) { LoggerService.error('OfflineSyncService: silent catch', e);
+    } catch (e) { LoggerService.error('OfflineSyncService: error', e);
       return 0;
     }
   }

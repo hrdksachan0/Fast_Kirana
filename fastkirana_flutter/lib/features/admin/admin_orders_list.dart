@@ -274,7 +274,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
                 .order('createdAt', ascending: false)
                 .limit(100);
             for (final j in res) {
-              try { addUnique(Order.fromJson(j)); } catch (e, _) { LoggerService.error('AdminOrdersList: silent catch', e); }
+              try { addUnique(Order.fromJson(j)); } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
                         }
                     } catch (e) {
             debugPrint('Supabase orders fetch error: $e');
@@ -297,7 +297,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
             }
             for (final j in rawList) {
               if (j is Map<String, dynamic>) {
-                try { addUnique(Order.fromJson(j)); } catch (e, _) { LoggerService.error('AdminOrdersList: silent catch', e); }
+                try { addUnique(Order.fromJson(j)); } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
               }
             }
           } catch (e) {
@@ -463,9 +463,9 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
                 .order('createdAt', ascending: false)
                 .limit(100);
             for (final j in res) {
-              try { addUnique(Order.fromJson(j)); } catch (e, _) { LoggerService.error('AdminOrdersList: silent catch', e); }
+              try { addUnique(Order.fromJson(j)); } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
                         }
-                    } catch (e, _) { LoggerService.error('AdminOrdersList: silent catch', e); }
+                    } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
         }(),
         // 2. REST API
         () async {
@@ -484,10 +484,10 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
             }
             for (final j in rawList) {
               if (j is Map<String, dynamic>) {
-                try { addUnique(Order.fromJson(j)); } catch (e, _) { LoggerService.error('AdminOrdersList: silent catch', e); }
+                try { addUnique(Order.fromJson(j)); } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
               }
             }
-          } catch (e, _) { LoggerService.error('AdminOrdersList: silent catch', e); }
+          } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
         }(),
         // 3. Local cached orders
         () async {
@@ -497,7 +497,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
             for (final o in local) {
               addUnique(o);
             }
-          } catch (e, _) { LoggerService.error('AdminOrdersList: silent catch', e); }
+          } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
         }(),
       ]);
 
@@ -525,7 +525,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
           });
         }
       }
-    } catch (e, _) { LoggerService.error('AdminOrdersList: silent catch', e); } finally {
+    } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); } finally {
       _isFetchingAdmin = false;
     }
   }

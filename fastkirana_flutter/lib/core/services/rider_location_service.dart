@@ -349,7 +349,7 @@ class RiderLocationService {
               'speed': item['speed'],
               'accuracy': item['accuracy'],
             });
-          } catch (e, _) { LoggerService.error('RiderLocationService: silent catch', e); }
+          } catch (e, _) { LoggerService.error('RiderLocationService: error', e); }
         }
       }
       await prefs.remove('offline_location_queue');

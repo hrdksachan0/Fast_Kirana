@@ -14,7 +14,7 @@ class BiometricService {
     } on PlatformException catch (e) {
       LoggerService.error('[BiometricService] Availability check error: $e');
       return false;
-    } catch (e) { LoggerService.error('BiometricService: silent catch', e);
+    } catch (e) { LoggerService.error('BiometricService: error', e);
       return false;
     }
   }
@@ -23,7 +23,7 @@ class BiometricService {
   static Future<List<BiometricType>> getAvailableBiometrics() async {
     try {
       return await _auth.getAvailableBiometrics();
-    } catch (e) { LoggerService.error('BiometricService: silent catch', e);
+    } catch (e) { LoggerService.error('BiometricService: error', e);
       return [];
     }
   }

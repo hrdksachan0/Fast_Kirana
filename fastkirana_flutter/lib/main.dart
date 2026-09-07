@@ -166,7 +166,7 @@ class FastKiranaApp extends StatelessWidget {
         final mediaQuery = MediaQuery.of(context);
         final clampedTextScaler = mediaQuery.textScaler.clamp(
           minScaleFactor: 0.85,
-          maxScaleFactor: 1.15,
+          maxScaleFactor: 2.0,
         );
         return MediaQuery(
           data: mediaQuery.copyWith(textScaler: clampedTextScaler),

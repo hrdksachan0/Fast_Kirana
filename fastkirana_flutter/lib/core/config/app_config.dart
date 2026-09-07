@@ -67,10 +67,24 @@ class AppConfig {
   // Loaded from /api/settings at runtime. No hardcoded admin phone.
 
   // ─── Darkstore Hub ─────────────────────────────────────────────
-  static const double darkstoreLat = 26.1534185;
-  static const double darkstoreLng = 80.1714024;
-  static const String darkstoreAddress =
-      'Ghatampur Market, Kanpur Nagar, UP - 209206';
+  /// Initial coordinates — updated at runtime by StoreHubProvider
+  /// when the nearest hub is resolved. Do NOT use `const` — these
+  /// must be mutable so multi-hub / multi-city deployments work.
+  static double darkstoreLat = 26.1534185;
+  static double darkstoreLng = 80.1714024;
+  static String darkstoreAddress = 'Ghatampur Market, Kanpur Nagar, UP - 209206';
+
+  /// Update the active darkstore hub coordinates at runtime.
+  /// Called by StoreHubProvider after resolving the nearest hub.
+  static void updateDarkstore({
+    required double lat,
+    required double lng,
+    required String address,
+  }) {
+    darkstoreLat = lat;
+    darkstoreLng = lng;
+    darkstoreAddress = address;
+  }
 
   // ─── Build Information ──────────────────────────────────────────
   static const String appName = 'FastKirana';

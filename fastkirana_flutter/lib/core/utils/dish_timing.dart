@@ -22,7 +22,7 @@ String formatTime12h(String timeStr) {
     final h12 = hours % 12 == 0 ? 12 : hours % 12;
     final mStr = minutes.toString().padLeft(2, '0');
     return '$h12:$mStr $period';
-  } catch (e) { LoggerService.error('DishTiming: silent catch', e);
+  } catch (e) { LoggerService.error('DishTiming: error', e);
     return timeStr;
   }
 }
@@ -73,7 +73,7 @@ DishTimingStatus checkDishTimeAvailability(String? startTime, String? endTime) {
       formattedTimeSlot: '$formattedStart - $formattedEnd',
       nextAvailableTimeStr: formattedStart,
     );
-  } catch (e) { LoggerService.error('DishTiming: silent catch', e);
+  } catch (e) { LoggerService.error('DishTiming: error', e);
     return const DishTimingStatus(
       isAvailableNow: true,
       formattedTimeSlot: null,

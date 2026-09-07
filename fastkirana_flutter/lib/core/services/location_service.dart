@@ -58,7 +58,8 @@ class DeliveryTierInfo {
 class LocationService {
   static const double maxDeliveryRadiusKm = 5.0; // FastKirana delivery zone radius (Strict 5.0 km)
 
-  /// Calculate distance in km from Central Darkstore Hub (Ghatampur) to given coordinates
+  /// Calculate distance in km from the active darkstore hub to given coordinates.
+  /// Reads from AppConfig which is updated at runtime by StoreHubProvider.
   static double getDistanceKm(double lat, double lng) {
     final distanceMeters = Geolocator.distanceBetween(
       AppConfig.darkstoreLat,
@@ -73,8 +74,12 @@ class LocationService {
   /// • 0 to 2 km (Local Ghatampur): ₹25 delivery fee — FREE Delivery on orders above ₹199!
   /// • 2 to 3 km (Suburban Area): ₹35 delivery fee — FREE Delivery on orders above ₹299!
   /// • 3 to 5 km (Extended Area): ₹50 delivery fee — FREE Delivery on orders above ₹399!
-  /// • Outside 5 km: Delivery is currently limited to a maximum of 5.0 km from our central hub.
-  static DeliveryTierInfo getDeliveryTier(double distanceKm, double subtotal) {
+  /// • Outside hub delivery radius: Not serviceable.
+  ///
+  /// If [hub] is provided, its [deliveryRadiusKm] determines the serviceability
+  /// boundary. Otherwise falls back to [maxDeliveryRadiusKm].
+  static DeliveryTierInfo getDeliveryTier(double distanceKm, double subtotal, {double? maxRadius}) {
+    final radius = maxRadius ?? maxDeliveryRadiusKm;
     if (distanceKm <= 2.0) {
       final isFree = subtotal >= 199.0;
       return DeliveryTierInfo(
@@ -99,7 +104,7 @@ class LocationService {
         freeDeliveryLabel: 'FREE Delivery above ₹299',
         feeDescription: '₹35 fee (FREE above ₹299)',
       );
-    } else if (distanceKm <= 5.0) {
+    } else if (distanceKm <= radius) {
       final isFree = subtotal >= 399.0;
       return DeliveryTierInfo(
         distanceKm: distanceKm,
@@ -107,7 +112,7 @@ class LocationService {
         baseFee: 50.0,
         freeDeliveryThreshold: 399.0,
         isServiceable: true,
-        tierName: '3 to 5 km (Extended Area)',
+        tierName: '3 to ${radius.toInt()} km (Extended Area)',
         freeDeliveryLabel: 'FREE Delivery above ₹399',
         feeDescription: '₹50 fee (FREE above ₹399)',
       );
@@ -118,9 +123,9 @@ class LocationService {
         baseFee: 0.0,
         freeDeliveryThreshold: 499.0,
         isServiceable: false,
-        tierName: 'Outside 5.0 km (Out of Zone)',
+        tierName: 'Outside ${radius.toInt()} km (Out of Zone)',
         freeDeliveryLabel: 'Outside delivery zone',
-        feeDescription: 'Delivery is currently limited to a maximum of 5.0 km from our central hub.',
+        feeDescription: 'Delivery is currently limited to a maximum of ${radius.toInt()} km from our central hub.',
       );
     }
   }
@@ -228,5 +233,6 @@ final deliveryTierProvider = Provider<DeliveryTierInfo>((ref) {
   final nearestResult = ref.watch(nearestHubResultProvider);
   final cart = ref.watch(cartProvider);
   final subtotal = cart.valueOrNull?.subtotal ?? 0.0;
-  return LocationService.getDeliveryTier(nearestResult.distanceKm, subtotal);
+  final radius = nearestResult.hub.deliveryRadiusKm;
+  return LocationService.getDeliveryTier(nearestResult.distanceKm, subtotal, maxRadius: radius);
 });

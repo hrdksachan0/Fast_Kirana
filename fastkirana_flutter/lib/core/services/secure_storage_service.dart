@@ -53,13 +53,13 @@ class SecureStorage {
               (k, v) => MapEntry(k, v.toString()),
             ),
           );
-        } catch (e) { LoggerService.error('SecureStorageService: silent catch', e);
+        } catch (e) { LoggerService.error('SecureStorageService: loadCache parse user_data', e);
           _cachedUserData = null;
         }
       }
 
       _isCacheLoaded = true;
-    } catch (e, _) { LoggerService.error('SecureStorageService: silent catch', e); }
+    } catch (e, _) { LoggerService.error('SecureStorageService: loadCache', e); }
   }
 
   /// Invalidate the cache. Call on logout or when user data changes.
@@ -123,11 +123,11 @@ class SecureStorage {
           return legacy;
         }
       }
-    } catch (e) { LoggerService.error('SecureStorageService: silent catch', e);
+    } catch (e) { LoggerService.error('SecureStorageService: read', e);
       try {
         final prefs = await SharedPreferences.getInstance();
         return prefs.getString(key);
-      } catch (e, _) { LoggerService.error('SecureStorageService: silent catch', e); }
+      } catch (e, _) { LoggerService.error('SecureStorageService: read fallback', e); }
     }
     return null;
   }
@@ -135,28 +135,28 @@ class SecureStorage {
   static Future<void> write(String key, String value) async {
     try {
       await _storage.write(key: key, value: value);
-    } catch (e) { LoggerService.error('SecureStorageService: silent catch', e);
+    } catch (e) { LoggerService.error('SecureStorageService: write', e);
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(key, value);
-      } catch (e, _) { LoggerService.error('SecureStorageService: silent catch', e); }
+      } catch (e, _) { LoggerService.error('SecureStorageService: write fallback', e); }
     }
   }
 
   static Future<void> delete(String key) async {
     try {
       await _storage.delete(key: key);
-    } catch (e, _) { LoggerService.error('SecureStorageService: silent catch', e); }
+    } catch (e, _) { LoggerService.error('SecureStorageService: delete', e); }
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(key);
-    } catch (e, _) { LoggerService.error('SecureStorageService: silent catch', e); }
+    } catch (e, _) { LoggerService.error('SecureStorageService: delete fallback', e); }
   }
 
   static Future<void> deleteAll() async {
     try {
       await _storage.deleteAll();
-    } catch (e, _) { LoggerService.error('SecureStorageService: silent catch', e); }
+    } catch (e, _) { LoggerService.error('SecureStorageService: deleteAll', e); }
   }
 
   static Future<Map<String, String>> readMany(Iterable<String> keys) async {
