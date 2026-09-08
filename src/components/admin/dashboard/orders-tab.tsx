@@ -51,6 +51,44 @@ export function OrdersTab({
 }: OrdersTabProps) {
   const [cancelConfirmOrder, setCancelConfirmOrder] = React.useState<any | null>(null)
   const [updatingPaymentId, setUpdatingPaymentId] = React.useState<string | null>(null)
+  const [syncingOrderId, setSyncingOrderId] = React.useState<string | null>(null)
+
+  const handleSyncRazorpayPayment = async (order: any, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    setSyncingOrderId(order.id)
+    try {
+      const res = await fetch('/api/admin/orders/sync-razorpay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: order.id }),
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        order.paymentStatus = 'PAID'
+        order.paymentMethod = 'UPI'
+        if (order.status === 'PENDING' || order.status === 'CANCELLED') {
+          order.status = 'CONFIRMED'
+        }
+        if (order.subOrders) {
+          order.subOrders.forEach((s: any) => {
+            s.paymentStatus = 'PAID'
+            s.paymentMethod = 'UPI'
+            if (s.status === 'PENDING' || s.status === 'CANCELLED') {
+              s.status = 'CONFIRMED'
+            }
+          })
+        }
+        toast.success(data.message || `Order #${order.readableId || order.id.slice(0, 8)} verified & synced as PAID via Razorpay!`)
+        onUpdateOrderStatus(order.id, order.status)
+      } else {
+        toast.error(data.error || `No captured payment found on Razorpay for Order #${order.readableId || order.id.slice(0, 8)}`)
+      }
+    } catch (err: any) {
+      toast.error('Failed to sync Razorpay payment')
+    } finally {
+      setSyncingOrderId(null)
+    }
+  }
   const [printedKotIds, setPrintedKotIds] = React.useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
     try {
@@ -862,6 +900,24 @@ export function OrdersTab({
                               </span>
                             )}
                           </button>
+                          {o.paymentStatus !== 'PAID' && (
+                            <button
+                              type="button"
+                              onClick={(e) => handleSyncRazorpayPayment(o, e)}
+                              disabled={syncingOrderId === o.id}
+                              className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-blue-700 dark:text-blue-300 bg-blue-500/15 border border-blue-500/30 hover:bg-blue-500/25 px-2 py-0.5 rounded-full mt-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                              title="Fetch & verify live payment directly from Razorpay gateway"
+                            >
+                              {syncingOrderId === o.id ? (
+                                <>
+                                  <Loader2 className="h-2.5 w-2.5 animate-spin text-blue-600" />
+                                  <span>Syncing...</span>
+                                </>
+                              ) : (
+                                <span>⚡ Fetch Razorpay</span>
+                              )}
+                            </button>
+                          )}
                         </td>
                         <td className="py-3 px-3 text-center">
                           <div className="flex flex-col items-center justify-center gap-1.5 min-w-[105px]">
@@ -1274,6 +1330,24 @@ export function OrdersTab({
                               </span>
                             )}
                           </button>
+                          {o.paymentStatus !== 'PAID' && (
+                            <button
+                              type="button"
+                              onClick={(e) => handleSyncRazorpayPayment(o, e)}
+                              disabled={syncingOrderId === o.id}
+                              className="inline-flex items-center gap-1 text-[8px] font-black uppercase text-blue-700 dark:text-blue-300 bg-blue-500/15 border border-blue-500/30 hover:bg-blue-500/25 px-1.5 py-0.5 rounded-full mt-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                              title="Fetch & verify live payment directly from Razorpay gateway"
+                            >
+                              {syncingOrderId === o.id ? (
+                                <>
+                                  <Loader2 className="h-2 w-2 animate-spin text-blue-600" />
+                                  <span>Syncing...</span>
+                                </>
+                              ) : (
+                                <span>⚡ Fetch Razorpay</span>
+                              )}
+                            </button>
+                          )}
                         </td>
                         <td className="py-3 px-3 text-center">
                           <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${

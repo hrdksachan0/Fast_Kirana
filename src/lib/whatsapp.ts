@@ -136,45 +136,84 @@ export async function sendWhatsAppOrderAlert(phone: string, textParam: string): 
   const phoneId = getCleanEnv('WHATSAPP_PHONE_NUMBER_ID')
   const templateName = getCleanEnv('WHATSAPP_ORDER_TEMPLATE_NAME')
 
-  if (!token || !phoneId || !templateName) {
+  if (!token || !phoneId) {
     return false
   }
 
   const cleanPhone = normalizePhone(phone).replace(/^\+/, '')
 
   try {
-    const body = {
-      messaging_product: 'whatsapp',
-      recipient_type: 'individual',
-      to: cleanPhone,
-      type: 'template',
-      template: {
-        name: templateName,
-        language: { code: process.env.WHATSAPP_TEMPLATE_LANG || 'en' },
-        components: [
-          {
-            type: 'body',
-            parameters: [
-              {
-                type: 'text',
-                text: textParam,
-              },
-            ],
-          },
-        ],
-      },
+    let body: any
+    if (templateName) {
+      body = {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: cleanPhone,
+        type: 'template',
+        template: {
+          name: templateName,
+          language: { code: process.env.WHATSAPP_TEMPLATE_LANG || 'en' },
+          components: [
+            {
+              type: 'body',
+              parameters: [
+                {
+                  type: 'text',
+                  text: textParam,
+                },
+              ],
+            },
+          ],
+        },
+      }
+    } else {
+      body = {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: cleanPhone,
+        type: 'text',
+        text: {
+          body: textParam,
+        },
+      }
     }
 
-    const res = await fetch(`https://graph.facebook.com/v20.0/${phoneId}/messages`, {
+    let res = await fetch(`https://graph.facebook.com/v20.0/${phoneId}/messages`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(5000),
     })
 
-    const data = await res.json()
+    let data = await res.json()
+
+    // If template send failed, fallback to direct text message for fail-safe delivery
+    if (!res.ok && templateName) {
+      console.warn('Meta WhatsApp order template send failed, trying direct text message fallback:', data)
+      const textBody = {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: cleanPhone,
+        type: 'text',
+        text: {
+          body: textParam,
+        },
+      }
+      res = await fetch(`https://graph.facebook.com/v20.0/${phoneId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(textBody),
+        signal: AbortSignal.timeout(5000),
+      })
+      data = await res.json()
+    }
+
     if (!res.ok) {
       console.error('Meta WhatsApp Order Alert error response:', data)
       return false

@@ -18,6 +18,7 @@ import '../../widgets/cart_conflict_dialog.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../products/product_detail_screen.dart';
 import '../profile/add_review_screen.dart';
+import 'package:share_plus/share_plus.dart';
 
 class WebMenuSection {
   final String tag;
@@ -672,8 +673,9 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                   ),
                 ),
                 actions: [
+                  // 1. Search Action
                   Container(
-                    margin: const EdgeInsets.all(8),
+                    margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                     decoration: BoxDecoration(
                       color: innerBoxIsScrolled ? Colors.transparent : Colors.black.withValues(alpha: 0.35),
                       shape: BoxShape.circle,
@@ -691,6 +693,27 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                           backgroundColor: Colors.transparent,
                           builder: (_) => _buildSearchSheet(),
                         );
+                      },
+                    ),
+                  ),
+                  // 2. Share Menu Action
+                  Container(
+                    margin: const EdgeInsets.only(top: 8, bottom: 8, right: 8, left: 4),
+                    decoration: BoxDecoration(
+                      color: innerBoxIsScrolled ? Colors.transparent : Colors.black.withValues(alpha: 0.35),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.share_rounded,
+                        color: innerBoxIsScrolled ? AppDesignSystem.slate900 : Colors.white,
+                        size: 19,
+                      ),
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        final shareUrl = 'https://fastkirana.in/cafe';
+                        final shareText = '🍔 Craving delicious food? Check out the fresh menu of $restaurantName on FastKirana!\nOrder online for fast express delivery: $shareUrl';
+                        Share.share(shareText, subject: '$restaurantName Menu - FastKirana');
                       },
                     ),
                   ),

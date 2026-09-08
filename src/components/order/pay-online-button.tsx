@@ -44,6 +44,34 @@ export function PayOnlineButton({
     })
   }
 
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false)
+
+  const handleCheckPaymentStatus = async () => {
+    setIsCheckingStatus(true)
+    try {
+      const res = await fetch('/api/payment/razorpay/sync-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      })
+      const data = await res.json()
+      if (res.ok && data.paymentStatus === 'PAID') {
+        toast.success('🎉 Online Payment Verified as PAID!')
+        if (onPaymentSuccess) {
+          onPaymentSuccess()
+        } else {
+          window.location.reload()
+        }
+      } else {
+        toast.info(data.message || 'No completed online payment detected yet. Please tap Pay Online to proceed.')
+      }
+    } catch (e: any) {
+      toast.error('Could not check payment status. Please try again.')
+    } finally {
+      setIsCheckingStatus(false)
+    }
+  }
+
   const handlePayOnline = async () => {
     try {
       triggerHaptic('light')
@@ -129,8 +157,24 @@ export function PayOnlineButton({
           }
         },
         modal: {
-          ondismiss: function () {
+          ondismiss: async function () {
             setIsProcessing(false)
+            // Auto check payment status in background if customer returned from UPI intent
+            setTimeout(async () => {
+              try {
+                const syncRes = await fetch('/api/payment/razorpay/sync-order', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ orderId }),
+                })
+                const syncData = await syncRes.json()
+                if (syncRes.ok && syncData.paymentStatus === 'PAID') {
+                  toast.success('🎉 Online Payment Verified!')
+                  if (onPaymentSuccess) onPaymentSuccess()
+                  else window.location.reload()
+                }
+              } catch (_) {}
+            }, 1500)
           },
         },
       }
@@ -253,6 +297,24 @@ export function PayOnlineButton({
           </>
         )}
       </button>
+
+      <div className="pt-1 flex items-center justify-center">
+        <button
+          type="button"
+          onClick={handleCheckPaymentStatus}
+          disabled={isCheckingStatus || isProcessing || isVerifying}
+          className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 underline underline-offset-4 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+        >
+          {isCheckingStatus ? (
+            <>
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Checking Razorpay payment...</span>
+            </>
+          ) : (
+            <span>Already paid via UPI or App? Tap here to sync 🔄</span>
+          )}
+        </button>
+      </div>
     </div>
   )
 }

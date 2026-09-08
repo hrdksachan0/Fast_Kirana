@@ -16,7 +16,9 @@ import {
 export const revalidate = 0 // Admin dashboard is fully dynamic
 
 
-export default async function AdminPage() {
+export default async function AdminPage(props: {
+  searchParams?: Promise<{ storeId?: string }>
+}) {
   const session = await auth()
   if (!session) {
     redirect('/login?callbackUrl=/admin')
@@ -26,6 +28,9 @@ export default async function AdminPage() {
   if (role !== 'ADMIN') {
     redirect('/')
   }
+
+  const searchParams = props.searchParams ? await props.searchParams : undefined
+  const initialStoreId = searchParams?.storeId || (session.user as any)?.assignedStoreId || null
 
   // 1. Fetch all store data in parallel
   let orderCount = 0
@@ -78,11 +83,18 @@ export default async function AdminPage() {
     istDate.setUTCHours(0, 0, 0, 0)
     const startOfToday = new Date(istDate.getTime() - istOffset)
 
+    const storeWhere = initialStoreId
+      ? (initialStoreId === 'hub-209206' || initialStoreId === 'default-Ghatampur Market'
+          ? { OR: [{ storeId: 'hub-209206' }, { storeId: 'default-Ghatampur Market' }, { storeId: null }] }
+          : { storeId: initialStoreId })
+      : undefined
+
     const [todayOrders, todayRevAgg, todayDeliveredAgg, ...results] = await Promise.all([
       prisma.order.count({
         where: {
           createdAt: { gte: startOfToday },
           deliveryMethod: { not: 'RETAIL' },
+          ...(storeWhere ? storeWhere : {}),
         },
       }),
       prisma.order.aggregate({
@@ -90,6 +102,7 @@ export default async function AdminPage() {
           createdAt: { gte: startOfToday },
           status: { not: 'CANCELLED' },
           deliveryMethod: { not: 'RETAIL' },
+          ...(storeWhere ? storeWhere : {}),
         },
         _sum: { total: true },
       }),
@@ -98,6 +111,7 @@ export default async function AdminPage() {
           createdAt: { gte: startOfToday },
           status: 'DELIVERED',
           deliveryMethod: { not: 'RETAIL' },
+          ...(storeWhere ? storeWhere : {}),
         },
         _sum: { total: true },
       }),
@@ -115,17 +129,30 @@ export default async function AdminPage() {
           restaurantId: null,
         },
       }),
-      prisma.$queryRaw`
-        SELECT "shopName", "restaurantId", "orderType"::text as "orderType", status::text as status,
-               COUNT(id)::int as count,
-               COALESCE(SUM(total), 0)::float as total,
-               COALESCE(SUM(subtotal), 0)::float as subtotal,
-               COALESCE(SUM(discount), 0)::float as discount
-        FROM orders
-        WHERE "deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL
-        GROUP BY "shopName", "restaurantId", "orderType", status
-      `,
+      initialStoreId
+        ? prisma.$queryRaw`
+            SELECT "shopName", "restaurantId", "orderType"::text as "orderType", status::text as status,
+                   COUNT(id)::int as count,
+                   COALESCE(SUM(total), 0)::float as total,
+                   COALESCE(SUM(subtotal), 0)::float as subtotal,
+                   COALESCE(SUM(discount), 0)::float as discount
+            FROM orders
+            WHERE ("deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL)
+              AND ("storeId" = ${initialStoreId} OR (${initialStoreId} IN ('hub-209206', 'default-Ghatampur Market') AND "storeId" IS NULL))
+            GROUP BY "shopName", "restaurantId", "orderType", status
+          `
+        : prisma.$queryRaw`
+            SELECT "shopName", "restaurantId", "orderType"::text as "orderType", status::text as status,
+                   COUNT(id)::int as count,
+                   COALESCE(SUM(total), 0)::float as total,
+                   COALESCE(SUM(subtotal), 0)::float as subtotal,
+                   COALESCE(SUM(discount), 0)::float as discount
+            FROM orders
+            WHERE "deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL
+            GROUP BY "shopName", "restaurantId", "orderType", status
+          `,
       prisma.order.findMany({
+        where: storeWhere,
         take: 40,
         orderBy: { createdAt: 'desc' },
         include: {
@@ -404,6 +431,7 @@ export default async function AdminPage() {
 
       {/* Dynamic Tabbed Console */}
       <AdminDashboard
+        initialStoreId={initialStoreId}
         serverUser={{
           id: session.user.id,
           name: session.user.name,

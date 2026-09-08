@@ -950,6 +950,23 @@ export default function CheckoutPage() {
         modal: {
           ondismiss: async function () {
             if (!paymentSuccess) {
+              // Try syncing with Razorpay before giving up — customer might have paid in external UPI app
+              try {
+                const syncRes = await fetch('/api/payment/razorpay/sync-order', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ orderId: orderData.id }),
+                })
+                const syncData = await syncRes.json()
+                if (syncRes.ok && syncData.paymentStatus === 'PAID') {
+                  clearCart()
+                  triggerHaptic('success')
+                  toast.success('🎉 Payment Successful!')
+                  window.location.href = `/order/${orderData.id}/success`
+                  return
+                }
+              } catch (_) {}
+
               setIsPlacingOrder(false)
               triggerHaptic('warning')
               toast.info('Payment was not completed. You can retry or switch payment method.')

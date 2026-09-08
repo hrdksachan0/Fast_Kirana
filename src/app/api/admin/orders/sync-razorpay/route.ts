@@ -24,11 +24,18 @@ export async function POST(req: Request) {
     let targetOrder: any = null
 
     if (orderId) {
-      targetOrder = await prisma.order.findUnique({
-        where: { id: orderId },
+      targetOrder = await prisma.order.findFirst({
+        where: {
+          OR: [
+            { id: orderId },
+            { readableId: String(orderId) },
+          ],
+        },
         include: { user: true, address: true },
       })
     }
+
+    let matchedPayment: any = null
 
     if (paymentId) {
       // Fetch details from Razorpay API
@@ -48,11 +55,18 @@ export async function POST(req: Request) {
         }, { status: 400 })
       }
 
+      matchedPayment = rzpPayment
+
       // Find order by notes or matching orderId
       const dbOrderId = rzpPayment.notes?.orderId || rzpPayment.notes?.receipt
       if (dbOrderId && !targetOrder) {
-        targetOrder = await prisma.order.findUnique({
-          where: { id: dbOrderId },
+        targetOrder = await prisma.order.findFirst({
+          where: {
+            OR: [
+              { id: dbOrderId },
+              { readableId: String(dbOrderId) },
+            ],
+          },
           include: { user: true, address: true },
         })
       }
@@ -69,6 +83,42 @@ export async function POST(req: Request) {
           include: { user: true, address: true },
         })
       }
+    } else if (targetOrder) {
+      // Automatically search recent captured Razorpay payments for this targetOrder!
+      try {
+        const rzpListRes = await fetch('https://api.razorpay.com/v1/payments?count=50', {
+          headers: { Authorization: authHeader },
+        })
+        if (rzpListRes.ok) {
+          const rzpData = await rzpListRes.json()
+          const items = rzpData.items || []
+          const orderTotalPaise = Math.round(Number(targetOrder.total) * 100)
+          const targetReadableId = String(targetOrder.readableId || '')
+
+          matchedPayment = items.find((p: any) => {
+            if (p.status !== 'captured' && p.status !== 'authorized') return false
+            if (p.notes?.orderId === targetOrder.id) return true
+            if (targetReadableId && p.notes?.readableId === targetReadableId) return true
+            if (targetReadableId && p.description && p.description.includes(targetReadableId)) return true
+            // Match amount if created within same time window
+            if (p.amount === orderTotalPaise) {
+              const pTime = p.created_at * 1000
+              const oTime = new Date(targetOrder.createdAt).getTime()
+              if (Math.abs(pTime - oTime) < 24 * 60 * 60 * 1000) return true
+            }
+            return false
+          })
+        }
+      } catch (searchErr) {
+        console.warn('Error searching Razorpay payments for order:', searchErr)
+      }
+
+      if (!matchedPayment) {
+        return NextResponse.json({
+          error: `No captured payment found on Razorpay for Order #${targetOrder.readableId || targetOrder.id.slice(-6)}.`,
+          found: false,
+        }, { status: 404 })
+      }
     }
 
     if (!targetOrder) {
@@ -81,12 +131,12 @@ export async function POST(req: Request) {
         UPDATE orders 
         SET "paymentStatus" = 'PAID'::"PaymentStatus",
             "paymentMethod" = 'UPI'::"PaymentMethod",
-            status = CASE WHEN status = 'PENDING' THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
+            status = CASE WHEN status IN ('PENDING', 'CANCELLED') THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
             "updatedAt" = NOW()
         WHERE "combinedId" = ${targetOrder.combinedId}
       `
     } else {
-      const nextStatus = targetOrder.status === 'PENDING' ? 'CONFIRMED' : targetOrder.status
+      const nextStatus = (targetOrder.status === 'PENDING' || targetOrder.status === 'CANCELLED') ? 'CONFIRMED' : targetOrder.status
       await prisma.$executeRaw`
         UPDATE orders 
         SET "paymentStatus" = 'PAID'::"PaymentStatus",

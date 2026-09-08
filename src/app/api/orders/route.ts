@@ -1287,7 +1287,42 @@ export async function POST(request: NextRequest) {
 
           const whatsappPromises: Promise<any>[] = []
 
-          // 2. WhatsApp Alert to Admins/Staff
+          // 2. Automated KOT Remote Broadcast to Kitchen Console & Thermal Printer
+          if (isRestaurant && order.restaurantId) {
+            try {
+              const { createClient } = await import('@supabase/supabase-js')
+              const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bberzasmxwioxjynbuaf.supabase.co'
+              const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+              if (supabaseUrl && supabaseKey) {
+                const supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } })
+                const channel = supabase.channel('restaurant-orders-live')
+                channel.subscribe((status) => {
+                  if (status === 'SUBSCRIBED') {
+                    channel.send({
+                      type: 'broadcast',
+                      event: 'reprint-kot',
+                      payload: {
+                        orderId: order.id,
+                        readableId: displayId,
+                        customerName: order.user?.name || body.customerName || 'Customer',
+                        items: order.items || [],
+                        deliveryMethod: order.deliveryMethod || 'DELIVERY',
+                        notes: order.notes || null,
+                        shopName: order.shopName || 'Kitchen',
+                        printedAt: new Date().toISOString(),
+                      }
+                    }).then(() => {
+                      setTimeout(() => supabase.removeChannel(channel), 2000)
+                    }).catch(() => {})
+                  }
+                })
+              }
+            } catch (kotErr) {
+              console.error('Automated KOT broadcast error:', kotErr)
+            }
+          }
+
+          // 3. WhatsApp Alert to Admins/Staff
           if (adminPhones.length > 0) {
             const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
             const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')

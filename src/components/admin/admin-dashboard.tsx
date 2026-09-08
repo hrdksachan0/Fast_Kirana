@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
+import { useSearchParams } from 'next/navigation'
 import { formatPrice, formatAddress, formatDisplayEmail } from '@/lib/utils'
 import { formatOrderTime, formatDate } from '@/lib/date-helpers'
 import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS, PRODUCT_TEMPLATES, HUB_CONFIG } from '@/lib/constants'
@@ -130,6 +131,7 @@ interface AdminDashboardProps {
 type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'restaurant-report' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals' | 'forecast' | 'rider-cash' | 'restaurant-console' | 'csv-import'
 
 export function AdminDashboard({
+  initialStoreId,
   serverUser,
   initialOrders,
   initialProducts,
@@ -287,6 +289,17 @@ export function AdminDashboard({
       if (res.ok) {
         setGroceryMartOpen(nextState)
         setGroceryAutoTiming(false)
+        if (selectedHubId && selectedHubId !== 'all') {
+          fetch('/api/admin/stores', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: selectedHubId,
+              groceryOpen: nextState,
+            }),
+          }).catch(console.warn)
+          setStoresList(prev => prev.map(s => s.id === selectedHubId ? { ...s, groceryOpen: nextState } : s))
+        }
         toast.success(nextState ? '🟢 Grocery Mart is now OPEN for orders!' : '🔴 Grocery Mart is now CLOSED.')
       } else {
         toast.error('Failed to update store status')
@@ -644,21 +657,39 @@ export function AdminDashboard({
   const isSuperAdmin = 
     phoneDigits === '9170942500' ||
     sessionUserEmail === 'superadmin@fastkirana.com' ||
-    sessionUserEmail.startsWith('superadmin')
+    sessionUserEmail.startsWith('superadmin') ||
+    (sessionUserRole === 'ADMIN' && !sessionAssignedStoreId)
+
+  const searchParams = useSearchParams()
+  const urlStoreId = searchParams?.get('storeId') || null
+  const effectiveInitialHub = sessionAssignedStoreId || initialStoreId || urlStoreId || 'hub-209206'
 
   const [editingProduct, setEditingProduct] = useState<any | null>(null)
   const [savingProductId, setSavingProductId] = useState<string | null>(null)
   const [restaurantsList, setRestaurantsList] = useState<any[]>([])
   const [storesList, setStoresList] = useState<any[]>([])
-  const [selectedHubId, setSelectedHubId] = useState<string>(() => sessionAssignedStoreId || 'hub-209206')
+  const [selectedHubId, setSelectedHubId] = useState<string>(() => effectiveInitialHub)
   const [isStoreHubsModalOpen, setIsStoreHubsModalOpen] = useState(false)
 
-  // Keep selectedHubId locked to assignedStoreId if user is Hub Admin
+  // Keep selectedHubId synchronized with URL or assignedStoreId
   useEffect(() => {
-    if (sessionAssignedStoreId && selectedHubId !== sessionAssignedStoreId) {
+    if (sessionAssignedStoreId) {
       setSelectedHubId(sessionAssignedStoreId)
+    } else if (urlStoreId && urlStoreId !== selectedHubId) {
+      setSelectedHubId(urlStoreId)
+    } else if (initialStoreId && initialStoreId !== selectedHubId && !urlStoreId) {
+      setSelectedHubId(initialStoreId)
     }
-  }, [sessionAssignedStoreId, selectedHubId])
+  }, [sessionAssignedStoreId, urlStoreId, initialStoreId])
+
+  const handleSelectHub = (hubId: string) => {
+    setSelectedHubId(hubId)
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      url.searchParams.set('storeId', hubId)
+      window.history.replaceState({}, '', url.toString())
+    }
+  }
 
   const fetchStoresAndRestaurants = useCallback(() => {
     fetch('/api/restaurants?all=true')
@@ -675,13 +706,17 @@ export function AdminDashboard({
           setStoresList(data)
           if (sessionAssignedStoreId) {
             setSelectedHubId(sessionAssignedStoreId)
+          } else if (urlStoreId && data.some(s => s.id === urlStoreId)) {
+            setSelectedHubId(urlStoreId)
+          } else if (initialStoreId && data.some(s => s.id === initialStoreId)) {
+            setSelectedHubId(initialStoreId)
           } else if (data.length > 0 && !data.some(s => s.id === selectedHubId) && selectedHubId !== 'all') {
             setSelectedHubId(data[0].id)
           }
         }
       })
       .catch(console.error)
-  }, [selectedHubId, sessionAssignedStoreId])
+  }, [selectedHubId, sessionAssignedStoreId, urlStoreId, initialStoreId])
 
   useEffect(() => {
     fetchStoresAndRestaurants()
@@ -2554,7 +2589,12 @@ export function AdminDashboard({
 
       <StoreControlBar
         storeHubName={activeStoreHub?.name || 'Ghatampur Central Hub'}
-        groceryMartOpen={groceryMartOpen}
+        storesList={storesList}
+        selectedHubId={selectedHubId}
+        onSelectHub={handleSelectHub}
+        onOpenHubManager={() => setIsStoreHubsModalOpen(true)}
+        isSuperAdmin={isSuperAdmin}
+        groceryMartOpen={activeStoreHub?.groceryOpen !== undefined ? activeStoreHub.groceryOpen : groceryMartOpen}
         groceryAutoTiming={groceryAutoTiming}
         isTogglingStore={isTogglingStore}
         onToggleGroceryMart={handleToggleGroceryMart}
@@ -3097,7 +3137,7 @@ export function AdminDashboard({
         assignedStoreId={sessionAssignedStoreId}
         onSelectHub={(hubId) => {
           if (isSuperAdmin) {
-            setSelectedHubId(hubId)
+            handleSelectHub(hubId)
           }
           setIsStoreHubsModalOpen(false)
         }}

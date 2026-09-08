@@ -52,7 +52,7 @@ class AppConfig {
   // ─── Payment Gateway ────────────────────────────────────────────
   static const String razorpayKeyId = String.fromEnvironment(
     'RAZORPAY_KEY_ID',
-    defaultValue: '',
+    defaultValue: 'rzp_live_TRvyzlqHiRGWbr',
   );
 
   // ─── Brand Assets ───────────────────────────────────────────────

@@ -30,6 +30,7 @@ import '../../core/utils/restaurant_utils.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/address_selector_sheet.dart';
 import '../../providers/product_provider.dart';
+import '../../core/services/kot_print_service.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   final double discountAmount;
@@ -272,255 +273,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     }
   }
 
-  /// Show Razorpay & UPI Online Payment Sheet (Web / Mobile Fallback)
-  void _showOnlineRazorpaySheet(Cart cart, double grandTotal) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return Container(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(28),
-              topRight: Radius.circular(28),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Drag Handle
-              Center(
-                child: Container(
-                  width: 42,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppDesignSystem.slate500,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
 
-              // Title & Amount Strip
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppDesignSystem.darkNavyHeader,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              'Razorpay',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 11),
-                                fontWeight: FontWeight.w900,
-                                color: AppDesignSystem.blue500,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Online Payment',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 16),
-                              fontWeight: FontWeight.w900,
-                              color: slateDark,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        '100% Encrypted & Secure Razorpay Gateway',
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: slateMuted),
-                      ),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppDesignSystem.statusDelivered,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppDesignSystem.emerald200),
-                    ),
-                    child: Text(
-                      '₹${grandTotal.toInt()}',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 16),
-                        fontWeight: FontWeight.w900,
-                        color: AppDesignSystem.emerald700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Razorpay Option 1: Instant UPI (GPay / PhonePe / Paytm)
-              _buildRazorpayOptionTile(
-                ctx,
-                iconWidget: Text('⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18))),
-                title: 'UPI Payment (GPay / PhonePe / Paytm)',
-                subtitle: 'Zero transaction charges • Fast confirmation',
-                badge: 'Popular',
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _processSimulatedRazorpayPayment(cart, 'UPI Gateway');
-                },
-              ),
-              const SizedBox(height: 10),
-
-              // Razorpay Option 2: Cards
-              _buildRazorpayOptionTile(
-                ctx,
-                iconWidget: const Icon(Icons.credit_card_rounded, color: AppDesignSystem.blue700, size: 20),
-                title: 'Debit / Credit Cards',
-                subtitle: 'Visa, Mastercard, RuPay',
-                badge: null,
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _processSimulatedRazorpayPayment(cart, 'Cards');
-                },
-              ),
-              const SizedBox(height: 10),
-
-              // Razorpay Option 3: NetBanking
-              _buildRazorpayOptionTile(
-                ctx,
-                iconWidget: const Icon(Icons.account_balance_rounded, color: AppDesignSystem.indigo700, size: 20),
-                title: 'NetBanking & All Wallets',
-                subtitle: 'HDFC, ICICI, SBI, Axis & More',
-                badge: null,
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _processSimulatedRazorpayPayment(cart, 'NetBanking');
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildRazorpayOptionTile(
-    BuildContext ctx, {
-    required Widget iconWidget,
-    required String title,
-    required String subtitle,
-    required String? badge,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppDesignSystem.slate50,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppDesignSystem.slate300),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppDesignSystem.slate300),
-              ),
-              child: Center(child: iconWidget),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        title,
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 13),
-                          fontWeight: FontWeight.w800,
-                          color: slateDark,
-                        ),
-                      ),
-                      if (badge != null) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: AppDesignSystem.green100,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            badge,
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 9),
-                              fontWeight: FontWeight.w800,
-                              color: AppDesignSystem.green600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: slateMuted),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppDesignSystem.slate400),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _processSimulatedRazorpayPayment(Cart cart, String method) async {
-    HapticFeedback.mediumImpact();
-    setState(() => _isPlacingOrder = true);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: AppDesignSystem.slate900,
-        duration: const Duration(seconds: 1),
-        content: Row(
-          children: [
-            const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Connecting to Razorpay ($method)...',
-              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w700),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    await Future.delayed(const Duration(milliseconds: 900));
-    _completeOrderPlacement(cart, paymentId: 'rzp_pay_${DateTime.now().millisecondsSinceEpoch}');
-  }
 
   Future<void> _handlePlaceOrder(Cart cart) async {
     if (_isPlacingOrder) return;
@@ -603,6 +356,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
       // Edge Case 2: Below minimum threshold for online gateway (₹1.00)
       if (grandTotal < 1.0) {
+        setState(() => _isPlacingOrder = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: primaryRed,
@@ -613,13 +367,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         return;
       }
 
-      if (kIsWeb) {
-        _showOnlineRazorpaySheet(cart, grandTotal);
-        return;
-      }
-
       // On Mobile, open direct Razorpay SDK Gateway with Server Preflight
-      if (_razorpay != null) {
+      if (!kIsWeb && _razorpay != null) {
         setState(() => _isPlacingOrder = true);
         _pendingCart = cart;
         _pendingGrandTotal = grandTotal;
@@ -630,14 +379,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         final cleanPhone = rawPhone.replaceAll(RegExp(r'[^\d]'), '').replaceAll(RegExp(r'^91'), '');
         final email = user?.email ?? (user?.name != null && user!.name!.isNotEmpty ? '${user.name!.replaceAll(' ', '').toLowerCase()}@fastkirana.in' : 'customer@fastkirana.in');
 
-        // Ultra-Fast Server-side Razorpay Order Preflight (1.5s timeout for instant UX)
+        // Ultra-Fast Server-side Razorpay Order Preflight
         String? serverRzpOrderId;
         try {
           final dio = ref.read(dioProvider);
           final rzpRes = await dio.post(
             '/api/payment/razorpay/create-order',
             data: {'amount': grandTotal},
-            options: Options(sendTimeout: const Duration(milliseconds: 1500), receiveTimeout: const Duration(milliseconds: 1500)),
+            options: Options(sendTimeout: const Duration(milliseconds: 2500), receiveTimeout: const Duration(milliseconds: 2500)),
           );
           if (rzpRes.data != null && rzpRes.data['razorpayOrderId'] != null) {
             serverRzpOrderId = rzpRes.data['razorpayOrderId']?.toString();
@@ -674,12 +423,37 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           _razorpay!.open(options);
           return;
         } catch (e) {
-          debugPrint('Razorpay open fallback: $e');
-          setState(() => _isPlacingOrder = false);
+          debugPrint('Razorpay open error: $e');
+          if (mounted) {
+            setState(() => _isPlacingOrder = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: primaryRed,
+                content: Text(
+                  'Could not open payment gateway ($e). Please retry or choose Cash on Delivery.',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                ),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+          return;
         }
       }
 
-      _showOnlineRazorpaySheet(cart, grandTotal);
+      if (mounted) {
+        setState(() => _isPlacingOrder = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: primaryRed,
+            content: Text(
+              'Online payment is supported on the mobile app. Please select Cash on Delivery.',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
       return;
     }
 
@@ -689,6 +463,28 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 
   Future<void> _completeOrderPlacement(Cart cart, {String? paymentId}) async {
+    // 🛡️ Anti-Fraud & Payment Integrity Guard:
+    // If online payment is selected, strictly require a valid paymentId from Razorpay SDK (unless 100% free promo)
+    if (_selectedPayment == 'online') {
+      final isFreePromo = (widget.discountAmount >= cart.subtotal && cart.subtotal > 0);
+      if ((paymentId == null || paymentId.trim().isEmpty) && !isFreePromo) {
+        if (mounted) {
+          setState(() => _isPlacingOrder = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: primaryRed,
+              content: Text(
+                'Payment verification failed. Your order has not been placed. Please retry or choose Cash on Delivery.',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+              ),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+    }
+
     final subtotal = cart.subtotal;
     final addresses = ref.read(addressesProvider).valueOrNull ?? [];
     final selectedAddress = ref.read(selectedAddressProvider) ??
@@ -878,35 +674,71 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       }
     } catch (e) {
       debugPrint('Backend sync notice: $e');
-      if (mounted) {
-        setState(() => _isPlacingOrder = false);
-        String errorMsg = 'Failed to place order. Please try again.';
-        if (e is DioException) {
-          final serverErr = e.response?.data;
-          if (serverErr is Map && serverErr['error'] != null) {
-            errorMsg = serverErr['error'].toString();
-          } else if (serverErr is String && serverErr.isNotEmpty) {
-            errorMsg = serverErr;
+      final isOnlinePaid = paymentId != null && paymentId.isNotEmpty;
+
+      // 🛡️ WORST-CASE CRASH PROTECTION:
+      // If customer has ALREADY PAID via Razorpay (money deducted from bank/UPI),
+      // we MUST NEVER tell them "Order Failed" or allow double deduction!
+      // We save the order locally, clear the cart, and proceed to OrderSuccessScreen.
+      // Server-side Razorpay webhook will automatically sync the order in the database.
+      if (isOnlinePaid) {
+        debugPrint('Emergency Payment Recovery: Order $orderId was paid ($paymentId) but backend sync had error $e. Recovering gracefully.');
+        await OrderRepository(ref.read(dioProvider)).savePlacedOrderLocally(placedOrder);
+      } else {
+        if (mounted) {
+          setState(() => _isPlacingOrder = false);
+          String errorMsg = 'Failed to place order. Please check your connection and try again.';
+          if (e is DioException) {
+            final serverErr = e.response?.data;
+            if (serverErr is Map && serverErr['error'] != null) {
+              errorMsg = serverErr['error'].toString();
+            } else if (serverErr is String && serverErr.isNotEmpty) {
+              errorMsg = serverErr;
+            }
           }
-        }
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppDesignSystem.red600,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            content: Text(
-              errorMsg,
-              style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: AppDesignSystem.red600,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: Text(
+                errorMsg,
+                style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+              ),
             ),
-          ),
-        );
+          );
+        }
+        return;
       }
-      return;
     }
 
     // 2. Save the primary order locally
     await OrderRepository(ref.read(dioProvider)).savePlacedOrderLocally(placedOrder);
+
+    // 3. Automated KOT Remote Broadcast for Restaurant & Kitchen items
+    final hasRestaurantItems = cart.items.any((i) => isRestaurantProduct(i.product));
+    if (hasRestaurantItems) {
+      try {
+        KotPrintService.sendRemoteKOTToKitchen(
+          orderId: placedOrder.id,
+          readableId: placedOrder.readableId,
+          shopName: shopName,
+          customerName: customerName,
+          items: cart.items.where((i) => isRestaurantProduct(i.product)).map((i) => {
+            'name': i.product.name,
+            'quantity': i.quantity,
+            'selectedVariant': i.selectedVariant,
+            'notes': orderNotes,
+          }).toList(),
+          deliveryMethod: _deliveryMethod,
+          notes: orderNotes,
+          dioClient: ref.read(dioProvider),
+        ).catchError((_) => false);
+      } catch (e) {
+        debugPrint('KOT dispatch note: $e');
+      }
+    }
 
     // Celebratory Haptic Feedback
     HapticFeedback.heavyImpact();
@@ -994,24 +826,26 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     }
     final totalSavings = (mrpTotal - subtotal + widget.discountAmount).clamp(0.0, 99999.0);
 
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      backgroundColor: AppDesignSystem.slate50,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: const BoxDecoration(
-              color: AppDesignSystem.slate200,
-              shape: BoxShape.circle,
+    return PopScope(
+      canPop: !_isPlacingOrder,
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        backgroundColor: AppDesignSystem.slate50,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          leading: IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: const BoxDecoration(
+                color: AppDesignSystem.slate200,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.arrow_back_rounded, color: slateDark, size: 18),
             ),
-            child: const Icon(Icons.arrow_back_rounded, color: slateDark, size: 18),
+            onPressed: _isPlacingOrder ? null : () => Navigator.pop(context),
           ),
-          onPressed: () => Navigator.pop(context),
-        ),
         titleSpacing: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1460,7 +1294,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 
   void _showEditReceiverModal(BuildContext context, String currentName, String currentPhone) {
