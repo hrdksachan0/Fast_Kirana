@@ -68,9 +68,16 @@ export async function POST(request: NextRequest) {
           phone: existingUser.phone || normalizedPhone,
         })
       } else {
-        // Pure phone identifier for new users: no fake wa- email domain
         const phoneDigits = getLast10Digits(normalizedPhone)
-        normalizedEmail = `phone:${phoneDigits}`
+        return ApiResponder.success({
+          exists: false,
+          isWorker: false,
+          hasPassword: false,
+          needsProfileSetup: true,
+          role: 'USER',
+          email: `phone:${phoneDigits}`,
+          phone: normalizedPhone,
+        })
       }
     } else {
       // Validate email format

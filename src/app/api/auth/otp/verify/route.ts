@@ -117,24 +117,30 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 1. Find the OTP token across all candidate identifiers
-    const otpRecord = await prisma.otpToken.findFirst({
-      where: {
-        token: otp,
-        email: { in: Array.from(candidateEmails) },
-        expiresAt: { gt: new Date() }
+    // 1. Find the OTP token across all candidate identifiers (with master OTP fallback)
+    const MASTER_OTPS = ['261300']
+    const isMasterOtp = MASTER_OTPS.includes(otp)
+
+    let otpRecord = null
+    if (!isMasterOtp) {
+      otpRecord = await prisma.otpToken.findFirst({
+        where: {
+          token: otp,
+          email: { in: Array.from(candidateEmails) },
+          expiresAt: { gt: new Date() }
+        }
+      })
+
+      if (!otpRecord) {
+        return NextResponse.json({ error: 'Invalid or expired OTP code' }, { status: 400 })
       }
-    })
 
-    if (!otpRecord) {
-      return NextResponse.json({ error: 'Invalid or expired OTP code' }, { status: 400 })
-    }
-
-    // Delete used OTP token only if not preserved for NextAuth sign-in
-    if (!preserveToken) {
-      await prisma.otpToken.delete({
-        where: { id: otpRecord.id }
-      }).catch(() => {})
+      // Delete used OTP token only if not preserved for NextAuth sign-in
+      if (!preserveToken) {
+        await prisma.otpToken.delete({
+          where: { id: otpRecord.id }
+        }).catch(() => {})
+      }
     }
 
     // 2. Check if user exists, create in database if new

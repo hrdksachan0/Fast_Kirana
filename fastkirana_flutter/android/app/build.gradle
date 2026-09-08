@@ -79,6 +79,19 @@ android {
         cruncherEnabled = false
         useNewCruncher = false
     }
+
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+        resources {
+            excludes += '/META-INF/{AL2.0,LGPL2.1}'
+        }
+        doNotStrip "*/armeabi-v7a/*.so"
+        doNotStrip "*/arm64-v8a/*.so"
+        doNotStrip "*/x86/*.so"
+        doNotStrip "*/x86_64/*.so"
+    }
 }
 
 flutter {
@@ -95,3 +108,10 @@ configurations.all {
 dependencies {
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
 }
+
+tasks.whenTaskAdded { task ->
+    if (task.name.startsWith("strip") && task.name.endsWith("DebugSymbols")) {
+        task.enabled = false
+    }
+}
+

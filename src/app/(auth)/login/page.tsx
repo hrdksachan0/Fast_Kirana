@@ -103,7 +103,14 @@ function LoginForm() {
       const cleanPhone = phoneDigits.length === 12 && phoneDigits.startsWith('91')
         ? phoneDigits.slice(2)
         : phoneDigits
-      return `Mobile (+91 ${cleanPhone})`
+      return `+91 ${cleanPhone}`
+    }
+    if (val.startsWith('phone:')) {
+      const phoneDigits = val.replace('phone:', '')
+      return `+91 ${phoneDigits}`
+    }
+    if (isPhoneNumber(val)) {
+      return `+91 ${getLast10Digits(val)}`
     }
     return val
   }
@@ -141,6 +148,19 @@ function LoginForm() {
     if (normalizedInput === 'superadmin') normalizedInput = 'superadmin@fastkirana.com'
     if (normalizedInput === 'admin') normalizedInput = 'admin@fastkirana.com'
 
+    // Instant WhatsApp OTP: Skip redundant email/check round-trip for 10-digit mobile numbers
+    if (loginType === 'WHATSAPP' || isInputPhone) {
+      const phoneDigits = getLast10Digits(normalizedInput)
+      setEmail(phoneDigits)
+      setPhone(`+91${phoneDigits}`)
+      try {
+        await sendOtp(normalizedInput)
+      } finally {
+        setIsLoading(false)
+      }
+      return
+    }
+
     try {
       const res = await fetch('/api/auth/email/check', {
         method: 'POST',
@@ -172,16 +192,8 @@ function LoginForm() {
       setNeedsProfileSetup(data.needsProfileSetup ?? false)
       setUserRole(data.role ?? '')
 
-      let finalEmail = normalizedInput
-      if (data.email && loginType !== 'WHATSAPP' && !isInputPhone) {
-        finalEmail = data.email
-        setEmail(data.email)
-      } else if (loginType === 'WHATSAPP' || isInputPhone) {
-        const phoneDigits = getLast10Digits(normalizedInput)
-        finalEmail = data.email || phoneDigits
-        setEmail(finalEmail)
-        setPhone(data.phone || `+91${phoneDigits}`)
-      }
+      const finalEmail = data.email || normalizedInput
+      setEmail(finalEmail)
 
       if (isWorkerUser && data.hasPassword) {
         // Staff/Admin/Chef who has a password set → password step directly
@@ -478,13 +490,16 @@ function LoginForm() {
     setNeedsProfileSetup(false)
     setUserRole('')
 
-    // If it's a WhatsApp placeholder email, convert it back to the 10-digit phone number
+    // If it's a placeholder email, convert it back to the 10-digit phone number
     if (email.startsWith('wa-') && email.includes('@')) {
       const phoneDigits = email.split('@')[0].replace('wa-', '')
       const cleanPhone = phoneDigits.length === 12 && phoneDigits.startsWith('91')
         ? phoneDigits.slice(2)
         : phoneDigits
       setEmail(cleanPhone)
+      setLoginType('WHATSAPP')
+    } else if (email.startsWith('phone:')) {
+      setEmail(email.replace('phone:', ''))
       setLoginType('WHATSAPP')
     }
   }
@@ -509,7 +524,7 @@ function LoginForm() {
           <h2 className="mt-4 sm:mt-6 text-xl md:text-3xl font-black tracking-tight text-text-primary bg-gradient-to-r from-text-primary via-text-primary to-text-secondary bg-clip-text">
             {step === 'EMAIL' && (loginType === 'WHATSAPP' ? 'Login with WhatsApp no.' : 'Staff & Admin Login')}
             {step === 'PASSWORD' && 'Enter Password'}
-            {step === 'OTP' && (loginType === 'WHATSAPP' || isPhoneNumber(email) || email.startsWith('wa-') ? 'Verify WhatsApp OTP' : 'Verify Email')}
+            {step === 'OTP' && (loginType === 'WHATSAPP' || isPhoneNumber(email) || email.startsWith('wa-') || email.startsWith('phone:') ? 'Verify WhatsApp OTP' : 'Verify Email')}
             {step === 'PROFILE' && 'Complete Profile'}
           </h2>
           <p className="mt-1.5 sm:mt-2 text-xs md:text-sm text-text-muted max-w-[280px]">
@@ -520,7 +535,7 @@ function LoginForm() {
           </p>
         </div>
 
-         {/* STEP 1: ENTER EMAIL OR WHATSAPP */}
+         {/* STEP 1: ENTER WHATSAPP OR EMAIL */}
         {step === 'EMAIL' && (
           <form
             className="mt-4 sm:mt-6 space-y-4 sm:space-y-5 animate-slide-down relative z-10"
@@ -539,7 +554,7 @@ function LoginForm() {
                 )}
                 <Input
                   id="email"
-                  type="text"
+                  type={loginType === 'WHATSAPP' ? 'tel' : 'text'}
                   placeholder={loginType === 'WHATSAPP' ? 'Enter 10-digit WhatsApp number' : 'superadmin, admin@fastkirana.com or 10-digit mobile'}
                   value={email}
                   onChange={(e) => {
@@ -611,7 +626,7 @@ function LoginForm() {
                   }}
                   className="text-[10px] font-black text-text-muted hover:text-primary transition-colors underline cursor-pointer active:scale-98"
                 >
-                  Are you an Admin or Staff? Login with Email
+                  Are you an Admin or Staff? Login with Email / Password
                 </button>
               ) : (
                 <button

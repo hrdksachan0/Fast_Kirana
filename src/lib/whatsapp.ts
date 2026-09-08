@@ -84,11 +84,18 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(3000),
     })
 
     let data = await res.json()
 
-    // If template send failed, fallback to direct text message for 100% fail-safe delivery
+    // If token is invalid or expired, exit early without retrying
+    if (!res.ok && (data?.error?.code === 190 || data?.error?.type === 'OAuthException')) {
+      console.warn('Meta WhatsApp access token expired or invalid:', data?.error?.message)
+      return false
+    }
+
+    // If template send failed, fallback to direct text message for fail-safe delivery
     if (!res.ok && templateName) {
       console.warn('Meta WhatsApp template send failed, trying direct text message fallback:', data)
       const textBody = {
@@ -107,6 +114,7 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(textBody),
+        signal: AbortSignal.timeout(3000),
       })
       data = await res.json()
     }
