@@ -971,7 +971,7 @@ export function ProductsTab({
                             Remove ✕
                           </button>
                         </div>
-                        <div className={`grid grid-cols-2 ${!isNewRestaurantMode ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-2 items-center`}>
+                        <div className={`grid grid-cols-2 ${!isNewRestaurantMode ? 'sm:grid-cols-5' : 'sm:grid-cols-3'} gap-2 items-center`}>
                           <div>
                             <label className="text-[9px] font-bold text-text-muted block mb-0.5">Name</label>
                             <input
@@ -989,6 +989,7 @@ export function ProductsTab({
                             <label className="text-[9px] font-bold text-text-muted block mb-0.5">MRP (₹)</label>
                             <input
                               type="number"
+                              step="0.01"
                               value={v.mrp}
                               onChange={(e) => {
                                 const updated = [...newProductVariants]
@@ -1002,6 +1003,7 @@ export function ProductsTab({
                             <label className="text-[9px] font-bold text-text-muted block mb-0.5">Selling Price (₹)</label>
                             <input
                               type="number"
+                              step="0.01"
                               value={v.price}
                               onChange={(e) => {
                                 const updated = [...newProductVariants]
@@ -1011,6 +1013,30 @@ export function ProductsTab({
                               className="w-full px-2 py-1 text-xs font-extrabold text-accent rounded-lg border bg-background focus:outline-none focus:border-primary"
                             />
                           </div>
+                          {!isNewRestaurantMode && (
+                            <div>
+                              <label className="text-[9px] font-bold text-text-muted block mb-0.5">
+                                Cost Price (₹)
+                                {parseFloat(v.price) > 0 && parseFloat(v.costPrice) > 0 && (
+                                  <span className="text-[8px] text-emerald-600 dark:text-emerald-400 ml-1 font-bold">
+                                    ({Math.round(((parseFloat(v.price) - parseFloat(v.costPrice)) / parseFloat(v.price)) * 100)}%)
+                                  </span>
+                                )}
+                              </label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                placeholder="Cost"
+                                value={v.costPrice || ''}
+                                onChange={(e) => {
+                                  const updated = [...newProductVariants]
+                                  updated[idx] = { ...updated[idx], costPrice: e.target.value }
+                                  setNewProductVariants(updated)
+                                }}
+                                className="w-full px-2 py-1 text-xs font-semibold rounded-lg border bg-background focus:outline-none focus:border-primary"
+                              />
+                            </div>
+                          )}
                           {!isNewRestaurantMode && (
                             <div>
                               <label className="text-[9px] font-bold text-text-muted block mb-0.5">Stock</label>
@@ -1032,7 +1058,7 @@ export function ProductsTab({
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end">
+                <div className={`grid grid-cols-2 ${!isNewRestaurantMode ? 'sm:grid-cols-6' : 'sm:grid-cols-4'} gap-2 items-end`}>
                   <div>
                     <label className="text-[9px] font-bold text-text-secondary block mb-1">
                       {isNewRestaurantMode ? 'Portion Name (e.g. Half / Full)' : 'Variant Name'}
@@ -1048,6 +1074,7 @@ export function ProductsTab({
                     <label className="text-[9px] font-bold text-text-secondary block mb-1">MRP Price (₹)</label>
                     <input
                       type="number"
+                      step="0.01"
                       id="new-var-mrp"
                       placeholder="MRP"
                       className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none"
@@ -1057,11 +1084,36 @@ export function ProductsTab({
                     <label className="text-[9px] font-bold text-text-secondary block mb-1">Selling Price (₹) *</label>
                     <input
                       type="number"
+                      step="0.01"
                       id="new-var-price"
                       placeholder="Price"
                       className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none font-bold"
                     />
                   </div>
+                  {!isNewRestaurantMode && (
+                    <div>
+                      <label className="text-[9px] font-bold text-text-secondary block mb-1">Cost Price (₹)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        id="new-var-cost"
+                        placeholder="Cost"
+                        className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none font-semibold"
+                      />
+                    </div>
+                  )}
+                  {!isNewRestaurantMode && (
+                    <div>
+                      <label className="text-[9px] font-bold text-text-secondary block mb-1">Stock (Units)</label>
+                      <input
+                        type="number"
+                        id="new-var-stock"
+                        placeholder="100"
+                        defaultValue="100"
+                        className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none font-bold"
+                      />
+                    </div>
+                  )}
                   <div>
                     <button
                       type="button"
@@ -1069,22 +1121,28 @@ export function ProductsTab({
                         const nameInput = document.getElementById('new-var-name') as HTMLInputElement
                         const mrpInput = document.getElementById('new-var-mrp') as HTMLInputElement
                         const priceInput = document.getElementById('new-var-price') as HTMLInputElement
+                        const costInput = document.getElementById('new-var-cost') as HTMLInputElement | null
+                        const stockInput = document.getElementById('new-var-stock') as HTMLInputElement | null
 
                         const name = nameInput.value.trim()
                         const mrp = mrpInput.value.trim() || priceInput.value.trim()
                         const price = priceInput.value.trim()
+                        const costPrice = costInput ? costInput.value.trim() || '0' : '0'
+                        const stock = stockInput ? stockInput.value.trim() || '100' : (isNewRestaurantMode ? '9999' : '100')
 
                         if (!name || !price) {
                           toast.error('Please enter portion name and price')
                           return
                         }
 
-                        const newVars = [...newProductVariants, { name, mrp, price, costPrice: '0', stock: isNewRestaurantMode ? '9999' : '100' }]
+                        const newVars = [...newProductVariants, { name, mrp, price, costPrice, stock }]
                         newVars.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0))
                         setNewProductVariants(newVars)
                         nameInput.value = ''
                         mrpInput.value = ''
                         priceInput.value = ''
+                        if (costInput) costInput.value = ''
+                        if (stockInput) stockInput.value = '100'
                       }}
                       className="w-full py-2 text-[10px] font-black bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 rounded-lg transition-colors cursor-pointer"
                     >

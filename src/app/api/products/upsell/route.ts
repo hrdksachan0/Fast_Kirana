@@ -26,13 +26,16 @@ export async function GET(request: NextRequest) {
     const activeRestaurantId = restaurantCartItem?.restaurantId || null
 
     // Allowed filter:
-    // If cart has a restaurant item: recommend items from THAT SAME restaurant OR Darkstore Groceries (restaurantId: null)
+    // If cart has a restaurant item: recommend items from THAT SAME restaurant OR strictly Darkstore Beverages & Ice Cream (restaurantId: null, category: beverages/ice-cream)
     // If cart is pure grocery: recommend strictly Darkstore Groceries (restaurantId: null)
     const typeFilter: Prisma.ProductWhereInput = activeRestaurantId
       ? {
           OR: [
             { restaurantId: activeRestaurantId },
-            { restaurantId: null }
+            {
+              restaurantId: null,
+              category: { slug: { in: ['beverages', 'ice-cream'] } }
+            }
           ]
         }
       : { restaurantId: null }

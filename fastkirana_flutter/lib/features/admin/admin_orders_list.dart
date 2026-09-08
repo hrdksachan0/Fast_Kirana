@@ -2569,44 +2569,47 @@ $formattedItems
                           width: 1.2,
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (isKOTSending) ...[
-                            const SizedBox(
-                              width: 13,
-                              height: 13,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(AppDesignSystem.amber600),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (isKOTSending) ...[
+                              const SizedBox(
+                                width: 13,
+                                height: 13,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(AppDesignSystem.amber600),
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Sending KOT...',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 11.5),
-                                fontWeight: FontWeight.w900,
-                                color: AppDesignSystem.amber700,
+                              const SizedBox(width: 6),
+                              Text(
+                                'Sending KOT...',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 11.5),
+                                  fontWeight: FontWeight.w900,
+                                  color: AppDesignSystem.amber700,
+                                ),
                               ),
-                            ),
-                          ] else ...[
-                            Icon(
-                              isKOTPrinted ? Icons.check_circle_rounded : Icons.print_rounded,
-                              size: 16,
-                              color: AppDesignSystem.green600,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              isKOTPrinted ? 'KOT Sent ✓' : 'Send KOT',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 12),
-                                fontWeight: FontWeight.w900,
-                                color: AppDesignSystem.green700,
+                            ] else ...[
+                              Icon(
+                                isKOTPrinted ? Icons.check_circle_rounded : Icons.print_rounded,
+                                size: 16,
+                                color: AppDesignSystem.green600,
                               ),
-                            ),
+                              const SizedBox(width: 6),
+                              Text(
+                                isKOTPrinted ? 'KOT Sent ✓' : 'Send KOT',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 12),
+                                  fontWeight: FontWeight.w900,
+                                  color: AppDesignSystem.green700,
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ),
                   ),
@@ -2624,20 +2627,23 @@ $formattedItems
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: AppDesignSystem.slate300, width: 1.2),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.chat_bubble_outline_rounded, size: 15, color: AppDesignSystem.slate900),
-                          const SizedBox(width: 6),
-                          Text(
-                            'WhatsApp KOT',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 12),
-                              fontWeight: FontWeight.w800,
-                              color: AppDesignSystem.slate900,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.chat_bubble_outline_rounded, size: 15, color: AppDesignSystem.slate900),
+                            const SizedBox(width: 6),
+                            Text(
+                              'WhatsApp KOT',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 12),
+                                fontWeight: FontWeight.w800,
+                                color: AppDesignSystem.slate900,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),

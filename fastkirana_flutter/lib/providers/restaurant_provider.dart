@@ -142,3 +142,9 @@ final restaurantReviewsProvider = FutureProvider.family<Map<String, dynamic>, St
   final repo = ref.watch(restaurantRepositoryProvider);
   return repo.getRestaurantReviews(restaurantId);
 });
+
+final restaurantAddonsProvider = FutureProvider<List<Product>>((ref) async {
+  ref.keepAlive();
+  final repo = ref.watch(restaurantRepositoryProvider);
+  return repo.getDarkstoreAddonRecommendations();
+});

@@ -2631,7 +2631,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           sliver: SliverGrid(
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: Responsive.isTablet(context) ? 3 : 2,
-              childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: true),
+              childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: false),
               crossAxisSpacing: 10,
               mainAxisSpacing: 12,
             ),
@@ -2698,7 +2698,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             sliver: SliverGrid(
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: Responsive.isTablet(context) ? 3 : 2,
-                childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: true),
+                childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: false),
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 12,
               ),
@@ -2708,7 +2708,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   return ProductCard(
                     key: ValueKey('infinite_grid_${product.id}'),
                     product: product,
-                    isCompact: true,
+                    isCompact: false,
                   );
                 },
                 childCount: visibleProducts.length,

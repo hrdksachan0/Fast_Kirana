@@ -366,7 +366,9 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                           return LayoutBuilder(
                             builder: (context, constraints) {
                               final columns = (constraints.maxWidth / 140).floor().clamp(2, 6);
-                              final itemAspect = Responsive.productCardAspectRatio(context, isCompact: true);
+                              final cardWidth = (constraints.maxWidth - 12 - (columns - 1) * 8) / columns;
+                              // Dynamic aspect ratio calculation so cards get enough vertical room regardless of screen width
+                              final itemAspect = cardWidth < 135 ? 0.54 : Responsive.productCardAspectRatio(context, isCompact: true);
                               final visibleProducts = list.take(_visibleCount).toList();
                               final hasMore = _visibleCount < list.length;
 
@@ -396,6 +398,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                                             key: ValueKey(product.id),
                                             product: product,
                                             isCompact: true,
+                                            width: cardWidth,
                                             onTap: () {
                                               Navigator.push(
                                                 context,

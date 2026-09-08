@@ -703,7 +703,7 @@ export function ProductEditModal({
                             Remove ✕
                           </button>
                         </div>
-                        <div className={`grid grid-cols-2 ${!isRestaurantMode ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-2 items-center`}>
+                        <div className={`grid grid-cols-2 ${!isRestaurantMode ? 'sm:grid-cols-5' : 'sm:grid-cols-3'} gap-2 items-center`}>
                           <div>
                             <label className="text-[9px] font-bold text-text-muted block mb-0.5">Name</label>
                             <input
@@ -721,6 +721,7 @@ export function ProductEditModal({
                             <label className="text-[9px] font-bold text-text-muted block mb-0.5">MRP (₹)</label>
                             <input
                               type="number"
+                              step="0.01"
                               value={v.mrp}
                               onChange={(e) => {
                                 const updated = [...editProductVariants]
@@ -734,6 +735,7 @@ export function ProductEditModal({
                             <label className="text-[9px] font-bold text-text-muted block mb-0.5">Selling Price (₹)</label>
                             <input
                               type="number"
+                              step="0.01"
                               value={v.price}
                               onChange={(e) => {
                                 const updated = [...editProductVariants]
@@ -743,6 +745,30 @@ export function ProductEditModal({
                               className="w-full px-2 py-1 text-xs font-extrabold text-accent rounded-lg border bg-background focus:outline-none focus:border-primary"
                             />
                           </div>
+                          {!isRestaurantMode && (
+                            <div>
+                              <label className="text-[9px] font-bold text-text-muted block mb-0.5">
+                                Cost Price (₹)
+                                {parseFloat(v.price) > 0 && parseFloat(v.costPrice) > 0 && (
+                                  <span className="text-[8px] text-emerald-600 dark:text-emerald-400 ml-1 font-bold">
+                                    ({Math.round(((parseFloat(v.price) - parseFloat(v.costPrice)) / parseFloat(v.price)) * 100)}%)
+                                  </span>
+                                )}
+                              </label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                placeholder="Cost"
+                                value={v.costPrice || ''}
+                                onChange={(e) => {
+                                  const updated = [...editProductVariants]
+                                  updated[idx] = { ...updated[idx], costPrice: e.target.value }
+                                  setEditProductVariants(updated)
+                                }}
+                                className="w-full px-2 py-1 text-xs font-semibold rounded-lg border bg-background focus:outline-none focus:border-primary"
+                              />
+                            </div>
+                          )}
                           {!isRestaurantMode && (
                             <div>
                               <label className="text-[9px] font-bold text-text-muted block mb-0.5">Stock</label>
@@ -764,7 +790,7 @@ export function ProductEditModal({
                   </div>
                 )}
 
-                <div className={`grid grid-cols-2 ${!isRestaurantMode ? 'sm:grid-cols-5' : 'sm:grid-cols-4'} gap-2 items-end`}>
+                <div className={`grid grid-cols-2 ${!isRestaurantMode ? 'sm:grid-cols-6' : 'sm:grid-cols-4'} gap-2 items-end`}>
                   <div>
                     <label className="text-[9px] font-bold text-text-secondary block mb-1">
                       {isRestaurantMode ? 'Portion Name (e.g. Half / Full)' : 'Variant Name'}
@@ -780,6 +806,7 @@ export function ProductEditModal({
                     <label className="text-[9px] font-bold text-text-secondary block mb-1">MRP Price (₹)</label>
                     <input
                       type="number"
+                      step="0.01"
                       id="edit-var-mrp"
                       placeholder="MRP"
                       className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none"
@@ -789,11 +816,24 @@ export function ProductEditModal({
                     <label className="text-[9px] font-bold text-text-secondary block mb-1">Selling Price (₹) *</label>
                     <input
                       type="number"
+                      step="0.01"
                       id="edit-var-price"
                       placeholder="Price"
                       className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none font-bold"
                     />
                   </div>
+                  {!isRestaurantMode && (
+                    <div>
+                      <label className="text-[9px] font-bold text-text-secondary block mb-1">Cost Price (₹)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        id="edit-var-cost"
+                        placeholder="Cost"
+                        className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-muted/10 focus:outline-none font-semibold"
+                      />
+                    </div>
+                  )}
                   {!isRestaurantMode && (
                     <div>
                       <label className="text-[9px] font-bold text-text-secondary block mb-1">Stock (Units)</label>
@@ -813,11 +853,13 @@ export function ProductEditModal({
                         const nameInput = document.getElementById('edit-var-name') as HTMLInputElement
                         const mrpInput = document.getElementById('edit-var-mrp') as HTMLInputElement
                         const priceInput = document.getElementById('edit-var-price') as HTMLInputElement
+                        const costInput = document.getElementById('edit-var-cost') as HTMLInputElement | null
                         const stockInput = document.getElementById('edit-var-stock') as HTMLInputElement | null
 
                         const name = nameInput.value.trim()
                         const mrp = mrpInput.value.trim() || priceInput.value.trim()
                         const price = priceInput.value.trim()
+                        const costPrice = costInput ? costInput.value.trim() || '0' : '0'
                         const stock = stockInput ? stockInput.value.trim() || '100' : (isRestaurantMode ? '9999' : '100')
 
                         if (!name || !price) {
@@ -825,12 +867,13 @@ export function ProductEditModal({
                           return
                         }
 
-                        const newVars = [...editProductVariants, { name, mrp, price, costPrice: '0', stock }]
+                        const newVars = [...editProductVariants, { name, mrp, price, costPrice, stock }]
                         newVars.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0))
                         setEditProductVariants(newVars)
                         nameInput.value = ''
                         mrpInput.value = ''
                         priceInput.value = ''
+                        if (costInput) costInput.value = ''
                         if (stockInput) stockInput.value = '100'
                       }}
                       className="w-full py-2 text-[10px] font-black bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 rounded-lg transition-colors cursor-pointer"

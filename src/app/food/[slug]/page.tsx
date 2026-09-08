@@ -152,8 +152,6 @@ export default async function FoodRestaurantPage({ params }: { params: Promise<{
     })
   ])
 
-  const products = [...restaurantProducts, ...darkstoreProducts]
-
   const opStatus = checkStoreOperatingStatus(restaurant)
   const mappedRestaurant = {
     ...restaurant,
@@ -165,12 +163,14 @@ export default async function FoodRestaurantPage({ params }: { params: Promise<{
 
   // Serialize dates for client component
   const serializedRestaurant = JSON.parse(JSON.stringify(mappedRestaurant))
-  const serializedProducts = JSON.parse(JSON.stringify(products))
+  const serializedProducts = JSON.parse(JSON.stringify(restaurantProducts))
+  const serializedRecommendedAddons = JSON.parse(JSON.stringify(darkstoreProducts))
 
   return (
     <RestaurantStorefront
       restaurant={serializedRestaurant}
       products={serializedProducts}
+      recommendedAddons={serializedRecommendedAddons}
     />
   )
 }

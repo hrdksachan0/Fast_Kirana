@@ -262,7 +262,7 @@ export async function GET(
       })
     }
 
-    // 6. Add Shared Darkstore Cold Drinks & Ice Creams Sections
+    // 6. Keep Darkstore Cold Drinks & Ice Creams strictly in Recommendations (not in main menu sections)
     const coldDrinksDishes: any[] = []
     const iceCreamsDishes: any[] = []
 
@@ -308,34 +308,6 @@ export async function GET(
       }
     }
 
-    if (coldDrinksDishes.length > 0) {
-      finalSections.push({
-        id: 'sec_chilled_drinks',
-        tag: 'chilled-drinks',
-        title: 'Chilled Cold Drinks & Sodas',
-        emoji: '🥤',
-        imageUrl: '/beverages_category.webp',
-        description: 'Chilled soft drinks, energy boosts & refreshing coolers from FastKirana Darkstore',
-        sortOrder: 90,
-        itemsCount: coldDrinksDishes.length,
-        dishes: coldDrinksDishes
-      })
-    }
-
-    if (iceCreamsDishes.length > 0) {
-      finalSections.push({
-        id: 'sec_ice_creams',
-        tag: 'ice-creams',
-        title: 'Ice Creams & Sweet Treats',
-        emoji: '🍦',
-        imageUrl: '/icecream_category.png',
-        description: 'Creamy cones, family tubs, sundaes & kulfis from FastKirana Darkstore',
-        sortOrder: 91,
-        itemsCount: iceCreamsDishes.length,
-        dishes: iceCreamsDishes
-      })
-    }
-
     // Sort sections by sortOrder
     finalSections.sort((a, b) => a.sortOrder - b.sortOrder)
 
@@ -366,6 +338,11 @@ export async function GET(
         totalDishes: products.length
       },
       sections: finalSections,
+      recommendations: {
+        chilledDrinks: coldDrinksDishes,
+        iceCreams: iceCreamsDishes,
+        items: [...coldDrinksDishes, ...iceCreamsDishes]
+      },
       totalDishesCount: products.length
     }
 

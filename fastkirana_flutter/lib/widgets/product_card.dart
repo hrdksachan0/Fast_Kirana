@@ -411,16 +411,29 @@ class AddToCartButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    Widget btn;
     // 1. Out of Stock
-    if (isOutOfStock) return _soldOut();
-    // 2. Timing Closed
-    if (isTimingClosed) return _timingClosed();
-    // 3. Store Closed
-    if (!isStoreOpen) return _storeClosed();
-    // 4. In Cart Stepper
-    if (inCartQty > 0) return _stepper(context, ref);
-    // 5. Default ADD
-    return _addButton(context, ref);
+    if (isOutOfStock) {
+      btn = _soldOut();
+    } else if (isTimingClosed) {
+      // 2. Timing Closed
+      btn = _timingClosed();
+    } else if (!isStoreOpen) {
+      // 3. Store Closed
+      btn = _storeClosed();
+    } else if (inCartQty > 0) {
+      // 4. In Cart Stepper
+      btn = _stepper(context, ref);
+    } else {
+      // 5. Default ADD
+      btn = _addButton(context, ref);
+    }
+
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerRight,
+      child: btn,
+    );
   }
 
   Widget _soldOut() {
@@ -647,8 +660,10 @@ class _ProductCardState extends ConsumerState<ProductCard> {
   bool _showAddedCheck = false;
 
   double get _uiScale {
-    final cardWidth = widget.width ?? (context.screenWidth - Responsive.horizontalPadding(context) * 2 - 12) / 2;
-    return (cardWidth / 155.0).clamp(1.0, 1.15);
+    final effectiveWidth = widget.width ?? (widget.isCompact
+        ? (context.screenWidth - 74 - 24) / 2
+        : (context.screenWidth - Responsive.horizontalPadding(context) * 2 - 12) / 2);
+    return (effectiveWidth / 155.0).clamp(0.85, 1.15);
   }
 
   double s(double v) => v * _uiScale;
@@ -747,8 +762,8 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                 SizedBox(height: s(6)),
 
                 // 2. VEG/NON-VEG + TITLE
-                SizedBox(
-                  height: s(34),
+                ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: s(34)),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -756,7 +771,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                       Expanded(
                         child: Text(
                           product.name,
-                          style: GoogleFonts.inter(fontSize: s(12), fontWeight: FontWeight.w700, color: const Color(0xFF0F172A), height: 1.22, letterSpacing: -0.2),
+                          style: GoogleFonts.inter(fontSize: s(12), fontWeight: FontWeight.w700, color: const Color(0xFF0F172A), height: 1.2, letterSpacing: -0.2),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -774,21 +789,29 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Flexible(child: PriceRow(priceText: '₹${startingPrice.toInt()}', mrpText: startingMrp > startingPrice ? '₹${startingMrp.toInt()}' : null, s: _uiScale)),
+                    Flexible(
+                      child: PriceRow(
+                        priceText: '₹${startingPrice.toInt()}',
+                        mrpText: startingMrp > startingPrice ? '₹${startingMrp.toInt()}' : null,
+                        s: _uiScale,
+                      ),
+                    ),
                     SizedBox(width: s(4)),
-                    AddToCartButton(
-                      scaffoldContext: context,
-                      product: product,
-                      inCartQty: inCartQty,
-                      hasVariants: hasVariants,
-                      isOutOfStock: isOutOfStock,
-                      isTimingClosed: !timingStatus.isAvailableNow,
-                      nextSlot: timingStatus.nextAvailableTimeStr,
-                      isStoreOpen: isStoreOpen,
-                      isFood: isFood,
-                      gradientColors: gradientColors,
-                      primaryColor: primaryColor,
-                      uiScale: _uiScale,
+                    Flexible(
+                      child: AddToCartButton(
+                        scaffoldContext: context,
+                        product: product,
+                        inCartQty: inCartQty,
+                        hasVariants: hasVariants,
+                        isOutOfStock: isOutOfStock,
+                        isTimingClosed: !timingStatus.isAvailableNow,
+                        nextSlot: timingStatus.nextAvailableTimeStr,
+                        isStoreOpen: isStoreOpen,
+                        isFood: isFood,
+                        gradientColors: gradientColors,
+                        primaryColor: primaryColor,
+                        uiScale: _uiScale,
+                      ),
                     ),
                   ],
                 ),

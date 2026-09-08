@@ -164,9 +164,10 @@ class FastKiranaApp extends StatelessWidget {
       initialRoute: '/splash',
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
+        // Industry-standard mobile clamping (prevents severe card blowout & truncation on high-DPI / large OS font devices)
         final clampedTextScaler = mediaQuery.textScaler.clamp(
           minScaleFactor: 0.85,
-          maxScaleFactor: 2.0,
+          maxScaleFactor: 1.15,
         );
         return MediaQuery(
           data: mediaQuery.copyWith(textScaler: clampedTextScaler),

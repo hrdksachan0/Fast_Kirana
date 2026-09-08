@@ -101,15 +101,16 @@ class Responsive {
     final width = MediaQuery.of(context).size.width;
     if (isCompact) {
       // Used in screens with side category rail (narrower column ~125-145px)
-      if (width < 360) return 0.58;
-      if (width < mobileBreakpoint) return 0.61;
+      if (width < 360) return 0.55;
+      if (width < 400) return 0.58;
+      if (width < mobileBreakpoint) return 0.60;
       return 0.63;
     }
     // Full width 2-column grid (card width is ~165-195px)
-    if (width < 360) return 0.68;
-    if (width < 400) return 0.70;
-    if (width < mobileBreakpoint) return 0.71;
-    if (width < tabletBreakpoint) return 0.75;
+    if (width < 360) return 0.64;
+    if (width < 400) return 0.66;
+    if (width < mobileBreakpoint) return 0.68;
+    if (width < tabletBreakpoint) return 0.74;
     return 0.78;
   }
 

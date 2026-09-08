@@ -153,7 +153,10 @@ String? getCategoryAssetImage(String tag) {
     'cold-coffee': 'assets/categories/cafe_coffee_category.webp',
     'chilled': 'assets/categories/cafe_cold_drinks_category.webp',
     'beverages': 'assets/categories/cafe_cold_drinks_category.webp',
+    'chilled-drinks': 'assets/categories/cafe_cold_drinks_category.webp',
     'desserts': 'assets/categories/ice_cream_category.webp',
+    'ice-cream': 'assets/categories/ice_cream_category.webp',
+    'ice-creams': 'assets/categories/ice_cream_category.webp',
   };
   return mapping[tag.toLowerCase()];
 }
@@ -339,7 +342,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
       }).toList();
     } else {
       final isCafe = _isCafeRestaurant(restaurant, widget.restaurantName, widget.restaurantId);
-      baseSections = isCafe ? webCafeSections : webRestaurantSections;
+      baseSections = isCafe ? List.of(webCafeSections) : List.of(webRestaurantSections);
     }
 
     var filtered = products;
@@ -416,10 +419,17 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
       categoryGroups.forEach((title, grpProducts) {
         final tag = 'custom-${title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}';
         final firstImg = grpProducts.firstWhere((p) => p.imageUrl != null && p.imageUrl!.startsWith('http'), orElse: () => grpProducts.first).imageUrl;
+        final tLower = title.toLowerCase();
+        String emoji = '🍳';
+        if (tLower.contains('drink') || tLower.contains('beverage') || tLower.contains('cold') || tLower.contains('soda')) {
+          emoji = '🥤';
+        } else if (tLower.contains('ice') || tLower.contains('cream') || tLower.contains('dessert') || tLower.contains('sweet') || tLower.contains('kulfi')) {
+          emoji = '🍦';
+        }
         result.add(RenderedCategory(
           tag: tag,
           title: title,
-          emoji: '🍳',
+          emoji: emoji,
           imageUrl: firstImg,
           products: grpProducts,
         ));
@@ -1031,6 +1041,12 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                   ),
               ],
 
+              // Frequently Ordered Together: Chilled Drinks & Ice Creams Recommendations
+              if (_searchQuery.isEmpty)
+                SliverToBoxAdapter(
+                  child: _buildDarkstoreRecommendationsSection(),
+                ),
+
               SliverPadding(padding: EdgeInsets.only(bottom: 180 + MediaQuery.of(context).padding.bottom)),
             ],
           ),
@@ -1038,6 +1054,106 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
       },
       loading: () => _buildShimmerGrid(),
       error: (_, __) => const Center(child: Text('Failed to load menu items')),
+    );
+  }
+
+  Widget _buildDarkstoreRecommendationsSection() {
+    return ref.watch(restaurantAddonsProvider).when(
+      data: (addons) {
+        if (addons.isEmpty) return const SizedBox.shrink();
+
+        return Container(
+          margin: const EdgeInsets.fromLTRB(12, 16, 12, 12),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppDesignSystem.slate200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Text('🥤🍦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Frequently ordered together',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 13.5),
+                              fontWeight: FontWeight.w800,
+                              color: AppDesignSystem.slate800,
+                            ),
+                          ),
+                          Text(
+                            'Chilled drinks & sweet desserts from Darkstore',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 10),
+                              fontWeight: FontWeight.w500,
+                              color: AppDesignSystem.slate500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Text(
+                    'Slide for more →',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 10.5),
+                      fontWeight: FontWeight.w600,
+                      color: primaryOrange,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 195,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: addons.length,
+                  itemBuilder: (context, idx) {
+                    final p = addons[idx];
+                    return Container(
+                      width: 140,
+                      margin: const EdgeInsets.only(right: 10),
+                      child: ProductCard(
+                        product: p,
+                        isCompact: true,
+                        showOutlet: false,
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          Navigator.push(
+                            context,
+                            FadeSlideRoute(page: ProductDetailScreen(product: p)),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 

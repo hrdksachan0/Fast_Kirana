@@ -31,6 +31,7 @@ const getCafeSectionImage = (tag: string) => {
     'cold-coffee': '/cafe_coffee_category.webp',
     'south-indian': '/cafe_south_indian_category.webp',
     'chilled': '/cafe_cold_drinks_category.webp',
+    'chilled-drinks': '/cafe_cold_drinks_category.webp',
     'beverages': '/cafe_cold_drinks_category.webp',
     'drinks': '/cafe_cold_drinks_category.webp',
     'bakery': '/bakery_biscuits_category.webp',
@@ -38,6 +39,8 @@ const getCafeSectionImage = (tag: string) => {
     'burgers': '/cafe_burgers_category.webp',
     'garlic-bread': '/cafe_garlic_bread_category.webp',
     'desserts': '/ice_cream_category.webp',
+    'ice-cream': '/ice_cream_category.webp',
+    'ice-creams': '/ice_cream_category.webp',
     'north-indian': '/cafe_south_indian_category.webp',
     'biryani-rice': '/cafe_rice_category.webp',
   }
@@ -47,9 +50,10 @@ const getCafeSectionImage = (tag: string) => {
 interface RestaurantStorefrontProps {
   restaurant: any
   products: any[]
+  recommendedAddons?: any[]
 }
 
-export function RestaurantStorefront({ restaurant, products }: RestaurantStorefrontProps) {
+export function RestaurantStorefront({ restaurant, products, recommendedAddons = [] }: RestaurantStorefrontProps) {
   const router = useRouter()
   const operatingStatus = useMemo(() => checkStoreOperatingStatus(restaurant), [restaurant])
   const [searchQuery, setSearchQuery] = useState('')
@@ -159,6 +163,11 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
     // Filter out disabled sections
     sections = Array.isArray(sections) ? sections.filter((s: any) => !s.disabled) : []
 
+    if (!sections || sections.length === 0) {
+      const isCafe = (restaurant.slug || '').includes('cafe') || (restaurant.slug || '').includes('as-')
+      sections = isCafe ? [...DEFAULT_CAFE_MENU_SECTIONS] : [...DEFAULT_RESTAURANT_MENU_SECTIONS]
+    }
+
     // Filter products — attach restaurant info
     let filteredProducts = products.map((p: any) => ({
       ...p,
@@ -252,10 +261,15 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
 
       Object.entries(categoryGroups).forEach(([title, grp]) => {
         const tag = title.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+        const tLower = title.toLowerCase()
+        let emoji = '🍳'
+        if (tLower.includes('drink') || tLower.includes('beverage') || tLower.includes('cold') || tLower.includes('soda')) emoji = '🥤'
+        else if (tLower.includes('ice') || tLower.includes('cream') || tLower.includes('dessert') || tLower.includes('sweet') || tLower.includes('kulfi')) emoji = '🍦'
+
         catsWithProducts.push({
           tag: `custom-${tag}`,
           title: grp.title,
-          emoji: '🍳',
+          emoji,
           description: `Delicious ${grp.title} from our kitchen`,
           products: grp.products,
         })
@@ -745,6 +759,41 @@ export function RestaurantStorefront({ restaurant, products }: RestaurantStorefr
                     </div>
                   )
                 })}
+              </div>
+            )}
+
+            {/* Darkstore Chilled Drinks & Ice Cream Recommendations */}
+            {recommendedAddons && recommendedAddons.length > 0 && (
+              <div className="w-full mt-10 pt-6 border-t border-zinc-200 dark:border-zinc-800">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🥤🍦</span>
+                      <h3 className="text-base sm:text-lg font-black text-zinc-900 dark:text-zinc-50">
+                        Frequently Ordered Together
+                      </h3>
+                    </div>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                      Chilled cold drinks & sweet desserts from FastKirana Darkstore
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-bold text-orange-500 hidden sm:inline">
+                    Slide for more →
+                  </span>
+                </div>
+
+                <div className="flex gap-3.5 md:gap-4 overflow-x-auto pb-4 pt-1 scrollbar-hide snap-x snap-mandatory scroll-smooth px-1">
+                  {recommendedAddons.map((addon: any) => (
+                    <div key={addon.id} className="w-[140px] min-[375px]:w-[160px] sm:w-[180px] md:w-[200px] shrink-0 snap-start">
+                      <ProductCard
+                        product={{
+                          ...addon,
+                          restaurantIsOpen: operatingStatus.isOpen,
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

@@ -146,20 +146,21 @@ class RestaurantRepository {
       }
 
       Future<List<Product>> fetchCall() async {
-        String canonicalId = restaurantId;
+        String canonicalId = restaurantId.trim();
         String? canonicalSlug;
 
-        final upperId = restaurantId.toUpperCase();
-        if (restaurantId.contains('bal-udyan') || restaurantId.contains('cmsbhxb6a') || upperId == 'REST-103') {
+        final upperId = canonicalId.toUpperCase();
+        // Legacy identifier resolution (for backwards compatibility with old bookmarks/CUIDs)
+        if (canonicalId.contains('bal-udyan') || canonicalId.contains('cmsbhxb6a') || upperId == 'REST-103') {
           canonicalId = 'REST-103';
           canonicalSlug = 'bal-udyan-restaurant';
-        } else if (restaurantId.contains('wedson') || restaurantId.contains('cms2p1lyx') || upperId == 'REST-102') {
+        } else if (canonicalId.contains('wedson') || canonicalId.contains('cms2p1lyx') || upperId == 'REST-102') {
           canonicalId = 'REST-102';
           canonicalSlug = 'wedson-restaurant';
-        } else if (restaurantId.contains('as') || restaurantId.contains('cms2p1lap') || upperId == 'REST-101') {
+        } else if (canonicalId.contains('as') || canonicalId.contains('cms2p1lap') || upperId == 'REST-101') {
           canonicalId = 'REST-101';
           canonicalSlug = 'as-restaurant';
-        } else if (restaurantId.contains('pari') || restaurantId.contains('cmtn66') || upperId == 'REST-104') {
+        } else if (canonicalId.contains('pari') || canonicalId.contains('cmtn66') || upperId == 'REST-104') {
           canonicalId = 'REST-104';
           canonicalSlug = 'pari-milk-dairy-sweets';
         }
@@ -201,6 +202,34 @@ class RestaurantRepository {
       if (_cachedMenus.containsKey(restaurantId)) {
         return _cachedMenus[restaurantId]!;
       }
+      return [];
+    }
+  }
+
+  /// Fetches darkstore cold drinks & ice cream for meal upsell recommendations
+  Future<List<Product>> getDarkstoreAddonRecommendations() async {
+    try {
+      final response = await _dio.get('/api/products', queryParameters: {
+        'category': 'beverages,ice-cream',
+        'excludeRestaurant': 'true',
+        'limit': 50,
+      });
+      final data = response.data;
+      List productsJson = [];
+      if (data is List) {
+        productsJson = data;
+      } else if (data is Map && data['products'] is List) {
+        productsJson = data['products'];
+      }
+      return productsJson
+          .map((json) => Product.fromJson(json as Map<String, dynamic>))
+          .where((p) {
+            final cat = (p.category?.slug ?? '').toLowerCase();
+            return cat == 'beverages' || cat == 'ice-cream';
+          })
+          .toList();
+    } catch (e, st) {
+      LoggerService.error('RestaurantRepository: getDarkstoreAddonRecommendations failed', e, st);
       return [];
     }
   }

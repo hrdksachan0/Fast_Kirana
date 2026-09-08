@@ -70,8 +70,12 @@ final cartUpsellProductsProvider = FutureProvider.family<List<Product>, List<Str
     final isRest = isRestaurantProduct(p);
 
     if (activeOutlet != null) {
-      // Cart has a restaurant item (e.g. A.S. Restaurant)
-      if (!isRest) return true; // Darkstore groceries & beverages allowed
+      // Cart has a restaurant item (e.g. A.S. Restaurant, Wedson, etc.)
+      if (!isRest) {
+        // Strictly allow only darkstore beverages and ice cream for restaurant orders
+        final cat = (p.category?.slug ?? '').toLowerCase();
+        return cat == 'beverages' || cat == 'ice-cream';
+      }
       final pOutlet = getOutletName(p);
       return pOutlet == activeOutlet ||
           (activeRestaurantId != null && p.restaurantId == activeRestaurantId);
@@ -93,10 +97,10 @@ final cartUpsellProductsProvider = FutureProvider.family<List<Product>, List<Str
   try {
     if (activeRestaurantId != null || activeOutlet != null) {
       final rId = activeRestaurantId ?? (activeOutlet?.toLowerCase().contains('wedson') == true ? outletWedsonId : outletAsRestaurantId);
-      // Fetch restaurant products + a broader batch to cover snacks/beverages
+      // Fetch restaurant dishes + darkstore chilled drinks & ice-creams
       final results = await Future.wait([
         repo.getProducts(restaurantId: rId, limit: 30),
-        repo.getProducts(limit: 80),  // generic pool for grocery upsells
+        repo.getProducts(category: 'beverages,ice-cream', excludeRestaurant: true, limit: 40),
       ]);
       all = [...results[0], ...results[1]];
     } else {

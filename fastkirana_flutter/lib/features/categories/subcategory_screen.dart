@@ -89,7 +89,7 @@ class _SubcategoryScreenState extends ConsumerState<SubcategoryScreen> {
                   padding: EdgeInsets.all(Responsive.horizontalPadding(context)),
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: Responsive.gridColumns(context, smallMobile: 2, mobile: 2, smallTablet: 3, tablet: 4, desktop: 5),
-                    childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: true),
+                    childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: false),
                     crossAxisSpacing: Responsive.horizontalPadding(context) * 0.5,
                     mainAxisSpacing: 10,
                   ),
