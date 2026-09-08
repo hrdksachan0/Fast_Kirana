@@ -154,28 +154,32 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Select Delivery Location',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 17),
-                        fontWeight: FontWeight.w900,
-                        color: AppDesignSystem.slate900,
-                        letterSpacing: -0.3,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Select Delivery Location',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 17),
+                          fontWeight: FontWeight.w900,
+                          color: AppDesignSystem.slate900,
+                          letterSpacing: -0.3,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Express delivery within 5 km of Ghatampur Hub',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 11.5),
-                        fontWeight: FontWeight.w500,
-                        color: AppDesignSystem.slate500,
+                      const SizedBox(height: 2),
+                      Text(
+                        'Express delivery within 5 km of Ghatampur Hub',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
+                          fontWeight: FontWeight.w500,
+                          color: AppDesignSystem.slate500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
@@ -405,12 +409,16 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
                                 children: [
                                   Row(
                                     children: [
-                                      Text(
-                                        addr.label.isNotEmpty ? addr.label : 'Saved Address',
-                                        style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 14),
-                                          fontWeight: FontWeight.w800,
-                                          color: AppDesignSystem.slate900,
+                                      Flexible(
+                                        child: Text(
+                                          addr.label.isNotEmpty ? addr.label : 'Saved Address',
+                                          style: GoogleFonts.inter(
+                                            fontSize: Responsive.scaledFontSize(context, 14),
+                                            fontWeight: FontWeight.w800,
+                                            color: AppDesignSystem.slate900,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                       const SizedBox(width: 8),

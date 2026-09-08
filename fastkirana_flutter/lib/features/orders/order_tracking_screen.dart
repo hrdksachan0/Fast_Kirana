@@ -1065,6 +1065,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
             Text(
               cleanDisplayId,
               style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w700, color: slateMuted),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -1351,7 +1353,9 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     return Column(
       children: [
         Container(
-          height: 290,
+          height: MediaQuery.sizeOf(context).height < 500 
+            ? MediaQuery.sizeOf(context).height * 0.35
+            : 290,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(22),

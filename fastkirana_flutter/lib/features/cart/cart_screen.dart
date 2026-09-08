@@ -453,6 +453,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'Your Cart',
@@ -967,39 +968,41 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => _showBillDetailsModal(context, subtotal, deliveryFee, totalSavings, grandTotal),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '₹${grandTotal.toInt()}',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 18),
-                            fontWeight: FontWeight.w900,
-                            color: AppDesignSystem.slate900,
-                            letterSpacing: -0.3,
+              Flexible(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _showBillDetailsModal(context, subtotal, deliveryFee, totalSavings, grandTotal),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '₹${grandTotal.toInt()}',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 18),
+                              fontWeight: FontWeight.w900,
+                              color: AppDesignSystem.slate900,
+                              letterSpacing: -0.3,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.info_outline_rounded, size: 13, color: AppDesignSystem.green700),
-                      ],
-                    ),
-                    Text(
-                      'TOTAL BILL • VIEW BREAKDOWN',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 8.5),
-                        fontWeight: FontWeight.w800,
-                        color: AppDesignSystem.green700,
-                        letterSpacing: 0.3,
+                          const SizedBox(width: 4),
+                          const Icon(Icons.info_outline_rounded, size: 13, color: AppDesignSystem.green700),
+                        ],
                       ),
-                    ),
-                  ],
+                      Text(
+                        'TOTAL BILL • VIEW BREAKDOWN',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 8.5),
+                          fontWeight: FontWeight.w800,
+                          color: AppDesignSystem.green700,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1093,7 +1096,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     );
                   },
                   child: Container(
-                    height: 44,
+                    constraints: const BoxConstraints(minHeight: 44),
                     decoration: BoxDecoration(
                       gradient: !tier.isServiceable
                           ? const LinearGradient(colors: [AppDesignSystem.slate400, AppDesignSystem.slate500])
@@ -1530,8 +1533,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         children: [
           // Product Image Container
           Container(
-            width: 56,
-            height: 56,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               color: AppDesignSystem.slate50,
               borderRadius: BorderRadius.circular(12),
@@ -1562,7 +1565,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
 
           // Name, Unit & Price Details
           Expanded(

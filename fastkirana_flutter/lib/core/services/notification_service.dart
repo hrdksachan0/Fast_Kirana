@@ -25,19 +25,25 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
   // If the message already has a notification payload, Android system tray handles it automatically
   // Calling localNotifications.show here would create a duplicate notification on the user's phone!
-  // We ONLY show a local notification in background if it's a data-only payload OR kitchen alert with custom alarm sound.
-  final isKitchen = data['screen'] == 'restaurant-console' ||
+  // Loud alarm with full-screen intent for ALL order alerts (Kitchen, Admin, Delivery, Picker)
+  final isOrderAlert = data['screen'] == 'restaurant-console' ||
+      data['screen'] == 'admin-orders' ||
+      data['screen'] == 'delivery' ||
+      data['screen'] == 'picker' ||
       data['restaurantId'] != null ||
+      data['type'] == 'NEW_ORDER' ||
       title.toString().contains('👨‍🍳') ||
+      title.toString().contains('🛎️') ||
+      title.toString().contains('💳') ||
       title.toString().toLowerCase().contains('kitchen') ||
       title.toString().toLowerCase().contains('new order');
 
-  if (notification != null && !isKitchen) {
+  if (notification != null && !isOrderAlert) {
     // Android OS has already displayed the standard notification. Do NOT show a 2nd notification!
     return;
   }
 
-  // Trigger system notification for data-only messages or custom kitchen alarm
+  // Trigger system notification for data-only messages or loud order alarm
   if (body != null && body.toString().trim().isNotEmpty) {
     try {
       final localNotifications = FlutterLocalNotificationsPlugin();
@@ -55,21 +61,21 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       final tag = (cleanOrderId != null && cleanOrderId.isNotEmpty) ? 'order_$cleanOrderId' : null;
 
       final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-        isKitchen ? 'fastkirana_kitchen_alerts' : 'fastkirana_alerts',
-        isKitchen ? 'Kitchen & Order Buzz Alerts' : 'FastKirana Alerts',
-        channelDescription: isKitchen
-            ? 'Loud alarm for kitchen orders even when phone is locked.'
+        isOrderAlert ? 'fastkirana_kitchen_alerts' : 'fastkirana_alerts',
+        isOrderAlert ? 'Kitchen & Order Buzz Alerts' : 'FastKirana Alerts',
+        channelDescription: isOrderAlert
+            ? 'Loud alarm for kitchen, admin, and staff orders even when phone is locked.'
             : 'Notifications for order updates and tracking.',
         icon: '@mipmap/ic_launcher',
         importance: Importance.max,
         priority: Priority.high,
         tag: tag,
-        fullScreenIntent: isKitchen,
+        fullScreenIntent: isOrderAlert,
         playSound: true,
-        sound: isKitchen ? const RawResourceAndroidNotificationSound('order_chime') : null,
-        audioAttributesUsage: isKitchen ? AudioAttributesUsage.alarm : AudioAttributesUsage.notification,
+        sound: isOrderAlert ? const RawResourceAndroidNotificationSound('order_chime') : null,
+        audioAttributesUsage: isOrderAlert ? AudioAttributesUsage.alarm : AudioAttributesUsage.notification,
         enableVibration: true,
-        vibrationPattern: isKitchen
+        vibrationPattern: isOrderAlert
             ? Int64List.fromList([0, 1000, 500, 1000, 500, 1000, 500, 1000])
             : null,
         showWhen: true,
@@ -268,9 +274,15 @@ class NotificationService {
       return;
     }
 
-    final isKitchen = data['screen'] == 'restaurant-console' ||
+    final isOrderAlert = data['screen'] == 'restaurant-console' ||
+        data['screen'] == 'admin-orders' ||
+        data['screen'] == 'delivery' ||
+        data['screen'] == 'picker' ||
         data['restaurantId'] != null ||
+        data['type'] == 'NEW_ORDER' ||
         title.toString().contains('👨‍🍳') ||
+        title.toString().contains('🛎️') ||
+        title.toString().contains('💳') ||
         title.toString().toLowerCase().contains('kitchen') ||
         title.toString().toLowerCase().contains('new order');
 
@@ -285,10 +297,10 @@ class NotificationService {
       body.toString(),
       NotificationDetails(
         android: AndroidNotificationDetails(
-          isKitchen ? 'fastkirana_kitchen_alerts' : 'fastkirana_alerts',
-          isKitchen ? 'Kitchen & Order Buzz Alerts' : 'FastKirana Alerts',
-          channelDescription: isKitchen
-              ? 'Loud alarm for kitchen orders even when phone is locked.'
+          isOrderAlert ? 'fastkirana_kitchen_alerts' : 'fastkirana_alerts',
+          isOrderAlert ? 'Kitchen & Order Buzz Alerts' : 'FastKirana Alerts',
+          channelDescription: isOrderAlert
+              ? 'Loud alarm for kitchen, admin, and staff orders even when phone is locked.'
               : 'Notifications for order updates and tracking.',
           icon: '@mipmap/ic_launcher',
           importance: Importance.max,
@@ -297,10 +309,10 @@ class NotificationService {
           showWhen: true,
           when: DateTime.now().millisecondsSinceEpoch,
           playSound: true,
-          sound: isKitchen ? const RawResourceAndroidNotificationSound('order_chime') : null,
-          audioAttributesUsage: isKitchen ? AudioAttributesUsage.alarm : AudioAttributesUsage.notification,
+          sound: isOrderAlert ? const RawResourceAndroidNotificationSound('order_chime') : null,
+          audioAttributesUsage: isOrderAlert ? AudioAttributesUsage.alarm : AudioAttributesUsage.notification,
           enableVibration: true,
-          vibrationPattern: isKitchen
+          vibrationPattern: isOrderAlert
               ? Int64List.fromList([0, 1000, 500, 1000, 500, 1000, 500, 1000])
               : null,
         ),
@@ -388,7 +400,11 @@ class NotificationService {
     }
   }
 
-  Future<void> registerDeviceToken(Dio dio) async {
+  Future<void> registerDeviceToken(
+    Dio dio, {
+    String? role,
+    String? assignedRestaurantId,
+  }) async {
     if (kIsWeb) return;
     try {
       String? token = await getFcmToken();
@@ -399,8 +415,21 @@ class NotificationService {
       final userId = prefs.getString('user_id');
       final phone = prefs.getString('user_phone') ?? '';
 
-      // Subscribe to user and phone specific topics
+      // Subscribe to role-based and user-specific topics
       try {
+        if (role == 'ADMIN') {
+          await _fcm?.subscribeToTopic('admin_orders');
+          await _fcm?.subscribeToTopic('staff_orders');
+        } else if (role == 'RESTAURANT' || assignedRestaurantId != null) {
+          final rId = assignedRestaurantId ?? prefs.getString('assigned_restaurant_id');
+          if (rId != null && rId.isNotEmpty) {
+            await _fcm?.subscribeToTopic('restaurant_$rId');
+            await _fcm?.subscribeToTopic('kitchen_$rId');
+          }
+        } else if (role == 'DELIVERY' || role == 'PICKER') {
+          await _fcm?.subscribeToTopic('staff_orders');
+        }
+
         if (userId != null && userId.isNotEmpty) {
           await _fcm?.subscribeToTopic('user_$userId');
         }
@@ -411,7 +440,7 @@ class NotificationService {
           }
         }
       } catch (e) {
-        print("Error subscribing to phone/user topic: $e");
+        print("Error subscribing to topics: $e");
       }
 
       final response = await dio.post(
@@ -421,6 +450,8 @@ class NotificationService {
           'deviceType': deviceType,
           if (userId != null) 'userId': userId,
           'phone': phone,
+          if (role != null) 'role': role,
+          if (assignedRestaurantId != null) 'assignedRestaurantId': assignedRestaurantId,
         },
       );
 

@@ -57,7 +57,7 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
             children: [
               Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
               SizedBox(width: 8),
-              Text('Thank you! Your review has been published.'),
+              Expanded(child: Text('Thank you! Your review has been published.')),
             ],
           ),
           backgroundColor: AppDesignSystem.success,

@@ -1891,6 +1891,16 @@ export function AdminDashboard({
         }
       }
 
+      const sortedEditVariants = hasVariantsEdit && editProductVariants.length > 0
+        ? [...editProductVariants].sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0))
+        : []
+      const lowestEditVariant = sortedEditVariants[0]
+      const lowestEditPrice = lowestEditVariant ? parseFloat(lowestEditVariant.price) || 0 : parseFloat(productEditForm.price)
+      const lowestEditMrp = lowestEditVariant ? parseFloat(lowestEditVariant.mrp) || lowestEditPrice : parseFloat(productEditForm.mrp)
+      const resolvedEditUnit = lowestEditVariant && (!productEditForm.unit || productEditForm.unit === '1 pc' || productEditForm.unit === '1 unit')
+        ? lowestEditVariant.name
+        : productEditForm.unit
+
       const res = await fetch(`/api/products/${editingProduct.id}`, {
         method: 'PATCH',
         headers: { 
@@ -1903,10 +1913,10 @@ export function AdminDashboard({
           imageUrl: productEditForm.imageUrl,
           categoryId: productEditForm.categoryId,
           restaurantId: productEditForm.restaurantId || null,
-          mrp: hasVariantsEdit && editProductVariants.length > 0 ? parseFloat(editProductVariants[0].mrp) : parseFloat(productEditForm.mrp),
-          price: hasVariantsEdit && editProductVariants.length > 0 ? parseFloat(editProductVariants[0].price) : parseFloat(productEditForm.price),
-          unit: productEditForm.unit,
-          stock: (isEditProductCafe || isEditProductRestaurant || productEditForm.restaurantId) ? 99999 : (hasVariantsEdit && editProductVariants.length > 0 ? editProductVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0) : (parseInt(productEditForm.stock) || 0)),
+          mrp: lowestEditMrp,
+          price: lowestEditPrice,
+          unit: resolvedEditUnit,
+          stock: (isEditProductCafe || isEditProductRestaurant || productEditForm.restaurantId) ? 99999 : (sortedEditVariants.length > 0 ? sortedEditVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0) : (parseInt(productEditForm.stock) || 0)),
           minStock: (isEditProductCafe || isEditProductRestaurant || productEditForm.restaurantId) ? 0 : (parseInt(productEditForm.minStock) || 10),
           isAvailable: productEditForm.isAvailable,
           tags: tagsArray,
@@ -1918,7 +1928,7 @@ export function AdminDashboard({
           isBestSeller: productEditForm.isBestSeller,
           sortOrder: parseInt(productEditForm.sortOrder) || 0,
           barcode: productEditForm.barcode || null,
-          variants: hasVariantsEdit ? editProductVariants.map(v => ({
+          variants: sortedEditVariants.length > 0 ? sortedEditVariants.map(v => ({
             name: v.name,
             price: parseFloat(v.price) || 0,
             mrp: parseFloat(v.mrp) || 0,
@@ -2001,6 +2011,16 @@ export function AdminDashboard({
         resolvedCategoryId = newProduct.categoryId || categories[0]?.id || ''
       }
 
+      const sortedNewVariants = hasVariantsNew && newProductVariants.length > 0
+        ? [...newProductVariants].sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0))
+        : []
+      const lowestNewVariant = sortedNewVariants[0]
+      const lowestNewPrice = lowestNewVariant ? parseFloat(lowestNewVariant.price) || 0 : parseFloat(newProduct.price)
+      const lowestNewMrp = lowestNewVariant ? parseFloat(lowestNewVariant.mrp) || lowestNewPrice : parseFloat(newProduct.mrp)
+      const resolvedNewUnit = lowestNewVariant && (!newProduct.unit || newProduct.unit === '1 pc' || newProduct.unit === '1 unit')
+        ? lowestNewVariant.name
+        : newProduct.unit
+
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: { 
@@ -2013,14 +2033,15 @@ export function AdminDashboard({
           barcode: newProduct.barcode || null,
           location: newProduct.location || null,
           categoryId: resolvedCategoryId || newProduct.categoryId,
-          mrp: hasVariantsNew && newProductVariants.length > 0 ? parseFloat(newProductVariants[0].mrp) : parseFloat(newProduct.mrp),
-          price: hasVariantsNew && newProductVariants.length > 0 ? parseFloat(newProductVariants[0].price) : parseFloat(newProduct.price),
-          stock: (isNewProductCafe || isNewProductRestaurant || newProduct.restaurantId) ? 99999 : (hasVariantsNew && newProductVariants.length > 0 ? newProductVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0) : (parseInt(newProduct.stock) || 0)),
+          mrp: lowestNewMrp,
+          price: lowestNewPrice,
+          unit: resolvedNewUnit,
+          stock: (isNewProductCafe || isNewProductRestaurant || newProduct.restaurantId) ? 99999 : (sortedNewVariants.length > 0 ? sortedNewVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0) : (parseInt(newProduct.stock) || 0)),
           minStock: (isNewProductCafe || isNewProductRestaurant || newProduct.restaurantId) ? 0 : (parseInt(newProduct.minStock) || 10),
           expiryDate: newProduct.expiryDate ? new Date(newProduct.expiryDate).toISOString() : null,
           costPrice: parseFloat(newProduct.costPrice) || 0,
           tags: tagsArray,
-          variants: hasVariantsNew ? newProductVariants.map(v => ({
+          variants: sortedNewVariants.length > 0 ? sortedNewVariants.map(v => ({
             name: v.name,
             price: parseFloat(v.price) || 0,
             mrp: parseFloat(v.mrp) || 0,

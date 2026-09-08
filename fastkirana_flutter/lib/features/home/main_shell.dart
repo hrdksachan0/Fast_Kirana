@@ -168,8 +168,8 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
     const navHeight = 58.0;
     final navTop = navBaseBottom + navHeight;
 
-    final cartBottomOffset = navTop + 8.0;
-    final trackingBottomOffset = cartCount > 0 ? (cartBottomOffset + 54.0) : cartBottomOffset;
+    final cartBottomOffset = navTop + 6.0;
+    final trackingBottomOffset = cartCount > 0 ? (cartBottomOffset + 46.0) : cartBottomOffset;
 
     return PopScope(
       canPop: false,

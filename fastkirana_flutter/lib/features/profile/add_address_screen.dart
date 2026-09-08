@@ -613,48 +613,48 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: slateBorder),
       ),
-      child: Row(
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
         children: List.generate(_addressTypes.length, (index) {
           final isSelected = _selectedTypeIndex == index;
           final item = _addressTypes[index];
-          return Expanded(
-            child: GestureDetector(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                setState(() => _selectedTypeIndex = index);
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppDesignSystem.rose50 : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: isSelected ? primaryRed : Colors.transparent,
-                    width: 1.2,
-                  ),
+          return GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              setState(() => _selectedTypeIndex = index);
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              decoration: BoxDecoration(
+                color: isSelected ? AppDesignSystem.rose50 : Colors.transparent,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isSelected ? primaryRed : Colors.transparent,
+                  width: 1.2,
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      item['icon'] as IconData,
-                      size: 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    item['icon'] as IconData,
+                    size: 16,
+                    color: isSelected ? primaryRed : slateMuted,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    item['label'] as String,
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 10),
+                      fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
                       color: isSelected ? primaryRed : slateMuted,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      item['label'] as String,
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 10),
-                        fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
-                        color: isSelected ? primaryRed : slateMuted,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
           );

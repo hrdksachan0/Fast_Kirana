@@ -461,6 +461,15 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Automatically sort in-stock products first, out-of-stock products at the end for customer storefronts
+    if (!isWorker && !includeUnavailable && products.length > 0) {
+      products.sort((a: any, b: any) => {
+        const aInStock = (a.isAvailable && (a.stock ?? 0) > 0) ? 1 : 0
+        const bInStock = (b.isAvailable && (b.stock ?? 0) > 0) ? 1 : 0
+        return bInStock - aInStock
+      })
+    }
+
     const responseData = {
       products,
       pagination: {
@@ -612,11 +621,15 @@ export async function POST(request: NextRequest) {
     let finalMrp = Number(mrp)
     let finalPrice = Number(price)
     let sortedVariants = variants
+    let resolvedUnit = finalUnit
 
     if (variants && Array.isArray(variants) && variants.length > 0) {
       sortedVariants = [...variants].sort((a: any, b: any) => (Number(a.price) || 0) - (Number(b.price) || 0))
       finalPrice = Number(sortedVariants[0].price) || 0
       finalMrp = Number(sortedVariants[0].mrp) || finalPrice
+      if (!unit || unit === '1 pc' || unit === '1 unit' || unit === '1 Serving') {
+        resolvedUnit = sortedVariants[0].name || finalUnit
+      }
     }
 
     const calculatedDiscount = finalMrp > finalPrice
@@ -661,7 +674,7 @@ export async function POST(request: NextRequest) {
         mrp: finalMrp,
         price: finalPrice,
         discount: calculatedDiscount,
-        unit: finalUnit,
+        unit: resolvedUnit,
         stock: finalRestaurantId ? 99999 : Number(stock || 0),
         isAvailable: isAvailable !== undefined ? !!isAvailable : true,
         tags: tagsList,

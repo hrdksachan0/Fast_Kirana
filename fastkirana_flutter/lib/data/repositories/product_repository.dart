@@ -263,6 +263,15 @@ class ProductRepository {
         .map((json) => Product.fromJson(json as Map<String, dynamic>))
         .toList();
 
+    // Sort: In-stock first, out-of-stock at the end
+    liveProducts.sort((a, b) {
+      final aInStock = a.isAvailable && a.stock > 0;
+      final bInStock = b.isAvailable && b.stock > 0;
+      if (aInStock && !bInStock) return -1;
+      if (!aInStock && bInStock) return 1;
+      return 0;
+    });
+
     // Cache in memory and on disk when fetching the full catalog without filters
     final isFullCatalog = (category == null || category.isEmpty) &&
         (search == null || search.isEmpty) &&
@@ -511,6 +520,15 @@ class ProductRepository {
         return matchesName || matchesDesc || matchesTag || matchesCat;
       }).toList();
     }
+
+    // Automatically place all in-stock products first, out-of-stock products at the very end
+    result.sort((a, b) {
+      final aInStock = a.isAvailable && a.stock > 0;
+      final bInStock = b.isAvailable && b.stock > 0;
+      if (aInStock && !bInStock) return -1;
+      if (!aInStock && bInStock) return 1;
+      return 0;
+    });
 
     return result;
   }

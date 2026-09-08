@@ -28,6 +28,9 @@ import '../../core/theme/responsive.dart';
 import '../orders/order_detail_screen.dart';
 import '../delivery/widgets/connectivity_banner.dart';
 import '../common/order_edit_modal.dart';
+import 'package:audioplayers/audioplayers.dart';
+import '../../core/services/notification_service.dart';
+import '../common/widgets/battery_optimization_dialog.dart';
 
 class AdminOrdersScreen extends ConsumerStatefulWidget {
   final bool showAppBar;
@@ -90,6 +93,9 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
 
   final Set<String> _printedKOTOrders = {};
   final Set<String> _sendingKOTOrderIds = {};
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _isPlayingAlarm = false;
+  Timer? _pendingAlarmTimer;
 
   final List<String> _liveStatusFilters = [
     'ALL',
@@ -138,6 +144,14 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
     super.initState();
     _initConnectivityAndOfflineQueue();
     _fetchDeliveryRiders();
+    _initAudioPlayer();
+    _initNotificationSubscriptions();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        BatteryOptimizationDialog.showIfNecessary(context);
+      }
+    });
 
     _loadDiskOrders();
     if (_cachedOrders.isNotEmpty) {
@@ -154,6 +168,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
         if (!_isDeviceOffline) {
           debugPrint('[Admin WebSocket] Live order update event: ${record['id']}');
           _silentFetchAdminOrders();
+          _playChime();
         }
       },
     );
@@ -230,8 +245,88 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
     });
   }
 
+  Future<void> _initAudioPlayer() async {
+    try {
+      await _audioPlayer.setAudioContext(
+        AudioContext(
+          android: const AudioContextAndroid(
+            isSpeakerphoneOn: true,
+            stayAwake: true,
+            contentType: AndroidContentType.sonification,
+            usageType: AndroidUsageType.alarm,
+            audioFocus: AndroidAudioFocus.gainTransientExclusive,
+          ),
+          iOS: AudioContextIOS(
+            category: AVAudioSessionCategory.playback,
+            options: const {
+              AVAudioSessionOptions.duckOthers,
+              AVAudioSessionOptions.defaultToSpeaker,
+            },
+          ),
+        ),
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _initNotificationSubscriptions() async {
+    try {
+      final notif = NotificationService();
+      await notif.init();
+      await notif.requestPermissions();
+      final dio = ref.read(dioProvider);
+      await notif.registerDeviceToken(dio, role: 'ADMIN');
+    } catch (e) {
+      debugPrint('[Admin] Notification init error: $e');
+    }
+  }
+
+  Future<void> _playChime() async {
+    try {
+      HapticFeedback.heavyImpact();
+      await _audioPlayer.stop();
+      await _audioPlayer.play(AssetSource('sounds/order_chime.mp3'), volume: 1.0);
+    } catch (_) {
+      try { await SystemSound.play(SystemSoundType.alert); } catch (_) {}
+    }
+  }
+
+  void _startPendingAlarm() {
+    if (_isPlayingAlarm) return;
+    _isPlayingAlarm = true;
+    _playChime();
+    _pendingAlarmTimer?.cancel();
+    _pendingAlarmTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      final hasPending = _allOrders.any((o) => (o.status == OrderStatus.pending));
+      if (!hasPending) {
+        _stopPendingAlarm();
+      } else {
+        _playChime();
+      }
+    });
+  }
+
+  void _stopPendingAlarm() {
+    _pendingAlarmTimer?.cancel();
+    _pendingAlarmTimer = null;
+    if (_isPlayingAlarm) {
+      _isPlayingAlarm = false;
+      try { _audioPlayer.stop(); } catch (_) {}
+    }
+  }
+
+  void _syncAlarmStateWithOrders(List<Order> orders) {
+    final hasPending = orders.any((o) => (o.status == OrderStatus.pending));
+    if (hasPending) {
+      _startPendingAlarm();
+    } else {
+      _stopPendingAlarm();
+    }
+  }
+
   @override
   void dispose() {
+    _stopPendingAlarm();
+    _audioPlayer.dispose();
     _liveSyncTimer?.cancel();
     _connectivitySubscription?.cancel();
     _searchDebounce?.cancel();
@@ -330,6 +425,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
           _allOrders = mergedOrders;
           _isLoading = false;
         });
+        _syncAlarmStateWithOrders(mergedOrders);
       }
     } catch (err) {
       if (mounted) {
@@ -523,6 +619,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
           setState(() {
             _allOrders = mergedOrders;
           });
+          _syncAlarmStateWithOrders(mergedOrders);
         }
       }
     } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); } finally {

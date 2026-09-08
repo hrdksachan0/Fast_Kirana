@@ -182,7 +182,9 @@ export function VariantSelectorDrawer() {
 
   const variantsList = useMemo(() => {
     if (!activeProduct || !activeProduct.variants || !Array.isArray(activeProduct.variants)) return []
-    return activeProduct.variants
+    const list = [...(activeProduct.variants as any[])]
+    list.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0))
+    return list
   }, [activeProduct])
 
   return (
@@ -227,7 +229,11 @@ export function VariantSelectorDrawer() {
                     {activeProduct.name}
                   </h3>
                   <span className="text-[10px] text-text-muted font-bold block mt-0.5">
-                    {activeProduct.unit}
+                    {variantsList.length > 0
+                      ? `${variantsList.length} Options (from ₹${variantsList[0].price})`
+                      : (activeProduct.unit && activeProduct.unit !== '1 pc' && activeProduct.unit !== '1 unit'
+                          ? activeProduct.unit
+                          : 'Standard Pack')}
                   </span>
                   {activeProduct.description && (
                     <p className="text-[10px] text-text-secondary line-clamp-2 mt-1 leading-normal font-semibold">

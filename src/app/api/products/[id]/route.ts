@@ -204,6 +204,9 @@ export async function PATCH(
       updateData.variants = sortedVariants
       updateData.price = finalPrice
       updateData.mrp = finalMrp
+      if (!updateData.unit || updateData.unit === '1 pc' || updateData.unit === '1 unit' || updateData.unit === '1 Serving') {
+        updateData.unit = sortedVariants[0].name || updateData.unit
+      }
     } else if (variants !== undefined) {
       updateData.variants = variants
     }

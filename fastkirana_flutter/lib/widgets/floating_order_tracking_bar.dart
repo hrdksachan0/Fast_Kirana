@@ -111,7 +111,7 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
     final latestOrder = activeOrders.first;
 
     final screenWidth = MediaQuery.of(context).size.width;
-    final barWidth = (screenWidth * 0.92).clamp(320.0, 420.0);
+    final barWidth = (screenWidth * 0.92).clamp(280.0, 420.0);
 
     return AnimatedPositioned(
       duration: const Duration(milliseconds: 450),
@@ -208,52 +208,62 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                                     cleanId = cleanId.substring(cleanId.length - 4);
                                   }
                                   final formattedId = cleanId.startsWith('#') ? cleanId : '#$cleanId';
-                                  return Text(
-                                    formattedId,
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 12.5),
-                                      fontWeight: FontWeight.w900,
-                                      color: AppDesignSystem.slate900,
-                                      letterSpacing: -0.2,
+                                  return Flexible(
+                                    child: Text(
+                                      formattedId,
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 12.5),
+                                        fontWeight: FontWeight.w900,
+                                        color: AppDesignSystem.slate900,
+                                        letterSpacing: -0.2,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   );
                                 },
                               ),
                               const SizedBox(width: 5),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
-                                decoration: BoxDecoration(
-                                  color: AppDesignSystem.statusDelivered,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: AppDesignSystem.emerald200),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 4.5,
-                                      height: 4.5,
-                                      decoration: BoxDecoration(
-                                        color: AppDesignSystem.success,
-                                        shape: BoxShape.circle,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: AppDesignSystem.success.withValues(alpha: 0.8),
-                                            blurRadius: 4,
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: AppDesignSystem.statusDelivered,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: AppDesignSystem.emerald200),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 4.5,
+                                        height: 4.5,
+                                        decoration: BoxDecoration(
+                                          color: AppDesignSystem.success,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: AppDesignSystem.success.withValues(alpha: 0.8),
+                                              blurRadius: 4,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 3.5),
+                                      Flexible(
+                                        child: Text(
+                                          latestOrder.status.displayName,
+                                          style: GoogleFonts.inter(
+                                            fontSize: Responsive.scaledFontSize(context, 9.5),
+                                            fontWeight: FontWeight.w800,
+                                            color: AppDesignSystem.emerald600,
                                           ),
-                                        ],
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 3.5),
-                                    Text(
-                                      latestOrder.status.displayName,
-                                      style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 9.5),
-                                        fontWeight: FontWeight.w800,
-                                        color: AppDesignSystem.emerald600,
-                                      ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],

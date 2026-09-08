@@ -100,7 +100,7 @@ final cartUpsellProductsProvider = FutureProvider.family<List<Product>, List<Str
       // Fetch restaurant dishes + darkstore chilled drinks & ice-creams
       final results = await Future.wait([
         repo.getProducts(restaurantId: rId, limit: 30),
-        repo.getProducts(category: 'beverages,ice-cream', excludeRestaurant: true, limit: 40),
+        repo.getProducts(category: 'beverages,ice-cream', limit: 40),
       ]);
       all = [...results[0], ...results[1]];
     } else {

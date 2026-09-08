@@ -296,6 +296,8 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                               children: [
                                 _buildFilterPill('Popularity', _selectedSort == 'Popularity'),
                                 const SizedBox(width: 6),
+                                _buildFilterPill('⚡ Deals', _selectedSort == '⚡ Deals'),
+                                const SizedBox(width: 6),
                                 _buildFilterPill('Under ₹199', _selectedSort == 'Under ₹199'),
                                 const SizedBox(width: 6),
                                 _buildFilterPill('Low to High', _selectedSort == 'Low to High'),
@@ -327,21 +329,44 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                             // Subcategory filter only when not searching
                             final currentSubcatName = subcats[_selectedSubcatIndex]['name']!.toLowerCase();
                             list = list.where((p) {
+                              if (currentSubcatName.contains('popular') || currentSubcatName.contains('deal')) {
+                                return p.isBestsellerProduct || p.isFlashDealProduct || p.discount >= 10 || p.tags.any((t) => t.toLowerCase().contains('popular') || t.toLowerCase().contains('deal'));
+                              }
+                              if (currentSubcatName.contains('new')) {
+                                return p.isNewArrival || p.tags.any((t) => t.toLowerCase().contains('new'));
+                              }
                               final name = p.name.toLowerCase();
-                              final tagMatch = p.tags.any((t) => currentSubcatName.contains(t.toLowerCase()));
+                              final tagMatch = p.tags.any((t) => currentSubcatName.contains(t.toLowerCase()) || t.toLowerCase().contains(currentSubcatName));
                               return name.contains(currentSubcatName) || tagMatch;
                             }).toList();
                             if (list.isEmpty) list = List<Product>.from(products); // fallback
                           }
 
                           // Sort
-                          if (_selectedSort == 'Under ₹199') {
+                          if (_selectedSort == 'Popularity') {
+                            list.sort((a, b) {
+                              final aScore = (a.isBestsellerProduct ? 30 : 0) + (a.isTopPick ? 20 : 0) + (a.isFlashDealProduct ? 10 : 0);
+                              final bScore = (b.isBestsellerProduct ? 30 : 0) + (b.isTopPick ? 20 : 0) + (b.isFlashDealProduct ? 10 : 0);
+                              return bScore.compareTo(aScore);
+                            });
+                          } else if (_selectedSort == '⚡ Deals') {
+                            list = list.where((p) => p.isFlashDealProduct || p.discount >= 10 || p.tags.any((t) => t.toLowerCase().contains('deal') || t.toLowerCase().contains('flash'))).toList();
+                          } else if (_selectedSort == 'Under ₹199') {
                             list = list.where((p) => p.price <= 199).toList();
                           } else if (_selectedSort == 'Low to High') {
                             list.sort((a, b) => a.price.compareTo(b.price));
                           } else if (_selectedSort == 'High to Low') {
                             list.sort((a, b) => b.price.compareTo(a.price));
                           }
+
+                          // ALWAYS move out-of-stock items to the very end
+                          list.sort((a, b) {
+                            final aInStock = a.isAvailable && a.stock > 0;
+                            final bInStock = b.isAvailable && b.stock > 0;
+                            if (aInStock && !bInStock) return -1;
+                            if (!aInStock && bInStock) return 1;
+                            return 0;
+                          });
 
                           if (list.isEmpty) {
                             return Center(
@@ -367,8 +392,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                             builder: (context, constraints) {
                               final columns = (constraints.maxWidth / 140).floor().clamp(2, 6);
                               final cardWidth = (constraints.maxWidth - 12 - (columns - 1) * 8) / columns;
-                              // Dynamic aspect ratio calculation so cards get enough vertical room regardless of screen width
-                              final itemAspect = cardWidth < 135 ? 0.54 : Responsive.productCardAspectRatio(context, isCompact: true);
+                              final itemAspect = Responsive.productCardAspectRatio(context, isCompact: true);
                               final visibleProducts = list.take(_visibleCount).toList();
                               final hasMore = _visibleCount < list.length;
 

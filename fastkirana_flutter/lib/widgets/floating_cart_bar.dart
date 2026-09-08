@@ -85,7 +85,7 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(22),
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: _isPressed
                         ? [
                             BoxShadow(
@@ -125,8 +125,8 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                             top: _isPressed ? -5 : -3,
                             right: _isPressed ? -5 : -4,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
-                              constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(10),
@@ -143,7 +143,7 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                                 child: Text(
                                   '$itemCount',
                                   style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 9.5),
+                                    fontSize: Responsive.scaledFontSize(context, 10),
                                     fontWeight: FontWeight.w900,
                                     color: AppDesignSystem.primary,
                                   ),
@@ -153,47 +153,54 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                           ),
                         ],
                       ),
-                      const SizedBox(width: 10),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '$itemCount ${itemCount == 1 ? 'Item' : 'Items'} • ₹${total.toInt()}',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 13),
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
+                      const SizedBox(width: 11),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$itemCount ${itemCount == 1 ? 'Item' : 'Items'} • ₹${total.toInt()}',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 13.5),
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: -0.2,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          Text(
-                            !tier.isServiceable
-                                ? '⚠️ Outside 5.0 km Hub'
-                                : (isFreeDelivery
-                                    ? '✨ Free Delivery Unlocked'
-                                    : 'Add ₹${remainingForFree.toInt()} for FREE Delivery'),
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 9.5),
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white.withValues(alpha: 0.92),
+                            const SizedBox(height: 1),
+                            Text(
+                              !tier.isServiceable
+                                  ? '⚠️ Outside 5.0 km Hub'
+                                  : (isFreeDelivery
+                                      ? '✨ Free Delivery Unlocked'
+                                      : 'Add ₹${remainingForFree.toInt()} for FREE Delivery'),
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 10),
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white.withValues(alpha: 0.94),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                      const Spacer(),
                       AnimatedOpacity(
                         opacity: _isPressed ? 0.75 : 1.0,
                         duration: const Duration(milliseconds: 120),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(18),
+                            borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withValues(alpha: 0.08),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1.5),
                               ),
                             ],
                           ),
@@ -206,7 +213,7 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                                   fontSize: Responsive.scaledFontSize(context, 11.5),
                                   fontWeight: FontWeight.w900,
                                   color: AppDesignSystem.primary,
-                                  letterSpacing: 0.2,
+                                  letterSpacing: 0.3,
                                 ),
                               ),
                               const SizedBox(width: 4),

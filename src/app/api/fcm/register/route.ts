@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth()
     const body = await request.json().catch(() => ({}))
-    const { token, deviceType, userId: bodyUserId, phone } = body
+    const { token, deviceType, userId: bodyUserId, phone, role, assignedRestaurantId } = body
 
     // Resolve user ID from NextAuth session, Flutter x-user-id header, or body payload
     let resolvedUserId = session?.user?.id || request.headers.get('x-user-id') || bodyUserId
@@ -68,6 +68,17 @@ export async function POST(request: NextRequest) {
         token: { not: token },
       },
     }).catch(() => {})
+
+    // Keep user role & restaurant assignment up-to-date
+    if (resolvedUserId && (role || assignedRestaurantId)) {
+      await prisma.user.update({
+        where: { id: resolvedUserId },
+        data: {
+          ...(role ? { role } : {}),
+          ...(assignedRestaurantId ? { assignedRestaurantId } : {}),
+        },
+      }).catch(() => {})
+    }
 
     // Mirror to PushSubscription table so admin panel alert checks always pass
     const existingSub = await prisma.pushSubscription.findFirst({

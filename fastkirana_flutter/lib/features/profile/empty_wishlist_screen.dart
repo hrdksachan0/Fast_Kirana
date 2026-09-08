@@ -19,7 +19,7 @@ class EmptyWishlistScreen extends StatelessWidget {
       body: EmptyState(
         emoji: '💝',
         title: 'No favorites yet',
-        subtitle: 'Tap the heart icon on products\nyou love to save them here.',
+        subtitle: 'Tap the heart icon on products you love to save them here.',
         ctaLabel: 'Explore Products',
         bgTint: AppDesignSystem.rose50,
         onCta: () => Navigator.pop(context),

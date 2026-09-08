@@ -1225,6 +1225,9 @@ export async function POST(request: NextRequest) {
                   fcmMessaging.send({ token, ...staffPayload }).catch(() => {})
                 }
               }
+              // Always broadcast to admin & staff topics for 100% delivery even when phone is locked
+              sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders', ...staffPayload }).catch(() => {})
+              sendTopicWithRetry(fcmMessaging, { topic: 'staff_orders', ...staffPayload }).catch(() => {})
 
               // 3. Direct device token push STRICTLY to the specific restaurant owner ONLY (WITHOUT AMOUNT)
               if (isRestaurant && order.restaurantId) {
@@ -1270,9 +1273,11 @@ export async function POST(request: NextRequest) {
                       fcmMessaging.send({ token, ...restaurantPayload }).catch(() => {})
                     }
                   }
-                } else if (order.restaurantId) {
-                  // Fallback to canonical restaurant topic ONLY if no direct registered tokens exist
+                }
+                // Always broadcast to canonical restaurant topic for guaranteed delivery
+                if (order.restaurantId) {
                   sendTopicWithRetry(fcmMessaging, { topic: `restaurant_${order.restaurantId}`, ...restaurantPayload }).catch(() => {})
+                  sendTopicWithRetry(fcmMessaging, { topic: `kitchen_${order.restaurantId}`, ...restaurantPayload }).catch(() => {})
                 }
               }
             }

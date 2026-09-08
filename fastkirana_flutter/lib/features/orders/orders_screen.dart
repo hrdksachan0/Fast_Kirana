@@ -564,7 +564,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Flexible(
+                    Expanded(
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                         decoration: BoxDecoration(
@@ -605,12 +605,16 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      DateFormat('dd MMM, hh:mm a').format(order.createdAt),
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 11),
-                        fontWeight: FontWeight.w600,
-                        color: slateMuted,
+                    Flexible(
+                      child: Text(
+                        DateFormat('dd MMM, hh:mm a').format(order.createdAt),
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 11),
+                          fontWeight: FontWeight.w600,
+                          color: slateMuted,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -700,81 +704,96 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                     ),
                   ],
                 ),
-                Row(
-                  children: [
-                    // Reorder Button
-                    Bounceable(
-                      onTap: () => _reorderItems(context, order),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppDesignSystem.slate300),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.refresh_rounded, size: 14, color: AppDesignSystem.slate700),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Reorder',
-                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w800, color: AppDesignSystem.slate700),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-
-                    // Track / View Details Button
-                    Bounceable(
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        Navigator.push(
-                          context,
-                          FadeSlideRoute(
-                            page: OrderTrackingScreen(orderId: order.id),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                        decoration: BoxDecoration(
-                          gradient: isActive
-                              ? const LinearGradient(
-                                  colors: [AppDesignSystem.green700, AppDesignSystem.accentDark],
-                                )
-                              : const LinearGradient(
-                                  colors: [primaryRed, primaryRedLight],
-                                ),
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: (isActive ? AppDesignSystem.green700 : primaryRed).withValues(alpha: 0.25),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              isActive ? Icons.navigation_rounded : Icons.receipt_long_rounded,
-                              size: 13,
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Reorder Button
+                      Flexible(
+                        child: Bounceable(
+                          onTap: () => _reorderItems(context, order),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
                               color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppDesignSystem.slate300),
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              isActive ? 'Track Live' : 'Details',
-                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w900, color: Colors.white),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.refresh_rounded, size: 14, color: AppDesignSystem.slate700),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    'Reorder',
+                                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w800, color: AppDesignSystem.slate700),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+
+                      // Track / View Details Button
+                      Flexible(
+                        child: Bounceable(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.push(
+                              context,
+                              FadeSlideRoute(
+                                page: OrderTrackingScreen(orderId: order.id),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                            decoration: BoxDecoration(
+                              gradient: isActive
+                                  ? const LinearGradient(
+                                      colors: [AppDesignSystem.green700, AppDesignSystem.accentDark],
+                                    )
+                                  : const LinearGradient(
+                                      colors: [primaryRed, primaryRedLight],
+                                    ),
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: (isActive ? AppDesignSystem.green700 : primaryRed).withValues(alpha: 0.25),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isActive ? Icons.navigation_rounded : Icons.receipt_long_rounded,
+                                  size: 13,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    isActive ? 'Track Live' : 'Details',
+                                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w900, color: Colors.white),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

@@ -126,7 +126,11 @@ class VariantSelectorSheet extends ConsumerWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        product.unit.isNotEmpty ? product.unit : (isFood ? 'Freshly Prepared' : 'Options available'),
+                        variants.isNotEmpty
+                            ? '${variants.length} Options (from ₹${variants.first.price.toInt()})'
+                            : (product.unit.isNotEmpty && product.unit != '1 pc' && product.unit != '1 unit'
+                                ? product.unit
+                                : (isFood ? 'Freshly Prepared' : 'Options available')),
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w600,

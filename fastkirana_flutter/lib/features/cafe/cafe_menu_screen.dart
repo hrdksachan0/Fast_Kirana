@@ -385,6 +385,15 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
       }).toList();
 
       if (secProducts.isNotEmpty) {
+        // Sort: In-stock dishes first, out-of-stock dishes at the end
+        secProducts.sort((a, b) {
+          final aInStock = a.isAvailable && a.stock > 0;
+          final bInStock = b.isAvailable && b.stock > 0;
+          if (aInStock && !bInStock) return -1;
+          if (!aInStock && bInStock) return 1;
+          return 0;
+        });
+
         String? catPhoto = sec.imageUrl;
         if (catPhoto == null || catPhoto.isEmpty) {
           final productWithImage = secProducts.firstWhere(
@@ -417,6 +426,15 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
       }
 
       categoryGroups.forEach((title, grpProducts) {
+        // Sort: In-stock dishes first, out-of-stock dishes at the end
+        grpProducts.sort((a, b) {
+          final aInStock = a.isAvailable && a.stock > 0;
+          final bInStock = b.isAvailable && b.stock > 0;
+          if (aInStock && !bInStock) return -1;
+          if (!aInStock && bInStock) return 1;
+          return 0;
+        });
+
         final tag = 'custom-${title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}';
         final firstImg = grpProducts.firstWhere((p) => p.imageUrl != null && p.imageUrl!.startsWith('http'), orElse: () => grpProducts.first).imageUrl;
         final tLower = title.toLowerCase();
@@ -435,6 +453,15 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
         ));
       });
     }
+
+    // Sort full filtered list as well
+    filtered.sort((a, b) {
+      final aInStock = a.isAvailable && a.stock > 0;
+      final bInStock = b.isAvailable && b.stock > 0;
+      if (aInStock && !bInStock) return -1;
+      if (!aInStock && bInStock) return 1;
+      return 0;
+    });
 
     return [
       RenderedCategory(
@@ -1804,6 +1831,8 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                             Text(
                               userName,
                               style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700, color: AppDesignSystem.slate900),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             Row(
                               children: List.generate(5, (i) => Icon(

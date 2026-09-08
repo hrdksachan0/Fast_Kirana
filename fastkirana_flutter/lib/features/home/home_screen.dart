@@ -298,50 +298,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final groceryItems = all.where((p) => p.restaurantId == null && p.restaurant == null).toList();
 
     if (_selectedFilterIndex == 1) {
-      // Dynamic Craving / Meal Slot (Breakfast, Lunch, Snacks, Late Night)
-      final timeTab = _getTimeBasedTab().toLowerCase();
+      // ⚡ Flash Deals: Products marked isFlashDeal, high discount (>= 15%), or tagged deal/flash
       return groceryItems.where((p) {
-        final name = p.name.toLowerCase();
-        final cat = (p.category?.name ?? '').toLowerCase();
-        final slug = (p.category?.slug ?? '').toLowerCase();
-        final tags = p.tags.map((t) => t.toLowerCase()).toList();
-        if (timeTab == 'breakfast') {
-          return cat.contains('dairy') || cat.contains('bakery') || slug.contains('breakfast') ||
-              name.contains('milk') || name.contains('bread') || name.contains('egg') ||
-              name.contains('tea') || name.contains('coffee') || name.contains('oats') ||
-              name.contains('butter') || tags.contains('breakfast');
-        } else if (timeTab == 'lunch') {
-          return cat.contains('atta') || cat.contains('rice') || cat.contains('dal') ||
-              cat.contains('kitchen') || slug.contains('atta') || name.contains('rice') ||
-              name.contains('dal') || name.contains('oil') || name.contains('flour') || tags.contains('lunch');
-        } else if (timeTab == 'snacks') {
-          return cat.contains('snack') || cat.contains('biscuit') || cat.contains('beverage') ||
-              name.contains('chip') || name.contains('namkeen') || name.contains('maggi') ||
-              tags.contains('snacks');
-        } else {
-          return cat.contains('ice') || cat.contains('sweet') || cat.contains('choco') ||
-              cat.contains('snack') || name.contains('maggi') || name.contains('noodle');
-        }
+        return p.isFlashDealProduct ||
+            p.isFlashDeal ||
+            p.discount >= 15 ||
+            p.tags.any((t) {
+              final lower = t.toLowerCase();
+              return lower.contains('flash') || lower.contains('deal') || lower.contains('steal') || lower.contains('offer');
+            });
       }).toList();
     } else if (_selectedFilterIndex == 2) {
-      // Trending & Bestsellers
+      // 🏆 Best Sellers: Products marked as best seller or top moving
       return groceryItems.where((p) {
         return p.isBestsellerProduct ||
             p.isBestSeller ||
-            p.isTopPick ||
-            p.tags.any((t) => t.toLowerCase().contains('trending') || t.toLowerCase().contains('best'));
+            p.tags.any((t) {
+              final lower = t.toLowerCase();
+              return lower.contains('best') || lower.contains('popular') || lower.contains('star');
+            });
       }).toList();
     } else if (_selectedFilterIndex == 3) {
-      // Snacks & Munchies Hub
+      // 🔥 Trending & Top Picks
+      return groceryItems.where((p) {
+        return p.isTrending ||
+            p.isTopPick ||
+            p.tags.any((t) {
+              final lower = t.toLowerCase();
+              return lower.contains('trend') || lower.contains('top') || lower.contains('hot') || lower.contains('feature');
+            });
+      }).toList();
+    } else if (_selectedFilterIndex == 4) {
+      // 🍿 Snacks & Munchies Hub
       return groceryItems.where((p) {
         final cat = (p.category?.name ?? '').toLowerCase();
         final slug = (p.category?.slug ?? '').toLowerCase();
         final name = p.name.toLowerCase();
+        final tags = p.tags.map((t) => t.toLowerCase()).toList();
         return cat.contains('snack') || slug.contains('snack') ||
             cat.contains('choco') || cat.contains('biscuit') ||
             cat.contains('munch') || name.contains('chips') ||
             name.contains('namkeen') || name.contains('kurkure') ||
-            name.contains('lay') || name.contains('biscuit');
+            name.contains('lay') || name.contains('biscuit') ||
+            tags.any((t) => t.contains('snack') || t.contains('munch') || t.contains('biscuit') || t.contains('chips'));
       }).toList();
     }
 
@@ -501,12 +500,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 ),
                               ),
                               const SizedBox(width: 5),
-                              Text(
-                                'Delivering to $locationLabel',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 11),
-                                  fontWeight: FontWeight.w600,
-                                  color: AppDesignSystem.textSecondary,
+                              Flexible(
+                                child: Text(
+                                  'Delivering to $locationLabel',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 11),
+                                    fontWeight: FontWeight.w600,
+                                    color: AppDesignSystem.textSecondary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
@@ -2736,19 +2739,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     switch (_selectedFilterIndex) {
       case 1:
-        final timeTab = _getTimeBasedTab();
-        title = '$timeTab Specials';
-        subtitle = 'Fresh picks for your $timeTab craving';
-        icon = Icons.wb_sunny_rounded;
+        title = '⚡ Flash Deals & Steals';
+        subtitle = 'Limited time mega discounts & hot offers';
+        icon = Icons.bolt_rounded;
         break;
       case 2:
-        title = 'Trending & Best Sellers';
-        subtitle = 'Fastest moving items in Ghatampur';
-        icon = Icons.local_fire_department_rounded;
+        title = '🏆 All-Time Best Sellers';
+        subtitle = 'Most loved groceries by FastKirana shoppers';
+        icon = Icons.emoji_events_rounded;
         break;
       case 3:
-        title = 'Snacks & Munchies Hub';
-        subtitle = 'Chips, namkeen, cookies & bites';
+        title = '🔥 Trending & Top Picks';
+        subtitle = 'Fastest moving daily essentials right now';
+        icon = Icons.local_fire_department_rounded;
+        break;
+      case 4:
+        title = '🍿 Snacks & Munchies Hub';
+        subtitle = 'Crispy chips, namkeen, biscuits & chocolates';
         icon = Icons.fastfood_rounded;
         break;
       default:

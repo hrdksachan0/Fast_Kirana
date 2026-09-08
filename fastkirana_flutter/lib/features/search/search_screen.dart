@@ -18,6 +18,7 @@ import '../../data/models/product.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/restaurant_card.dart';
 import '../../widgets/variant_selector_sheet.dart';
+import '../../widgets/cart_conflict_dialog.dart';
 import '../products/product_detail_screen.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
@@ -708,16 +709,42 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             score = 0;
           }
 
+          // Query tag intent boost
+          if ((queryClean.contains('deal') || queryClean.contains('flash') || queryClean.contains('offer') || queryClean.contains('discount') || queryClean.contains('sale')) && p.isFlashDealProduct) {
+            score += 80;
+          }
+          if ((queryClean.contains('best') || queryClean.contains('bestseller') || queryClean.contains('popular') || queryClean.contains('top')) && p.isBestsellerProduct) {
+            score += 80;
+          }
+          if ((queryClean.contains('trend') || queryClean.contains('viral') || queryClean.contains('hot')) && p.isTrending) {
+            score += 80;
+          }
+          if ((queryClean.contains('organic') || queryClean.contains('pure') || queryClean.contains('desi') || queryClean.contains('natural') || queryClean.contains('fresh')) && p.isOrganic) {
+            score += 80;
+          }
+          if (queryClean.contains('must') && p.isMustTry) {
+            score += 80;
+          }
+
           if (score > 0) {
             // Prioritize in-stock and available products
             if (p.isAvailable && p.stock > 0) score += 20;
-            if (p.isBestSeller) score += 10;
+            if (p.isBestsellerProduct) score += 15;
+            if (p.isFlashDealProduct) score += 15;
+            if (p.isTrending) score += 10;
+            if (p.isOrganic) score += 10;
             scoredProducts.add(MapEntry(p, score));
           }
         }
 
-        // Sort by relevance score descending
-        scoredProducts.sort((a, b) => b.value.compareTo(a.value));
+        // Sort: In-stock items first (ranked by relevance), out-of-stock items at the very end
+        scoredProducts.sort((a, b) {
+          final aInStock = a.key.isAvailable && a.key.stock > 0;
+          final bInStock = b.key.isAvailable && b.key.stock > 0;
+          if (aInStock && !bInStock) return -1;
+          if (!aInStock && bInStock) return 1;
+          return b.value.compareTo(a.value);
+        });
         final filtered = scoredProducts.map((e) => e.key).toList();
 
         if (filtered.isEmpty && matchedRestaurants.isEmpty) {
@@ -1234,6 +1261,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               );
                               return;
                             }
+                            final conflictRestaurant = ref.read(cartProvider.notifier).checkRestaurantConflict(product);
+                            if (conflictRestaurant != null) {
+                              CartConflictDialog.show(
+                                context,
+                                product: product,
+                                existingOutletName: conflictRestaurant,
+                                groceryItemsCount: ref.read(cartProvider.notifier).groceryItemsCount,
+                                onConfirm: () {
+                                  ref.read(cartProvider.notifier).replaceRestaurantItemsWith(product, 1);
+                                },
+                              );
+                              return;
+                            }
                             HapticFeedback.lightImpact();
                             ref.read(cartProvider.notifier).increment(product);
                           }
@@ -1254,6 +1294,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   if (hasVariants) {
                     VariantSelectorSheet.show(context, product);
                   } else {
+                    final conflictRestaurant = ref.read(cartProvider.notifier).checkRestaurantConflict(product);
+                    if (conflictRestaurant != null) {
+                      CartConflictDialog.show(
+                        context,
+                        product: product,
+                        existingOutletName: conflictRestaurant,
+                        groceryItemsCount: ref.read(cartProvider.notifier).groceryItemsCount,
+                        onConfirm: () {
+                          ref.read(cartProvider.notifier).replaceRestaurantItemsWith(product, 1);
+                        },
+                      );
+                      return;
+                    }
                     ref.read(cartProvider.notifier).addProduct(product);
                   }
                 },

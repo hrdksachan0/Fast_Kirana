@@ -224,7 +224,9 @@ const [productRaw, relatedRaw] = await Promise.all([
             {/* Unit & Ratings summary */}
             <div className="flex items-center gap-4 text-sm font-semibold">
               <span className="text-text-secondary bg-muted px-2.5 py-1 rounded-lg">
-                {product.unit}
+                {product.variants && Array.isArray(product.variants) && product.variants.length > 0
+                  ? `${product.variants.length} Options Available`
+                  : (product.unit && product.unit !== '1 pc' && product.unit !== '1 unit' ? product.unit : 'Standard Pack')}
               </span>
               
               {avgRating && (

@@ -242,9 +242,10 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          SizedBox(
-            width: 95,
+          Flexible(
+            flex: 1,
             child: Text(
               label,
               style: GoogleFonts.inter(
@@ -255,13 +256,16 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
             ),
           ),
           const SizedBox(width: 8),
-          Expanded(
+          Flexible(
+            flex: 1,
             child: Align(
               alignment: Alignment.centerRight,
               child: customValue ??
                   Text(
                     value,
                     textAlign: TextAlign.end,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 13),
                       fontWeight: isBold || isHighlight ? FontWeight.w800 : FontWeight.w600,

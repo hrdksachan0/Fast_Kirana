@@ -801,12 +801,16 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
               children: [
                 Row(
                   children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 13.5),
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF0F172A),
+                    Flexible(
+                      child: Text(
+                        title,
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 13.5),
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF0F172A),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 6),

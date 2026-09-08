@@ -12,15 +12,20 @@ interface ProductVariantSelectorProps {
 
 export function ProductVariantSelector({ product }: ProductVariantSelectorProps) {
   const hasVariants = product.variants && Array.isArray(product.variants) && product.variants.length > 0
-  const variantsList = hasVariants ? (product.variants as any[]) : []
+  const variantsList = useMemo(() => {
+    if (!hasVariants) return []
+    const list = [...(product.variants as any[])]
+    list.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0))
+    return list
+  }, [hasVariants, product.variants])
 
-  // Track selected variant name
+  // Track selected variant name (default to cheapest variant)
   const [selectedVariantName, setSelectedVariantName] = useState<string>(
-    hasVariants ? variantsList[0].name : ''
+    variantsList.length > 0 ? variantsList[0].name : ''
   )
 
   const activeVariant = useMemo(() => {
-    if (!hasVariants) return null
+    if (!hasVariants || variantsList.length === 0) return null
     return variantsList.find((v) => v.name === selectedVariantName) || variantsList[0]
   }, [hasVariants, variantsList, selectedVariantName])
 

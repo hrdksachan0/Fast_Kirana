@@ -27,6 +27,7 @@ import '../../providers/store_settings_provider.dart';
 import '../../core/utils/app_toast.dart';
 import 'widgets/connectivity_banner.dart';
 import 'widgets/delivery_header.dart';
+import '../../core/services/notification_service.dart';
 
 class DeliveryDashboard extends ConsumerStatefulWidget {
   const DeliveryDashboard({super.key});
@@ -121,6 +122,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     _initConnectivityAndOfflineQueue();
     _fetchOrders();
     _fetchWallet();
+
+    NotificationService().registerDeviceToken(ref.read(dioProvider), role: 'DELIVERY');
 
     // Immediately request GPS / Location permission as soon as Rider opens dashboard
     WidgetsBinding.instance.addPostFrameCallback((_) {

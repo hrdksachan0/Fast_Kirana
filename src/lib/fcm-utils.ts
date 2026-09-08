@@ -66,7 +66,17 @@ export function buildOrderFcmPayload(
 ) {
   const collapseId = data.orderId ? `order_${data.orderId}` : undefined
 
-  const isKitchenAlert = data.screen === 'restaurant-console' || Boolean(data.restaurantId)
+  const isOrderAlert =
+    data.screen === 'restaurant-console' ||
+    data.screen === 'admin-orders' ||
+    data.screen === 'delivery' ||
+    data.screen === 'picker' ||
+    Boolean(data.restaurantId) ||
+    data.type === 'NEW_ORDER' ||
+    title.includes('Order') ||
+    title.includes('🛎️') ||
+    title.includes('💳') ||
+    title.includes('👨‍🍳')
 
   return {
     notification: { title, body },
@@ -76,13 +86,13 @@ export function buildOrderFcmPayload(
       ttl: ttlSeconds,
       ...(collapseId ? { collapseKey: collapseId } : {}),
       notification: {
-        channelId: isKitchenAlert ? 'fastkirana_kitchen_alerts' : 'fastkirana_alerts',
-        sound: isKitchenAlert ? 'order_chime' : 'default',
-        defaultSound: !isKitchenAlert,
-        defaultVibrateTimings: !isKitchenAlert,
-        ...(isKitchenAlert ? { vibrateTimingsMillis: [0, 1000, 500, 1000, 500, 1000, 500, 1000] } : {}),
+        channelId: isOrderAlert ? 'fastkirana_kitchen_alerts' : 'fastkirana_alerts',
+        sound: isOrderAlert ? 'order_chime' : 'default',
+        defaultSound: !isOrderAlert,
+        defaultVibrateTimings: !isOrderAlert,
+        ...(isOrderAlert ? { vibrateTimingsMillis: [0, 1000, 500, 1000, 500, 1000, 500, 1000] } : {}),
         visibility: 'PUBLIC' as const,
-        priority: isKitchenAlert ? ('MAX' as const) : ('HIGH' as const),
+        priority: isOrderAlert ? ('MAX' as const) : ('HIGH' as const),
         clickAction: 'FLUTTER_NOTIFICATION_CLICK',
         ...(collapseId ? { tag: collapseId } : {}),
       },

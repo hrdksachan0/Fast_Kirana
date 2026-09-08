@@ -122,9 +122,9 @@ class Product {
       expiryDate: parsedExpiry,
       costPrice: double.tryParse(json['costPrice']?.toString() ?? '0') ?? 0.0,
       location: json['location']?.toString(),
-      isFlashDeal: json['isFlashDeal'] == true || json['is_flash_deal'] == true,
-      isTopPick: json['isTopPick'] == true || json['is_top_pick'] == true || json['trending'] == true || json['isTrending'] == true,
-      isBestSeller: json['isBestSeller'] == true || json['is_best_seller'] == true || json['bestseller'] == true || json['isBestseller'] == true,
+      isFlashDeal: json['isFlashDeal'] == true || json['is_flash_deal'] == true || tagsList.any((t) => ['flash deal', 'flashdeal', 'flash-deal', 'flash', 'deal'].contains(t.toLowerCase())),
+      isTopPick: json['isTopPick'] == true || json['is_top_pick'] == true || json['trending'] == true || json['isTrending'] == true || tagsList.any((t) => ['top-pick', 'toppick', 'top pick', 'trending', 'featured'].contains(t.toLowerCase())),
+      isBestSeller: json['isBestSeller'] == true || json['is_best_seller'] == true || json['bestseller'] == true || json['isBestseller'] == true || tagsList.any((t) => ['bestseller', 'best seller', 'best-seller', 'popular', 'star'].contains(t.toLowerCase())),
       sortOrder: int.tryParse(json['sortOrder']?.toString() ?? '0') ?? 0,
       availableStartTime: json['availableStartTime']?.toString(),
       availableEndTime: json['availableEndTime']?.toString(),
@@ -186,7 +186,7 @@ class Product {
       }
     }
     if (listData is List) {
-      return listData.map((v) {
+      final list = listData.map((v) {
         if (v is Map) {
           final vMap = Map<String, dynamic>.from(v);
           final p = double.tryParse(vMap['price']?.toString() ?? '') ?? price;
@@ -203,6 +203,8 @@ class Product {
         }
         return ProductVariant(name: v.toString(), price: price, mrp: mrp, stock: stock);
       }).toList();
+      list.sort((a, b) => a.price.compareTo(b.price));
+      return list;
     }
     return [];
   }
@@ -213,21 +215,52 @@ class Product {
           t.toLowerCase() == 'trending' ||
           t.toLowerCase() == 'popular' ||
           t.toLowerCase() == 'toppick' ||
-          t.toLowerCase() == 'top pick');
+          t.toLowerCase() == 'top pick' ||
+          t.toLowerCase() == 'top-pick' ||
+          t.toLowerCase() == 'featured' ||
+          t.toLowerCase() == 'hot');
 
   bool get isBestsellerProduct =>
       isBestSeller ||
       tags.any((t) =>
           t.toLowerCase() == 'bestseller' ||
           t.toLowerCase() == 'best seller' ||
-          t.toLowerCase() == 'best-seller');
+          t.toLowerCase() == 'best-seller' ||
+          t.toLowerCase() == 'star');
 
   bool get isFlashDealProduct =>
       isFlashDeal ||
+      discount >= 15 ||
       tags.any((t) =>
           t.toLowerCase() == 'flash deal' ||
           t.toLowerCase() == 'flashdeal' ||
-          t.toLowerCase() == 'flash-deal');
+          t.toLowerCase() == 'flash-deal' ||
+          t.toLowerCase() == 'flash' ||
+          t.toLowerCase() == 'deal' ||
+          t.toLowerCase() == 'super-saver');
+
+  bool get isOrganic =>
+      tags.any((t) =>
+          t.toLowerCase() == 'organic' ||
+          t.toLowerCase() == 'natural' ||
+          t.toLowerCase() == 'pure' ||
+          t.toLowerCase() == 'farm-fresh');
+
+  bool get isNewArrival =>
+      tags.any((t) =>
+          t.toLowerCase() == 'new' ||
+          t.toLowerCase() == 'new-arrival' ||
+          t.toLowerCase() == 'new arrival' ||
+          t.toLowerCase() == 'fresh-arrival') ||
+      createdAt.isAfter(DateTime.now().subtract(const Duration(days: 45)));
+
+  bool get isMustTry =>
+      tags.any((t) =>
+          t.toLowerCase() == 'must try' ||
+          t.toLowerCase() == 'must-try' ||
+          t.toLowerCase() == 'chef special' ||
+          t.toLowerCase() == 'chef-special' ||
+          t.toLowerCase() == 'special');
 }
 
 class ProductVariant {

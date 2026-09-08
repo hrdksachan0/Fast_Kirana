@@ -34,7 +34,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     super.initState();
     final variants = widget.product.parsedVariants;
     if (variants.isNotEmpty) {
-      _selectedVariant = variants.first;
+      _selectedVariant = variants.reduce((a, b) => a.price < b.price ? a : b);
     }
   }
 
@@ -86,9 +86,15 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   Widget build(BuildContext context) {
     final p = widget.product;
     final variants = p.parsedVariants;
-    final activePrice = _selectedVariant?.price ?? p.price;
-    final activeMrp = _selectedVariant?.mrp ?? p.mrp;
-    final activeUnit = _selectedVariant?.name ?? p.unit;
+    final hasVariants = variants.isNotEmpty;
+    final activeVariant = _selectedVariant ?? (hasVariants ? variants.first : null);
+    final activePrice = activeVariant?.price ?? p.price;
+    final activeMrp = activeVariant?.mrp ?? p.mrp;
+    final activeUnit = activeVariant != null
+        ? activeVariant.name
+        : (p.unit.isNotEmpty && p.unit != '1 pc' && p.unit != '1 unit'
+            ? p.unit
+            : (isRestaurantProduct(p) ? 'Freshly Prepared' : 'Standard Pack'));
 
     final cart = ref.watch(cartProvider).value;
     final cartItem = cart?.items.where((i) => i.productId == p.id).firstOrNull;

@@ -241,6 +241,36 @@ class ProductBadge extends StatelessWidget {
     );
   }
 
+  factory ProductBadge.organic({required double s}) {
+    return ProductBadge(
+      s: s,
+      margin: EdgeInsets.only(bottom: s * 3),
+      padding: EdgeInsets.symmetric(horizontal: s * 5.5, vertical: s * 2),
+      gradient: const LinearGradient(colors: [Color(0xFF059669), Color(0xFF10B981)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+      radius: s * 5,
+      shadowColor: const Color(0xFF059669),
+      shadowAlpha: 0.35,
+      shadowBlur: s * 4,
+      shadowOffset: Offset(0, s),
+      child: Text('🌿 PURE', style: GoogleFonts.inter(fontSize: s * 7.5, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3)),
+    );
+  }
+
+  factory ProductBadge.mustTry({required double s}) {
+    return ProductBadge(
+      s: s,
+      margin: EdgeInsets.only(bottom: s * 3),
+      padding: EdgeInsets.symmetric(horizontal: s * 5.5, vertical: s * 2),
+      gradient: const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFFA855F7)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+      radius: s * 5,
+      shadowColor: const Color(0xFF8B5CF6),
+      shadowAlpha: 0.35,
+      shadowBlur: s * 4,
+      shadowOffset: Offset(0, s),
+      child: Text('✨ MUST TRY', style: GoogleFonts.inter(fontSize: s * 7.5, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3)),
+    );
+  }
+
   factory ProductBadge.discount(int percent, {required double s}) {
     return ProductBadge(
       s: s,
@@ -719,7 +749,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
         ? s(100)
         : Responsive.isSmallMobile(context) ? s(95) : (isFood ? 116 : 110) * _uiScale;
 
-    final hasBadges = product.isBestsellerProduct || product.isTrending || product.isFlashDealProduct;
+    final hasBadges = product.isBestsellerProduct || product.isTrending || product.isFlashDealProduct || product.isOrganic || product.isMustTry;
 
     return RepaintBoundary(
       child: GestureDetector(
@@ -878,9 +908,11 @@ class _ImageShowcase extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (product.isBestsellerProduct) ProductBadge.bestseller(s: s)
+                  if (product.isFlashDealProduct) ProductBadge.flashDeal(s: s)
+                  else if (product.isBestsellerProduct) ProductBadge.bestseller(s: s)
                   else if (product.isTrending) ProductBadge.trending(s: s)
-                  else if (product.isFlashDealProduct) ProductBadge.flashDeal(s: s),
+                  else if (product.isOrganic) ProductBadge.organic(s: s)
+                  else if (product.isMustTry) ProductBadge.mustTry(s: s),
                   if (resolvedDiscount > 0) ProductBadge.discount(resolvedDiscount, s: s),
                 ],
               ),

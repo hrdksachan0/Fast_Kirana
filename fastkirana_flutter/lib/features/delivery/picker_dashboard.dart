@@ -16,6 +16,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/live_clock_badge.dart';
 import '../common/order_edit_modal.dart';
 import 'widgets/add_picker_product_modal.dart';
+import '../../core/services/notification_service.dart';
 
 class PickerDashboard extends ConsumerStatefulWidget {
   const PickerDashboard({super.key});
@@ -79,6 +80,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
     _loadDiskPickerOrders();
     _fetchPickerOrders();
     _initSupabaseRealtime();
+    NotificationService().registerDeviceToken(ref.read(dioProvider), role: 'PICKER');
 
     // 30-second calm background refresh (without 1-second full-screen rebuilds)
     _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {

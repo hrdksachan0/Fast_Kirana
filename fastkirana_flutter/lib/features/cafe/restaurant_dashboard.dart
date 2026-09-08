@@ -122,7 +122,6 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
     _loadLocalCachedData();
     _initConnectivityAndOfflineQueue();
     _initOutletDetails();
-    _initNotificationSubscriptions();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -402,6 +401,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       _fetchOrders();
     }
     _initSupabaseRealtime();
+    _initNotificationSubscriptions();
   }
 
   Future<void> _initNotificationSubscriptions() async {
@@ -410,10 +410,10 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       await notif.init();
       await notif.requestPermissions();
       final dio = ref.read(dioProvider);
-      await notif.registerDeviceToken(dio);
 
       // Subscribe to restaurant topics for instant order buzz
       final outletId = _assignedRestaurantId ?? widget.initialRestaurantId;
+      await notif.registerDeviceToken(dio, role: 'RESTAURANT', assignedRestaurantId: outletId);
       if (outletId != null && outletId.isNotEmpty) {
         await notif.subscribeToTopic('restaurant_$outletId');
         await notif.subscribeToTopic('kitchen_$outletId');

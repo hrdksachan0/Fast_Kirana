@@ -533,29 +533,31 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Enter available inventory quantity for this product:',
-              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate500),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              autofocus: true,
-              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900),
-              decoration: InputDecoration(
-                labelText: 'Stock Units',
-                hintText: 'e.g. 50',
-                filled: true,
-                fillColor: AppDesignSystem.slate50,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Enter available inventory quantity for this product:',
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate500),
               ),
-            ),
-          ],
+              const SizedBox(height: 10),
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900),
+                decoration: InputDecoration(
+                  labelText: 'Stock Units',
+                  hintText: 'e.g. 50',
+                  filled: true,
+                  fillColor: AppDesignSystem.slate50,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -760,46 +762,72 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                       Row(
                         children: [
                           if (isRestaurant && outletName != null) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppDesignSystem.statusPending,
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                              child: Text(
-                                outletName,
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 10),
-                                  fontWeight: FontWeight.w800,
-                                  color: AppDesignSystem.amber600,
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppDesignSystem.statusPending,
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
+                                child: Text(
+                                  outletName,
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 10),
+                                    fontWeight: FontWeight.w800,
+                                    color: AppDesignSystem.amber600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ),
                           ] else if (p.category != null) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppDesignSystem.slate100,
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                              child: Text(
-                                p.category!.name,
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 10),
-                                  fontWeight: FontWeight.w700,
-                                  color: AppDesignSystem.slate600,
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppDesignSystem.slate100,
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
+                                child: Text(
+                                  p.category!.name,
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 10),
+                                    fontWeight: FontWeight.w700,
+                                    color: AppDesignSystem.slate600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ),
                           ],
-                          if (p.unit.isNotEmpty) ...[
+                          if (variants.isNotEmpty) ...[
                             const SizedBox(width: 6),
-                            Text(
-                              '(${p.unit})',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 11),
-                                fontWeight: FontWeight.w500,
-                                color: AppDesignSystem.slate500,
+                            Flexible(
+                              child: Text(
+                                '(${variants.length} options, from ₹${variants.first.price.toInt()})',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 11),
+                                  fontWeight: FontWeight.w600,
+                                  color: AppDesignSystem.primary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ] else if (p.unit.isNotEmpty) ...[
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                '(${p.unit})',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 11),
+                                  fontWeight: FontWeight.w500,
+                                  color: AppDesignSystem.slate500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -808,93 +836,115 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                       const SizedBox(height: 6),
 
                       // Price and Quick Interactive Stock Stepper
-                      Row(
-                        children: [
-                          Text(
-                            '₹${p.price.toInt()}',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 14),
-                              fontWeight: FontWeight.w900,
-                              color: AppDesignSystem.slate900,
-                            ),
-                          ),
-                          if (p.mrp > p.price) ...[
-                            const SizedBox(width: 6),
-                            Text(
-                              '₹${p.mrp.toInt()}',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 11),
-                                color: AppDesignSystem.slate400,
-                                decoration: TextDecoration.lineThrough,
-                              ),
-                            ),
-                          ],
-                          const Spacer(),
-                          // Quick [-] [Stock] [+] Stepper
-                          if (!isRestaurant) ...[
-                            Container(
-                              decoration: BoxDecoration(
-                                color: isLowStock
-                                    ? AppDesignSystem.statusPending
-                                    : AppDesignSystem.slate100,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: isLowStock
-                                      ? AppDesignSystem.warning.withValues(alpha: 0.5)
-                                      : AppDesignSystem.slate300,
-                                  width: 1,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // [-] Button
-                                  InkWell(
-                                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
-                                    onTap: () => _updateProductStock(p, currentStock - 1),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                      child: Icon(
-                                        Icons.remove_rounded,
-                                        size: 14,
-                                        color: isLowStock ? AppDesignSystem.amber600 : AppDesignSystem.slate700,
+                      Builder(
+                        builder: (context) {
+                          final effectivePrice = variants.isNotEmpty ? variants.first.price : p.price;
+                          final effectiveMrp = variants.isNotEmpty ? variants.first.mrp : p.mrp;
+
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        '₹${effectivePrice.toInt()}',
+                                        style: GoogleFonts.inter(
+                                          fontSize: Responsive.scaledFontSize(context, 14),
+                                          fontWeight: FontWeight.w900,
+                                          color: AppDesignSystem.slate900,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                  ),
-                                  // Stock Value (Tap to type)
-                                  GestureDetector(
-                                    onTap: () => _promptDirectStockInput(p, currentStock),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      color: Colors.white,
-                                      child: Text(
-                                        '$currentStock',
-                                        style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 11.5),
-                                          fontWeight: FontWeight.w900,
-                                          color: isLowStock ? AppDesignSystem.amber600 : AppDesignSystem.slate900,
+                                    if (effectiveMrp > effectivePrice) ...[
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          '₹${effectiveMrp.toInt()}',
+                                          style: GoogleFonts.inter(
+                                            fontSize: Responsive.scaledFontSize(context, 11),
+                                            color: AppDesignSystem.slate400,
+                                            decoration: TextDecoration.lineThrough,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
-                                    ),
-                                  ),
-                                  // [+] Button
-                                  InkWell(
-                                    borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
-                                    onTap: () => _updateProductStock(p, currentStock + 1),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                      child: Icon(
-                                        Icons.add_rounded,
-                                        size: 14,
-                                        color: isLowStock ? AppDesignSystem.amber600 : AppDesignSystem.slate700,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                    ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
-                        ],
+                              const SizedBox(width: 4),
+
+                              // Quick [-] [Stock] [+] Stepper
+                              if (!isRestaurant) ...[
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: isLowStock
+                                        ? AppDesignSystem.statusPending
+                                        : AppDesignSystem.slate100,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isLowStock
+                                          ? AppDesignSystem.warning.withValues(alpha: 0.5)
+                                          : AppDesignSystem.slate300,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // [-] Button
+                                      InkWell(
+                                        borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
+                                        onTap: () => _updateProductStock(p, currentStock - 1),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                          child: Icon(
+                                            Icons.remove_rounded,
+                                            size: 14,
+                                            color: isLowStock ? AppDesignSystem.amber600 : AppDesignSystem.slate700,
+                                          ),
+                                        ),
+                                      ),
+                                      // Stock Value (Tap to type)
+                                      GestureDetector(
+                                        onTap: () => _promptDirectStockInput(p, currentStock),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          color: Colors.white,
+                                          child: Text(
+                                            '$currentStock',
+                                            style: GoogleFonts.inter(
+                                              fontSize: Responsive.scaledFontSize(context, 11.5),
+                                              fontWeight: FontWeight.w900,
+                                              color: isLowStock ? AppDesignSystem.amber600 : AppDesignSystem.slate900,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      // [+] Button
+                                      InkWell(
+                                        borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
+                                        onTap: () => _updateProductStock(p, currentStock + 1),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                          child: Icon(
+                                            Icons.add_rounded,
+                                            size: 14,
+                                            color: isLowStock ? AppDesignSystem.amber600 : AppDesignSystem.slate700,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -1072,7 +1122,11 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
   late TextEditingController _priceController;
   late TextEditingController _mrpController;
   late TextEditingController _stockController;
+  late TextEditingController _tagsController;
   late bool _isAvailable;
+  late bool _isFlashDeal;
+  late bool _isBestSeller;
+  late bool _isTopPick;
   bool _isSaving = false;
 
   final List<_VariantEditItem> _variantItems = [];
@@ -1088,7 +1142,11 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
     _priceController = TextEditingController(text: p.price.toInt().toString());
     _mrpController = TextEditingController(text: p.mrp.toInt().toString());
     _stockController = TextEditingController(text: p.stock.toString());
+    _tagsController = TextEditingController(text: p.tags.join(', '));
     _isAvailable = p.isAvailable;
+    _isFlashDeal = p.isFlashDeal;
+    _isBestSeller = p.isBestSeller;
+    _isTopPick = p.isTopPick;
 
     // Initialize existing variants
     for (final v in p.parsedVariants) {
@@ -1108,6 +1166,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
     _priceController.dispose();
     _mrpController.dispose();
     _stockController.dispose();
+    _tagsController.dispose();
     for (final item in _variantItems) {
       item.dispose();
     }
@@ -1147,6 +1206,11 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
     final mrp = double.tryParse(_mrpController.text.trim()) ?? price;
     final stock = int.tryParse(_stockController.text.trim()) ?? 0;
     final unit = _unitController.text.trim().isNotEmpty ? _unitController.text.trim() : '1 unit';
+    final tagsList = _tagsController.text
+        .split(',')
+        .map((t) => t.trim().toLowerCase())
+        .where((t) => t.isNotEmpty)
+        .toList();
 
     final variantsJson = _variantItems.map((v) => v.toJson()).toList();
 
@@ -1161,6 +1225,10 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
         'mrp': mrp > price ? mrp : price,
         'stock': stock,
         'isAvailable': _isAvailable,
+        'is_flash_deal': _isFlashDeal,
+        'is_best_seller': _isBestSeller,
+        'is_top_pick': _isTopPick,
+        'tags': tagsList,
         'variants': variantsJson.isNotEmpty ? variantsJson : null,
       };
 
@@ -1403,9 +1471,51 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                     ],
                   ),
 
+                  const SizedBox(height: 20),
+
+                  // 3. Tags & Badges Section
+                  _buildSectionTitle('TAGS & PROMOTIONAL BADGES'),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppDesignSystem.slate50,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppDesignSystem.slate200),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildTagSwitchRow(
+                          '⚡ Flash Deal (Curated Deals Tab)',
+                          _isFlashDeal,
+                          (val) => setState(() => _isFlashDeal = val),
+                        ),
+                        const Divider(height: 12, color: AppDesignSystem.slate200),
+                        _buildTagSwitchRow(
+                          '🔥 Best Seller (Top Badges & Tab)',
+                          _isBestSeller,
+                          (val) => setState(() => _isBestSeller = val),
+                        ),
+                        const Divider(height: 12, color: AppDesignSystem.slate200),
+                        _buildTagSwitchRow(
+                          '⭐ Top Pick / Trending (Trending Tab)',
+                          _isTopPick,
+                          (val) => setState(() => _isTopPick = val),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTextField(
+                    label: 'Custom Tags (Comma Separated)',
+                    controller: _tagsController,
+                    hint: 'e.g. organic, pure, must try, snacks, healthy',
+                    icon: Icons.sell_rounded,
+                  ),
+
                   const SizedBox(height: 22),
 
-                  // 3. Variants Section
+                  // 4. Variants Section
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -1702,6 +1812,33 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
               borderSide: const BorderSide(color: AppDesignSystem.slate300),
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTagSwitchRow(String label, bool value, ValueChanged<bool> onChanged) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: Responsive.scaledFontSize(context, 12),
+              fontWeight: FontWeight.w700,
+              color: AppDesignSystem.slate800,
+            ),
+          ),
+        ),
+        Switch(
+          value: value,
+          activeColor: primaryRed,
+          onChanged: (v) {
+            HapticFeedback.lightImpact();
+            onChanged(v);
+          },
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
       ],
     );
