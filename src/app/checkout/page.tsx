@@ -985,6 +985,32 @@ export default function CheckoutPage() {
 
       const rzp = new (window as any).Razorpay(options)
       rzp.open()
+
+      // Real-time auto-polling loop: automatically detects payment completion (e.g. from UPI apps)
+      let pollCount = 0
+      const pollTimer = setInterval(async () => {
+        pollCount++
+        if (pollCount > 60 || paymentSuccess) {
+          clearInterval(pollTimer)
+          return
+        }
+        try {
+          const syncRes = await fetch('/api/payment/razorpay/sync-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId: orderData.id }),
+          })
+          const syncData = await syncRes.json()
+          if (syncRes.ok && syncData.paymentStatus === 'PAID') {
+            paymentSuccess = true
+            clearInterval(pollTimer)
+            clearCart()
+            triggerHaptic('success')
+            toast.success('🎉 Payment Verified Automatically!')
+            window.location.href = `/order/${orderData.id}/success`
+          }
+        } catch (_) {}
+      }, 2500)
     } catch (err) {
       toast.error('An unexpected error occurred during Razorpay checkout.')
       setIsPlacingOrder(false)

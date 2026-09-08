@@ -98,6 +98,7 @@ import { AdminSortManager } from './admin-sort-manager'
 import { getLast10Digits } from '@/lib/phone'
 
 interface AdminDashboardProps {
+  initialStoreId?: string | null
   serverUser?: {
     id?: string
     name?: string | null

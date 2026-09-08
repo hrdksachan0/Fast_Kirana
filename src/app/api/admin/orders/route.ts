@@ -244,6 +244,63 @@ export async function GET(request: Request) {
     const todayNetSales = todayDeliveredSalesAgg._sum?.total || 0
     const todayOrdersCount = todaySalesAgg._count?.id || 0
 
+    // Background auto-sync: Automatically check Razorpay for recent unpaid orders (last 2 hours)
+    const recentUnpaid = ordersRaw.filter((o: any) => 
+      o.paymentStatus !== 'PAID' && (Date.now() - new Date(o.createdAt).getTime()) < 2 * 60 * 60 * 1000
+    )
+
+    if (recentUnpaid.length > 0) {
+      try {
+        const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_TRvyzlqHiRGWbr'
+        const keySecret = process.env.RAZORPAY_KEY_SECRET || '4C54O0N5q841qdmQ8N1MTTiU'
+        const authHeader = 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64')
+        const rzpRes = await fetch('https://api.razorpay.com/v1/payments?count=50', {
+          headers: { Authorization: authHeader },
+          cache: 'no-store'
+        })
+        if (rzpRes.ok) {
+          const rzpData = await rzpRes.json()
+          const items = rzpData.items || []
+
+          for (const unp of recentUnpaid) {
+            const orderTotalPaise = Math.round(Number(unp.total) * 100)
+            const targetReadableId = String(unp.readableId || '')
+            const matched = items.find((p: any) => {
+              if (p.status !== 'captured' && p.status !== 'authorized') return false
+              if (p.notes?.orderId === unp.id) return true
+              if (targetReadableId && p.notes?.readableId === targetReadableId) return true
+              if (targetReadableId && p.description && p.description.includes(targetReadableId)) return true
+              if (p.amount === orderTotalPaise) {
+                const pTime = p.created_at * 1000
+                const oTime = new Date(unp.createdAt).getTime()
+                if (Math.abs(pTime - oTime) < 24 * 60 * 60 * 1000) return true
+              }
+              return false
+            })
+
+            if (matched) {
+              unp.paymentStatus = 'PAID'
+              unp.paymentMethod = 'UPI'
+              if (unp.status === 'PENDING' || unp.status === 'CANCELLED') {
+                unp.status = 'CONFIRMED'
+              }
+              // Update in DB asynchronously
+              prisma.$executeRaw`
+                UPDATE orders 
+                SET "paymentStatus" = 'PAID'::"PaymentStatus",
+                    "paymentMethod" = 'UPI'::"PaymentMethod",
+                    status = CASE WHEN status IN ('PENDING', 'CANCELLED') THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
+                    "updatedAt" = NOW()
+                WHERE id = ${unp.id}
+              `.catch(() => {})
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Background auto-sync Razorpay notice in admin orders API:', e)
+      }
+    }
+
     const orders = ordersRaw.map((o) => {
       const user = allUsers.find(u => u.id === o.userId) || { name: 'Customer', email: '', phone: '' }
       const address = allAddresses.find(a => a.id === o.addressId) || null
