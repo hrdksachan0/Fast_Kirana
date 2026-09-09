@@ -15,6 +15,7 @@ export async function GET(request: Request) {
   const search = searchParams.get('search')
   const role = searchParams.get('role')
   const status = searchParams.get('status')
+  const storeId = searchParams.get('storeId') || (session?.user as any)?.assignedStoreId || null
   
   const skip = (page - 1) * limit
 
@@ -24,24 +25,66 @@ export async function GET(request: Request) {
         email: { startsWith: 'guest-' }
       }
     }
+    const andClauses: any[] = []
 
     if (role && role !== 'ALL') {
-      where.role = role
+      andClauses.push({ role })
     }
 
     if (status === 'BLOCKED') {
-      where.isBlocked = true
+      andClauses.push({ isBlocked: true })
     } else if (status === 'ACTIVE') {
-      where.isBlocked = false
+      andClauses.push({ isBlocked: false })
     }
 
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { phone: { contains: search, mode: 'insensitive' } },
-        { blockReason: { contains: search, mode: 'insensitive' } },
-      ]
+      andClauses.push({
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+          { phone: { contains: search, mode: 'insensitive' } },
+          { blockReason: { contains: search, mode: 'insensitive' } },
+        ]
+      })
+    }
+
+    if (storeId && storeId !== 'all') {
+      if (storeId === 'hub-224122') {
+        andClauses.push({
+          OR: [
+            { assignedStoreId: 'hub-224122' },
+            { orders: { some: { storeId: 'hub-224122' } } },
+            { addresses: { some: { pincode: '224122' } } },
+            { addresses: { some: { city: { contains: 'Akbarpur', mode: 'insensitive' } } } }
+          ]
+        })
+      } else if (storeId === 'hub-209206' || storeId === 'default-Ghatampur Market') {
+        andClauses.push({
+          OR: [
+            { assignedStoreId: 'hub-209206' },
+            { orders: { some: { OR: [{ storeId: 'hub-209206' }, { storeId: null }] } } },
+            { addresses: { some: { pincode: '209206' } } },
+            { addresses: { some: { city: { contains: 'Ghatampur', mode: 'insensitive' } } } },
+            {
+              AND: [
+                { assignedStoreId: null },
+                { orders: { none: { storeId: { notIn: ['hub-209206', null] } } } }
+              ]
+            }
+          ]
+        })
+      } else {
+        andClauses.push({
+          OR: [
+            { assignedStoreId: storeId },
+            { orders: { some: { storeId } } }
+          ]
+        })
+      }
+    }
+
+    if (andClauses.length > 0) {
+      where.AND = andClauses
     }
 
     const [users, total] = await Promise.all([

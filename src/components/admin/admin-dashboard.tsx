@@ -148,6 +148,45 @@ export function AdminDashboard({
   const activeUser = session?.user || serverUser
   const sessionUserId = (activeUser as any)?.id || ''
   const sessionUserRole = activeUser?.role || ''
+  const sessionUserEmail = ((activeUser as any)?.email || '').toLowerCase().trim()
+  const sessionUserPhone = (activeUser as any)?.phone || ''
+  const sessionAssignedStoreId = (activeUser as any)?.assignedStoreId || null
+  const phoneDigits = sessionUserPhone.replace(/\D/g, '').slice(-10)
+
+  const isSuperAdmin = 
+    phoneDigits === '9170942500' ||
+    sessionUserEmail === 'superadmin@fastkirana.com' ||
+    sessionUserEmail.startsWith('superadmin') ||
+    (sessionUserRole === 'ADMIN' && !sessionAssignedStoreId)
+
+  const searchParams = useSearchParams()
+  const urlStoreId = searchParams?.get('storeId') || null
+  const effectiveInitialHub = sessionAssignedStoreId || initialStoreId || urlStoreId || 'hub-209206'
+
+  const [restaurantsList, setRestaurantsList] = useState<any[]>([])
+  const [storesList, setStoresList] = useState<any[]>([])
+  const [selectedHubId, setSelectedHubId] = useState<string>(() => effectiveInitialHub)
+  const [isStoreHubsModalOpen, setIsStoreHubsModalOpen] = useState(false)
+
+  // Keep selectedHubId synchronized with URL or assignedStoreId
+  useEffect(() => {
+    if (sessionAssignedStoreId) {
+      setSelectedHubId(sessionAssignedStoreId)
+    } else if (urlStoreId && urlStoreId !== selectedHubId) {
+      setSelectedHubId(urlStoreId)
+    } else if (initialStoreId && initialStoreId !== selectedHubId && !urlStoreId) {
+      setSelectedHubId(initialStoreId)
+    }
+  }, [sessionAssignedStoreId, urlStoreId, initialStoreId])
+
+  const handleSelectHub = (hubId: string) => {
+    setSelectedHubId(hubId)
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      url.searchParams.set('storeId', hubId)
+      window.history.replaceState({}, '', url.toString())
+    }
+  }
 
   const [activeTab, setActiveTab] = useState<TabType>('orders')
   const [activeHub, setActiveHub] = useState<'orders_hub' | 'grocery' | 'food' | 'insights' | 'people' | 'marketing'>('orders_hub')
@@ -434,7 +473,8 @@ export function AdminDashboard({
   useEffect(() => {
     const fetchLiveOrdersList = async () => {
       try {
-        const res = await fetch('/api/orders?all=true')
+        const storeQuery = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
+        const res = await fetch(`/api/orders?all=true${storeQuery}`)
         if (res.ok) {
           const data = await res.json()
           setLiveOrders(data)
@@ -551,7 +591,7 @@ export function AdminDashboard({
       if (railwayWs) railwayWs.close()
       if (updateTimeout) clearTimeout(updateTimeout)
     }
-  }, [isChimeMuted])
+  }, [isChimeMuted, selectedHubId])
 
   // Warning chime manager
   useEffect(() => {
@@ -650,47 +690,8 @@ export function AdminDashboard({
       setIsLoadingOrderItems(false)
     }
   }, [])
-  const sessionUserEmail = ((activeUser as any)?.email || '').toLowerCase().trim()
-  const sessionUserPhone = (activeUser as any)?.phone || ''
-  const sessionAssignedStoreId = (activeUser as any)?.assignedStoreId || null
-  const phoneDigits = sessionUserPhone.replace(/\D/g, '').slice(-10)
-
-  const isSuperAdmin = 
-    phoneDigits === '9170942500' ||
-    sessionUserEmail === 'superadmin@fastkirana.com' ||
-    sessionUserEmail.startsWith('superadmin') ||
-    (sessionUserRole === 'ADMIN' && !sessionAssignedStoreId)
-
-  const searchParams = useSearchParams()
-  const urlStoreId = searchParams?.get('storeId') || null
-  const effectiveInitialHub = sessionAssignedStoreId || initialStoreId || urlStoreId || 'hub-209206'
-
   const [editingProduct, setEditingProduct] = useState<any | null>(null)
   const [savingProductId, setSavingProductId] = useState<string | null>(null)
-  const [restaurantsList, setRestaurantsList] = useState<any[]>([])
-  const [storesList, setStoresList] = useState<any[]>([])
-  const [selectedHubId, setSelectedHubId] = useState<string>(() => effectiveInitialHub)
-  const [isStoreHubsModalOpen, setIsStoreHubsModalOpen] = useState(false)
-
-  // Keep selectedHubId synchronized with URL or assignedStoreId
-  useEffect(() => {
-    if (sessionAssignedStoreId) {
-      setSelectedHubId(sessionAssignedStoreId)
-    } else if (urlStoreId && urlStoreId !== selectedHubId) {
-      setSelectedHubId(urlStoreId)
-    } else if (initialStoreId && initialStoreId !== selectedHubId && !urlStoreId) {
-      setSelectedHubId(initialStoreId)
-    }
-  }, [sessionAssignedStoreId, urlStoreId, initialStoreId])
-
-  const handleSelectHub = (hubId: string) => {
-    setSelectedHubId(hubId)
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href)
-      url.searchParams.set('storeId', hubId)
-      window.history.replaceState({}, '', url.toString())
-    }
-  }
 
   const fetchStoresAndRestaurants = useCallback(() => {
     fetch('/api/restaurants?all=true')
@@ -989,15 +990,15 @@ export function AdminDashboard({
   // Pagination page resets
   useEffect(() => {
     setOrderPage(1)
-  }, [orderStatusFilter, orderSearchQuery])
+  }, [orderStatusFilter, orderSearchQuery, selectedHubId])
 
   useEffect(() => {
     setProductPage(1)
-  }, [selectedCategoryFilter, searchQuery, selectedTypeFilter])
+  }, [selectedCategoryFilter, searchQuery, selectedTypeFilter, selectedHubId])
 
   useEffect(() => {
     setUserPage(1)
-  }, [userSearch, userRoleFilter, userStatusFilter])
+  }, [userSearch, userRoleFilter, userStatusFilter, selectedHubId])
 
   // Fetch paginated/filtered orders with 5-second live auto-refresh
   useEffect(() => {
@@ -1056,25 +1057,26 @@ export function AdminDashboard({
     }
   }, [])
 
-  // Fetch active carts count once on mount for the badge count
+  // Fetch active carts count on mount or store change for the badge count
   useEffect(() => {
     let active = true
     const fetchCartsCount = async () => {
       try {
-        const res = await fetch(`/api/admin/live-carts?t=${Date.now()}`)
+        const storeQuery = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
+        const res = await fetch(`/api/admin/live-carts?t=${Date.now()}${storeQuery}`)
         if (res.ok && active) {
           const data = await res.json()
           setActiveCartsCount(data.count || 0)
         }
       } catch (err) {
-        console.error('Failed to fetch carts count on mount:', err)
+        console.error('Failed to fetch carts count:', err)
       }
     }
     fetchCartsCount()
     return () => { active = false }
-  }, [])
+  }, [selectedHubId])
 
-  // Poll active carts detail every 30 seconds only if activeTab is 'liveops'
+  // Poll active carts detail every 3 seconds only if activeTab is 'liveops'
   useEffect(() => {
     let active = true
     let intervalId: any = null
@@ -1083,7 +1085,8 @@ export function AdminDashboard({
       if (activeTab !== 'liveops') return
       setIsLoadingCarts(true)
       try {
-        const res = await fetch(`/api/admin/live-carts?t=${Date.now()}`)
+        const storeQuery = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
+        const res = await fetch(`/api/admin/live-carts?t=${Date.now()}${storeQuery}`)
         if (res.ok && active) {
           const data = await res.json()
           setActiveCarts(data.carts || [])
@@ -1105,7 +1108,7 @@ export function AdminDashboard({
       active = false
       if (intervalId) clearInterval(intervalId)
     }
-  }, [activeTab, cartsRefreshKey])
+  }, [activeTab, cartsRefreshKey, selectedHubId])
 
   // Fetch paginated/filtered products
   useEffect(() => {
@@ -1113,7 +1116,8 @@ export function AdminDashboard({
     const fetchProducts = async () => {
       setIsLoadingProducts(true)
       try {
-        const res = await fetch(`/api/admin/products?page=${productPage}&limit=10&categoryId=${selectedCategoryFilter}&search=${encodeURIComponent(searchQuery)}&type=${selectedTypeFilter}&t=${Date.now()}`)
+        const storeQuery = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
+        const res = await fetch(`/api/admin/products?page=${productPage}&limit=10&categoryId=${selectedCategoryFilter}&search=${encodeURIComponent(searchQuery)}&type=${selectedTypeFilter}${storeQuery}&t=${Date.now()}`)
         if (res.ok && active) {
           const data = await res.json()
           setProducts(data.products)
@@ -1127,7 +1131,7 @@ export function AdminDashboard({
     }
     fetchProducts()
     return () => { active = false }
-  }, [productPage, selectedCategoryFilter, searchQuery, selectedTypeFilter])
+  }, [productPage, selectedCategoryFilter, searchQuery, selectedTypeFilter, selectedHubId])
 
   // Fetch paginated/filtered users
   useEffect(() => {
@@ -1135,7 +1139,8 @@ export function AdminDashboard({
     const fetchUsers = async () => {
       setIsLoadingUsers(true)
       try {
-        const res = await fetch(`/api/admin/users?page=${userPage}&limit=10&search=${encodeURIComponent(userSearch)}&role=${userRoleFilter}&status=${userStatusFilter}&t=${Date.now()}`)
+        const storeQuery = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
+        const res = await fetch(`/api/admin/users?page=${userPage}&limit=10&search=${encodeURIComponent(userSearch)}&role=${userRoleFilter}&status=${userStatusFilter}${storeQuery}&t=${Date.now()}`)
         if (res.ok && active) {
           const data = await res.json()
           setUsers(data.users)
@@ -1149,7 +1154,7 @@ export function AdminDashboard({
     }
     fetchUsers()
     return () => { active = false }
-  }, [userPage, userSearch, userRoleFilter, userStatusFilter])
+  }, [userPage, userSearch, userRoleFilter, userStatusFilter, selectedHubId])
 
   const handleToggleBlock = async (userToBlock: any, isBlocked: boolean, reason?: string) => {
     setIsUpdatingBlockStatus(true)
@@ -1964,6 +1969,7 @@ export function AdminDashboard({
           isBestSeller: productEditForm.isBestSeller,
           sortOrder: parseInt(productEditForm.sortOrder) || 0,
           barcode: productEditForm.barcode || null,
+          storeId: selectedHubId && selectedHubId !== 'all' ? selectedHubId : undefined,
           variants: sortedEditVariants.length > 0 ? sortedEditVariants.map(v => ({
             name: v.name,
             price: parseFloat(v.price) || 0,
@@ -2068,6 +2074,7 @@ export function AdminDashboard({
           restaurantId: newProduct.restaurantId || null,
           barcode: newProduct.barcode || null,
           location: newProduct.location || null,
+          storeId: selectedHubId && selectedHubId !== 'all' ? selectedHubId : undefined,
           categoryId: resolvedCategoryId || newProduct.categoryId,
           mrp: lowestNewMrp,
           price: lowestNewPrice,

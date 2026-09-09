@@ -116,19 +116,58 @@ export default async function AdminPage(props: {
         _sum: { total: true },
       }),
       prisma.user.count({
-        where: {
-          NOT: {
-            email: { startsWith: 'guest-' }
-          }
-        }
+        where: (initialStoreId && initialStoreId !== 'all'
+          ? (initialStoreId === 'hub-224122'
+              ? {
+                  NOT: { email: { startsWith: 'guest-' } },
+                  OR: [
+                    { assignedStoreId: 'hub-224122' },
+                    { orders: { some: { storeId: 'hub-224122' } } },
+                    { addresses: { some: { pincode: '224122' } } },
+                    { addresses: { some: { city: { contains: 'Akbarpur', mode: 'insensitive' } } } }
+                  ]
+                }
+              : (initialStoreId === 'hub-209206' || initialStoreId === 'default-Ghatampur Market')
+              ? {
+                  NOT: { email: { startsWith: 'guest-' } },
+                  OR: [
+                    { assignedStoreId: 'hub-209206' },
+                    { orders: { some: { OR: [{ storeId: 'hub-209206' }, { storeId: null }] } } },
+                    { addresses: { some: { pincode: '209206' } } },
+                    { addresses: { some: { city: { contains: 'Ghatampur', mode: 'insensitive' } } } },
+                    {
+                      AND: [
+                        { assignedStoreId: null },
+                        { orders: { none: { storeId: 'hub-224122' } } }
+                      ]
+                    }
+                  ]
+                }
+              : {
+                  NOT: { email: { startsWith: 'guest-' } },
+                  OR: [
+                    { assignedStoreId: initialStoreId },
+                    { orders: { some: { storeId: initialStoreId } } }
+                  ]
+                })
+          : {
+              NOT: { email: { startsWith: 'guest-' } }
+            }) as any
       }),
-      prisma.product.count({
-        where: {
-          stock: { lt: 15 },
-          isAvailable: true,
-          restaurantId: null,
-        },
-      }),
+      initialStoreId && initialStoreId !== 'all'
+        ? prisma.storeInventory.count({
+            where: {
+              storeId: initialStoreId,
+              stock: { lt: 15 }
+            }
+          })
+        : prisma.product.count({
+            where: {
+              stock: { lt: 15 },
+              isAvailable: true,
+              restaurantId: null,
+            },
+          }),
       initialStoreId
         ? prisma.$queryRaw`
             SELECT "shopName", "restaurantId", "orderType"::text as "orderType", status::text as status,

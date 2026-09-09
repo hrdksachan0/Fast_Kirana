@@ -1459,26 +1459,63 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const all = searchParams.get('all') === 'true'
+    const storeId = searchParams.get('storeId') || (session?.user as any)?.assignedStoreId || null
     const isStaff = session?.user?.role === 'ADMIN' || session?.user?.role === 'CHEF' || session?.user?.role === 'PICKER' || session?.user?.role === 'DELIVERY'
 
     let orders: any[] = []
 
     if (isStaff && all) {
-      // Staff queries all orders with associated customer details
-      orders = await prisma.$queryRaw`
-        SELECT o.id, o."userId", o."addressId", o."readableId",
-               o.status::text as status,
-               o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
-               o."paymentMethod"::text as "paymentMethod",
-               o."paymentStatus"::text as "paymentStatus",
-               o."estimatedDelivery", o."createdAt", o."updatedAt",
-               o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone", o."restaurantId",
-               u.name as "userName", u.email as "userEmail", u.phone as "userPhone"
-        FROM orders o
-        LEFT JOIN users u ON o."userId" = u.id
-        ORDER BY o."createdAt" DESC
-        LIMIT 1000
-      `
+      // Staff queries orders with associated customer details, filtered by store
+      if (storeId && storeId !== 'all') {
+        if (storeId === 'hub-209206' || storeId === 'default-Ghatampur Market') {
+          orders = await prisma.$queryRaw`
+            SELECT o.id, o."userId", o."addressId", o."readableId",
+                   o.status::text as status,
+                   o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+                   o."paymentMethod"::text as "paymentMethod",
+                   o."paymentStatus"::text as "paymentStatus",
+                   o."estimatedDelivery", o."createdAt", o."updatedAt",
+                   o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone", o."restaurantId", o."storeId",
+                   u.name as "userName", u.email as "userEmail", u.phone as "userPhone"
+            FROM orders o
+            LEFT JOIN users u ON o."userId" = u.id
+            WHERE o."storeId" = 'hub-209206' OR o."storeId" = 'default-Ghatampur Market' OR o."storeId" IS NULL
+            ORDER BY o."createdAt" DESC
+            LIMIT 1000
+          `
+        } else {
+          orders = await prisma.$queryRaw`
+            SELECT o.id, o."userId", o."addressId", o."readableId",
+                   o.status::text as status,
+                   o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+                   o."paymentMethod"::text as "paymentMethod",
+                   o."paymentStatus"::text as "paymentStatus",
+                   o."estimatedDelivery", o."createdAt", o."updatedAt",
+                   o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone", o."restaurantId", o."storeId",
+                   u.name as "userName", u.email as "userEmail", u.phone as "userPhone"
+            FROM orders o
+            LEFT JOIN users u ON o."userId" = u.id
+            WHERE o."storeId" = ${storeId}
+            ORDER BY o."createdAt" DESC
+            LIMIT 1000
+          `
+        }
+      } else {
+        orders = await prisma.$queryRaw`
+          SELECT o.id, o."userId", o."addressId", o."readableId",
+                 o.status::text as status,
+                 o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+                 o."paymentMethod"::text as "paymentMethod",
+                 o."paymentStatus"::text as "paymentStatus",
+                 o."estimatedDelivery", o."createdAt", o."updatedAt",
+                 o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone", o."restaurantId", o."storeId",
+                 u.name as "userName", u.email as "userEmail", u.phone as "userPhone"
+          FROM orders o
+          LEFT JOIN users u ON o."userId" = u.id
+          ORDER BY o."createdAt" DESC
+          LIMIT 1000
+        `
+      }
     } else {
       // Normal user queries their orders by userId, email, or phone match
       const sessionEmail = session?.user?.email ? session.user.email.toLowerCase().trim() : ''

@@ -236,6 +236,33 @@ export async function PATCH(
       },
     })
 
+    // If storeId is provided, update localized stock in store_inventories
+    const targetStoreId = body.storeId || (session?.user as any)?.assignedStoreId || null
+    if (targetStoreId && targetStoreId !== 'all' && stock !== undefined) {
+      const parsedLocalStock = parseInt(stock)
+      const val = isNaN(parsedLocalStock) ? 0 : parsedLocalStock
+      try {
+        await prisma.storeInventory.upsert({
+          where: {
+            productId_storeId: {
+              productId: product.id,
+              storeId: targetStoreId,
+            }
+          },
+          create: {
+            productId: product.id,
+            storeId: targetStoreId,
+            stock: val,
+          },
+          update: {
+            stock: val,
+          }
+        })
+      } catch (invErr) {
+        console.warn('Failed to upsert store_inventories in product PATCH:', invErr)
+      }
+    }
+
     // Invalidate storefront, restaurant, and search caches
     revalidateStorefront(updatedProduct.category?.slug, updatedProduct.restaurant?.slug)
     await invalidateProductCache()

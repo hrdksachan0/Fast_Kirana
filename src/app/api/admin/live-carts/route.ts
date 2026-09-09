@@ -9,16 +9,56 @@ export async function GET(request: Request) {
   const session = adminResult.session
 
   try {
+    const { searchParams } = new URL(request.url)
+    const storeId = searchParams.get('storeId') || (session?.user as any)?.assignedStoreId || null
+
+    const whereClause: any = {
+      items: {
+        some: {} // has at least one item
+      },
+      updatedAt: {
+        gte: new Date(Date.now() - 12 * 60 * 60 * 1000) // past 12 hours only
+      }
+    }
+
+    if (storeId && storeId !== 'all') {
+      if (storeId === 'hub-224122') {
+        whereClause.user = {
+          OR: [
+            { assignedStoreId: 'hub-224122' },
+            { orders: { some: { storeId: 'hub-224122' } } },
+            { addresses: { some: { pincode: '224122' } } },
+            { addresses: { some: { city: { contains: 'Akbarpur', mode: 'insensitive' } } } }
+          ]
+        }
+      } else if (storeId === 'hub-209206' || storeId === 'default-Ghatampur Market') {
+        whereClause.user = {
+          OR: [
+            { assignedStoreId: 'hub-209206' },
+            { orders: { some: { OR: [{ storeId: 'hub-209206' }, { storeId: null }] } } },
+            { addresses: { some: { pincode: '209206' } } },
+            { addresses: { some: { city: { contains: 'Ghatampur', mode: 'insensitive' } } } },
+            {
+              AND: [
+                { assignedStoreId: null },
+                { orders: { none: { storeId: { notIn: ['hub-209206', null] } } } }
+              ]
+            }
+          ]
+        }
+      } else {
+        whereClause.user = {
+          OR: [
+            { assignedStoreId: storeId },
+            { orders: { some: { storeId } } }
+          ]
+        }
+      }
+    }
+
     // Fetch active carts that have at least one item, updated in the past 12 hours
     const carts = await prisma.cart.findMany({
-      where: {
-        items: {
-          some: {} // has at least one item
-        },
-        updatedAt: {
-          gte: new Date(Date.now() - 12 * 60 * 60 * 1000) // past 12 hours only
-        }
-      },
+      where: whereClause,
       include: {
         user: {
           select: {

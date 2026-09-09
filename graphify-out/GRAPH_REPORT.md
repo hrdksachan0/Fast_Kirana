@@ -1,7 +1,7 @@
 # Graph Report - Fastkirana  (2026-09-09)
 
 ## Corpus Check
-- 789 files · ~3,520,600 words
+- 789 files · ~3,521,723 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `fdcf9107`
+- Built from commit: `16a35182`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -39,7 +39,7 @@
 - order.dart
 - product.dart
 - utils.ts
-- address_selector_sheet.dart
+- authProvider
 - checkout/page.tsx
 - fastapi-backend/routers/cart.py
 - routers/auth.py
@@ -56,7 +56,7 @@
 - FastKirana Production Deployment Guide
 - dependencies
 - delivery_dashboard.dart
-- authProvider
+- categoriesProvider
 - cart.dart
 - voice_search_sheet.dart
 - admin-csv-import.tsx
@@ -328,7 +328,7 @@
 - Operate mode depth (and Read notes)
 - auth/splash_screen.dart
 - subscription_screen.dart
-- firebase-admin.ts
+- address_selector_sheet.dart
 - restaurant-orders-console.tsx
 - app/routers/banners.py
 - bolder.md
@@ -380,7 +380,7 @@
 - media-library-modal.tsx
 - framer-motion
 - review-edit-modal.tsx
-- class-variance-authority
+- @auth/prisma-adapter
 - alerts-tab.tsx
 - stats-cards.tsx
 - store-hubs-manager.tsx
@@ -429,7 +429,7 @@ Nodes (64): GET(), PATCH(), POST(), PUT(), DELETE(), GET(), POST(), PUT() (+56 m
 
 ### Community 3 - "auth"
 Cohesion: 0.03
-Nodes (70): AccountPage(), dynamic, revalidate, WishlistPage(), AdminPage(), revalidate, EditRestaurantPage(), NewRestaurantPage() (+62 more)
+Nodes (73): AccountPage(), dynamic, revalidate, WishlistPage(), AdminPage(), revalidate, EditRestaurantPage(), NewRestaurantPage() (+65 more)
 
 ### Community 4 - "admin_products.dart"
 Cohesion: 0.04
@@ -437,7 +437,7 @@ Nodes (45): _addVariant, _buildCategoryChip, _buildGroceryCategoryChips, _buildM
 
 ### Community 5 - "cn"
 Cohesion: 0.05
-Nodes (54): RootLayout(), AccountDashboardProps, WishlistClient(), WishlistItem, RestaurantManager(), RestaurantManagerProps, SlideToOrder(), SlideToOrderProps (+46 more)
+Nodes (51): RootLayout(), AccountDashboard(), AccountDashboardProps, WishlistClient(), WishlistItem, SlideToOrder(), SlideToOrderProps, OrderConfirmationStatus() (+43 more)
 
 ### Community 6 - "cart_screen.dart"
 Cohesion: 0.03
@@ -512,12 +512,12 @@ Cohesion: 0.04
 Nodes (49): availableEndTime, availableStartTime, bannerUrl, barcode, category, categoryId, CategoryInfo, costPrice (+41 more)
 
 ### Community 23 - "utils.ts"
-Cohesion: 0.03
-Nodes (77): CheckoutCouponInput(), CouponInputProps, CheckoutDeliverySelector(), DeliverySelectorProps, ActiveDeliveryCard(), ActiveDeliveryCardProps, itemVariants, DeliveryHistoryView() (+69 more)
+Cohesion: 0.04
+Nodes (75): CheckoutCouponInput(), CouponInputProps, CheckoutDeliverySelector(), DeliverySelectorProps, ActiveDeliveryCard(), ActiveDeliveryCardProps, itemVariants, CodPaymentModal() (+67 more)
 
-### Community 24 - "address_selector_sheet.dart"
-Cohesion: 0.07
-Nodes (43): Address?, _Address, _loadSettings, _buildBottomCheckoutBar, build, _buildScrollableAddressSection, CheckoutScreen, _CheckoutScreenState (+35 more)
+### Community 24 - "authProvider"
+Cohesion: 0.08
+Nodes (40): _handleLogout, _loadSettings, _handleVerifyOtp, build, _initOutletDetails, _showKOTPrintModal, _buildBottomCheckoutBar, build (+32 more)
 
 ### Community 25 - "checkout/page.tsx"
 Cohesion: 0.06
@@ -577,15 +577,15 @@ Nodes (26): 1. Generate Release Keystore, 2. Configure Signing, 3. Verify Fireba
 
 ### Community 39 - "dependencies"
 Cohesion: 0.07
-Nodes (27): @auth/prisma-adapter, @base-ui/react, bcryptjs, clsx, next, dependencies, @auth/prisma-adapter, @base-ui/react (+19 more)
+Nodes (27): @base-ui/react, bcryptjs, class-variance-authority, clsx, next, dependencies, @base-ui/react, bcryptjs (+19 more)
 
 ### Community 40 - "delivery_dashboard.dart"
 Cohesion: 0.02
 Nodes (88): ../../core/services/rider_location_service.dart, _activeTab, _assignedStoreId, _assignedStoreName, _audioPlayer, _autoRefreshTimer, bgMain, borderCol (+80 more)
 
-### Community 41 - "authProvider"
-Cohesion: 0.10
-Nodes (23): _handleLogout, _handleVerifyOtp, OtpScreen, _OtpScreenState, build, _initOutletDetails, RestaurantDashboard, _RestaurantDashboardState (+15 more)
+### Community 41 - "categoriesProvider"
+Cohesion: 0.07
+Nodes (33): CategoriesScreen, AdminProductsScreen, _AdminProductsScreenState, build, build, build, _CategoriesScreenState, build (+25 more)
 
 ### Community 42 - "cart.dart"
 Cohesion: 0.07
@@ -624,8 +624,8 @@ Cohesion: 0.04
 Nodes (45): 2.1 — Delete Dead Debounce Hook, 2.2 — Replace Custom CSV Parsing with papaparse, 2.3 — Replace Cache Files with lru-cache, 2.4 — Consolidate Date/Time Formatting, 4.1 — `src/app/checkout/page.tsx` (1,918 → ~400 lines), 4.2 — `src/app/picker/page.tsx` (1,864 → ~400 lines), 4.3 — `src/app/delivery/page.tsx` (1,780 → ~400 lines), 4.4 — `src/components/admin/admin-inventory-center.tsx` (1,765 → ~500 lines) (+37 more)
 
 ### Community 51 - "ConsumerState"
-Cohesion: 0.05
-Nodes (67): CategoriesScreen, ConsumerState, ConsumerStatefulWidget, DeliveryLoginScreen, AdminProductsScreen, _AdminProductsScreenState, build, _ProductEditBottomSheet (+59 more)
+Cohesion: 0.07
+Nodes (45): ConsumerState, ConsumerStatefulWidget, DeliveryLoginScreen, _ProductEditBottomSheet, _ProductEditBottomSheetState, AdminLoginScreen, _AdminLoginScreenState, _DeliveryLoginScreenState (+37 more)
 
 ### Community 52 - "restaurant_dashboard.dart"
 Cohesion: 0.03
@@ -637,7 +637,7 @@ Nodes (21): area, city, hashCode, houseNo, id, isDefault, label, latitude (+13 m
 
 ### Community 54 - "doorstep_details_screen.dart"
 Cohesion: 0.08
-Nodes (25): areaName, _buildCategoryPill, _buildInputField, _buildInstructionChip, createState, _customLabelController, dispose, DoorstepDetailsScreen (+17 more)
+Nodes (23): areaName, _buildCategoryPill, _buildInputField, _buildInstructionChip, createState, _customLabelController, dispose, fullAddress (+15 more)
 
 ### Community 55 - "user.dart"
 Cohesion: 0.08
@@ -941,7 +941,7 @@ Nodes (16): Duration?, FadeScaleRoute, FadeThroughRoute, FastKiranaPageTransitio
 
 ### Community 140 - "constants.ts"
 Cohesion: 0.04
-Nodes (60): DeliveryHeader(), DeliveryHeaderProps, LiveClock(), dynamic, findRestaurantBySlug(), FoodRestaurantPage(), generateMetadata(), ProductPage() (+52 more)
+Nodes (62): DeliveryHeader(), DeliveryHeaderProps, LiveClock(), dynamic, findRestaurantBySlug(), FoodRestaurantPage(), generateMetadata(), ProductPage() (+54 more)
 
 ### Community 141 - "live_gps_route_card.dart"
 Cohesion: 0.11
@@ -1448,8 +1448,8 @@ Cohesion: 0.20
 Nodes (9): generate_id(), get_distance_km(), get_last_10_digits(), Order Service Utilities & Helper Functions Extracted from orders.py for…, Generate a unique ID string., Extract clean 10-digit mobile number., Calculate Haversine distance in kilometers between two GPS coordinates., Validate allowed state transitions for order workflow. (+1 more)
 
 ### Community 315 - "getLast10Digits"
-Cohesion: 0.07
-Nodes (51): POST(), POST(), GET(), POST(), POST(), POST(), POST(), POST() (+43 more)
+Cohesion: 0.06
+Nodes (55): POST(), POST(), GET(), POST(), POST(), POST(), POST(), POST() (+47 more)
 
 ### Community 316 - "live_clock_badge.dart"
 Cohesion: 0.07
@@ -1499,13 +1499,13 @@ Nodes (9): Animation, AnimationController, build, _controller, createState, disp
 Cohesion: 0.15
 Nodes (13): _availableCatalog, brandGreen, build, createState, primaryRed, _showNewSubscriptionModal, _skipTomorrow, slateDark (+5 more)
 
-### Community 335 - "firebase-admin.ts"
-Cohesion: 0.24
-Nodes (7): POST(), POST(), FALLBACK_CREDENTIALS, fcmMessaging, getFcmMessaging(), OptimizedFcmPayloadOptions, sendTopicWithRetry()
+### Community 335 - "address_selector_sheet.dart"
+Cohesion: 0.12
+Nodes (17): Address?, _Address, build, currentUserIdProvider, activeAddress, AddressSelectorSheet, _AddressSelectorSheetState, build (+9 more)
 
 ### Community 336 - "restaurant-orders-console.tsx"
 Cohesion: 0.05
-Nodes (60): CodPaymentModal(), CodPaymentModalProps, ModalStep, RiderWalletView(), RiderWalletViewProps, DeliveryDashboard(), optimizeRoute(), triggerConfetti() (+52 more)
+Nodes (63): DeliveryDashboard(), optimizeRoute(), triggerConfetti(), BIN_CONFIGS, CATEGORY_AISLES, CompanionOrder, getAisleName(), getAisleNumber() (+55 more)
 
 ### Community 337 - "app/routers/banners.py"
 Cohesion: 0.28
@@ -1607,7 +1607,7 @@ Nodes (3): StoreHub, StoreHubsManager(), StoreHubsManagerProps
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `dependencies` connect `dependencies` to `framer-motion`, `class-variance-authority`, `@upstash/redis`, `dotenv`, `fcm.py`, `date-fns`, `scripts`, `lru-cache`, `@types/web-push`, `next-auth`, `react-dom`, `nodemailer`, `pg`, `sonner`, `papaparse`, `tailwind-merge`, `@supabase/supabase-js`, `tailwindcss`, `lucide-react`, `@types/react-dom`, `libphonenumber-js`, `prisma`, `@types/react`, `@prisma/client`, `resend`, `sharp`, `@tailwindcss/postcss`, `@types/pg`, `xlsx`, `zustand`, `web-push`?**
+- **Why does `dependencies` connect `dependencies` to `framer-motion`, `@auth/prisma-adapter`, `@upstash/redis`, `dotenv`, `fcm.py`, `date-fns`, `scripts`, `lru-cache`, `@types/web-push`, `next-auth`, `react-dom`, `nodemailer`, `pg`, `sonner`, `papaparse`, `tailwind-merge`, `@supabase/supabase-js`, `tailwindcss`, `lucide-react`, `@types/react-dom`, `libphonenumber-js`, `prisma`, `@types/react`, `@prisma/client`, `resend`, `sharp`, `@tailwindcss/postcss`, `@types/pg`, `xlsx`, `zustand`, `web-push`?**
   _High betweenness centrality (0.026) - this node is a cross-community bridge._
 - **Why does `firebase-admin` connect `fcm.py` to `dependencies`?**
   _High betweenness centrality (0.025) - this node is a cross-community bridge._
@@ -1620,4 +1620,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `requireAdmin` be split into smaller, more focused modules?**
   _Cohesion score 0.046981168705105804 - nodes in this community are weakly interconnected._
 - **Should `auth` be split into smaller, more focused modules?**
-  _Cohesion score 0.03241758241758242 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.031192660550458717 - nodes in this community are weakly interconnected._

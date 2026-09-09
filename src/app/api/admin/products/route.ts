@@ -19,6 +19,7 @@ export async function GET(request: Request) {
   const topPicks = searchParams.get('topPicks') === 'true'
   const bestSellers = searchParams.get('bestSellers') === 'true'
   const type = searchParams.get('type')
+  const storeId = searchParams.get('storeId') || (session?.user as any)?.assignedStoreId || null
   
   const skip = (page - 1) * limit
 
@@ -86,36 +87,56 @@ export async function GET(request: Request) {
       prisma.product.count({ where }),
     ])
 
-    const products = productsRaw.map((p) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      description: p.description,
-      imageUrl: p.imageUrl,
-      categoryId: p.categoryId,
-      restaurantId: p.restaurantId,
-      mrp: p.mrp,
-      price: p.price,
-      discount: p.discount,
-      unit: p.unit,
-      stock: p.stock,
-      isAvailable: p.isAvailable,
-      tags: p.tags,
-      variants: p.variants,
-      costPrice: p.costPrice ?? 0,
-      minStock: p.minStock ?? 10,
-      location: p.location,
-      barcode: p.barcode || '',
-      sortOrder: p.sortOrder ?? 0,
-      isFlashDeal: p.isFlashDeal,
-      isTopPick: p.isTopPick,
-      isBestSeller: p.isBestSeller,
-      category: p.category ? {
-        id: p.category.id,
-        name: p.category.name,
-        slug: p.category.slug,
-      } : null,
-    }))
+    // Localize stock from store_inventories if a specific store is selected
+    let inventoryMap = new Map<string, number>()
+    if (storeId && storeId !== 'all') {
+      try {
+        const inventories = await prisma.storeInventory.findMany({
+          where: {
+            storeId,
+            productId: { in: productsRaw.map((p) => p.id) }
+          }
+        })
+        inventoryMap = new Map(inventories.map((inv) => [inv.productId, inv.stock]))
+      } catch (invErr) {
+        console.warn('Could not query store_inventories in admin products:', invErr)
+      }
+    }
+
+    const products = productsRaw.map((p) => {
+      const localStock = (storeId && storeId !== 'all') ? (inventoryMap.get(p.id) ?? 0) : p.stock
+      return {
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        description: p.description,
+        imageUrl: p.imageUrl,
+        categoryId: p.categoryId,
+        restaurantId: p.restaurantId,
+        mrp: p.mrp,
+        price: p.price,
+        discount: p.discount,
+        unit: p.unit,
+        stock: localStock,
+        isAvailable: (storeId && storeId !== 'all') ? (p.isAvailable && localStock > 0) : p.isAvailable,
+        tags: p.tags,
+        variants: p.variants,
+        costPrice: p.costPrice ?? 0,
+        minStock: p.minStock ?? 10,
+        location: p.location,
+        barcode: p.barcode || '',
+        sortOrder: p.sortOrder ?? 0,
+        isFlashDeal: p.isFlashDeal,
+        isTopPick: p.isTopPick,
+        isBestSeller: p.isBestSeller,
+        storeId: storeId || 'all',
+        category: p.category ? {
+          id: p.category.id,
+          name: p.category.name,
+          slug: p.category.slug,
+        } : null,
+      }
+    })
 
     return NextResponse.json({ products, total, page, limit })
   } catch (error: any) {
@@ -127,6 +148,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const adminResult = await requireAdmin()
   if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
   try {
     const body = await request.json()
@@ -182,6 +204,25 @@ export async function POST(request: Request) {
         category: true,
       }
     })
+
+    // Seed store-level inventory for all dark stores
+    try {
+      const allStores = await prisma.darkStore.findMany({ select: { id: true } })
+      if (allStores.length > 0) {
+        const targetStoreId = body.storeId || (session?.user as any)?.assignedStoreId || 'hub-209206'
+        const initialStockNum = parseInt(String(stock), 10) || 0
+        await prisma.storeInventory.createMany({
+          data: allStores.map((s) => ({
+            storeId: s.id,
+            productId: product.id,
+            stock: s.id === targetStoreId ? initialStockNum : 0,
+          })),
+          skipDuplicates: true,
+        })
+      }
+    } catch (seedErr) {
+      console.warn('Could not seed store_inventories for new product:', seedErr)
+    }
 
     revalidateStorefront(product.category?.slug)
 
