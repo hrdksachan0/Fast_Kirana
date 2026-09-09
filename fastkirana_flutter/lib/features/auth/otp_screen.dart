@@ -192,10 +192,10 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
 
         final isMasterAdminUser = widget.identifier.contains('7054470303') ||
             widget.identifier.contains('9170942500') ||
-            user.phone.contains('7054470303') ||
-            user.phone.contains('9170942500') ||
-            user.email.toLowerCase().startsWith('admin@') ||
-            user.email.toLowerCase().startsWith('superadmin@');
+            (user.phone?.contains('7054470303') ?? false) ||
+            (user.phone?.contains('9170942500') ?? false) ||
+            (user.email?.toLowerCase().startsWith('admin@') ?? false) ||
+            (user.email?.toLowerCase().startsWith('superadmin@') ?? false);
 
         final roleUpper = isMasterAdminUser ? 'ADMIN' : user.role.toUpperCase();
         if (isMasterAdminUser && user.role != 'ADMIN') {
