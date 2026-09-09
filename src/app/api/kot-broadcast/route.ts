@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { auth } from '@/auth'
 
 /**
  * Server-side KOT Broadcast API
  * 
- * Fallback for when the client-side Supabase broadcast fails.
- * Creates a server-side Supabase client, subscribes to the channel,
- * sends the broadcast, then cleans up.
+ * Single authoritative gateway for KOT dispatch.
+ * Strictly gated so only Admin / Staff or manual dispatch triggers kitchen prints.
+ * Automatically ignores automated checkout calls from legacy APK versions.
  */
 // Server-side deduplication window (10 seconds) to prevent duplicate KOT ticket prints
 const recentBroadcastTimestamps = new Map<string, number>()
@@ -24,6 +25,19 @@ export async function POST(request: NextRequest) {
     const cleanReadable = readableId ? String(readableId).trim().replace(/^#/, '') : ''
     const baseReadable = cleanReadable.replace(/-[GR\d]+$/i, '')
     const now = Date.now()
+
+    // 🛡️ Legacy APK Protection:
+    // If a customer checkout from an older APK version tries to auto-broadcast KOT,
+    // intercept it and return 200 without broadcasting to the kitchen.
+    const session = await auth()
+    const role = (session?.user as any)?.role?.toUpperCase()
+    const isAdminOrStaff = role === 'ADMIN' || role === 'RESTAURANT_OWNER' || role === 'CHEF'
+    const isManualAdminDispatch = Boolean(body.kotText && body.kotText.includes('FASTKIRANA KOT'))
+
+    if (!isAdminOrStaff && !isManualAdminDispatch) {
+      console.log(`[KOT Broadcast API] 🛡️ Ignored legacy checkout auto-KOT for Order #${cleanReadable || cleanId}`)
+      return NextResponse.json({ success: true, ignored: true, reason: 'Auto-KOT on checkout disabled' })
+    }
 
     const lastBroadcastId = recentBroadcastTimestamps.get(cleanId)
     const lastBroadcastReadable = cleanReadable ? recentBroadcastTimestamps.get(cleanReadable) : undefined
