@@ -410,20 +410,22 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
       return
     }
 
-    if (addressForm.pincode !== '209206') {
-      toast.error('FastKirana only delivers to Ghatampur area (Pincode: 209206)')
+    const validPincodes = ['209206', '224122']
+    if (!validPincodes.includes(addressForm.pincode.trim())) {
+      toast.error('FastKirana delivers to Ghatampur (209206) & Akbarpur (224122)')
       return
     }
 
     setIsSavingAddress(true)
     try {
+      const city = addressForm.pincode.trim() === '224122' ? 'Akbarpur' : 'Ghatampur'
       const payload = {
         id: editingAddress.id,
         label: addressForm.label,
         houseNo: '.',
         street: addressForm.street.trim(),
         area: '.',
-        city: 'Ghatampur',
+        city,
         pincode: addressForm.pincode.trim(),
         phone: addressForm.phone.trim(),
         isDefault: addressForm.isDefault,

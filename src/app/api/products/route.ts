@@ -286,6 +286,25 @@ export async function GET(request: NextRequest) {
         finalProducts = [...finalProducts, ...anyProducts]
       }
 
+      // Override stock and availability with localized dark store inventory
+      if (storeId && finalProducts.length > 0) {
+        const inventories = await prisma.storeInventory.findMany({
+          where: {
+            storeId,
+            productId: { in: finalProducts.map(p => p.id) }
+          }
+        })
+        const inventoryMap = new Map(inventories.map(inv => [inv.productId, inv.stock]))
+        finalProducts = finalProducts.map(p => {
+          const localStock = inventoryMap.get(p.id) ?? 0
+          return {
+            ...p,
+            stock: localStock,
+            isAvailable: p.isAvailable && localStock > 0
+          }
+        })
+      }
+
       return NextResponse.json({
         products: finalProducts.slice(0, 8),
         pagination: {

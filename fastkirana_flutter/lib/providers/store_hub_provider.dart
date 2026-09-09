@@ -100,6 +100,7 @@ final nearestHubResultProvider = Provider<NearestHubResult>((ref) {
     lat: nearest.latitude,
     lng: nearest.longitude,
     address: '${nearest.name}, ${nearest.city}',
+    id: nearest.id,
   );
 
   return NearestHubResult(

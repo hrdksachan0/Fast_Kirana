@@ -231,15 +231,40 @@ export async function POST(request: NextRequest) {
     // Distance-based delivery validation
     let deliveryRules: ReturnType<typeof getDeliveryRules> | null = null
 
+    // Resolve target dark store for multi-hub routing and geofencing
+    const addrPincode = (address?.pincode || '').trim().replace(/\s+/g, '')
+    const addrCity = (address?.city || '').trim().toLowerCase()
+    let resolvedStoreId = storeId
+
+    if (!resolvedStoreId) {
+      if (addrPincode === '224122' || addrCity.includes('akbarpur') || addrCity.includes('ambedkar')) {
+        resolvedStoreId = 'hub-224122'
+      } else {
+        resolvedStoreId = 'hub-209206'
+      }
+    }
+
+    const targetDarkStore = await prisma.darkStore.findUnique({
+      where: { id: resolvedStoreId }
+    })
+
+    const isAkbarpurStore = resolvedStoreId === 'hub-224122' || addrPincode === '224122' || addrCity.includes('akbarpur') || addrCity.includes('ambedkar')
+
     if (deliveryMethod === 'DELIVERY') {
-      const p = (address.pincode || '').trim().replace(/\s+/g, '')
+      const p = addrPincode
       const serviceablePincode = (resolvePincode(settingsMap) || '209206').replace(/\s+/g, '')
-      const allowedPincodes = [serviceablePincode, '209206', '209201', '209214', '209208', '208001', '208002', '208011', '208012', '208020']
+      const allowedPincodes = isAkbarpurStore
+        ? ['224122']
+        : [serviceablePincode, '209206', '209201', '209214', '209208', '208001', '208002', '208011', '208012', '208020']
+
       if (p && !allowedPincodes.includes(p) && !/^\d{6}$/.test(p)) {
         return NextResponse.json({ error: `Selected address pincode (${p}) is outside our delivery zone.` }, { status: 400 })
       }
-      const c = (address.city || '').trim().toLowerCase()
-      const allowedCities = ['ghatampur', 'kanpur', 'nagar', 'dehat', 'up', 'uttar pradesh']
+      const c = addrCity
+      const allowedCities = isAkbarpurStore
+        ? ['akbarpur', 'ambedkar', 'ambedkarnagar', 'up', 'uttar pradesh']
+        : ['ghatampur', 'kanpur', 'nagar', 'dehat', 'up', 'uttar pradesh']
+
       if (c && !allowedCities.some(cityKeyword => c.includes(cityKeyword))) {
         return NextResponse.json({ error: 'Selected address city is outside our delivery zone.' }, { status: 400 })
       }
@@ -253,17 +278,20 @@ export async function POST(request: NextRequest) {
       })
       const geoSettingMap = new Map(geoSettings.map(s => [s.key, s.value]))
 
-      const storeLat = geoSettingMap.get('store_lat') ? parseFloat(geoSettingMap.get('store_lat')!) : DEFAULT_STORE_LAT
-      const storeLng = geoSettingMap.get('store_lng') ? parseFloat(geoSettingMap.get('store_lng')!) : DEFAULT_STORE_LNG
-      const maxRadiusKm = geoSettingMap.get('delivery_radius') ? parseFloat(geoSettingMap.get('delivery_radius')!) : (geoSettingMap.get('max_delivery_radius') ? parseFloat(geoSettingMap.get('max_delivery_radius')!) : 5.0)
-      const surgeFee = geoSettingMap.get('surge_charge') ? parseFloat(geoSettingMap.get('surge_charge')!) : 0
+      const storeLat = targetDarkStore ? targetDarkStore.latitude : (geoSettingMap.get('store_lat') ? parseFloat(geoSettingMap.get('store_lat')!) : DEFAULT_STORE_LAT)
+      const storeLng = targetDarkStore ? targetDarkStore.longitude : (geoSettingMap.get('store_lng') ? parseFloat(geoSettingMap.get('store_lng')!) : DEFAULT_STORE_LNG)
+      const maxRadiusKm = targetDarkStore?.deliveryRadiusKm ? targetDarkStore.deliveryRadiusKm : (geoSettingMap.get('delivery_radius') ? parseFloat(geoSettingMap.get('delivery_radius')!) : (geoSettingMap.get('max_delivery_radius') ? parseFloat(geoSettingMap.get('max_delivery_radius')!) : 5.0))
+      const surgeFee = targetDarkStore?.surgeCharge ? targetDarkStore.surgeCharge : (geoSettingMap.get('surge_charge') ? parseFloat(geoSettingMap.get('surge_charge')!) : 0)
+      const storeDisplayName = targetDarkStore?.name || (isAkbarpurStore ? 'Akbarpur Store' : 'Ghatampur Store')
 
       let resolvedLat = targetLat
       let resolvedLng = targetLng
 
       if (!resolvedLat || !resolvedLng) {
         try {
-          const addressQuery = `${address.houseNo || ''} ${address.street || ''} ${address.area || ''}, ${address.city || 'Ghatampur'}, ${address.pincode || STORE_PINCODE}`
+          const fallbackCity = isAkbarpurStore ? 'Akbarpur' : 'Ghatampur'
+          const fallbackPincode = isAkbarpurStore ? '224122' : STORE_PINCODE
+          const addressQuery = `${address.houseNo || ''} ${address.street || ''} ${address.area || ''}, ${address.city || fallbackCity}, ${address.pincode || fallbackPincode}`
           const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
           if (apiKey) {
             const geoController = new AbortController()
@@ -294,7 +322,7 @@ export async function POST(request: NextRequest) {
 
         if (!deliveryRules.isServiceable || distanceKm > maxRadiusKm) {
           return NextResponse.json({
-            error: `Your location is ${distanceKm.toFixed(1)} km away. Delivery is strictly limited to ${maxRadiusKm.toFixed(1)} km from Ghatampur Store.`
+            error: `Your location is ${distanceKm.toFixed(1)} km away. Delivery is strictly limited to ${maxRadiusKm.toFixed(1)} km from ${storeDisplayName}.`
           }, { status: 400 })
         }
       }
@@ -943,7 +971,7 @@ export async function POST(request: NextRequest) {
               estimatedDelivery,
               deliveryMethod,
               isB2B: Boolean(isB2B),
-              storeId: storeId || 'hub-209206',
+              storeId: resolvedStoreId || storeId || 'hub-209206',
               couponCode: couponCode ? couponCode.toUpperCase() : null,
               shopName: orderInfo.type === 'RESTAURANT'
                 ? (orderInfo.restaurant?.name || 'Restaurant')

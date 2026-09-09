@@ -6,6 +6,7 @@ import '../data/repositories/product_repository.dart';
 import '../core/network/api_client.dart';
 import '../core/utils/restaurant_utils.dart';
 import 'cart_provider.dart';
+import 'store_hub_provider.dart';
 
 final productRepositoryProvider = Provider<ProductRepository>((ref) {
   return ProductRepository(ref.read(dioProvider));
@@ -20,19 +21,22 @@ final categoriesProvider = FutureProvider<List<Category>>((ref) async {
 final trendingProductsProvider = FutureProvider<List<Product>>((ref) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
-  return repo.getProducts(limit: 10);
+  final hub = ref.watch(currentStoreHubProvider);
+  return repo.getProducts(limit: 10, storeId: hub.id);
 });
 
 final productsProvider = FutureProvider.family<List<Product>, String?>((ref, categoryId) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
-  return repo.getProducts(category: categoryId, limit: 500);
+  final hub = ref.watch(currentStoreHubProvider);
+  return repo.getProducts(category: categoryId, limit: 500, storeId: hub.id);
 });
 
 final productsByRestaurantProvider = FutureProvider.family<List<Product>, String>((ref, restaurantId) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
-  return repo.getProducts(restaurantId: restaurantId, limit: 500);
+  final hub = ref.watch(currentStoreHubProvider);
+  return repo.getProducts(restaurantId: restaurantId, limit: 500, storeId: hub.id);
 });
 
 // Single shared product catalog for home screen — fetches ALL products once,
@@ -40,7 +44,8 @@ final productsByRestaurantProvider = FutureProvider.family<List<Product>, String
 final homeProductCatalogProvider = FutureProvider<List<Product>>((ref) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
-  return repo.getProducts(limit: 1000);
+  final hub = ref.watch(currentStoreHubProvider);
+  return repo.getProducts(limit: 1000, storeId: hub.id);
 });
 
 final cartUpsellProductsProvider = FutureProvider.family<List<Product>, List<String>>((ref, productIds) async {

@@ -5,6 +5,7 @@ import '../../core/services/logger_service.dart';
 import '../models/product.dart';
 import '../models/category.dart';
 import '../../core/network/api_client.dart';
+import '../../core/config/app_config.dart';
 
 class ProductRepository {
   final Dio dio;
@@ -152,17 +153,22 @@ class ProductRepository {
   }
 
   /// Build a stable cache key from query parameters
-  static String _cacheKey({String? search, String? restaurantId, String? category}) {
-    return '${search ?? ''}|${restaurantId ?? ''}|${category ?? ''}';
+  static String _cacheKey({String? search, String? restaurantId, String? category, String? storeId}) {
+    return '${search ?? ''}|${restaurantId ?? ''}|${category ?? ''}|${storeId ?? ''}';
   }
 
   Future<List<Product>> getProducts({
     String? category,
     String? search,
     String? restaurantId,
+    String? storeId,
     int limit = 500,
     bool forceRefresh = false,
   }) async {
+    final effectiveStoreId = (storeId != null && storeId.isNotEmpty)
+        ? storeId
+        : (AppConfig.darkstoreId.isNotEmpty ? AppConfig.darkstoreId : null);
+
     // Wait for disk preload to finish so cached data is available before checking
     if (!_preloadComplete) {
       await _preloadFromDisk();
@@ -198,7 +204,7 @@ class ProductRepository {
       }
 
       // 3. If a network fetch with the same parameters is already in flight, reuse it
-      final key = _cacheKey(search: search, restaurantId: restaurantId, category: category);
+      final key = _cacheKey(search: search, restaurantId: restaurantId, category: category, storeId: effectiveStoreId);
       if (_inFlightFetches.containsKey(key) && !forceRefresh) {
         final products = await _inFlightFetches[key]!;
         return _filterProducts(products, category: category, search: search, restaurantId: restaurantId);
@@ -210,6 +216,7 @@ class ProductRepository {
         search: search,
         restaurantId: restaurantId,
         category: category,
+        storeId: effectiveStoreId,
       );
       _inFlightFetches[key] = future;
       final liveProducts = await future;
@@ -217,8 +224,8 @@ class ProductRepository {
 
       return _filterProducts(liveProducts, category: category, search: search, restaurantId: restaurantId);
     } catch (e, st) {
-      LoggerService.error('ProductRepository: fetchProducts failed ($search, cat=$category, rid=$restaurantId)', e, st);
-      _inFlightFetches.remove(_cacheKey(search: search, restaurantId: restaurantId, category: category));
+      LoggerService.error('ProductRepository: fetchProducts failed ($search, cat=$category, rid=$restaurantId, store=$effectiveStoreId)', e, st);
+      _inFlightFetches.remove(_cacheKey(search: search, restaurantId: restaurantId, category: category, storeId: effectiveStoreId));
       // 5. Fallback chain: in-memory → disk → hardcoded static
       if (_cachedProducts != null && _cachedProducts!.isNotEmpty) {
         return _filterProducts(_cachedProducts!, category: category, search: search, restaurantId: restaurantId);
@@ -239,7 +246,12 @@ class ProductRepository {
     String? search,
     String? restaurantId,
     String? category,
+    String? storeId,
   }) async {
+    final effectiveStoreId = (storeId != null && storeId.isNotEmpty)
+        ? storeId
+        : (AppConfig.darkstoreId.isNotEmpty ? AppConfig.darkstoreId : null);
+
     final response = await dio.get(
       '/api/products',
       queryParameters: {
@@ -248,6 +260,7 @@ class ProductRepository {
         if (search != null && search.isNotEmpty) 'search': search,
         if (restaurantId != null && restaurantId.isNotEmpty) 'restaurantId': restaurantId,
         if (category != null && category.isNotEmpty) 'category': category,
+        if (effectiveStoreId != null) 'storeId': effectiveStoreId,
       },
     );
 

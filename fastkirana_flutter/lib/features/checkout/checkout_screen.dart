@@ -30,6 +30,7 @@ import '../../core/utils/restaurant_utils.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/address_selector_sheet.dart';
 import '../../providers/product_provider.dart';
+import '../../providers/store_hub_provider.dart';
 import '../../core/services/kot_print_service.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
@@ -601,9 +602,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     // 1. Post to backend Next.js API for Web App Admin & Database sync
     var placedOrder = newOrder;
     try {
+      final nearestHub = ref.read(currentStoreHubProvider);
       final isOnlinePaid = paymentId != null && paymentId.isNotEmpty;
       final apiPayload = {
         ...newOrder.toJson(),
+        'storeId': nearestHub.id,
         'addressId': selectedAddress?.id ?? 'addr_default',
         'paymentMethod': _selectedPayment == 'online' ? 'UPI' : 'COD',
         'paymentStatus': isOnlinePaid ? 'PAID' : 'PENDING',

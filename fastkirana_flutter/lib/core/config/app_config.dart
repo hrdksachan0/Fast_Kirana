@@ -73,6 +73,7 @@ class AppConfig {
   static double darkstoreLat = 26.1534185;
   static double darkstoreLng = 80.1714024;
   static String darkstoreAddress = 'Ghatampur Market, Kanpur Nagar, UP - 209206';
+  static String darkstoreId = 'hub-209206';
 
   /// Update the active darkstore hub coordinates at runtime.
   /// Called by StoreHubProvider after resolving the nearest hub.
@@ -80,10 +81,14 @@ class AppConfig {
     required double lat,
     required double lng,
     required String address,
+    String? id,
   }) {
     darkstoreLat = lat;
     darkstoreLng = lng;
     darkstoreAddress = address;
+    if (id != null && id.isNotEmpty) {
+      darkstoreId = id;
+    }
   }
 
   // ─── Build Information ──────────────────────────────────────────

@@ -125,12 +125,19 @@ function validateAddress(
   const p = (address.pincode || '').trim().replace(/\s+/g, '')
   const c = (address.city || '').trim().toLowerCase()
 
-  const allowedPincodes = [DEFAULT_STORE_PINCODE, '209206', '209201', '209214', '209208', '208001', '208002', '208011', '208012', '208020']
+  const isAkbarpur = p === '224122' || c.includes('akbarpur') || c.includes('ambedkar')
+  const allowedPincodes = isAkbarpur
+    ? ['224122']
+    : [DEFAULT_STORE_PINCODE, '209206', '209201', '209214', '209208', '208001', '208002', '208011', '208012', '208020']
+
   if (p && !allowedPincodes.includes(p) && !/^\d{6}$/.test(p)) {
-    return { valid: false, error: `Selected address pincode (${p}) is outside our delivery zone. We deliver in Ghatampur & Kanpur region.` }
+    return { valid: false, error: `Selected address pincode (${p}) is outside our delivery zone.` }
   }
 
-  const allowedCities = ['ghatampur', 'kanpur', 'nagar', 'dehat', 'up', 'uttar pradesh']
+  const allowedCities = isAkbarpur
+    ? ['akbarpur', 'ambedkar', 'ambedkarnagar', 'up', 'uttar pradesh']
+    : ['ghatampur', 'kanpur', 'nagar', 'dehat', 'up', 'uttar pradesh']
+
   if (c && !allowedCities.some(cityKeyword => c.includes(cityKeyword))) {
     return { valid: false, error: 'Selected address city is outside our delivery zone.' }
   }
