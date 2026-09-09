@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { productId, barcode, batchCode, quantity, costPrice, expiryDate, name } = body as {
+    const { productId, barcode, batchCode, quantity, costPrice, expiryDate, name, storeId } = body as {
       productId?: string
       barcode?: string
       batchCode?: string
@@ -19,7 +19,9 @@ export async function POST(request: NextRequest) {
       costPrice?: string | number
       expiryDate?: string
       name?: string
+      storeId?: string
     }
+    const targetStoreId = storeId || (session.user as any)?.assignedStoreId || null
 
     if (!productId && !barcode && !name) {
       return NextResponse.json(
@@ -110,6 +112,30 @@ export async function POST(request: NextRequest) {
           category: true
         }
       })
+
+      // 4b. Localize inwarding to specific dark store inventory if provided
+      if (targetStoreId) {
+        try {
+          await tx.storeInventory.upsert({
+            where: {
+              productId_storeId: {
+                productId: activeProductId,
+                storeId: targetStoreId,
+              }
+            },
+            create: {
+              storeId: targetStoreId,
+              productId: activeProductId,
+              stock: parsedQty,
+            },
+            update: {
+              stock: { increment: parsedQty },
+            }
+          })
+        } catch (invErr) {
+          console.warn('Could not upsert store_inventory on inward:', invErr)
+        }
+      }
 
       // 5. Create StockLog entry for audit trail
       try {

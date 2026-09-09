@@ -81,7 +81,19 @@ export async function GET(
         discountBadge: true,
         menuSections: true,
         cuisineTags: true,
-        commissionRate: true
+        commissionRate: true,
+        lat: true,
+        lng: true,
+        deliveryRadiusKm: true,
+        _count: {
+          select: {
+            orders: {
+              where: {
+                status: { in: ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED'] }
+              }
+            }
+          }
+        }
       }
     })
 
@@ -322,6 +334,9 @@ export async function GET(
         bannerUrl: restaurant.bannerUrl,
         address: restaurant.address,
         phone: restaurant.ownerPhone,
+        lat: restaurant.lat,
+        lng: restaurant.lng,
+        deliveryRadiusKm: restaurant.deliveryRadiusKm || 5.0,
         rating: restaurant.rating,
         reviewCount: restaurant.reviewCount,
         isVeg: restaurant.isVeg,
@@ -335,7 +350,8 @@ export async function GET(
         discountOffer: restaurant.discountOffer,
         discountBadge: restaurant.discountBadge,
         cuisineTags: restaurant.cuisineTags,
-        totalDishes: products.length
+        totalDishes: products.length,
+        activeOrdersCount: restaurant._count?.orders ?? 0,
       },
       sections: finalSections,
       recommendations: {

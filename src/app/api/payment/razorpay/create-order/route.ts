@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createRazorpayOrderSchema, validateBody } from '@/lib/validation'
+import { orderLimiter } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
+  const limited = await orderLimiter.check(request)
+  if (limited) return limited
+
   const validation = await validateBody(request, createRazorpayOrderSchema)
   if (!validation.success) return validation.error
 
@@ -49,8 +53,12 @@ export async function POST(request: NextRequest) {
       totalAmount = Number(amount)
     }
 
-    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_TRvyzlqHiRGWbr'
-    const keySecret = process.env.RAZORPAY_KEY_SECRET || '4C54O0N5q841qdmQ8N1MTTiU'
+    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
+    const keySecret = process.env.RAZORPAY_KEY_SECRET
+    if (!keyId || !keySecret) {
+      console.error('FATAL: Razorpay credentials not configured in environment variables')
+      return NextResponse.json({ error: 'Payment service unavailable' }, { status: 503 })
+    }
 
     const amountInPaise = Math.round(totalAmount * 100)
 

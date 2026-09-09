@@ -21,6 +21,7 @@ class Restaurant {
   final List<dynamic>? menuSections;
   final double? lat;
   final double? lng;
+  final int activeOrdersCount;
 
   Restaurant({
     required this.id,
@@ -45,6 +46,7 @@ class Restaurant {
     this.menuSections,
     this.lat,
     this.lng,
+    this.activeOrdersCount = 0,
   });
 
   factory Restaurant.fromJson(Map<String, dynamic> json) {
@@ -122,6 +124,9 @@ class Restaurant {
       menuSections: json['menuSections'] is List ? json['menuSections'] as List<dynamic> : null,
       lat: parseLat(),
       lng: parseLng(),
+      activeOrdersCount: json['activeOrdersCount'] != null
+          ? int.tryParse(json['activeOrdersCount'].toString()) ?? 0
+          : 0,
     );
   }
 

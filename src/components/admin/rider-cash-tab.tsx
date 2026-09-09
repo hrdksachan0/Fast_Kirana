@@ -2,12 +2,14 @@
 
 import { AdminRiderCash } from '@/components/admin/admin-rider-cash'
 
-interface RiderCashTabProps {}
+interface RiderCashTabProps {
+  storeId?: string | null
+}
 
-export function RiderCashTab({}: RiderCashTabProps) {
+export function RiderCashTab({ storeId }: RiderCashTabProps) {
   return (
     <div className="animate-fade-in">
-      <AdminRiderCash />
+      <AdminRiderCash storeId={storeId} />
     </div>
   )
 }

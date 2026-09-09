@@ -112,8 +112,9 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
     // Auto-heal / Auto-sync with Razorpay if order is marked unpaid but was actually paid online
     if (order && order.paymentStatus !== 'PAID') {
       try {
-        const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_TRvyzlqHiRGWbr'
-        const keySecret = process.env.RAZORPAY_KEY_SECRET || '4C54O0N5q841qdmQ8N1MTTiU'
+        const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
+        const keySecret = process.env.RAZORPAY_KEY_SECRET
+        if (!keyId || !keySecret) throw new Error('Razorpay credentials not configured')
         const authHeader = 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64')
         const rzpRes = await fetch('https://api.razorpay.com/v1/payments?count=50', {
           headers: { Authorization: authHeader },
@@ -127,13 +128,14 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
 
           const matchedPayment = items.find((p: any) => {
             if (p.status !== 'captured' && p.status !== 'authorized') return false
-            if (p.notes?.orderId === order.id) return true
-            if (targetReadableId && p.notes?.readableId === targetReadableId) return true
-            if (targetReadableId && p.description && p.description.includes(targetReadableId)) return true
-            if (p.amount === orderTotalPaise) {
-              const pTime = p.created_at * 1000
-              const oTime = new Date(order.createdAt).getTime()
-              if (Math.abs(pTime - oTime) < 24 * 60 * 60 * 1000) return true
+            const hasExplicitIdMatch = 
+              (p.notes?.orderId && p.notes.orderId === order.id) ||
+              (targetReadableId && p.notes?.readableId === targetReadableId) ||
+              (targetReadableId && p.description && p.description.includes(targetReadableId)) ||
+              (p.order_id && (order as any).razorpayOrderId && p.order_id === (order as any).razorpayOrderId)
+            
+            if (hasExplicitIdMatch && p.amount === orderTotalPaise) {
+              return true
             }
             return false
           })

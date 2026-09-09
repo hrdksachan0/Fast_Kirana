@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { requireAdmin } from '@/lib/auth-guard'
+import { getStoreUserFilter } from '@/lib/store-resolver'
 
 export async function GET(request: Request) {
   const adminResult = await requireAdmin()
@@ -22,38 +23,7 @@ export async function GET(request: Request) {
     }
 
     if (storeId && storeId !== 'all') {
-      if (storeId === 'hub-224122') {
-        whereClause.user = {
-          OR: [
-            { assignedStoreId: 'hub-224122' },
-            { orders: { some: { storeId: 'hub-224122' } } },
-            { addresses: { some: { pincode: '224122' } } },
-            { addresses: { some: { city: { contains: 'Akbarpur', mode: 'insensitive' } } } }
-          ]
-        }
-      } else if (storeId === 'hub-209206' || storeId === 'default-Ghatampur Market') {
-        whereClause.user = {
-          OR: [
-            { assignedStoreId: 'hub-209206' },
-            { orders: { some: { OR: [{ storeId: 'hub-209206' }, { storeId: null }] } } },
-            { addresses: { some: { pincode: '209206' } } },
-            { addresses: { some: { city: { contains: 'Ghatampur', mode: 'insensitive' } } } },
-            {
-              AND: [
-                { assignedStoreId: null },
-                { orders: { none: { storeId: { notIn: ['hub-209206', null] } } } }
-              ]
-            }
-          ]
-        }
-      } else {
-        whereClause.user = {
-          OR: [
-            { assignedStoreId: storeId },
-            { orders: { some: { storeId } } }
-          ]
-        }
-      }
+      whereClause.user = await getStoreUserFilter(storeId)
     }
 
     // Fetch active carts that have at least one item, updated in the past 12 hours

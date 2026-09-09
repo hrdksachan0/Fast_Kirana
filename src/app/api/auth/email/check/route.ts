@@ -42,18 +42,14 @@ export async function POST(request: NextRequest) {
         select: { email: true, name: true, phone: true, role: true, passwordHash: true, assignedRestaurantId: true }
       })
 
-      // Prioritize canonical staff & restaurant accounts:
-      // 9170942500 -> superadmin@fastkirana.com (Super Admin HQ)
-      // 7054470303 -> admin@fastkirana.com (Store Operations Manager)
-      // 8112849854 -> asrestaurant3@gmail.com (A.S. Restaurant Owner REST-101)
-      // 9250138656 -> restaurant@fastkirana.com (Wedson Restaurant Owner REST-102)
-      // 7991488783 -> baludyanhotelrestaurant@gmail.com (Bal Udyan Restaurant Owner REST-103)
+      // Dynamically prioritize canonical staff and restaurant owner accounts
       const canonicalUser = matchingUsers.find(u => 
         (phoneDigits === '9170942500' && u.email === 'superadmin@fastkirana.com') ||
         (phoneDigits === '7054470303' && u.email === 'admin@fastkirana.com') ||
-        (phoneDigits === '8112849854' && (u.email === 'asrestaurant3@gmail.com' || u.assignedRestaurantId === 'REST-101')) ||
-        (phoneDigits === '9250138656' && (u.email === 'restaurant@fastkirana.com' || u.assignedRestaurantId === 'REST-102')) ||
-        (phoneDigits === '7991488783' && (u.email === 'baludyanhotelrestaurant@gmail.com' || u.assignedRestaurantId === 'REST-103'))
+        u.role === 'RESTAURANT_OWNER' ||
+        u.role === 'CHEF' ||
+        u.role === 'ADMIN' ||
+        !!u.assignedRestaurantId
       )
       const existingUser = canonicalUser || matchingUsers.find(u => u.role !== 'USER' || !!u.passwordHash) || matchingUsers[0]
 

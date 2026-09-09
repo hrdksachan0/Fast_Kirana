@@ -16,9 +16,17 @@ export async function GET(request: NextRequest) {
     const todayStart = new Date()
     todayStart.setHours(0, 0, 0, 0)
 
-    // 1. Fetch all delivery riders
+    const { searchParams } = new URL(request.url)
+    const storeId = searchParams.get('storeId') || (session?.user as any)?.assignedStoreId || null
+
+    const riderWhere: any = { role: 'DELIVERY' }
+    if (storeId && storeId !== 'all') {
+      riderWhere.assignedStoreId = storeId
+    }
+
+    // 1. Fetch delivery riders scoped by store
     const riders = await prisma.user.findMany({
-      where: { role: 'DELIVERY' },
+      where: riderWhere,
       select: {
         id: true,
         name: true,
@@ -97,7 +105,7 @@ export async function GET(request: NextRequest) {
           todayOnlineTotal: todayOnlineOrders._sum.total || 0,
           todayDepositedTotal: todayDeposits._sum.amount || 0,
           assignedStoreId: r.assignedStoreId,
-          storeName: r.assignedStore?.name || ((r.assignedStoreId === 'hub-209206' || r.assignedStoreId === 'default-Ghatampur Market') ? 'Ghatampur Hub' : null),
+          storeName: r.assignedStore?.name || null,
         }
       })
     )

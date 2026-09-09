@@ -175,7 +175,7 @@ export default function RestaurantKitchenPage() {
   const userAssignedId = (session?.user as any)?.assignedRestaurantId
   const effectiveRestId = (!isAdmin && userAssignedId)
     ? userAssignedId
-    : (selectedRestaurantId || userAssignedId || restaurants[0]?.id || 'REST-101')
+    : (selectedRestaurantId || userAssignedId || (restaurants.length > 0 ? restaurants[0].id : ''))
   const currentRestaurant = restaurants.find(r => r.id === effectiveRestId)
 
   return (

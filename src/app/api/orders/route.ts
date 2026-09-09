@@ -14,6 +14,11 @@ import { getProductLimit } from '@/lib/utils'
 import { getLast10Digits } from '@/lib/phone'
 import { checkIsStoreOpen } from '@/app/api/settings/route'
 import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
+import { resolveDarkStoreForCustomer, extractCityFromStoreName, extractPincodeFromStoreId } from '@/lib/store-resolver'
+import { evaluateSurgeStatus } from '@/lib/surge-manager'
+
+const inFlightOrderPlacements = new Set<string>()
+
 export async function POST(request: NextRequest) {
   const limited = await orderLimiter.check(request)
   if (limited) return limited
@@ -76,6 +81,13 @@ export async function POST(request: NextRequest) {
       error: `Your account has been blocked from placing orders.${currentUser.blockReason ? ` Reason: ${currentUser.blockReason}` : ' Please contact support.'}`
     }, { status: 403 })
   }
+
+  if (inFlightOrderPlacements.has(userId)) {
+    return NextResponse.json({
+      error: 'An order is already being processed for this account. Please wait a moment.'
+    }, { status: 429 })
+  }
+  inFlightOrderPlacements.add(userId)
 
   try {
     const { addressId, paymentMethod, items, couponCode, deliveryMethod = 'DELIVERY', isB2B = false, scheduledSlot = 'INSTANT', shopName = null, shopPhone = null, storeId = null, packagingOption = 'NORMAL', packagingFee = 0 } = body
@@ -230,40 +242,40 @@ export async function POST(request: NextRequest) {
 
     // Distance-based delivery validation
     let deliveryRules: ReturnType<typeof getDeliveryRules> | null = null
+    let resolvedLat: number | null = null
+    let resolvedLng: number | null = null
+    let storeLat: number = DEFAULT_STORE_LAT
+    let storeLng: number = DEFAULT_STORE_LNG
+    let maxRadiusKm: number = 5.0
+    let storeDisplayName: string = 'FastKirana Store'
 
-    // Resolve target dark store for multi-hub routing and geofencing
+    // Resolve target dark store for multi-hub routing and geofencing dynamically
     const addrPincode = (address?.pincode || '').trim().replace(/\s+/g, '')
     const addrCity = (address?.city || '').trim().toLowerCase()
-    let resolvedStoreId = storeId
 
-    if (!resolvedStoreId) {
-      if (addrPincode === '224122' || addrCity.includes('akbarpur') || addrCity.includes('ambedkar')) {
-        resolvedStoreId = 'hub-224122'
-      } else {
-        resolvedStoreId = 'hub-209206'
-      }
-    }
-
-    const targetDarkStore = await prisma.darkStore.findUnique({
+    const storeResolveResult = await resolveDarkStoreForCustomer(address, storeId)
+    const resolvedStoreId = storeResolveResult.storeId
+    const targetDarkStore = storeResolveResult.store || await prisma.darkStore.findUnique({
       where: { id: resolvedStoreId }
     })
 
-    const isAkbarpurStore = resolvedStoreId === 'hub-224122' || addrPincode === '224122' || addrCity.includes('akbarpur') || addrCity.includes('ambedkar')
+    const targetStoreCity = targetDarkStore ? extractCityFromStoreName(targetDarkStore.name).toLowerCase() : ''
+    const targetStorePincode = targetDarkStore ? extractPincodeFromStoreId(targetDarkStore.id) : null
 
     if (deliveryMethod === 'DELIVERY') {
       const p = addrPincode
       const serviceablePincode = (resolvePincode(settingsMap) || '209206').replace(/\s+/g, '')
-      const allowedPincodes = isAkbarpurStore
-        ? ['224122']
+      const allowedPincodes = targetStorePincode
+        ? [targetStorePincode]
         : [serviceablePincode, '209206', '209201', '209214', '209208', '208001', '208002', '208011', '208012', '208020']
 
       if (p && !allowedPincodes.includes(p) && !/^\d{6}$/.test(p)) {
         return NextResponse.json({ error: `Selected address pincode (${p}) is outside our delivery zone.` }, { status: 400 })
       }
       const c = addrCity
-      const allowedCities = isAkbarpurStore
-        ? ['akbarpur', 'ambedkar', 'ambedkarnagar', 'up', 'uttar pradesh']
-        : ['ghatampur', 'kanpur', 'nagar', 'dehat', 'up', 'uttar pradesh']
+      const allowedCities = targetStoreCity
+        ? [targetStoreCity, 'up', 'uttar pradesh']
+        : ['ghatampur', 'kanpur', 'akbarpur', 'ambedkar', 'nagar', 'dehat', 'up', 'uttar pradesh']
 
       if (c && !allowedCities.some(cityKeyword => c.includes(cityKeyword))) {
         return NextResponse.json({ error: 'Selected address city is outside our delivery zone.' }, { status: 400 })
@@ -278,19 +290,19 @@ export async function POST(request: NextRequest) {
       })
       const geoSettingMap = new Map(geoSettings.map(s => [s.key, s.value]))
 
-      const storeLat = targetDarkStore ? targetDarkStore.latitude : (geoSettingMap.get('store_lat') ? parseFloat(geoSettingMap.get('store_lat')!) : DEFAULT_STORE_LAT)
-      const storeLng = targetDarkStore ? targetDarkStore.longitude : (geoSettingMap.get('store_lng') ? parseFloat(geoSettingMap.get('store_lng')!) : DEFAULT_STORE_LNG)
-      const maxRadiusKm = targetDarkStore?.deliveryRadiusKm ? targetDarkStore.deliveryRadiusKm : (geoSettingMap.get('delivery_radius') ? parseFloat(geoSettingMap.get('delivery_radius')!) : (geoSettingMap.get('max_delivery_radius') ? parseFloat(geoSettingMap.get('max_delivery_radius')!) : 5.0))
+      storeLat = targetDarkStore ? targetDarkStore.latitude : (geoSettingMap.get('store_lat') ? parseFloat(geoSettingMap.get('store_lat')!) : DEFAULT_STORE_LAT)
+      storeLng = targetDarkStore ? targetDarkStore.longitude : (geoSettingMap.get('store_lng') ? parseFloat(geoSettingMap.get('store_lng')!) : DEFAULT_STORE_LNG)
+      maxRadiusKm = targetDarkStore?.deliveryRadiusKm ? targetDarkStore.deliveryRadiusKm : (geoSettingMap.get('delivery_radius') ? parseFloat(geoSettingMap.get('delivery_radius')!) : (geoSettingMap.get('max_delivery_radius') ? parseFloat(geoSettingMap.get('max_delivery_radius')!) : 5.0))
       const surgeFee = targetDarkStore?.surgeCharge ? targetDarkStore.surgeCharge : (geoSettingMap.get('surge_charge') ? parseFloat(geoSettingMap.get('surge_charge')!) : 0)
-      const storeDisplayName = targetDarkStore?.name || (isAkbarpurStore ? 'Akbarpur Store' : 'Ghatampur Store')
+      storeDisplayName = targetDarkStore?.name || 'FastKirana Store'
 
-      let resolvedLat = targetLat
-      let resolvedLng = targetLng
+      resolvedLat = targetLat
+      resolvedLng = targetLng
 
       if (!resolvedLat || !resolvedLng) {
         try {
-          const fallbackCity = isAkbarpurStore ? 'Akbarpur' : 'Ghatampur'
-          const fallbackPincode = isAkbarpurStore ? '224122' : STORE_PINCODE
+          const fallbackCity = targetStoreCity || 'Ghatampur'
+          const fallbackPincode = targetStorePincode || STORE_PINCODE
           const addressQuery = `${address.houseNo || ''} ${address.street || ''} ${address.area || ''}, ${address.city || fallbackCity}, ${address.pincode || fallbackPincode}`
           const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
           if (apiKey) {
@@ -319,12 +331,6 @@ export async function POST(request: NextRequest) {
       if (resolvedLat && resolvedLng) {
         const distanceKm = getDistanceKm(storeLat, storeLng, resolvedLat, resolvedLng)
         deliveryRules = getDeliveryRules(distanceKm, { maxRadiusKm, surgeFee })
-
-        if (!deliveryRules.isServiceable || distanceKm > maxRadiusKm) {
-          return NextResponse.json({
-            error: `Your location is ${distanceKm.toFixed(1)} km away. Delivery is strictly limited to ${maxRadiusKm.toFixed(1)} km from ${storeDisplayName}.`
-          }, { status: 400 })
-        }
       }
     }
 
@@ -635,22 +641,80 @@ export async function POST(request: NextRequest) {
     let groceryDeliveryFee = 0
 
     if (deliveryMethod === 'DELIVERY' && !isB2B) {
-      if (deliveryRules && !deliveryRules.isServiceable) {
-        return NextResponse.json({
-          error: `Selected address is outside our delivery zone (${deliveryRules.distanceKm.toFixed(1)} km away). We deliver up to 5 km.`
-        }, { status: 400 })
+      // Evaluate active surge for target DarkStore hub
+      let hubSurgeFee = 0
+      try {
+        const activeSurge = await evaluateSurgeStatus(
+          settingsMap,
+          targetDarkStore?.id,
+          targetDarkStore ? { lat: targetDarkStore.latitude, lng: targetDarkStore.longitude } : null
+        )
+        if (activeSurge.isSurgeActive && activeSurge.surgeFee > 0) {
+          hubSurgeFee = activeSurge.surgeFee
+        }
+      } catch (surgeErr) {
+        console.error('Failed to evaluate hub surge fee:', surgeErr)
       }
 
-      const defaultThreshold = settingsMap['grocery_free_delivery_threshold'] ? parseFloat(settingsMap['grocery_free_delivery_threshold']) : GROCERY_FREE_DELIVERY_THRESHOLD
-      const freeDeliveryThreshold = (deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : defaultThreshold
-      const appliesDeliveryFee = combinedSubtotal < freeDeliveryThreshold
+      // 1. Process Grocery Items Delivery Fee & Validation from DarkStore Hub
+      if (groceryItems.length > 0) {
+        const defaultThreshold = settingsMap['grocery_free_delivery_threshold'] ? parseFloat(settingsMap['grocery_free_delivery_threshold']) : GROCERY_FREE_DELIVERY_THRESHOLD
 
-      if (appliesDeliveryFee) {
-        const feeToCharge = (deliveryRules && deliveryRules.isServiceable) ? deliveryRules.deliveryFee : deliveryFeeVal
-        if (groceryItems.length > 0) {
-          groceryDeliveryFee = feeToCharge
-        } else if (restaurantData.length > 0) {
-          restaurantData[0].deliveryFee = feeToCharge
+        if (resolvedLat && resolvedLng) {
+          const groceryDistKm = getDistanceKm(storeLat, storeLng, resolvedLat, resolvedLng)
+          const groceryRules = getDeliveryRules(groceryDistKm, { maxRadiusKm, surgeFee: hubSurgeFee })
+
+          if (!groceryRules.isServiceable || groceryDistKm > maxRadiusKm) {
+            return NextResponse.json({
+              error: `Your delivery address is ${groceryDistKm.toFixed(1)} km away. Grocery delivery is strictly limited to ${maxRadiusKm.toFixed(1)} km from ${storeDisplayName}.`
+            }, { status: 400 })
+          }
+
+          if (grocerySubtotal < groceryRules.freeDeliveryThreshold) {
+            groceryDeliveryFee = groceryRules.deliveryFee
+          } else {
+            groceryDeliveryFee = 0
+          }
+        } else {
+          groceryDeliveryFee = (grocerySubtotal < defaultThreshold ? deliveryFeeVal : 0) + hubSurgeFee
+        }
+      }
+
+      // 2. Process EACH Restaurant's Delivery Fee & Validation based on THAT restaurant's GPS location!
+      for (const rData of restaurantData) {
+        const r = rData.restaurant
+        const rLat = r?.lat ?? (r?.latitude ? parseFloat(String(r.latitude)) : null)
+        const rLng = r?.lng ?? (r?.longitude ? parseFloat(String(r.longitude)) : null)
+        const rMaxRadius = r?.deliveryRadiusKm ? parseFloat(String(r.deliveryRadiusKm)) : 5.0
+        const rName = r?.name || 'Restaurant'
+
+        const rDefaultThreshold = settingsMap['restaurant_free_delivery_threshold']
+          ? parseFloat(settingsMap['restaurant_free_delivery_threshold'])
+          : (settingsMap['combined_free_delivery_threshold'] ? parseFloat(settingsMap['combined_free_delivery_threshold']) : 200)
+
+        if (resolvedLat && resolvedLng && rLat && rLng) {
+          // Calculate real distance from the restaurant to the customer's home!
+          const rDistKm = getDistanceKm(rLat, rLng, resolvedLat, resolvedLng)
+          const rRules = getDeliveryRules(rDistKm, { maxRadiusKm: rMaxRadius, surgeFee: hubSurgeFee })
+
+          if (!rRules.isServiceable || rDistKm > rMaxRadius) {
+            return NextResponse.json({
+              error: `Your delivery address is ${rDistKm.toFixed(1)} km away from ${rName}. Delivery from this restaurant is strictly limited to ${rMaxRadius.toFixed(1)} km.`
+            }, { status: 400 })
+          }
+
+          if (rData.subtotal < rRules.freeDeliveryThreshold) {
+            rData.deliveryFee = rRules.deliveryFee
+          } else {
+            rData.deliveryFee = 0
+          }
+        } else {
+          // Fallback if restaurant has no GPS saved
+          if (rData.subtotal < rDefaultThreshold) {
+            rData.deliveryFee = deliveryFeeVal + hubSurgeFee
+          } else {
+            rData.deliveryFee = 0
+          }
         }
       }
     }
@@ -971,7 +1035,7 @@ export async function POST(request: NextRequest) {
               estimatedDelivery,
               deliveryMethod,
               isB2B: Boolean(isB2B),
-              storeId: resolvedStoreId || storeId || 'hub-209206',
+              storeId: resolvedStoreId || storeId || null,
               couponCode: couponCode ? couponCode.toUpperCase() : null,
               shopName: orderInfo.type === 'RESTAURANT'
                 ? (orderInfo.restaurant?.name || 'Restaurant')
@@ -1315,40 +1379,9 @@ export async function POST(request: NextRequest) {
 
           const whatsappPromises: Promise<any>[] = []
 
-          // 2. Automated KOT Remote Broadcast to Kitchen Console & Thermal Printer
-          if (isRestaurant && order.restaurantId) {
-            try {
-              const { createClient } = await import('@supabase/supabase-js')
-              const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bberzasmxwioxjynbuaf.supabase.co'
-              const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-              if (supabaseUrl && supabaseKey) {
-                const supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } })
-                const channel = supabase.channel('restaurant-orders-live')
-                channel.subscribe((status) => {
-                  if (status === 'SUBSCRIBED') {
-                    channel.send({
-                      type: 'broadcast',
-                      event: 'reprint-kot',
-                      payload: {
-                        orderId: order.id,
-                        readableId: displayId,
-                        customerName: order.user?.name || body.customerName || 'Customer',
-                        items: order.items || [],
-                        deliveryMethod: order.deliveryMethod || 'DELIVERY',
-                        notes: order.notes || null,
-                        shopName: order.shopName || 'Kitchen',
-                        printedAt: new Date().toISOString(),
-                      }
-                    }).then(() => {
-                      setTimeout(() => supabase.removeChannel(channel), 2000)
-                    }).catch(() => {})
-                  }
-                })
-              }
-            } catch (kotErr) {
-              console.error('Automated KOT broadcast error:', kotErr)
-            }
-          }
+          // 2. Automated KOT Remote Broadcast: DISABLED by business rule.
+          // KOT is strictly controlled by Admin and is ONLY dispatched when Admin clicks "Send KOT" in the Admin Dashboard (/admin).
+
 
           // 3. WhatsApp Alert to Admins/Staff
           if (adminPhones.length > 0) {
@@ -1451,6 +1484,10 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Order creation error:', error)
     return NextResponse.json({ error: error.message || 'Failed to place order' }, { status: 500 })
+  } finally {
+    if (userId) {
+      inFlightOrderPlacements.delete(userId)
+    }
   }
 }
 
@@ -1495,39 +1532,21 @@ export async function GET(request: NextRequest) {
     if (isStaff && all) {
       // Staff queries orders with associated customer details, filtered by store
       if (storeId && storeId !== 'all') {
-        if (storeId === 'hub-209206' || storeId === 'default-Ghatampur Market') {
-          orders = await prisma.$queryRaw`
-            SELECT o.id, o."userId", o."addressId", o."readableId",
-                   o.status::text as status,
-                   o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
-                   o."paymentMethod"::text as "paymentMethod",
-                   o."paymentStatus"::text as "paymentStatus",
-                   o."estimatedDelivery", o."createdAt", o."updatedAt",
-                   o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone", o."restaurantId", o."storeId",
-                   u.name as "userName", u.email as "userEmail", u.phone as "userPhone"
-            FROM orders o
-            LEFT JOIN users u ON o."userId" = u.id
-            WHERE o."storeId" = 'hub-209206' OR o."storeId" = 'default-Ghatampur Market' OR o."storeId" IS NULL
-            ORDER BY o."createdAt" DESC
-            LIMIT 1000
-          `
-        } else {
-          orders = await prisma.$queryRaw`
-            SELECT o.id, o."userId", o."addressId", o."readableId",
-                   o.status::text as status,
-                   o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
-                   o."paymentMethod"::text as "paymentMethod",
-                   o."paymentStatus"::text as "paymentStatus",
-                   o."estimatedDelivery", o."createdAt", o."updatedAt",
-                   o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone", o."restaurantId", o."storeId",
-                   u.name as "userName", u.email as "userEmail", u.phone as "userPhone"
-            FROM orders o
-            LEFT JOIN users u ON o."userId" = u.id
-            WHERE o."storeId" = ${storeId}
-            ORDER BY o."createdAt" DESC
-            LIMIT 1000
-          `
-        }
+        orders = await prisma.$queryRaw`
+          SELECT o.id, o."userId", o."addressId", o."readableId",
+                 o.status::text as status,
+                 o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+                 o."paymentMethod"::text as "paymentMethod",
+                 o."paymentStatus"::text as "paymentStatus",
+                 o."estimatedDelivery", o."createdAt", o."updatedAt",
+                 o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone", o."restaurantId", o."storeId",
+                 u.name as "userName", u.email as "userEmail", u.phone as "userPhone"
+          FROM orders o
+          LEFT JOIN users u ON o."userId" = u.id
+          WHERE o."storeId" = ${storeId}
+          ORDER BY o."createdAt" DESC
+          LIMIT 1000
+        `
       } else {
         orders = await prisma.$queryRaw`
           SELECT o.id, o."userId", o."addressId", o."readableId",

@@ -1,12 +1,15 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import crypto from 'crypto'
 import { sseEmitter } from '@/lib/sse-emitter'
 import { sendPushNotificationToRoles, sendPushNotificationToRestaurant } from '@/lib/push-notification'
 import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
 import { Role } from '@prisma/client'
+import { apiWriteLimiter } from '@/lib/rate-limit'
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const limited = await apiWriteLimiter.check(req)
+  if (limited) return limited
   try {
     const { orderId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = await req.json()
 
@@ -34,7 +37,11 @@ export async function POST(req: Request) {
 
     const order = orders[0]
 
-    const keySecret = process.env.RAZORPAY_KEY_SECRET || '4C54O0N5q841qdmQ8N1MTTiU'
+    const keySecret = process.env.RAZORPAY_KEY_SECRET
+    if (!keySecret) {
+      console.error('FATAL: RAZORPAY_KEY_SECRET not configured')
+      return NextResponse.json({ error: 'Payment verification unavailable' }, { status: 503 })
+    }
 
     const generatedSignature = crypto
       .createHmac('sha256', keySecret)

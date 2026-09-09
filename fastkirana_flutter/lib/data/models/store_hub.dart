@@ -7,6 +7,7 @@ class StoreHub {
   final bool isActive;
   final bool groceryOpen;
   final String city;
+  final double surgeCharge;
 
   const StoreHub({
     required this.id,
@@ -17,6 +18,7 @@ class StoreHub {
     this.isActive = true,
     this.groceryOpen = true,
     this.city = 'Ghatampur',
+    this.surgeCharge = 0.0,
   });
 
   factory StoreHub.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,9 @@ class StoreHub {
       isActive: json['isActive'] ?? true,
       groceryOpen: json['groceryOpen'] ?? true,
       city: json['city']?.toString() ?? json['name']?.toString() ?? 'Ghatampur',
+      surgeCharge: (json['surgeCharge'] as num?)?.toDouble() ??
+          (json['surge_charge'] as num?)?.toDouble() ??
+          0.0,
     );
   }
 
@@ -41,6 +46,7 @@ class StoreHub {
         'isActive': isActive,
         'groceryOpen': groceryOpen,
         'city': city,
+        'surgeCharge': surgeCharge,
       };
 
   static const StoreHub defaultGhatampur = StoreHub(
@@ -52,5 +58,6 @@ class StoreHub {
     isActive: true,
     groceryOpen: true,
     city: 'Ghatampur',
+    surgeCharge: 0.0,
   );
 }

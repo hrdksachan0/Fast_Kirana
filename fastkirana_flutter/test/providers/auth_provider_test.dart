@@ -6,6 +6,8 @@ import 'package:fastkirana_flutter/data/models/user.dart';
 import 'package:fastkirana_flutter/providers/auth_provider.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('AuthNotifier', () {
     setUp(() {
       SharedPreferences.setMockInitialValues({});
@@ -42,6 +44,9 @@ void main() {
 
         final container = ProviderContainer();
         addTearDown(container.dispose);
+
+        // Read once to instantiate AuthNotifier and start _load()
+        container.read(authProvider);
 
         // Wait for async _load to complete
         await Future.delayed(const Duration(milliseconds: 100));

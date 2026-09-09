@@ -1,34 +1,69 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { evaluateSurgeStatus } from '@/lib/surge-manager'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    const stores = await prisma.darkStore.findMany({
-      where: { isActive: true },
-      select: {
-        id: true,
-        name: true,
-        latitude: true,
-        longitude: true,
-        deliveryRadiusKm: true,
-        isActive: true,
-        groceryOpen: true,
-      },
-      orderBy: { name: 'asc' },
-    })
+    const [stores, storeSettings] = await Promise.all([
+      prisma.darkStore.findMany({
+        where: { isActive: true },
+        select: {
+          id: true,
+          name: true,
+          latitude: true,
+          longitude: true,
+          deliveryRadiusKm: true,
+          isActive: true,
+          groceryOpen: true,
+          surgeCharge: true,
+        },
+        orderBy: { name: 'asc' },
+      }),
+      prisma.storeSetting.findMany({
+        select: { key: true, value: true }
+      })
+    ])
 
-    const formatted = stores.map((s) => ({
-      id: s.id,
-      name: s.name,
-      latitude: s.latitude,
-      longitude: s.longitude,
-      deliveryRadiusKm: s.deliveryRadiusKm || 5.0,
-      isActive: s.isActive,
-      groceryOpen: s.groceryOpen,
-      city: s.name.replace(/\s+(Hub|Market|Central|Dark\s*Store).*$/i, '').trim(),
-    }))
+    const settingsMap = storeSettings.reduce((acc, s) => {
+      acc[s.key] = s.value
+      return acc
+    }, {} as Record<string, string>)
+
+    const formatted = await Promise.all(
+      stores.map(async (s) => {
+        let liveSurgeFee = s.surgeCharge || 0
+        let isSurgeActive = liveSurgeFee > 0
+        let surgeReason = ''
+
+        try {
+          const surge = await evaluateSurgeStatus(settingsMap, s.id, {
+            lat: s.latitude,
+            lng: s.longitude
+          })
+          liveSurgeFee = surge.surgeFee
+          isSurgeActive = surge.isSurgeActive
+          surgeReason = surge.surgeReason
+        } catch (err) {
+          console.warn(`Surge eval failed for hub ${s.id}:`, err)
+        }
+
+        return {
+          id: s.id,
+          name: s.name,
+          latitude: s.latitude,
+          longitude: s.longitude,
+          deliveryRadiusKm: s.deliveryRadiusKm || 5.0,
+          isActive: s.isActive,
+          groceryOpen: s.groceryOpen,
+          surgeCharge: liveSurgeFee,
+          surgeActive: isSurgeActive,
+          surgeReason,
+          city: s.name.replace(/\s+(Hub|Market|Central|Dark\s*Store).*$/i, '').trim(),
+        }
+      })
+    )
 
     return NextResponse.json({
       success: true,
@@ -36,21 +71,10 @@ export async function GET() {
     })
   } catch (error: any) {
     console.error('Failed to fetch store hubs:', error)
-    // Fallback default Ghatampur hub
     return NextResponse.json({
-      success: true,
-      hubs: [
-        {
-          id: 'hub-209206',
-          name: 'Ghatampur Central Hub',
-          latitude: 26.1534185,
-          longitude: 80.1714024,
-          deliveryRadiusKm: 5.0,
-          isActive: true,
-          groceryOpen: true,
-          city: 'Ghatampur',
-        },
-      ],
-    })
+      success: false,
+      error: 'Failed to fetch hubs',
+      hubs: [],
+    }, { status: 500 })
   }
 }

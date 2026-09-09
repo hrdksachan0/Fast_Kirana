@@ -17,8 +17,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Either paymentId or orderId is required' }, { status: 400 })
     }
 
-    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_TRvyzlqHiRGWbr'
-    const keySecret = process.env.RAZORPAY_KEY_SECRET || '4C54O0N5q841qdmQ8N1MTTiU'
+    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
+    const keySecret = process.env.RAZORPAY_KEY_SECRET
+    if (!keyId || !keySecret) {
+      return NextResponse.json({ error: 'Payment service unavailable' }, { status: 503 })
+    }
     const authHeader = 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64')
 
     let targetOrder: any = null
@@ -71,18 +74,7 @@ export async function POST(req: Request) {
         })
       }
 
-      // Fallback: match by amount
-      if (!targetOrder) {
-        const amountInRupees = Number(rzpPayment.amount) / 100
-        targetOrder = await prisma.order.findFirst({
-          where: {
-            total: amountInRupees,
-            paymentStatus: 'PENDING',
-          },
-          orderBy: { createdAt: 'desc' },
-          include: { user: true, address: true },
-        })
-      }
+      // No fallback by amount — strict ID matching only
     } else if (targetOrder) {
       // Automatically search recent captured Razorpay payments for this targetOrder!
       try {
@@ -97,14 +89,14 @@ export async function POST(req: Request) {
 
           matchedPayment = items.find((p: any) => {
             if (p.status !== 'captured' && p.status !== 'authorized') return false
-            if (p.notes?.orderId === targetOrder.id) return true
-            if (targetReadableId && p.notes?.readableId === targetReadableId) return true
-            if (targetReadableId && p.description && p.description.includes(targetReadableId)) return true
-            // Match amount if created within same time window
-            if (p.amount === orderTotalPaise) {
-              const pTime = p.created_at * 1000
-              const oTime = new Date(targetOrder.createdAt).getTime()
-              if (Math.abs(pTime - oTime) < 24 * 60 * 60 * 1000) return true
+            const hasExplicitIdMatch = 
+              (p.notes?.orderId && p.notes.orderId === targetOrder.id) ||
+              (targetReadableId && p.notes?.readableId === targetReadableId) ||
+              (targetReadableId && p.description && p.description.includes(targetReadableId)) ||
+              (p.order_id && (targetOrder as any).razorpayOrderId && p.order_id === (targetOrder as any).razorpayOrderId)
+            
+            if (hasExplicitIdMatch && p.amount === orderTotalPaise) {
+              return true
             }
             return false
           })

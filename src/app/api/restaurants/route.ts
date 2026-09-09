@@ -7,6 +7,7 @@ import { apiReadLimiter, apiWriteLimiter } from '@/lib/rate-limit'
 import { revalidateStorefront, revalidateRestaurant } from '@/lib/revalidate'
 
 import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
+import { extractCityFromStoreName } from '@/lib/store-resolver'
 
 export async function GET(request: NextRequest) {
   const limited = await apiReadLimiter.check(request)
@@ -20,10 +21,16 @@ export async function GET(request: NextRequest) {
 
     const where: Prisma.RestaurantWhereInput = {}
 
-    let isAdmin = false
-    if (all) {
-      const session = await auth()
-      isAdmin = session?.user?.role === 'ADMIN'
+    const session = await auth()
+    const userRole = session?.user?.role
+    const userAssignedRestaurantId = (session?.user as any)?.assignedRestaurantId
+    const isAdmin = userRole === 'ADMIN'
+
+    // 1. Strict Isolation: If logged in as RESTAURANT_OWNER or CHEF, lock to their assigned restaurant!
+    if (userRole === 'RESTAURANT_OWNER' || userRole === 'CHEF') {
+      if (userAssignedRestaurantId) {
+        where.id = userAssignedRestaurantId
+      }
     }
 
     if (!isAdmin || !all) {
@@ -51,6 +58,19 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // 2. Filter by storeId: If browsing by dark store hub, only restaurants from that store's city!
+    const storeId = searchParams.get('storeId')
+    if (storeId && storeId !== 'all') {
+      const store = await prisma.darkStore.findUnique({
+        where: { id: storeId },
+        select: { name: true }
+      })
+      const storeCity = store ? extractCityFromStoreName(store.name) : ''
+      if (storeCity) {
+        where.city = { contains: storeCity, mode: 'insensitive' }
+      }
+    }
+
     const restaurants = await prisma.restaurant.findMany({
       where,
       orderBy: [
@@ -69,7 +89,14 @@ export async function GET(request: NextRequest) {
           }
         },
         _count: {
-          select: { products: true }
+          select: {
+            products: true,
+            orders: {
+              where: {
+                status: { in: ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED'] }
+              }
+            }
+          }
         }
       }
     })
@@ -82,6 +109,7 @@ export async function GET(request: NextRequest) {
         isClosedBySchedule: opStatus.isClosedBySchedule,
         isClosedByOwner: opStatus.isClosedByOwner,
         formattedScheduleStr: opStatus.formattedScheduleStr,
+        activeOrdersCount: r._count?.orders ?? 0,
       }
     })
 

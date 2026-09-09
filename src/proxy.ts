@@ -122,7 +122,19 @@ export async function proxy(req: NextRequest) {
     }
   }
 
-  // Forward user session headers to FastAPI backend for all /api requests
+  // Protect restaurant-kitchen routes
+  const isRestaurantRoute = nextUrl.pathname.startsWith('/restaurant-kitchen') || nextUrl.pathname.startsWith('/restaurant-dashboard')
+  if (isRestaurantRoute) {
+    if (!isLoggedIn) {
+      const callbackUrl = encodeURIComponent(nextUrl.pathname + nextUrl.search)
+      return NextResponse.redirect(new URL(`/restaurant-login?callbackUrl=${callbackUrl}`, baseUrl))
+    }
+    if (userRole !== 'RESTAURANT_OWNER' && userRole !== 'CHEF' && userRole !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/', baseUrl))
+    }
+  }
+
+  // Forward user session headers to backend for all /api requests
   if (nextUrl.pathname.startsWith('/api/')) {
     const requestHeaders = new Headers(req.headers)
     if (isLoggedIn && token) {
@@ -135,6 +147,12 @@ export async function proxy(req: NextRequest) {
       }
       if (token.email) {
         requestHeaders.set('x-user-email', token.email as string)
+      }
+      if (token.assignedRestaurantId) {
+        requestHeaders.set('x-restaurant-id', token.assignedRestaurantId as string)
+      }
+      if (token.assignedStoreId) {
+        requestHeaders.set('x-store-id', token.assignedStoreId as string)
       }
     }
     return NextResponse.next({

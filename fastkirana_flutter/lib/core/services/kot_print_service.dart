@@ -19,6 +19,7 @@ class KotPrintService {
   static Future<bool> sendRemoteKOTToKitchen({
     required String orderId,
     String? readableId,
+    String? restaurantId,
     String? shopName,
     String? kotText,
     String? customerName,
@@ -54,6 +55,7 @@ class KotPrintService {
     final payload = {
       'orderId': cleanId,
       'readableId': readableId ?? cleanId,
+      'restaurantId': restaurantId,
       'shopName': shopName ?? 'Kitchen',
       'kotText': kotText ?? '',
       'customerName': customerName ?? 'Customer',

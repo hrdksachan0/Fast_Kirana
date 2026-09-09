@@ -21,10 +21,25 @@ export async function GET(request: NextRequest) {
 
     if (!effectiveRestId && cleanPhone) {
       const last10 = cleanPhone.slice(-10)
-      if (last10 === '8112849854') effectiveRestId = 'REST-101'
-      else if (last10 === '9250138656') effectiveRestId = 'REST-102'
-      else if (last10 === '7991488783') effectiveRestId = 'REST-103'
-      else if (last10 === '9900112233') effectiveRestId = 'REST-104'
+      const dbUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { phone: { endsWith: last10 } },
+            { phone: `+91${last10}` }
+          ],
+          assignedRestaurantId: { not: null }
+        },
+        select: { assignedRestaurantId: true }
+      })
+      if (dbUser?.assignedRestaurantId) {
+        effectiveRestId = dbUser.assignedRestaurantId
+      } else {
+        const rest = await prisma.restaurant.findFirst({
+          where: { ownerPhone: { contains: last10 } },
+          select: { id: true }
+        })
+        if (rest) effectiveRestId = rest.id
+      }
     }
 
     if (!effectiveRestId && headerUserId) {
@@ -43,9 +58,9 @@ export async function GET(request: NextRequest) {
     else if (effectiveRestId === 'cmsbhxb6a000304if8kf1cwji' || effectiveRestId === 'bal-udyan-restaurant' || effectiveRestId === 'bal-udyan') effectiveRestId = 'REST-103'
     else if (effectiveRestId === 'cmtn66nhy000004k0fu84b7ke' || effectiveRestId === 'pari-milk-dairy-sweets' || effectiveRestId === 'pari-milk') effectiveRestId = 'REST-104'
 
-    // Default fallback to A.S. Restaurant if no specific outlet requested
+    // If no restaurant ID resolved, return empty list (no mixup)
     if (!effectiveRestId) {
-      effectiveRestId = 'REST-101'
+      return NextResponse.json([])
     }
 
     const status = searchParams.get('status')

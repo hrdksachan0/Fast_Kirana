@@ -1,8 +1,10 @@
 import { redirect } from 'next/navigation'
+import { Suspense } from 'react'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { formatPrice, withRetry } from '@/lib/utils'
 import { AdminDashboard } from '@/components/admin/admin-dashboard'
+import { getStoreUserFilter } from '@/lib/store-resolver'
 import {
   IndianRupee,
   ShoppingBag,
@@ -83,11 +85,11 @@ export default async function AdminPage(props: {
     istDate.setUTCHours(0, 0, 0, 0)
     const startOfToday = new Date(istDate.getTime() - istOffset)
 
-    const storeWhere = initialStoreId
-      ? (initialStoreId === 'hub-209206' || initialStoreId === 'default-Ghatampur Market'
-          ? { OR: [{ storeId: 'hub-209206' }, { storeId: 'default-Ghatampur Market' }, { storeId: null }] }
-          : { storeId: initialStoreId })
+    const storeWhere = initialStoreId && initialStoreId !== 'all'
+      ? { storeId: initialStoreId }
       : undefined
+
+    const userStoreFilter = await getStoreUserFilter(initialStoreId)
 
     const [todayOrders, todayRevAgg, todayDeliveredAgg, ...results] = await Promise.all([
       prisma.order.count({
@@ -116,43 +118,10 @@ export default async function AdminPage(props: {
         _sum: { total: true },
       }),
       prisma.user.count({
-        where: (initialStoreId && initialStoreId !== 'all'
-          ? (initialStoreId === 'hub-224122'
-              ? {
-                  NOT: { email: { startsWith: 'guest-' } },
-                  OR: [
-                    { assignedStoreId: 'hub-224122' },
-                    { orders: { some: { storeId: 'hub-224122' } } },
-                    { addresses: { some: { pincode: '224122' } } },
-                    { addresses: { some: { city: { contains: 'Akbarpur', mode: 'insensitive' } } } }
-                  ]
-                }
-              : (initialStoreId === 'hub-209206' || initialStoreId === 'default-Ghatampur Market')
-              ? {
-                  NOT: { email: { startsWith: 'guest-' } },
-                  OR: [
-                    { assignedStoreId: 'hub-209206' },
-                    { orders: { some: { OR: [{ storeId: 'hub-209206' }, { storeId: null }] } } },
-                    { addresses: { some: { pincode: '209206' } } },
-                    { addresses: { some: { city: { contains: 'Ghatampur', mode: 'insensitive' } } } },
-                    {
-                      AND: [
-                        { assignedStoreId: null },
-                        { orders: { none: { storeId: 'hub-224122' } } }
-                      ]
-                    }
-                  ]
-                }
-              : {
-                  NOT: { email: { startsWith: 'guest-' } },
-                  OR: [
-                    { assignedStoreId: initialStoreId },
-                    { orders: { some: { storeId: initialStoreId } } }
-                  ]
-                })
-          : {
-              NOT: { email: { startsWith: 'guest-' } }
-            }) as any
+        where: {
+          NOT: { email: { startsWith: 'guest-' } },
+          ...(Object.keys(userStoreFilter).length > 0 ? userStoreFilter : {})
+        } as any
       }),
       initialStoreId && initialStoreId !== 'all'
         ? prisma.storeInventory.count({
@@ -168,7 +137,7 @@ export default async function AdminPage(props: {
               restaurantId: null,
             },
           }),
-      initialStoreId
+      initialStoreId && initialStoreId !== 'all'
         ? prisma.$queryRaw`
             SELECT "shopName", "restaurantId", "orderType"::text as "orderType", status::text as status,
                    COUNT(id)::int as count,
@@ -177,7 +146,7 @@ export default async function AdminPage(props: {
                    COALESCE(SUM(discount), 0)::float as discount
             FROM orders
             WHERE ("deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL)
-              AND ("storeId" = ${initialStoreId} OR (${initialStoreId} IN ('hub-209206', 'default-Ghatampur Market') AND "storeId" IS NULL))
+              AND "storeId" = ${initialStoreId}
             GROUP BY "shopName", "restaurantId", "orderType", status
           `
         : prisma.$queryRaw`
@@ -469,37 +438,44 @@ export default async function AdminPage(props: {
       </div>
 
       {/* Dynamic Tabbed Console */}
-      <AdminDashboard
-        initialStoreId={initialStoreId}
-        serverUser={{
-          id: session.user.id,
-          name: session.user.name,
-          email: session.user.email,
-          role: session.user.role,
-          phone: (session.user as any).phone || null,
-          assignedStoreId: (session.user as any).assignedStoreId || null,
-        }}
-        initialOrders={orders}
-        initialProducts={products}
-        initialCategories={categories}
-        initialUsers={users}
-        initialReviews={reviews}
-        initialCoupons={coupons}
-        allProducts={allProducts}
-        initialOrderCounts={initialOrderCounts}
-        stats={{
-          revenue,
-          todaySales: todayRevenue,
-          netSales: todayNetRevenue,
-          todayOrdersCount: todayOrdersCount,
-          orderCount: totalOrdersCount,
-          activeOrderCount: activeOrdersCount,
-          userCount,
-          lowStockCount,
-          groceryRevenue,
-          restaurantRevenue,
-        }}
-      />
+      <Suspense fallback={
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 text-muted-foreground animate-pulse">
+          <div className="w-8 h-8 rounded-full border-2 border-red-500 border-t-transparent animate-spin" />
+          <p className="text-xs font-bold tracking-wide">Loading Fast Kirana Admin Console...</p>
+        </div>
+      }>
+        <AdminDashboard
+          initialStoreId={initialStoreId}
+          serverUser={{
+            id: session.user.id,
+            name: session.user.name,
+            email: session.user.email,
+            role: session.user.role,
+            phone: (session.user as any).phone || null,
+            assignedStoreId: (session.user as any).assignedStoreId || null,
+          }}
+          initialOrders={orders}
+          initialProducts={products}
+          initialCategories={categories}
+          initialUsers={users}
+          initialReviews={reviews}
+          initialCoupons={coupons}
+          allProducts={allProducts}
+          initialOrderCounts={initialOrderCounts}
+          stats={{
+            revenue,
+            todaySales: todayRevenue,
+            netSales: todayNetRevenue,
+            todayOrdersCount: todayOrdersCount,
+            orderCount: totalOrdersCount,
+            activeOrderCount: activeOrdersCount,
+            userCount,
+            lowStockCount,
+            groceryRevenue,
+            restaurantRevenue,
+          }}
+        />
+      </Suspense>
 
     </div>
   )

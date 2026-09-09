@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
 import { getRedis, CACHE_KEYS, DEFAULT_TTL } from '@/lib/redis-client'
+import { evaluateSurgeStatus } from '@/lib/surge-manager'
 
 export const revalidate = 10
 
@@ -41,6 +42,12 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   cafe_free_delivery_threshold: '200',
   combined_free_delivery_threshold: '200',
   delivery_fee: '25',
+  surge_mode: 'AUTO',
+  surge_rain_amount: '20',
+  surge_demand_amount: '15',
+  surge_manual_amount: '20',
+  surge_max_cap: '25',
+  surge_demand_threshold: '3.0',
   contact_phone: '+91 70544 70303',
   contact_email: 'help@fastkirana.com',
   contact_timings: '6 AM - 12 AM',
@@ -116,7 +123,7 @@ export function checkIsStoreOpen(settingsMap: Record<string, string>, prefix: 'g
   return currentTotal >= openTotal || currentTotal <= closeTotal
 }
 
-async function buildSettingsMap(): Promise<Record<string, string>> {
+async function buildSettingsMap(storeId?: string | null): Promise<Record<string, string>> {
   const [settings, activeRestaurants] = await Promise.all([
     prisma.storeSetting.findMany({
       select: { key: true, value: true },
@@ -129,6 +136,34 @@ async function buildSettingsMap(): Promise<Record<string, string>> {
 
   const settingsMap = { ...DEFAULT_SETTINGS }
   settings.forEach((s) => { settingsMap[s.key] = s.value })
+
+  // If a specific DarkStore hub is queried, inject its hub-specific parameters
+  if (storeId && storeId !== 'all') {
+    try {
+      const hub = await prisma.darkStore.findUnique({
+        where: { id: storeId },
+        select: {
+          id: true,
+          name: true,
+          latitude: true,
+          longitude: true,
+          deliveryRadiusKm: true,
+          groceryOpen: true,
+          surgeCharge: true,
+        }
+      })
+      if (hub) {
+        settingsMap['store_id'] = hub.id
+        settingsMap['store_name'] = hub.name
+        settingsMap['store_lat'] = String(hub.latitude)
+        settingsMap['store_lng'] = String(hub.longitude)
+        settingsMap['delivery_radius'] = String(hub.deliveryRadiusKm || 5.0)
+        settingsMap['grocery_mart_open'] = hub.groceryOpen ? 'true' : 'false'
+      }
+    } catch (hubErr) {
+      console.warn('Failed to load specific hub in settings:', hubErr)
+    }
+  }
 
   for (const r of activeRestaurants) {
     const opStatus = checkStoreOperatingStatus(r)
@@ -152,14 +187,43 @@ async function buildSettingsMap(): Promise<Record<string, string>> {
     if (cafe.closeTime) settingsMap['cafe_close_time'] = cafe.closeTime
   }
 
-  settingsMap['grocery_mart_open'] = checkIsStoreOpen(settingsMap, 'grocery') ? 'true' : 'false'
+  if (!storeId || storeId === 'all') {
+    settingsMap['grocery_mart_open'] = checkIsStoreOpen(settingsMap, 'grocery') ? 'true' : 'false'
+  }
+
+  try {
+    const surge = await evaluateSurgeStatus(settingsMap, storeId)
+    settingsMap['surge_active'] = surge.isSurgeActive ? 'true' : 'false'
+    settingsMap['surge_fee'] = String(surge.surgeFee)
+    settingsMap['surge_charge'] = String(surge.surgeFee)
+    settingsMap['surge_reason'] = surge.surgeReason
+    settingsMap['surge_type'] = surge.surgeType
+    settingsMap['surge_mode'] = surge.mode
+    if (surge.weatherInfo) {
+      settingsMap['current_weather_temp'] = String(surge.weatherInfo.temperature)
+      settingsMap['current_weather_condition'] = surge.weatherInfo.condition
+      settingsMap['current_weather_is_raining'] = surge.weatherInfo.isRaining ? 'true' : 'false'
+    }
+    if (surge.demandInfo) {
+      settingsMap['current_active_orders'] = String(surge.demandInfo.activeOrders)
+      settingsMap['current_active_riders'] = String(surge.demandInfo.activeRiders)
+      settingsMap['current_demand_ratio'] = String(surge.demandInfo.ratio)
+    }
+  } catch (surgeErr) {
+    console.error('Surge evaluation error in settings:', surgeErr)
+  }
+
   return settingsMap
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const storeId = searchParams.get('storeId') || searchParams.get('hubId')
+    const cacheKey = storeId && storeId !== 'all' ? `${CACHE_KEYS.SETTINGS}:${storeId}` : CACHE_KEYS.SETTINGS
+
     const redis = getRedis()
-    const cached = await redis.get<Record<string, string>>(CACHE_KEYS.SETTINGS)
+    const cached = await redis.get<Record<string, string>>(cacheKey)
 
     if (cached) {
       return NextResponse.json(cached, {
@@ -169,8 +233,8 @@ export async function GET() {
       })
     }
 
-    const settingsMap = await buildSettingsMap()
-    await redis.set(CACHE_KEYS.SETTINGS, settingsMap, { ex: DEFAULT_TTL.SETTINGS })
+    const settingsMap = await buildSettingsMap(storeId)
+    await redis.set(cacheKey, settingsMap, { ex: DEFAULT_TTL.SETTINGS })
 
     return NextResponse.json(settingsMap, {
       headers: {

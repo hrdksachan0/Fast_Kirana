@@ -2,12 +2,14 @@
 
 import { AdminRestaurantReport } from '@/components/admin/admin-restaurant-report'
 
-interface RestaurantReportTabProps {}
+interface RestaurantReportTabProps {
+  storeId?: string | null
+}
 
-export function RestaurantReportTab({}: RestaurantReportTabProps) {
+export function RestaurantReportTab({ storeId }: RestaurantReportTabProps) {
   return (
     <div className="animate-fade-in">
-      <AdminRestaurantReport />
+      <AdminRestaurantReport storeId={storeId} />
     </div>
   )
 }

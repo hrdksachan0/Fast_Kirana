@@ -11,6 +11,7 @@ import { getCachedSearch, setCachedSearch } from '@/lib/search-cache'
 import { OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID } from '@/lib/constants'
 import { getSemanticAiScore } from '@/lib/vector-search'
 import { normalizeRestaurantId } from '@/lib/restaurant-ids'
+import { extractCityFromStoreName } from '@/lib/store-resolver'
 
 const SYNONYM_DICTIONARY: Record<string, string[]> = {
   'aalu': ['potato', 'aloo'],
@@ -94,6 +95,24 @@ export async function GET(request: NextRequest) {
     } else if (excludeRestaurant || (!includeRestaurants && !isWorker && !includeUnavailable && !category && !normalizedSearch)) {
       // In grocery context (no restaurant, no category, NO search query), exclude restaurant products
       where.restaurantId = null
+    }
+
+    // Strict Store Isolation: Exclude restaurants from other cities for this store
+    if (storeId && storeId !== 'all') {
+      const store = await prisma.darkStore.findUnique({
+        where: { id: storeId },
+        select: { name: true }
+      })
+      const storeCity = store ? extractCityFromStoreName(store.name) : ''
+      if (storeCity) {
+        const storeScope = {
+          OR: [
+            { restaurantId: null },
+            { restaurant: { city: { contains: storeCity, mode: 'insensitive' as const } } }
+          ]
+        }
+        where.AND = where.AND ? (Array.isArray(where.AND) ? [...where.AND, storeScope] : [where.AND, storeScope]) : [storeScope]
+      }
     }
 
     if (categoryId) {
@@ -209,6 +228,10 @@ export async function GET(request: NextRequest) {
           rating: true,
           deliveryTime: true,
           isOpen: true,
+          lat: true,
+          lng: true,
+          deliveryRadiusKm: true,
+          address: true,
         }
       }
     }

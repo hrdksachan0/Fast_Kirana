@@ -70,9 +70,10 @@ interface StockHistoryLog {
 
 interface AdminInventoryCenterProps {
   onInventoryUpdated?: () => void
+  storeId?: string | null
 }
 
-export function AdminInventoryCenter({ onInventoryUpdated }: AdminInventoryCenterProps = {}) {
+export function AdminInventoryCenter({ onInventoryUpdated, storeId }: AdminInventoryCenterProps = {}) {
   const [activeTab, setActiveTab] = useState<'inward' | 'pos' | 'import' | 'history'>('inward')
   
   // Shared state: products catalog (loaded on mount)
@@ -83,7 +84,8 @@ export function AdminInventoryCenter({ onInventoryUpdated }: AdminInventoryCente
   const fetchCatalog = async () => {
     try {
       setLoadingCatalog(true)
-      const res = await fetch(`/api/products?limit=1000&admin=true&includeUnavailable=true&t=${Date.now()}`)
+      const storeParam = storeId ? `&storeId=${encodeURIComponent(storeId)}` : ''
+      const res = await fetch(`/api/products?limit=1000&admin=true&includeUnavailable=true${storeParam}&t=${Date.now()}`)
       if (!res.ok) throw new Error('Failed to load products')
       const data = await res.json()
       setProducts(data.products || [])
@@ -104,7 +106,7 @@ export function AdminInventoryCenter({ onInventoryUpdated }: AdminInventoryCente
 
   useEffect(() => {
     fetchCatalog()
-  }, [])
+  }, [storeId])
 
   // =========================================================================
   // TAB 1: QUICK INWARD & SCAN (BLINKIT-STYLE)
@@ -374,7 +376,8 @@ export function AdminInventoryCenter({ onInventoryUpdated }: AdminInventoryCente
           batchCode: inwardBatchCode.trim(),
           quantity: parseInt(inwardQty, 10),
           costPrice: parseFloat(inwardCost),
-          expiryDate: inwardExpiry ? new Date(inwardExpiry).toISOString() : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // default +30 days if blank
+          expiryDate: inwardExpiry ? new Date(inwardExpiry).toISOString() : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // default +30 days if blank
+          storeId: storeId || undefined,
         })
       })
 

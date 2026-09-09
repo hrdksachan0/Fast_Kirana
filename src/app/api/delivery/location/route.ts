@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/auth'
+import { requireRole } from '@/lib/auth-guard'
 
 const DEFAULT_GHATAMPUR_LAT = 26.1534185
 const DEFAULT_GHATAMPUR_LNG = 80.1714024
@@ -101,13 +101,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    let userId: string | null = null
+    const { error: authError, session } = await requireRole(['DELIVERY', 'ADMIN'], request)
     
-    // 1. Session check
-    const session = await auth()
-    if (session?.user?.id) {
-      userId = session.user.id
-    }
+    let userId: string | null = session?.user?.id || null
 
     // 2. Header fallback for mobile / flutter app
     if (!userId) {

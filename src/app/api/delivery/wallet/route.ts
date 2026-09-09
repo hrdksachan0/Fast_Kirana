@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/auth'
+import { requireRole } from '@/lib/auth-guard'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
-  const session = await auth()
+  const { error, session } = await requireRole(['DELIVERY', 'ADMIN'], request)
+  if (error) return error
+
   const searchParams = request.nextUrl.searchParams
   const queryUserId = searchParams.get('userId')
   const queryPhone = searchParams.get('phone')
@@ -115,7 +117,7 @@ export async function GET(request: NextRequest) {
         name: riderUser?.name || 'Partner',
         phone: riderUser?.phone || '',
         assignedStoreId: riderUser?.assignedStoreId || null,
-        storeName: riderUser?.assignedStore?.name || ((riderUser?.assignedStoreId === 'hub-209206' || riderUser?.assignedStoreId === 'default-Ghatampur Market') ? 'Ghatampur Hub' : null)
+        storeName: riderUser?.assignedStore?.name || null
       },
       wallet: {
         cashInHand: wallet.cashInHand,

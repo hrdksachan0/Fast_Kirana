@@ -321,6 +321,10 @@ class RestaurantInfo {
   final double rating;
   final String deliveryTime;
   final bool isOpen;
+  final double? lat;
+  final double? lng;
+  final double? deliveryRadiusKm;
+  final String? address;
 
   RestaurantInfo({
     required this.id,
@@ -331,18 +335,50 @@ class RestaurantInfo {
     required this.rating,
     required this.deliveryTime,
     required this.isOpen,
+    this.lat,
+    this.lng,
+    this.deliveryRadiusKm,
+    this.address,
   });
 
-  factory RestaurantInfo.fromJson(Map<String, dynamic> json) => RestaurantInfo(
-        id: json['id']?.toString() ?? '',
-        name: json['name']?.toString() ?? '',
-        slug: json['slug']?.toString() ?? '',
-        logoUrl: json['logoUrl']?.toString(),
-        bannerUrl: json['bannerUrl']?.toString(),
-        rating: double.tryParse(json['rating']?.toString() ?? '4.5') ?? 4.5,
-        deliveryTime: json['deliveryTime']?.toString() ?? 'Fast Delivery',
-        isOpen: json['isOpen'] != false,
-      );
+  factory RestaurantInfo.fromJson(Map<String, dynamic> json) {
+    final lower = (json['name'] ?? json['slug'] ?? '').toString().toLowerCase();
+
+    double? parseLat() {
+      if (json['lat'] != null) return double.tryParse(json['lat'].toString());
+      if (json['latitude'] != null) return double.tryParse(json['latitude'].toString());
+      if (lower.contains('bal udyan') || lower.contains('birshibpur')) return 26.1468042;
+      if (lower.contains('as') || lower.contains('a.s') || lower.contains('palika')) return 26.1494833;
+      if (lower.contains('wedson') || lower.contains('hamirpur')) return 26.147862;
+      if (lower.contains('pari') || lower.contains('dairy')) return 26.1484783;
+      return null;
+    }
+
+    double? parseLng() {
+      if (json['lng'] != null) return double.tryParse(json['lng'].toString());
+      if (json['longitude'] != null) return double.tryParse(json['longitude'].toString());
+      if (lower.contains('bal udyan') || lower.contains('birshibpur')) return 80.1773979;
+      if (lower.contains('as') || lower.contains('a.s') || lower.contains('palika')) return 80.1672394;
+      if (lower.contains('wedson') || lower.contains('hamirpur')) return 80.172482;
+      if (lower.contains('pari') || lower.contains('dairy')) return 80.1667542;
+      return null;
+    }
+
+    return RestaurantInfo(
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      slug: json['slug']?.toString() ?? '',
+      logoUrl: json['logoUrl']?.toString(),
+      bannerUrl: json['bannerUrl']?.toString(),
+      rating: double.tryParse(json['rating']?.toString() ?? '4.5') ?? 4.5,
+      deliveryTime: json['deliveryTime']?.toString() ?? 'Fast Delivery',
+      isOpen: json['isOpen'] != false,
+      lat: parseLat(),
+      lng: parseLng(),
+      deliveryRadiusKm: double.tryParse(json['deliveryRadiusKm']?.toString() ?? '5.0') ?? 5.0,
+      address: json['address']?.toString(),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -353,5 +389,9 @@ class RestaurantInfo {
         'rating': rating,
         'deliveryTime': deliveryTime,
         'isOpen': isOpen,
+        'lat': lat,
+        'lng': lng,
+        'deliveryRadiusKm': deliveryRadiusKm,
+        'address': address,
       };
 }

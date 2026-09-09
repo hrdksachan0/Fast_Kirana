@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { requireAdmin } from '@/lib/auth-guard'
 import { revalidateStorefront } from '@/lib/revalidate'
+import { extractCityFromStoreName } from '@/lib/store-resolver'
 
 export async function GET(request: Request) {
   const adminResult = await requireAdmin()
@@ -66,6 +67,22 @@ export async function GET(request: Request) {
       andClauses.push({
         restaurantId: null
       })
+    }
+
+    if (storeId && storeId !== 'all') {
+      const store = await prisma.darkStore.findUnique({
+        where: { id: storeId },
+        select: { name: true }
+      })
+      const storeCity = store ? extractCityFromStoreName(store.name) : ''
+      if (storeCity) {
+        andClauses.push({
+          OR: [
+            { restaurantId: null },
+            { restaurant: { city: { contains: storeCity, mode: 'insensitive' } } }
+          ]
+        })
+      }
     }
 
     if (andClauses.length > 0) {
@@ -209,7 +226,7 @@ export async function POST(request: Request) {
     try {
       const allStores = await prisma.darkStore.findMany({ select: { id: true } })
       if (allStores.length > 0) {
-        const targetStoreId = body.storeId || (session?.user as any)?.assignedStoreId || 'hub-209206'
+        const targetStoreId = body.storeId || (session?.user as any)?.assignedStoreId || allStores[0].id
         const initialStockNum = parseInt(String(stock), 10) || 0
         await prisma.storeInventory.createMany({
           data: allStores.map((s) => ({

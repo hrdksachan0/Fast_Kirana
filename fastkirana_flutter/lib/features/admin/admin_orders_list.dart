@@ -30,6 +30,7 @@ import '../delivery/widgets/connectivity_banner.dart';
 import '../common/order_edit_modal.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../../core/services/notification_service.dart';
+import '../../core/services/order_alarm_service.dart';
 import '../common/widgets/battery_optimization_dialog.dart';
 
 class AdminOrdersScreen extends ConsumerStatefulWidget {
@@ -290,34 +291,27 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
     }
   }
 
-  void _startPendingAlarm() {
-    if (_isPlayingAlarm) return;
-    _isPlayingAlarm = true;
-    _playChime();
-    _pendingAlarmTimer?.cancel();
-    _pendingAlarmTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      final hasPending = _allOrders.any((o) => (o.status == OrderStatus.pending));
-      if (!hasPending) {
-        _stopPendingAlarm();
-      } else {
-        _playChime();
-      }
-    });
+  void _startPendingAlarm(Order order) {
+    OrderAlarmService.instance.startAlarm(
+      order: order,
+      context: context,
+      onAccept: () {
+        _updateOrderStatus(order, OrderStatus.confirmed);
+      },
+    );
   }
 
   void _stopPendingAlarm() {
-    _pendingAlarmTimer?.cancel();
-    _pendingAlarmTimer = null;
-    if (_isPlayingAlarm) {
-      _isPlayingAlarm = false;
-      try { _audioPlayer.stop(); } catch (_) {}
-    }
+    OrderAlarmService.instance.stopAlarm();
   }
 
   void _syncAlarmStateWithOrders(List<Order> orders) {
-    final hasPending = orders.any((o) => (o.status == OrderStatus.pending));
-    if (hasPending) {
-      _startPendingAlarm();
+    final pendingOrders = orders.where((o) => o.status == OrderStatus.pending).toList();
+    if (pendingOrders.isNotEmpty) {
+      final latestPending = pendingOrders.first;
+      if (!OrderAlarmService.instance.isPlaying) {
+        _startPendingAlarm(latestPending);
+      }
     } else {
       _stopPendingAlarm();
     }
@@ -1203,6 +1197,7 @@ $formattedItems
       await KotPrintService.sendRemoteKOTToKitchen(
         orderId: targetOrder.id,
         readableId: targetOrder.readableId ?? targetOrder.id,
+        restaurantId: targetOrder.restaurantId,
         shopName: targetOrder.shopName ?? 'Kitchen',
         customerName: targetOrder.customerName ?? order.customerName ?? 'Customer',
         items: itemsList,
@@ -1545,6 +1540,25 @@ $formattedItems
                 ],
               ),
               actions: [
+                IconButton(
+                  tooltip: OrderAlarmService.instance.isMuted ? 'Unmute Order Alarm' : 'Mute Order Alarm',
+                  icon: Icon(
+                    OrderAlarmService.instance.isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                    color: OrderAlarmService.instance.isMuted ? AppDesignSystem.slate400 : AppDesignSystem.green600,
+                  ),
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    setState(() {
+                      OrderAlarmService.instance.toggleMute();
+                    });
+                    AppToast.showInfo(
+                      context,
+                      OrderAlarmService.instance.isMuted
+                          ? '🔇 Order Alarm Sound Muted'
+                          : '🔊 Order Alarm Sound Active',
+                    );
+                  },
+                ),
                 IconButton(
                   icon: const Icon(Icons.refresh_rounded, color: primaryRed),
                   onPressed: () {
@@ -2163,30 +2177,49 @@ $formattedItems
                               const SizedBox(height: 2),
                               Row(
                                 children: [
-                                  Builder(
-                                    builder: (context) {
-                                      final isOnline = order.paymentMethod != PaymentMethod.cod || order.paymentStatus.toUpperCase() == 'PAID';
-                                      return Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                                        decoration: BoxDecoration(
-                                          color: isOnline ? AppDesignSystem.green100 : AppDesignSystem.statusPending,
-                                          borderRadius: BorderRadius.circular(5),
-                                          border: Border.all(
-                                            color: isOnline ? AppDesignSystem.emerald200 : AppDesignSystem.yellow200,
-                                            width: 0.9,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          isOnline ? '✅ ONLINE PAID' : '💵 COD',
-                                          style: GoogleFonts.inter(
-                                            fontSize: Responsive.scaledFontSize(context, 9),
-                                            fontWeight: FontWeight.w900,
-                                            color: isOnline ? AppDesignSystem.green700 : AppDesignSystem.amber700,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
+                                   Builder(
+                                     builder: (context) {
+                                       final isPaid = order.paymentStatus.toUpperCase() == 'PAID';
+                                       final isCod = order.paymentMethod == PaymentMethod.cod;
+
+                                       String badgeText;
+                                       Color bg;
+                                       Color border;
+                                       Color text;
+
+                                       if (isPaid) {
+                                         badgeText = isCod ? '💵 CASH RECEIVED' : '✅ ONLINE PAID';
+                                         bg = AppDesignSystem.green100;
+                                         border = AppDesignSystem.emerald200;
+                                         text = AppDesignSystem.green700;
+                                       } else {
+                                         badgeText = isCod ? '💵 COD' : '⏳ UNPAID (ONLINE)';
+                                         bg = isCod ? AppDesignSystem.statusPending : const Color(0xFFFFE4E6);
+                                         border = isCod ? AppDesignSystem.yellow200 : const Color(0xFFFDA4AF);
+                                         text = isCod ? AppDesignSystem.amber700 : const Color(0xFFBE123C);
+                                       }
+
+                                       return Container(
+                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                         decoration: BoxDecoration(
+                                           color: bg,
+                                           borderRadius: BorderRadius.circular(5),
+                                           border: Border.all(
+                                             color: border,
+                                             width: 0.9,
+                                           ),
+                                         ),
+                                         child: Text(
+                                           badgeText,
+                                           style: GoogleFonts.inter(
+                                             fontSize: Responsive.scaledFontSize(context, 9),
+                                             fontWeight: FontWeight.w900,
+                                             color: text,
+                                           ),
+                                         ),
+                                       );
+                                     },
+                                   ),
                                   const SizedBox(width: 6),
                                   Text(
                                     _formatOrderTime(order.createdAt),

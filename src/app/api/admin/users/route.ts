@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth-guard'
 import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 import bcrypt from 'bcryptjs'
+import { getStoreUserFilter } from '@/lib/store-resolver'
 
 export async function GET(request: Request) {
   const adminResult = await requireAdmin()
@@ -49,37 +50,9 @@ export async function GET(request: Request) {
     }
 
     if (storeId && storeId !== 'all') {
-      if (storeId === 'hub-224122') {
-        andClauses.push({
-          OR: [
-            { assignedStoreId: 'hub-224122' },
-            { orders: { some: { storeId: 'hub-224122' } } },
-            { addresses: { some: { pincode: '224122' } } },
-            { addresses: { some: { city: { contains: 'Akbarpur', mode: 'insensitive' } } } }
-          ]
-        })
-      } else if (storeId === 'hub-209206' || storeId === 'default-Ghatampur Market') {
-        andClauses.push({
-          OR: [
-            { assignedStoreId: 'hub-209206' },
-            { orders: { some: { OR: [{ storeId: 'hub-209206' }, { storeId: null }] } } },
-            { addresses: { some: { pincode: '209206' } } },
-            { addresses: { some: { city: { contains: 'Ghatampur', mode: 'insensitive' } } } },
-            {
-              AND: [
-                { assignedStoreId: null },
-                { orders: { none: { storeId: { notIn: ['hub-209206', null] } } } }
-              ]
-            }
-          ]
-        })
-      } else {
-        andClauses.push({
-          OR: [
-            { assignedStoreId: storeId },
-            { orders: { some: { storeId } } }
-          ]
-        })
+      const userStoreFilter = await getStoreUserFilter(storeId)
+      if (Object.keys(userStoreFilter).length > 0) {
+        andClauses.push(userStoreFilter)
       }
     }
 
@@ -154,6 +127,17 @@ export async function PATCH(request: Request) {
       if (role !== 'USER' && role !== 'DELIVERY' && role !== 'ADMIN' && role !== 'PICKER' && role !== 'CHEF') {
         return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
       }
+
+      // Safeguard: Do not allow downgrading master admin or assigned store managers
+      const targetUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, phone: true, role: true, assignedStoreId: true }
+      })
+      const isRootAdmin = targetUser?.email === 'admin@fastkirana.com' || targetUser?.email === 'superadmin@fastkirana.com' || targetUser?.phone?.includes('7054470303') || targetUser?.phone?.includes('9170942500')
+      if (isRootAdmin && role !== 'ADMIN') {
+        return NextResponse.json({ error: 'Root Admin accounts cannot be downgraded' }, { status: 403 })
+      }
+
       // Update using raw SQL to bypass PrismaPg enum casting issue
       await prisma.$executeRaw`
         UPDATE users SET role = ${role}::"Role", "updatedAt" = NOW() WHERE id = ${userId}

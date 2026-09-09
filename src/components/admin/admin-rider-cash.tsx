@@ -61,7 +61,11 @@ interface DepositLog {
   createdAt: string
 }
 
-export function AdminRiderCash() {
+interface AdminRiderCashProps {
+  storeId?: string | null
+}
+
+export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
   const [riders, setRiders] = useState<RiderCashInfo[]>([])
   const [summary, setSummary] = useState<SummaryInfo | null>(null)
   const [recentDeposits, setRecentDeposits] = useState<DepositLog[]>([])
@@ -77,7 +81,8 @@ export function AdminRiderCash() {
   const fetchData = async () => {
     try {
       setIsLoading(true)
-      const res = await fetch('/api/admin/rider-cash')
+      const url = storeId ? `/api/admin/rider-cash?storeId=${encodeURIComponent(storeId)}` : '/api/admin/rider-cash'
+      const res = await fetch(url)
       if (res.ok) {
         const data = await res.json()
         setRiders(data.riders || [])
@@ -96,7 +101,7 @@ export function AdminRiderCash() {
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [storeId])
 
   const handleOpenSettleModal = (rider: RiderCashInfo) => {
     setSelectedRider(rider)

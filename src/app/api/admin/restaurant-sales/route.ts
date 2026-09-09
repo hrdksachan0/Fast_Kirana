@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
 import { requireAdmin } from '@/lib/auth-guard'
+import { extractCityFromStoreName } from '@/lib/store-resolver'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -15,6 +17,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const startDateParam = searchParams.get('startDate')
     const endDateParam = searchParams.get('endDate')
+    const storeId = searchParams.get('storeId') || (session?.user as any)?.assignedStoreId || null
 
     const now = new Date()
     let start: Date
@@ -34,11 +37,27 @@ export async function GET(request: NextRequest) {
       end.setHours(23, 59, 59, 999)
     }
 
-    // 2. Fetch all active restaurants from DB
+    // 2. Fetch active restaurants from DB filtered by store/city
+    const restWhere: any = { isActive: true }
+    if (storeId && storeId !== 'all') {
+      const store = await prisma.darkStore.findUnique({
+        where: { id: storeId },
+        select: { name: true }
+      })
+      const storeCity = store ? extractCityFromStoreName(store.name) : ''
+      if (storeCity) {
+        restWhere.city = { contains: storeCity, mode: 'insensitive' }
+      }
+    }
+
     const restaurants = await prisma.restaurant.findMany({
-      where: { isActive: true },
+      where: restWhere,
       select: { id: true, name: true, slug: true, logoUrl: true, isOpen: true, commissionRate: true }
     })
+
+    const storeWhereOrders = storeId && storeId !== 'all'
+      ? Prisma.sql`AND o."storeId" = ${storeId}`
+      : Prisma.empty
 
     // 3. Fetch all DELIVERED orders that have a restaurantId, within the date range
     const orders = await prisma.$queryRaw<
@@ -60,6 +79,7 @@ export async function GET(request: NextRequest) {
         AND o."restaurantId" IS NOT NULL
         AND o."createdAt" >= ${start}
         AND o."createdAt" <= ${end}
+        ${storeWhereOrders}
     `
 
     // 4. Fetch order items for those orders to find top dish per restaurant
@@ -85,6 +105,7 @@ export async function GET(request: NextRequest) {
         AND o."restaurantId" IS NOT NULL
         AND o."createdAt" >= ${start}
         AND o."createdAt" <= ${end}
+        ${storeWhereOrders}
     `
 
     const grandTotal = {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
 import { requireAdmin } from '@/lib/auth-guard'
 
@@ -34,6 +35,16 @@ export async function GET(request: NextRequest) {
       end.setHours(23, 59, 59, 999)
     }
 
+    const storeId = searchParams.get('storeId') || (session?.user as any)?.assignedStoreId || null
+
+    const storeWhereOrders = storeId && storeId !== 'all'
+      ? Prisma.sql`AND "storeId" = ${storeId}`
+      : Prisma.empty
+
+    const storeWhereOrderItems = storeId && storeId !== 'all'
+      ? Prisma.sql`AND o."storeId" = ${storeId}`
+      : Prisma.empty
+
     // 1. Fetch delivered orders within range
     const orders = await prisma.$queryRaw<
       Array<{
@@ -53,6 +64,7 @@ export async function GET(request: NextRequest) {
       WHERE status::text = 'DELIVERED'
         AND "createdAt" >= ${start}
         AND "createdAt" <= ${end}
+        ${storeWhereOrders}
       ORDER BY "createdAt" ASC
     `
 
@@ -98,6 +110,7 @@ export async function GET(request: NextRequest) {
       WHERE o.status::text = 'DELIVERED'
         AND o."createdAt" >= ${start}
         AND o."createdAt" <= ${end}
+        ${storeWhereOrderItems}
     `
 
     // Map order items by order ID for easier processing

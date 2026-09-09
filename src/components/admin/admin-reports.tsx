@@ -117,7 +117,11 @@ const getCategoryMeta = (catName: string) => {
   return { icon: '📦', badge: 'bg-zinc-500/10 text-zinc-600 border-zinc-500/20 dark:text-zinc-400' }
 }
 
-export function AdminReports() {
+interface AdminReportsProps {
+  storeId?: string | null
+}
+
+export function AdminReports({ storeId }: AdminReportsProps = {}) {
   const [rangePreset, setRangePreset] = useState<'today' | 'yesterday' | '7days' | '30days' | 'custom'>('30days')
   const [startDate, setStartDate] = useState(() => {
     const d = new Date()
@@ -178,7 +182,8 @@ export function AdminReports() {
   const fetchReport = async () => {
     try {
       setLoading(true)
-      const url = `/api/admin/reports?startDate=${startDate}&endDate=${endDate}&t=${Date.now()}`
+      const storeParam = storeId ? `&storeId=${encodeURIComponent(storeId)}` : ''
+      const url = `/api/admin/reports?startDate=${startDate}&endDate=${endDate}${storeParam}&t=${Date.now()}`
       const res = await fetch(url)
       if (!res.ok) throw new Error('Failed to fetch report data')
       
@@ -200,7 +205,7 @@ export function AdminReports() {
     if (startDate && endDate) {
       fetchReport()
     }
-  }, [startDate, endDate])
+  }, [startDate, endDate, storeId])
 
   // Filtered Products based on Selected Category & Search Query
   const filteredProducts = useMemo(() => {

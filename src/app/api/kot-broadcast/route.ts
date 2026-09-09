@@ -41,40 +41,67 @@ export async function POST(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bberzasmxwioxjynbuaf.supabase.co'
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
+    let targetRestaurantId = body.restaurantId
+    if (!targetRestaurantId && cleanId) {
+      try {
+        const { prisma } = await import('@/lib/prisma')
+        const orderRecord = await prisma.order.findUnique({
+          where: { id: cleanId },
+          select: { restaurantId: true }
+        })
+        if (orderRecord?.restaurantId) {
+          targetRestaurantId = orderRecord.restaurantId
+        }
+      } catch (_) {}
+    }
+
+    const payloadWithRest = {
+      ...body,
+      restaurantId: targetRestaurantId || body.restaurantId || null,
+    }
+
     const supabase = createClient(supabaseUrl, supabaseKey, {
       auth: { persistSession: false },
     })
 
-    const channel = supabase.channel('restaurant-orders-live')
+    const channelsToNotify = ['restaurant-orders-live']
+    if (targetRestaurantId) {
+      channelsToNotify.push(`restaurant-orders-${targetRestaurantId}`)
+    }
 
-    // Subscribe and wait for connection
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Channel subscribe timeout')), 8000)
-      channel.subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          clearTimeout(timeout)
-          resolve()
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          clearTimeout(timeout)
-          reject(new Error(`Channel status: ${status}`))
+    await Promise.all(
+      channelsToNotify.map(async (chName) => {
+        try {
+          const ch = supabase.channel(chName)
+          await new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error(`Timeout subscribing to ${chName}`)), 6000)
+            ch.subscribe((status) => {
+              if (status === 'SUBSCRIBED') {
+                clearTimeout(timeout)
+                resolve()
+              } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                clearTimeout(timeout)
+                reject(new Error(`Status: ${status}`))
+              }
+            })
+          })
+
+          await ch.send({
+            type: 'broadcast',
+            event: 'reprint-kot',
+            payload: payloadWithRest,
+          })
+
+          setTimeout(() => {
+            try { supabase.removeChannel(ch) } catch (_) {}
+          }, 2000)
+        } catch (err: any) {
+          console.warn(`[KOT Broadcast API] Failed broadcast on ${chName}:`, err?.message)
         }
       })
-    })
+    )
 
-    // Send the broadcast with all order details
-    await channel.send({
-      type: 'broadcast',
-      event: 'reprint-kot',
-      payload: body
-    })
-
-    // Keep alive briefly for propagation
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    // Cleanup
-    supabase.removeChannel(channel)
-
-    return NextResponse.json({ success: true, orderId })
+    return NextResponse.json({ success: true, orderId, restaurantId: targetRestaurantId })
   } catch (error: any) {
     console.error('[KOT Broadcast API] Error:', error.message)
     return NextResponse.json(

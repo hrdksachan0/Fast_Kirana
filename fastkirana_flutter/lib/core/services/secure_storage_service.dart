@@ -87,6 +87,12 @@ class SecureStorage {
     await write('refresh_token', token);
   }
 
+  /// Save FCM device token for push notifications
+  static Future<void> saveFcmToken(String token) async {
+    if (token.isEmpty) return;
+    await write('fcm_token', token);
+  }
+
   // ─── Synchronous cache reads (used by the auth interceptor) ───
   static String? get cachedToken => _cachedToken;
   static String? get cachedRefreshToken => _cachedRefreshToken;
@@ -157,6 +163,10 @@ class SecureStorage {
     try {
       await _storage.deleteAll();
     } catch (e, _) { LoggerService.error('SecureStorageService: deleteAll', e); }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+    } catch (e, _) { LoggerService.error('SecureStorageService: deleteAll fallback', e); }
   }
 
   static Future<Map<String, String>> readMany(Iterable<String> keys) async {

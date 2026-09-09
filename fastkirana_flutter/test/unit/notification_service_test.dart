@@ -42,15 +42,13 @@ void main() {
     });
 
     test('phone number normalization for topic subscription', () {
-      // The notification service normalizes phone numbers for topic names:
-      // phone.replaceAll('+91', '').replaceAll(' ', '').trim()
       String normalize(String phone) =>
-          phone.replaceAll('+91', '').replaceAll(' ', '').trim();
+          phone.replaceAll(RegExp(r'^\+?91[-\s]?'), '').replaceAll(RegExp(r'[-\s]'), '').trim();
 
       expect(normalize('+919876543210'), '9876543210');
       expect(normalize('91 9876 543 210'), '9876543210');
       expect(normalize('9876543210'), '9876543210');
-      expect(normalize('+91-98765-43210'), '91-98765-43210');
+      expect(normalize('+91-98765-43210'), '9876543210');
       expect(normalize(''), '');
     });
 

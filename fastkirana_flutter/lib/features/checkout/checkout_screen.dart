@@ -13,6 +13,7 @@ import '../../core/theme/design_system.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../core/config/app_config.dart';
 import '../../data/models/cart.dart';
+import '../../data/models/product.dart';
 import '../../data/models/address.dart';
 import '../../data/models/order.dart';
 import '../../data/models/store_settings.dart';
@@ -323,18 +324,36 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final selectedAddress = ref.read(selectedAddressProvider) ??
         (_selectedAddressIndex < addresses.length ? addresses[_selectedAddressIndex] : null);
     final subtotal = cart.subtotal;
-    final tier = LocationService.getTierForAddress(selectedAddress, subtotal);
+    RestaurantInfo? cartRestaurant;
+    for (final item in cart.items) {
+      if (item.product.restaurant != null &&
+          item.product.restaurant!.lat != null &&
+          item.product.restaurant!.lng != null) {
+        cartRestaurant = item.product.restaurant;
+        break;
+      }
+    }
+
+    final tier = LocationService.getTierForAddress(
+      selectedAddress,
+      subtotal,
+      originLat: cartRestaurant?.lat,
+      originLng: cartRestaurant?.lng,
+      maxRadius: cartRestaurant?.deliveryRadiusKm,
+    );
 
     if (_deliveryMethod == 'DELIVERY' && !tier.isServiceable) {
       setState(() => _isPlacingOrder = false);
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      final originLabel = cartRestaurant != null ? cartRestaurant.name : 'our central hub';
+      final maxRad = (cartRestaurant?.deliveryRadiusKm ?? 5.0).toStringAsFixed(1);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: AppDesignSystem.red600,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           content: Text(
-            'Delivery is currently limited to a maximum of 5.0 km from our central hub. (Selected location is ${tier.distanceKm.toStringAsFixed(1)} km away)',
+            'Delivery is currently limited to a maximum of $maxRad km from $originLabel. (Selected location is ${tier.distanceKm.toStringAsFixed(1)} km away)',
             style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
           ),
         ),
@@ -490,18 +509,37 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final addresses = ref.read(addressesProvider).valueOrNull ?? [];
     final selectedAddress = ref.read(selectedAddressProvider) ??
         (_selectedAddressIndex < addresses.length ? addresses[_selectedAddressIndex] : null);
-    final tier = LocationService.getTierForAddress(selectedAddress, subtotal);
+
+    RestaurantInfo? cartRestaurant;
+    for (final item in cart.items) {
+      if (item.product.restaurant != null &&
+          item.product.restaurant!.lat != null &&
+          item.product.restaurant!.lng != null) {
+        cartRestaurant = item.product.restaurant;
+        break;
+      }
+    }
+
+    final tier = LocationService.getTierForAddress(
+      selectedAddress,
+      subtotal,
+      originLat: cartRestaurant?.lat,
+      originLng: cartRestaurant?.lng,
+      maxRadius: cartRestaurant?.deliveryRadiusKm,
+    );
 
     if (_deliveryMethod == 'DELIVERY' && !tier.isServiceable) {
       setState(() => _isPlacingOrder = false);
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      final originLabel = cartRestaurant != null ? cartRestaurant.name : 'our central hub';
+      final maxRad = (cartRestaurant?.deliveryRadiusKm ?? 5.0).toStringAsFixed(1);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: AppDesignSystem.red600,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           content: Text(
-            'Delivery is currently limited to a maximum of 5.0 km from our central hub. (Selected address is ${tier.distanceKm.toStringAsFixed(1)} km away)',
+            'Delivery is currently limited to a maximum of $maxRad km from $originLabel. (Selected address is ${tier.distanceKm.toStringAsFixed(1)} km away)',
             style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
           ),
         ),
@@ -719,29 +757,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     // 2. Save the primary order locally
     await OrderRepository(ref.read(dioProvider)).savePlacedOrderLocally(placedOrder);
 
-    // 3. Automated KOT Remote Broadcast for Restaurant & Kitchen items
-    final hasRestaurantItems = cart.items.any((i) => isRestaurantProduct(i.product));
-    if (hasRestaurantItems) {
-      try {
-        KotPrintService.sendRemoteKOTToKitchen(
-          orderId: placedOrder.id,
-          readableId: placedOrder.readableId,
-          shopName: shopName,
-          customerName: customerName,
-          items: cart.items.where((i) => isRestaurantProduct(i.product)).map((i) => {
-            'name': i.product.name,
-            'quantity': i.quantity,
-            'selectedVariant': i.selectedVariant,
-            'notes': orderNotes,
-          }).toList(),
-          deliveryMethod: _deliveryMethod,
-          notes: orderNotes,
-          dioClient: ref.read(dioProvider),
-        ).catchError((_) => false);
-      } catch (e) {
-        debugPrint('KOT dispatch note: $e');
-      }
-    }
+    // 3. Automated KOT Remote Broadcast: DISABLED by business rule.
+    // KOT is strictly controlled by Admin and is ONLY dispatched when Admin clicks "Send KOT".
+
 
     // Celebratory Haptic Feedback
     HapticFeedback.heavyImpact();
@@ -794,7 +812,24 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final addresses = ref.watch(addressesProvider).valueOrNull ?? [];
     final selectedAddress = ref.watch(selectedAddressProvider) ??
         (_selectedAddressIndex < addresses.length ? addresses[_selectedAddressIndex] : null);
-    final tier = LocationService.getTierForAddress(selectedAddress, subtotal);
+
+    RestaurantInfo? cartRestaurant;
+    for (final item in items) {
+      if (item.product.restaurant != null &&
+          item.product.restaurant!.lat != null &&
+          item.product.restaurant!.lng != null) {
+        cartRestaurant = item.product.restaurant;
+        break;
+      }
+    }
+
+    final tier = LocationService.getTierForAddress(
+      selectedAddress,
+      subtotal,
+      originLat: cartRestaurant?.lat,
+      originLng: cartRestaurant?.lng,
+      maxRadius: cartRestaurant?.deliveryRadiusKm,
+    );
     final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : tier.deliveryFee;
     final packagingFee = _selectedPackaging == 'PREMIUM' ? 15.0 : 5.0;
     final packagingLabel = _selectedPackaging == 'PREMIUM' ? 'Premium Thermal Packaging' : 'Standard Packaging';

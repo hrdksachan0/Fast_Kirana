@@ -57,7 +57,11 @@ interface SettlementLog {
   restaurant?: { name: string; slug: string } | null
 }
 
-export function AdminRestaurantReport() {
+interface AdminRestaurantReportProps {
+  storeId?: string | null
+}
+
+export function AdminRestaurantReport({ storeId }: AdminRestaurantReportProps = {}) {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<RestaurantSalesData[]>([])
   
@@ -116,7 +120,8 @@ export function AdminRestaurantReport() {
   const fetchReport = async () => {
     setLoading(true)
     try {
-      const url = `/api/admin/restaurant-sales?startDate=${startDate}&endDate=${endDate}`
+      const storeParam = storeId ? `&storeId=${encodeURIComponent(storeId)}` : ''
+      const url = `/api/admin/restaurant-sales?startDate=${startDate}&endDate=${endDate}${storeParam}`
       const res = await fetch(url)
       if (!res.ok) throw new Error('Failed to fetch data')
       const json = await res.json()
@@ -132,7 +137,8 @@ export function AdminRestaurantReport() {
   const fetchPastPayouts = async () => {
     setLoadingPayouts(true)
     try {
-      const res = await fetch('/api/admin/payouts')
+      const storeParam = storeId ? `?storeId=${encodeURIComponent(storeId)}` : ''
+      const res = await fetch(`/api/admin/payouts${storeParam}`)
       if (!res.ok) throw new Error('Failed to load payouts')
       const json = await res.json()
       setPastPayouts(json || [])
@@ -148,7 +154,7 @@ export function AdminRestaurantReport() {
       fetchReport()
     }
     fetchPastPayouts()
-  }, [startDate, endDate, rangePreset])
+  }, [startDate, endDate, rangePreset, storeId])
 
   const handleOpenSettleModal = (rest: RestaurantSalesData) => {
     setSettlingRest(rest)

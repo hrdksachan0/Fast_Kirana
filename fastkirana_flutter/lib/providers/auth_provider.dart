@@ -26,11 +26,11 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       final raw = await SecureStorage.read('user_data');
       final token = await SecureStorage.read('auth_token');
       if (raw == null || token == null) {
-        state = const AsyncValue.data(null);
+        if (mounted) state = const AsyncValue.data(null);
         return;
       }
       final json = jsonDecode(raw) as Map<String, dynamic>;
-      state = AsyncValue.data(User.fromJson(json));
+      if (mounted) state = AsyncValue.data(User.fromJson(json));
 
       // Register device FCM push token on startup
       try {
@@ -40,7 +40,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
         LoggerService.error("Failed to register FCM token on startup: $e");
       }
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      if (mounted) state = AsyncValue.error(e, st);
     }
   }
 

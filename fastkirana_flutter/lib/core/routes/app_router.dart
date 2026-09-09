@@ -9,6 +9,7 @@ import '../../features/categories/categories_screen.dart';
 import '../../features/cart/cart_screen.dart';
 import '../../features/checkout/checkout_screen.dart';
 import '../../features/orders/orders_screen.dart';
+import '../../features/orders/order_tracking_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/search/search_screen.dart';
 import '../../features/auth/admin_login.dart';
@@ -63,6 +64,12 @@ class AppRouter {
         return SwiggyModalRoute(page: const CheckoutScreen());
       case '/orders':
         return ZeptoSlideRoute(page: const OrdersScreen());
+      case '/order/track':
+      case '/orders/track':
+      case '/order-track':
+      case '/order-tracking':
+        final orderId = (settings.arguments as String?) ?? '';
+        return FadeSlideRoute(page: OrderTrackingScreen(orderId: orderId));
       case '/profile':
         return ZeptoSlideRoute(page: const ProfileScreen());
       case '/search':

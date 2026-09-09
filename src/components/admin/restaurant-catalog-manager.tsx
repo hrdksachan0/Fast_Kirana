@@ -241,9 +241,14 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
 
   const effectiveRestId = (!isAdmin && assignedRestaurantId) 
     ? assignedRestaurantId 
-    : (selectedOutletId || initialRestaurantId || assignedRestaurantId || 'REST-101')
+    : (selectedOutletId || initialRestaurantId || assignedRestaurantId || (outlets.length > 0 ? outlets[0].id : ''))
 
   const fetchCatalogAndCategories = async () => {
+    if (!effectiveRestId) {
+      setProducts([])
+      setLoading(false)
+      return
+    }
     try {
       setLoading(true)
       const url = `/api/restaurant-dashboard/products?restaurantId=${effectiveRestId}`

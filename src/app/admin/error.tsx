@@ -31,9 +31,11 @@ export default function AdminError({
           </p>
         </div>
 
-        {process.env.NODE_ENV === 'development' && error?.message && (
-          <div className="p-3 bg-muted/60 rounded-xl text-[11px] font-mono text-rose-500 text-left overflow-x-auto border border-border">
+        {error?.message && (
+          <div className="p-3 bg-muted/60 rounded-xl text-[11px] font-mono text-rose-500 text-left overflow-x-auto border border-border break-words max-h-32">
+            <p className="font-bold text-rose-600 mb-1">Diagnostic Details:</p>
             {error.message}
+            {error.digest && <p className="text-[10px] text-muted-foreground mt-1">Digest: {error.digest}</p>}
           </div>
         )}
 

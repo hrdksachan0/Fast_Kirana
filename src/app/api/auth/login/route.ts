@@ -43,9 +43,10 @@ export async function POST(request: NextRequest) {
       const canonicalUser = matchingUsers.find(u =>
         (phoneDigits === '9170942500' && u.email === 'superadmin@fastkirana.com') ||
         (phoneDigits === '7054470303' && u.email === 'admin@fastkirana.com') ||
-        (phoneDigits === '8112849854' && (u.email === 'asrestaurant3@gmail.com' || u.assignedRestaurantId === 'REST-101')) ||
-        (phoneDigits === '9250138656' && (u.email === 'restaurant@fastkirana.com' || u.assignedRestaurantId === 'REST-102')) ||
-        (phoneDigits === '7991488783' && (u.email === 'baludyanhotelrestaurant@gmail.com' || u.assignedRestaurantId === 'REST-103'))
+        u.role === 'RESTAURANT_OWNER' ||
+        u.role === 'CHEF' ||
+        u.role === 'ADMIN' ||
+        !!u.assignedRestaurantId
       )
       const existingUser = canonicalUser || matchingUsers.find(u => u.role !== 'USER' || !!u.passwordHash) || matchingUsers[0]
       if (existingUser) {

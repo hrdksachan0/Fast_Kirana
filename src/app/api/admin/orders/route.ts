@@ -27,15 +27,7 @@ export async function GET(request: Request) {
     }
 
     if (effectiveStoreId) {
-      if (effectiveStoreId === 'hub-209206' || effectiveStoreId === 'default-Ghatampur Market') {
-        where.OR = [
-          { storeId: 'hub-209206' },
-          { storeId: 'default-Ghatampur Market' },
-          { storeId: null }
-        ]
-      } else {
-        where.storeId = effectiveStoreId
-      }
+      where.storeId = effectiveStoreId
     }
 
     if (search) {
@@ -69,7 +61,7 @@ export async function GET(request: Request) {
           FROM orders o
           LEFT JOIN users u ON o."userId" = u.id
           WHERE o.status::text = ${status}
-            AND (o."storeId" = ${effectiveStoreId} OR (${effectiveStoreId} IN ('hub-209206', 'default-Ghatampur Market') AND o."storeId" IS NULL))
+            AND o."storeId" = ${effectiveStoreId}
             AND (
               o.id ILIKE ${searchLike}
               OR o."readableId"::text ILIKE ${searchLike}
@@ -109,7 +101,7 @@ export async function GET(request: Request) {
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
           FROM orders o
           WHERE o.status::text = ${status}
-            AND (o."storeId" = ${effectiveStoreId} OR (${effectiveStoreId} IN ('hub-209206', 'default-Ghatampur Market') AND o."storeId" IS NULL))
+            AND o."storeId" = ${effectiveStoreId}
           ORDER BY o."createdAt" DESC
           LIMIT ${limit} OFFSET ${skip}
         `
@@ -135,7 +127,7 @@ export async function GET(request: Request) {
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
           FROM orders o
           LEFT JOIN users u ON o."userId" = u.id
-          WHERE (o."storeId" = ${effectiveStoreId} OR (${effectiveStoreId} IN ('hub-209206', 'default-Ghatampur Market') AND o."storeId" IS NULL))
+          WHERE o."storeId" = ${effectiveStoreId}
             AND (
               o.id ILIKE ${searchLike}
               OR o."readableId"::text ILIKE ${searchLike}
@@ -171,7 +163,7 @@ export async function GET(request: Request) {
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
           FROM orders o
-          WHERE (o."storeId" = ${effectiveStoreId} OR (${effectiveStoreId} IN ('hub-209206', 'default-Ghatampur Market') AND o."storeId" IS NULL))
+          WHERE o."storeId" = ${effectiveStoreId}
           ORDER BY o."createdAt" DESC
           LIMIT ${limit} OFFSET ${skip}
         `
@@ -251,8 +243,9 @@ export async function GET(request: Request) {
 
     if (recentUnpaid.length > 0) {
       try {
-        const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_TRvyzlqHiRGWbr'
-        const keySecret = process.env.RAZORPAY_KEY_SECRET || '4C54O0N5q841qdmQ8N1MTTiU'
+        const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
+        const keySecret = process.env.RAZORPAY_KEY_SECRET
+        if (!keyId || !keySecret) throw new Error('Razorpay credentials not configured')
         const authHeader = 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64')
         const rzpRes = await fetch('https://api.razorpay.com/v1/payments?count=50', {
           headers: { Authorization: authHeader },
@@ -267,13 +260,14 @@ export async function GET(request: Request) {
             const targetReadableId = String(unp.readableId || '')
             const matched = items.find((p: any) => {
               if (p.status !== 'captured' && p.status !== 'authorized') return false
-              if (p.notes?.orderId === unp.id) return true
-              if (targetReadableId && p.notes?.readableId === targetReadableId) return true
-              if (targetReadableId && p.description && p.description.includes(targetReadableId)) return true
-              if (p.amount === orderTotalPaise) {
-                const pTime = p.created_at * 1000
-                const oTime = new Date(unp.createdAt).getTime()
-                if (Math.abs(pTime - oTime) < 24 * 60 * 60 * 1000) return true
+              const hasExplicitIdMatch = 
+                (p.notes?.orderId && p.notes.orderId === unp.id) ||
+                (targetReadableId && p.notes?.readableId === targetReadableId) ||
+                (targetReadableId && p.description && p.description.includes(targetReadableId)) ||
+                (p.order_id && (unp as any).razorpayOrderId && p.order_id === (unp as any).razorpayOrderId)
+              
+              if (hasExplicitIdMatch && p.amount === orderTotalPaise) {
+                return true
               }
               return false
             })

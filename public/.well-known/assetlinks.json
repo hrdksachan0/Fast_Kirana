@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.fastkirana.app",
+      "sha256_cert_fingerprints": [
+        "B3:B2:A0:3C:12:F4:F4:E3:A3:8F:75:F5:4E:BA:87:60:DF:F0:FC:29:5F:74:7C:83:E1:D4:0C:FA:FB:C6:3B:04"
+      ]
+    }
+  }
+]

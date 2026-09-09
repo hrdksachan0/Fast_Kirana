@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
             data: products.map(p => ({
               storeId: store.id,
               productId: p.id,
-              stock: p.stock > 0 ? p.stock : 30
+              stock: 0
             })),
             skipDuplicates: true
           })

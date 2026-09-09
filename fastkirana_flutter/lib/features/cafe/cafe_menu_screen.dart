@@ -905,31 +905,46 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                         '($totalReviews reviews)',
                         style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: AppDesignSystem.textSecondary),
                       ),
-                      if (currentRestaurant?.discountBadge?.toUpperCase().contains('RUSH') == true ||
+                      if ((currentRestaurant != null && currentRestaurant.activeOrdersCount >= 6) ||
+                          currentRestaurant?.discountBadge?.toUpperCase().contains('RUSH') == true ||
                           currentRestaurant?.discountBadge?.toUpperCase().contains('BUSY') == true) ...[
-                        const SizedBox(width: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFEF3C7),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFFF59E0B), width: 1),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text('🔥', style: TextStyle(fontSize: 12)),
-                              const SizedBox(width: 4),
-                              Text(
-                                'HIGH RUSH',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 10.5),
-                                  fontWeight: FontWeight.w900,
-                                  color: const Color(0xFFB45309),
-                                  letterSpacing: 0.4,
-                                ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFEA580C), Color(0xFFDC2626)],
                               ),
-                            ],
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFDC2626).withValues(alpha: 0.3),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('⚡', style: TextStyle(fontSize: 11)),
+                                const SizedBox(width: 3),
+                                Flexible(
+                                  child: Text(
+                                    'HIGH DEMAND (NO SURGE FEE)',
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 9.5),
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      letterSpacing: 0.2,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],

@@ -298,19 +298,19 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
     ordersRef.current = orders
   }, [orders])
 
-  // Continuous alarm chime while unaccepted PENDING orders exist
+  // Continuous alarm chime while unaccepted CONFIRMED orders exist (waiting for chef to claim/cook)
   useEffect(() => {
     if (!soundEnabled) return
 
-    const hasPendingOrders = orders.some(o => o.status === 'PENDING')
-    if (!hasPendingOrders) return
+    const hasUnclaimedOrders = orders.some(o => o.status === 'CONFIRMED' && !o.assignedChefId)
+    if (!hasUnclaimedOrders) return
 
-    // Immediately play once when pending order detected
+    // Immediately play once when unclaimed confirmed order detected
     playKitchenAlarmChime()
 
     const alarmInterval = setInterval(() => {
       playKitchenAlarmChime()
-    }, 3500)
+    }, 4000)
 
     return () => clearInterval(alarmInterval)
   }, [orders, soundEnabled])
@@ -355,9 +355,14 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
     return () => clearInterval(timer)
   }, [])
 
-  const effectiveRestaurantId = restaurantId || (session?.user as any)?.assignedRestaurantId || 'REST-101'
+  const effectiveRestaurantId = restaurantId || (session?.user as any)?.assignedRestaurantId || ''
 
   const fetchOrders = useCallback(async (silent = false) => {
+    if (!effectiveRestaurantId) {
+      setOrders([])
+      setIsLoading(false)
+      return
+    }
     if (!silent) setIsLoading(true)
     else setIsRefreshing(true)
     
@@ -442,93 +447,108 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
               fetchOrders(true)
             }, 50)
           } else if (payload.eventType === 'INSERT') {
-            const newOrder = payload.new as any
-            const isRestaurantOrder = newOrder.restaurantId || newOrder.orderType === 'RESTAURANT'
-            
+            // New order placed - refresh queue quietly without ringing kitchen alarm prematurely
+            // Kitchen alarm will ONLY sound when Admin explicitly dispatches KOT via Send KOT
             if (updateTimeout) clearTimeout(updateTimeout)
             updateTimeout = setTimeout(() => {
               fetchOrders(true)
             }, 50)
-
-            if (isRestaurantOrder) {
-              if (soundEnabledRef.current && !audioContextBlockedRef.current) {
-                playKitchenAlarmChime()
-              }
-              triggerHaptic()
-            }
           }
         }
       )
-      .on(
-        'broadcast',
-        { event: 'reprint-kot' },
-        async (payload) => {
-          const { orderId } = payload.payload || {}
-          if (orderId) {
-            const cleanId = String(orderId).trim().replace(/^#/, '')
-            const now = Date.now()
-            
-            let orderToPrint = ordersRef.current.find((o) => o.id === orderId || o.readableId === orderId || o.id === cleanId)
-            if (!orderToPrint) {
-              try {
-                const res = await fetch(`/api/orders/${cleanId}`)
-                if (res.ok) {
-                  const data = await res.json()
-                  orderToPrint = data.order || data
-                }
-              } catch (e) {
-                console.error('Failed to fetch remote order for KOT print:', e)
-              }
-            }
 
-            const combinedKey = (orderToPrint as any)?.combinedId ? String((orderToPrint as any).combinedId).trim() : null
-            const baseReadableKey = String((orderToPrint as any)?.readableId || cleanId).replace(/-[GR\d]+$/i, '')
-            
-            // Client-side 10-second deduplication guard (checks cleanId, combinedId, and baseReadableId)
-            const lastPrinted = (window as any).__lastKOTPrintTimestamps?.[cleanId] ||
-              (combinedKey ? (window as any).__lastKOTPrintTimestamps?.[combinedKey] : null) ||
-              (baseReadableKey ? (window as any).__lastKOTPrintTimestamps?.[baseReadableKey] : null)
+    const handleKOTBroadcast = async (payload: any) => {
+      const { orderId, restaurantId: broadcastRestId } = payload.payload || {}
+      if (effectiveRestaurantId && broadcastRestId && broadcastRestId !== effectiveRestaurantId) {
+        console.log(`[Kitchen KOT Channel] 🛡️ Ignored KOT for different restaurant: ${broadcastRestId}`)
+        return
+      }
 
-            if (lastPrinted && (now - lastPrinted) < 10000) {
-              console.warn(`[Kitchen KOT Channel] 🛡️ Ignored duplicate reprint broadcast for #${cleanId} (${Math.round((10000 - (now - lastPrinted))/1000)}s cooldown active)`)
-              return
+      if (orderId) {
+        const cleanId = String(orderId).trim().replace(/^#/, '')
+        const now = Date.now()
+        
+        let orderToPrint = ordersRef.current.find((o) => o.id === orderId || o.readableId === orderId || o.id === cleanId)
+        if (!orderToPrint) {
+          try {
+            const res = await fetch(`/api/orders/${cleanId}`)
+            if (res.ok) {
+              const data = await res.json()
+              orderToPrint = data.order || data
             }
-            if (!(window as any).__lastKOTPrintTimestamps) {
-              (window as any).__lastKOTPrintTimestamps = {}
-            }
-            (window as any).__lastKOTPrintTimestamps[cleanId] = now
-            if (combinedKey) (window as any).__lastKOTPrintTimestamps[combinedKey] = now
-            if (baseReadableKey) (window as any).__lastKOTPrintTimestamps[baseReadableKey] = now
-            if (orderToPrint) {
-              console.log('Received remote reprint request for Order ID:', cleanId)
-              // Play alert so kitchen staff notices the KOT
-              if (soundEnabledRef.current && !audioContextBlockedRef.current) {
-                playKitchenAlarmChime()
-              }
-              triggerHaptic()
-              printKOTReceiptRef.current?.(orderToPrint)
-              toast.info(`🖨️ KOT #${orderToPrint.readableId || cleanId.slice(0, 8)} printed!`)
-            }
+          } catch (e) {
+            console.error('Failed to fetch remote order for KOT print:', e)
           }
         }
-      )
-      .subscribe((status) => {
-        console.log('[Kitchen KOT Channel] Subscription status:', status)
-        if (status === 'CHANNEL_ERROR') {
-          console.error('[Kitchen KOT Channel] Failed to subscribe to realtime channel')
-          toast.error('⚠️ Kitchen realtime connection failed — KOT auto-receive disabled. Refresh the page.')
-        } else if (status === 'SUBSCRIBED') {
-          console.log('[Kitchen KOT Channel] ✅ Successfully subscribed — ready to receive KOT broadcasts')
+
+        if (effectiveRestaurantId && orderToPrint?.restaurantId && orderToPrint.restaurantId !== effectiveRestaurantId) {
+          console.log(`[Kitchen KOT Channel] 🛡️ Ignored KOT: order restaurant ${orderToPrint.restaurantId} !== ${effectiveRestaurantId}`)
+          return
         }
-      })
+
+        const combinedKey = (orderToPrint as any)?.combinedId ? String((orderToPrint as any).combinedId).trim() : null
+        const baseReadableKey = String((orderToPrint as any)?.readableId || cleanId).replace(/-[GR\d]+$/i, '')
+        
+        // Client-side 10-second deduplication guard (checks cleanId, combinedId, and baseReadableId)
+        const lastPrinted = (window as any).__lastKOTPrintTimestamps?.[cleanId] ||
+          (combinedKey ? (window as any).__lastKOTPrintTimestamps?.[combinedKey] : null) ||
+          (baseReadableKey ? (window as any).__lastKOTPrintTimestamps?.[baseReadableKey] : null)
+
+        if (lastPrinted && (now - lastPrinted) < 10000) {
+          console.warn(`[Kitchen KOT Channel] 🛡️ Ignored duplicate reprint broadcast for #${cleanId} (${Math.round((10000 - (now - lastPrinted))/1000)}s cooldown active)`)
+          return
+        }
+        if (!(window as any).__lastKOTPrintTimestamps) {
+          (window as any).__lastKOTPrintTimestamps = {}
+        }
+        (window as any).__lastKOTPrintTimestamps[cleanId] = now
+        if (combinedKey) (window as any).__lastKOTPrintTimestamps[combinedKey] = now
+        if (baseReadableKey) (window as any).__lastKOTPrintTimestamps[baseReadableKey] = now
+        if (orderToPrint) {
+          console.log('Received remote reprint request for Order ID:', cleanId)
+          // Play alert so kitchen staff notices the KOT
+          if (soundEnabledRef.current && !audioContextBlockedRef.current) {
+            playKitchenAlarmChime()
+          }
+          triggerHaptic()
+          printKOTReceiptRef.current?.(orderToPrint)
+          toast.info(`🖨️ KOT #${orderToPrint.readableId || cleanId.slice(0, 8)} printed!`)
+          fetchOrders(true)
+        }
+      }
+    }
+
+    channel.on('broadcast', { event: 'reprint-kot' }, handleKOTBroadcast)
+
+    channel.subscribe((status) => {
+      console.log('[Kitchen KOT Channel] Subscription status:', status)
+      if (status === 'CHANNEL_ERROR') {
+        console.error('[Kitchen KOT Channel] Failed to subscribe to realtime channel')
+        toast.error('⚠️ Kitchen realtime connection failed — KOT auto-receive disabled. Refresh the page.')
+      } else if (status === 'SUBSCRIBED') {
+        console.log('[Kitchen KOT Channel] ✅ Successfully subscribed — ready to receive KOT broadcasts')
+      }
+    })
+
+    // Also subscribe to the global broadcast channel if on an isolated restaurant channel
+    let globalChannel: ReturnType<typeof supabase.channel> | null = null
+    if (effectiveRestaurantId) {
+      globalChannel = supabase
+        .channel('restaurant-orders-live')
+        .on('broadcast', { event: 'reprint-kot' }, handleKOTBroadcast)
+        .subscribe()
+    }
     
     return () => {
       supabase.removeChannel(channel)
+      if (globalChannel) {
+        supabase.removeChannel(globalChannel)
+      }
       if (updateTimeout) {
         clearTimeout(updateTimeout)
       }
     }
-  }, [status, fetchOrders])
+  }, [status, fetchOrders, effectiveRestaurantId])
 
   useEffect(() => {
     if (status === 'authenticated') {

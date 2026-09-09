@@ -19,10 +19,25 @@ export async function GET(request: NextRequest) {
       : (paramRestId || sessionRestId)
 
     if (!effectiveRestId && cleanPhone) {
-      if (cleanPhone === '8112849854') effectiveRestId = 'REST-101'
-      else if (cleanPhone === '9250138656') effectiveRestId = 'REST-102'
-      else if (cleanPhone === '7991488783') effectiveRestId = 'REST-103'
-      else if (cleanPhone === '9900112233') effectiveRestId = 'REST-104'
+      const dbUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { phone: { endsWith: cleanPhone } },
+            { phone: `+91${cleanPhone}` }
+          ],
+          assignedRestaurantId: { not: null }
+        },
+        select: { assignedRestaurantId: true }
+      })
+      if (dbUser?.assignedRestaurantId) {
+        effectiveRestId = dbUser.assignedRestaurantId
+      } else {
+        const rest = await prisma.restaurant.findFirst({
+          where: { ownerPhone: { contains: cleanPhone } },
+          select: { id: true }
+        })
+        if (rest) effectiveRestId = rest.id
+      }
     }
 
     // If still not resolved and session user is restaurant owner
@@ -36,9 +51,19 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Default fallback to A.S. Restaurant if no specific outlet requested
+    // If no restaurant resolved, return clean zero stats
     if (!effectiveRestId) {
-      effectiveRestId = 'REST-101'
+      return NextResponse.json({
+        totalRevenue: 0,
+        netPayout: 0,
+        totalOrders: 0,
+        pendingOrders: 0,
+        completedOrders: 0,
+        commissionRate: 0.15,
+        restaurantName: '',
+        todayRevenue: 0,
+        todayOrders: 0
+      })
     }
 
     let commissionRate = 0.25

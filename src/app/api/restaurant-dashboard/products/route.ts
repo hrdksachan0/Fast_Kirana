@@ -24,8 +24,10 @@ export async function GET(request: NextRequest) {
     const where: any = {}
     if (effectiveRestId === 'ALL') {
       where.restaurantId = { not: null }
+    } else if (effectiveRestId) {
+      where.restaurantId = effectiveRestId
     } else {
-      where.restaurantId = effectiveRestId || 'REST-101'
+      return NextResponse.json({ products: [], restaurant: null })
     }
 
     const [products, restaurant] = await Promise.all([
@@ -81,8 +83,7 @@ export async function POST(request: NextRequest) {
     // Determine target restaurant ID
     let finalRestaurantId = normalizeRestaurantId(body.restaurantId || assignedRestaurantId)
     if (!finalRestaurantId) {
-      const defaultRest = await prisma.restaurant.findFirst({ where: { isActive: true } })
-      finalRestaurantId = defaultRest?.id || 'REST-101'
+      return NextResponse.json({ error: 'Target restaurant ID is required to create a dish' }, { status: 400 })
     }
 
     const targetCategoryId = (categoryId && typeof categoryId === 'string' && categoryId.trim()) ? categoryId.trim() : null

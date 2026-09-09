@@ -15,27 +15,42 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const type = searchParams.get('type') // 'cafe', 'restaurant' or 'grocery'
   const paramRestId = searchParams.get('restaurantId')
+  const isPlatformAdmin = role === 'ADMIN'
   
-  let assignedRestaurantId = (session?.user as any)?.assignedRestaurantId || paramRestId
-  if (assignedRestaurantId === 'cms2p1lap0000n0id8alldboy' || assignedRestaurantId === 'as-restaurant') assignedRestaurantId = 'REST-101'
-  else if (assignedRestaurantId === 'cms2p1lyx0001n0idod904lfu' || assignedRestaurantId === 'wedson-restaurant' || assignedRestaurantId === 'wedson') assignedRestaurantId = 'REST-102'
-  else if (assignedRestaurantId === 'cmsbhxb6a000304if8kf1cwji' || assignedRestaurantId === 'bal-udyan-restaurant' || assignedRestaurantId === 'bal-udyan') assignedRestaurantId = 'REST-103'
-  else if (assignedRestaurantId === 'cmtn66nhy000004k0fu84b7ke' || assignedRestaurantId === 'pari-milk-dairy-sweets' || assignedRestaurantId === 'pari-milk') assignedRestaurantId = 'REST-104'
+  let assignedRestaurantId = (session?.user as any)?.assignedRestaurantId
 
-  if (!assignedRestaurantId && headerPhone) {
+  // If not admin, lock strictly to assignedRestaurantId
+  let targetRestId = (!isPlatformAdmin && assignedRestaurantId)
+    ? assignedRestaurantId
+    : (paramRestId || assignedRestaurantId || null)
+
+  if (!targetRestId && headerPhone) {
     const clean = headerPhone.replace(/[^0-9]/g, '').slice(-10)
-    if (clean === '8112849854') assignedRestaurantId = 'REST-101'
-    else if (clean === '9250138656') assignedRestaurantId = 'REST-102'
-    else if (clean === '7991488783') assignedRestaurantId = 'REST-103'
-    else if (clean === '9900112233') assignedRestaurantId = 'REST-104'
-    else {
+    const restUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { phone: { endsWith: clean } },
+          { phone: `+91${clean}` }
+        ],
+        assignedRestaurantId: { not: null }
+      },
+      select: { assignedRestaurantId: true }
+    })
+    if (restUser?.assignedRestaurantId) {
+      targetRestId = restUser.assignedRestaurantId
+    } else {
       const rest = await prisma.restaurant.findFirst({
         where: { ownerPhone: { contains: clean } },
         select: { id: true }
       })
-      if (rest) assignedRestaurantId = rest.id
+      if (rest) targetRestId = rest.id
     }
   }
+
+  if (targetRestId === 'cms2p1lap0000n0id8alldboy' || targetRestId === 'as-restaurant') targetRestId = 'REST-101'
+  else if (targetRestId === 'cms2p1lyx0001n0idod904lfu' || targetRestId === 'wedson-restaurant' || targetRestId === 'wedson') targetRestId = 'REST-102'
+  else if (targetRestId === 'cmsbhxb6a000304if8kf1cwji' || targetRestId === 'bal-udyan-restaurant' || targetRestId === 'bal-udyan') targetRestId = 'REST-103'
+  else if (targetRestId === 'cmtn66nhy000004k0fu84b7ke' || targetRestId === 'pari-milk-dairy-sweets' || targetRestId === 'pari-milk') targetRestId = 'REST-104'
 
   if (role === 'CHEF' || role === 'RESTAURANT_OWNER') {
     const isRestaurantChef = session?.user?.email?.toLowerCase().startsWith('restaurant') || role === 'RESTAURANT_OWNER' || type === 'restaurant'
@@ -44,6 +59,9 @@ export async function GET(request: Request) {
     }
     if (!isRestaurantChef && type !== 'cafe') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (assignedRestaurantId && targetRestId !== assignedRestaurantId) {
+      return NextResponse.json({ error: 'Forbidden: Access restricted to your own restaurant' }, { status: 403 })
     }
   }
   if (role === 'PICKER' && (type === 'cafe' || type === 'restaurant')) {
@@ -55,7 +73,7 @@ export async function GET(request: Request) {
     let orders: any[] = []
     
     if (type === 'cafe') {
-      const targetRestId = assignedRestaurantId || paramRestId || 'REST-101'
+      if (!targetRestId) return NextResponse.json([])
       orders = await prisma.$queryRaw`
         SELECT o.id, o."userId", o."addressId", o."readableId",
                o.status::text as status,
@@ -72,7 +90,7 @@ export async function GET(request: Request) {
         ORDER BY o."createdAt" ASC
       `
     } else if (type === 'restaurant') {
-      const targetRestId = assignedRestaurantId || paramRestId || 'REST-101'
+      if (!targetRestId) return NextResponse.json([])
       orders = await prisma.$queryRaw`
         SELECT o.id, o."userId", o."addressId", o."readableId",
                o.status::text as status,

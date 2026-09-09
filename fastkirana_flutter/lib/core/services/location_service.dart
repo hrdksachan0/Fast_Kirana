@@ -4,6 +4,8 @@ import 'package:geocoding/geocoding.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_config.dart';
 import '../../data/models/address.dart';
+import '../../data/models/product.dart';
+import '../../providers/address_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/store_hub_provider.dart';
 
@@ -58,12 +60,20 @@ class DeliveryTierInfo {
 class LocationService {
   static const double maxDeliveryRadiusKm = 5.0; // FastKirana delivery zone radius (Strict 5.0 km)
 
-  /// Calculate distance in km from the active darkstore hub to given coordinates.
-  /// Reads from AppConfig which is updated at runtime by StoreHubProvider.
-  static double getDistanceKm(double lat, double lng) {
+  /// Calculate distance in km from an origin location (e.g. restaurant or darkstore hub) to customer coordinates.
+  /// If [originLat] and [originLng] are provided (e.g. from a restaurant), measures from that point.
+  /// Otherwise defaults to the active darkstore hub coords in AppConfig.
+  static double getDistanceKm(
+    double lat,
+    double lng, {
+    double? originLat,
+    double? originLng,
+  }) {
+    final startLat = (originLat != null && originLat != 0.0) ? originLat : AppConfig.darkstoreLat;
+    final startLng = (originLng != null && originLng != 0.0) ? originLng : AppConfig.darkstoreLng;
     final distanceMeters = Geolocator.distanceBetween(
-      AppConfig.darkstoreLat,
-      AppConfig.darkstoreLng,
+      startLat,
+      startLng,
       lat,
       lng,
     );
@@ -125,18 +135,29 @@ class LocationService {
         isServiceable: false,
         tierName: 'Outside ${radius.toInt()} km (Out of Zone)',
         freeDeliveryLabel: 'Outside delivery zone',
-        feeDescription: 'Delivery is currently limited to a maximum of ${radius.toInt()} km from our central hub.',
+        feeDescription: 'Delivery is currently limited to a maximum of ${radius.toStringAsFixed(1)} km from our central hub.',
       );
     }
   }
 
-  /// Convenience: calculate tier directly from an Address object
-  static DeliveryTierInfo getTierForAddress(Address? address, double subtotal) {
+  /// Convenience: calculate tier directly from an Address object with optional custom origin (e.g. restaurant)
+  static DeliveryTierInfo getTierForAddress(
+    Address? address,
+    double subtotal, {
+    double? originLat,
+    double? originLng,
+    double? maxRadius,
+  }) {
     if (address == null || address.latitude == null || address.longitude == null || (address.latitude == 0.0 && address.longitude == 0.0)) {
-      return getDeliveryTier(1.0, subtotal);
+      return getDeliveryTier(1.0, subtotal, maxRadius: maxRadius);
     }
-    final dist = getDistanceKm(address.latitude!, address.longitude!);
-    return getDeliveryTier(dist, subtotal);
+    final dist = getDistanceKm(
+      address.latitude!,
+      address.longitude!,
+      originLat: originLat,
+      originLng: originLng,
+    );
+    return getDeliveryTier(dist, subtotal, maxRadius: maxRadius);
   }
 
   /// Check & request location permission, then fetch current GPS location
@@ -230,9 +251,40 @@ class LocationService {
 
 /// Provider that calculates the dynamic distance tier for the currently selected address & cart
 final deliveryTierProvider = Provider<DeliveryTierInfo>((ref) {
-  final nearestResult = ref.watch(nearestHubResultProvider);
   final cart = ref.watch(cartProvider);
   final subtotal = cart.valueOrNull?.subtotal ?? 0.0;
+  final items = cart.valueOrNull?.items ?? [];
+
+  // Check if cart contains restaurant food items
+  RestaurantInfo? restaurant;
+  for (final item in items) {
+    if (item.product.restaurant != null &&
+        item.product.restaurant!.lat != null &&
+        item.product.restaurant!.lng != null) {
+      restaurant = item.product.restaurant;
+      break;
+    }
+  }
+
+  if (restaurant != null && restaurant.lat != null && restaurant.lng != null) {
+    final selectedAddress = ref.watch(selectedAddressProvider);
+    final userLat = selectedAddress?.latitude;
+    final userLng = selectedAddress?.longitude;
+
+    if (userLat != null && userLng != null && (userLat != 0.0 || userLng != 0.0)) {
+      final dist = LocationService.getDistanceKm(
+        userLat,
+        userLng,
+        originLat: restaurant.lat,
+        originLng: restaurant.lng,
+      );
+      return LocationService.getDeliveryTier(dist, subtotal, maxRadius: restaurant.deliveryRadiusKm);
+    } else {
+      return LocationService.getDeliveryTier(1.0, subtotal, maxRadius: restaurant.deliveryRadiusKm);
+    }
+  }
+
+  final nearestResult = ref.watch(nearestHubResultProvider);
   final radius = nearestResult.hub.deliveryRadiusKm;
   return LocationService.getDeliveryTier(nearestResult.distanceKm, subtotal, maxRadius: radius);
 });

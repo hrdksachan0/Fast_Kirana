@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { auth } from '@/auth'
+import { requireRole } from '@/lib/auth-guard'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
-  const session = await auth()
+  const { error, session } = await requireRole(['DELIVERY', 'ADMIN', 'PICKER'], request)
+  if (error) return error
+
   const searchParams = request.nextUrl.searchParams
   const queryUserId = searchParams.get('userId') || searchParams.get('deliveryUserId')
   const queryPhone = searchParams.get('phone')

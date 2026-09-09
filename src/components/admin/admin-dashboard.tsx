@@ -2596,7 +2596,7 @@ export function AdminDashboard({
       />
 
       <StoreControlBar
-        storeHubName={activeStoreHub?.name || 'Ghatampur Central Hub'}
+        storeHubName={activeStoreHub?.name || storesList[0]?.name || 'Central Hub'}
         storesList={storesList}
         selectedHubId={selectedHubId}
         onSelectHub={handleSelectHub}
@@ -2916,6 +2916,7 @@ export function AdminDashboard({
 
       {activeTab === 'inward' && (
         <InwardTab
+          storeId={selectedHubId}
           onInventoryUpdated={async () => {
             try {
               const res = await fetch(`/api/products?limit=1000&t=${Date.now()}`)
@@ -2954,11 +2955,11 @@ export function AdminDashboard({
       )}
 
       {activeTab === 'reports' && (
-        <ReportsTab />
+        <ReportsTab storeId={selectedHubId} />
       )}
 
       {activeTab === 'restaurant-report' && (
-        <RestaurantReportTab />
+        <RestaurantReportTab storeId={selectedHubId} />
       )}
 
       {activeTab === 'banners' && (
@@ -2978,7 +2979,7 @@ export function AdminDashboard({
       )}
 
       {activeTab === 'rider-cash' && (
-        <RiderCashTab />
+        <RiderCashTab storeId={selectedHubId} />
       )}
 
       {activeTab === 'csv-import' && (

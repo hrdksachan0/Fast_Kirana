@@ -16,6 +16,7 @@ const DEFAULT_STAFF_ACCOUNTS: Array<{ phone: string; email: string; restaurantId
   { phone: '8112849854', email: 'asrestaurant3@gmail.com', restaurantId: 'REST-101' },
   { phone: '9250138656', email: 'restaurant@fastkirana.com', restaurantId: 'REST-102' },
   { phone: '7991488783', email: 'baludyanhotelrestaurant@gmail.com', restaurantId: 'REST-103' },
+  { phone: '9900112233', email: 'chef@fastkirana.com', restaurantId: 'REST-104' },
 ]
 
 // ─── In-memory cache ──────────────────────────────────────────────────────────

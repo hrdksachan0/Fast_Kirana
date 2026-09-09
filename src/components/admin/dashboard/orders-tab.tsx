@@ -292,6 +292,7 @@ export function OrdersTab({
         body: JSON.stringify({
           orderId: targetOrder.id,
           readableId: targetOrder.readableId,
+          restaurantId: targetOrder.restaurantId || null,
           customerName,
           items: targetItems,
           deliveryMethod: targetOrder.deliveryMethod || 'DELIVERY',
@@ -309,54 +310,61 @@ export function OrdersTab({
       }
     } catch (err) {
       // Fallback to direct channel if API fails
-      let channel: ReturnType<typeof supabase.channel> | null = null
-      try {
-        channel = supabase.channel('restaurant-orders-live', {
-          config: { broadcast: { self: false } },
-        })
-        await new Promise<void>((resolve, reject) => {
-          const timeout = setTimeout(() => reject(new Error('Subscribe timeout')), 4000)
-          channel!.subscribe((status) => {
-            if (status === 'SUBSCRIBED') {
-              clearTimeout(timeout)
-              resolve()
-            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-              clearTimeout(timeout)
-              reject(new Error(`Channel ${status}`))
+      const chNames = ['restaurant-orders-live']
+      if (targetOrder.restaurantId) {
+        chNames.push(`restaurant-orders-${targetOrder.restaurantId}`)
+      }
+      
+      for (const chName of chNames) {
+        let channel: ReturnType<typeof supabase.channel> | null = null
+        try {
+          channel = supabase.channel(chName, {
+            config: { broadcast: { self: false } },
+          })
+          await new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Subscribe timeout')), 4000)
+            channel!.subscribe((status) => {
+              if (status === 'SUBSCRIBED') {
+                clearTimeout(timeout)
+                resolve()
+              } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                clearTimeout(timeout)
+                reject(new Error(`Channel ${status}`))
+              }
+            })
+          })
+
+          const targetItems = (targetOrder.restaurantItems && targetOrder.restaurantItems.length > 0)
+            ? targetOrder.restaurantItems
+            : (targetOrder.subOrders?.find((s: any) => s.type === 'RESTAURANT')?.items) || targetOrder.items || []
+          const customerName = targetOrder.userName || targetOrder.user?.name || targetOrder.customerName || 'Customer'
+
+          await channel.send({
+            type: 'broadcast',
+            event: 'reprint-kot',
+            payload: {
+              orderId: targetOrder.id,
+              readableId: targetOrder.readableId,
+              restaurantId: targetOrder.restaurantId || null,
+              customerName,
+              items: targetItems,
+              deliveryMethod: targetOrder.deliveryMethod || 'DELIVERY',
+              notes: targetOrder.notes || null,
+              shopName: targetOrder.shopName || targetOrder.restaurantName || 'Kitchen',
+              printedAt: new Date().toISOString(),
             }
           })
-        })
 
-        const targetItems = (targetOrder.restaurantItems && targetOrder.restaurantItems.length > 0)
-          ? targetOrder.restaurantItems
-          : (targetOrder.subOrders?.find((s: any) => s.type === 'RESTAURANT')?.items) || targetOrder.items || []
-        const customerName = targetOrder.userName || targetOrder.user?.name || targetOrder.customerName || 'Customer'
-
-        await channel.send({
-          type: 'broadcast',
-          event: 'reprint-kot',
-          payload: {
-            orderId: targetOrder.id,
-            readableId: targetOrder.readableId,
-            customerName,
-            items: targetItems,
-            deliveryMethod: targetOrder.deliveryMethod || 'DELIVERY',
-            notes: targetOrder.notes || null,
-            shopName: targetOrder.shopName || targetOrder.restaurantName || 'Kitchen',
-            printedAt: new Date().toISOString(),
-          }
-        })
-
-        toast.dismiss(toastId)
-        toast.success(`KOT Sent to Kitchen ✓ 📲`)
-        setTimeout(() => {
+          setTimeout(() => {
+            try { if (channel) supabase.removeChannel(channel) } catch (_) {}
+          }, 2000)
+        } catch (directErr) {
           try { if (channel) supabase.removeChannel(channel) } catch (_) {}
-        }, 2000)
-      } catch (directErr) {
-        try { if (channel) supabase.removeChannel(channel) } catch (_) {}
-        toast.dismiss(toastId)
-        toast.warning('KOT send may have failed — open Kitchen Console and print manually')
+        }
       }
+
+      toast.dismiss(toastId)
+      toast.success(`KOT Sent to Kitchen ✓ 📲`)
     } finally {
       // Cooldown of 4 seconds before re-enabling click
       setTimeout(() => {

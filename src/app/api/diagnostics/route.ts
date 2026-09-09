@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import nodemailer from 'nodemailer'
+import { requireAdmin } from '@/lib/auth-guard'
 
 export async function GET(request: NextRequest) {
+  const { error } = await requireAdmin(request)
+  if (error) return error
   const report: Record<string, any> = {
     timestamp: new Date().toISOString(),
     env: {

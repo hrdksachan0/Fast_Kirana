@@ -71,6 +71,19 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="fastkirana" android:host="product" />
             </intent-filter>
+
+            <!-- Universal App Links: https://fastkirana.in/order/*, /orders/*, /product/* -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="fastkirana.in" android:pathPrefix="/order" />
+                <data android:scheme="https" android:host="fastkirana.in" android:pathPrefix="/orders" />
+                <data android:scheme="https" android:host="fastkirana.in" android:pathPrefix="/product" />
+                <data android:scheme="https" android:host="www.fastkirana.in" android:pathPrefix="/order" />
+                <data android:scheme="https" android:host="www.fastkirana.in" android:pathPrefix="/orders" />
+                <data android:scheme="https" android:host="www.fastkirana.in" android:pathPrefix="/product" />
+            </intent-filter>
         </activity>
 
         <!-- Firebase Cloud Messaging Defaults -->
