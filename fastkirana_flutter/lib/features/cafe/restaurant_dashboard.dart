@@ -2157,6 +2157,10 @@ $formattedItems
 
     final dynamic rawUser = order['user'];
     final Map<String, dynamic> user = (rawUser is Map<String, dynamic>) ? rawUser : {};
+    final String customerName = (order['userName'] ?? user['name'] ?? order['customerName'] ?? 'Customer')
+        .toString().trim().isEmpty
+        ? 'Customer'
+        : (order['userName'] ?? user['name'] ?? order['customerName'] ?? 'Customer').toString().trim();
     final dynamic rawRider = order['assignedRider'] ?? order['assignedDelivery'] ?? order['deliveryUser'];
     final Map<String, dynamic>? assignedRider = (rawRider is Map<String, dynamic> &&
             !(rawRider['name']?.toString().toLowerCase().contains('admin') ?? false) &&

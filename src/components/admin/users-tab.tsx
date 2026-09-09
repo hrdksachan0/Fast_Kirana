@@ -216,7 +216,7 @@ export function UsersTab({
                   <select
                     value={u.role}
                     onChange={(e) => handleUserRoleChange(u.id, e.target.value)}
-                    disabled={u.role === 'ADMIN'}
+                    disabled={u.role === 'ADMIN' || u.email === 'admin@fastkirana.com' || u.email === 'superadmin@fastkirana.com' || Boolean(u.phone?.includes('7054470303')) || Boolean(u.phone?.includes('9170942500'))}
                     className="bg-muted px-2 py-1 rounded-lg border text-[11px] font-bold text-text-primary focus:outline-none cursor-pointer disabled:opacity-50"
                   >
                     <option value="USER">Customer (USER)</option>

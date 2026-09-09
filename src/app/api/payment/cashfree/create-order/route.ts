@@ -20,8 +20,14 @@ export async function POST(request: NextRequest) {
     let resolvedName = customerName || 'FastKirana Customer'
 
     if (orderId) {
-      const order = await prisma.order.findUnique({
-        where: { id: orderId },
+      const cleanOrderId = String(orderId).trim()
+      const order = await prisma.order.findFirst({
+        where: {
+          OR: [
+            { id: cleanOrderId },
+            { readableId: cleanOrderId }
+          ]
+        },
         include: {
           user: { select: { id: true, name: true, email: true, phone: true } },
           address: { select: { phone: true } }
@@ -63,15 +69,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Minimum order amount for online payment is ₹1.00' }, { status: 400 })
     }
 
+    // Sanitize phone to strictly 10 digits as required by Cashfree API
+    let cleanPhone = String(resolvedPhone || '').replace(/[^\d]/g, '')
+    if (cleanPhone.startsWith('91') && cleanPhone.length > 10) {
+      cleanPhone = cleanPhone.slice(2)
+    }
+    if (cleanPhone.length !== 10) {
+      cleanPhone = '9999999999'
+    }
+
+    // Sanitize email
+    let cleanEmail = String(resolvedEmail || '').trim().toLowerCase()
+    if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      cleanEmail = 'customer@fastkirana.in'
+    }
+
+    const cleanName = String(resolvedName || 'FastKirana Customer').trim() || 'FastKirana Customer'
+
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fastkirana.in'
 
     const cfOrder = await createCashfreeOrder({
       orderId: resolvedOrderId,
       amount: totalAmount,
       customerId,
-      customerName: resolvedName,
-      customerPhone: resolvedPhone,
-      customerEmail: resolvedEmail,
+      customerName: cleanName,
+      customerPhone: cleanPhone,
+      customerEmail: cleanEmail,
       returnUrl: `${appUrl}/checkout/verify?order_id=${resolvedOrderId}&cf_order_id={order_id}`,
       notifyUrl: `${appUrl}/api/payment/cashfree/webhook`,
       note: `FastKirana Order #${readableId || resolvedOrderId}`

@@ -13,6 +13,7 @@ import 'package:flutter_cashfree_pg_sdk/api/cfsession/cfsession.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfpaymentgateway/cfpaymentgatewayservice.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfwebcheckoutpayment.dart';
 import 'package:flutter_cashfree_pg_sdk/utils/cfenums.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cftheme/cftheme.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cferrorresponse/cferrorresponse.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/routes/page_transitions.dart';
@@ -494,8 +495,19 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 .setPaymentSessionId(paymentSessionId)
                 .build();
 
+            final theme = CFThemeBuilder()
+                .setNavigationBarBackgroundColorColor("#E20A22")
+                .setNavigationBarTextColor("#FFFFFF")
+                .setButtonBackgroundColor("#E20A22")
+                .setButtonTextColor("#FFFFFF")
+                .setPrimaryTextColor("#0F172A")
+                .setBackgroundColor("#FFFFFF")
+                .setPrimaryFont("Inter")
+                .build();
+
             final cfPayment = CFWebCheckoutPaymentBuilder()
                 .setSession(session)
+                .setTheme(theme)
                 .build();
 
             _cfService.doPayment(cfPayment);
@@ -2445,13 +2457,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           ),
           const SizedBox(height: 10),
 
-          // Option 2: Online Payment (Razorpay)
+          // Option 2: Online Payment (FastKirana Instant Pay)
           _buildPaymentOptionTile(
             id: 'online',
-            title: 'Online Payment (Razorpay)',
-            subtitle: 'UPI, Google Pay, PhonePe, Cards & NetBanking',
-            badge: '⚡ Fast & Secure',
-            badgeColor: AppDesignSystem.blue700,
+            title: 'Online Payment (Instant UPI / Cards)',
+            subtitle: 'PhonePe, Google Pay, Paytm, Cards & NetBanking',
+            badge: '⚡ Instant & 100% Secure',
+            badgeColor: AppDesignSystem.emerald600,
             iconWidget: Text('💳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
           ),
         ],

@@ -80,14 +80,8 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     final phone = prefs.getString('user_phone') ?? prefs.getString('auth_phone') ?? '';
     final userId = prefs.getString('user_id') ?? '';
 
-    // 1. Unsubscribe from customer-specific topics on logout
-    if (phone.isNotEmpty) {
-      final cleanPhone = phone.replaceAll('+91', '').replaceAll(' ', '').trim();
-      NotificationService().unsubscribeFromTopic('phone_$cleanPhone');
-    }
-    if (userId.isNotEmpty) {
-      NotificationService().unsubscribeFromTopic('user_$userId');
-    }
+    // 1. Unsubscribe from ALL FCM topics on logout (admin, staff, restaurant, kitchen, user, phone)
+    await NotificationService().unsubscribeAllTopics();
 
     // 2. Clear all active push notifications from Android notification tray
     await NotificationService().clearAllNotifications();

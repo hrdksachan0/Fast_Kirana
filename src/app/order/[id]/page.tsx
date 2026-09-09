@@ -10,6 +10,7 @@ import { OrderSuccessEffects } from '@/components/shared/order-success-effects'
 import { OrderConfirmationStatus } from '@/components/order/order-confirmation-status'
 import { LockscreenAlertMockup } from '@/components/order/lockscreen-alert-mockup'
 import { PayOnlineButton } from '@/components/order/pay-online-button'
+import { getCashfreeOrder } from '@/lib/cashfree'
 
 interface OrderConfirmPageProps {
   params: Promise<{ id: string }>
@@ -109,7 +110,27 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
       }
     })
 
-    // Auto-heal / Auto-sync with Razorpay if order is marked unpaid but was actually paid online
+    // Auto-heal / Auto-sync with Cashfree first if order is marked unpaid but was paid online
+    if (order && order.paymentStatus !== 'PAID') {
+      try {
+        const cfOrder = await getCashfreeOrder(order.id)
+        if (cfOrder && cfOrder.order_status === 'PAID') {
+          order.paymentStatus = 'PAID'
+          order.paymentMethod = 'UPI'
+          if (order.combinedId) {
+            await prisma.$executeRaw`
+              UPDATE orders SET "paymentStatus" = 'PAID'::"PaymentStatus", "paymentMethod" = 'UPI'::"PaymentMethod", "updatedAt" = NOW() WHERE "combinedId" = ${order.combinedId}
+            `
+          } else {
+            await prisma.$executeRaw`
+              UPDATE orders SET "paymentStatus" = 'PAID'::"PaymentStatus", "paymentMethod" = 'UPI'::"PaymentMethod", "updatedAt" = NOW() WHERE id = ${order.id}
+            `
+          }
+        }
+      } catch (cfErr) {}
+    }
+
+    // Auto-heal / Auto-sync with Razorpay if order is still unpaid
     if (order && order.paymentStatus !== 'PAID') {
       try {
         const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID

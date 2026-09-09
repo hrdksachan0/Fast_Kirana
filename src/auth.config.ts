@@ -77,7 +77,12 @@ export const authConfig = {
           })
           if (dbUser) {
             token.id = dbUser.id
-            token.role = dbUser.role
+            const isMasterAdmin =
+              dbUser.email === 'admin@fastkirana.com' ||
+              dbUser.email === 'superadmin@fastkirana.com' ||
+              dbUser.phone?.includes('7054470303') ||
+              dbUser.phone?.includes('9170942500')
+            token.role = isMasterAdmin ? 'ADMIN' : dbUser.role
             token.assignedRestaurantId = dbUser.assignedRestaurantId
             token.assignedStoreId = dbUser.assignedStoreId
             if (dbUser.phone) token.phone = dbUser.phone

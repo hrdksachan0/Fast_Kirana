@@ -728,7 +728,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                 Payment Confirmed • {formatPrice(combinedTotal || order.total)} Paid Online
               </h4>
               <span className="text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                {order.paymentMethod === 'UPI' ? 'UPI / Razorpay' : order.paymentMethod}
+                {order.paymentMethod === 'UPI' ? 'UPI / Cashfree Online' : order.paymentMethod}
               </span>
             </div>
             <p className="text-[11px] sm:text-xs text-emerald-700 dark:text-emerald-400 mt-0.5 font-medium">
@@ -741,6 +741,8 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
           orderId={order.id}
           amount={combinedTotal || order.total}
           readableId={String(order.baseReadableId || order.readableId || '').replace(/-[GR\d]+$/i, '') || order.id?.slice(0, 8)}
+          customerPhone={(order as any).customerPhone || (order as any).address?.phone || ''}
+          customerName={(order as any).customerName || (order as any).userName || 'FastKirana Customer'}
           onPaymentSuccess={async () => {
             try {
               const refetchRes = await fetch(`/api/orders/${order.id}`)

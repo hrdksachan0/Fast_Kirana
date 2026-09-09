@@ -13,6 +13,12 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cfsession/cfsession.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cfpaymentgateway/cfpaymentgatewayservice.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfwebcheckoutpayment.dart';
+import 'package:flutter_cashfree_pg_sdk/utils/cfenums.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cftheme/cftheme.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cferrorresponse/cferrorresponse.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:confetti/confetti.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -75,6 +81,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   Timer? _etaUpdateTimer;
   StreamSubscription<String>? _sseLineSubscription;
   Razorpay? _razorpay;
+  final CFPaymentGatewayService _cfService = CFPaymentGatewayService();
   bool _isProcessingPayment = false;
 
   // Animation controller for smooth rider marker movement
@@ -158,8 +165,64 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       _razorpay = Razorpay();
       _razorpay?.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
       _razorpay?.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+      _cfService.setCallback(_handleCashfreeSuccess, _handleCashfreeError);
     } catch (e) {
-      debugPrint('Razorpay init error: $e');
+      debugPrint('Payment gateway init error: $e');
+    }
+  }
+
+  void _handleCashfreeSuccess(String cfOrderId) async {
+    HapticFeedback.heavyImpact();
+    setState(() => _isProcessingPayment = true);
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.post('/api/payment/cashfree/verify', data: {
+        'orderId': widget.orderId,
+      });
+      await _fetchLiveOrder();
+      if (mounted) {
+        setState(() => _isProcessingPayment = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: brandGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '🎉 Payment Received! Order #${_order?.readableId ?? widget.orderId} is now PAID.',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error updating paid status from Cashfree: $e');
+      if (mounted) setState(() => _isProcessingPayment = false);
+    }
+  }
+
+  void _handleCashfreeError(CFErrorResponse errorResponse, String cfOrderId) {
+    HapticFeedback.lightImpact();
+    if (mounted) {
+      setState(() => _isProcessingPayment = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: primaryRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          content: Text(
+            errorResponse.getMessage() ?? 'Payment was cancelled or could not be completed.',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white),
+          ),
+        ),
+      );
     }
   }
 
@@ -224,33 +287,95 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     if (grandTotal <= 0) return;
 
     HapticFeedback.lightImpact();
+    setState(() => _isProcessingPayment = true);
     final prefs = await SharedPreferences.getInstance();
     final phone = _order?.customerPhone ?? prefs.getString('user_phone') ?? '';
+    final cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '').replaceAll(RegExp(r'^91'), '');
     final email = prefs.getString('user_email') ?? 'customer@fastkirana.in';
+    final customerName = _order?.customerName ?? 'FastKirana Customer';
 
-    final options = {
-      'key': AppConfig.razorpayKeyId,
-      'amount': (grandTotal * 100).toInt(),
-      'name': 'FastKirana Express',
-      'description': 'Order Payment #${_order?.readableId ?? widget.orderId}',
-      'prefill': {
-        'contact': phone,
-        'email': email,
-      },
-      'theme': {
-        'color': '#00A344',
-      },
-    };
-
+    // 1. Primary Gateway: Cashfree PG
+    bool cashfreeLaunched = false;
     try {
-      _razorpay?.open(options);
-    } catch (e) {
+      final dio = ref.read(dioProvider);
+      final cfRes = await dio.post(
+        '/api/payment/cashfree/create-order',
+        data: {
+          'orderId': widget.orderId,
+          'amount': grandTotal,
+          'customerPhone': cleanPhone.isNotEmpty ? cleanPhone : '9999999999',
+          'customerEmail': email,
+          'customerName': customerName,
+        },
+        options: Options(sendTimeout: const Duration(seconds: 4), receiveTimeout: const Duration(seconds: 4)),
+      );
+
+      if (cfRes.data != null && cfRes.data['paymentSessionId'] != null) {
+        final paymentSessionId = cfRes.data['paymentSessionId'].toString();
+        final cfOrderId = cfRes.data['orderId']?.toString() ?? widget.orderId;
+
+        final env = AppConfig.cashfreeEnv == 'SANDBOX' ? CFEnvironment.SANDBOX : CFEnvironment.PRODUCTION;
+        final session = CFSessionBuilder()
+            .setEnvironment(env)
+            .setOrderId(cfOrderId)
+            .setPaymentSessionId(paymentSessionId)
+            .build();
+
+        final theme = CFThemeBuilder()
+            .setNavigationBarBackgroundColorColor("#E20A22")
+            .setNavigationBarTextColor("#FFFFFF")
+            .setButtonBackgroundColor("#E20A22")
+            .setButtonTextColor("#FFFFFF")
+            .setPrimaryTextColor("#0F172A")
+            .setBackgroundColor("#FFFFFF")
+            .setPrimaryFont("Inter")
+            .build();
+
+        final cfPayment = CFWebCheckoutPaymentBuilder()
+            .setSession(session)
+            .setTheme(theme)
+            .build();
+
+        _cfService.doPayment(cfPayment);
+        cashfreeLaunched = true;
+        return;
+      }
+    } catch (cfErr) {
+      debugPrint('Cashfree create-order error, falling back to Razorpay: $cfErr');
+    }
+
+    // 2. Fallback Gateway: Razorpay
+    if (!cashfreeLaunched && _razorpay != null) {
+      final options = {
+        'key': AppConfig.razorpayKeyId,
+        'amount': (grandTotal * 100).toInt(),
+        'name': 'FastKirana Express',
+        'description': 'Order Payment #${_order?.readableId ?? widget.orderId}',
+        'prefill': {
+          if (cleanPhone.isNotEmpty) 'contact': cleanPhone,
+          'email': email,
+        },
+        'theme': {
+          'color': '#00A344',
+        },
+      };
+
+      try {
+        _razorpay?.open(options);
+        return;
+      } catch (e) {
+        debugPrint('Razorpay open error: $e');
+      }
+    }
+
+    if (mounted) {
+      setState(() => _isProcessingPayment = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: primaryRed,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          content: Text('Could not open payment gateway: $e'),
+          content: const Text('Could not open payment gateway. Please retry.'),
         ),
       );
     }

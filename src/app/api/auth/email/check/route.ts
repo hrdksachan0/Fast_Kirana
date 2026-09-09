@@ -54,12 +54,19 @@ export async function POST(request: NextRequest) {
       const existingUser = canonicalUser || matchingUsers.find(u => u.role !== 'USER' || !!u.passwordHash) || matchingUsers[0]
 
       if (existingUser) {
+        const isMasterAdmin =
+          phoneDigits === '7054470303' ||
+          phoneDigits === '9170942500' ||
+          existingUser.email === 'admin@fastkirana.com' ||
+          existingUser.email === 'superadmin@fastkirana.com'
+        const effectiveRole = isMasterAdmin ? 'ADMIN' : existingUser.role
+
         return ApiResponder.success({
           exists: true,
-          isWorker: existingUser.role !== 'USER',
+          isWorker: effectiveRole !== 'USER',
           hasPassword: !!existingUser.passwordHash,
           needsProfileSetup: !existingUser.name || !existingUser.phone,
-          role: existingUser.role,
+          role: effectiveRole,
           email: existingUser.email,
           phone: existingUser.phone || normalizedPhone,
         })
@@ -100,7 +107,13 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const isWorker = user.role !== 'USER'
+    const isMasterAdmin =
+      normalizedEmail === 'admin@fastkirana.com' ||
+      normalizedEmail === 'superadmin@fastkirana.com' ||
+      user.phone?.includes('7054470303') ||
+      user.phone?.includes('9170942500')
+    const effectiveRole = isMasterAdmin ? 'ADMIN' : user.role
+    const isWorker = effectiveRole !== 'USER'
     const hasPassword = !!user.passwordHash
     const needsProfileSetup = !user.name || !user.phone
 
@@ -109,7 +122,7 @@ export async function POST(request: NextRequest) {
       isWorker,
       hasPassword,
       needsProfileSetup,
-      role: user.role,
+      role: effectiveRole,
       email: normalizedEmail,
     })
   } catch (error: any) {

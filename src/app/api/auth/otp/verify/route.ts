@@ -184,13 +184,23 @@ export async function POST(request: NextRequest) {
 
     const cleanEmail = (user.email && !user.email.startsWith('wa-') && !user.email.includes('@users.fastkirana.in') && !user.email.endsWith('@fastkirana.com') && !user.email.endsWith('@fastkirana.in')) ? user.email : ''
 
+    const isRootAdmin = (
+      phoneDigits === '7054470303' || 
+      phoneDigits === '9170942500' || 
+      user.email === 'admin@fastkirana.com' || 
+      user.email === 'superadmin@fastkirana.com' ||
+      user.phone?.includes('7054470303') ||
+      user.phone?.includes('9170942500')
+    )
+    const effectiveRole = isRootAdmin ? 'ADMIN' : (user.role || 'USER')
+
     // Generate cryptographic signed JWT token (valid for 30 days)
     const { signFastKiranaJWT } = await import('@/lib/jwt')
     const signedToken = await signFastKiranaJWT({
       userId: user.id,
       phone: user.phone || (phoneDigits ? `+91${phoneDigits}` : null),
       email: cleanEmail || null,
-      role: user.role || 'USER',
+      role: effectiveRole,
       assignedStoreId: user.assignedStoreId || null,
       assignedRestaurantId: user.assignedRestaurantId || null,
     })
@@ -203,7 +213,7 @@ export async function POST(request: NextRequest) {
       name: user.name || '',
       email: cleanEmail,
       phone: user.phone || (phoneDigits ? `+91${phoneDigits}` : trimmed),
-      role: user.role || 'USER',
+      role: effectiveRole,
       assignedStoreId: user.assignedStoreId || null,
       assignedRestaurantId: user.assignedRestaurantId || null,
       user: {
@@ -211,7 +221,7 @@ export async function POST(request: NextRequest) {
         name: user.name || '',
         email: cleanEmail,
         phone: user.phone || (phoneDigits ? `+91${phoneDigits}` : trimmed),
-        role: user.role || 'USER',
+        role: effectiveRole,
         assignedStoreId: user.assignedStoreId || null,
         assignedRestaurantId: user.assignedRestaurantId || null,
         isBlocked: user.isBlocked || false,

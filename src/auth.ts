@@ -365,11 +365,20 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
           })
         }
 
+        const isAdminAccount =
+          user.email === 'admin@fastkirana.com' ||
+          user.email === 'superadmin@fastkirana.com' ||
+          String(user.phone || '').includes('7054470303') ||
+          String(user.phone || '').includes('9170942500') ||
+          cleanDigits === '7054470303' ||
+          cleanDigits === '9170942500'
+        const effectiveUserRole = isAdminAccount ? 'ADMIN' : user.role
+
         return {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role,
+          role: effectiveUserRole,
           phone: user.phone,
           image: user.image,
           assignedStoreId: user.assignedStoreId,

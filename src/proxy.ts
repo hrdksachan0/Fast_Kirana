@@ -12,7 +12,15 @@ export async function proxy(req: NextRequest) {
   }
 
   const isLoggedIn = !!token
-  const userRole = token?.role as string | undefined
+  const isMasterAdmin =
+    token?.email === 'admin@fastkirana.com' ||
+    token?.email === 'superadmin@fastkirana.com' ||
+    String(token?.phone || '').includes('7054470303') ||
+    String(token?.phone || '').includes('9170942500') ||
+    token?.role === 'ADMIN'
+
+  const effectiveRole = isMasterAdmin ? 'ADMIN' : (token?.role as string | undefined)
+  const userRole = effectiveRole
   const { nextUrl } = req
 
   // Reconstruct original request domain to bypass NextAuth NEXTAUTH_URL localhost overrides
@@ -29,6 +37,7 @@ export async function proxy(req: NextRequest) {
 
   // Helper to get target console URL for staff roles
   const getStaffConsoleUrl = (role?: string) => {
+    if (isMasterAdmin) return null
     if (role === 'RESTAURANT_OWNER' || role === 'CHEF') return '/restaurant-kitchen'
     if (role === 'DELIVERY') return '/delivery'
     if (role === 'PICKER') return '/picker'
@@ -44,7 +53,7 @@ export async function proxy(req: NextRequest) {
         return NextResponse.redirect(new URL(callbackUrl, baseUrl))
       }
       const roleUpper = userRole?.toUpperCase()
-      if (roleUpper === 'ADMIN') {
+      if (roleUpper === 'ADMIN' || isMasterAdmin) {
         return NextResponse.redirect(new URL('/admin', baseUrl))
       }
       if (staffConsoleUrl) {

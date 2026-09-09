@@ -494,6 +494,54 @@ class NotificationService {
     } catch (e, _) { LoggerService.error('NotificationService: error', e); }
   }
 
+  /// Unsubscribe from ALL FCM topics on logout so no notifications arrive when logged out
+  Future<void> unsubscribeAllTopics() async {
+    if (kIsWeb) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('user_id');
+      final phone = prefs.getString('user_phone') ?? '';
+      final restaurantId = prefs.getString('assigned_restaurant_id');
+
+      // Unsubscribe from all possible topics this device may have subscribed to
+      final topics = <String>[
+        'all_users',
+        'ghatampur_alerts',
+        'admin_orders',
+        'staff_orders',
+      ];
+
+      if (userId != null && userId.isNotEmpty) {
+        topics.add('user_$userId');
+      }
+      if (phone.isNotEmpty) {
+        final cleanPhone = phone.replaceAll('+91', '').replaceAll(' ', '').trim();
+        if (cleanPhone.length == 10) {
+          topics.add('phone_$cleanPhone');
+        }
+      }
+      if (restaurantId != null && restaurantId.isNotEmpty) {
+        topics.add('restaurant_$restaurantId');
+        topics.add('kitchen_$restaurantId');
+      }
+
+      for (final topic in topics) {
+        try {
+          await _fcm?.unsubscribeFromTopic(topic);
+        } catch (_) {}
+      }
+
+      // Also delete the FCM token so backend stops sending to this device
+      try {
+        await _fcm?.deleteToken();
+      } catch (_) {}
+
+      debugPrint('NotificationService: Unsubscribed from ${topics.length} topics on logout');
+    } catch (e, _) {
+      LoggerService.error('NotificationService: unsubscribeAllTopics error', e);
+    }
+  }
+
   /// Cancel all active notifications in system tray (used on logout)
   Future<void> clearAllNotifications() async {
     if (kIsWeb) return;

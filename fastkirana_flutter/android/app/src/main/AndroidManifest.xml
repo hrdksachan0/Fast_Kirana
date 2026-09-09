@@ -102,8 +102,19 @@
             android:value="2" />
     </application>
 
-    <!-- Required for speech recognition (Android 11+) and text processing -->
+    <!-- Required for UPI Payment Apps (Cashfree / PhonePe / GPay / Paytm) -->
     <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="upi" />
+        </intent>
+        <package android:name="com.phonepe.app" />
+        <package android:name="com.google.android.apps.nbu.paisa.user" />
+        <package android:name="net.one97.paytm" />
+        <package android:name="in.org.npci.upiapp" />
+        <package android:name="in.amazon.mShop.android.shopping" />
+        <package android:name="com.whatsapp" />
+        <!-- Required for speech recognition (Android 11+) and text processing -->
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>

@@ -125,16 +125,23 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid email or password' }, { status: 400 })
       }
 
+      const isMasterAdmin =
+        user.email === 'admin@fastkirana.com' ||
+        user.email === 'superadmin@fastkirana.com' ||
+        user.phone?.includes('7054470303') ||
+        user.phone?.includes('9170942500')
+      const effectiveRole = isMasterAdmin ? 'ADMIN' : user.role
+
       return NextResponse.json({
         success: true,
         token: `token_${user.id}_${Date.now()}`,
-        role: user.role,
+        role: effectiveRole,
         assignedStoreId: user.assignedStoreId || null,
         user: {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role,
+          role: effectiveRole,
           phone: user.phone,
           image: user.image,
           assignedStoreId: user.assignedStoreId || null,
@@ -193,16 +200,23 @@ export async function POST(request: NextRequest) {
         })
       }
 
+      const isMasterAdmin =
+        user.email === 'admin@fastkirana.com' ||
+        user.email === 'superadmin@fastkirana.com' ||
+        user.phone?.includes('7054470303') ||
+        user.phone?.includes('9170942500')
+      const effectiveRole = isMasterAdmin ? 'ADMIN' : user.role
+
       return NextResponse.json({
         success: true,
         token: `token_${user.id}_${Date.now()}`,
-        role: user.role,
+        role: effectiveRole,
         assignedStoreId: user.assignedStoreId || null,
         user: {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role,
+          role: effectiveRole,
           phone: user.phone,
           image: user.image,
           assignedStoreId: user.assignedStoreId || null,
