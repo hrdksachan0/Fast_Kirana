@@ -97,22 +97,30 @@ export async function GET(request: NextRequest) {
       where.restaurantId = null
     }
 
-    // Strict Store Isolation: Exclude restaurants from other cities for this store
+    // Strict Store Isolation: Exclude restaurants from other cities and require localized inventory for grocery
     if (storeId && storeId !== 'all') {
       const store = await prisma.darkStore.findUnique({
         where: { id: storeId },
         select: { name: true }
       })
       const storeCity = store ? extractCityFromStoreName(store.name) : ''
-      if (storeCity) {
-        const storeScope = {
-          OR: [
-            { restaurantId: null },
-            { restaurant: { city: { contains: storeCity, mode: 'insensitive' as const } } }
-          ]
-        }
-        where.AND = where.AND ? (Array.isArray(where.AND) ? [...where.AND, storeScope] : [where.AND, storeScope]) : [storeScope]
+      const storeScope: Prisma.ProductWhereInput = {
+        OR: [
+          {
+            restaurantId: null,
+            inventories: {
+              some: {
+                storeId,
+                ...(!isWorker && !includeUnavailable ? { stock: { gt: 0 } } : {})
+              }
+            }
+          },
+          ...(storeCity ? [{
+            restaurant: { city: { contains: storeCity, mode: 'insensitive' as const } }
+          }] : [])
+        ]
       }
+      where.AND = where.AND ? (Array.isArray(where.AND) ? [...where.AND, storeScope] : [where.AND, storeScope]) : [storeScope]
     }
 
     if (categoryId) {

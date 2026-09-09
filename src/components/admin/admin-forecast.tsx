@@ -35,7 +35,7 @@ interface ForecastItem {
     id: string
     name: string
     slug: string
-  }
+  } | null
   salesVelocity: number
   weekdayVelocity: number
   weekendVelocity: number
@@ -147,7 +147,7 @@ export function AdminForecast({ onRestockCompleted, categories }: AdminForecastP
   const filteredList = useMemo(() => {
     return forecastList.filter((f) => {
       const matchesSearch = f.name.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesCategory = selectedCategory === 'ALL' || f.category.id === selectedCategory
+      const matchesCategory = selectedCategory === 'ALL' || f.category?.id === selectedCategory
       return matchesSearch && matchesCategory
     })
   }, [forecastList, searchQuery, selectedCategory])
@@ -467,7 +467,7 @@ export function AdminForecast({ onRestockCompleted, categories }: AdminForecastP
                         <span className="font-extrabold truncate max-w-[180px]">{item.name}</span>
                       </div>
                     </td>
-                    <td className="p-3 font-semibold text-text-secondary">{item.category.name}</td>
+                    <td className="p-3 font-semibold text-text-secondary">{item.category?.name || 'General'}</td>
                     <td className="p-3 text-center font-bold">
                       <span className={item.stock <= item.minStock ? 'text-rose-600 font-extrabold' : ''}>
                         {item.stock}

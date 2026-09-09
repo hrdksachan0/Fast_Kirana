@@ -102,8 +102,8 @@ export function AdminInward({ onInwardCompleted }: AdminInwardProps) {
     if (!search.trim()) return []
     return products.filter(p => 
       (p.name.toLowerCase().includes(search.toLowerCase()) || 
-      p.category.name.toLowerCase().includes(search.toLowerCase())) &&
-      p.category.slug !== 'cafe'
+      (p.category?.name?.toLowerCase().includes(search.toLowerCase()) ?? false)) &&
+      p.category?.slug !== 'cafe'
     ).slice(0, 5) // Show top 5 matches
   }, [search, products])
 
@@ -239,7 +239,7 @@ export function AdminInward({ onInwardCompleted }: AdminInwardProps) {
                           <span className="text-lg">{p.imageUrl || '📦'}</span>
                           <div>
                             <span className="text-text-primary block leading-tight">{p.name}</span>
-                            <span className="text-[10px] text-text-muted block mt-0.5">{p.category.name}</span>
+                            <span className="text-[10px] text-text-muted block mt-0.5">{p.category?.name || 'General'}</span>
                           </div>
                         </div>
                         <div className="text-right shrink-0">

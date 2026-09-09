@@ -75,14 +75,21 @@ export async function GET(request: Request) {
         select: { name: true }
       })
       const storeCity = store ? extractCityFromStoreName(store.name) : ''
-      if (storeCity) {
-        andClauses.push({
-          OR: [
-            { restaurantId: null },
-            { restaurant: { city: { contains: storeCity, mode: 'insensitive' } } }
-          ]
-        })
-      }
+      andClauses.push({
+        OR: [
+          {
+            restaurantId: null,
+            inventories: {
+              some: {
+                storeId
+              }
+            }
+          },
+          ...(storeCity ? [{
+            restaurant: { city: { contains: storeCity, mode: 'insensitive' as const } }
+          }] : [])
+        ]
+      })
     }
 
     if (andClauses.length > 0) {

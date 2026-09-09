@@ -30,15 +30,19 @@ export async function GET(request: Request) {
       where.storeId = effectiveStoreId
     }
 
-    if (search) {
+    const cleanSearch = search ? search.replace(/^#/, '').trim() : ''
+    const parsedReadableId = cleanSearch && /^\d+$/.test(cleanSearch) ? parseInt(cleanSearch, 10) : null
+
+    if (cleanSearch) {
       where.AND = [
         ...(where.AND || []),
         {
           OR: [
-            { id: { contains: search, mode: 'insensitive' } },
-            { user: { name: { contains: search, mode: 'insensitive' } } },
-            { user: { email: { contains: search, mode: 'insensitive' } } },
-            { shopName: { contains: search, mode: 'insensitive' } },
+            { id: { contains: cleanSearch, mode: 'insensitive' } },
+            ...(parsedReadableId !== null ? [{ readableId: parsedReadableId }] : []),
+            { user: { name: { contains: cleanSearch, mode: 'insensitive' } } },
+            { user: { email: { contains: cleanSearch, mode: 'insensitive' } } },
+            { shopName: { contains: cleanSearch, mode: 'insensitive' } },
           ]
         }
       ]
@@ -50,8 +54,8 @@ export async function GET(request: Request) {
     let ordersRaw: any[] = []
     
     // Construct dynamic raw SQL query based on filters to avoid enum deserialization bug
-    if (status && status !== 'ALL' && search) {
-      const searchLike = `%${search}%`
+    if (status && status !== 'ALL' && cleanSearch) {
+      const searchLike = `%${cleanSearch}%`
       if (effectiveStoreId) {
         ordersRaw = await prisma.$queryRaw`
           SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
@@ -117,8 +121,8 @@ export async function GET(request: Request) {
           LIMIT ${limit} OFFSET ${skip}
         `
       }
-    } else if (search) {
-      const searchLike = `%${search}%`
+    } else if (cleanSearch) {
+      const searchLike = `%${cleanSearch}%`
       if (effectiveStoreId) {
         ordersRaw = await prisma.$queryRaw`
           SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",

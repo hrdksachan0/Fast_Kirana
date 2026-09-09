@@ -104,8 +104,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Auto-seed initial store inventory for grocery dark store
-    if (seedInventory !== false) {
+    // Auto-seed initial store inventory for grocery dark store only if explicitly requested
+    if (seedInventory === true) {
       try {
         const products = await prisma.product.findMany({
           where: { isAvailable: true },

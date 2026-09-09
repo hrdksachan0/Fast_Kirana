@@ -26,8 +26,8 @@ const phoneToEmail = new Map<string, string>() // last-10-digits → email
 const phoneToRestaurantId = new Map<string, string>() // last-10-digits → restaurantId
 
 // Pre-populate with defaults immediately
+superadminPhones.add('9170942500')
 for (const acc of DEFAULT_STAFF_ACCOUNTS) {
-  superadminPhones.add(acc.phone)
   phoneToEmail.set(acc.phone, acc.email)
   if (acc.restaurantId) {
     phoneToRestaurantId.set(acc.phone, acc.restaurantId)
@@ -47,7 +47,9 @@ async function loadCache() {
 
       for (const row of rows) {
         const digits = row.phone.replace(/\D/g, '').slice(-10)
-        superadminPhones.add(digits)
+        if (row.email === 'superadmin@fastkirana.com' || digits === '9170942500') {
+          superadminPhones.add(digits)
+        }
         phoneToEmail.set(digits, row.email)
         if (row.assignedRestaurantId) {
           phoneToRestaurantId.set(digits, row.assignedRestaurantId)

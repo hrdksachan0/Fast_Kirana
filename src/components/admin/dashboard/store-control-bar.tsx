@@ -45,8 +45,8 @@ export function StoreControlBar({
         </div>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            {/* Store Hub Switcher for SuperAdmin / Admin */}
-            {isSuperAdmin && storesList.length > 0 ? (
+            {/* Store Hub Switcher for SuperAdmin ONLY */}
+            {isSuperAdmin && storesList.length > 1 ? (
               <div className="flex items-center gap-1.5">
                 <span className="text-[11px] font-black uppercase tracking-wider text-text-secondary">
                   Darkstore:
@@ -83,8 +83,8 @@ export function StoreControlBar({
               </span>
             )}
 
-            {/* Restaurant Quick Switcher for Admin */}
-            {restaurantsList && restaurantsList.length > 0 && (
+            {/* Restaurant Quick Switcher ONLY for SuperAdmin */}
+            {isSuperAdmin && restaurantsList && restaurantsList.length > 0 && (
               <div className="flex items-center gap-1.5">
                 <span className="text-[11px] font-black uppercase tracking-wider text-text-secondary">
                   Restaurant:

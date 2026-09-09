@@ -494,13 +494,15 @@ export function OrdersTab({
     const matchesFilter = orderStatusFilter === 'ALL' || !activeStatuses.includes(orderStatusFilter) || o.status === orderStatusFilter
     const matchesShop = orderShopFilter === 'ALL' || getOrderStoreType(o) === orderShopFilter
     const matchesMethod = orderMethodFilter === 'ALL' || getOrderMethod(o) === orderMethodFilter
+    const q = orderSearchQuery.toLowerCase().trim().replace(/^#/, '')
     const matchesSearch = 
-      orderSearchQuery.trim() === '' || 
-      o.id.toLowerCase().includes(orderSearchQuery.toLowerCase()) || 
-      (o.userName && o.userName.toLowerCase().includes(orderSearchQuery.toLowerCase())) || 
-      (o.userEmail && o.userEmail.toLowerCase().includes(orderSearchQuery.toLowerCase())) ||
-      (o.userPhone && o.userPhone.includes(orderSearchQuery)) ||
-      (o.address?.phone && o.address.phone.includes(orderSearchQuery))
+      q === '' || 
+      o.id.toLowerCase().includes(q) || 
+      (o.readableId && String(o.readableId).includes(q)) ||
+      (o.userName && o.userName.toLowerCase().includes(q)) || 
+      (o.userEmail && o.userEmail.toLowerCase().includes(q)) ||
+      (o.userPhone && o.userPhone.includes(q)) ||
+      (o.address?.phone && o.address.phone.includes(q))
     return matchesFilter && matchesShop && matchesMethod && matchesSearch
   })
 
@@ -509,13 +511,15 @@ export function OrdersTab({
     const matchesFilter = orderStatusFilter === 'ALL' || activeStatuses.includes(orderStatusFilter) || o.status === orderStatusFilter
     const matchesShop = orderShopFilter === 'ALL' || getOrderStoreType(o) === orderShopFilter
     const matchesMethod = orderMethodFilter === 'ALL' || getOrderMethod(o) === orderMethodFilter
+    const q = orderSearchQuery.toLowerCase().trim().replace(/^#/, '')
     const matchesSearch = 
-      orderSearchQuery.trim() === '' || 
-      o.id.toLowerCase().includes(orderSearchQuery.toLowerCase()) || 
-      (o.userName && o.userName.toLowerCase().includes(orderSearchQuery.toLowerCase())) || 
-      (o.userEmail && o.userEmail.toLowerCase().includes(orderSearchQuery.toLowerCase())) ||
-      (o.userPhone && o.userPhone.includes(orderSearchQuery)) ||
-      (o.address?.phone && o.address.phone.includes(orderSearchQuery))
+      q === '' || 
+      o.id.toLowerCase().includes(q) || 
+      (o.readableId && String(o.readableId).includes(q)) ||
+      (o.userName && o.userName.toLowerCase().includes(q)) || 
+      (o.userEmail && o.userEmail.toLowerCase().includes(q)) ||
+      (o.userPhone && o.userPhone.includes(q)) ||
+      (o.address?.phone && o.address.phone.includes(q))
     return matchesFilter && matchesShop && matchesMethod && matchesSearch
   })
 

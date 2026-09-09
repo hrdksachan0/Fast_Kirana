@@ -156,8 +156,7 @@ export function AdminDashboard({
   const isSuperAdmin = 
     phoneDigits === '9170942500' ||
     sessionUserEmail === 'superadmin@fastkirana.com' ||
-    sessionUserEmail.startsWith('superadmin') ||
-    (sessionUserRole === 'ADMIN' && !sessionAssignedStoreId)
+    sessionUserEmail.startsWith('superadmin')
 
   const searchParams = useSearchParams()
   const urlStoreId = searchParams?.get('storeId') || null
@@ -2865,13 +2864,13 @@ export function AdminDashboard({
 
       {activeTab === 'analytics' && (
         <AnalyticsTab
-          products={allProducts}
-          orders={liveOrders}
-          categories={categories}
+          products={allProducts || []}
+          orders={liveOrders || []}
+          categories={categories || []}
           stats={{
-            revenue: stats.revenue,
-            orderCount: stats.orderCount,
-            lowStockCount: stats.lowStockCount
+            revenue: stats?.revenue ?? stats?.todaySales ?? 0,
+            orderCount: stats?.orderCount ?? (orders || []).length ?? 0,
+            lowStockCount: stats?.lowStockCount ?? 0
           }}
         />
       )}

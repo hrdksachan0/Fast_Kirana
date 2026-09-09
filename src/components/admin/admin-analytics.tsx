@@ -131,8 +131,8 @@ export function AdminAnalytics({ products, orders, categories, stats }: AdminAna
 
     let cafeActiveCount = 0
 
-    for (const p of products) {
-      if (!p.isAvailable) continue
+    for (const p of products || []) {
+      if (!p || !p.isAvailable) continue
       const isCafe = p.category?.slug === 'cafe' || p.tags?.some((t: string) => t.toLowerCase() === 'cafe')
       const isRestaurant = p.category?.slug === 'restaurant' || p.tags?.some((t: string) => t.toLowerCase() === 'restaurant')
       
@@ -142,13 +142,15 @@ export function AdminAnalytics({ products, orders, categories, stats }: AdminAna
         restaurantActiveCount++
       } else {
         groceryActiveCount++
-        groceryStockValue += p.price * p.stock
-        const cost = p.costPrice > 0 ? p.costPrice : p.price * 0.75
-        groceryCostValue += cost * p.stock
+        const price = p.price || 0
+        const stock = p.stock || 0
+        groceryStockValue += price * stock
+        const cost = (p.costPrice && p.costPrice > 0) ? p.costPrice : price * 0.75
+        groceryCostValue += cost * stock
 
-        if (p.stock === 0) {
+        if (stock === 0) {
           groceryOutOfStock++
-        } else if (p.stock <= p.minStock) {
+        } else if (stock <= (p.minStock ?? 10)) {
           groceryLowStock++
         } else {
           groceryHealthyStock++
@@ -158,8 +160,6 @@ export function AdminAnalytics({ products, orders, categories, stats }: AdminAna
 
     const groceryProfit = Math.max(0, groceryStockValue - groceryCostValue)
     const groceryMargin = groceryStockValue > 0 ? (groceryProfit / groceryStockValue) * 100 : 0
-
-
 
     return {
       grocery: {
@@ -185,18 +185,18 @@ export function AdminAnalytics({ products, orders, categories, stats }: AdminAna
   const categoryMetrics = useMemo(() => {
     const data: Record<string, { name: string; count: number; value: number; lowStock: number }> = {}
 
-    for (const p of products) {
-      if (!p.isAvailable) continue
+    for (const p of products || []) {
+      if (!p || !p.isAvailable) continue
       const isCafe = p.category?.slug === 'cafe' || p.tags?.some((t: string) => t.toLowerCase() === 'cafe')
       const isRestaurant = p.category?.slug === 'restaurant' || p.tags?.some((t: string) => t.toLowerCase() === 'restaurant')
-      const catName = p.category.name
+      const catName = p.category?.name || 'General'
       if (!data[catName]) {
         data[catName] = { name: catName, count: 0, value: 0, lowStock: 0 }
       }
       data[catName].count++
       if (!isCafe && !isRestaurant) {
-        data[catName].value += p.price * p.stock
-        if (p.stock <= p.minStock) {
+        data[catName].value += (p.price || 0) * (p.stock || 0)
+        if ((p.stock || 0) <= (p.minStock ?? 10)) {
           data[catName].lowStock++
         }
       }
