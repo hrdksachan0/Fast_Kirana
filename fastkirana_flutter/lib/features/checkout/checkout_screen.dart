@@ -7,8 +7,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cfsession/cfsession.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cfpaymentgateway/cfpaymentgatewayservice.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfwebcheckoutpayment.dart';
+import 'package:flutter_cashfree_pg_sdk/utils/cfenums.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cferrorresponse/cferrorresponse.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../core/config/app_config.dart';
@@ -66,6 +71,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   Cart? _pendingCart;
   double? _pendingGrandTotal;
   Razorpay? _razorpay;
+  final CFPaymentGatewayService _cfService = CFPaymentGatewayService();
+  String? _pendingCashfreeOrderId;
 
   static const Color primaryRed = AppDesignSystem.primary;
   static const Color brandGreen = AppDesignSystem.green700;
@@ -84,6 +91,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       _razorpay!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
       _razorpay!.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
       _razorpay!.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+
+      _cfService.setCallback(_handleCashfreeSuccess, _handleCashfreeError);
     }
   }
 
@@ -173,6 +182,64 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           content: Text(
             'Redirecting to ${response.walletName ?? "external wallet"} to complete your payment...',
             style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleCashfreeSuccess(String cfOrderId) async {
+    HapticFeedback.heavyImpact();
+    final cart = _pendingCart ?? ref.read(cartProvider).value;
+    if (cart == null) {
+      if (mounted) setState(() => _isPlacingOrder = false);
+      return;
+    }
+
+    final dio = ref.read(dioProvider);
+
+    // Verify Cashfree payment with backend
+    String resolvedPaymentId = 'CF_$cfOrderId';
+    try {
+      final verifyRes = await dio.post('/api/payment/cashfree/verify', data: {
+        'orderId': cfOrderId,
+      });
+      if (verifyRes.data != null && verifyRes.data['cfPaymentId'] != null) {
+        resolvedPaymentId = verifyRes.data['cfPaymentId'].toString();
+      }
+    } catch (e) {
+      debugPrint('Cashfree verification check note: $e');
+    }
+
+    await _completeOrderPlacement(
+      cart,
+      paymentId: resolvedPaymentId,
+    );
+  }
+
+  void _handleCashfreeError(CFErrorResponse errorResponse, String cfOrderId) {
+    HapticFeedback.lightImpact();
+    if (mounted) setState(() => _isPlacingOrder = false);
+
+    final errorMsg = errorResponse.getMessage() ?? 'Payment cancelled or could not be completed. Please retry or choose Cash on Delivery (COD).';
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppDesignSystem.warning,
+          content: Row(
+            children: [
+              const Icon(Icons.info_outline_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  errorMsg,
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white, fontSize: Responsive.scaledFontSize(context, 12)),
+                ),
+              ),
+            ],
           ),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -387,8 +454,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         return;
       }
 
-      // On Mobile, open direct Razorpay SDK Gateway with Server Preflight
-      if (!kIsWeb && _razorpay != null) {
+      // On Mobile, open direct Cashfree PG Drop Checkout with Server Preflight (Razorpay fallback)
+      if (!kIsWeb) {
         setState(() => _isPlacingOrder = true);
         _pendingCart = cart;
         _pendingGrandTotal = grandTotal;
@@ -398,66 +465,108 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         final rawPhone = user?.phone ?? prefs.getString('user_phone') ?? '';
         final cleanPhone = rawPhone.replaceAll(RegExp(r'[^\d]'), '').replaceAll(RegExp(r'^91'), '');
         final email = user?.email ?? (user?.name != null && user!.name!.isNotEmpty ? '${user.name!.replaceAll(' ', '').toLowerCase()}@fastkirana.in' : 'customer@fastkirana.in');
+        final customerName = user?.name ?? 'FastKirana Customer';
 
-        // Ultra-Fast Server-side Razorpay Order Preflight
-        String? serverRzpOrderId;
+        // 1. Primary Gateway: Cashfree PG Drop Checkout
+        bool cashfreeLaunched = false;
         try {
           final dio = ref.read(dioProvider);
-          final rzpRes = await dio.post(
-            '/api/payment/razorpay/create-order',
-            data: {'amount': grandTotal},
-            options: Options(sendTimeout: const Duration(milliseconds: 2500), receiveTimeout: const Duration(milliseconds: 2500)),
+          final cfRes = await dio.post(
+            '/api/payment/cashfree/create-order',
+            data: {
+              'amount': grandTotal,
+              'customerPhone': cleanPhone.isNotEmpty ? cleanPhone : '9999999999',
+              'customerEmail': email,
+              'customerName': customerName,
+            },
+            options: Options(sendTimeout: const Duration(seconds: 4), receiveTimeout: const Duration(seconds: 4)),
           );
-          if (rzpRes.data != null && rzpRes.data['razorpayOrderId'] != null) {
-            serverRzpOrderId = rzpRes.data['razorpayOrderId']?.toString();
-            _pendingRazorpayOrderId = serverRzpOrderId;
+
+          if (cfRes.data != null && cfRes.data['paymentSessionId'] != null) {
+            final paymentSessionId = cfRes.data['paymentSessionId'].toString();
+            final cfOrderId = cfRes.data['orderId']?.toString() ?? 'cf_${DateTime.now().millisecondsSinceEpoch}';
+            _pendingCashfreeOrderId = cfOrderId;
+
+            final env = AppConfig.cashfreeEnv == 'SANDBOX' ? CFEnvironment.SANDBOX : CFEnvironment.PRODUCTION;
+            final session = CFSessionBuilder()
+                .setEnvironment(env)
+                .setOrderId(cfOrderId)
+                .setPaymentSessionId(paymentSessionId)
+                .build();
+
+            final cfPayment = CFWebCheckoutPaymentBuilder()
+                .setSession(session)
+                .build();
+
+            _cfService.doPayment(cfPayment);
+            cashfreeLaunched = true;
+            return;
           }
-        } catch (e) {
-          debugPrint('Razorpay fast preflight note: $e');
+        } catch (cfErr) {
+          debugPrint('Cashfree launch error, falling back to Razorpay: $cfErr');
         }
 
-        final options = {
-          'key': AppConfig.razorpayKeyId,
-          'amount': (grandTotal * 100).toInt(),
-          if (serverRzpOrderId != null) 'order_id': serverRzpOrderId,
-          'name': 'FastKirana Express',
-          'description': 'Express Grocery & Food Delivery',
-          'prefill': {
-            if (cleanPhone.isNotEmpty) 'contact': cleanPhone,
-            'email': email,
-          },
-          'theme': {
-            'color': '#E20A22',
-          },
-          'external': {
-            'wallets': ['paytm', 'phonepe', 'gpay', 'mobikwik'],
-          },
-          'retry': {
-            'enabled': true,
-            'max_count': 3,
-          },
-          'send_sms_hash': true,
-        };
-
-        try {
-          _razorpay!.open(options);
-          return;
-        } catch (e) {
-          debugPrint('Razorpay open error: $e');
-          if (mounted) {
-            setState(() => _isPlacingOrder = false);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                backgroundColor: primaryRed,
-                content: Text(
-                  'Could not open payment gateway ($e). Please retry or choose Cash on Delivery.',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-                ),
-                behavior: SnackBarBehavior.floating,
-              ),
+        // 2. Fallback Gateway: Razorpay
+        if (!cashfreeLaunched && _razorpay != null) {
+          String? serverRzpOrderId;
+          try {
+            final dio = ref.read(dioProvider);
+            final rzpRes = await dio.post(
+              '/api/payment/razorpay/create-order',
+              data: {'amount': grandTotal},
+              options: Options(sendTimeout: const Duration(milliseconds: 2500), receiveTimeout: const Duration(milliseconds: 2500)),
             );
+            if (rzpRes.data != null && rzpRes.data['razorpayOrderId'] != null) {
+              serverRzpOrderId = rzpRes.data['razorpayOrderId']?.toString();
+              _pendingRazorpayOrderId = serverRzpOrderId;
+            }
+          } catch (e) {
+            debugPrint('Razorpay fast preflight note: $e');
           }
-          return;
+
+          final options = {
+            'key': AppConfig.razorpayKeyId,
+            'amount': (grandTotal * 100).toInt(),
+            if (serverRzpOrderId != null) 'order_id': serverRzpOrderId,
+            'name': 'FastKirana Express',
+            'description': 'Express Grocery & Food Delivery',
+            'prefill': {
+              if (cleanPhone.isNotEmpty) 'contact': cleanPhone,
+              'email': email,
+            },
+            'theme': {
+              'color': '#E20A22',
+            },
+            'external': {
+              'wallets': ['paytm', 'phonepe', 'gpay', 'mobikwik'],
+            },
+            'retry': {
+              'enabled': true,
+              'max_count': 3,
+            },
+            'send_sms_hash': true,
+          };
+
+          try {
+            _razorpay!.open(options);
+            return;
+          } catch (e) {
+            debugPrint('Razorpay open error: $e');
+            if (mounted) {
+              setState(() => _isPlacingOrder = false);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  backgroundColor: primaryRed,
+                  content: Text(
+                    'Could not open payment gateway ($e). Please retry or choose Cash on Delivery.',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                  ),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+            return;
+          }
         }
       }
 

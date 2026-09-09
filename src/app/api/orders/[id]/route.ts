@@ -577,7 +577,8 @@ export async function PATCH(
         where: { OR: [{ email: 'delivery@fastkirana.com' }, { role: 'DELIVERY' }] },
         select: { id: true }
       })
-      const targetRiderId = session?.user?.id || headerUserId || defaultDeliveryRider?.id || userId
+      const isDeliveryRole = userRole === 'DELIVERY'
+      const targetRiderId = isDeliveryRole ? (session?.user?.id || headerUserId || userId) : (existingOrder.deliveryUserId || defaultDeliveryRider?.id || null)
 
       if (shouldUpdateAllCombined && existingOrder.combinedId) {
         if (latVal !== null && lngVal !== null) {
@@ -658,20 +659,22 @@ export async function PATCH(
           WHERE "combinedId" = ${existingOrder.combinedId}
         `
       } else if (userRole === 'CHEF' || existingOrder.orderType === 'RESTAURANT' || !!existingOrder.restaurantId) {
+        const targetChefId = userRole === 'CHEF' ? userId : (existingOrder.assignedChefId || null)
         await prisma.$executeRaw`
           UPDATE orders 
           SET status = ${status}::"OrderStatus", 
-              "assignedChefId" = ${userId},
+              "assignedChefId" = ${targetChefId},
               "confirmedAt" = NOW(),
               "estimatedDelivery" = ${estimatedDeliveryVal},
               "updatedAt" = NOW() 
             WHERE id = ${existingOrder.id}
         `
       } else {
+        const targetPickerId = userRole === 'PICKER' ? userId : (existingOrder.assignedPickerId || null)
         await prisma.$executeRaw`
           UPDATE orders 
           SET status = ${status}::"OrderStatus", 
-              "assignedPickerId" = ${userId},
+              "assignedPickerId" = ${targetPickerId},
               "confirmedAt" = NOW(),
               "estimatedDelivery" = ${estimatedDeliveryVal},
               "updatedAt" = NOW() 

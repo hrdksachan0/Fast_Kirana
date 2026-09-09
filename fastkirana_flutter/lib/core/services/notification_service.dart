@@ -26,7 +26,15 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // If the message already has a notification payload, Android system tray handles it automatically
   // Calling localNotifications.show here would create a duplicate notification on the user's phone!
   // Loud alarm with full-screen intent for ALL order alerts (Kitchen, Admin, Delivery, Picker)
-  final isOrderAlert = data['screen'] == 'restaurant-console' ||
+  // BUT NOT for cancel/reject notifications — those should be quiet
+  final orderStatus = (data['status'] ?? data['orderStatus'] ?? '').toString().toUpperCase();
+  final isCancelledOrTerminal = orderStatus == 'CANCELLED' || orderStatus == 'REJECTED' ||
+      orderStatus == 'FAILED' || orderStatus == 'REFUNDED' ||
+      title.toString().toLowerCase().contains('cancel') ||
+      (body ?? '').toString().toLowerCase().contains('cancel');
+
+  final isOrderAlert = !isCancelledOrTerminal && (
+      data['screen'] == 'restaurant-console' ||
       data['screen'] == 'admin-orders' ||
       data['screen'] == 'delivery' ||
       data['screen'] == 'picker' ||
@@ -36,7 +44,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       title.toString().contains('🛎️') ||
       title.toString().contains('💳') ||
       title.toString().toLowerCase().contains('kitchen') ||
-      title.toString().toLowerCase().contains('new order');
+      title.toString().toLowerCase().contains('new order'));
 
   if (notification != null && !isOrderAlert) {
     // Android OS has already displayed the standard notification. Do NOT show a 2nd notification!
@@ -274,7 +282,15 @@ class NotificationService {
       return;
     }
 
-    final isOrderAlert = data['screen'] == 'restaurant-console' ||
+    // Detect cancel/reject notifications — these should NOT trigger loud alarm
+    final orderStatus = (data['status'] ?? data['orderStatus'] ?? '').toString().toUpperCase();
+    final isCancelledOrTerminal = orderStatus == 'CANCELLED' || orderStatus == 'REJECTED' ||
+        orderStatus == 'FAILED' || orderStatus == 'REFUNDED' ||
+        title.toString().toLowerCase().contains('cancel') ||
+        body.toString().toLowerCase().contains('cancel');
+
+    final isOrderAlert = !isCancelledOrTerminal && (
+        data['screen'] == 'restaurant-console' ||
         data['screen'] == 'admin-orders' ||
         data['screen'] == 'delivery' ||
         data['screen'] == 'picker' ||
@@ -284,7 +300,7 @@ class NotificationService {
         title.toString().contains('🛎️') ||
         title.toString().contains('💳') ||
         title.toString().toLowerCase().contains('kitchen') ||
-        title.toString().toLowerCase().contains('new order');
+        title.toString().toLowerCase().contains('new order'));
 
     final notifId = (cleanOrderId != null && cleanOrderId.isNotEmpty)
         ? (cleanOrderId.hashCode & 0x7FFFFFFF)

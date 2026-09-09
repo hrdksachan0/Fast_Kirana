@@ -173,7 +173,7 @@ export async function GET(request: Request) {
         : [],
       userIds.length > 0
         ? (prisma.$queryRaw`
-            SELECT id, name, phone FROM users WHERE id = ANY(${userIds})
+            SELECT id, name, phone, email, role::text as role FROM users WHERE id = ANY(${userIds})
           ` as Promise<any[]>)
         : [],
       addressIds.length > 0
@@ -190,7 +190,15 @@ export async function GET(request: Request) {
     const result = orders.map((o) => {
       const orderItems = allItems.filter(item => item.orderId === o.id)
       const user = allUsers.find(u => u.id === o.userId) || { name: 'Customer', phone: null }
-      const assignedPicker = o.assignedPickerId ? allUsers.find(u => u.id === o.assignedPickerId) : null
+      const rawPicker = o.assignedPickerId ? allUsers.find(u => u.id === o.assignedPickerId) : null
+      const isPickerAdmin = rawPicker && (
+        rawPicker.role === 'ADMIN' ||
+        String(rawPicker.phone || '').includes('7054470303') ||
+        String(rawPicker.phone || '').includes('9170942500') ||
+        String(rawPicker.email || '').toLowerCase().startsWith('admin') ||
+        String(rawPicker.email || '').toLowerCase().startsWith('superadmin')
+      )
+      const assignedPicker = isPickerAdmin ? null : rawPicker
       const assignedChef = o.assignedChefId ? allUsers.find(u => u.id === o.assignedChefId) : null
       const address = allAddresses.find(a => a.id === o.addressId)
       const restaurant = o.restaurantId ? allRestaurants.find(r => r.id === o.restaurantId) : null

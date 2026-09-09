@@ -1570,7 +1570,14 @@ async def update_order(
                 db.add(wallet)
 
     elif target_status == OrderStatus.SHIPPED:
-        order.deliveryUserId = user_id
+        if role == Role.DELIVERY:
+            order.deliveryUserId = user_id
+        elif not order.deliveryUserId:
+            rider_stmt = select(User.id).where(or_(User.email == "delivery@fastkirana.com", User.role == Role.DELIVERY)).limit(1)
+            rider_res = await db.execute(rider_stmt)
+            rider_id = rider_res.scalars().first()
+            if rider_id:
+                order.deliveryUserId = rider_id
         if delivery_lat is not None and delivery_lng is not None:
             order.deliveryLat = float(delivery_lat)
             order.deliveryLng = float(delivery_lng)
@@ -1581,9 +1588,9 @@ async def update_order(
 
     elif target_status == OrderStatus.CONFIRMED:
         order.confirmedAt = datetime.utcnow()
-        if role == Role.CHEF or order.orderType == OrderType.RESTAURANT or order.restaurantId:
+        if role == Role.CHEF:
             order.assignedChefId = user_id
-        else:
+        elif role == Role.PICKER:
             order.assignedPickerId = user_id
 
         if prep_time and str(prep_time).isdigit():

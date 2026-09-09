@@ -30,6 +30,20 @@ export function PayOnlineButton({
   const [isProcessing, setIsProcessing] = useState(false)
   const [isVerifying, setIsVerifying] = useState(false)
 
+  const loadCashfreeScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if ((window as any).Cashfree) {
+        resolve(true)
+        return
+      }
+      const script = document.createElement('script')
+      script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js'
+      script.onload = () => resolve(true)
+      script.onerror = () => resolve(false)
+      document.body.appendChild(script)
+    })
+  }
+
   const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
       if ((window as any).Razorpay) {
@@ -49,6 +63,22 @@ export function PayOnlineButton({
   const handleCheckPaymentStatus = async () => {
     setIsCheckingStatus(true)
     try {
+      const cfRes = await fetch('/api/payment/cashfree/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      })
+      const cfData = await cfRes.json()
+      if (cfRes.ok && cfData.paymentStatus === 'PAID') {
+        toast.success('🎉 Online Payment Verified as PAID!')
+        if (onPaymentSuccess) {
+          onPaymentSuccess()
+        } else {
+          window.location.reload()
+        }
+        return
+      }
+
       const res = await fetch('/api/payment/razorpay/sync-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -63,10 +93,10 @@ export function PayOnlineButton({
           window.location.reload()
         }
       } else {
-        toast.info(data.message || 'No completed online payment detected yet. Please tap Pay Online to proceed.')
+        toast.info(cfData.message || data.message || 'No confirmed online payment received yet.')
       }
-    } catch (e: any) {
-      toast.error('Could not check payment status. Please try again.')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to check payment status')
     } finally {
       setIsCheckingStatus(false)
     }
@@ -80,7 +110,91 @@ export function PayOnlineButton({
     setIsProcessing(true)
 
     try {
-      // 1. Create Razorpay Payment Order (pass amount for combined order total)
+      // 1. Try Cashfree First
+      const cfRes = await fetch('/api/payment/cashfree/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, amount, customerPhone, customerName }),
+      })
+
+      const cfData = await cfRes.json()
+
+      if (cfRes.ok && cfData.paymentSessionId) {
+        const loaded = await loadCashfreeScript()
+        if (loaded && (window as any).Cashfree) {
+          const cashfree = (window as any).Cashfree({
+            mode: process.env.NEXT_PUBLIC_CASHFREE_ENV === 'SANDBOX' ? 'sandbox' : 'production'
+          })
+
+          let paymentConfirmed = false
+
+          // Polling verification loop
+          const pollTimer = setInterval(async () => {
+            if (paymentConfirmed) {
+              clearInterval(pollTimer)
+              return
+            }
+            try {
+              const verifyRes = await fetch('/api/payment/cashfree/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId }),
+              })
+              const verifyData = await verifyRes.json()
+              if (verifyRes.ok && verifyData.paymentStatus === 'PAID') {
+                paymentConfirmed = true
+                clearInterval(pollTimer)
+                toast.success('🎉 Payment Successful! Your order is now Paid Online.')
+                if (onPaymentSuccess) {
+                  onPaymentSuccess()
+                } else {
+                  window.location.reload()
+                }
+              }
+            } catch (_) {}
+          }, 2500)
+
+          try {
+            await cashfree.checkout({
+              paymentSessionId: cfData.paymentSessionId,
+              redirectTarget: '_modal',
+            })
+          } catch (modalErr) {
+            console.warn('Cashfree modal note:', modalErr)
+          }
+
+          setTimeout(async () => {
+            if (!paymentConfirmed) {
+              try {
+                const verifyRes = await fetch('/api/payment/cashfree/verify', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ orderId }),
+                })
+                const verifyData = await verifyRes.json()
+                if (verifyRes.ok && verifyData.paymentStatus === 'PAID') {
+                  paymentConfirmed = true
+                  clearInterval(pollTimer)
+                  toast.success('🎉 Payment Successful! Your order is now Paid Online.')
+                  if (onPaymentSuccess) {
+                    onPaymentSuccess()
+                  } else {
+                    window.location.reload()
+                  }
+                  return
+                }
+              } catch (_) {}
+
+              setIsProcessing(false)
+              toast.info('Payment window closed.')
+            }
+          }, 1500)
+
+          return
+        }
+      }
+
+      // Fallback to Razorpay if Cashfree session could not be created
       const res = await fetch('/api/payment/razorpay/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

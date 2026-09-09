@@ -49,10 +49,20 @@ class AppConfig {
     defaultValue: '',
   );
 
-  // ─── Payment Gateway ────────────────────────────────────────────
+  // ─── Payment Gateways ───────────────────────────────────────────
   static const String razorpayKeyId = String.fromEnvironment(
     'RAZORPAY_KEY_ID',
     defaultValue: 'rzp_live_TRvyzlqHiRGWbr',
+  );
+
+  static const String cashfreeAppId = String.fromEnvironment(
+    'CASHFREE_APP_ID',
+    defaultValue: '14063870a97e08f92d03df853487836041',
+  );
+
+  static const String cashfreeEnv = String.fromEnvironment(
+    'CASHFREE_ENV',
+    defaultValue: 'PRODUCTION',
   );
 
   // ─── Brand Assets ───────────────────────────────────────────────

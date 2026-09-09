@@ -90,10 +90,10 @@ async def get_picker_orders(
     
     workers = {}
     if worker_ids:
-        w_stmt = select(User.id, User.name, User.phone).where(User.id.in_(worker_ids))
+        w_stmt = select(User.id, User.name, User.phone, User.role, User.email).where(User.id.in_(worker_ids))
         w_res = await db.execute(w_stmt)
         for w in w_res.all():
-            workers[w.id] = {"name": w.name or "Staff", "phone": w.phone}
+            workers[w.id] = {"name": w.name or "Staff", "phone": w.phone, "role": str(w.role), "email": w.email}
 
     # Fetch restaurants
     restaurant_ids = list(set([o.restaurantId for o in orders if o.restaurantId]))
@@ -135,8 +135,13 @@ async def get_picker_orders(
                 } if p_obj else None
             })
 
-        user_data = {"name": o.user.name or "Customer", "phone": o.user.phone} if o.user else {"name": "Customer", "phone": None}
         assigned_picker = workers.get(o.assignedPickerId)
+        if assigned_picker:
+            picker_phone = str(assigned_picker.get("phone") or "")
+            picker_email = str(assigned_picker.get("email") or "").lower()
+            picker_role = str(assigned_picker.get("role") or "").upper()
+            if "7054470303" in picker_phone or "9170942500" in picker_phone or "admin" in picker_role or picker_email.startswith("admin") or picker_email.startswith("superadmin"):
+                assigned_picker = None
         assigned_chef = workers.get(o.assignedChefId)
         rest_obj = restaurants.get(o.restaurantId)
 

@@ -456,6 +456,9 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
     }
   }
 
+  /// Statuses that should NOT trigger a chime sound (terminal/non-actionable)
+  static const _silentStatuses = {'CANCELLED', 'REJECTED', 'DELIVERED', 'FAILED', 'REFUNDED'};
+
   void _initSupabaseRealtime() {
     try {
       final supabase = SupabaseService.client;
@@ -470,6 +473,15 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
             table: 'orders',
             callback: (payload) {
               _fetchOrders(silent: true);
+
+              // Only play chime if the new status is actionable (not cancelled/rejected/delivered)
+              final newRecord = payload.newRecord;
+              final newStatus = (newRecord?['status'] ?? '').toString().toUpperCase();
+              if (newStatus.isNotEmpty && _silentStatuses.contains(newStatus)) {
+                // Order was cancelled/rejected/delivered — stop alarm instead of playing chime
+                _syncAlarmStateWithOrders(_orders);
+                return;
+              }
               _playChime();
             },
           );
@@ -481,8 +493,8 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
           .onBroadcast(
             event: 'reprint-kot',
             callback: (payload) {
+              // Reprint is a silent action — just refresh orders, no chime
               _fetchOrders(silent: true);
-              _playChime();
             },
           )
           .onBroadcast(
@@ -2145,8 +2157,12 @@ $formattedItems
 
     final dynamic rawUser = order['user'];
     final Map<String, dynamic> user = (rawUser is Map<String, dynamic>) ? rawUser : {};
-    final String customerName = (user['name'] ?? 'Customer').toString();
-    final assignedRider = order['assignedPicker'] ?? order['assignedRider'];
+    final dynamic rawRider = order['assignedRider'] ?? order['assignedDelivery'] ?? order['deliveryUser'];
+    final Map<String, dynamic>? assignedRider = (rawRider is Map<String, dynamic> &&
+            !(rawRider['name']?.toString().toLowerCase().contains('admin') ?? false) &&
+            !(rawRider['phone']?.toString().contains('7054470303') ?? false))
+        ? rawRider
+        : null;
 
     Color statusBadgeColor = primaryRed;
     String statusLabel = 'NEW ORDER';

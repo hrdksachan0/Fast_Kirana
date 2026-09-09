@@ -2,7 +2,7 @@ name: fastkirana_flutter
 description: FastKirana Mobile App - Grocery & Food Delivery
 
 publish_to: 'none'
-version: 1.0.0+5
+version: 2.0.5+2005
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -79,7 +79,8 @@ dependencies:
   firebase_core: ^2.27.0
   firebase_messaging: ^14.7.15
   firebase_crashlytics: 3.5.7
-  app_links: ^7.2.1
+  app_links: ^6.3.4
+  flutter_cashfree_pg_sdk: ^2.2.6+44
 
 dev_dependencies:
   flutter_test:

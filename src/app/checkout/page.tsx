@@ -807,7 +807,22 @@ export default function CheckoutPage() {
     }
   }
 
-  // Handle Razorpay Payment Gateway Checkout
+  // Handle Cashfree Payment Gateway Checkout
+  const loadCashfreeScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if ((window as any).Cashfree) {
+        resolve(true)
+        return
+      }
+      const script = document.createElement('script')
+      script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js'
+      script.onload = () => resolve(true)
+      script.onerror = () => resolve(false)
+      document.body.appendChild(script)
+    })
+  }
+
+  // Handle Razorpay Payment Gateway Checkout (legacy fallback)
   const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
       if ((window as any).Razorpay) {
@@ -822,10 +837,166 @@ export default function CheckoutPage() {
     })
   }
 
-  // Preload Razorpay SDK as soon as checkout page mounts for instant popup
+  // Preload Payment SDKs
   useEffect(() => {
+    loadCashfreeScript()
     loadRazorpayScript()
   }, [])
+
+  const handleCashfreeCheckout = async (overrideMethod?: 'COD' | 'UPI' | 'CARD' | 'WALLET') => {
+    const selectedMethod = overrideMethod || paymentMethod
+    setIsPlacingOrder(true)
+    try {
+      // 1. Validate checkout eligibility
+      const settingsRes = await fetch('/api/settings', { cache: 'no-store' })
+      const settings: SettingsMap = await settingsRes.json()
+
+      const validation = await validateCheckoutEligibility({
+        items: items.map(i => ({ product: i.product as CartItem['product'] })),
+        addresses,
+        selectedAddressId,
+        deliveryMethod,
+        settings,
+      })
+
+      if (!validation.valid) {
+        triggerHaptic('warning')
+        toast.error(validation.error!)
+        setIsPlacingOrder(false)
+        return
+      }
+
+      // 2. Pre-create DB Order in PENDING / UNPAID state
+      const effectiveCustomerPhone = selectedAddress?.phone || addressForm.phone || (session?.user as any)?.phone || ''
+
+      const payload = buildOrderPayload({
+        finalAddressId: validation.finalAddressId!,
+        paymentMethod: selectedMethod,
+        items,
+        deliveryMethod,
+        scheduledSlot,
+        appliedCouponCode,
+        customerPhone: effectiveCustomerPhone,
+        contactPhone,
+        packagingOption,
+        packagingFee,
+      })
+
+      const orderRes = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...payload,
+          existingOrderId: activePendingOrderId || undefined,
+          notes: cookingInstruction.trim() || undefined
+        }),
+      })
+
+      const orderData = await orderRes.json()
+
+      if (!orderRes.ok) {
+        toast.error(orderData.error || 'Failed to initialize order')
+        setIsPlacingOrder(false)
+        return
+      }
+
+      setActivePendingOrderId(orderData.id)
+
+      // 3. Create Cashfree Payment Order Session
+      const cfRes = await fetch('/api/payment/cashfree/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: orderData.id }),
+      })
+
+      const cfData = await cfRes.json()
+
+      if (!cfRes.ok || !cfData.paymentSessionId) {
+        console.warn('Cashfree session failed, falling back to Razorpay:', cfData.error)
+        return handleRazorpayCheckout('UPI')
+      }
+
+      const loaded = await loadCashfreeScript()
+      if (!loaded || !(window as any).Cashfree) {
+        console.warn('Cashfree SDK failed to load, falling back to Razorpay')
+        return handleRazorpayCheckout('UPI')
+      }
+
+      const cashfree = (window as any).Cashfree({
+        mode: process.env.NEXT_PUBLIC_CASHFREE_ENV === 'SANDBOX' ? 'sandbox' : 'production'
+      })
+
+      let paymentSuccess = false
+
+      // Polling loop to auto-confirm if customer pays via external UPI app
+      let pollCount = 0
+      const pollTimer = setInterval(async () => {
+        pollCount++
+        if (pollCount > 60 || paymentSuccess) {
+          clearInterval(pollTimer)
+          return
+        }
+        try {
+          const verifyRes = await fetch('/api/payment/cashfree/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId: orderData.id }),
+          })
+          const verifyData = await verifyRes.json()
+          if (verifyRes.ok && verifyData.paymentStatus === 'PAID') {
+            paymentSuccess = true
+            clearInterval(pollTimer)
+            clearCart()
+            triggerHaptic('success')
+            toast.success('🎉 Payment Verified Successfully!')
+            window.location.href = `/order/${orderData.id}/success`
+          }
+        } catch (_) {}
+      }, 2500)
+
+      // Launch Cashfree In-Page Modal
+      try {
+        await cashfree.checkout({
+          paymentSessionId: cfData.paymentSessionId,
+          redirectTarget: '_modal',
+        })
+      } catch (checkoutErr) {
+        console.warn('Cashfree checkout modal note:', checkoutErr)
+      }
+
+      // Check status once modal closes
+      setTimeout(async () => {
+        if (!paymentSuccess) {
+          try {
+            const verifyRes = await fetch('/api/payment/cashfree/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ orderId: orderData.id }),
+            })
+            const verifyData = await verifyRes.json()
+            if (verifyRes.ok && verifyData.paymentStatus === 'PAID') {
+              paymentSuccess = true
+              clearInterval(pollTimer)
+              clearCart()
+              triggerHaptic('success')
+              toast.success('🎉 Payment Successful!')
+              window.location.href = `/order/${orderData.id}/success`
+              return
+            }
+          } catch (_) {}
+
+          setIsPlacingOrder(false)
+          triggerHaptic('warning')
+          toast.info('Payment window closed. You can retry or switch payment method.')
+        }
+      }, 1500)
+
+    } catch (err) {
+      console.error('Error during Cashfree checkout:', err)
+      toast.error('An unexpected error occurred during checkout.')
+      setIsPlacingOrder(false)
+    }
+  }
 
   const handleRazorpayCheckout = async (overrideMethod?: 'COD' | 'UPI' | 'CARD' | 'WALLET') => {
     const selectedMethod = overrideMethod || paymentMethod
@@ -1910,7 +2081,7 @@ export default function CheckoutPage() {
         onSelectOnline={() => {
           setIsPaymentModalOpen(false)
           setPaymentMethod('UPI')
-          handleRazorpayCheckout('UPI')
+          handleCashfreeCheckout('UPI')
         }}
       />
     </div>
