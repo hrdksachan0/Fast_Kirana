@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -314,6 +315,26 @@ class ProductImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final imgUrl = product.imageUrl?.trim() ?? '';
     if (imgUrl.isNotEmpty) {
+      if (imgUrl.startsWith('data:image')) {
+        try {
+          final base64String = imgUrl.contains(',') ? imgUrl.split(',')[1] : imgUrl;
+          final bytes = base64Decode(base64String);
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(s * 13),
+            child: Container(
+              color: isFood ? const Color(0xFFFFF7ED) : Colors.transparent,
+              padding: isFood ? EdgeInsets.all(s * 6) : EdgeInsets.zero,
+              child: Image.memory(
+                bytes,
+                fit: BoxFit.contain,
+                width: double.infinity,
+                height: double.infinity,
+                errorBuilder: (_, __, ___) => Center(child: Text(_emoji(product.name), style: TextStyle(fontSize: s * 36))),
+              ),
+            ),
+          );
+        } catch (_) {}
+      }
       final resolved = imgUrl.startsWith('/') ? 'https://www.fastkirana.in$imgUrl' : imgUrl;
       return ClipRRect(
         borderRadius: BorderRadius.circular(s * 13),

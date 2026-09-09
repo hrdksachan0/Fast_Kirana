@@ -18,7 +18,7 @@ export async function GET(request: Request) {
         some: {} // has at least one item
       },
       updatedAt: {
-        gte: new Date(Date.now() - 12 * 60 * 60 * 1000) // past 12 hours only
+        gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // past 24 hours
       }
     }
 

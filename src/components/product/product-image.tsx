@@ -176,11 +176,26 @@ export function ProductImage({
   }
 
   // Determine if it is a valid image URL (not an emoji or empty)
-  const isValidUrl = currentSrc && (currentSrc.startsWith('/') || currentSrc.startsWith('http') || currentSrc.startsWith('https'))
+  const isDataUri = !!currentSrc && currentSrc.startsWith('data:')
+  const isValidUrl = !!currentSrc && (currentSrc.startsWith('/') || currentSrc.startsWith('http') || currentSrc.startsWith('https') || isDataUri)
 
-  const optimizedSrc = isValidUrl ? (getOptimizedImageUrl(currentSrc, width) || currentSrc) : currentSrc
+  const optimizedSrc = (isValidUrl && !isDataUri) ? (getOptimizedImageUrl(currentSrc, width) || currentSrc) : currentSrc
 
   if (!imgError && isValidUrl) {
+    if (isDataUri) {
+      return (
+        <div className="relative w-full h-full flex items-center justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={currentSrc!}
+            alt={alt}
+            className={className || "h-full w-full object-contain"}
+            onError={handleError}
+          />
+        </div>
+      )
+    }
+
     return (
       <div className="relative w-full h-full">
         <Image

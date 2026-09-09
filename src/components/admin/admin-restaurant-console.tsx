@@ -63,8 +63,9 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
     fetch('/api/restaurants')
       .then(res => res.ok ? res.json() : null)
       .then(data => {
-        if (data?.restaurants) {
-          setRestaurants(data.restaurants)
+        const list = Array.isArray(data) ? data : (data?.restaurants || [])
+        if (list.length > 0) {
+          setRestaurants(list)
         }
       })
       .catch(console.error)

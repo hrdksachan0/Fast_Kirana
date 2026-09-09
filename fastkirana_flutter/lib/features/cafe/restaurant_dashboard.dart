@@ -1282,7 +1282,7 @@ $formattedItems
                         KotPrintService.sendRemoteKOTToKitchen(
                           orderId: orderId,
                           readableId: order['readableId']?.toString() ?? orderId,
-                          restaurantId: order['restaurantId']?.toString() ?? _restaurantId,
+                          restaurantId: order['restaurantId']?.toString() ?? _assignedRestaurantId,
                           shopName: _restaurantName,
                           customerName: custName,
                           items: extractedItems,

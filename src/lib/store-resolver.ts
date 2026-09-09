@@ -159,7 +159,7 @@ export async function getStoreUserFilter(storeId?: string | null) {
   if (storeId === 'hub-209206') {
     return {
       AND: [
-        ...(otherStoreIds.length > 0 ? [{ assignedStoreId: { notIn: otherStoreIds } }] : []),
+        ...(otherStoreIds.length > 0 ? [{ OR: [{ assignedStoreId: null }, { assignedStoreId: { notIn: otherStoreIds } }] }] : []),
         ...(otherPincodes.length > 0 ? [{ addresses: { none: { pincode: { in: otherPincodes } } } }] : []),
         ...(otherStoreIds.length > 0 ? [{ orders: { none: { storeId: { in: otherStoreIds } } } }] : [])
       ]

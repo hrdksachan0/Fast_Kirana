@@ -2598,6 +2598,7 @@ export function AdminDashboard({
       <StoreControlBar
         storeHubName={activeStoreHub?.name || storesList[0]?.name || 'Central Hub'}
         storesList={storesList}
+        restaurantsList={restaurantsList}
         selectedHubId={selectedHubId}
         onSelectHub={handleSelectHub}
         onOpenHubManager={() => setIsStoreHubsModalOpen(true)}

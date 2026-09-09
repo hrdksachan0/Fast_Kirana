@@ -5,6 +5,7 @@ import { RefreshCw, ToggleLeft, ToggleRight, Settings } from 'lucide-react'
 interface StoreControlBarProps {
   storeHubName?: string
   storesList?: any[]
+  restaurantsList?: any[]
   selectedHubId?: string
   onSelectHub?: (hubId: string) => void
   onOpenHubManager?: () => void
@@ -19,6 +20,7 @@ interface StoreControlBarProps {
 export function StoreControlBar({
   storeHubName = 'Ghatampur Central Hub',
   storesList = [],
+  restaurantsList = [],
   selectedHubId,
   onSelectHub,
   onOpenHubManager,
@@ -44,7 +46,7 @@ export function StoreControlBar({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             {/* Store Hub Switcher for SuperAdmin / Admin */}
-            {isSuperAdmin && storesList.length > 1 ? (
+            {isSuperAdmin && storesList.length > 0 ? (
               <div className="flex items-center gap-1.5">
                 <span className="text-[11px] font-black uppercase tracking-wider text-text-secondary">
                   Darkstore:
@@ -55,6 +57,9 @@ export function StoreControlBar({
                   className="bg-primary/10 border-2 border-primary/30 hover:border-primary text-primary text-xs font-black uppercase tracking-wider rounded-xl px-2.5 py-1 focus:outline-none cursor-pointer shadow-xs transition-all"
                   title="Switch between Darkstore Hubs"
                 >
+                  <option value="all" className="bg-card text-text-primary font-bold">
+                    🌐 All Hubs ({storesList.length})
+                  </option>
                   {storesList.map((store) => (
                     <option key={store.id} value={store.id} className="bg-card text-text-primary font-bold">
                       🏢 {store.name} ({store.id})
@@ -76,6 +81,34 @@ export function StoreControlBar({
               <span className="text-xs font-black uppercase tracking-wider text-text-secondary">
                 Store Operations • {storeHubName}
               </span>
+            )}
+
+            {/* Restaurant Quick Switcher for Admin */}
+            {restaurantsList && restaurantsList.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-black uppercase tracking-wider text-text-secondary">
+                  Restaurant:
+                </span>
+                <select
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      window.open(`/restaurant-kitchen?restaurantId=${encodeURIComponent(e.target.value)}`, '_blank')
+                    }
+                  }}
+                  defaultValue=""
+                  className="bg-amber-500/10 border-2 border-amber-500/30 hover:border-amber-500 text-amber-600 dark:text-amber-400 text-xs font-black uppercase tracking-wider rounded-xl px-2.5 py-1 focus:outline-none cursor-pointer shadow-xs transition-all"
+                  title="Switch to Restaurant Kitchen Console"
+                >
+                  <option value="" disabled className="bg-card text-text-primary font-bold">
+                    🍽️ Open Kitchen ({restaurantsList.length})
+                  </option>
+                  {restaurantsList.map((rest) => (
+                    <option key={rest.id} value={rest.id} className="bg-card text-text-primary font-bold">
+                      🍽️ {rest.name} ({rest.id})
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
 
             <span
