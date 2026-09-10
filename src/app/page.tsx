@@ -496,17 +496,18 @@ export default async function Home() {
       id: p.category.id,
       name: p.category.name,
       slug: p.category.slug,
-      imageUrl: p.category.imageUrl,
-      parentId: p.category.parentId,
-      sortOrder: p.category.sortOrder,
+      imageUrl: p.category.imageUrl ?? null,
+      parentId: p.category.parentId ?? null,
+      sortOrder: p.category.sortOrder ?? 0,
       parent: p.category.parent ? {
         id: p.category.parent.id,
         name: p.category.parent.name,
         slug: p.category.parent.slug,
-        imageUrl: p.category.parent.imageUrl,
-        sortOrder: p.category.parent.sortOrder,
-      } : undefined,
-    } : undefined,
+        imageUrl: p.category.parent.imageUrl ?? null,
+        parentId: p.category.parent.parentId ?? null,
+        sortOrder: p.category.parent.sortOrder ?? 0,
+      } : null,
+    } : null,
   })
 
   const topPicks = sortProductsByStock(topPicksRaw.map(mapProduct))

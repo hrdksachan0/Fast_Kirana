@@ -67,6 +67,7 @@ export interface Category {
   sortOrder: number
   _count?: { products: number }
   children?: Category[]
+  parent?: Category | null
 }
 
 export interface ProductImage {
