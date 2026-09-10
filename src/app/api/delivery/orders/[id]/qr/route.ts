@@ -147,20 +147,26 @@ export async function GET(
       }
     }
 
-    // Universal dynamic UPI QR code (Amazon/Flipkart delivery boy style)
-    // Directly opens GPay / PhonePe / Paytm / BHIM with FastKirana as payee and exact amount pre-filled
-    const activeQrImageUrl = directUpiQrImageUrl
+    // Cashfree Hosted Doorstep Payment Page URL
+    // Customer scans QR → opens this page → Cashfree JS SDK checkout → auto-detect payment
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
+    const doorstepPayUrl = `${appUrl}/doorstep-pay/${order.id}`
+    const doorstepPayQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=8&data=${encodeURIComponent(doorstepPayUrl)}`
+
+    // Use Cashfree hosted page QR as primary (auto-detect), direct UPI as fallback
+    const activeQrImageUrl = isCashfreeConfigured() ? doorstepPayQrUrl : directUpiQrImageUrl
     const cleanCustomerPhone = (order.address?.phone || order.user?.phone || '').replace(/\D/g, '').slice(-10)
 
     return NextResponse.json({
       orderId: order.id,
       readableId: order.readableId,
       amount: order.total,
-      gateway: 'DIRECT_UPI',
+      gateway: isCashfreeConfigured() ? 'CASHFREE' : 'DIRECT_UPI',
       upiVpa,
       upiUri: directUpiUri,
       directUpiQrUrl: directUpiQrImageUrl,
-      cashfreeQrUrl,
+      cashfreeQrUrl: doorstepPayQrUrl,
+      doorstepPayUrl,
       paymentSessionId,
       paymentLinkUrl,
       customerPhone: cleanCustomerPhone,

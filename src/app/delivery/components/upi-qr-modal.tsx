@@ -95,8 +95,9 @@ export default function UpiQrModal({
   const customerPhone = qrData?.customerPhone || (order.address?.phone || order.user?.phone || '').replace(/\D/g, '').slice(-10)
 
   const handleShareWhatsApp = () => {
+    const doorstepPayUrl = (qrData as any)?.doorstepPayUrl || `${window.location.origin}/doorstep-pay/${order.id}`
     const text = encodeURIComponent(
-      `Namaste! Aapka FastKirana Order #${displayId} ka bill ₹${order.total} hai.\n\nUPI (Google Pay, PhonePe, Paytm, BHIM) se pay karne ke liye:\nUPI ID: ${qrData?.upiVpa || 'FastKirana'}\nAmount: ₹${order.total}`
+      `Namaste! Aapka FastKirana Order #${displayId} ka bill ₹${order.total} hai.\n\nOnline pay karne ke liye yahan click karein:\n${doorstepPayUrl}\n\nGPay, PhonePe, Paytm, UPI, Card — sab supported hai.`
     )
     const targetPhone = customerPhone ? `91${customerPhone}` : ''
     const waUrl = targetPhone ? `https://wa.me/${targetPhone}?text=${text}` : `https://wa.me/?text=${text}`
@@ -136,7 +137,7 @@ export default function UpiQrModal({
             ) : (
               <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider bg-emerald-50 dark:bg-emerald-500/10 px-3.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-500/20">
                 <Zap className="h-3.5 w-3.5 fill-emerald-500 text-emerald-500" />
-                FASTKIRANA DOORSTEP UPI QR ⚡
+                FASTKIRANA CASHFREE QR ⚡
               </span>
             )}
             
@@ -159,7 +160,7 @@ export default function UpiQrModal({
                   Payment Verified ✅
                 </h4>
                 <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">
-                  {formatPrice(order.total)} received successfully.
+                  {formatPrice(order.total)} received via Cashfree.
                 </p>
                 <div className="mt-3 bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-black shadow-md border border-emerald-400/30">
                   Collect ₹0 Cash from Customer 🚀
@@ -173,17 +174,17 @@ export default function UpiQrModal({
                 {isLoading ? (
                   <div className="flex flex-col items-center gap-2">
                     <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
-                    <span className="text-[10px] font-bold text-slate-500">Generating UPI QR...</span>
+                    <span className="text-[10px] font-bold text-slate-500">Loading Cashfree QR...</span>
                   </div>
                 ) : (
                   <>
                     <img
                       src={qrSrc}
-                      alt="FastKirana UPI QR"
+                      alt="FastKirana Cashfree QR"
                       className="w-full h-full object-contain"
                     />
                     <div className="absolute bottom-1 bg-emerald-600 text-white text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full shadow-sm flex items-center gap-1">
-                      <span>FASTKIRANA OFFICIAL UPI ⚡</span>
+                      <span>OFFICIAL FASTKIRANA CASHFREE ⚡</span>
                     </div>
                   </>
                 )}
@@ -192,10 +193,10 @@ export default function UpiQrModal({
               {/* Instructional Text */}
               <div className="text-center space-y-1">
                 <p className="text-[11px] font-extrabold text-text-primary">
-                  Scan directly with GPay, PhonePe, Paytm or any UPI app
+                  Customer scan karein — Cashfree Checkout khulega
                 </p>
                 <p className="text-[10px] text-text-muted font-medium">
-                  Payee: <span className="font-bold text-emerald-600">FastKirana</span> • Pre-filled Amount: <span className="font-bold">{formatPrice(order.total)}</span>
+                  GPay, PhonePe, Paytm, UPI, Card — sab supported
                 </p>
               </div>
 
@@ -205,8 +206,14 @@ export default function UpiQrModal({
                 onClick={handleShareWhatsApp}
                 className="w-full py-2.5 px-3 bg-green-500/15 hover:bg-green-500/25 text-green-700 dark:text-green-300 border border-green-500/30 text-[11px] font-black rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <span>📲 Share UPI Details via WhatsApp</span>
+                <span>📲 WhatsApp se Payment Link bhejein</span>
               </button>
+
+              {/* Live Auto-Detect Status */}
+              <div className="flex items-center justify-center gap-2 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-3.5 py-2 rounded-xl border border-emerald-300 dark:border-emerald-500/20 w-full">
+                <RefreshCw className="h-3.5 w-3.5 animate-spin text-emerald-500 shrink-0" />
+                <span className="leading-tight">Auto-detecting Cashfree Payment...</span>
+              </div>
             </>
           )}
 
@@ -233,7 +240,7 @@ export default function UpiQrModal({
             )}
             {!isAlreadyPaid && (
               <p className="text-[10px] text-center text-text-muted px-2">
-                💡 Jab customer scan karke pay kar de, &apos;Confirm Payment Received&apos; daba kar delivery poori karein.
+                💡 Cashfree se payment auto-detect hoga. Customer ka success screen dikhne par manually bhi confirm kar sakte ho.
               </p>
             )}
             <button
