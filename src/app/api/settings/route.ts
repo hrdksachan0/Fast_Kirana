@@ -42,7 +42,7 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   cafe_free_delivery_threshold: '200',
   combined_free_delivery_threshold: '200',
   delivery_fee: '25',
-  surge_mode: 'AUTO',
+  surge_mode: 'MANUAL_OFF',
   surge_rain_amount: '20',
   surge_demand_amount: '15',
   surge_manual_amount: '20',

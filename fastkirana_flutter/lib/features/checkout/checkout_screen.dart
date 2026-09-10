@@ -1416,7 +1416,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   const SizedBox(height: 14),
 
                   // 6. 🧾 Detailed Bill Summary
-                  _buildBillSummary(subtotal, deliveryFee, packagingFee, packagingLabel, grandTotal),
+                  _buildBillSummary(subtotal, deliveryFee, packagingFee, packagingLabel, grandTotal, tier: tier),
                   const SizedBox(height: 24),
                 ],
               ),
@@ -2574,8 +2574,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     double deliveryFee,
     double packagingFee,
     String packagingLabel,
-    double grandTotal,
-  ) {
+    double grandTotal, {
+    DeliveryTierInfo? tier,
+  }) {
+    final deliveryFeeLabel = (tier != null && tier.distanceKm > 3.0)
+        ? 'Delivery Fee (3-5 km Zone)'
+        : (tier != null && tier.distanceKm > 2.0)
+            ? 'Delivery Fee (2-3 km Zone)'
+            : 'Delivery Fee';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -2603,7 +2610,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           _buildBillRow('Item Total', '₹${subtotal.toInt()}'),
           const SizedBox(height: 7),
           _buildBillRow(
-            'Delivery Fee',
+            deliveryFeeLabel,
             deliveryFee == 0.0 ? 'FREE' : '₹${deliveryFee.toInt()}',
             isFree: deliveryFee == 0.0,
           ),

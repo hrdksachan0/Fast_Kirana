@@ -482,9 +482,10 @@ export default function CheckoutPage() {
   if (deliveryMethod === 'DELIVERY' && selectedAddress) {
     if (selectedAddress.lat && selectedAddress.lng) {
       const maxRadiusKm = parseFloat(storeSettingsMap['delivery_radius'] || storeSettingsMap['max_delivery_radius'] || '5.0')
-      const surgeFee = parseFloat(storeSettingsMap['surge_charge'] || '0')
+      const surgeFee = parseFloat(storeSettingsMap['surge_charge'] || storeSettingsMap['surge_fee'] || '0')
+      const surgeReason = storeSettingsMap['surge_reason'] || (surgeFee > 0 ? 'Special Delivery Surge' : '')
       distanceKm = getDistanceKm(storeLat, storeLng, selectedAddress.lat, selectedAddress.lng)
-      deliveryRules = getDeliveryRules(distanceKm, { maxRadiusKm, surgeFee })
+      deliveryRules = getDeliveryRules(distanceKm, { maxRadiusKm, surgeFee, surgeReason })
     }
   }
 
@@ -528,6 +529,8 @@ export default function CheckoutPage() {
 
   const couponDiscount = appliedCoupon ? appliedCoupon.discountAmount : 0
   const deliveryFee = groceryDeliveryFee + cafeDeliveryFee
+  const appliedSurgeFee = (deliveryFee > 0 && deliveryRules && deliveryRules.isServiceable) ? (deliveryRules.surgeFee || 0) : 0
+  const baseDeliveryFee = Math.max(0, deliveryFee - appliedSurgeFee)
   const taxes = Math.max(0, adjustedSubtotal - couponDiscount) * taxRate
   const grandTotal = Math.max(0, adjustedSubtotal - couponDiscount) + deliveryFee + taxes + effectiveMiscFee + packagingFee
 
@@ -1941,15 +1944,30 @@ export default function CheckoutPage() {
               <div className="flex flex-col text-left">
                 <span>Delivery Charge</span>
                 <span className="text-[9px] text-text-muted">
+                  {deliveryRules?.zoneName ? `${deliveryRules.zoneName} · ` : ''}
                   {adjustedSubtotal >= ((deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : (groceryThreshold || 200))
                     ? `Free delivery on orders ₹${(deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : (groceryThreshold || 200)}+`
-                    : `₹${deliveryFee} fee on orders under ₹${(deliveryRules && deliveryRules.isServiceable) ? deliveryRules.freeDeliveryThreshold : (groceryThreshold || 200)}`}
+                    : `Standard delivery fee`}
                 </span>
               </div>
-              <span className={cn(deliveryFee === 0 ? "text-accent font-black text-xs" : "")}>
-                {deliveryFee === 0 ? 'FREE 🎉' : `₹${deliveryFee}`}
+              <span className={cn(baseDeliveryFee === 0 ? "text-accent font-black text-xs" : "")}>
+                {baseDeliveryFee === 0 ? 'FREE 🎉' : `₹${baseDeliveryFee}`}
               </span>
             </div>
+
+            {appliedSurgeFee > 0 && (
+              <div className="flex justify-between items-center text-amber-700 dark:text-amber-400 font-bold bg-amber-500/10 px-2.5 py-1.5 rounded-lg border border-amber-500/20">
+                <div className="flex flex-col text-left">
+                  <span className="flex items-center gap-1 text-xs">
+                    <span>⚡</span> {deliveryRules?.surgeReason || 'Delivery Surge'}
+                  </span>
+                  <span className="text-[9px] text-amber-600/80 dark:text-amber-400/80 font-normal">
+                    Applied for rider safety & high demand
+                  </span>
+                </div>
+                <span>+₹{appliedSurgeFee}</span>
+              </div>
+            )}
 
             {packagingFee > 0 && (
               <div className="flex justify-between items-center text-amber-700 dark:text-amber-400 font-extrabold bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">

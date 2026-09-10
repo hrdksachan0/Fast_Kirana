@@ -32,16 +32,19 @@ export interface DeliveryRules {
   distanceKm: number
   minOrder: number
   deliveryFee: number
+  baseFee: number
   freeDeliveryThreshold: number
   isServiceable: boolean
   zoneName: string
   surgeFee: number
+  surgeReason?: string
   maxRadiusKm: number
 }
 
 interface DeliveryRuleOptions {
   maxRadiusKm?: number
   surgeFee?: number
+  surgeReason?: string
   isRainMode?: boolean
 }
 
@@ -54,6 +57,7 @@ export function getDeliveryRules(
 ): DeliveryRules {
   const maxRadiusKm = options.maxRadiusKm ?? 5.0 // Default 5 km delivery radius
   const surgeFee = options.surgeFee ?? 0
+  const surgeReason = options.surgeReason
 
   // Check if distance exceeds max allowed radius
   if (distanceKm > maxRadiusKm) {
@@ -61,10 +65,12 @@ export function getDeliveryRules(
       distanceKm,
       minOrder: 20,
       deliveryFee: 0,
+      baseFee: 0,
       freeDeliveryThreshold: 499,
       isServiceable: false,
       zoneName: `Outside Delivery Zone (> ${maxRadiusKm.toFixed(1)} km)`,
       surgeFee,
+      surgeReason,
       maxRadiusKm,
     }
   }
@@ -75,10 +81,12 @@ export function getDeliveryRules(
       distanceKm,
       minOrder: 0,
       deliveryFee: 25 + surgeFee,
+      baseFee: 25,
       freeDeliveryThreshold: 199,
       isServiceable: true,
       zoneName: '0 - 2 km (Local Ghatampur Zone)',
       surgeFee,
+      surgeReason,
       maxRadiusKm,
     }
   }
@@ -89,10 +97,12 @@ export function getDeliveryRules(
       distanceKm,
       minOrder: 0,
       deliveryFee: 35 + surgeFee,
+      baseFee: 35,
       freeDeliveryThreshold: 299,
       isServiceable: true,
       zoneName: '2 - 3 km (Suburban Zone)',
       surgeFee,
+      surgeReason,
       maxRadiusKm,
     }
   }
@@ -103,10 +113,12 @@ export function getDeliveryRules(
       distanceKm,
       minOrder: 0,
       deliveryFee: 50 + surgeFee,
+      baseFee: 50,
       freeDeliveryThreshold: 399,
       isServiceable: true,
       zoneName: '3 - 5 km (Extended Zone)',
       surgeFee,
+      surgeReason,
       maxRadiusKm,
     }
   }
@@ -116,10 +128,12 @@ export function getDeliveryRules(
     distanceKm,
     minOrder: 0,
     deliveryFee: 70 + surgeFee,
+    baseFee: 70,
     freeDeliveryThreshold: 499,
     isServiceable: false,
     zoneName: `Outside Delivery Zone (> ${maxRadiusKm.toFixed(1)} km)`,
     surgeFee,
+    surgeReason,
     maxRadiusKm,
   }
 }

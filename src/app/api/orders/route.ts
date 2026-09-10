@@ -639,10 +639,11 @@ export async function POST(request: NextRequest) {
     const deliveryFeeVal = settingsMap['delivery_fee'] ? parseFloat(settingsMap['delivery_fee']) : DELIVERY_FEE
 
     let groceryDeliveryFee = 0
+    let hubSurgeFee = 0
+    let hubSurgeReason = ''
 
     if (deliveryMethod === 'DELIVERY' && !isB2B) {
       // Evaluate active surge for target DarkStore hub
-      let hubSurgeFee = 0
       try {
         const activeSurge = await evaluateSurgeStatus(
           settingsMap,
@@ -651,6 +652,7 @@ export async function POST(request: NextRequest) {
         )
         if (activeSurge.isSurgeActive && activeSurge.surgeFee > 0) {
           hubSurgeFee = activeSurge.surgeFee
+          hubSurgeReason = activeSurge.surgeReason || 'Safety & Weather Surge'
         }
       } catch (surgeErr) {
         console.error('Failed to evaluate hub surge fee:', surgeErr)
@@ -734,6 +736,10 @@ export async function POST(request: NextRequest) {
 
       const groceryTotal = grocerySubtotal - groceryDiscount + groceryDeliveryFee + groceryTaxes + appliedMiscFee
 
+      const gSurgeNote = (hubSurgeFee > 0 && groceryDeliveryFee > 0) ? `⚡ Surge Fee Applied: ₹${hubSurgeFee} (${hubSurgeReason})` : null
+      const gPackagingNote = isPremiumPackaging ? '✨ Premium Thermal Packaging Requested (+₹15)' : null
+      const gCombinedNotes = [body.notes, gPackagingNote, gSurgeNote].filter(Boolean).join(' | ')
+
       ordersToCreate.push({
         type: 'GROCERY',
         subtotal: grocerySubtotal,
@@ -743,6 +749,7 @@ export async function POST(request: NextRequest) {
         miscFee: appliedMiscFee,
         total: groceryTotal,
         items: groceryItems,
+        notes: gCombinedNotes || undefined,
       })
     }
 
@@ -761,6 +768,10 @@ export async function POST(request: NextRequest) {
 
       const rTotal = rData.subtotal - rDiscount + rData.deliveryFee + rTaxes + appliedMiscFee
 
+      const rSurgeNote = (hubSurgeFee > 0 && rData.deliveryFee > 0) ? `⚡ Surge Fee Applied: ₹${hubSurgeFee} (${hubSurgeReason})` : null
+      const rPackagingNote = isPremiumPackaging ? '✨ Premium Thermal Packaging Requested (+₹15)' : null
+      const rCombinedNotes = [body.notes, rPackagingNote, rSurgeNote].filter(Boolean).join(' | ')
+
       ordersToCreate.push({
         type: 'RESTAURANT',
         restaurantId: rData.rId,
@@ -772,7 +783,7 @@ export async function POST(request: NextRequest) {
         miscFee: appliedMiscFee,
         total: rTotal,
         items: rData.items,
-        notes: isPremiumPackaging ? '✨ Premium Thermal Packaging Requested (+₹15)' : undefined,
+        notes: rCombinedNotes || undefined,
       })
     }
 

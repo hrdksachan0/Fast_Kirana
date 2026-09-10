@@ -56,8 +56,10 @@ export async function fetchLiveWeather(
     const showers = Number(current.showers ?? 0)
     const temp = Number(current.temperature_2m ?? 30)
 
-    const rainCodes = [51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99]
-    const isRaining = rain > 0.1 || showers > 0.1 || rainCodes.includes(code)
+    // Only genuine heavy rain (> 1.5mm) or moderate/heavy rain/thunderstorm codes trigger safety rain surge
+    // Drizzle (51, 53, 55) or trace moisture (< 1.5mm) will NOT trigger surge charge
+    const heavyRainCodes = [63, 65, 81, 82, 95, 96, 99]
+    const isRaining = (rain >= 1.5 || showers >= 1.5) || (rain >= 0.5 && heavyRainCodes.includes(code))
 
     let condition = 'Clear'
     if (isRaining) {
@@ -126,7 +128,7 @@ export async function evaluateSurgeStatus(
   storeId?: string | null,
   customCoords?: { lat: number; lng: number } | null
 ): Promise<SurgeStatus> {
-  const mode = (settingsMap['surge_mode'] || 'AUTO').toUpperCase() as 'AUTO' | 'MANUAL_ON' | 'MANUAL_OFF'
+  const mode = (settingsMap['surge_mode'] || 'MANUAL_OFF').toUpperCase() as 'AUTO' | 'MANUAL_ON' | 'MANUAL_OFF'
   const rainAmount = parseFloat(settingsMap['surge_rain_amount'] || '20')
   const demandAmount = parseFloat(settingsMap['surge_demand_amount'] || '15')
   const manualAmount = parseFloat(settingsMap['surge_manual_amount'] || '20')
