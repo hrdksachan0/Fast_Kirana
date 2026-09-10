@@ -190,6 +190,7 @@ export function StorefrontClient({
             {/* 4. Deals & Curations Hub */}
             <div className="section-lazy-render">
               <DealsCurationHub
+                categories={categories}
                 flashDeals={flashDeals}
                 bestSellers={bestSellers}
                 topPicks={topPicks}

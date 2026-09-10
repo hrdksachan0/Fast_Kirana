@@ -16,74 +16,11 @@ interface Subcategory {
   id: string
   name: string
   emoji: string
+  imageUrl?: string | null
   filterFn: (p: Product) => boolean
 }
 
-const formatMenuTag = (tag: string): { name: string; emoji: string } => {
-  const t = tag.toLowerCase().trim()
-  const map: Record<string, { name: string; emoji: string }> = {
-    'restaurant': { name: 'Restaurant Specials', emoji: '👨‍🍳' },
-    'cafe': { name: 'Cafe Specials', emoji: '☕' },
-    'roti-naan-kulcha': { name: 'Roti, Naan & Breads', emoji: '🫓' },
-    'roti': { name: 'Roti & Breads', emoji: '🫓' },
-    'naan': { name: 'Naan & Breads', emoji: '🫓' },
-    'breads': { name: 'Roti & Breads', emoji: '🫓' },
-    'burger': { name: 'Burgers', emoji: '🍔' },
-    'burgers': { name: 'Burgers', emoji: '🍔' },
-    'pizza': { name: 'Pizzas', emoji: '🍕' },
-    'pizzas': { name: 'Pizzas', emoji: '🍕' },
-    'north-indian': { name: 'North Indian', emoji: '🥘' },
-    'south-indian': { name: 'South Indian', emoji: '🍛' },
-    'biryani-rice': { name: 'Biryani & Rice', emoji: '🍚' },
-    'biryani': { name: 'Biryani & Rice', emoji: '🍚' },
-    'rice-dishes': { name: 'Rice Dishes', emoji: '🍚' },
-    'chinese': { name: 'Chinese Wok', emoji: '🥡' },
-    'noodles': { name: 'Noodles', emoji: '🍜' },
-    'sandwiches': { name: 'Sandwiches', emoji: '🥪' },
-    'sandwich': { name: 'Sandwiches', emoji: '🥪' },
-    'frankie-rolls': { name: 'Rolls & Wraps', emoji: '🌯' },
-    'rolls': { name: 'Rolls & Wraps', emoji: '🌯' },
-    'hot-beverage': { name: 'Brews & Tea', emoji: '☕' },
-    'hot-bite': { name: 'Hot Snacks', emoji: '🥟' },
-    'starter': { name: 'Starters', emoji: '🥟' },
-    'starters': { name: 'Starters', emoji: '🥟' },
-    'main-course': { name: 'Main Course', emoji: '🍲' },
-    'italian-pasta': { name: 'Pasta & Italian', emoji: '🍝' },
-    'pasta': { name: 'Pasta & Italian', emoji: '🍝' },
-    'bombay-bites': { name: 'Bombay Bites', emoji: '🥪' },
-    'shakes': { name: 'Shakes & Coolers', emoji: '🥤' },
-    'mocktails': { name: 'Mocktails', emoji: '🍹' },
-    'cold-coffee': { name: 'Cold Coffee', emoji: '🧋' },
-    'chilled': { name: 'Cold Drinks', emoji: '🥤' },
-    'desserts': { name: 'Ice Cream & Sweets', emoji: '🍨' },
-    'dessert': { name: 'Desserts', emoji: '🍨' },
-    'bakery': { name: 'Bakery Treats', emoji: '🥐' },
-    'thali': { name: 'Thali & Combo', emoji: '🍱' },
-    'beverages': { name: 'Beverages', emoji: '🥤' },
-    'snacks': { name: 'Snacks', emoji: '🍿' },
-  }
 
-  if (map[t]) return map[t]
-
-  const formatted = t
-    .split('-')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
-
-  let emoji = '🍽️'
-  if (/drink|sip|beverage|tea|coffee|soda/i.test(t)) emoji = '🥤'
-  else if (/sweet|ice|dessert|cake|pastry/i.test(t)) emoji = '🍨'
-  else if (/bread|roti|naan|paratha/i.test(t)) emoji = '🫓'
-  else if (/rice|biryani|pulav/i.test(t)) emoji = '🍚'
-  else if (/chicken|meat|egg|nonveg/i.test(t)) emoji = '🍗'
-  else if (/snack|fry|bite|starter/i.test(t)) emoji = '🥟'
-  else if (/burger/i.test(t)) emoji = '🍔'
-  else if (/pizza/i.test(t)) emoji = '🍕'
-  else if (/roll|wrap/i.test(t)) emoji = '🌯'
-  else if (/noodle|pasta|spaghetti/i.test(t)) emoji = '🍝'
-
-  return { name: formatted, emoji }
-}
 
 function getSubcategories(
   categorySlug: string,
@@ -111,10 +48,12 @@ function getSubcategories(
 
   if (dbChildCategories.length > 0) {
     dbChildCategories.forEach((child) => {
+      const hasImage = Boolean(child.imageUrl && (child.imageUrl.startsWith('http') || child.imageUrl.startsWith('/')))
       list.push({
         id: child.id,
         name: child.name,
         emoji: child.imageUrl && !child.imageUrl.startsWith('http') && child.imageUrl.length < 5 ? child.imageUrl : '🏷️',
+        imageUrl: hasImage ? child.imageUrl : null,
         filterFn: (p) =>
           Boolean(
             p.categoryId === child.id ||
@@ -123,319 +62,6 @@ function getSubcategories(
       })
     })
     return list
-  }
-
-  if (normSlug === 'fruits-vegetables' || normSlug.includes('fruit') || normSlug.includes('vegetable')) {
-    list.push(
-      {
-        id: 'vegetables',
-        name: 'Fresh Veggies',
-        emoji: '🥦',
-        filterFn: (p) => {
-          const name = p.name.toLowerCase()
-          const tags = p.tags?.map(t => t.toLowerCase()) || []
-          return tags.includes('cooking') || tags.includes('essential') || tags.includes('salad') || tags.includes('spicy') ||
-            /potato|onion|tomato|chilli|coriander|garlic|ginger|lemon|cucumber|cabbage|carrot|cauliflower|bhindi|okra|gourd|spinach|palak/.test(name)
-        }
-      },
-      {
-        id: 'fruits',
-        name: 'Fresh Fruits',
-        emoji: '🍎',
-        filterFn: (p) => {
-          const name = p.name.toLowerCase()
-          const tags = p.tags?.map(t => t.toLowerCase()) || []
-          return (tags.includes('fresh') && !/potato|onion|tomato|chilli|coriander|garlic|ginger|lemon|cucumber|cabbage|carrot|cauliflower|bhindi|okra|gourd|spinach|palak/.test(name)) || tags.includes('premium') ||
-            /banana|apple|mango|litchi|orange|grapes|pomegranate|watermelon|papaya|kiwi|pineapple/.test(name)
-        }
-      },
-      {
-        id: 'herbs-seasoning',
-        name: 'Leafy & Herbs',
-        emoji: '🌿',
-        filterFn: (p) => {
-          const name = p.name.toLowerCase()
-          return /coriander|mint|pudina|ginger|garlic|lemon|curry|leaf|chilli/.test(name)
-        }
-      },
-      {
-        id: 'premium',
-        name: 'Exotics & Premium',
-        emoji: '👑',
-        filterFn: (p) => p.tags?.map(t => t.toLowerCase()).includes('premium') || false
-      }
-    )
-  } else if (normSlug === 'dairy-breakfast' || normSlug === 'daily-breakfast' || normSlug.includes('breakfast') || normSlug.includes('dairy')) {
-    list.push(
-      {
-        id: 'milk',
-        name: 'Milk & Curd',
-        emoji: '🥛',
-        filterFn: (p) => /milk|dahi|curd|paneer|butter|cream|lassi/i.test(p.name)
-      },
-      {
-        id: 'bread-bakery',
-        name: 'Bread & Pav',
-        emoji: '🍞',
-        filterFn: (p) => /bread|pav|bun|toast|rusk/i.test(p.name)
-      },
-      {
-        id: 'sewai-vermicelli',
-        name: 'Sewai & Vermicelli',
-        emoji: '🍜',
-        filterFn: (p) => /sewai|vermicelli|semiya|kheer/i.test(p.name) || (p.tags && p.tags.some(t => /sewai|vermicelli/i.test(t)))
-      },
-      {
-        id: 'cereal-oats',
-        name: 'Cereal & Oats',
-        emoji: '🥣',
-        filterFn: (p) => /oats|cereal|cornflakes|muesli|poha/i.test(p.name)
-      },
-      {
-        id: 'eggs',
-        name: 'Eggs & Butter',
-        emoji: '🥚',
-        filterFn: (p) => /egg|butter|cheese/i.test(p.name)
-      }
-    )
-  } else if (normSlug === 'munchies' || normSlug === 'snacks-munchies' || normSlug === 'snacks-biscuits' || normSlug.includes('snack') || normSlug.includes('biscuit') || normSlug.includes('munchie')) {
-    list.push(
-      {
-        id: 'chips',
-        name: 'Chips & Crisps',
-        emoji: '🥔',
-        filterFn: (p) => /chips|crisps|wafer|kurkure|lays|bingo/i.test(p.name)
-      },
-      {
-        id: 'namkeen',
-        name: 'Namkeen & Bhujia',
-        emoji: '🥨',
-        filterFn: (p) => /namkeen|bhujia|sev|mixture|gathiya|bikaji|haldiram/i.test(p.name)
-      },
-      {
-        id: 'biscuits',
-        name: 'Biscuits & Cookies',
-        emoji: '🍪',
-        filterFn: (p) => /biscuit|cookie|parle|good day|oreo|dark fantasy|gobbles|cake/i.test(p.name)
-      },
-      {
-        id: 'chocolates',
-        name: 'Chocolates & Sweets',
-        emoji: '🍫',
-        filterFn: (p) => /chocolate|cadbury|dairy milk|kitkat|munch|5 star|snickers|mithai|sweets/i.test(p.name)
-      }
-    )
-  } else if (categorySlug === 'beverages' || categorySlug === 'cold-drinks-juices' || categorySlug.includes('beverage') || categorySlug.includes('drink')) {
-    list.push(
-      {
-        id: 'soft-drinks',
-        name: 'Soft Drinks & Soda',
-        emoji: '🥤',
-        filterFn: (p) => {
-          const pName = (p.name || '').toLowerCase()
-          if (/chocolate|cadbury|kitkat|cake|pastry|brownie|biscuit|cookie|bread|muffin|noodle|pasta|maggi|namkeen|chips|atta|rice|dal|soap|shampoo|face|facewash|skincare|mamaearth|lotion|cream|moisturizer|wash|oil|conditioner|serum/i.test(pName)) return false
-          return /thums|pepsi|coke|sprite|7up|limca|fanta|mirinda|\bdew\b|mountain.?dew|campa|hell|soda|cold|drink|cola/i.test(pName) || (p.tags && p.tags.some(t => /soda|cola|soft-drink|beverages|drink/i.test(t)))
-        }
-      },
-      {
-        id: 'juices',
-        name: 'Fruit Juices & Drinks',
-        emoji: '🧃',
-        filterFn: (p) => {
-          const pName = (p.name || '').toLowerCase()
-          if (/chocolate|cadbury|kitkat|cake|pastry|brownie|biscuit|cookie|bread|muffin|noodle|pasta|maggi|namkeen|chips|atta|rice|dal|soap|shampoo|face|facewash|skincare|mamaearth|lotion|cream|moisturizer|wash|oil|conditioner|serum/i.test(pName)) return false
-          return /juice|real|tropicana|frooti|maaza|slice|appy|paper|coconut|water|shake|smoothie|drink/i.test(pName) || (p.tags && p.tags.some(t => /juice|shake|drink/i.test(t)))
-        }
-      },
-      {
-        id: 'energy-drinks',
-        name: 'Packaged Water & Energy',
-        emoji: '⚡',
-        filterFn: (p) => {
-          const pName = (p.name || '').toLowerCase()
-          if (/chocolate|cadbury|kitkat|cake|pastry|brownie|biscuit|cookie|bread|muffin|noodle|pasta|maggi|namkeen|chips|atta|rice|dal|soap|shampoo/i.test(pName)) return false
-          return /water|bisleri|kinley|aquafina|red.?bull|monster|sting|hell|energy|drink/i.test(pName) || (p.tags && p.tags.some(t => /energy|water|drink/i.test(t)))
-        }
-      }
-    )
-  } else if (categorySlug === 'instant-food') {
-    list.push(
-      {
-        id: 'noodles',
-        name: 'Noodles & Pasta',
-        emoji: '🍜',
-        filterFn: (p) => /maggi|yippee|top ramen|noodles|pasta|macaroni/i.test(p.name)
-      },
-      {
-        id: 'sauces-spreads',
-        name: 'Sauces & Spreads',
-        emoji: '🥫',
-        filterFn: (p) => /ketchup|sauce|mayo|mayonnaise|jam|peanut butter|nutella/i.test(p.name)
-      },
-      {
-        id: 'ready-to-eat',
-        name: 'Ready to Eat',
-        emoji: '🍲',
-        filterFn: (p) => /soup|upma|halwa|poha|instant/i.test(p.name)
-      }
-    )
-  } else if (categorySlug === 'tea-coffee') {
-    list.push(
-      {
-        id: 'tea',
-        name: 'Tea & Chai',
-        emoji: '☕',
-        filterFn: (p) => /tea|chai|tata|taj mahal|red label|wagh bakri|green tea/i.test(p.name)
-      },
-      {
-        id: 'coffee',
-        name: 'Coffee & Mixes',
-        emoji: '☕',
-        filterFn: (p) => /coffee|nescafe|bru|sunrise|continental|cold coffee/i.test(p.name)
-      },
-      {
-        id: 'health-drinks',
-        name: 'Health Drinks',
-        emoji: '🥛',
-        filterFn: (p) => /horlicks|complan|bournvita|boost|pediasure/i.test(p.name)
-      }
-    )
-  } else if (categorySlug === 'attas-rice') {
-    list.push(
-      {
-        id: 'atta',
-        name: 'Atta & Flours',
-        emoji: '🌾',
-        filterFn: (p) => /atta|flour|maida|sooji|besan|sattu/i.test(p.name)
-      },
-      {
-        id: 'rice',
-        name: 'Rice & Poha',
-        emoji: '🍚',
-        filterFn: (p) => /rice|poha|basmati/i.test(p.name)
-      },
-      {
-        id: 'dals',
-        name: 'Dals & Pulses',
-        emoji: '🫘',
-        filterFn: (p) => /dal |pulses|chana|rajma|moong|masoor|urad|arhar/i.test(p.name)
-      },
-      {
-        id: 'oils-ghee',
-        name: 'Oil & Ghee',
-        emoji: '🛢️',
-        filterFn: (p) => /oil|ghee|mustard|refine/i.test(p.name)
-      }
-    )
-  } else if (categorySlug === 'ice-cream' || categorySlug === 'ice_cream') {
-    list.push(
-      {
-        id: 'cones-cups',
-        name: 'Cones & Cups',
-        emoji: '🍦',
-        filterFn: (p) => {
-          const name = p.name.toLowerCase()
-          if (/shake|milkshake|smoothie|frappe/i.test(name)) return false
-          const catSlug = ((p as any).categorySlug || p.category?.slug || '').toLowerCase()
-          const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : []
-          const isIceCream = /ice.?cream|kulfi|chocobar|cornetto|cassatta|sundae|scoop|matka|kwality|havmor|amul|vadilal|baskin|nic/i.test(name) ||
-            tags.some((t: string) => /ice.?cream|kulfi|chocobar|cornetto/i.test(t)) ||
-            catSlug === 'ice-cream' || catSlug === 'ice_cream'
-          if (!isIceCream) return false
-          return /cone|cup|cornetto|matka|scoop|single|chocobar|stick/i.test(name)
-        }
-      },
-      {
-        id: 'tubs-packs',
-        name: 'Family Tubs',
-        emoji: '🍨',
-        filterFn: (p) => {
-          const name = p.name.toLowerCase()
-          if (/shake|milkshake|smoothie|frappe/i.test(name)) return false
-          const catSlug = ((p as any).categorySlug || p.category?.slug || '').toLowerCase()
-          const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : []
-          const isIceCream = /ice.?cream|kulfi|chocobar|cornetto|cassatta|sundae|scoop|matka|kwality|havmor|amul|vadilal|baskin|nic/i.test(name) ||
-            tags.some((t: string) => /ice.?cream|kulfi|chocobar|cornetto/i.test(t)) ||
-            catSlug === 'ice-cream' || catSlug === 'ice_cream'
-          if (!isIceCream) return false
-          return /tub|brick|pack|family|party|1l|750ml|500ml|container|bucket/i.test(name)
-        }
-      }
-    )
-    let rawSecs: any[] = []
-    const customSecsStr = settings.restaurant_menu_sections || settings.RESTAURANT_MENU_SECTIONS
-    if (customSecsStr) {
-      try {
-        const parsed = typeof customSecsStr === 'string' ? JSON.parse(customSecsStr) : customSecsStr
-        if (Array.isArray(parsed) && parsed.length > 0) rawSecs = parsed
-      } catch (e) {}
-    }
-    rawSecs
-      .filter((sec: any) => !sec.disabled && (sec.disabled as any) !== 'true' && categoryStatus[sec.tag] !== false && categoryStatus[sec.id] !== false)
-      .forEach((sec: any) => {
-        list.push({
-          id: sec.tag,
-          name: sec.title,
-          emoji: sec.emoji,
-          filterFn: (p) => {
-            const tags = (p.tags || []).map((t) => t.toLowerCase())
-            return (
-              tags.includes(sec.tag.toLowerCase()) ||
-              (sec.matchTags ? sec.matchTags.some((mt: string) => tags.includes(mt.toLowerCase())) : false) ||
-              p.name.toLowerCase().includes(sec.tag.toLowerCase())
-            )
-          }
-        })
-      })
-  } else if (categorySlug === 'cafe' || categorySlug.includes('cafe')) {
-    let rawSecs = DEFAULT_CAFE_MENU_SECTIONS
-    const customSecsStr = settings.cafe_menu_sections || settings.CAFE_MENU_SECTIONS
-    if (customSecsStr) {
-      try {
-        const parsed = typeof customSecsStr === 'string' ? JSON.parse(customSecsStr) : customSecsStr
-        if (Array.isArray(parsed) && parsed.length > 0) rawSecs = parsed
-      } catch (e) {}
-    }
-    rawSecs
-      .filter((sec: any) => !sec.disabled && (sec.disabled as any) !== 'true' && categoryStatus[sec.tag] !== false && categoryStatus[sec.id] !== false)
-      .forEach((sec: any) => {
-        list.push({
-          id: sec.tag,
-          name: sec.title,
-          emoji: sec.emoji,
-          filterFn: (p) => {
-            const tags = (p.tags || []).map((t) => t.toLowerCase())
-            return (
-              tags.includes(sec.tag.toLowerCase()) ||
-              (sec.matchTags ? sec.matchTags.some((mt: string) => tags.includes(mt.toLowerCase())) : false) ||
-              p.name.toLowerCase().includes(sec.tag.toLowerCase())
-            )
-          }
-        })
-      })
-  } else {
-    // Tags are strictly for search and filter indexing — NEVER convert tags into fake subcategories
-  }
-
-  // 4. Dynamically append DB Child Subcategories if they exist under activeCategory
-  if (activeCategory && allCategories.length > 0) {
-    const dbChildCategories = allCategories.filter(
-      (c) => c.parentId && (c.parentId === activeCategory.id || c.parentId === activeCategory.slug)
-    )
-
-    dbChildCategories.forEach((child) => {
-      if (!list.some((s) => s.id === child.id || s.name.toLowerCase() === child.name.toLowerCase())) {
-        list.push({
-          id: child.id,
-          name: child.name,
-          emoji: child.imageUrl && !child.imageUrl.startsWith('http') ? child.imageUrl : '🛒',
-          filterFn: (p) =>
-            p.categoryId === child.id ||
-            (p.category && (p.category.id === child.id || p.category.slug === child.slug)) ||
-            (p.tags && p.tags.some((t) => t.toLowerCase() === child.name.toLowerCase() || t.toLowerCase() === child.slug.toLowerCase()))
-        })
-      }
-    })
   }
 
   return list
@@ -848,26 +474,37 @@ export function CategoryPageClient({
             </div>
 
             {/* Desktop Subcategory Pills */}
-            <div className="flex flex-wrap gap-2 select-none">
-              {subcategories.map((subcat) => {
-                const isActive = subcat.id === activeSubcategoryId
-                return (
-                  <button
-                    key={subcat.id}
-                    onClick={() => setActiveSubcategoryId(subcat.id)}
-                    className={cn(
-                      'flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-full transition-all duration-300 border cursor-pointer select-none active:scale-95 outline-none',
-                      isActive
-                        ? cn('bg-white dark:bg-zinc-900', theme.border, theme.glow, theme.primaryText)
-                        : 'bg-card hover:bg-muted text-zinc-500 dark:text-zinc-400 border-zinc-200/80 dark:border-zinc-800/85 hover:border-zinc-300 dark:hover:border-zinc-700'
-                    )}
-                  >
-                    <span className="text-sm filter drop-shadow-sm select-none leading-none">{subcat.emoji}</span>
-                    <span>{subcat.name}</span>
-                  </button>
-                )
-              })}
-            </div>
+            {subcategories.length > 1 && (
+              <div className="flex flex-wrap gap-2 select-none">
+                {subcategories.map((subcat) => {
+                  const isActive = subcat.id === activeSubcategoryId
+                  return (
+                    <button
+                      key={subcat.id}
+                      onClick={() => setActiveSubcategoryId(subcat.id)}
+                      className={cn(
+                        'flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-full transition-all duration-300 border cursor-pointer select-none active:scale-95 outline-none',
+                        isActive
+                          ? cn('bg-white dark:bg-zinc-900', theme.border, theme.glow, theme.primaryText)
+                          : 'bg-card hover:bg-muted text-zinc-500 dark:text-zinc-400 border-zinc-200/80 dark:border-zinc-800/85 hover:border-zinc-300 dark:hover:border-zinc-700'
+                      )}
+                    >
+                      {subcat.imageUrl ? (
+                        <img
+                          src={subcat.imageUrl}
+                          alt={subcat.name}
+                          className="w-4 h-4 rounded-full object-cover shrink-0 select-none"
+                          onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none' }}
+                        />
+                      ) : (
+                        <span className="text-sm filter drop-shadow-sm select-none leading-none">{subcat.emoji}</span>
+                      )}
+                      <span>{subcat.name}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
 
             {/* Search Bar and Dynamic Filters */}
             <div className="flex gap-3 items-center">
@@ -1009,65 +646,76 @@ export function CategoryPageClient({
         {/* Main Split Area */}
         <div className="flex flex-1 border-t border-zinc-100 dark:border-zinc-900">
           {/* Mobile Left Sidebar: Redesigned into Sleek Rectangular Vertical Tabs */}
-          <aside className="w-[94px] shrink-0 border-r border-zinc-150 dark:border-zinc-900 bg-zinc-50/70 dark:bg-zinc-950/40 py-2 pl-1.5 pr-1 space-y-1.5 overflow-y-auto max-h-[calc(100vh-140px)] scrollbar-none sticky top-[52px] self-start backdrop-blur-md">
-            {subcategories.map((subcat) => {
-              const isActive = subcat.id === activeSubcategoryId
-              // Format subcategory name to Title Case (e.g. JUICES & DRINKS -> Juices & Drinks)
-              const formattedName = subcat.name
-                .toLowerCase()
-                .split(' ')
-                .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                .join(' ')
+          {subcategories.length > 1 && (
+            <aside className="w-[94px] shrink-0 border-r border-zinc-150 dark:border-zinc-900 bg-zinc-50/70 dark:bg-zinc-950/40 py-2 pl-1.5 pr-1 space-y-1.5 overflow-y-auto max-h-[calc(100vh-140px)] scrollbar-none sticky top-[52px] self-start backdrop-blur-md">
+              {subcategories.map((subcat) => {
+                const isActive = subcat.id === activeSubcategoryId
+                // Format subcategory name to Title Case (e.g. JUICES & DRINKS -> Juices & Drinks)
+                const formattedName = subcat.name
+                  .toLowerCase()
+                  .split(' ')
+                  .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                  .join(' ')
 
-              return (
-                <button
-                  key={subcat.id}
-                  onClick={() => setActiveSubcategoryId(subcat.id)}
-                  className={cn(
-                    'w-full flex flex-col items-center text-center gap-1 py-3 px-1.5 relative transition-all cursor-pointer select-none z-10 outline-none border-0 bg-transparent',
-                    isActive ? theme.primaryText : 'text-zinc-500 dark:text-zinc-400'
-                  )}
-                >
-                  {/* Sliding Left indicator bar */}
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeSubcategoryMobileBar"
-                      className={cn("absolute left-0.5 top-2.5 bottom-2.5 w-[3px] rounded-full", theme.indicatorBg)}
-                      transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-                    />
-                  )}
-
-                  {/* Rectangular Card Container */}
-                  <div
+                return (
+                  <button
+                    key={subcat.id}
+                    onClick={() => setActiveSubcategoryId(subcat.id)}
                     className={cn(
-                      'w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 border relative z-10 shadow-[0_2px_8px_rgba(0,0,0,0.01)]',
-                      isActive
-                        ? cn('bg-white dark:bg-zinc-900 scale-[1.05]', theme.border, theme.glow)
-                        : 'bg-white/80 dark:bg-zinc-900/60 border-zinc-100 dark:border-zinc-900/60'
+                      'w-full flex flex-col items-center text-center gap-1 py-3 px-1.5 relative transition-all cursor-pointer select-none z-10 outline-none border-0 bg-transparent',
+                      isActive ? theme.primaryText : 'text-zinc-500 dark:text-zinc-400'
                     )}
                   >
-                    {/* Sliding active inner background */}
+                    {/* Sliding Left indicator bar */}
                     {isActive && (
                       <motion.div
-                        layoutId="activeSubcategoryMobileCircle"
-                        className={cn("absolute inset-0 rounded-2xl -z-10", theme.activeBg)}
-                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                        layoutId="activeSubcategoryMobileBar"
+                        className={cn("absolute left-0.5 top-2.5 bottom-2.5 w-[3px] rounded-full", theme.indicatorBg)}
+                        transition={{ type: 'spring', stiffness: 350, damping: 25 }}
                       />
                     )}
-                    <span className="text-2xl filter drop-shadow-sm select-none leading-none relative z-20">{subcat.emoji}</span>
-                  </div>
 
-                  {/* Subcategory Name */}
-                  <span className={cn(
-                    "text-[9.5px] leading-tight px-0.5 tracking-tight select-none mt-1.5 relative z-20 text-center line-clamp-2 max-w-[80px]",
-                    isActive ? cn("font-extrabold", theme.primaryText) : "font-semibold text-zinc-500 dark:text-zinc-400"
-                  )}>
-                    {formattedName}
-                  </span>
-                </button>
-              )
-            })}
-          </aside>
+                    {/* Rectangular Card Container */}
+                    <div
+                      className={cn(
+                        'w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 border relative z-10 shadow-[0_2px_8px_rgba(0,0,0,0.01)]',
+                        isActive
+                          ? cn('bg-white dark:bg-zinc-900 scale-[1.05]', theme.border, theme.glow)
+                          : 'bg-white/80 dark:bg-zinc-900/60 border-zinc-100 dark:border-zinc-900/60'
+                      )}
+                    >
+                      {/* Sliding active inner background */}
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeSubcategoryMobileCircle"
+                          className={cn("absolute inset-0 rounded-2xl -z-10", theme.activeBg)}
+                          transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                        />
+                      )}
+                      {subcat.imageUrl ? (
+                        <img
+                          src={subcat.imageUrl}
+                          alt={subcat.name}
+                          className="w-full h-full object-cover rounded-2xl relative z-20 p-1"
+                          onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none' }}
+                        />
+                      ) : (
+                        <span className="text-2xl filter drop-shadow-sm select-none leading-none relative z-20">{subcat.emoji}</span>
+                      )}
+                    </div>
+
+                    {/* Subcategory Name */}
+                    <span className={cn(
+                      "text-[9.5px] leading-tight px-0.5 tracking-tight select-none mt-1.5 relative z-20 text-center line-clamp-2 max-w-[80px]",
+                      isActive ? cn("font-extrabold", theme.primaryText) : "font-semibold text-zinc-500 dark:text-zinc-400"
+                    )}>
+                      {formattedName}
+                    </span>
+                  </button>
+                )
+              })}
+            </aside>
+          )}
 
           {/* Mobile Right Content Panel */}
           <div className="flex-grow min-w-0 bg-background overflow-y-auto max-h-[calc(100vh-140px)] px-2 py-2 space-y-2.5">
@@ -1093,7 +741,16 @@ export function CategoryPageClient({
               </div>
 
               <div className="relative z-10 shrink-0 text-3xl font-bold animate-float pr-1.5 filter drop-shadow-[0_2px_5px_rgba(0,0,0,0.1)] leading-none">
-                {activeBanner.emoji}
+                {activeSubcategory.imageUrl ? (
+                  <img
+                    src={activeSubcategory.imageUrl}
+                    alt={activeSubcategory.name}
+                    className="w-12 h-12 object-contain rounded-xl drop-shadow-md"
+                    onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none' }}
+                  />
+                ) : (
+                  activeBanner.emoji
+                )}
               </div>
             </div>
 

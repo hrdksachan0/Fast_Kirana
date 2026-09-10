@@ -297,51 +297,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // Strictly isolate grocery items (exclude restaurant dishes)
     final groceryItems = all.where((p) => p.restaurantId == null && p.restaurant == null).toList();
 
-    if (_selectedFilterIndex == 1) {
-      // ⚡ Flash Deals: Products marked isFlashDeal, high discount (>= 15%), or tagged deal/flash
-      return groceryItems.where((p) {
-        return p.isFlashDealProduct ||
-            p.isFlashDeal ||
-            p.discount >= 15 ||
-            p.tags.any((t) {
-              final lower = t.toLowerCase();
-              return lower.contains('flash') || lower.contains('deal') || lower.contains('steal') || lower.contains('offer');
-            });
-      }).toList();
-    } else if (_selectedFilterIndex == 2) {
-      // 🏆 Best Sellers: Products marked as best seller or top moving
-      return groceryItems.where((p) {
-        return p.isBestsellerProduct ||
-            p.isBestSeller ||
-            p.tags.any((t) {
-              final lower = t.toLowerCase();
-              return lower.contains('best') || lower.contains('popular') || lower.contains('star');
-            });
-      }).toList();
-    } else if (_selectedFilterIndex == 3) {
-      // 🔥 Trending & Top Picks
-      return groceryItems.where((p) {
-        return p.isTrending ||
-            p.isTopPick ||
-            p.tags.any((t) {
-              final lower = t.toLowerCase();
-              return lower.contains('trend') || lower.contains('top') || lower.contains('hot') || lower.contains('feature');
-            });
-      }).toList();
-    } else if (_selectedFilterIndex == 4) {
-      // 🍿 Snacks & Munchies Hub
-      return groceryItems.where((p) {
-        final cat = (p.category?.name ?? '').toLowerCase();
-        final slug = (p.category?.slug ?? '').toLowerCase();
-        final name = p.name.toLowerCase();
-        final tags = p.tags.map((t) => t.toLowerCase()).toList();
-        return cat.contains('snack') || slug.contains('snack') ||
-            cat.contains('choco') || cat.contains('biscuit') ||
-            cat.contains('munch') || name.contains('chips') ||
-            name.contains('namkeen') || name.contains('kurkure') ||
-            name.contains('lay') || name.contains('biscuit') ||
-            tags.any((t) => t.contains('snack') || t.contains('munch') || t.contains('biscuit') || t.contains('chips'));
-      }).toList();
+    final categories = ref.read(categoriesProvider).valueOrNull ?? [];
+    final groceryCategories = categories.where((c) {
+      if (c.parentId != null && c.parentId!.isNotEmpty) return false;
+      final slug = c.slug.toLowerCase().trim();
+      final name = c.name.toLowerCase().trim();
+      if (slug == 'restaurant-food' ||
+          slug == 'restaurant' ||
+          slug == 'cafe' ||
+          slug == 'fast-food-kitchen' ||
+          slug.contains('restaurant') ||
+          slug.contains('fastfood') ||
+          name.contains('restaurant') ||
+          name.contains('cafe')) {
+        return false;
+      }
+      return true;
+    }).toList();
+
+    if (_selectedFilterIndex > 0 && _selectedFilterIndex <= groceryCategories.length) {
+      final selectedCat = groceryCategories[_selectedFilterIndex - 1];
+      return groceryItems.where((p) => _isProductInCategory(p, selectedCat)).toList();
     }
 
     return groceryItems;
@@ -2129,39 +2105,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  // 6. Curated For You Filter Tabs (100% Exact Screenshot Match: Circular Icon Tabs + Underline)
+  // 6. Curated For You Filter Tabs (100% Real Grocery Categories ONLY)
   Widget _buildCuratedForYouFilter() {
-    final curations = [
+    final categoriesAsync = ref.watch(categoriesProvider);
+    final categories = categoriesAsync.valueOrNull ?? [];
+
+    final groceryCategories = categories.where((c) {
+      if (c.parentId != null && c.parentId!.isNotEmpty) return false;
+      final slug = c.slug.toLowerCase().trim();
+      final name = c.name.toLowerCase().trim();
+      if (slug == 'restaurant-food' ||
+          slug == 'restaurant' ||
+          slug == 'cafe' ||
+          slug == 'fast-food-kitchen' ||
+          slug.contains('restaurant') ||
+          slug.contains('fastfood') ||
+          name.contains('restaurant') ||
+          name.contains('cafe')) {
+        return false;
+      }
+      return true;
+    }).toList();
+
+    final curations = <Map<String, dynamic>>[
       {
         'title': 'All',
+        'isAll': true,
         'icon': Icons.storefront_rounded,
         'iconColor': AppDesignSystem.indigo500,
         'bg': AppDesignSystem.indigo50,
       },
-      {
-        'title': 'Flash Deals',
-        'icon': Icons.bolt_rounded,
-        'iconColor': AppDesignSystem.danger,
-        'bg': AppDesignSystem.rose50,
-      },
-      {
-        'title': 'Best Sellers',
-        'icon': Icons.emoji_events_rounded,
-        'iconColor': AppDesignSystem.warning,
-        'bg': AppDesignSystem.yellow50,
-      },
-      {
-        'title': 'Trending',
-        'icon': Icons.local_fire_department_rounded,
-        'iconColor': AppDesignSystem.orange500,
-        'bg': AppDesignSystem.orange50,
-      },
-      {
-        'title': 'Snacks',
-        'icon': Icons.fastfood_rounded,
-        'iconColor': AppDesignSystem.pink500,
-        'bg': AppDesignSystem.rose50,
-      },
+      ...groceryCategories.map((cat) {
+        final slug = cat.slug.toLowerCase().trim();
+        final asset = _categoryAssetMap[slug];
+        final imageUrl = (cat.imageUrl != null && cat.imageUrl!.startsWith('http')) ? cat.imageUrl : null;
+        return {
+          'title': cat.name,
+          'isAll': false,
+          'category': cat,
+          'imageUrl': imageUrl,
+          'asset': asset,
+          'icon': Icons.shopping_basket_rounded,
+          'iconColor': AppDesignSystem.primary,
+          'bg': AppDesignSystem.slate50,
+        };
+      }),
     ];
 
     return Padding(
@@ -2181,7 +2169,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           ),
           const SizedBox(height: 2),
           Text(
-            'Handpicked collections for every mood',
+            'Handpicked collections by category',
             style: GoogleFonts.inter(
               fontSize: Responsive.scaledFontSize(context, 12),
               fontWeight: FontWeight.w500,
@@ -2212,7 +2200,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   },
                   child: Column(
                     children: [
-                      // Circular Icon Avatar (Crisp Vector Graphic)
+                      // Circular Icon Avatar (Crisp Category Image or Vector Graphic)
                       Container(
                         width: 54,
                         height: 54,
@@ -2234,21 +2222,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               : null,
                         ),
                         child: Center(
-                          child: Icon(
-                            item['icon'] as IconData,
-                            color: item['iconColor'] as Color,
-                            size: 26,
-                          ),
+                          child: (item['isAll'] == true)
+                              ? Icon(
+                                  item['icon'] as IconData,
+                                  color: item['iconColor'] as Color,
+                                  size: 26,
+                                )
+                              : (item['imageUrl'] != null)
+                                  ? ClipOval(
+                                      child: CachedNetworkImage(
+                                        imageUrl: item['imageUrl'] as String,
+                                        width: 48,
+                                        height: 48,
+                                        fit: BoxFit.cover,
+                                        errorWidget: (_, __, ___) => (item['asset'] != null)
+                                            ? Image.asset(item['asset'] as String, width: 48, height: 48, fit: BoxFit.cover)
+                                            : Icon(item['icon'] as IconData, color: item['iconColor'] as Color, size: 24),
+                                      ),
+                                    )
+                                  : (item['asset'] != null)
+                                      ? ClipOval(
+                                          child: Image.asset(
+                                            item['asset'] as String,
+                                            width: 48,
+                                            height: 48,
+                                            fit: BoxFit.cover,
+                                            errorWidget: (_, __, ___) => Icon(item['icon'] as IconData, color: item['iconColor'] as Color, size: 24),
+                                          ),
+                                        )
+                                      : Icon(item['icon'] as IconData, color: item['iconColor'] as Color, size: 24),
                         ),
                       ),
                       const SizedBox(height: 6),
                       // Tab Title Text
-                      Text(
-                        item['title'] as String,
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11),
-                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                          color: isSelected ? AppDesignSystem.textPrimary : AppDesignSystem.textSecondary,
+                      SizedBox(
+                        width: 70,
+                        child: Text(
+                          item['title'] as String,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 10.5),
+                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                            color: isSelected ? AppDesignSystem.textPrimary : AppDesignSystem.textSecondary,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -2320,13 +2338,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       data: (allProducts) {
         final slivers = <Widget>[];
 
-        // If a specific curated tab is selected (e.g. Snacks), prioritize relevant categories
+        // If a specific category tab is selected, show only that category's shelf
         var targetCategories = groceryCategories;
-        if (_selectedFilterIndex == 4) {
-          // Snacks tab
-          targetCategories = groceryCategories.where((c) =>
-            c.slug.contains('snack') || c.slug.contains('biscuit') || c.slug.contains('choco') || c.slug.contains('pack')
-          ).toList();
+        if (_selectedFilterIndex > 0 && _selectedFilterIndex <= groceryCategories.length) {
+          targetCategories = [groceryCategories[_selectedFilterIndex - 1]];
         }
 
         for (final cat in targetCategories) {
@@ -2746,35 +2761,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Widget _buildInfiniteFeedHeader(int totalCount, {required bool isLoading}) {
-    String title;
-    String subtitle;
-    IconData icon;
+    String title = 'All Groceries & Essentials';
+    String subtitle = '10-15 Min Delivery from local dark store';
+    IconData icon = Icons.auto_awesome_rounded;
 
-    switch (_selectedFilterIndex) {
-      case 1:
-        title = '⚡ Flash Deals & Steals';
-        subtitle = 'Limited time mega discounts & hot offers';
-        icon = Icons.bolt_rounded;
-        break;
-      case 2:
-        title = '🏆 All-Time Best Sellers';
-        subtitle = 'Most loved groceries by FastKirana shoppers';
-        icon = Icons.emoji_events_rounded;
-        break;
-      case 3:
-        title = '🔥 Trending & Top Picks';
-        subtitle = 'Fastest moving daily essentials right now';
-        icon = Icons.local_fire_department_rounded;
-        break;
-      case 4:
-        title = '🍿 Snacks & Munchies Hub';
-        subtitle = 'Crispy chips, namkeen, biscuits & chocolates';
-        icon = Icons.fastfood_rounded;
-        break;
-      default:
-        title = 'All Groceries & Essentials';
-        subtitle = '10-15 Min Delivery from local dark store';
-        icon = Icons.auto_awesome_rounded;
+    final categories = ref.read(categoriesProvider).valueOrNull ?? [];
+    final groceryCategories = categories.where((c) {
+      if (c.parentId != null && c.parentId!.isNotEmpty) return false;
+      final slug = c.slug.toLowerCase().trim();
+      final name = c.name.toLowerCase().trim();
+      if (slug == 'restaurant-food' ||
+          slug == 'restaurant' ||
+          slug == 'cafe' ||
+          slug == 'fast-food-kitchen' ||
+          slug.contains('restaurant') ||
+          slug.contains('fastfood') ||
+          name.contains('restaurant') ||
+          name.contains('cafe')) {
+        return false;
+      }
+      return true;
+    }).toList();
+
+    if (_selectedFilterIndex > 0 && _selectedFilterIndex <= groceryCategories.length) {
+      final selectedCat = groceryCategories[_selectedFilterIndex - 1];
+      title = selectedCat.name;
+      subtitle = _getCategorySubtitle(selectedCat.name);
+      icon = Icons.shopping_basket_rounded;
     }
 
     return Row(

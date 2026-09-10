@@ -40,7 +40,6 @@ interface CategoryConfig {
   btnBg: string
   btnArrowColor: string
   bgEmoji: string
-  subcats: { id: string; name: string; emoji: string }[]
 }
 
 export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryClientProps) {
@@ -66,11 +65,6 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       btnBg: 'bg-[#029664] hover:bg-[#028054]',
       btnArrowColor: 'text-[#029664]',
       bgEmoji: '🥦',
-      subcats: [
-        { id: 'vegetables', name: 'Vegetables', emoji: '🥦' },
-        { id: 'fruits', name: 'Fresh Fruits', emoji: '🍎' },
-        { id: 'herbs-seasoning', name: 'Leafy Herbs', emoji: '🌿' },
-      ],
     },
     'dairy-breakfast': {
       title: 'Dairy & Breakfast',
@@ -90,11 +84,6 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       btnBg: 'bg-[#2563EB] hover:bg-[#1D4ED8]',
       btnArrowColor: 'text-[#2563EB]',
       bgEmoji: '🥛',
-      subcats: [
-        { id: 'milk', name: 'Milk & Curd', emoji: '🥛' },
-        { id: 'cheese-butter', name: 'Cheese & Paneer', emoji: '🧀' },
-        { id: 'breakfast', name: 'Breakfast', emoji: '🥣' },
-      ],
     },
     'snacks-munchies': {
       title: 'Snacks & Munchies',
@@ -114,12 +103,6 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       btnBg: 'bg-[#EA580C] hover:bg-[#D97706]',
       btnArrowColor: 'text-[#EA580C]',
       bgEmoji: '🍿',
-      subcats: [
-        { id: 'chips', name: 'Chips & Crisps', emoji: '🍟' },
-        { id: 'biscuits', name: 'Biscuits', emoji: '🍪' },
-        { id: 'chocolates', name: 'Chocolates', emoji: '🍫' },
-        { id: 'namkeen', name: 'Namkeen', emoji: '🥨' },
-      ],
     },
     'beverages': {
       title: 'Beverages',
@@ -139,11 +122,6 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       btnBg: 'bg-[#7C3AED] hover:bg-[#6D28D9]',
       btnArrowColor: 'text-[#7C3AED]',
       bgEmoji: '🥤',
-      subcats: [
-        { id: 'cold-drinks', name: 'Soft Drinks', emoji: '🥤' },
-        { id: 'juices', name: 'Juices & Soda', emoji: '🧃' },
-        { id: 'tea-coffee', name: 'Tea & Coffee', emoji: '☕' },
-      ],
     },
     'personal-care': {
       title: 'Personal Care',
@@ -163,11 +141,6 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       btnBg: 'bg-[#DB2777] hover:bg-[#BE185D]',
       btnArrowColor: 'text-[#DB2777]',
       bgEmoji: '🧴',
-      subcats: [
-        { id: 'bath', name: 'Bath & Soap', emoji: '🧼' },
-        { id: 'hair', name: 'Hair Care', emoji: '💇' },
-        { id: 'skin', name: 'Skin Care', emoji: '🧴' },
-      ],
     },
     'household': {
       title: 'Household Needs',
@@ -187,11 +160,6 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       btnBg: 'bg-[#0D9488] hover:bg-[#0F766E]',
       btnArrowColor: 'text-[#0D9488]',
       bgEmoji: '🧼',
-      subcats: [
-        { id: 'cleaners', name: 'Cleaners', emoji: '🧹' },
-        { id: 'repellents', name: 'Repellents', emoji: '🦟' },
-        { id: 'detergents', name: 'Detergents', emoji: '🧼' },
-      ],
     },
     'bakery-biscuits': {
       title: 'Bakery & Bread',
@@ -211,10 +179,6 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       btnBg: 'bg-[#EA580C] hover:bg-[#C2410C]',
       btnArrowColor: 'text-[#EA580C]',
       bgEmoji: '🥐',
-      subcats: [
-        { id: 'bread', name: 'Fresh Bread', emoji: '🍞' },
-        { id: 'cookies', name: 'Cookies', emoji: '🍪' },
-      ],
     },
     'atta-rice-dal': {
       title: 'Atta, Rice & Dal',
@@ -234,11 +198,6 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       btnBg: 'bg-[#B45309] hover:bg-[#9A3412]',
       btnArrowColor: 'text-[#B45309]',
       bgEmoji: '🌾',
-      subcats: [
-        { id: 'atta-flours', name: 'Atta Flours', emoji: '🌾' },
-        { id: 'rice-grains', name: 'Rice Grains', emoji: '🍚' },
-        { id: 'pulses-dals', name: 'Dals & Pulses', emoji: '🍛' },
-      ],
     },
     'ice-cream': {
       title: 'Ice Cream & Desserts',
@@ -258,10 +217,6 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       btnBg: 'bg-[#0284C7] hover:bg-[#0369A1]',
       btnArrowColor: 'text-[#0284C7]',
       bgEmoji: '🍦',
-      subcats: [
-        { id: 'cones', name: 'Cones & Bars', emoji: '🍦' },
-        { id: 'tubs', name: 'Family Tubs', emoji: '🍨' },
-      ],
     },
     'cafe': {
       title: 'FastKirana Café',
@@ -281,11 +236,6 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       btnBg: 'bg-[#D97706] hover:bg-[#B45309]',
       btnArrowColor: 'text-[#D97706]',
       bgEmoji: '☕',
-      subcats: [
-        { id: 'hot-beverage', name: 'Brews', emoji: '☕' },
-        { id: 'hot-bite', name: 'Snacks', emoji: '🥟' },
-        { id: 'sandwiches', name: 'Sandwiches', emoji: '🥪' },
-      ],
     },
   }
 
@@ -296,14 +246,13 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
 
     const lowerQuery = searchQuery.toLowerCase()
     return rootCats.filter((c) => {
-      const config = categoryConfigs[c.slug]
       const nameMatch = c.name.toLowerCase().includes(lowerQuery)
-      const subcatsMatch = (c.children || config?.subcats || []).some((sub) =>
+      const subcatsMatch = (c.children || []).some((sub) =>
         sub.name.toLowerCase().includes(lowerQuery)
       )
       return nameMatch || subcatsMatch
     })
-  }, [categories, searchQuery, categoryConfigs])
+  }, [categories, searchQuery])
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -382,7 +331,6 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
               btnBg: 'bg-primary hover:bg-primary/95 text-white',
               btnArrowColor: 'text-primary',
               bgEmoji: '🛒',
-              subcats: [],
             }
             const itemCount = c._count?.products ?? 0
             const isCafe = c.slug === 'cafe'
@@ -464,7 +412,16 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
                             className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-primary/10 hover:text-primary transition-colors border border-zinc-200/60 dark:border-zinc-700/40"
                             title={`ID: ${sub.id}`}
                           >
-                            <span>🏷️</span>
+                            {sub.imageUrl && (sub.imageUrl.startsWith('http') || sub.imageUrl.startsWith('/')) ? (
+                              <img
+                                src={sub.imageUrl}
+                                alt={sub.name}
+                                className="w-3.5 h-3.5 rounded-full object-cover shrink-0 select-none"
+                                onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none' }}
+                              />
+                            ) : (
+                              <span>🏷️</span>
+                            )}
                             <span className="truncate max-w-[90px]">{sub.name}</span>
                           </Link>
                         ))}

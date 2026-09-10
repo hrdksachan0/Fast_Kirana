@@ -395,6 +395,7 @@ function PremiumLateNightIcon({ className }: { className?: string }) {
 // ==========================================
 
 interface DealsCurationHubProps {
+  categories?: any[]
   flashDeals: any[]
   bestSellers: any[]
   topPicks: any[]
@@ -406,6 +407,7 @@ interface DealsCurationHubProps {
 }
 
 export function DealsCurationHub({
+  categories = [],
   flashDeals,
   bestSellers,
   topPicks,
@@ -415,7 +417,7 @@ export function DealsCurationHub({
   nightProducts,
   sortRules = {}
 }: DealsCurationHubProps) {
-  const [activeCuration, setActiveCuration] = useState<'all' | 'flash-deals' | 'best-in-town' | 'trending' | 'dynamic-craving'>('all')
+  const [activeCuration, setActiveCuration] = useState<string>('all')
   const [currentHour, setCurrentHour] = useState<number>(0) // default to 0 (Night Mode)
   const [mounted, setMounted] = useState(false)
 
@@ -509,7 +511,7 @@ export function DealsCurationHub({
 
   // Combine products for "All" curation dynamically to ensure they stay up-to-date
   const allProducts = useMemo(() => {
-    const combined = [...flashDeals, ...bestSellers, ...topPicks]
+    const combined = [...flashDeals, ...bestSellers, ...topPicks, ...breakfastProducts, ...lunchProducts, ...teaProducts, ...nightProducts]
     const seen = new Set()
     return combined.filter((p) => {
       if (!p || !p.id) return false
@@ -517,62 +519,96 @@ export function DealsCurationHub({
       seen.add(p.id)
       return true
     })
-  }, [flashDeals, bestSellers, topPicks])
+  }, [flashDeals, bestSellers, topPicks, breakfastProducts, lunchProducts, teaProducts, nightProducts])
 
-  // All curation options linked directly to backend admin (isFlashDeal, isBestSeller, isTopPick)
-  const curations = useMemo(() => [
-    {
-      id: 'all' as const,
-      title: 'All',
-      subtitle: '🔥 Mega collections',
-      icon: PremiumEssentialsIcon,
-      gradient: 'from-indigo-600 via-indigo-500 to-purple-600',
-      activeBorderColor: '#6366F1',
-      products: allProducts,
-      activeShadow: 'shadow-[0_12px_25px_-5px_rgba(99,102,241,0.22)]',
-      inactiveBg: 'bg-indigo-500/[0.02]',
-      inactiveHover: 'hover:border-indigo-500/20',
-    },
-    {
-      id: 'flash-deals' as const,
-      title: 'Flash Deals',
-      subtitle: '⚡ Instant discounts',
-      icon: PremiumLightningDealsIcon,
-      gradient: 'from-amber-500 via-orange-500 to-rose-500',
-      activeBorderColor: '#EF4444',
-      products: flashDeals,
-      activeShadow: 'shadow-[0_12px_25px_-5px_rgba(239,68,68,0.22)]',
-      inactiveBg: 'bg-orange-500/[0.02]',
-      inactiveHover: 'hover:border-orange-500/20',
-    },
-    {
-      id: 'best-in-town' as const,
-      title: 'Best Sellers',
-      subtitle: '🏆 Customer favorites',
-      icon: PremiumTrendingIcon,
-      gradient: 'from-blue-600 via-indigo-500 to-cyan-500',
-      activeBorderColor: '#3B82F6',
-      products: bestSellers,
-      activeShadow: 'shadow-[0_12px_25px_-5px_rgba(59,130,246,0.22)]',
-      inactiveBg: 'bg-blue-500/[0.02]',
-      inactiveHover: 'hover:border-blue-500/20',
-    },
-    {
-      id: 'trending' as const,
-      title: 'Trending',
-      subtitle: '🔥 Popular in town',
-      icon: PremiumTrendingFlameIcon,
-      gradient: 'from-orange-600 via-amber-500 to-red-500',
-      activeBorderColor: '#F97316',
-      products: topPicks,
-      activeShadow: 'shadow-[0_12px_25px_-5px_rgba(249,115,22,0.22)]',
-      inactiveBg: 'bg-orange-500/[0.02]',
-      inactiveHover: 'hover:border-orange-500/20',
-    },
-    {
-      ...dynamicCravingConfig
-    }
-  ], [allProducts, flashDeals, bestSellers, topPicks, dynamicCravingConfig])
+  // Filter root grocery categories (strictly no restaurant/cafe or subcategories)
+  const rootGroceryCategories = useMemo(() => {
+    return (categories || []).filter((c) => {
+      if (c.parentId) return false
+      const slug = (c.slug || '').toLowerCase().trim()
+      const name = (c.name || '').toLowerCase().trim()
+      if (
+        slug === 'restaurant' ||
+        slug === 'cafe' ||
+        slug === 'restaurant-food' ||
+        slug === 'fast-food-kitchen' ||
+        slug.includes('restaurant') ||
+        slug.includes('fastfood') ||
+        name.includes('restaurant') ||
+        name.includes('cafe')
+      ) {
+        return false
+      }
+      return true
+    })
+  }, [categories])
+
+  // All curation options: "All" + real grocery categories ONLY (No fake/mock curation tabs)
+  const curations = useMemo(() => {
+    const list: any[] = [
+      {
+        id: 'all',
+        title: 'All',
+        subtitle: '🔥 All Categories',
+        icon: PremiumEssentialsIcon,
+        emoji: '🛒',
+        imageUrl: null,
+        gradient: 'from-indigo-600 via-indigo-500 to-purple-600',
+        activeBorderColor: '#6366F1',
+        products: allProducts,
+        activeShadow: 'shadow-[0_12px_25px_-5px_rgba(99,102,241,0.22)]',
+        inactiveBg: 'bg-indigo-500/[0.02]',
+        inactiveHover: 'hover:border-indigo-500/20',
+      },
+    ]
+
+    const colorPalettes = [
+      { border: '#10B981', gradient: 'from-emerald-500 via-teal-500 to-green-600', icon: PremiumEssentialsIcon, emoji: '🥦' },
+      { border: '#3B82F6', gradient: 'from-blue-600 via-sky-500 to-indigo-600', icon: PremiumBreakfastIcon, emoji: '🥛' },
+      { border: '#F59E0B', gradient: 'from-amber-500 via-orange-500 to-yellow-600', icon: PremiumLunchIcon, emoji: '🌾' },
+      { border: '#EF4444', gradient: 'from-rose-500 via-pink-500 to-red-600', icon: PremiumSnacksIcon, emoji: '🍿' },
+      { border: '#06B6D4', gradient: 'from-cyan-500 via-teal-500 to-blue-600', icon: PremiumLightningDealsIcon, emoji: '🥤' },
+      { border: '#8B5CF6', gradient: 'from-purple-600 via-fuchsia-500 to-pink-600', icon: PremiumTrendingIcon, emoji: '🍨' },
+      { border: '#EC4899', gradient: 'from-pink-500 via-rose-500 to-amber-500', icon: PremiumTrendingFlameIcon, emoji: '🍫' },
+      { border: '#14B8A6', gradient: 'from-teal-500 via-emerald-500 to-cyan-600', icon: PremiumEssentialsIcon, emoji: '🧴' },
+      { border: '#6366F1', gradient: 'from-indigo-500 via-purple-500 to-blue-600', icon: PremiumEssentialsIcon, emoji: '🧼' },
+    ]
+
+    rootGroceryCategories.forEach((cat, idx) => {
+      const palette = colorPalettes[idx % colorPalettes.length]
+      const catId = (cat.id || '').toLowerCase()
+      const catSlug = (cat.slug || '').toLowerCase()
+      const catName = (cat.name || '').toLowerCase()
+
+      const catProducts = allProducts.filter((p) => {
+        const pCatId = (p.categoryId || p.category?.id || '').toLowerCase()
+        const pCatSlug = (p.category?.slug || '').toLowerCase()
+        const pParentId = (p.category?.parentId || '').toLowerCase()
+        const pCatName = (p.category?.name || '').toLowerCase()
+
+        if (pCatId === catId || pCatSlug === catSlug || pParentId === catId || pCatName === catName) return true
+        if (p.tags && Array.isArray(p.tags) && p.tags.some((t: string) => t.toLowerCase() === catSlug || t.toLowerCase() === catName)) return true
+        return false
+      })
+
+      list.push({
+        id: cat.slug || cat.id,
+        title: cat.name,
+        subtitle: `${cat.name} fresh picks`,
+        icon: palette.icon,
+        emoji: palette.emoji,
+        imageUrl: cat.imageUrl && (cat.imageUrl.startsWith('http') || cat.imageUrl.startsWith('/')) ? cat.imageUrl : null,
+        gradient: palette.gradient,
+        activeBorderColor: palette.border,
+        products: catProducts,
+        activeShadow: `shadow-[0_12px_25px_-5px_${palette.border}35]`,
+        inactiveBg: 'bg-zinc-500/[0.02]',
+        inactiveHover: 'hover:border-zinc-500/20',
+      })
+    })
+
+    return list
+  }, [allProducts, rootGroceryCategories])
 
   // Active curation data
   const currentCuration = useMemo(() => {
@@ -582,7 +618,7 @@ export function DealsCurationHub({
   // Group products of the active curation by their category dynamically
   const groupedProducts = useMemo(() => {
     const groups: Record<string, { categoryName: string; categorySlug: string; sortOrder: number; products: any[] }> = {}
-    currentCuration.products.forEach((product) => {
+    currentCuration.products.forEach((product: any) => {
       // Exclude Classic Cold Coffee and prepared restaurant dishes from Grocery home page sections
       const isClassicColdCoffee = /classic.?cold.?coffee/i.test(product.name || '')
       
@@ -597,42 +633,44 @@ export function DealsCurationHub({
         return
       }
 
-      let categoryName = product.category?.name || 'Other Essentials'
-      let categorySlug = product.category?.slug || ''
+      let categoryName = activeCuration !== 'all' ? currentCuration.title : (product.category?.name || 'Other Essentials')
+      let categorySlug = activeCuration !== 'all' ? currentCuration.id : (product.category?.slug || '')
       let sortOrder = product.category?.sortOrder ?? 999
 
-      const pName = (product.name || '').toLowerCase()
-      const pTags = Array.isArray(product.tags) ? product.tags.map((t: string) => t.toLowerCase()) : []
-      const isPersonalCareOrHousehold = ['personal-care', 'personal_care', 'skincare', 'household', 'beauty'].includes(categorySlug) ||
-        /face|facewash|skincare|mamaearth|lotion|cream|moisturizer|wash|oil|conditioner|serum|soap|shampoo|cleaner|detergent/i.test(pName)
-      const isChocolateOrBakery = /chocolate|cadbury|kitkat|cake|pastry|brownie|muffin|biscuit|cookie|bread|toast|rusk|dark fantasy|amul dark/i.test(pName)
-      const isIceCreamProduct = categorySlug === 'ice-cream' ||
-        categoryName.toLowerCase().includes('ice cream') ||
-        pTags.includes('ice-cream') ||
-        /ice.?cream|kulfi|chocobar|cornetto|cassatta|sundae|scoop|matka|kwality|havmor|vadilal|baskin|cup masti/i.test(pName)
+      if (activeCuration === 'all') {
+        const pName = (product.name || '').toLowerCase()
+        const pTags = Array.isArray(product.tags) ? product.tags.map((t: string) => t.toLowerCase()) : []
+        const isPersonalCareOrHousehold = ['personal-care', 'personal_care', 'skincare', 'household', 'beauty'].includes(categorySlug) ||
+          /face|facewash|skincare|mamaearth|lotion|cream|moisturizer|wash|oil|conditioner|serum|soap|shampoo|cleaner|detergent/i.test(pName)
+        const isChocolateOrBakery = /chocolate|cadbury|kitkat|cake|pastry|brownie|muffin|biscuit|cookie|bread|toast|rusk|dark fantasy|amul dark/i.test(pName)
+        const isIceCreamProduct = categorySlug === 'ice-cream' ||
+          categoryName.toLowerCase().includes('ice cream') ||
+          pTags.includes('ice-cream') ||
+          /ice.?cream|kulfi|chocobar|cornetto|cassatta|sundae|scoop|matka|kwality|havmor|vadilal|baskin|cup masti/i.test(pName)
 
-      // Ensure Ice Cream items (including Choco Brownie Sundae) stay in Ice Cream
-      if (isIceCreamProduct) {
-        categoryName = 'Ice Cream'
-        categorySlug = 'ice-cream'
-        sortOrder = 4
-      }
-      // Ensure cakes, pastries, brownies, muffins, and bakery items group cleanly into Bakery (excluding Ice Creams)
-      else if (/cake|pastry|brownie|muffin|bakery/i.test(pName) || pTags.some((t: string) => /cake|pastry|brownie|bakery/i.test(t))) {
-        categoryName = 'Bakery'
-        categorySlug = 'bakery'
-        sortOrder = 6
-      }
-      // Ensure all packaged beverages (Energy Campa, Coca Cola, Pepsi, Juices, etc.) group cleanly into Beverages section
-      else if (!isChocolateOrBakery && !isPersonalCareOrHousehold) {
-        const isBeverageProduct = categorySlug === 'beverages' || 
-          pTags.includes('beverages') || pTags.includes('drinks') || pTags.includes('soft-drink') ||
-          /thums|pepsi|coke|sprite|7up|limca|fanta|mirinda|\bdew\b|mountain.?dew|campa|hell|soda|cold|drink|soft|cola|juice|real|tropicana|frooti|maaza|slice|appy|paper|water|bisleri|kinley|aquafina|sting|red.?bull|monster|charged|coconut/i.test(pName)
+        // Ensure Ice Cream items (including Choco Brownie Sundae) stay in Ice Cream
+        if (isIceCreamProduct) {
+          categoryName = 'Ice Cream'
+          categorySlug = 'ice-cream'
+          sortOrder = 4
+        }
+        // Ensure cakes, pastries, brownies, muffins, and bakery items group cleanly into Bakery (excluding Ice Creams)
+        else if (/cake|pastry|brownie|muffin|bakery/i.test(pName) || pTags.some((t: string) => /cake|pastry|brownie|bakery/i.test(t))) {
+          categoryName = 'Bakery'
+          categorySlug = 'bakery'
+          sortOrder = 6
+        }
+        // Ensure all packaged beverages (Energy Campa, Coca Cola, Pepsi, Juices, etc.) group cleanly into Beverages section
+        else if (!isChocolateOrBakery && !isPersonalCareOrHousehold) {
+          const isBeverageProduct = categorySlug === 'beverages' || 
+            pTags.includes('beverages') || pTags.includes('drinks') || pTags.includes('soft-drink') ||
+            /thums|pepsi|coke|sprite|7up|limca|fanta|mirinda|\bdew\b|mountain.?dew|campa|hell|soda|cold|drink|soft|cola|juice|real|tropicana|frooti|maaza|slice|appy|paper|water|bisleri|kinley|aquafina|sting|red.?bull|monster|charged|coconut/i.test(pName)
 
-        if (isBeverageProduct) {
-          categoryName = 'Beverages'
-          categorySlug = 'beverages'
-          sortOrder = 5
+          if (isBeverageProduct) {
+            categoryName = 'Beverages'
+            categorySlug = 'beverages'
+            sortOrder = 5
+          }
         }
       }
 
@@ -747,16 +785,24 @@ export function DealsCurationHub({
               {/* Clean minimal organic circle */}
               <div
                 className={cn(
-                  'relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 border bg-white dark:bg-zinc-950',
+                  'relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 border bg-white dark:bg-zinc-950 overflow-hidden',
                   isActive
                     ? 'shadow-md border-solid scale-105'
                     : 'border-zinc-200/50 dark:border-zinc-800/40 hover:border-zinc-350 dark:hover:border-zinc-750 shadow-2xs'
                 )}
                 style={isActive ? { borderColor: c.activeBorderColor, boxShadow: `0 0 12px ${c.activeBorderColor}30` } : {}}
               >
-                {/* Premium Vector inline SVG icon */}
-                {c.icon && (
+                {c.imageUrl ? (
+                  <img
+                    src={c.imageUrl}
+                    alt={c.title}
+                    className="w-full h-full object-cover p-1 rounded-full relative z-10"
+                    onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none' }}
+                  />
+                ) : c.icon ? (
                   <c.icon className="w-[75%] h-[75%] transition-transform duration-500 group-hover:scale-108 relative z-10" />
+                ) : (
+                  <span className="text-xl leading-none select-none">{c.emoji || '🛍️'}</span>
                 )}
               </div>
 
@@ -810,11 +856,20 @@ export function DealsCurationHub({
               } : {}}
               suppressHydrationWarning
             >
-              {/* Small sized vector icon inside the pill */}
-              {c.icon && (
+              {/* Category image or vector icon inside the pill */}
+              {c.imageUrl ? (
+                <img
+                  src={c.imageUrl}
+                  alt={c.title}
+                  className="w-5 h-5 rounded-full object-cover shrink-0 select-none"
+                  onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none' }}
+                />
+              ) : c.icon ? (
                 <div className="w-5 h-5 shrink-0 flex items-center justify-center rounded-full bg-white dark:bg-zinc-950 p-0.5 border border-zinc-100 dark:border-zinc-800 shadow-2xs group-hover:scale-108 transition-transform">
                   <c.icon className="w-full h-full" />
                 </div>
+              ) : (
+                <span className="text-sm select-none">{c.emoji || '🛍️'}</span>
               )}
               <span>{c.title}</span>
             </button>

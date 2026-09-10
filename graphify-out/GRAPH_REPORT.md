@@ -1,55 +1,55 @@
 # Graph Report - Fastkirana  (2026-09-10)
 
 ## Corpus Check
-- 802 files · ~3,533,427 words
+- 802 files · ~3,534,198 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 7779 nodes · 13452 edges · 402 communities (327 shown, 75 thin omitted)
+- 7784 nodes · 13465 edges · 389 communities (312 shown, 77 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 350 edges (avg confidence: 0.52)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c044069e`
+- Built from commit: `102677b7`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - package:flutter/material.dart
 - admin_extended.py
-- prisma.ts
+- requireAdmin
 - auth
 - admin_products.dart
 - cn
 - orders/[id]/route.ts
 - coupons_screen.dart
-- api/products/route.ts
+- package:flutter/services.dart
 - home_screen.dart
 - utils.ts
 - design_system.dart
-- product-card.tsx
+- index.ts
 - order_tracking_screen.dart
-- coupons-tab.tsx
+- date-helpers.ts
 - add_item_search_sheet.dart
-- cart_screen.dart
+- dioProvider
 - fastapi-backend/routers/products.py
 - public.py
 - schemas.py
-- Restaurant
+- fastapi-backend/routers/restaurants.py
 - order.dart
 - product.dart
 - admin-dashboard.tsx
-- constants.ts
+- checkStoreOperatingStatus
 - checkout/page.tsx
 - fastapi-backend/routers/cart.py
 - routers/auth.py
-- Order
+- verify_razorpay_signature_in_payments
 - store-config.ts
 - The Toolkit
-- ConsumerState
-- search_screen.dart
+- cart_screen.dart
+- add_picker_product_modal.dart
 - compilerOptions
-- product_provider.dart
+- StatelessWidget
 - api/orders/route.ts
 - rider_location_service.dart
 - admin_orders_list.dart
@@ -63,7 +63,7 @@
 - components.json
 - FastKirana Refactoring — Complete Status & Plan
 - restaurant_utils.dart
-- ../core/theme/responsive.dart
+- package:fastkirana_flutter/core/theme/design_system.dart
 - order_edit_modal.dart
 - FastKirana — Antigravity Implementation Plan
 - lib/widgets/empty_state.dart
@@ -75,19 +75,19 @@
 - brandkit/SKILL.md
 - map_picker_screen.dart
 - skeletons.tsx
-- restaurant_card.dart
-- search-cache.ts
+- restaurants/[id]/route.ts
+- revalidateStorefront
 - product_repository.dart
 - package:dio/dio.dart
 - notification_service.dart
 - order_alarm_service.dart
-- orders_screen.dart
+- brand_button.dart
 - Generate Report
 - coupon.dart
 - contextual_brand_transition_screen.dart
 - Extract Flow
 - scripts
-- brand_button.dart
+- retry_wrapper.dart
 - devDependencies
 - websockets.py
 - category.dart
@@ -104,35 +104,35 @@
 - core/database.py
 - add_address_screen.dart
 - CORE DIRECTIVE: PREMIUM MOBILE APP IMAGE DIRECTION
-- triggerHaptic
+- app/page.tsx
 - restaurant_delivery_loading_screen.dart
 - models.py
 - public/manifest.json
 - FastKirana Refactoring Plan
-- delivery_location_screen.dart
+- doorstep_details_screen.dart
 - app/routers/addresses.py
 - settings.py
 - cafe_menu_screen.dart
-- package:flutter/services.dart
+- restaurant_card.dart
 - live_gps_route_card.dart
-- admin_dashboard.dart
+- ConsumerState
 - High-Agency Frontend Skill
 - picker_dashboard.dart
-- order_repository.dart
-- delivery_header.dart
+- ../../core/services/logger_service.dart
+- ../core/theme/responsive.dart
 - fastapi-backend/main.py
-- verify_razorpay_signature_in_payments
+- restaurant_menu_catalog_tab.dart
 - functions
 - Responsive Design
 - optimize_base64_image
 - app/routers/orders.py
-- doorstep_details_screen.dart
+- brand_input.dart
 - seed.ts
+- live_clock_badge.dart
 - floating_order_tracking_bar.dart
-- app_router.dart
 - 3. Custom Code That Deserves a Library
 - impeccable/SKILL.md
-- app/layout.tsx
+- triggerHaptic
 - DateTime?
 - next-auth.d.ts
 - order_success_screen.dart
@@ -148,14 +148,14 @@
 - privacy-policy/page.tsx
 - cart-fly-animation.tsx
 - proxy.ts
-- StatelessWidget
+- fcm.py
 - cart_provider.dart
 - Handle `generate`
 - Category
 - page_transitions.dart
 - eslint.config.mjs
 - routers/__init__.py
-- package:flutter_riverpod/flutter_riverpod.dart
+- otp_screen.dart
 - splash/splash_screen.dart
 - Design Audit
 - store_settings.dart
@@ -172,14 +172,14 @@
 - flash-deals-tab.tsx
 - restaurant_provider.dart
 - Product
+- offline_cart_sync_test.dart
 - package:flutter_riverpod/flutter_riverpod.dart
-- store_hub_provider.dart
 - postcss.config.mjs
 - prisma.config.ts
-- offline_banner.dart
+- order_repository.dart
 - nodemailer.d.ts
 - web-push.d.ts
-- storefront-client.tsx
+- Color?
 - Exception
 - User
 - sw.js
@@ -190,7 +190,7 @@
 - SKILL: Industrial Brutalism & Tactical Telemetry UI
 - FastKirana — Project Brain
 - animate.md
-- static const Color
+- order_detail_screen.dart
 - Appendix B - Canonical Sources (read these before reinventing)
 - Generate Report
 - Design System: Taste Standard
@@ -229,9 +229,9 @@
 - 8. ANTI-AI-SLOP RULES
 - middleware/auth.py
 - Persona-Based Design Testing
-- delivery.py
+- String?
 - Phase 3: Security Hardening
-- product-edit-modal.tsx
+- dart:async
 - APPENDICES - Real Source-Backed Reference Material
 - 11. REDESIGN PROTOCOL
 - 3. DEFAULT ARCHITECTURE & CONVENTIONS
@@ -252,7 +252,7 @@
 - 5. IMAGE COUNT & PAGE SLICING
 - Fastkirana Improvement Plan
 - Phase 1: Complete the Admin Dashboard Refactor
-- String?
+- prisma.ts
 - World-Class UI/UX Design System Skill (Web & Mobile)
 - 12. THE BLOCK LIBRARY (Contract - Implementations Land Here Iteratively)
 - 5. CONTEXT-AWARE PROACTIVITY
@@ -293,64 +293,64 @@
 - workflows/graphify.md
 - app/routers/cart.py
 - get_buy_again_products
-- orders_service.py
+- picker/page.tsx
 - festive-branding-grid.tsx
-- fcm.py
-- onboarding_screen.dart
+- Order
+- paytm_callback
 - auth_repository.dart
 - health_check
 - banner.dart
-- get_ai_demand_forecast
+- notifications_screen.dart
 - @fastkirana
 - FastKirana Flutter
 - dotenv
 - capture-pages.spec.ts
-- dioProvider
-- requireRole
+- app_errors.dart
+- orders_service.py
 - package:shared_preferences/shared_preferences.dart
 - State
-- compressImageClient
-- unserviceable_location_banner.dart
+- eta_widget.dart
+- orders_screen.dart
 - getLast10Digits
-- ../../core/services/logger_service.dart
+- admin-analytics.tsx
 - app/routers/restaurants.py
 - secure_storage_service.dart
 - product_card.dart
 - models/__init__.py
 - login_screen.dart
 - Cart?
-- restaurant_sales_report_tab.dart
+- product-edit-modal.tsx
 - date-fns
-- offline_cart_sync_test.dart
-- ../core/network/api_client.dart
-- class-variance-authority
+- admin-inventory-center.tsx
+- AsyncValue
+- doctor.md
 - Core Capabilities
 - Operate mode depth (and Read notes)
-- cart_repository.dart
+- admin-forecast.tsx
 - app_connectivity.dart
-- animated_cart_badge.dart
+- Diagnostic Scan
 - restaurant-orders-console.tsx
 - app/routers/banners.py
 - bolder.md
 - fastapi-backend/database.py
-- kot-print.ts
-- wishlist_provider.dart
+- get_ai_demand_forecast
+- 1. THE THREE DIALS (Core Configuration)
 - checkout/layout.tsx
 - conftest.py
-- deals-curation-hub.tsx
+- storefront-client.tsx
 - User
-- admin-banners.tsx
+- imagegen-frontend-web/SKILL.md
 - framer-motion
 - libphonenumber-js
 - store_hub.dart
-- admin-analytics.tsx
+- class-variance-authority
 - nodemailer
 - logger_service.dart
 - pg
 - sonner
 - schemas/product.py
 - next-auth
-- admin-inventory-center.tsx
+- _AdminProductsScreenState
 - papaparse
 - Canvas UI Rules & Best Practices
 - react-dom
@@ -372,22 +372,9 @@
 - web-push
 - xlsx
 - zustand
-- doctor.md
+- _ProductEditBottomSheetState
 - lru-cache
-- app_toast.dart
-- package:flutter/foundation.dart
 - cart/layout.tsx
-- admin-restaurant-report.tsx
-- live-carts-panel.tsx
-- eta_widget.dart
-- Diagnostic Scan
-- admin-sort-manager.tsx
-- hub-nav.tsx
-- category-edit-modal.tsx
-- media-library-modal.tsx
-- stats-cards.tsx
-- store-hubs-manager.tsx
-- bannersProvider
 - @upstash/redis
 
 ## God Nodes (most connected - your core abstractions)
@@ -417,79 +404,79 @@
 ## Import Cycles
 - None detected.
 
-## Communities (402 total, 75 thin omitted)
+## Communities (389 total, 77 thin omitted)
 
 ### Community 0 - "package:flutter/material.dart"
 Cohesion: 0.02
-Nodes (94): ../core/theme/design_system.dart, delivery_dashboard.dart, design_system.dart, AppTheme, _pageTransitionsTheme, AboutScreen, build, _divider (+86 more)
+Nodes (99): ../core/theme/design_system.dart, ../data/models/product.dart, ../data/repositories/product_repository.dart, design_system.dart, AppTheme, _pageTransitionsTheme, AboutScreen, build (+91 more)
 
 ### Community 1 - "admin_extended.py"
 Cohesion: 0.05
-Nodes (95): Banner, Product, admin_block_user(), admin_bulk_import_products(), admin_bulk_sort_products(), admin_bulk_update(), admin_create_banner(), admin_create_category() (+87 more)
+Nodes (96): Banner, Product, admin_block_user(), admin_bulk_import_products(), admin_bulk_sort_products(), admin_bulk_update(), admin_create_banner(), admin_create_category() (+88 more)
 
-### Community 2 - "prisma.ts"
+### Community 2 - "requireAdmin"
 Cohesion: 0.04
-Nodes (80): GET(), PATCH(), POST(), PUT(), DELETE(), GET(), POST(), PUT() (+72 more)
+Nodes (60): GET(), PATCH(), POST(), PUT(), GET(), computeNewValue(), DELETE(), generateBatchId() (+52 more)
 
 ### Community 3 - "auth"
-Cohesion: 0.05
-Nodes (49): WishlistPage(), EditRestaurantPage(), NewRestaurantPage(), AdminRestaurantsPage(), revalidate, DELETE(), dynamic, GET() (+41 more)
+Cohesion: 0.04
+Nodes (55): WishlistPage(), EditRestaurantPage(), NewRestaurantPage(), AdminRestaurantsPage(), revalidate, DELETE(), dynamic, GET() (+47 more)
 
 ### Community 4 - "admin_products.dart"
-Cohesion: 0.05
-Nodes (44): _addVariant, _buildCategoryChip, _buildGroceryCategoryChips, _buildMiniInput, _buildRestaurantOutletChips, _buildSectionTitle, _buildSegmentButton, _buildTagSwitchRow (+36 more)
+Cohesion: 0.04
+Nodes (45): _addVariant, _buildCategoryChip, _buildGroceryCategoryChips, _buildMiniInput, _buildProductAdminCard, _buildRestaurantOutletChips, _buildSectionTitle, _buildSegmentButton (+37 more)
 
 ### Community 5 - "cn"
-Cohesion: 0.05
-Nodes (50): RootLayout(), AccountDashboardProps, WishlistClient(), WishlistItem, RestaurantManager(), RestaurantManagerProps, Badge(), badgeVariants (+42 more)
+Cohesion: 0.04
+Nodes (59): RootLayout(), AccountDashboardProps, WishlistClient(), WishlistItem, RestaurantForm(), RestaurantFormProps, RestaurantManager(), RestaurantManagerProps (+51 more)
 
 ### Community 6 - "orders/[id]/route.ts"
-Cohesion: 0.09
-Nodes (27): GET(), POST(), POST(), DELETE(), GET(), PATCH(), PUT, STAFF_ROLES (+19 more)
+Cohesion: 0.11
+Nodes (24): GET(), POST(), POST(), DELETE(), PATCH(), PUT, STAFF_ROLES, uploadDeliveryPhoto() (+16 more)
 
 ### Community 7 - "coupons_screen.dart"
-Cohesion: 0.10
-Nodes (23): ../data/models/coupon.dart, AdminCouponsScreen, build, _applyCode, build, _buildCouponCard, _buildLoadingShimmer, _buildManualInputCard (+15 more)
+Cohesion: 0.08
+Nodes (28): ../data/models/coupon.dart, ../data/repositories/coupon_repository.dart, CouponRepository, AdminCouponsScreen, build, _applyCode, build, _buildCouponCard (+20 more)
 
-### Community 8 - "api/products/route.ts"
-Cohesion: 0.10
-Nodes (17): GET(), getFuzzyScore(), getLevenshteinDistance(), SYNONYM_DICTIONARY, POST(), OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID, apiReadLimiter (+9 more)
+### Community 8 - "package:flutter/services.dart"
+Cohesion: 0.03
+Nodes (55): ../../../core/services/battery_optimization_service.dart, _auth, authenticate, BiometricService, getAvailableBiometrics, isBiometricAvailable, AppToast, _show (+47 more)
 
 ### Community 9 - "home_screen.dart"
-Cohesion: 0.04
-Nodes (55): , ../categories/category_products_screen.dart, build, _buildActiveDeliveryTracker, _buildApiProductSections, _buildCategoryAvatarImage, _buildCategoryFallback, _buildCategoryToggle (+47 more)
+Cohesion: 0.02
+Nodes (122): , ../categories/category_products_screen.dart, empty_state.dart, widgets, build, _buildFilterPill, createState, _cuisineCategories (+114 more)
 
 ### Community 10 - "utils.ts"
 Cohesion: 0.03
-Nodes (105): CheckoutCouponInput(), CouponInputProps, CheckoutDeliverySelector(), DeliverySelectorProps, CheckoutOrderSummary(), OrderSummaryProps, ActiveDeliveryCard(), ActiveDeliveryCardProps (+97 more)
+Nodes (83): CheckoutCouponInput(), CouponInputProps, ActiveDeliveryCard(), ActiveDeliveryCardProps, itemVariants, CodPaymentModal(), CodPaymentModalProps, ModalStep (+75 more)
 
 ### Community 11 - "design_system.dart"
 Cohesion: 0.01
 Nodes (192): accent, accentDark, accentGradient, accentLight, amber400, amber50, amber600, amber700 (+184 more)
 
-### Community 12 - "product-card.tsx"
-Cohesion: 0.05
-Nodes (50): dynamic, revalidate, CategoryPage(), CategoryPageProps, revalidate, revalidate, SearchPage(), SearchPageProps (+42 more)
+### Community 12 - "index.ts"
+Cohesion: 0.04
+Nodes (62): dynamic, revalidate, CategoryPage(), CategoryPageProps, revalidate, CheckoutDeliverySelector(), DeliverySelectorProps, CheckoutOrderSummary() (+54 more)
 
 ### Community 13 - "order_tracking_screen.dart"
 Cohesion: 0.02
-Nodes (95): BitmapDescriptor?, activeColor, _audioPlayer, brandGreen, _buildCancelledOrderCard, _buildDeliveryDestinationCard, _buildGoogleMapsCard, _buildMapCircleBtn (+87 more)
+Nodes (99): BitmapDescriptor?, activeColor, _audioPlayer, brandGreen, build, _buildCancelledOrderCard, _buildDeliveryDestinationCard, _buildGoogleMapsCard (+91 more)
 
-### Community 14 - "coupons-tab.tsx"
-Cohesion: 0.29
-Nodes (6): Category, Coupon, CouponEditForm, CouponsTab(), CouponsTabProps, emptyNewCoupon
+### Community 14 - "date-helpers.ts"
+Cohesion: 0.04
+Nodes (47): DeliveryHeader(), DeliveryHeaderProps, LiveClock(), ProductPage(), AdminAlerts(), AdminAlertsProps, AlertItem, Counts (+39 more)
 
 ### Community 15 - "add_item_search_sheet.dart"
 Cohesion: 0.09
 Nodes (23): ../../../core/utils/app_toast.dart, AddItemSearchSheet, _AddItemSearchSheetState, _adminCatalogFilter, _buildAdminFilterChip, _buildCatalogSearchTab, _buildCustomItemTab, createState (+15 more)
 
-### Community 16 - "cart_screen.dart"
-Cohesion: 0.05
-Nodes (39): ../checkout/checkout_screen.dart, coupons_screen.dart, _appliedCoupon, _applyCoupon, brandGreen, _buildBillDetailsCard, _buildBillRow, _buildCancellationPolicy (+31 more)
+### Community 16 - "dioProvider"
+Cohesion: 0.08
+Nodes (26): dioProvider, _assignRider, _fetchAdminOrders, _fetchDeliveryRiders, _flushOfflineAdminQueue, _initNotificationSubscriptions, _sendRemoteKOT, _silentFetchAdminOrders (+18 more)
 
 ### Community 17 - "fastapi-backend/routers/products.py"
-Cohesion: 0.11
-Nodes (28): check_live_stock(), create_product(), delete_product(), generate_slug(), get_buy_again(), get_fuzzy_score(), get_levenshtein_distance(), get_product_details() (+20 more)
+Cohesion: 0.10
+Nodes (31): check_live_stock(), create_product(), delete_product(), generate_slug(), get_buy_again(), get_fuzzy_score(), get_levenshtein_distance(), get_product_details() (+23 more)
 
 ### Community 18 - "public.py"
 Cohesion: 0.20
@@ -497,11 +484,11 @@ Nodes (13): geocode_address(), get_geocode_key(), get_public_banners(), Any, Asy
 
 ### Community 19 - "schemas.py"
 Cohesion: 0.12
-Nodes (28): AddressCreate, AddressUpdate, CashDepositRequest, CategoryCreate, CategoryOut, CategoryUpdate, Config, CouponCreate (+20 more)
+Nodes (27): AddressCreate, AddressUpdate, CashDepositRequest, CategoryCreate, CategoryOut, CategoryUpdate, Config, CouponCreate (+19 more)
 
-### Community 20 - "Restaurant"
-Cohesion: 0.08
-Nodes (33): Restaurant, Any, AsyncSession, post, Validate a promo voucher code, computing flat or percentage discount amounts…, validate_coupon(), get_picker_orders(), AsyncSession (+25 more)
+### Community 20 - "fastapi-backend/routers/restaurants.py"
+Cohesion: 0.17
+Nodes (18): create_restaurant(), delete_restaurant(), generate_restaurant_slug(), get_restaurant_details(), get_restaurant_menu(), get_restaurants(), Any, AsyncSession (+10 more)
 
 ### Community 21 - "order.dart"
 Cohesion: 0.03
@@ -516,16 +503,16 @@ Cohesion: 0.04
 Nodes (52): address, availableEndTime, availableStartTime, bannerUrl, barcode, category, categoryId, CategoryInfo (+44 more)
 
 ### Community 23 - "admin-dashboard.tsx"
-Cohesion: 0.05
-Nodes (38): AdminAlerts(), AdminDashboardProps, BlockCustomerModal, CreateOrderModal, OrderTrackingModal, ReviewEditModal, TabType, AlertsTab() (+30 more)
+Cohesion: 0.03
+Nodes (85): AdminBulkUpdate(), AdminBulkUpdateProps, BatchHistory, Category, ChangePreview, Product, AdminDashboard(), AdminDashboardProps (+77 more)
 
-### Community 24 - "constants.ts"
-Cohesion: 0.05
-Nodes (48): dynamic, findRestaurantBySlug(), FoodRestaurantPage(), generateMetadata(), AdminBulkUpdate(), AdminBulkUpdateProps, BatchHistory, Category (+40 more)
+### Community 24 - "checkStoreOperatingStatus"
+Cohesion: 0.10
+Nodes (26): dynamic, findRestaurantBySlug(), FoodRestaurantPage(), generateMetadata(), CUISINES, FoodMarketplace(), FoodMarketplaceProps, SortOption (+18 more)
 
 ### Community 25 - "checkout/page.tsx"
-Cohesion: 0.06
-Nodes (50): GET(), CheckoutPage(), PaymentSelectionModal(), PaymentSelectionModalProps, SlideToOrder(), SlideToOrderProps, FreeMapPicker(), FreeMapPickerProps (+42 more)
+Cohesion: 0.07
+Nodes (48): GET(), CheckoutPage(), PaymentSelectionModal(), PaymentSelectionModalProps, FreeMapPicker(), FreeMapPickerProps, loadLeaflet(), LocationData (+40 more)
 
 ### Community 26 - "fastapi-backend/routers/cart.py"
 Cohesion: 0.21
@@ -535,37 +522,37 @@ Nodes (23): CartItem, add_to_cart(), clear_cart(), generate_id(), get_cart(), ge
 Cohesion: 0.06
 Nodes (69): Role, check_email(), direct_login(), DirectLoginRequest, generate_otp(), get_current_user(), get_me(), get_session() (+61 more)
 
-### Community 28 - "Order"
-Cohesion: 0.05
-Nodes (78): Order, OrderStatus, OrderType, PaymentMethod, PaymentStatus, str, get_admin_rider_cash_summary(), Real-time financial reconciliation & rider cash balances (+70 more)
+### Community 28 - "verify_razorpay_signature_in_payments"
+Cohesion: 0.12
+Nodes (22): create_razorpay_order_in_payments(), get_payment_methods(), get_razorpay_client(), Any, AsyncSession, get, post, Verify payment signature and update order status. Expected payload: {"orderId":… (+14 more)
 
 ### Community 29 - "store-config.ts"
-Cohesion: 0.08
-Nodes (19): AdminSettings(), AdminSettingsProps, SettingsTab(), SettingsTabProps, CAFE_FREE_DELIVERY_THRESHOLD, CAFE_PICKUP_ADDRESS, COMBINED_FREE_DELIVERY_THRESHOLD, DELIVERY_FEE (+11 more)
+Cohesion: 0.06
+Nodes (27): AdminBanners(), AdminBannersProps, FESTIVAL_TEMPLATES, GRADIENT_PRESETS, PromoBanner, AdminSettings(), AdminSettingsProps, BannersTab() (+19 more)
 
 ### Community 30 - "The Toolkit"
 Cohesion: 0.10
 Nodes (20): Animate complex properties, Assess What "Extraordinary" Means Here, For data-heavy interfaces, For functional UI, For performance-critical UI, For visual/marketing surfaces, Implement with Discipline, Interact with the device (+12 more)
 
-### Community 31 - "ConsumerState"
+### Community 31 - "cart_screen.dart"
 Cohesion: 0.03
-Nodes (106): ConsumerState, ConsumerStatefulWidget, DeliveryLoginScreen, AdminDashboard, _AdminDashboardState, _handleLogout, _loadSettings, _OperationsBottomSheet (+98 more)
+Nodes (91): ../checkout/checkout_screen.dart, ConsumerWidget, coupons_screen.dart, FadeSlideRoute, deliveryTierProvider, _loadSettings, _buildAdminOrderCard, _handleContinue (+83 more)
 
-### Community 32 - "search_screen.dart"
-Cohesion: 0.05
-Nodes (42): empty_state.dart, widgets, _buildFilterPill, createState, _cuisineCategories, dispose, RestaurantsListScreen, _searchController (+34 more)
+### Community 32 - "add_picker_product_modal.dart"
+Cohesion: 0.07
+Nodes (30): class, AddPickerProductModal, _AddPickerProductModalState, _barcodeController, brandGreen, brandOrange, _commonUnits, createState (+22 more)
 
 ### Community 33 - "compilerOptions"
 Cohesion: 0.06
 Nodes (33): check_all_products.ts, dom, dom.iterable, esnext, **/*.mts, .next/dev, .next/dev/types/**/*.ts, next-env.d.ts (+25 more)
 
-### Community 34 - "product_provider.dart"
-Cohesion: 0.04
-Nodes (52): category_products_screen.dart, ../data/models/category.dart, ProductRepository, bgMain, brandGreen, build, _buildMenuFilterChip, createState (+44 more)
+### Community 34 - "StatelessWidget"
+Cohesion: 0.06
+Nodes (37): BoxShape, AdminBannersScreen, _StatusDropdownItem, _ImageShowcase, OutletTag, PriceRow, ProductBadge, ProductCardSkeleton (+29 more)
 
 ### Community 35 - "api/orders/route.ts"
-Cohesion: 0.07
-Nodes (38): AdminPage(), revalidate, GET(), checkAdmin(), GET(), PATCH(), POST(), dynamic (+30 more)
+Cohesion: 0.10
+Nodes (25): AdminPage(), revalidate, GET(), checkAdmin(), GET(), PATCH(), POST(), GET() (+17 more)
 
 ### Community 36 - "rider_location_service.dart"
 Cohesion: 0.08
@@ -573,7 +560,7 @@ Nodes (24): _activeChannels, _activeOrderId, _activeReadableId, _activeRelatedOr
 
 ### Community 37 - "admin_orders_list.dart"
 Cohesion: 0.03
-Nodes (66): ../common/widgets/battery_optimization_dialog.dart, ../../core/services/offline_sync_service.dart, ../../core/services/order_alarm_service.dart, ../delivery/widgets/connectivity_banner.dart, AdminOrdersScreen, _AdminOrdersScreenState, _allOrders, _audioPlayer (+58 more)
+Nodes (64): ../common/widgets/battery_optimization_dialog.dart, ../../core/services/offline_sync_service.dart, ../../core/services/order_alarm_service.dart, ../delivery/widgets/connectivity_banner.dart, _allOrders, _audioPlayer, _availableRiders, build (+56 more)
 
 ### Community 38 - "FastKirana Production Deployment Guide"
 Cohesion: 0.07
@@ -597,11 +584,11 @@ Nodes (30): @JsonSerializable, _, appliedCouponCode, Cart, cartId, CartItem, cou
 
 ### Community 43 - "voice_search_sheet.dart"
 Cohesion: 0.12
-Nodes (17): build, createState, dispose, _finishWithResult, _initAndStartSpeech, initState, _isListening, _liveTranscript (+9 more)
+Nodes (15): build, createState, dispose, _finishWithResult, _initAndStartSpeech, initState, _isListening, _liveTranscript (+7 more)
 
 ### Community 44 - "admin-csv-import.tsx"
-Cohesion: 0.10
-Nodes (20): AdminCsvImport(), AdminCsvImportProps, CAFE_TEMPLATE_HEADERS, CAFE_TEMPLATE_ROWS, GROCERY_TEMPLATE_HEADERS, GROCERY_TEMPLATE_ROWS, ImportResult, parseCSV() (+12 more)
+Cohesion: 0.11
+Nodes (19): AdminCsvImport(), AdminCsvImportProps, CAFE_TEMPLATE_HEADERS, CAFE_TEMPLATE_ROWS, GROCERY_TEMPLATE_HEADERS, GROCERY_TEMPLATE_ROWS, ImportResult, parseCSV() (+11 more)
 
 ### Community 45 - "components.json"
 Cohesion: 0.09
@@ -615,9 +602,9 @@ Nodes (47): 5.1 — `src/app/checkout/page.tsx` (1,918 → ~400 lines), 5.2 — 
 Cohesion: 0.06
 Nodes (35): address, asRestaurantLocation, balUdyanLocation, categorySlug, darkstoreLocation, false, getOutletLocation, getOutletName (+27 more)
 
-### Community 48 - "../core/theme/responsive.dart"
-Cohesion: 0.05
-Nodes (41): ../core/theme/responsive.dart, AddressCard, build, fullAddress, isSelected, label, onTap, actionLabel (+33 more)
+### Community 48 - "package:fastkirana_flutter/core/theme/design_system.dart"
+Cohesion: 0.08
+Nodes (23): AddressCard, build, fullAddress, isSelected, label, onTap, actionLabel, build (+15 more)
 
 ### Community 49 - "order_edit_modal.dart"
 Cohesion: 0.07
@@ -633,7 +620,7 @@ Nodes (21): bgTint, build, ctaColor, ctaLabel, emoji, emptyCart, EmptyState, ico
 
 ### Community 52 - "restaurant_dashboard.dart"
 Cohesion: 0.03
-Nodes (75): ../../core/network/network_retry_helper.dart, _activeTab, _assignedRestaurantId, _audioPlayer, _autoRefreshTimer, _availableOutlets, bgMain, brandAmber (+67 more)
+Nodes (77): ../../core/network/network_retry_helper.dart, _activeTab, _assignedRestaurantId, _audioPlayer, _autoRefreshTimer, _availableOutlets, bgMain, brandAmber (+69 more)
 
 ### Community 53 - "address.dart"
 Cohesion: 0.09
@@ -656,40 +643,40 @@ Cohesion: 0.05
 Nodes (43): 1. Logo Cover, 1. Monogram + Meaning, 2 × 3 REFERENCE-STYLE LAYOUT, 2. Logo Construction, 2. Product Action, 3. Digital Application, 3. Metaphor Fusion, 4. Brand Essence (+35 more)
 
 ### Community 58 - "map_picker_screen.dart"
-Cohesion: 0.07
-Nodes (29): doorstep_details_screen.dart, _areaName, build, _calculateDistance, createState, _currentLat, _currentLng, dispose (+21 more)
+Cohesion: 0.06
+Nodes (31): doorstep_details_screen.dart, _areaName, build, _calculateDistance, createState, _currentLat, _currentLng, dispose (+23 more)
 
 ### Community 59 - "skeletons.tsx"
 Cohesion: 0.22
 Nodes (11): AccountSkeleton(), AdminSkeleton(), CafeSkeleton(), CartSkeleton(), CategorySkeleton(), CheckoutSkeleton(), HomepageSkeleton(), OperationalSkeleton() (+3 more)
 
-### Community 60 - "restaurant_card.dart"
-Cohesion: 0.08
-Nodes (25): ../core/config/app_config.dart, ../data/models/restaurant.dart, ../data/models/store_settings.dart, AppUpdateDialog, build, checkAndShow, _handleUpdate, _hasPromptedThisSession (+17 more)
+### Community 60 - "restaurants/[id]/route.ts"
+Cohesion: 0.12
+Nodes (22): PATCH(), DELETE(), GET(), PATCH(), POST(), buildSettingsMap(), checkIsStoreOpen(), DEFAULT_SETTINGS (+14 more)
 
-### Community 61 - "search-cache.ts"
-Cohesion: 0.15
-Nodes (18): GET(), GET(), POST(), DELETE(), PATCH(), DELETE(), PATCH(), GET() (+10 more)
+### Community 61 - "revalidateStorefront"
+Cohesion: 0.06
+Nodes (40): DELETE(), POST(), PUT(), dynamic, POST(), POST(), slugify(), POST() (+32 more)
 
 ### Community 62 - "product_repository.dart"
 Cohesion: 0.06
 Nodes (30): _cachedCategories, _cachedProducts, _cacheKey, _cacheTTLMinutes, _categoryAliases, dio, _diskCategoriesKey, _diskCategoryTimestampKey (+22 more)
 
 ### Community 63 - "package:dio/dio.dart"
-Cohesion: 0.07
-Nodes (28): Completer, Dio, ApiException, dio, _isRefreshingToken, message, null, _refreshCompleter (+20 more)
+Cohesion: 0.08
+Nodes (27): Completer, Dio, ApiException, dio, _isRefreshingToken, message, null, _refreshCompleter (+19 more)
 
 ### Community 64 - "notification_service.dart"
 Cohesion: 0.05
-Nodes (36): AndroidFlutterLocalNotificationsPlugin, @pragma, dart:typed_data, body, clearAllNotifications, data, firebaseMessagingBackgroundHandler, getFcmToken (+28 more)
+Nodes (43): AndroidFlutterLocalNotificationsPlugin, @pragma, dart:typed_data, body, clearAllNotifications, data, firebaseMessagingBackgroundHandler, getFcmToken (+35 more)
 
 ### Community 65 - "order_alarm_service.dart"
 Cohesion: 0.08
 Nodes (23): AudioPlayer, ../data/models/order.dart, AdminNotificationService, fireAdminWhatsAppAlert, formatOrderWhatsAppMessage, formatRestaurantKOTMessage, sendSubstitutionWhatsApp, _activeOrderId (+15 more)
 
-### Community 66 - "orders_screen.dart"
-Cohesion: 0.06
-Nodes (39): ../cart/cart_screen.dart, FadeSlideRoute, _handleContinue, _buildMenuTab, _buildRestaurantDishItem, _buildReviewsTab, build, build (+31 more)
+### Community 66 - "brand_button.dart"
+Cohesion: 0.11
+Nodes (17): BorderRadius?, double?, backgroundColor, borderRadius, BrandButton, build, fontSize, fullWidth (+9 more)
 
 ### Community 67 - "Generate Report"
 Cohesion: 0.29
@@ -711,9 +698,9 @@ Nodes (7): Extract Flow, Step 1: Discover the Design System, Step 2: Identify Pa
 Cohesion: 0.11
 Nodes (17): name, prisma, seed, private, scripts, build, dev, flutter (+9 more)
 
-### Community 72 - "brand_button.dart"
-Cohesion: 0.07
-Nodes (26): BorderRadius?, Color?, backgroundColor, borderRadius, BrandButton, build, fontSize, fullWidth (+18 more)
+### Community 72 - "retry_wrapper.dart"
+Cohesion: 0.11
+Nodes (17): EdgeInsets?, build, child, error, isLoading, onRetry, retryLabel, RetryWrapper (+9 more)
 
 ### Community 73 - "devDependencies"
 Cohesion: 0.12
@@ -733,15 +720,15 @@ Nodes (26): activeOrdersCount, address, bannerUrl, city, cuisineTags, deliveryTi
 
 ### Community 77 - "responsive.dart"
 Cohesion: 0.05
-Nodes (36): BuildContext, EdgeInsetsGeometry, backgroundColor, bannerHeight, bottomPadding, build, categoryCardAspectRatio, child (+28 more)
+Nodes (37): BuildContext, EdgeInsetsGeometry, backgroundColor, bannerHeight, bottomPadding, build, categoryCardAspectRatio, child (+29 more)
 
 ### Community 78 - "location_service.dart"
 Cohesion: 0.06
 Nodes (34): area, baseFee, cart, city, deliveryFee, DeliveryTierInfo, distanceKm, feeDescription (+26 more)
 
 ### Community 79 - "category_products_screen.dart"
-Cohesion: 0.06
-Nodes (32): ../data/models/product.dart, ../data/repositories/product_repository.dart, _buildFilterPill, category, createState, dispose, initState, _isSearchActive (+24 more)
+Cohesion: 0.05
+Nodes (43): CategoriesScreen, category_products_screen.dart, ../core/routes/page_transitions.dart, ../data/models/category.dart, build, _categories, CategoriesScreen, _buildReferenceCategoryCard (+35 more)
 
 ### Community 80 - "checkout_screen.dart"
 Cohesion: 0.03
@@ -772,24 +759,24 @@ Cohesion: 0.15
 Nodes (13): Settings, get_db(), get, root(), Category, Base, Product, Base (+5 more)
 
 ### Community 87 - "add_address_screen.dart"
-Cohesion: 0.04
-Nodes (57): ../data/models/address.dart, ../data/repositories/address_repository.dart, AddressRepository, _addressTypes, _areaController, brandGreen, build, _buildAddressTypeSelector (+49 more)
+Cohesion: 0.05
+Nodes (38): _addressTypes, _areaController, brandGreen, build, _buildAddressTypeSelector, _buildInputField, _buildInteractiveMapPinboard, _buildStickyBottomBar (+30 more)
 
 ### Community 88 - "CORE DIRECTIVE: PREMIUM MOBILE APP IMAGE DIRECTION"
 Cohesion: 0.06
 Nodes (34): 10. DEVICE MOCKUP FRAME RULE, 11. ONBOARDING FLOW RULE, 12. FIRST SCREEN CLEANLINESS RULE, 13. SAFE AREA AND SYSTEM REGION RULE, 14. NAVIGATION RULE, 15. CLEAN LAYOUT RULE, 16. CREATIVE IMAGE DIRECTION RULE, 17. BACKGROUND TEXTURE AND SURFACE RULE (+26 more)
 
-### Community 89 - "triggerHaptic"
-Cohesion: 0.09
-Nodes (32): UpiQrModal(), loadQrData(), UpiQrModalProps, Error(), AdminForecast(), AdminForecastProps, ForecastItem, CUISINES (+24 more)
+### Community 89 - "app/page.tsx"
+Cohesion: 0.18
+Nodes (19): getCachedBanners, getCachedBestSellers, getCachedBreakfastDeals, getCachedCategories, getCachedCategorySortRules, getCachedFlashDeals, getCachedLunchDeals, getCachedManualTopPicks (+11 more)
 
 ### Community 90 - "restaurant_delivery_loading_screen.dart"
 Cohesion: 0.10
-Nodes (20): autoDismissDuration, build, _buildFoodIllustration, createState, _CuteFoodVectorPainter, dispose, _fadeAnim, _fadeController (+12 more)
+Nodes (20): autoDismissDuration, build, _buildFoodIllustration, createState, dispose, _fadeAnim, _fadeController, _floatAnim (+12 more)
 
 ### Community 91 - "models.py"
-Cohesion: 0.16
-Nodes (22): Cart, CashDepositTransaction, Coupon, DarkStore, FcmToken, InventoryLog, OrderItem, OtpToken (+14 more)
+Cohesion: 0.07
+Nodes (48): Cart, CashDepositTransaction, Coupon, DarkStore, FcmToken, InventoryLog, OrderItem, OtpToken (+40 more)
 
 ### Community 92 - "public/manifest.json"
 Cohesion: 0.12
@@ -799,9 +786,9 @@ Nodes (16): background_color, categories, description, display, icons, id, name,
 Cohesion: 0.06
 Nodes (34): 1.1 Custom Debounce → `use-debounce`, 1.2 CSV Parsing → `papaparse`, 1.3 Custom In-memory Cache → `lru-cache`, 1.4 Date/Time Utilities → Consolidate with `date-fns`, 2.1 Split `admin-dashboard.tsx` (7,444 lines → ~10 files), 2.2 Extract Sub-components from Heavy Pages, 3.1 Map Components → `@react-google-maps/api`, 3.2 Phone Number Parsing → `libphonenumber-js` (+26 more)
 
-### Community 94 - "delivery_location_screen.dart"
-Cohesion: 0.05
-Nodes (36): Address?, ../../../core/services/battery_optimization_service.dart, _Address, BatteryOptimizationDialog, build, _buildStepRow, onDismissed, showIfNecessary (+28 more)
+### Community 94 - "doorstep_details_screen.dart"
+Cohesion: 0.03
+Nodes (99): Address?, ../data/models/address.dart, ../data/repositories/address_repository.dart, _Address, AddressRepository, build, _buildScrollableAddressSection, _fetchAndApplyCurrentLocation (+91 more)
 
 ### Community 95 - "app/routers/addresses.py"
 Cohesion: 0.18
@@ -813,19 +800,19 @@ Nodes (14): check_is_store_open(), check_nearest_store(), get_ist_time(), get_pu
 
 ### Community 97 - "cafe_menu_screen.dart"
 Cohesion: 0.03
-Nodes (66): _activeCategoryTag, build, _buildBannerImage, _buildCategories, _buildCategoryThumbnail, _buildDarkstoreRecommendationsSection, _buildDishImage, _buildFallbackBanner (+58 more)
+Nodes (58): _activeCategoryTag, _buildBannerImage, _buildCategories, _buildCategoryThumbnail, _buildDishImage, _buildFallbackBanner, _buildFallbackLogo, _buildLocalAssetOrEmoji (+50 more)
 
-### Community 98 - "package:flutter/services.dart"
-Cohesion: 0.04
-Nodes (46): cart_conflict_dialog.dart, ../core/utils/dish_timing.dart, ../core/utils/restaurant_utils.dart, _auth, authenticate, BiometricService, getAvailableBiometrics, isBiometricAvailable (+38 more)
+### Community 98 - "restaurant_card.dart"
+Cohesion: 0.15
+Nodes (12): ../data/models/restaurant.dart, _buildDefaultFallback, _buildImagePlaceholder, _buildLocalOrFallbackImage, _buildRestaurantImage, createState, _isFavorite, onTap (+4 more)
 
 ### Community 99 - "live_gps_route_card.dart"
-Cohesion: 0.10
-Nodes (20): dart:ui, build, _countdownTimer, createState, destinationAddress, dispose, _formatCountdown, initState (+12 more)
+Cohesion: 0.11
+Nodes (18): dart:ui, build, _countdownTimer, createState, destinationAddress, dispose, _formatCountdown, initState (+10 more)
 
-### Community 100 - "admin_dashboard.dart"
-Cohesion: 0.06
-Nodes (31): admin_orders_list.dart, admin_products.dart, _buildDockItem, _buildOutletTile, createState, _currentIndex, _handleBackPress, _initialized (+23 more)
+### Community 100 - "ConsumerState"
+Cohesion: 0.04
+Nodes (69): admin_orders_list.dart, admin_products.dart, ConsumerState, ConsumerStatefulWidget, delivery_dashboard.dart, DeliveryLoginScreen, AdminDashboard, _AdminDashboardState (+61 more)
 
 ### Community 101 - "High-Agency Frontend Skill"
 Cohesion: 0.06
@@ -835,21 +822,21 @@ Nodes (30): 10. FINAL PRE-FLIGHT CHECK, 1. ACTIVE BASELINE CONFIGURATION, 2. DEF
 Cohesion: 0.06
 Nodes (33): ../common/order_edit_modal.dart, _autoRefreshTimer, bgMain, brandGreen, brandOrange, _buildLiveClockMetric, _buildMetric, _buildPickerOrderCard (+25 more)
 
-### Community 103 - "order_repository.dart"
-Cohesion: 0.05
-Nodes (35): ../../core/services/admin_authorization.dart, dart:convert, dart:io, BatteryOptimizationService, markDismissed, _prefKeyDismissed, requestExemption, shouldShowPrompt (+27 more)
+### Community 103 - "../../core/services/logger_service.dart"
+Cohesion: 0.07
+Nodes (28): ../../core/services/logger_service.dart, clearCache, createAddress, defaultAddressWithPhone, defaultGhatampurAddress, deleteAddress, dio, getAddresses (+20 more)
 
-### Community 104 - "delivery_header.dart"
-Cohesion: 0.10
-Nodes (20): activeTab, build, DeliveryHeader, _greeting, _greetingText, isDarkMode, isOnline, onBack (+12 more)
+### Community 104 - "../core/theme/responsive.dart"
+Cohesion: 0.04
+Nodes (56): cart_conflict_dialog.dart, ../core/theme/responsive.dart, ../core/utils/dish_timing.dart, ../core/utils/restaurant_utils.dart, build, ConnectivityBanner, onRetry, _buildQualityRow (+48 more)
 
 ### Community 105 - "fastapi-backend/main.py"
 Cohesion: 0.24
 Nodes (9): exception_handler, add_process_time_header(), global_exception_handler(), health_check(), Exception, get, Request, root() (+1 more)
 
-### Community 106 - "verify_razorpay_signature_in_payments"
-Cohesion: 0.12
-Nodes (22): create_razorpay_order_in_payments(), get_payment_methods(), get_razorpay_client(), Any, AsyncSession, get, post, Verify payment signature and update order status. Expected payload: {"orderId":… (+14 more)
+### Community 106 - "restaurant_menu_catalog_tab.dart"
+Cohesion: 0.04
+Nodes (44): build, createState, _currentPage, dispose, _navigateToLogin, _pageController, _pages, bgMain (+36 more)
 
 ### Community 107 - "functions"
 Cohesion: 0.07
@@ -867,21 +854,21 @@ Nodes (10): ImageBase64Payload, optimize_base64_image(), optimize_image_bytes(),
 Cohesion: 0.16
 Nodes (18): CurrentUser, get_current_user(), Order, OrderItem, Base, get_order_details(), get_user_orders(), place_order() (+10 more)
 
-### Community 111 - "doorstep_details_screen.dart"
-Cohesion: 0.08
-Nodes (24): areaName, _buildCategoryPill, _buildInputField, _buildInstructionChip, createState, _customLabelController, dispose, DoorstepDetailsScreen (+16 more)
+### Community 111 - "brand_input.dart"
+Cohesion: 0.15
+Nodes (12): BrandInput, build, controller, hint, keyboardType, label, obscure, onSuffixTap (+4 more)
 
 ### Community 112 - "seed.ts"
 Cohesion: 0.33
 Nodes (4): adapter, pool, prisma, NOTE: We do NOT delete any products, categories, or orders.
 
-### Community 113 - "floating_order_tracking_bar.dart"
-Cohesion: 0.07
-Nodes (29): ../core/services/supabase_service.dart, dart:async, dart:math, ../data/repositories/order_repository.dart, NetworkRetryHelper, bottomOffset, createState, dispose (+21 more)
+### Community 113 - "live_clock_badge.dart"
+Cohesion: 0.13
+Nodes (15): backgroundColor, borderColor, build, createState, dispose, fontSize, _formatTime, iconColor (+7 more)
 
-### Community 114 - "app_router.dart"
-Cohesion: 0.06
-Nodes (32): AppRouter, generateRoute, navigatorKey, AppException, auth, code, color, isRetryable (+24 more)
+### Community 114 - "floating_order_tracking_bar.dart"
+Cohesion: 0.04
+Nodes (48): ../core/services/location_service.dart, AppRouter, generateRoute, navigatorKey, bottomOffset, createState, FloatingCartBar, _FloatingCartBarState (+40 more)
 
 ### Community 115 - "3. Custom Code That Deserves a Library"
 Cohesion: 0.08
@@ -891,9 +878,9 @@ Nodes (23): 1. App Scale Overview, 2. Heaviest Files (Lines of Code), 3.10 State
 Cohesion: 0.07
 Nodes (26): Craft (deprecated alias), Impeccable Documenter, Input Contract, Output Contract, Workflow, Checks, in order, Disposition, Impeccable Finish Reviewer (+18 more)
 
-### Community 117 - "app/layout.tsx"
-Cohesion: 0.06
-Nodes (75): POST(), CartPage(), jakarta, metadata, viewport, CartConflictDialog(), CartDrawer(), CartStickyBar() (+67 more)
+### Community 117 - "triggerHaptic"
+Cohesion: 0.05
+Nodes (87): POST(), CartPage(), Error(), jakarta, metadata, viewport, CartConflictDialog(), CartDrawer() (+79 more)
 
 ### Community 119 - "next-auth.d.ts"
 Cohesion: 0.33
@@ -904,8 +891,8 @@ Cohesion: 0.06
 Nodes (34): ConfettiController, _animController, _buildDetailRow, _buildProgressLine, _buildProgressStep, _buttonsFadeAnim, _buttonsSlideAnim, _checkScaleAnim (+26 more)
 
 ### Community 121 - "add_restaurant_product_modal.dart"
-Cohesion: 0.03
-Nodes (80): CategoriesScreen, class, AdminProductsScreen, _AdminProductsScreenState, build, AddRestaurantProductModal, _AddRestaurantProductModalState, build (+72 more)
+Cohesion: 0.06
+Nodes (31): AddRestaurantProductModal, _AddRestaurantProductModalState, _buildFoodTypeOption, createState, _descriptionController, dispose, _fetchRestaurantSections, _formKey (+23 more)
 
 ### Community 122 - "live.md"
 Cohesion: 0.06
@@ -923,13 +910,13 @@ Nodes (22): Assess Onboarding Needs, Context Over Ceremony, Contextual Help, Des
 Cohesion: 0.14
 Nodes (9): Bundle, ByteArray, MainActivity, RecognitionListener, FlutterActivity, FlutterEngine, Intent, MethodChannel (+1 more)
 
-### Community 133 - "StatelessWidget"
-Cohesion: 0.06
-Nodes (39): BoxShape, double?, ResponsiveContainer, _StatusDropdownItem, RestaurantMenuManagementScreen, _ImageShowcase, OutletTag, PriceRow (+31 more)
+### Community 133 - "fcm.py"
+Cohesion: 0.16
+Nodes (17): generate_id(), get_user_id(), Any, AsyncSession, post, Register or update an FCM device token for the authenticated user., Send a test or targeted push notification to a user or specific token., register_fcm_token() (+9 more)
 
 ### Community 134 - "cart_provider.dart"
 Cohesion: 0.07
-Nodes (28): Cart? get, ChangeNotifier, ../data/models/cart.dart, ../data/repositories/cart_repository.dart, AppConnectivityObserver, addItem, addProduct, _buildCart (+20 more)
+Nodes (26): Cart? get, ../data/models/cart.dart, ../data/repositories/cart_repository.dart, addItem, addProduct, _buildCart, _cart, cartRepoProvider (+18 more)
 
 ### Community 135 - "Handle `generate`"
 Cohesion: 0.12
@@ -943,9 +930,9 @@ Nodes (23): Category, create_category(), delete_category(), generate_id(), get_c
 Cohesion: 0.18
 Nodes (16): Duration?, FadeScaleRoute, FadeThroughRoute, FastKiranaPageTransitionsBuilder, page, SharedAxisRoute, SwiggyModalRoute, transitionDurationOverride (+8 more)
 
-### Community 140 - "package:flutter_riverpod/flutter_riverpod.dart"
+### Community 140 - "otp_screen.dart"
 Cohesion: 0.02
-Nodes (126): address_book_screen.dart, ../admin/admin_dashboard.dart, ../auth/login_screen.dart, ../cafe/restaurant_dashboard.dart, cart_provider.dart, ../categories/categories_screen.dart, core/routes/app_router.dart, ../core/routes/page_transitions.dart (+118 more)
+Nodes (115): address_book_screen.dart, ../admin/admin_dashboard.dart, ../auth/login_screen.dart, ../cafe/restaurant_dashboard.dart, ../categories/categories_screen.dart, ../data/models/user.dart, ../delivery/delivery_dashboard.dart, ../delivery/picker_dashboard.dart (+107 more)
 
 ### Community 141 - "splash/splash_screen.dart"
 Cohesion: 0.08
@@ -976,8 +963,8 @@ Cohesion: 0.11
 Nodes (18): Color get, bgMain, borderCol, brandGreen, cardBg, cardSubtle, DeliveryTheme, emeraldDark (+10 more)
 
 ### Community 149 - "validation.ts"
-Cohesion: 0.07
-Nodes (39): DELETE(), GET(), PATCH(), POST(), PUT(), resolveUserId(), POST(), POST() (+31 more)
+Cohesion: 0.06
+Nodes (41): DELETE(), GET(), PATCH(), POST(), PUT(), resolveUserId(), POST(), POST() (+33 more)
 
 ### Community 150 - "deep_link_service.dart"
 Cohesion: 0.11
@@ -1000,24 +987,24 @@ Cohesion: 0.33
 Nodes (5): AdminPromotions(), HighlightType, Product, FlashDealsTab(), FlashDealsTabProps
 
 ### Community 155 - "restaurant_provider.dart"
-Cohesion: 0.09
-Nodes (30): ../data/repositories/restaurant_repository.dart, build, build, _RestaurantsListScreenState, address, cuisine, distanceMeters, filteredRestaurantsProvider (+22 more)
+Cohesion: 0.08
+Nodes (38): ../data/repositories/restaurant_repository.dart, build, build, _buildDarkstoreRecommendationsSection, CafeMenuScreen, _CafeMenuScreenState, _centerCategoryInHorizontalBar, build (+30 more)
 
-### Community 157 - "package:flutter_riverpod/flutter_riverpod.dart"
-Cohesion: 0.15
-Nodes (13): _availableCatalog, brandGreen, build, createState, primaryRed, _showNewSubscriptionModal, _skipTomorrow, slateDark (+5 more)
+### Community 157 - "offline_cart_sync_test.dart"
+Cohesion: 0.13
+Nodes (16): CartRepository, main, main, _makeGrocery, makeNotifier, cartRepo, main, makeTestProduct (+8 more)
 
-### Community 158 - "store_hub_provider.dart"
-Cohesion: 0.11
-Nodes (18): address_provider.dart, ../data/models/store_hub.dart, activeStoreHubsProvider, address, customerLat, customerLng, distanceKm, hub (+10 more)
+### Community 158 - "package:flutter_riverpod/flutter_riverpod.dart"
+Cohesion: 0.02
+Nodes (90): address_provider.dart, cart_provider.dart, ../core/config/app_config.dart, ../core/network/api_client.dart, core/routes/app_router.dart, core/services/deep_link_service.dart, ../core/services/notification_service.dart, ../core/services/secure_storage_service.dart (+82 more)
 
-### Community 161 - "offline_banner.dart"
-Cohesion: 0.16
-Nodes (13): ../core/utils/app_connectivity.dart, connectivityProvider, build, createState, dispose, OfflineBanner, _OfflineBannerState, offlineText (+5 more)
+### Community 161 - "order_repository.dart"
+Cohesion: 0.05
+Nodes (35): ../../core/services/admin_authorization.dart, dart:convert, dart:io, BatteryOptimizationService, markDismissed, _prefKeyDismissed, requestExemption, shouldShowPrompt (+27 more)
 
-### Community 173 - "storefront-client.tsx"
-Cohesion: 0.06
-Nodes (39): getCachedBanners, getCachedBestSellers, getCachedBreakfastDeals, getCachedCategories, getCachedCategorySortRules, getCachedFlashDeals, getCachedLunchDeals, getCachedManualTopPicks (+31 more)
+### Community 173 - "Color?"
+Cohesion: 0.18
+Nodes (10): Color?, BrandLogo, build, FastKiranaLogoPainter, FastKiranaLogoWidget, paint, shouldRepaint, size (+2 more)
 
 ### Community 184 - "Agent Skill: Principal UI/UX Architect & Motion Choreographer (Awwwards-Tier)"
 Cohesion: 0.11
@@ -1028,8 +1015,8 @@ Cohesion: 0.11
 Nodes (19): autoDismissDuration, build, _buildGroceryIllustration, createState, _CuteGroceryVectorPainter, dispose, _fadeAnim, _fadeController (+11 more)
 
 ### Community 186 - "CORE DIRECTIVE: AWWWARDS-LEVEL IMAGE ART DIRECTION"
-Cohesion: 0.12
-Nodes (16): 10. SECTION RHYTHM RULE, 12. DENSITY & SPACING DISCIPLINE, 14. IMAGE / MEDIA DIRECTION, 16. MULTI-IMAGE CONSISTENCY RULE, 17. CLARITY CHECK, 19. RESPONSE BEHAVIOR, 1. ACTIVE BASELINE CONFIGURATION, 21. FINAL GOAL (+8 more)
+Cohesion: 0.14
+Nodes (14): 10. SECTION RHYTHM RULE, 12. DENSITY & SPACING DISCIPLINE, 14. IMAGE / MEDIA DIRECTION, 16. MULTI-IMAGE CONSISTENCY RULE, 17. CLARITY CHECK, 19. RESPONSE BEHAVIOR, 1. ACTIVE BASELINE CONFIGURATION, 21. FINAL GOAL (+6 more)
 
 ### Community 187 - "SKILL: Industrial Brutalism & Tactical Telemetry UI"
 Cohesion: 0.12
@@ -1043,9 +1030,9 @@ Nodes (16): 10. Development Notes, 1. Project Overview, 2. Technology Stack, 3. 
 Cohesion: 0.12
 Nodes (14): Accessibility and control, Choose material by meaning, Find the job, Implement to the runtime, Set the motion thesis, Timing and easing, Verify, Visitor mode (+6 more)
 
-### Community 190 - "static const Color"
-Cohesion: 0.06
-Nodes (36): ConsumerWidget, build, _buildBillRow, _buildPayOnlineCard, _buildStatusHeaderCard, _buildTimelineStep, _getStatusBg, _getStatusColor (+28 more)
+### Community 190 - "order_detail_screen.dart"
+Cohesion: 0.11
+Nodes (17): build, _buildBillRow, _buildPayOnlineCard, _buildStatusHeaderCard, _buildTimelineStep, _getStatusBg, _getStatusColor, _getStatusStepIndex (+9 more)
 
 ### Community 191 - "Appendix B - Canonical Sources (read these before reinventing)"
 Cohesion: 0.13
@@ -1096,8 +1083,8 @@ Cohesion: 0.17
 Nodes (11): 📝 API Routes, 🔐 Authentication, 🗄️ Database, 📍 Endpoints, 🔑 Environment Variables, FastKirana FastAPI Backend, 📜 License, Option 1: One-Click Start (Windows) (+3 more)
 
 ### Community 204 - "tasteskill: Anti-Slop Frontend Skill"
-Cohesion: 0.13
-Nodes (15): 0.A Read these signals first, 0.B Output a one-line "Design Read" before generating, 0. BRIEF INFERENCE (Read the Room Before Anything Else), 0.C If the brief is ambiguous, ask one question, do not guess, 0.D Anti-Default Discipline, 13. OUT OF SCOPE, 14. FINAL PRE-FLIGHT CHECK, 1.A Dial Inference (design read → dial values) (+7 more)
+Cohesion: 0.18
+Nodes (11): 0.A Read these signals first, 0.B Output a one-line "Design Read" before generating, 0. BRIEF INFERENCE (Read the Room Before Anything Else), 0.C If the brief is ambiguous, ask one question, do not guess, 0.D Anti-Default Discipline, 13. OUT OF SCOPE, 14. FINAL PRE-FLIGHT CHECK, 2.A When to reach for a real design system (use official packages) (+3 more)
 
 ### Community 205 - "clarify.md"
 Cohesion: 0.18
@@ -1199,17 +1186,17 @@ Nodes (14): Any, JWT authentication middleware for FastAPI. Validates NextAuth.j
 Cohesion: 0.25
 Nodes (8): 1. Impatient Power User: "Alex", 2. Confused First-Timer: "Jordan", 3. Accessibility-Dependent User: "Sam", 4. Deliberate Stress Tester: "Riley", 5. Distracted Mobile User: "Casey", Persona-Based Design Testing, Project-Specific Personas, Selecting Personas
 
-### Community 231 - "delivery.py"
-Cohesion: 0.23
-Nodes (15): confirm_doorstep_qr_payment(), get_delivery_orders(), get_doorstep_qr(), get_rider_delivery_location(), Any, AsyncSession, get, post (+7 more)
+### Community 231 - "String?"
+Cohesion: 0.12
+Nodes (15): checkDishTimeAvailability, DishTimingStatus, formattedTimeSlot, formatTime12h, isAvailableNow, nextAvailableTimeStr, build, deliveryOtp (+7 more)
 
 ### Community 232 - "Phase 3: Security Hardening"
 Cohesion: 0.25
 Nodes (8): 3.1 Audit admin API routes, 3.2 Create reusable auth middleware, 3.3 Apply auth guards to all admin routes, 3.4 Eliminate dev bypass mechanisms, 3.5 Add rate limiting, 3.6 Input validation, Acceptance Criteria, Phase 3: Security Hardening
 
-### Community 233 - "product-edit-modal.tsx"
-Cohesion: 0.22
-Nodes (7): ProductEditModal, Category, MenuSection, ProductEditForm, ProductEditModalProps, ProductVariant, Restaurant
+### Community 233 - "dart:async"
+Cohesion: 0.12
+Nodes (14): ../core/utils/app_connectivity.dart, dart:async, dart:math, NetworkRetryHelper, createState, dispose, offlineText, _onlineNoticeTimer (+6 more)
 
 ### Community 234 - "APPENDICES - Real Source-Backed Reference Material"
 Cohesion: 0.29
@@ -1291,9 +1278,9 @@ Nodes (5): Fastkirana Improvement Plan, File Locations Reference, Overall Strate
 Cohesion: 0.33
 Nodes (6): 1.1 Extract products-tab.tsx (~1000 lines), 1.2 Extract live-ops tab (~330 lines), 1.3 Extract remaining simple tabs (~150 lines each), 1.4 Clean up the orchestrator, Acceptance Criteria, Phase 1: Complete the Admin Dashboard Refactor
 
-### Community 254 - "String?"
+### Community 254 - "prisma.ts"
 Cohesion: 0.07
-Nodes (27): checkDishTimeAvailability, DishTimingStatus, formattedTimeSlot, formatTime12h, isAvailableNow, nextAvailableTimeStr, build, deliveryOtp (+19 more)
+Nodes (17): GET(), GET(), POST(), recentBroadcastTimestamps, GET(), isPointInPolygon(), DEFAULT_CAFE_SECTIONS, DEFAULT_RESTAURANT_SECTIONS (+9 more)
 
 ### Community 255 - "World-Class UI/UX Design System Skill (Web & Mobile)"
 Cohesion: 0.40
@@ -1387,21 +1374,21 @@ Nodes (12): Cart, CartItem, Base, get_cart(), get, post, sync_cart(), CartItemIn
 Cohesion: 0.17
 Nodes (15): get_buy_again_products(), get_live_stock(), get_upsell_products(), Any, AsyncSession, get, post, Products Helper Routes Migrated from Next.js API routes to FastAPI. (+7 more)
 
-### Community 295 - "orders_service.py"
-Cohesion: 0.20
-Nodes (9): generate_id(), get_distance_km(), get_last_10_digits(), Order Service Utilities & Helper Functions Extracted from orders.py for…, Generate a unique ID string., Extract clean 10-digit mobile number., Calculate Haversine distance in kilometers between two GPS coordinates., Validate allowed state transitions for order workflow. (+1 more)
+### Community 295 - "picker/page.tsx"
+Cohesion: 0.18
+Nodes (12): BIN_CONFIGS, CATEGORY_AISLES, CompanionOrder, getAisleName(), getAisleNumber(), getSlaClass(), Order, OrderItem (+4 more)
 
 ### Community 296 - "festive-branding-grid.tsx"
 Cohesion: 0.40
 Nodes (3): DEFAULT_FESTIVE_CARDS, FestiveBrandingGrid(), FestiveCard
 
-### Community 297 - "fcm.py"
-Cohesion: 0.16
-Nodes (17): generate_id(), get_user_id(), Any, AsyncSession, post, Register or update an FCM device token for the authenticated user., Send a test or targeted push notification to a user or specific token., register_fcm_token() (+9 more)
+### Community 297 - "Order"
+Cohesion: 0.06
+Nodes (66): Order, OrderStatus, OrderType, PaymentMethod, PaymentStatus, str, get_admin_rider_cash_summary(), Real-time financial reconciliation & rider cash balances (+58 more)
 
-### Community 298 - "onboarding_screen.dart"
-Cohesion: 0.18
-Nodes (11): build, createState, _currentPage, dispose, _navigateToLogin, OnboardingScreen, _OnboardingScreenState, _pageController (+3 more)
+### Community 298 - "paytm_callback"
+Cohesion: 0.22
+Nodes (13): _generate_signature(), paytm_callback(), paytm_initiate(), paytm_mock_success(), Any, AsyncSession, post, Request (+5 more)
 
 ### Community 299 - "auth_repository.dart"
 Cohesion: 0.11
@@ -1415,9 +1402,9 @@ Nodes (4): health_check(), AsyncSession, get, FastAPI Health Check Endpoint Used
 Cohesion: 0.11
 Nodes (19): Banner, hashCode, id, imageUrl, isActive, link, operator, _privateConstructorUsedError (+11 more)
 
-### Community 302 - "get_ai_demand_forecast"
-Cohesion: 0.33
-Nodes (5): get_ai_demand_forecast(), Any, AsyncSession, get, Native Python AI Demand Forecasting Engine for Inventory & Stock Optimization
+### Community 302 - "notifications_screen.dart"
+Cohesion: 0.18
+Nodes (11): ../data/repositories/order_repository.dart, _buildNotificationTile, createState, _formatTimeAgo, initState, _isLoading, _loadData, NotificationsScreen (+3 more)
 
 ### Community 304 - "FastKirana Flutter"
 Cohesion: 0.08
@@ -1427,37 +1414,37 @@ Nodes (24): 1. High-Level Architecture Overview, 2. Tech Stack Summary, 3. Direc
 Cohesion: 0.40
 Nodes (4): BaseSettings, dotenv, Settings, dotenv
 
-### Community 309 - "dioProvider"
-Cohesion: 0.07
-Nodes (29): dioProvider, _assignRider, _fetchAdminOrders, _fetchDeliveryRiders, _flushOfflineAdminQueue, _initNotificationSubscriptions, _sendRemoteKOT, _silentFetchAdminOrders (+21 more)
+### Community 309 - "app_errors.dart"
+Cohesion: 0.17
+Nodes (11): AppException, auth, code, color, isRetryable, message, network, server (+3 more)
 
-### Community 310 - "requireRole"
-Cohesion: 0.10
-Nodes (19): POST(), dynamic, GET(), POST(), dynamic, GET(), dynamic, GET() (+11 more)
+### Community 310 - "orders_service.py"
+Cohesion: 0.20
+Nodes (9): generate_id(), get_distance_km(), get_last_10_digits(), Order Service Utilities & Helper Functions Extracted from orders.py for…, Generate a unique ID string., Extract clean 10-digit mobile number., Calculate Haversine distance in kilometers between two GPS coordinates., Validate allowed state transitions for order workflow. (+1 more)
 
 ### Community 311 - "package:shared_preferences/shared_preferences.dart"
 Cohesion: 0.08
 Nodes (24): main, main, main, main, main, main, main, main (+16 more)
 
 ### Community 312 - "State"
-Cohesion: 0.14
-Nodes (18): ContextualBrandTransitionScreen, _ContextualBrandTransitionScreenState, SplashScreen, RestaurantMenuCatalogTab, _RestaurantMenuCatalogTabState, _DeliveryPaymentSheet, _DeliveryPaymentSheetState, _AnimatedStepNode (+10 more)
+Cohesion: 0.13
+Nodes (23): ContextualBrandTransitionScreen, _ContextualBrandTransitionScreenState, OnboardingScreen, _OnboardingScreenState, SplashScreen, RestaurantMenuCatalogTab, _RestaurantMenuCatalogTabState, RestaurantSalesReportTab (+15 more)
 
-### Community 313 - "compressImageClient"
-Cohesion: 0.10
-Nodes (16): AdminDashboard(), AdminRestaurantConsole(), AdminRestaurantConsoleProps, Product, RestaurantConsoleTab(), RestaurantConsoleTabProps, RestaurantFormProps, getCafeSectionImage() (+8 more)
+### Community 313 - "eta_widget.dart"
+Cohesion: 0.13
+Nodes (12): build, distanceText, etaText, EtaWidget, isRealtimeConnected, orderStatus, build, createdAt (+4 more)
 
-### Community 314 - "unserviceable_location_banner.dart"
+### Community 314 - "orders_screen.dart"
 Cohesion: 0.10
-Nodes (22): ../core/services/location_service.dart, deliveryTierProvider, bottomOffset, build, createState, FloatingCartBar, _FloatingCartBarState, _isPressed (+14 more)
+Nodes (21): ../cart/cart_screen.dart, _buildEmptyState, _buildSearchBox, _buildSegmentedTabs, _buildStatusFilterPills, createState, dispose, OrderCardSkeleton (+13 more)
 
 ### Community 315 - "getLast10Digits"
-Cohesion: 0.08
+Cohesion: 0.09
 Nodes (32): AccountPage(), dynamic, revalidate, POST(), POST(), POST(), POST(), POST() (+24 more)
 
-### Community 316 - "../../core/services/logger_service.dart"
-Cohesion: 0.08
-Nodes (24): ../../core/services/logger_service.dart, clearCache, createAddress, defaultAddressWithPhone, defaultGhatampurAddress, deleteAddress, dio, getAddresses (+16 more)
+### Community 316 - "admin-analytics.tsx"
+Cohesion: 0.25
+Nodes (7): AdminAnalytics(), AdminAnalyticsProps, Category, Order, Product, AnalyticsTab(), AnalyticsTabProps
 
 ### Community 317 - "app/routers/restaurants.py"
 Cohesion: 0.27
@@ -1479,17 +1466,21 @@ Nodes (10): Database initialization script. Run with: python init_db.py, get_ban
 Cohesion: 0.09
 Nodes (22): ../../data/repositories/auth_repository.dart, build, _buildTncSection, createState, dispose, _errorMessage, _focusNode, _handleSkipGuest (+14 more)
 
-### Community 326 - "restaurant_sales_report_tab.dart"
-Cohesion: 0.13
-Nodes (15): brandGreen, build, _buildSummaryRow, commissionRate, createState, primaryRed, RestaurantSalesReportTab, _RestaurantSalesReportTabState (+7 more)
+### Community 326 - "product-edit-modal.tsx"
+Cohesion: 0.22
+Nodes (7): ProductEditModal, Category, MenuSection, ProductEditForm, ProductEditModalProps, ProductVariant, Restaurant
 
-### Community 328 - "offline_cart_sync_test.dart"
-Cohesion: 0.13
-Nodes (16): CartRepository, main, main, _makeGrocery, makeNotifier, cartRepo, main, makeTestProduct (+8 more)
+### Community 328 - "admin-inventory-center.tsx"
+Cohesion: 0.25
+Nodes (7): AdminInventoryCenter(), AdminInventoryCenterProps, CartItem, Product, StockHistoryLog, InwardTab(), InwardTabProps
 
-### Community 329 - "../core/network/api_client.dart"
-Cohesion: 0.15
-Nodes (11): ../core/network/api_client.dart, ../data/models/banner.dart, ../data/repositories/banner_repository.dart, ../data/repositories/coupon_repository.dart, CouponRepository, bannerRepositoryProvider, getBanners, repo (+3 more)
+### Community 329 - "AsyncValue"
+Cohesion: 0.47
+Nodes (6): AsyncValue, AddressesNotifier, AuthNotifier, CartNotifier, WishlistNotifier, StateNotifier
+
+### Community 330 - "doctor.md"
+Cohesion: 0.25
+Nodes (7): Monorepo notes, Opting out of the boot check, Step 1: Run the pass, Step 2: Act by severity, Step 3: Deprecated fields are binding, Step 4: Do not overclaim on truth drift, What this owns, and what it does not
 
 ### Community 331 - "Core Capabilities"
 Cohesion: 0.29
@@ -1499,21 +1490,21 @@ Nodes (6): 1. Flutter CustomPainter & Canvas Optimization, 2. High-Performance M
 Cohesion: 0.10
 Nodes (18): Craft floor, Refuse, Verify, Constraints, Failure modes, Flow, $impeccable hooks, Intentional findings (+10 more)
 
-### Community 333 - "cart_repository.dart"
-Cohesion: 0.13
-Nodes (14): applyCoupon, clearCart, dio, getCart, _getCartCacheKey, getLocalCart, _handleError, hasPendingSync (+6 more)
+### Community 333 - "admin-forecast.tsx"
+Cohesion: 0.33
+Nodes (5): AdminForecast(), AdminForecastProps, ForecastItem, ForecastTab(), ForecastTabProps
 
 ### Community 334 - "app_connectivity.dart"
-Cohesion: 0.17
-Nodes (11): bool get, Connectivity, _checkConnection, _connectivity, dispose, _init, _isOnline, observer (+3 more)
-
-### Community 335 - "animated_cart_badge.dart"
 Cohesion: 0.12
-Nodes (15): EdgeInsets?, badgeColor, build, child, onTap, textColor, BrandCard, build (+7 more)
+Nodes (15): bool get, ChangeNotifier, Connectivity, AppConnectivityObserver, _checkConnection, _connectivity, connectivityProvider, dispose (+7 more)
+
+### Community 335 - "Diagnostic Scan"
+Cohesion: 0.33
+Nodes (6): 1. Accessibility (VoiceOver / TalkBack), 2. Performance, 3. Appearance & Theming, 4. Platform Conformance (CRITICAL), 5. Adaptivity, Diagnostic Scan
 
 ### Community 336 - "restaurant-orders-console.tsx"
-Cohesion: 0.07
-Nodes (43): BIN_CONFIGS, CATEGORY_AISLES, CompanionOrder, getAisleName(), getAisleNumber(), getSlaClass(), Order, OrderItem (+35 more)
+Cohesion: 0.08
+Nodes (44): RestaurantKitchenPage(), OrdersTab(), OrdersTabProps, CompanionOrder, containerVariants, foodEmojis, formatElapsed(), getItemEmoji() (+36 more)
 
 ### Community 337 - "app/routers/banners.py"
 Cohesion: 0.28
@@ -1523,33 +1514,25 @@ Nodes (6): PromoBanner, Base, get_banners(), get, PromoBannerOut, BaseModel
 Cohesion: 0.33
 Nodes (5): Before you finish, Scope is sovereign, The amplification, The skeleton test, Why it reads flat
 
-### Community 340 - "kot-print.ts"
-Cohesion: 0.24
-Nodes (13): OrdersTab(), OrdersTabProps, formatKOTDate(), generateInvoiceHtml(), generateKOTHtml(), getElapsedText(), getHiddenIframe(), printCustomerInvoice() (+5 more)
+### Community 340 - "get_ai_demand_forecast"
+Cohesion: 0.33
+Nodes (5): get_ai_demand_forecast(), Any, AsyncSession, get, Native Python AI Demand Forecasting Engine for Inventory & Stock Optimization
 
-### Community 341 - "wishlist_provider.dart"
-Cohesion: 0.16
-Nodes (13): AsyncValue, ../data/repositories/wishlist_repository.dart, WishlistRepository, AddressesNotifier, AuthNotifier, CartNotifier, isInWishlist, loadWishlist (+5 more)
+### Community 341 - "1. THE THREE DIALS (Core Configuration)"
+Cohesion: 0.50
+Nodes (4): 1.A Dial Inference (design read → dial values), 1.B Use-Case Presets, 1.C How the Dials Drive Output, 1. THE THREE DIALS (Core Configuration)
 
-### Community 344 - "deals-curation-hub.tsx"
-Cohesion: 0.24
-Nodes (12): DealsCurationHub(), DealsCurationHubProps, PremiumBreakfastIcon(), PremiumEssentialsIcon(), PremiumLateNightIcon(), PremiumLightningDealsIcon(), PremiumLunchIcon(), PremiumSnacksIcon() (+4 more)
+### Community 344 - "storefront-client.tsx"
+Cohesion: 0.06
+Nodes (37): CafeSection(), CafeSectionProps, getCafeSectionImage(), getShortTitle(), DealsCurationHub(), DealsCurationHubProps, PremiumBreakfastIcon(), PremiumEssentialsIcon() (+29 more)
 
 ### Community 345 - "User"
 Cohesion: 0.12
 Nodes (35): User, get_admin_all_orders(), get_admin_dashboard(), get_admin_inventory_forecast(), get_sales_reports(), Any, AsyncSession, get (+27 more)
 
-### Community 346 - "admin-banners.tsx"
-Cohesion: 0.20
-Nodes (8): AdminBanners(), AdminBannersProps, FESTIVAL_TEMPLATES, GRADIENT_PRESETS, PromoBanner, BannersTab(), BannersTabProps, SERVICE_AREA_NAME
-
 ### Community 349 - "store_hub.dart"
 Cohesion: 0.13
 Nodes (14): city, defaultGhatampur, deliveryRadiusKm, fromJson, groceryOpen, id, isActive, latitude (+6 more)
-
-### Community 350 - "admin-analytics.tsx"
-Cohesion: 0.25
-Nodes (7): AdminAnalytics(), AdminAnalyticsProps, Category, Order, Product, AnalyticsTab(), AnalyticsTabProps
 
 ### Community 352 - "logger_service.dart"
 Cohesion: 0.22
@@ -1559,85 +1542,29 @@ Nodes (8): debug, error, info, _logger, LoggerService, warning, package:logger/l
 Cohesion: 0.43
 Nodes (5): CategoryOut, BaseModel, ProductOut, ProductVariant, BaseModel
 
-### Community 357 - "admin-inventory-center.tsx"
-Cohesion: 0.25
-Nodes (7): AdminInventoryCenter(), AdminInventoryCenterProps, CartItem, Product, StockHistoryLog, InwardTab(), InwardTabProps
-
 ### Community 368 - "push-notifications-tab.tsx"
 Cohesion: 0.40
 Nodes (4): AdminPushNotifications(), PushNotificationHistory, PushNotificationsTab(), PushNotificationsTabProps
 
-### Community 380 - "doctor.md"
-Cohesion: 0.25
-Nodes (7): Monorepo notes, Opting out of the boot check, Step 1: Run the pass, Step 2: Act by severity, Step 3: Deprecated fields are binding, Step 4: Do not overclaim on truth drift, What this owns, and what it does not
-
-### Community 383 - "app_toast.dart"
-Cohesion: 0.25
-Nodes (7): AppToast, _show, showError, showInfo, showSuccess, showWarning, ToastType
-
-### Community 384 - "package:flutter/foundation.dart"
-Cohesion: 0.25
-Nodes (7): android, DefaultFirebaseOptions, ios, web, package:firebase_core/firebase_core.dart, package:flutter/foundation.dart, static const FirebaseOptions
-
-### Community 388 - "admin-restaurant-report.tsx"
-Cohesion: 0.29
-Nodes (6): AdminRestaurantReport(), AdminRestaurantReportProps, RestaurantSalesData, SettlementLog, RestaurantReportTab(), RestaurantReportTabProps
-
-### Community 390 - "live-carts-panel.tsx"
-Cohesion: 0.29
-Nodes (6): LiveCart, LiveCartItem, LiveCartsPanel(), LiveCartsPanelProps, LiveOpsTab(), LiveOpsTabProps
-
-### Community 391 - "eta_widget.dart"
-Cohesion: 0.29
-Nodes (6): build, distanceText, etaText, EtaWidget, isRealtimeConnected, orderStatus
-
-### Community 392 - "Diagnostic Scan"
-Cohesion: 0.33
-Nodes (6): 1. Accessibility (VoiceOver / TalkBack), 2. Performance, 3. Appearance & Theming, 4. Platform Conformance (CRITICAL), 5. Adaptivity, Diagnostic Scan
-
-### Community 394 - "admin-sort-manager.tsx"
-Cohesion: 0.47
-Nodes (5): AdminSortManager(), loadCategoryData(), AdminSortManagerProps, getSortedProducts(), ProductItem
-
-### Community 395 - "hub-nav.tsx"
-Cohesion: 0.33
-Nodes (5): DashboardHubNav(), DashboardHubNavProps, HUB_ICONS, HubNavItem, HubNavTab
-
-### Community 396 - "category-edit-modal.tsx"
-Cohesion: 0.40
-Nodes (3): CategoryEditModal, Category, CategoryEditModalProps
-
-### Community 397 - "media-library-modal.tsx"
-Cohesion: 0.40
-Nodes (3): MediaLibraryModal, MediaImage, MediaLibraryModalProps
-
-### Community 398 - "stats-cards.tsx"
-Cohesion: 0.50
-Nodes (3): DashboardStats, DashboardStatsCards(), DashboardStatsCardsProps
-
-### Community 399 - "store-hubs-manager.tsx"
-Cohesion: 0.50
-Nodes (3): StoreHub, StoreHubsManager(), StoreHubsManagerProps
-
 ## Knowledge Gaps
-- **4291 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+4286 more)
+- **4292 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+4287 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **75 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **77 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `dependencies` connect `dependencies` to `@upstash/redis`, `fcm.py`, `dotenv`, `date-fns`, `scripts`, `class-variance-authority`, `framer-motion`, `libphonenumber-js`, `nodemailer`, `pg`, `sonner`, `next-auth`, `papaparse`, `react-dom`, `sharp`, `@supabase/supabase-js`, `tailwind-merge`, `tailwindcss`, `lucide-react`, `@types/pg`, `@types/react`, `prisma`, `@types/react-dom`, `@prisma/client`, `resend`, `@types/web-push`, `@tailwindcss/postcss`, `web-push`, `xlsx`, `zustand`, `lru-cache`?**
+- **Why does `dependencies` connect `dependencies` to `fcm.py`, `@upstash/redis`, `dotenv`, `date-fns`, `scripts`, `framer-motion`, `libphonenumber-js`, `class-variance-authority`, `nodemailer`, `pg`, `sonner`, `next-auth`, `papaparse`, `react-dom`, `sharp`, `@supabase/supabase-js`, `tailwind-merge`, `tailwindcss`, `lucide-react`, `@types/pg`, `@types/react`, `prisma`, `@types/react-dom`, `@prisma/client`, `resend`, `@types/web-push`, `@tailwindcss/postcss`, `web-push`, `xlsx`, `zustand`, `lru-cache`?**
   _High betweenness centrality (0.020) - this node is a cross-community bridge._
 - **Why does `firebase-admin` connect `fcm.py` to `dependencies`?**
   _High betweenness centrality (0.020) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _4291 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _4292 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `package:flutter/material.dart` be split into smaller, more focused modules?**
-  _Cohesion score 0.024337244676227728 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.023873015873015872 - nodes in this community are weakly interconnected._
 - **Should `admin_extended.py` be split into smaller, more focused modules?**
-  _Cohesion score 0.04875429553264605 - nodes in this community are weakly interconnected._
-- **Should `prisma.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.03658787255909558 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.04839049021670524 - nodes in this community are weakly interconnected._
+- **Should `requireAdmin` be split into smaller, more focused modules?**
+  _Cohesion score 0.038222646918299095 - nodes in this community are weakly interconnected._
 - **Should `auth` be split into smaller, more focused modules?**
-  _Cohesion score 0.04666666666666667 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.04155374887082204 - nodes in this community are weakly interconnected._

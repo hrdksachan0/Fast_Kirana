@@ -10,9 +10,23 @@ import '../../data/models/category.dart';
 import '../../providers/product_provider.dart';
 import '../../data/repositories/product_repository.dart';
 import '../../providers/cart_provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/floating_cart_bar.dart';
 import '../products/product_detail_screen.dart';
+
+class _SubcatItem {
+  final String id;
+  final String name;
+  final String emoji;
+  final String? imageUrl;
+  const _SubcatItem({
+    required this.id,
+    required this.name,
+    required this.emoji,
+    this.imageUrl,
+  });
+}
 
 class CategoryProductsScreen extends ConsumerStatefulWidget {
   final Category category;
@@ -33,42 +47,6 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
   int _visibleCount = 12;
 
   static const Color primaryRed = AppDesignSystem.primary;
-
-  // Subcategories mapping matching the Next.js Web App
-  final Map<String, List<Map<String, String>>> _subcatMap = {
-    'snacks-munchies': [
-      {'name': 'All Items', 'emoji': '✨'},
-      {'name': 'Chips & Crisps', 'emoji': '🥔'},
-      {'name': 'Namkeen & Bhujia', 'emoji': '🥨'},
-      {'name': 'Biscuits & Cookies', 'emoji': '🍪'},
-      {'name': 'Chocolates', 'emoji': '🍫'},
-    ],
-    'instant-foods': [
-      {'name': 'All Items', 'emoji': '✨'},
-      {'name': 'Noodles & Pasta', 'emoji': '🍜'},
-      {'name': 'Instant Soups', 'emoji': '🥣'},
-      {'name': 'Ready to Eat', 'emoji': '🍲'},
-    ],
-    'kitchen-needs': [
-      {'name': 'All Items', 'emoji': '✨'},
-      {'name': 'Atta & Flours', 'emoji': '🌾'},
-      {'name': 'Oils & Ghee', 'emoji': '🧈'},
-      {'name': 'Spices & Salt', 'emoji': '🧂'},
-      {'name': 'Rice & Dals', 'emoji': '🍚'},
-    ],
-    'chocolates': [
-      {'name': 'All Items', 'emoji': '✨'},
-      {'name': 'Silk & Bars', 'emoji': '🍫'},
-      {'name': 'Toffees & Candies', 'emoji': '🍬'},
-      {'name': 'Gift Boxes', 'emoji': '🎁'},
-    ],
-    'ice-cream': [
-      {'name': 'All Items', 'emoji': '✨'},
-      {'name': 'Tubs & Packs', 'emoji': '🍨'},
-      {'name': 'Cones & Sticks', 'emoji': '🍦'},
-      {'name': 'Kulfi', 'emoji': '🍧'},
-    ],
-  };
 
   @override
   void initState() {
@@ -108,14 +86,26 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
   @override
   Widget build(BuildContext context) {
     final productsAsync = ref.watch(productsProvider(widget.category.slug));
+    final categoriesAsync = ref.watch(categoriesProvider);
     final cart = ref.watch(cartProvider).value;
     final cartCount = cart?.totalItems ?? 0;
     final cartSubtotal = cart?.subtotal ?? 0.0;
 
-    final subcats = _subcatMap[widget.category.slug] ?? [
-      {'name': 'All Items', 'emoji': '✨'},
-      {'name': 'Popular Deals', 'emoji': '🔥'},
-      {'name': 'New Arrivals', 'emoji': '⭐'},
+    final allCats = categoriesAsync.valueOrNull ?? [];
+    final dbSubcats = allCats.where((c) =>
+      c.parentId != null && c.parentId!.isNotEmpty &&
+      (c.parentId == widget.category.id || c.parentId == widget.category.slug)
+    ).toList();
+
+    final List<_SubcatItem> subcats = [
+      const _SubcatItem(id: 'all', name: 'All Items', emoji: '✨'),
+      if (dbSubcats.isNotEmpty)
+        ...dbSubcats.map((sc) => _SubcatItem(
+          id: sc.id,
+          name: sc.name,
+          emoji: (sc.imageUrl != null && !sc.imageUrl!.startsWith('http') && sc.imageUrl!.length < 5) ? sc.imageUrl! : '🏷️',
+          imageUrl: (sc.imageUrl != null && sc.imageUrl!.startsWith('http')) ? sc.imageUrl : null,
+        )),
     ];
 
     return Scaffold(
@@ -164,11 +154,12 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-              // 1. Left Vertical Subcategory Rail (Blinkit 2-Pane Navigation)
-              Container(
-                width: Responsive.isSmallMobile(context) ? 64 : 82,
-                color: AppDesignSystem.gray50,
-                child: ListView.builder(
+              // 1. Left Vertical Subcategory Rail (Blinkit 2-Pane Navigation) - only if DB subcategories exist
+              if (subcats.length > 1)
+                Container(
+                  width: Responsive.isSmallMobile(context) ? 64 : 82,
+                  color: AppDesignSystem.gray50,
+                  child: ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   itemCount: subcats.length,
                   itemBuilder: (context, idx) {
@@ -213,15 +204,28 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                                 shape: BoxShape.circle,
                               ),
                               child: Center(
-                                child: Text(
-                                  item['emoji']!,
-                                  style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18)),
-                                ),
+                                child: item.imageUrl != null && item.imageUrl!.startsWith('http')
+                                    ? ClipOval(
+                                        child: CachedNetworkImage(
+                                          imageUrl: item.imageUrl!,
+                                          width: 38,
+                                          height: 38,
+                                          fit: BoxFit.cover,
+                                          errorWidget: (_, __, ___) => Text(
+                                            item.emoji,
+                                            style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18)),
+                                          ),
+                                        ),
+                                      )
+                                    : Text(
+                                        item.emoji,
+                                        style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18)),
+                                      ),
                               ),
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              item['name']!,
+                              item.name,
                               textAlign: TextAlign.center,
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 9.5),
@@ -325,21 +329,18 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                               final unitMatch = p.unit.toLowerCase().contains(_searchQuery);
                               return nameMatch || tagMatch || descMatch || unitMatch;
                             }).toList();
-                          } else if (_selectedSubcatIndex > 0) {
-                            // Subcategory filter only when not searching
-                            final currentSubcatName = subcats[_selectedSubcatIndex]['name']!.toLowerCase();
-                            list = list.where((p) {
-                              if (currentSubcatName.contains('popular') || currentSubcatName.contains('deal')) {
-                                return p.isBestsellerProduct || p.isFlashDealProduct || p.discount >= 10 || p.tags.any((t) => t.toLowerCase().contains('popular') || t.toLowerCase().contains('deal'));
-                              }
-                              if (currentSubcatName.contains('new')) {
-                                return p.isNewArrival || p.tags.any((t) => t.toLowerCase().contains('new'));
-                              }
-                              final name = p.name.toLowerCase();
-                              final tagMatch = p.tags.any((t) => currentSubcatName.contains(t.toLowerCase()) || t.toLowerCase().contains(currentSubcatName));
-                              return name.contains(currentSubcatName) || tagMatch;
-                            }).toList();
-                            if (list.isEmpty) list = List<Product>.from(products); // fallback
+                          } else if (_selectedSubcatIndex > 0 && _selectedSubcatIndex < subcats.length) {
+                            final selectedSubcat = subcats[_selectedSubcatIndex];
+                            if (selectedSubcat.id != 'all' && dbSubcats.isNotEmpty) {
+                              list = list.where((p) {
+                                final pCatId = (p.category?.id ?? p.categoryId ?? '').toLowerCase().trim();
+                                final pParentId = (p.category?.parentId ?? '').toLowerCase().trim();
+                                final targetId = selectedSubcat.id.toLowerCase().trim();
+                                final targetName = selectedSubcat.name.toLowerCase().trim();
+                                final pCatName = (p.category?.name ?? '').toLowerCase().trim();
+                                return pCatId == targetId || pParentId == targetId || pCatName == targetName;
+                              }).toList();
+                            }
                           }
 
                           // Sort
