@@ -125,7 +125,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     } as any
   }
 
-  // 3. Build broad product search query to include both direct category items and tagged products
+  // 3. Build strict product query: only products directly attached to this category or its subcategories
   const normSlug = slug.toLowerCase().trim()
   const slugVariants = [
     normSlug,
@@ -134,28 +134,14 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     normSlug.replace(/-/g, ' '),
   ]
 
-  const relatedTagsMap: Record<string, string[]> = {
-    'beverages': ['beverages', 'beverage', 'drinks', 'drink', 'cold-drinks', 'cold-beverages', 'hot-beverages', 'chilled', 'juices', 'juice', 'soda', 'tea', 'coffee', 'campa', 'energy'],
-    'ice-cream': ['ice-cream', 'ice cream', 'ice_cream', 'kulfi', 'cassatta', 'cornetto', 'chocobar', 'icecream', 'amul ice', 'kwality wall', 'havmor', 'vadilal', 'baskin', 'nic ice'],
-    'dairy-breakfast': ['dairy', 'breakfast', 'milk', 'curd', 'paneer', 'butter', 'nashta', 'bread', 'eggs', 'dahi'],
-    'snacks-munchies': ['snack', 'snacks', 'namkeen', 'chips', 'biscuits', 'munchies', 'bhujia', 'biscuit'],
-    'fruits-vegetables': ['fruit', 'fruits', 'vegetable', 'vegetables', 'sabzi', 'pyaz', 'tamatar', 'aalu'],
-    'bakery-biscuits': ['bakery', 'biscuit', 'biscuits', 'bread', 'cake', 'cookies', 'toast', 'rusk'],
-    'atta-rice-dal': ['atta', 'rice', 'dal', 'pulse', 'pulses', 'flour', 'chawal', 'aata'],
-    'personal-care': ['personal', 'care', 'soap', 'shampoo', 'paste', 'brush', 'lotion'],
-    'household': ['household', 'cleaner', 'detergent', 'dishwash', 'clean'],
-  }
-
-  const related = relatedTagsMap[normSlug] || slugVariants
-  const conditions: any[] = [
-    { category: { slug: { in: slugVariants } } },
-    { tags: { hasSome: related } },
-  ]
+  const conditions: any[] = []
 
   if (activeCategory && activeCategory.id && !activeCategory.id.startsWith('virtual-')) {
+    // Strictly attach by category ID: direct category products OR child subcategory products
     conditions.push({ categoryId: activeCategory.id })
-    // Also include products belonging to any child subcategory of this parent
     conditions.push({ category: { parentId: activeCategory.id } })
+  } else {
+    conditions.push({ category: { slug: { in: slugVariants } } })
   }
 
   const productsRaw = await prisma.product.findMany({
@@ -282,7 +268,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     minStock: p.minStock,
     variants: p.variants as any,
     category: {
-      id: p.category?.id || activeCategory.id,
+      id: p.category?.id || p.categoryId || activeCategory.id,
       name: p.category?.name || activeCategory.name,
       slug: p.category?.slug || activeCategory.slug,
       imageUrl: p.category?.imageUrl || activeCategory.imageUrl,

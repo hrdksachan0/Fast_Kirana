@@ -48,8 +48,22 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
   void initState() {
     super.initState();
     final rawItems = widget.order['items'];
+    final parentRestId = widget.restaurantId ?? widget.order['restaurantId']?.toString();
+    final parentShopName = widget.order['shopName']?.toString();
+
     if (rawItems is List) {
-      _items = rawItems.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      _items = rawItems.map((e) {
+        final map = Map<String, dynamic>.from(e as Map);
+        if (widget.isRestaurant) {
+          if (map['restaurantId'] == null || map['restaurantId'].toString().isEmpty) {
+            map['restaurantId'] = parentRestId;
+          }
+          if (map['shopName'] == null || map['shopName'].toString().isEmpty) {
+            map['shopName'] = parentShopName ?? 'Restaurant';
+          }
+        }
+        return map;
+      }).toList();
     } else {
       _items = [];
     }
@@ -231,18 +245,27 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
       final dio = ref.read(dioProvider);
 
       final payload = {
-        'updatedItems': _items.map((it) => {
-          'productId': it['productId'] ?? it['id'],
-          'name': it['name'],
-          'price': (it['price'] is num)
-              ? (it['price'] as num).toDouble()
-              : (double.tryParse(it['price']?.toString() ?? '0') ?? 0.0),
-          'quantity': (it['quantity'] is num) ? (it['quantity'] as num).toInt() : 1,
-          'selectedVariant': it['selectedVariant'],
-          'notes': it['notes'],
-          'imageUrl': it['imageUrl'],
-          'restaurantId': it['restaurantId'],
-          'shopName': it['shopName'],
+        'updatedItems': _items.map((it) {
+          final rawPid = it['productId']?.toString();
+          final rawId = it['id']?.toString();
+          // Avoid sending OrderItem CUID (cmt...) as productId
+          final cleanPid = (rawPid != null && !rawPid.startsWith('cmt'))
+              ? rawPid
+              : ((rawId != null && !rawId.startsWith('cmt')) ? rawId : null);
+
+          return {
+            'productId': cleanPid,
+            'name': it['name'],
+            'price': (it['price'] is num)
+                ? (it['price'] as num).toDouble()
+                : (double.tryParse(it['price']?.toString() ?? '0') ?? 0.0),
+            'quantity': (it['quantity'] is num) ? (it['quantity'] as num).toInt() : 1,
+            'selectedVariant': it['selectedVariant'],
+            'notes': it['notes'],
+            'imageUrl': it['imageUrl'],
+            'restaurantId': it['restaurantId'] ?? (widget.isRestaurant ? (widget.restaurantId ?? widget.order['restaurantId']) : null),
+            'shopName': it['shopName'] ?? (widget.isRestaurant ? (widget.order['shopName'] ?? 'Restaurant') : null),
+          };
         }).toList(),
         'outOfStockProductIds': _outOfStockProductIds.toList(),
       };

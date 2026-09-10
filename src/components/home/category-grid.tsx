@@ -44,7 +44,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
   const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
 
   const allDisplayCategories = useMemo(() => {
-    return (categories || []).filter((c) => !c.parentId)
+    return (categories || []).filter((cat) => !cat.parentId)
   }, [categories])
 
   // Map of category slugs to visual themes with glowing rings
@@ -67,6 +67,30 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
       gradient: 'from-amber-100/30 to-amber-50/10 dark:from-amber-500/10 dark:to-transparent', 
       ring: 'group-hover:border-amber-500/50 group-hover:shadow-[0_0_15px_rgba(245,158,11,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(245,158,11,0.5)]' 
     },
+    'snacks-instant-food': { 
+      bg: 'bg-amber-50 dark:bg-amber-500/5', 
+      text: 'text-amber-500 dark:text-amber-400', 
+      gradient: 'from-amber-100/30 to-amber-50/10 dark:from-amber-500/10 dark:to-transparent', 
+      ring: 'group-hover:border-amber-500/50 group-hover:shadow-[0_0_15px_rgba(245,158,11,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(245,158,11,0.5)]' 
+    },
+    'dry-fruits-spices': { 
+      bg: 'bg-orange-50 dark:bg-orange-500/5', 
+      text: 'text-orange-500 dark:text-orange-400', 
+      gradient: 'from-orange-100/30 to-orange-50/10 dark:from-orange-500/10 dark:to-transparent', 
+      ring: 'group-hover:border-orange-500/50 group-hover:shadow-[0_0_15px_rgba(249,115,22,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(249,115,22,0.5)]' 
+    },
+    'kitchen-ration': { 
+      bg: 'bg-yellow-50 dark:bg-yellow-500/5', 
+      text: 'text-yellow-500 dark:text-yellow-400', 
+      gradient: 'from-yellow-100/30 to-yellow-50/10 dark:from-yellow-500/10 dark:to-transparent', 
+      ring: 'group-hover:border-yellow-500/50 group-hover:shadow-[0_0_15px_rgba(234,179,8,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(234,179,8,0.5)]' 
+    },
+    'kitchen-needs': { 
+      bg: 'bg-yellow-50 dark:bg-yellow-500/5', 
+      text: 'text-yellow-500 dark:text-yellow-400', 
+      gradient: 'from-yellow-100/30 to-yellow-50/10 dark:from-yellow-500/10 dark:to-transparent', 
+      ring: 'group-hover:border-yellow-500/50 group-hover:shadow-[0_0_15px_rgba(234,179,8,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(234,179,8,0.5)]' 
+    },
     'beverages': { 
       bg: 'bg-purple-50 dark:bg-purple-500/5', 
       text: 'text-purple-500 dark:text-purple-400', 
@@ -85,7 +109,19 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
       gradient: 'from-indigo-100/30 to-indigo-50/10 dark:from-indigo-500/10 dark:to-transparent', 
       ring: 'group-hover:border-indigo-500/50 group-hover:shadow-[0_0_15px_rgba(99,102,241,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(99,102,241,0.5)]' 
     },
+    'home-needs-and-cleaning': { 
+      bg: 'bg-indigo-50 dark:bg-indigo-500/5', 
+      text: 'text-indigo-500 dark:text-indigo-400', 
+      gradient: 'from-indigo-100/30 to-indigo-50/10 dark:from-indigo-500/10 dark:to-transparent', 
+      ring: 'group-hover:border-indigo-500/50 group-hover:shadow-[0_0_15px_rgba(99,102,241,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(99,102,241,0.5)]' 
+    },
     'bakery-biscuits': { 
+      bg: 'bg-orange-50 dark:bg-orange-500/5', 
+      text: 'text-orange-500 dark:text-orange-400', 
+      gradient: 'from-orange-100/30 to-orange-50/10 dark:from-orange-500/10 dark:to-transparent', 
+      ring: 'group-hover:border-orange-500/50 group-hover:shadow-[0_0_15px_rgba(249,115,22,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(249,115,22,0.5)]' 
+    },
+    'bakery': { 
       bg: 'bg-orange-50 dark:bg-orange-500/5', 
       text: 'text-orange-500 dark:text-orange-400', 
       gradient: 'from-orange-100/30 to-orange-50/10 dark:from-orange-500/10 dark:to-transparent', 
@@ -103,6 +139,30 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
       gradient: 'from-teal-100/30 to-teal-50/10 dark:from-teal-500/10 dark:to-transparent', 
       ring: 'group-hover:border-teal-500/50 group-hover:shadow-[0_0_15px_rgba(20,184,166,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(20,184,166,0.5)]' 
     },
+    'chocolates': { 
+      bg: 'bg-purple-50 dark:bg-purple-500/5', 
+      text: 'text-purple-500 dark:text-purple-400', 
+      gradient: 'from-purple-100/30 to-purple-50/10 dark:from-purple-500/10 dark:to-transparent', 
+      ring: 'group-hover:border-purple-500/50 group-hover:shadow-[0_0_15px_rgba(139,92,246,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(139,92,246,0.5)]' 
+    },
+    'packaged-foods': { 
+      bg: 'bg-indigo-50 dark:bg-indigo-500/5', 
+      text: 'text-indigo-500 dark:text-indigo-400', 
+      gradient: 'from-indigo-100/30 to-indigo-50/10 dark:from-indigo-500/10 dark:to-transparent', 
+      ring: 'group-hover:border-indigo-500/50 group-hover:shadow-[0_0_15px_rgba(99,102,241,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(99,102,241,0.5)]' 
+    },
+    'healthy-foods': { 
+      bg: 'bg-emerald-50 dark:bg-emerald-500/5', 
+      text: 'text-emerald-500 dark:text-emerald-400', 
+      gradient: 'from-emerald-100/30 to-emerald-50/10 dark:from-emerald-500/10 dark:to-transparent', 
+      ring: 'group-hover:border-emerald-500/50 group-hover:shadow-[0_0_15px_rgba(16,185,129,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(16,185,129,0.5)]' 
+    },
+    'groceries': { 
+      bg: 'bg-blue-50 dark:bg-blue-500/5', 
+      text: 'text-blue-500 dark:text-blue-400', 
+      gradient: 'from-blue-100/30 to-blue-50/10 dark:from-blue-500/10 dark:to-transparent', 
+      ring: 'group-hover:border-blue-500/50 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)]' 
+    },
     'cafe': { 
       bg: 'bg-amber-50 dark:bg-amber-500/5', 
       text: 'text-amber-500 dark:text-amber-400', 
@@ -115,12 +175,22 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
     'fruits-vegetables': { bg: 'bg-[#ecf7ed] dark:bg-emerald-950/20', text: 'text-[#2e7d32]', label: 'Fruits & Veg', emoji: '🥦' },
     'dairy-breakfast': { bg: 'bg-[#e8f4fd] dark:bg-blue-950/20', text: 'text-[#1976d2]', label: 'Milk & Dairy', emoji: '🥛' },
     'snacks-munchies': { bg: 'bg-[#fff8e1] dark:bg-amber-950/20', text: 'text-[#f57f17]', label: 'Snacks', emoji: '🍿' },
+    'snacks-instant-food': { bg: 'bg-[#fff8e1] dark:bg-amber-950/20', text: 'text-[#f57f17]', label: 'Snacks & Instant', emoji: '🍿' },
+    'dry-fruits-spices': { bg: 'bg-[#fff3e0] dark:bg-orange-950/20', text: 'text-[#e65100]', label: 'Dry Fruits & Spices', emoji: '🥜' },
+    'kitchen-ration': { bg: 'bg-[#fffde7] dark:bg-yellow-950/20', text: 'text-[#fbc02d]', label: 'Kitchen & Ration', emoji: '🌾' },
+    'kitchen-needs': { bg: 'bg-[#fffde7] dark:bg-yellow-950/20', text: 'text-[#fbc02d]', label: 'Kitchen Needs', emoji: '🍳' },
     'beverages': { bg: 'bg-[#eef2f6] dark:bg-slate-900/40', text: 'text-[#37474f]', label: 'Beverages', emoji: '🥤' },
     'personal-care': { bg: 'bg-[#fce4ec] dark:bg-pink-950/20', text: 'text-[#c2185b]', label: 'Personal Care', emoji: '🧴' },
     'household': { bg: 'bg-[#e0f7fa] dark:bg-teal-950/20', text: 'text-[#00838f]', label: 'Home Care', emoji: '🧼' },
+    'home-needs-and-cleaning': { bg: 'bg-[#e0f7fa] dark:bg-teal-950/20', text: 'text-[#00838f]', label: 'Home Needs', emoji: '🧼' },
+    'bakery': { bg: 'bg-[#efebe9] dark:bg-amber-950/10', text: 'text-[#4e342e]', label: 'Bakery & Biscuits', emoji: '🥐' },
     'bakery-biscuits': { bg: 'bg-[#efebe9] dark:bg-amber-950/10', text: 'text-[#4e342e]', label: 'Bakery', emoji: '🥐' },
-    'atta-rice-dal': { bg: 'bg-[#fffde7] dark:bg-yellow-950/20', text: 'text-[#fbc02d]', label: 'Atta, Rice & Dal', emoji: '🌾' },
+    'atta-rice-dal': { bg: 'bg-[#fffde7] dark:bg-yellow-950/20', text: 'text-[#fbc02d]', label: 'Staples', emoji: '🌾' },
     'ice-cream': { bg: 'bg-[#e0f2f1] dark:bg-teal-950/20', text: 'text-[#00796b]', label: 'Ice Cream', emoji: '🍦' },
+    'chocolates': { bg: 'bg-[#f3e5f5] dark:bg-purple-950/20', text: 'text-[#7b1fa2]', label: 'Chocolates & Sweets', emoji: '🍫' },
+    'packaged-foods': { bg: 'bg-[#ede7f6] dark:bg-indigo-950/20', text: 'text-[#512da8]', label: 'Packaged Foods', emoji: '🥫' },
+    'healthy-foods': { bg: 'bg-[#e8f5e9] dark:bg-emerald-950/20', text: 'text-[#388e3c]', label: 'Healthy Foods', emoji: '🥗' },
+    'groceries': { bg: 'bg-[#e3f2fd] dark:bg-blue-950/20', text: 'text-[#1976d2]', label: 'Groceries', emoji: '🛒' },
     'cafe': { bg: 'bg-[#fff8e1] dark:bg-amber-950/20', text: 'text-[#f57f17]', label: 'Cafe', emoji: '☕' },
   }
 
@@ -128,7 +198,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
 
   const handleScroll = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
-      const scrollOffset = direction === 'left' ? -220 : 220
+      const scrollOffset = direction === 'left' ? -240 : 240
       scrollContainerRef.current.scrollBy({ left: scrollOffset, behavior: 'smooth' })
     }
   }
@@ -158,7 +228,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
           <Link 
-            href="/category/fruits-vegetables" 
+            href="/category" 
             className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary hover:bg-primary/15 transition-all duration-300 shadow-[0_1.5px_4px_rgba(0,0,0,0.015)] active:scale-95 whitespace-nowrap ml-0.5"
           >
             See all
@@ -166,20 +236,20 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
         </div>
       </div>
 
-      {/* Mobile: Horizontal scrollable/sliding list with useRef controller */}
+      {/* Mobile: 2-Row Horizontal scrollable/sliding list with useRef controller */}
       <div 
         ref={scrollContainerRef}
-        className="flex gap-4.5 overflow-x-auto pb-3.5 pt-1.5 scrollbar-none md:hidden px-2 snap-x snap-mandatory scroll-smooth"
+        className="grid grid-rows-2 grid-flow-col auto-cols-[74px] sm:auto-cols-[80px] gap-x-2.5 gap-y-3.5 overflow-x-auto pb-3.5 pt-1.5 scrollbar-none md:hidden px-1 scroll-smooth"
       >
         {allDisplayCategories.map((category: any) => {
             const config = mobileColorMap[category.slug] || {
               bg: 'bg-rose-500/10 dark:bg-rose-950/20 hover:border-rose-500/30',
               text: 'text-rose-500 dark:text-rose-450',
               label: category.name,
-              emoji: (category as any).emoji || '🍽️'
+              emoji: (category as any).emoji || '📦'
             }
 
-            const rawLabel = (category.name || config.label || '').replace(/^FastKirana\s+/i, '').trim()
+            const rawLabel = (config.label || category.name || '').replace(/^FastKirana\s+/i, '').trim()
             let formattedLabel = rawLabel
             if (category.slug === 'household' || category.slug?.includes('household') || category.name?.toLowerCase().includes('household')) {
               formattedLabel = 'Home Care'
@@ -197,7 +267,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
               <motion.div
                 key={category.id}
                 whileTap={{ scale: 0.93, rotate: -1.5 }}
-                className="w-[74px] shrink-0 snap-start"
+                className="w-[74px] shrink-0"
               >
                 <Link
                   href={category.slug === 'cafe' || category.isCafeSection ? '/food/as-cafe' : category.slug === 'restaurant' ? '/food' : `/category/${category.slug}`}
@@ -205,40 +275,40 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                 >
                   {/* Pastel Rounded Card with Real Photo or 3D Glassmorphic Emoji */}
                   <div
-                    className={`w-[66px] h-[66px] mx-auto rounded-full ${config.bg} overflow-hidden shadow-[0_3px_10px_rgba(0,0,0,0.03)] transition-all duration-300 border border-transparent dark:border-white/[0.02] relative`}
+                    className={`w-[62px] h-[62px] mx-auto rounded-full ${config.bg} overflow-hidden shadow-[0_3px_10px_rgba(0,0,0,0.03)] transition-all duration-300 border border-transparent dark:border-white/[0.02] relative flex items-center justify-center`}
                   >
+                    {/* Fallback Emoji layer (always present beneath the image) */}
+                    <span className="text-2xl select-none filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.12)]">
+                      {category.imageUrl && category.imageUrl.length < 5 ? category.imageUrl : config.emoji}
+                    </span>
+
+                    {/* Image overlay if real photo URL exists */}
                     {category.imageUrl && (category.imageUrl.startsWith('data:image/') || category.imageUrl.startsWith('/') || category.imageUrl.startsWith('http')) ? (
                       <Image
                         src={category.imageUrl}
                         alt={formattedLabel}
                         fill
-                        sizes="(max-width: 640px) 66px, 80px"
+                        sizes="62px"
                         className="object-cover transition-transform duration-500 group-hover:scale-110"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLElement).style.display = 'none'
+                        }}
                       />
                     ) : categoryPhotos[category.slug] ? (
                       <Image
                         src={categoryPhotos[category.slug]}
                         alt={formattedLabel}
                         fill
-                        sizes="(max-width: 640px) 66px, 80px"
+                        sizes="62px"
                         className="object-cover transition-transform duration-500 group-hover:scale-110"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLElement).style.display = 'none'
+                        }}
                       />
-                    ) : category.imageUrl && category.imageUrl.length < 5 ? (
-                      <div className="w-full h-full flex items-center justify-center bg-white/40 dark:bg-black/35 backdrop-blur-md shadow-[inset_0_1.5px_3px_rgba(255,255,255,0.45)] border border-white/20 dark:border-white/[0.06] rounded-full">
-                        <span className="text-3xl select-none filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
-                          {category.imageUrl}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-white/40 dark:bg-black/35 backdrop-blur-md shadow-[inset_0_1.5px_3px_rgba(255,255,255,0.45)] border border-white/20 dark:border-white/[0.06] rounded-full">
-                        <span className="text-3xl select-none filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
-                          {config.emoji}
-                        </span>
-                      </div>
-                    )}
+                    ) : null}
                   </div>
                   {/* Category Label */}
-                  <div className="min-h-[26px] flex items-center justify-center mt-1.5 w-full">
+                  <div className="min-h-[26px] flex items-center justify-center mt-1 w-full px-0.5">
                     <span className="text-[10px] sm:text-[10.5px] font-black text-zinc-800 dark:text-zinc-200 leading-[1.15] tracking-tight line-clamp-2 text-center break-words max-w-full">
                       {formattedLabel}
                     </span>
@@ -290,6 +360,9 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                         fill
                         sizes="(max-width: 768px) 80px, 100px"
                         className="object-cover transition-transform duration-300 group-hover:scale-110"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLElement).style.display = 'none'
+                        }}
                       />
                     ) : categoryPhotos[category.slug] ? (
                       <Image
@@ -298,6 +371,9 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                         fill
                         sizes="(max-width: 768px) 80px, 100px"
                         className="object-cover transition-transform duration-300 group-hover:scale-110"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLElement).style.display = 'none'
+                        }}
                       />
                     ) : category.imageUrl && category.imageUrl.length < 5 ? (
                       <div className="w-full h-full flex items-center justify-center bg-white/40 dark:bg-black/35 backdrop-blur-md shadow-[inset_0_1.5px_3px_rgba(255,255,255,0.45)] border border-white/20 dark:border-white/[0.06] rounded-2xl">

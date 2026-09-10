@@ -53,6 +53,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     with SingleTickerProviderStateMixin {
   bool _isGrocerySelected = true;
   int _selectedFilterIndex = 0;
+  final Map<String, String> _selectedCategorySubcat = {};
   int _searchPlaceholderIndex = 0;
   Timer? _searchTimer;
   Timer? _orderSyncTimer;
@@ -378,25 +379,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   SliverToBoxAdapter(child: _buildCategoryToggle()),
 
                   if (_isGrocerySelected) ...[
-                    // 3. Single Hero Promo Banner (Ghatampur Express - Grocery Only)
-                    SliverToBoxAdapter(child: _buildHeroPromoBanner()),
+                    // 3. Top 8 Categories (2 rows) - Saaf suthre tiles
+                    SliverToBoxAdapter(child: _buildTopCategoriesGrid()),
 
-                    // 4. Sleek Trust Badge Strip (Grocery Only)
-                    SliverToBoxAdapter(child: _buildTrustBadgeStrip()),
-
-                    // 5. Circular Category Carousel (Web 1:1)
-                    SliverToBoxAdapter(child: _buildCircularCategoryCarousel()),
-
-                    // 6. Curated For You Filter Tabs
-                    SliverToBoxAdapter(child: _buildCuratedForYouFilter()),
-
-                    // 7. Dynamic Category Carousel Sections (Top Categories)
+                    // 4. Product Shelves (Category title + Subcategory chips + Products with + ADD)
                     ..._buildApiProductSections(),
 
-                    // 8. Infinite Scroll Product Feed (Batch-loaded 20 items at a time, Blinkit/Zepto style)
+                    // 5. Infinite Scroll Product Feed (Batch-loaded 20 items at a time, Blinkit/Zepto style)
                     ..._buildInfiniteProductFeed(),
 
-                    // 9. Footer
+                    // Footer
                     SliverToBoxAdapter(child: _buildFooter()),
                   ] else ...[
                     // Food & Cafe Mode — directly show restaurants
@@ -1726,6 +1718,171 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   );
 }
 
+  // 3. Top 8 Categories Grid (2 rows x 4 columns - Clean Zepto/Blinkit Style)
+  Widget _buildTopCategoriesGrid() {
+    final categoriesAsync = ref.watch(categoriesProvider);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Explore Categories',
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 16),
+                  fontWeight: FontWeight.w900,
+                  color: AppDesignSystem.textPrimary,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  ref.read(selectedTabProvider.notifier).state = 2; // Categories tab
+                },
+                child: Text(
+                  'See All >',
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 12),
+                    fontWeight: FontWeight.w800,
+                    color: AppDesignSystem.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          categoriesAsync.when(
+            data: (categories) {
+              final groceryCategories = categories.where((c) {
+                if (c.parentId != null && c.parentId!.isNotEmpty) return false;
+                final slug = c.slug.toLowerCase().trim();
+                final name = c.name.toLowerCase().trim();
+                if (slug == 'restaurant-food' ||
+                    slug == 'restaurant' ||
+                    slug == 'cafe' ||
+                    slug == 'fast-food-kitchen' ||
+                    slug.contains('restaurant') ||
+                    slug.contains('fastfood')) {
+                  return false;
+                }
+                if (name.contains('restaurant kitchen') ||
+                    name.contains('restaurant') ||
+                    name.contains('cafe') ||
+                    name.startsWith('fast food')) {
+                  return false;
+                }
+                return true;
+              }).take(8).toList();
+
+              if (groceryCategories.isEmpty) return const SizedBox.shrink();
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: groceryCategories.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  childAspectRatio: 0.76,
+                ),
+                itemBuilder: (context, index) {
+                  final cat = groceryCategories[index];
+
+                  return GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.push(
+                        context,
+                        FadeSlideRoute(page: CategoryProductsScreen(category: cat)),
+                      );
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: AppDesignSystem.gray50,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppDesignSystem.border, width: 1),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.02),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                            padding: const EdgeInsets.all(7),
+                            child: Center(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: _buildCategoryAvatarImage(cat),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          cat.name,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 10.5),
+                            fontWeight: FontWeight.w700,
+                            color: AppDesignSystem.textPrimary,
+                            height: 1.15,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+            loading: () => GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: 8,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: 0.76,
+              ),
+              itemBuilder: (_, __) => Shimmer.fromColors(
+                baseColor: AppDesignSystem.border,
+                highlightColor: AppDesignSystem.gray50,
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Container(height: 10, width: 50, color: Colors.white),
+                  ],
+                ),
+              ),
+            ),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
   // 5. Circular Category Carousel (Web 1:1 Parity)
   Widget _buildCircularCategoryCarousel() {
     final categoriesAsync = ref.watch(categoriesProvider);
@@ -2247,7 +2404,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                             width: 48,
                                             height: 48,
                                             fit: BoxFit.cover,
-                                            errorWidget: (_, __, ___) => Icon(item['icon'] as IconData, color: item['iconColor'] as Color, size: 24),
+                                            errorBuilder: (_, __, ___) => Icon(item['icon'] as IconData, color: item['iconColor'] as Color, size: 24),
                                           ),
                                         )
                                       : Icon(item['icon'] as IconData, color: item['iconColor'] as Color, size: 24),
@@ -2349,12 +2506,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               .where((p) => _isProductInCategory(p, cat))
               .toList();
           if (categoryProducts.isEmpty) continue;
-          final displayProducts = categoryProducts.take(8).toList();
+          final childSubcategories = categories.where((c) =>
+            c.parentId != null && c.parentId!.isNotEmpty && c.parentId!.toLowerCase().trim() == cat.id.toLowerCase().trim()
+          ).toList();
+
           slivers.add(
             SliverToBoxAdapter(
               child: _buildHorizontalProductSection(
                 cat,
-                displayProducts,
+                categoryProducts,
+                childSubcategories: childSubcategories,
                 totalCount: categoryProducts.length,
               ),
             ),
@@ -2475,8 +2636,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   // Horizontal Product Track with Direct Category Navigation & View More Card
-  Widget _buildHorizontalProductSection(Category cat, List<Product> products, {required int totalCount}) {
+  Widget _buildHorizontalProductSection(
+    Category cat,
+    List<Product> allCategoryProducts, {
+    List<Category> childSubcategories = const [],
+    required int totalCount,
+  }) {
     final subtitle = _getCategorySubtitle(cat.name);
+    final activeSubcatId = _selectedCategorySubcat[cat.id] ?? 'all';
+
+    List<Product> products = allCategoryProducts;
+    if (activeSubcatId != 'all') {
+      final selectedSub = childSubcategories.firstWhere(
+        (s) => s.id == activeSubcatId,
+        orElse: () => childSubcategories.first,
+      );
+      final targetId = selectedSub.id.toLowerCase().trim();
+      final targetSlug = selectedSub.slug.toLowerCase().trim();
+      final targetName = selectedSub.name.toLowerCase().trim();
+
+      products = allCategoryProducts.where((p) {
+        final pCatId = (p.categoryId ?? '').toLowerCase().trim();
+        final pSubId = (p.category?.id ?? '').toLowerCase().trim();
+        final pSubSlug = (p.category?.slug ?? '').toLowerCase().trim();
+        final pSubName = (p.category?.name ?? '').toLowerCase().trim();
+        final pName = p.name.toLowerCase();
+
+        return pCatId == targetId ||
+            pSubId == targetId ||
+            pSubSlug == targetSlug ||
+            pSubName == targetName ||
+            (p.tags.any((t) => t.toLowerCase().trim() == targetName)) ||
+            pName.contains(targetName);
+      }).toList();
+    }
+
+    final displayProducts = products.take(10).toList();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 18, 0, 4),
@@ -2549,19 +2744,102 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          AnimationLimiter(
-            child: SizedBox(
-              height: Responsive.isSmallMobile(context) ? 232 : 252,
+          // Dynamic Subcategory Chips Strip (only rendered when real subcategories exist in DB)
+          if (childSubcategories.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 32,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.only(right: Responsive.horizontalPadding(context)),
-                itemCount: products.length + 1,
-                separatorBuilder: (_, __) => SizedBox(width: Responsive.isSmallMobile(context) ? 8 : 10),
+                padding: const EdgeInsets.only(right: 16),
+                itemCount: childSubcategories.length + 1,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
-                  if (index < products.length) {
-                    final product = products[index];
+                  final isAll = index == 0;
+                  final isSelected = isAll
+                      ? activeSubcatId == 'all'
+                      : activeSubcatId == childSubcategories[index - 1].id;
+                  final title = isAll ? 'All' : childSubcategories[index - 1].name;
+
+                  return GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() {
+                        _selectedCategorySubcat[cat.id] = isAll ? 'all' : childSubcategories[index - 1].id;
+                      });
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppDesignSystem.primary : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isSelected ? AppDesignSystem.primary : AppDesignSystem.border,
+                          width: isSelected ? 1.4 : 1.0,
+                        ),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: AppDesignSystem.primary.withValues(alpha: 0.22),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Center(
+                        child: Text(
+                          title,
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 11),
+                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                            color: isSelected ? Colors.white : AppDesignSystem.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          if (displayProducts.isEmpty)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(right: 16),
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppDesignSystem.gray50,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppDesignSystem.borderLight),
+              ),
+              child: Center(
+                child: Text(
+                  'No items in this subcategory yet',
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 12),
+                    fontWeight: FontWeight.w600,
+                    color: AppDesignSystem.textSecondary,
+                  ),
+                ),
+              ),
+            )
+          else
+            AnimationLimiter(
+              child: SizedBox(
+                height: Responsive.isSmallMobile(context) ? 232 : 252,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  padding: EdgeInsets.only(right: Responsive.horizontalPadding(context)),
+                  itemCount: displayProducts.length + 1,
+                  separatorBuilder: (_, __) => SizedBox(width: Responsive.isSmallMobile(context) ? 8 : 10),
+                  itemBuilder: (context, index) {
+                    if (index < displayProducts.length) {
+                      final product = displayProducts[index];
                     final cardWidth = Responsive.isSmallMobile(context)
                         ? (context.screenWidth - Responsive.horizontalPadding(context) * 2 - 10) / 2
                         : Responsive.isTablet(context)

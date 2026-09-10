@@ -191,17 +191,20 @@ export async function GET(
         const grocerySub = subOrders.find(s => s.type === 'GROCERY')
         const restaurantSub = subOrders.find(s => s.type === 'RESTAURANT')
 
+        const activeOrders = combinedOrders.filter(o => o.status !== 'CANCELLED')
+        const ordersToSum = activeOrders.length > 0 ? activeOrders : combinedOrders
+
         const mergedOrder = {
           ...order,
           readableId: baseReadableId,
           baseReadableId,
           status: combinedStatus,
-          subtotal: combinedOrders.reduce((sum, o) => sum + (o.subtotal || 0), 0),
-          discount: combinedOrders.reduce((sum, o) => sum + (o.discount || 0), 0),
-          deliveryFee: combinedOrders.reduce((sum, o) => sum + (o.deliveryFee || 0), 0),
-          taxes: combinedOrders.reduce((sum, o) => sum + (o.taxes || 0), 0),
-          miscFee: combinedOrders.reduce((sum, o) => sum + (o.miscFee || 0), 0),
-          total: combinedOrders.reduce((sum, o) => sum + (o.total || 0), 0),
+          subtotal: ordersToSum.reduce((sum, o) => sum + (o.subtotal || 0), 0),
+          discount: ordersToSum.reduce((sum, o) => sum + (o.discount || 0), 0),
+          deliveryFee: ordersToSum.reduce((sum, o) => sum + (o.deliveryFee || 0), 0),
+          taxes: ordersToSum.reduce((sum, o) => sum + (o.taxes || 0), 0),
+          miscFee: ordersToSum.reduce((sum, o) => sum + (o.miscFee || 0), 0),
+          total: ordersToSum.reduce((sum, o) => sum + (o.total || 0), 0),
           items: allItems,
           address,
           deliveryUser,
@@ -415,16 +418,15 @@ export async function PATCH(
     }
 
     // Sub-order isolation for combined orders:
-    // When a single outlet cancels or packs an order, only that outlet's order updates
+    // When a single outlet cancels, edits, or packs an order, only that outlet's order updates
     // unless the caller explicitly passes scope: 'ALL' or updateCombined: true.
-    const isSingleSubOrderAction = body.scope === 'SINGLE' || (!body.scope && (status === 'CANCELLED' || status === 'PACKED' || status === 'CONFIRMED') && !isAdmin)
+    // If a picker cancels or edits a grocery sub-order (-G), the restaurant companion order (-R) MUST NEVER be cancelled!
+    const isExplicitAll = body.scope === 'ALL' || body.updateCombined === true
     const shouldUpdateAllCombined = Boolean(
-      existingOrder.combinedId && !isSingleSubOrderAction && (
-        body.scope === 'ALL' || 
-        body.updateCombined === true ||
+      existingOrder.combinedId && (
+        isExplicitAll ||
         status === 'SHIPPED' || 
-        status === 'DELIVERED' ||
-        (isAdmin && body.scope !== 'SINGLE' && status === 'CANCELLED')
+        status === 'DELIVERED'
       )
     )
 

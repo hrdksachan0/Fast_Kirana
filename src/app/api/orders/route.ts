@@ -658,6 +658,17 @@ export async function POST(request: NextRequest) {
         console.error('Failed to evaluate hub surge fee:', surgeErr)
       }
 
+      // Evaluate combined order threshold
+      const isCombinedOrder = groceryItems.length > 0 && restaurantData.length > 0
+      const combinedThreshold = settingsMap['combined_free_delivery_threshold']
+        ? parseFloat(settingsMap['combined_free_delivery_threshold'])
+        : (settingsMap['grocery_free_delivery_threshold']
+          ? parseFloat(settingsMap['grocery_free_delivery_threshold'])
+          : COMBINED_FREE_DELIVERY_THRESHOLD)
+
+      // In a combined order (e.g. Food + Grocery), if the combined cart reaches threshold, delivery is FREE for all parts!
+      const isCombinedFree = isCombinedOrder && (combinedSubtotal >= combinedThreshold)
+
       // 1. Process Grocery Items Delivery Fee & Validation from DarkStore Hub
       if (groceryItems.length > 0) {
         const defaultThreshold = settingsMap['grocery_free_delivery_threshold'] ? parseFloat(settingsMap['grocery_free_delivery_threshold']) : GROCERY_FREE_DELIVERY_THRESHOLD
@@ -672,13 +683,13 @@ export async function POST(request: NextRequest) {
             }, { status: 400 })
           }
 
-          if (grocerySubtotal < groceryRules.freeDeliveryThreshold) {
-            groceryDeliveryFee = groceryRules.deliveryFee
-          } else {
+          if (isCombinedFree || grocerySubtotal >= groceryRules.freeDeliveryThreshold || combinedSubtotal >= groceryRules.freeDeliveryThreshold) {
             groceryDeliveryFee = 0
+          } else {
+            groceryDeliveryFee = groceryRules.deliveryFee
           }
         } else {
-          groceryDeliveryFee = (grocerySubtotal < defaultThreshold ? deliveryFeeVal : 0) + hubSurgeFee
+          groceryDeliveryFee = ((isCombinedFree || grocerySubtotal >= defaultThreshold || combinedSubtotal >= defaultThreshold) ? 0 : deliveryFeeVal) + hubSurgeFee
         }
       }
 
@@ -705,16 +716,26 @@ export async function POST(request: NextRequest) {
             }, { status: 400 })
           }
 
-          if (rData.subtotal < rRules.freeDeliveryThreshold) {
-            rData.deliveryFee = rRules.deliveryFee
-          } else {
+          if (isCombinedFree || rData.subtotal >= rRules.freeDeliveryThreshold || combinedSubtotal >= rRules.freeDeliveryThreshold) {
             rData.deliveryFee = 0
+          } else {
+            rData.deliveryFee = rRules.deliveryFee
           }
         } else {
           // Fallback if restaurant has no GPS saved
-          if (rData.subtotal < rDefaultThreshold) {
-            rData.deliveryFee = deliveryFeeVal + hubSurgeFee
+          if (isCombinedFree || rData.subtotal >= rDefaultThreshold || combinedSubtotal >= rDefaultThreshold) {
+            rData.deliveryFee = 0
           } else {
+            rData.deliveryFee = deliveryFeeVal + hubSurgeFee
+          }
+        }
+      }
+
+      // Single delivery fee rule for combined order under threshold:
+      // If grocery has already been charged a delivery fee, waive delivery fee on the restaurant portion so customer is never double-charged
+      if (isCombinedOrder && !isCombinedFree) {
+        if (groceryDeliveryFee > 0) {
+          for (const rData of restaurantData) {
             rData.deliveryFee = 0
           }
         }
@@ -1674,17 +1695,20 @@ export async function GET(request: NextRequest) {
 
         const baseReadableId = (mainOrder.readableId || '').replace(/-[GR\d]+$/i, '') || mainOrder.readableId
 
+        const activeOrders = relatedOrders.filter((o: any) => o.status !== 'CANCELLED')
+        const ordersToSum = activeOrders.length > 0 ? activeOrders : relatedOrders
+
         const mergedOrder = {
           ...mainOrder,
           id: mainOrder.id,
           readableId: baseReadableId,
           status: combinedStatus,
-          subtotal: relatedOrders.reduce((sum, o) => sum + (o.subtotal || 0), 0),
-          discount: relatedOrders.reduce((sum, o) => sum + (o.discount || 0), 0),
-          deliveryFee: relatedOrders.reduce((sum, o) => sum + (o.deliveryFee || 0), 0),
-          taxes: relatedOrders.reduce((sum, o) => sum + (o.taxes || 0), 0),
-          miscFee: relatedOrders.reduce((sum, o) => sum + (o.miscFee || 0), 0),
-          total: relatedOrders.reduce((sum, o) => sum + (o.total || 0), 0),
+          subtotal: ordersToSum.reduce((sum: number, o: any) => sum + (o.subtotal || 0), 0),
+          discount: ordersToSum.reduce((sum: number, o: any) => sum + (o.discount || 0), 0),
+          deliveryFee: ordersToSum.reduce((sum: number, o: any) => sum + (o.deliveryFee || 0), 0),
+          taxes: ordersToSum.reduce((sum: number, o: any) => sum + (o.taxes || 0), 0),
+          miscFee: ordersToSum.reduce((sum: number, o: any) => sum + (o.miscFee || 0), 0),
+          total: ordersToSum.reduce((sum: number, o: any) => sum + (o.total || 0), 0),
           items: Array.from(itemMap.values()),
           isCombined: true,
           subOrders

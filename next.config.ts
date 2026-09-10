@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
     },
   },
   images: {
+    unoptimized: process.env.NODE_ENV === 'development',
     minimumCacheTTL: 2592000,
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200],

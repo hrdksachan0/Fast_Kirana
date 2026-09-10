@@ -1,7 +1,6 @@
 import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'package:flutter/material.dart';
 import '../core/theme/design_system.dart';
-import '../core/theme/responsive.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -208,7 +207,7 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
                   child: Bounceable(
                     onTap: _handleUseCurrentLocation,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF0FDF4),
                         borderRadius: BorderRadius.circular(14),
@@ -219,22 +218,25 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
                         children: [
                           _isLocatingGps
                               ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
+                                  width: 16,
+                                  height: 16,
                                   child: CircularProgressIndicator(strokeWidth: 2, color: AppDesignSystem.green600),
                                 )
-                              : const Icon(Icons.my_location_rounded, size: 18, color: AppDesignSystem.green600),
-                          const SizedBox(width: 8),
+                              : const Icon(Icons.my_location_rounded, size: 16, color: AppDesignSystem.green600),
+                          const SizedBox(width: 6),
                           Flexible(
-                            child: Text(
-                              _isLocatingGps ? 'Locating...' : 'Current Location',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 12.5),
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xFF15803D),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                _isLocatingGps ? 'Locating...' : 'Current Location',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 12),
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF15803D),
+                                ),
+                                maxLines: 1,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -266,7 +268,7 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
                       }
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFFF7ED),
                         borderRadius: BorderRadius.circular(14),
@@ -275,18 +277,21 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.add_location_alt_rounded, size: 18, color: AppDesignSystem.orange600),
-                          const SizedBox(width: 8),
+                          const Icon(Icons.add_location_alt_rounded, size: 16, color: AppDesignSystem.orange600),
+                          const SizedBox(width: 6),
                           Flexible(
-                            child: Text(
-                              'Add New Address',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 12.5),
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xFFC2410C),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Add New Address',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 12),
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFFC2410C),
+                                ),
+                                maxLines: 1,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],

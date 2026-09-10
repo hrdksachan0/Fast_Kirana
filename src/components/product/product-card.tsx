@@ -269,16 +269,16 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
   return (
     <div
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-3xl p-1 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] cursor-pointer",
+        "group relative flex flex-col overflow-hidden rounded-[20px] transition-all duration-300 ease-out active:scale-[0.98] cursor-pointer",
         isRestaurant 
-          ? "bg-amber-500/10 dark:bg-amber-950/20 border border-amber-500/20 hover:border-orange-500/40 shadow-xs hover:shadow-md"
-          : "bg-slate-200/60 dark:bg-zinc-900/80 border border-black/5 dark:border-white/10 shadow-xs hover:shadow-lg",
+          ? "bg-white dark:bg-[#141210] border border-amber-500/25 hover:border-amber-500/50 shadow-[0_2px_10px_rgba(245,158,11,0.06)] hover:shadow-[0_12px_28px_-6px_rgba(245,158,11,0.15)]"
+          : "bg-white dark:bg-[#121215] border border-zinc-200/80 dark:border-zinc-800/80 hover:border-zinc-300 dark:hover:border-zinc-700 shadow-[0_2px_8px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.08),0_4px_10px_rgba(0,0,0,0.03)] hover:-translate-y-0.5",
         isCompact 
-          ? "h-[208px] min-[375px]:h-[228px] sm:h-[248px]" 
-          : "h-[243px] min-[375px]:h-[266px] sm:h-[288px]"
+          ? "h-[215px] min-[375px]:h-[235px] sm:h-[255px]" 
+          : "h-[250px] min-[375px]:h-[272px] sm:h-[294px]"
       )}
     >
-      <div className="flex flex-col h-full w-full rounded-[calc(1.5rem-0.25rem)] bg-card p-2 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] relative overflow-hidden">
+      <div className="flex flex-col h-full w-full p-2 sm:p-2.5 relative overflow-hidden">
       {/* Cart Add Success Animation Overlay (with smooth enter and exit transitions) */}
       <AnimatePresence>
         {showAdded && (
@@ -287,14 +287,14 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
-            className="absolute inset-0 z-30 flex items-center justify-center bg-[#2e7d32]/10 rounded-3xl pointer-events-none"
+            className="absolute inset-0 z-30 flex items-center justify-center bg-emerald-500/10 rounded-[20px] pointer-events-none backdrop-blur-[1px]"
           >
             <motion.div
               initial={{ scale: 0.6, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.6, opacity: 0 }}
               transition={{ duration: 0.12, ease: 'easeOut' }}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2e7d32] text-white shadow-lg"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg"
             >
               <Check className="h-4 w-4" strokeWidth={3} />
             </motion.div>
@@ -307,21 +307,21 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
         {/* Discount Badge — top left */}
         {resolvedDiscount > 0 && (
           <div className={cn(
-            "absolute left-2 top-2 z-10 rounded-full bg-gradient-to-r from-rose-500 to-orange-500 px-2 py-0.5 font-black text-white shadow-[0_2px_8px_rgba(244,63,94,0.3)] tracking-wider whitespace-nowrap pointer-events-none select-none",
-            isCompact ? "text-[7.5px] px-1.5" : "text-[8.5px] min-[375px]:text-[9.5px]"
+            "absolute left-1.5 top-1.5 z-10 rounded-md bg-gradient-to-r from-[#e8153a] to-[#ff3b30] px-1.5 py-0.5 font-black text-white shadow-[0_2px_6px_rgba(232,21,58,0.3)] tracking-wider whitespace-nowrap pointer-events-none select-none",
+            isCompact ? "text-[7.5px]" : "text-[8px] min-[375px]:text-[8.5px]"
           )}>
             {resolvedDiscount}% OFF
           </div>
         )}
 
-        {/* Image Container - Larger & Appetizing */}
+        {/* Image Container - Clean Soft Canvas */}
         <div
           ref={imageRef}
           className={cn(
-            "relative w-full overflow-hidden rounded-2xl bg-muted/15 dark:bg-white/[0.03] flex items-center justify-center shrink-0 border border-border/30",
+            "relative w-full overflow-hidden rounded-[14px] bg-gradient-to-b from-zinc-50 via-zinc-100/35 to-zinc-50/60 dark:from-zinc-900/80 dark:via-zinc-900/40 dark:to-zinc-900/30 flex items-center justify-center shrink-0 border border-zinc-100/80 dark:border-zinc-800/40",
             isCompact
-              ? "h-[90px] min-[375px]:h-[105px] sm:h-[120px]"
-              : "h-[118px] min-[375px]:h-[132px] sm:h-[148px] md:h-[165px]"
+              ? "h-[92px] min-[375px]:h-[108px] sm:h-[122px]"
+              : "h-[120px] min-[375px]:h-[135px] sm:h-[150px] md:h-[168px]"
           )}
         >
           <ProductImage
@@ -330,7 +330,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
             categorySlug={categorySlug}
             isBestseller={product.tags?.includes('popular')}
             width={240}
-            className="h-full w-full object-contain p-1 transition-transform duration-300 md:group-hover:scale-105 group-active:scale-[0.97] md:group-active:scale-105"
+            className="h-full w-full object-contain p-1.5 transition-transform duration-300 ease-out md:group-hover:scale-108 group-active:scale-[0.97]"
           />
 
           {/* Heart / Wishlist Button */}
@@ -344,15 +344,15 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
             disabled={wishlistLoading}
             aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
             className={cn(
-              "absolute top-1 right-1 z-20 flex items-center justify-center rounded-full p-1.5 transition-all duration-200 cursor-pointer active:scale-90",
+              "absolute top-1.5 right-1.5 z-20 flex items-center justify-center rounded-full w-6.5 h-6.5 min-[375px]:w-7 min-[375px]:h-7 transition-all duration-200 cursor-pointer active:scale-90",
               isWishlisted
                 ? "opacity-100 bg-rose-500 text-white shadow-md scale-105"
-                : "opacity-85 sm:opacity-0 sm:group-hover:opacity-100 bg-white/90 dark:bg-zinc-800/90 text-zinc-500 dark:text-zinc-400 shadow-xs hover:text-rose-500 hover:scale-110",
+                : "opacity-80 sm:opacity-0 sm:group-hover:opacity-100 bg-white/90 dark:bg-zinc-800/90 text-zinc-500 dark:text-zinc-400 shadow-xs hover:text-rose-500 hover:scale-110 border border-zinc-200/50 dark:border-zinc-700/50",
               wishlistLoading && "opacity-70 cursor-wait"
             )}
           >
             {wishlistLoading ? (
-              <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+              <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
               </svg>
@@ -370,18 +370,18 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
           {/* Bestseller Tag */}
           {(product.tags?.includes('popular') || product.isBestSeller) && (
             <div className={cn(
-              "absolute bottom-1.5 left-1.5 z-10 flex items-center gap-0.5 rounded-full backdrop-blur-md px-2 py-0.5 text-[8px] font-extrabold text-white pointer-events-none select-none",
+              "absolute bottom-1.5 left-1.5 z-10 flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[7.5px] min-[375px]:text-[8px] font-black pointer-events-none select-none tracking-tight",
               isRestaurant 
-                ? "bg-gradient-to-r from-red-600 to-amber-600 shadow-[0_2px_8px_rgba(226,10,34,0.3)]" 
-                : "bg-amber-500/95 shadow-[0_2px_8px_rgba(245,158,11,0.25)]"
+                ? "bg-red-600 text-white shadow-xs" 
+                : "bg-amber-400 text-zinc-950 shadow-xs"
             )}>
-              {isRestaurant ? ('👨‍🍳 ' + (((product as any).restaurant?.name || (product as any).restaurantName)?.split(' ')[0] || 'Chef') + ' Special') : '⭐ Bestseller'}
+              {isRestaurant ? ('👨‍🍳 ' + (((product as any).restaurant?.name || (product as any).restaurantName)?.split(' ')[0] || 'Chef') + ' Special') : '⭐ BESTSELLER'}
             </div>
           )}
 
           {/* Cafe Fresh Tag */}
           {isCafe && (
-            <div className="absolute bottom-1.5 right-1.5 z-10 flex items-center gap-0.5 rounded-full bg-orange-500/90 backdrop-blur-md px-2 py-0.5 text-[8px] font-extrabold text-white shadow-[0_2px_8px_rgba(249,115,22,0.2)] pointer-events-none select-none">
+            <div className="absolute bottom-1.5 right-1.5 z-10 flex items-center gap-0.5 rounded-full bg-orange-500/90 backdrop-blur-md px-2 py-0.5 text-[8px] font-extrabold text-white shadow-xs pointer-events-none select-none">
               ☕ Cafe Fresh
             </div>
           )}
@@ -401,9 +401,9 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 300, damping: 15 }}
               className={cn(
-                "absolute z-10 flex items-center gap-0.5 rounded-md bg-red-500/95 px-1.5 py-0.5 text-[8px] font-bold text-white shadow-[0_2px_8px_rgba(239,68,68,0.3)] pointer-events-none select-none",
+                "absolute z-10 flex items-center gap-0.5 rounded-md bg-red-500/95 px-1.5 py-0.5 text-[7.5px] font-bold text-white shadow-xs pointer-events-none select-none",
                 (product.tags?.includes('popular') || product.isBestSeller)
-                  ? "bottom-7 left-1.5"
+                  ? "bottom-6 left-1.5"
                   : "bottom-1.5 right-1.5"
               )}
             >
@@ -413,7 +413,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
 
           {/* Out of Stock Overlay */}
           {(resolvedStock <= 0 || !resolvedIsAvailable) && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/45 backdrop-blur-[1px] rounded-2xl pointer-events-none select-none">
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/45 backdrop-blur-[1px] rounded-[14px] pointer-events-none select-none">
               <span className="rounded-full bg-zinc-950/90 px-2 py-0.5 text-[8.5px] min-[375px]:text-[9.5px] font-black text-rose-400 border border-rose-500/40 shadow-lg tracking-wider uppercase">
                 Out of Stock
               </span>
@@ -422,8 +422,8 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
         </div>
       </Link>
 
-        {/* ROW 1: Pack Size (Left) & ADD Button (Right) — Immediately below image container */}
-        <div className="flex items-center justify-between gap-1 mt-1.5 mb-1 shrink-0 w-full min-w-0">
+        {/* ROW 1: Pack Size (Left) & ADD Button (Right) — Clean & Balanced */}
+        <div className="flex items-center justify-between gap-1 mt-2 mb-1 shrink-0 w-full min-w-0">
           <div className="min-w-0 flex-1 overflow-hidden">
             {hasVariants ? (
               <span 
@@ -437,16 +437,16 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
                   setActiveVariantProduct(product)
                 }}
                 className={cn(
-                  "inline-flex items-center gap-0.5 text-[7.5px] min-[375px]:text-[8.5px] font-extrabold px-1 py-0.5 rounded-full border whitespace-nowrap truncate max-w-full leading-tight transition-all",
+                  "inline-flex items-center gap-0.5 text-[8px] min-[375px]:text-[8.5px] font-extrabold px-1.5 py-0.5 rounded-md border whitespace-nowrap truncate max-w-full leading-tight transition-all",
                   resolvedStock <= 0 || !resolvedIsAvailable
                     ? "text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 cursor-not-allowed opacity-75"
-                    : "text-[#2e7d32] dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30 cursor-pointer active:scale-95 animate-pulse"
+                    : "text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30 cursor-pointer active:scale-95"
                 )}
               >
                 {variantsList.length} Options ▾
               </span>
             ) : (
-              <span className="text-[8.5px] min-[375px]:text-[9.5px] sm:text-xs font-bold text-zinc-600 dark:text-zinc-400 leading-none truncate block whitespace-nowrap">
+              <span className="text-[9px] min-[375px]:text-[10px] sm:text-[11px] font-extrabold text-zinc-400 dark:text-zinc-500 uppercase tracking-tight leading-none truncate block whitespace-nowrap">
                 {product.unit}
               </span>
             )}
@@ -456,8 +456,8 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
           <div className={cn(
             "relative shrink-0 flex-shrink-0 ml-auto",
             isCompact 
-              ? "h-6 min-[375px]:h-6.5 w-[44px] min-[375px]:w-[50px] sm:w-14" 
-              : "h-6.5 sm:h-7.5 w-[50px] min-[375px]:w-[56px] sm:w-16"
+              ? "h-6.5 min-[375px]:h-7 w-[46px] min-[375px]:w-[52px] sm:w-14" 
+              : "h-7 sm:h-8 w-[52px] min-[375px]:w-[58px] sm:w-16"
           )}>
             <AnimatePresence mode="wait">
               {resolvedQuantity === 0 ? (
@@ -476,19 +476,19 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
                   }}
                   disabled={resolvedStock <= 0 || !resolvedIsAvailable || (isStoreClosed && resolvedStock > 0) || !timingStatus.isAvailableNow}
                   className={cn(
-                    "w-full h-full border font-black rounded-lg transition-all duration-200 flex items-center justify-center gap-0.5 outline-none px-1",
-                    isCompact ? "text-[7.5px] min-[375px]:text-[8.5px]" : "text-[8.5px] sm:text-[10px]",
+                    "w-full h-full border font-black rounded-lg transition-all duration-200 flex items-center justify-center gap-0.5 outline-none px-1 tracking-wide",
+                    isCompact ? "text-[8px] min-[375px]:text-[9px]" : "text-[9px] sm:text-[10.5px]",
                     resolvedStock <= 0 || !resolvedIsAvailable
-                      ? "border-zinc-300 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800/80 text-zinc-400 dark:text-zinc-500 cursor-not-allowed shadow-none"
+                      ? "border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800/80 text-zinc-400 dark:text-zinc-500 cursor-not-allowed shadow-none"
                       : !timingStatus.isAvailableNow
                       ? "border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400 cursor-not-allowed shadow-none"
                       : isStoreClosed && resolvedStock > 0
-                      ? "border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 cursor-not-allowed shadow-none"
+                      ? "border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 cursor-not-allowed shadow-none"
                       : isCafe
-                      ? "border-orange-500 bg-white dark:bg-zinc-900 text-orange-600 dark:text-orange-400 md:hover:bg-orange-500 md:hover:text-white cursor-pointer shadow-2xs md:hover:scale-[1.03]"
+                      ? "border-orange-500 bg-orange-50/60 dark:bg-orange-950/20 text-orange-600 dark:text-orange-400 hover:bg-orange-500 hover:text-white cursor-pointer shadow-2xs hover:shadow-xs"
                       : isRestaurant
-                      ? "border-[#e20a22] bg-white dark:bg-zinc-900 text-[#e20a22] dark:text-red-400 md:hover:bg-[#e20a22] md:hover:text-white cursor-pointer shadow-2xs md:hover:scale-[1.03]"
-                      : "border-[#22c55e] bg-white dark:bg-zinc-900 text-[#16a34a] dark:text-emerald-400 md:hover:bg-[#22c55e] md:hover:text-white cursor-pointer shadow-2xs md:hover:scale-[1.03]"
+                      ? "border-[#e20a22] bg-rose-50/60 dark:bg-rose-950/20 text-[#e20a22] dark:text-rose-400 hover:bg-[#e20a22] hover:text-white cursor-pointer shadow-2xs hover:shadow-xs"
+                      : "border-emerald-600 dark:border-emerald-500 bg-emerald-50/80 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white cursor-pointer shadow-2xs hover:shadow-xs"
                   )}
                 >
                   {resolvedStock <= 0 || !resolvedIsAvailable ? (
@@ -506,18 +506,18 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
                 </motion.button>
               ) : (
                 <div className={cn(
-                  "flex h-full w-full items-center justify-between rounded-lg text-white font-bold shadow-xs overflow-hidden",
-                  isCafe ? "bg-orange-500" : isRestaurant ? "bg-[#e20a22]" : "bg-[#22c55e]"
+                  "flex h-full w-full items-center justify-between rounded-lg text-white font-black shadow-xs overflow-hidden",
+                  isCafe ? "bg-orange-500" : isRestaurant ? "bg-[#e20a22]" : "bg-emerald-600"
                 )}>
                   <motion.button
                     whileTap={{ scale: 0.85 }}
                     transition={{ type: 'spring', stiffness: 400, damping: 15 }}
                     onClick={handleDecrement}
-                    className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all cursor-pointer"
+                    className="flex-1 flex h-full items-center justify-center hover:bg-black/15 transition-all cursor-pointer"
                   >
                     <Minus className="h-2.5 w-2.5 stroke-[3]" />
                   </motion.button>
-                  <span className="shrink-0 flex items-center justify-center font-black select-none text-[9px] min-[375px]:text-[10px]">
+                  <span className="shrink-0 flex items-center justify-center font-black select-none text-[9.5px] min-[375px]:text-[10.5px]">
                     {quantity}
                   </span>
                   <motion.button
@@ -525,7 +525,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
                     transition={{ type: 'spring', stiffness: 400, damping: 15 }}
                     onClick={handleIncrement}
                     disabled={quantity >= resolvedStock || quantity >= getProductLimit(product) || isStoreClosed}
-                    className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all disabled:opacity-50 cursor-pointer"
+                    className="flex-1 flex h-full items-center justify-center hover:bg-black/15 transition-all disabled:opacity-50 cursor-pointer"
                   >
                     <Plus className="h-2.5 w-2.5 stroke-[3]" />
                   </motion.button>
@@ -536,7 +536,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
         </div>
 
         {/* ROW 2, ROW 3, and Restaurant Outlet wrapped in Link for tap navigation */}
-        <Link href={`/product/${product.slug}`} className="flex flex-col flex-1 min-h-0 min-w-0">
+        <Link href={`/product/${product.slug}`} className="flex flex-col flex-1 min-h-0 min-w-0 justify-between">
           {/* ROW 2: Price & MRP */}
           <div className="flex items-baseline gap-1.5 flex-wrap leading-none mb-1">
             <motion.span
@@ -545,16 +545,16 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
               className={cn(
-                "font-black text-text-primary block tracking-tight tabular-nums",
+                "font-black text-zinc-950 dark:text-white block tracking-tight tabular-nums",
                 isCompact 
-                  ? "text-[11px] min-[375px]:text-xs sm:text-sm" 
-                  : "text-[12px] min-[375px]:text-sm sm:text-base"
+                  ? "text-[12px] min-[375px]:text-[13px] sm:text-[14px]" 
+                  : "text-[13px] min-[375px]:text-[14px] sm:text-[16px]"
               )}
             >
               ₹{resolvedPrice}
             </motion.span>
             {resolvedMrp > resolvedPrice && (
-              <span className="text-[9px] min-[375px]:text-[10px] text-zinc-400 dark:text-zinc-500 line-through font-semibold tabular-nums">
+              <span className="text-[9.5px] min-[375px]:text-[10px] text-zinc-400 dark:text-zinc-500 line-through font-medium tabular-nums">
                 ₹{resolvedMrp}
               </span>
             )}
@@ -568,10 +568,10 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
               </div>
             )}
             <h3 className={cn(
-              "font-extrabold text-text-primary line-clamp-2 leading-tight transition-colors flex-1 min-w-0",
+              "font-bold text-zinc-850 dark:text-zinc-100 line-clamp-2 leading-[1.3] transition-colors flex-1 min-w-0 group-hover:text-emerald-600 dark:group-hover:text-emerald-400",
               isCompact 
-                ? "text-[9.5px] min-[375px]:text-[10px] min-h-[22px]" 
-                : "text-[10.5px] min-[375px]:text-[11.5px] sm:text-xs min-h-[26px]"
+                ? "text-[10px] min-[375px]:text-[10.5px] min-h-[26px]" 
+                : "text-[11px] min-[375px]:text-[12px] sm:text-[12.5px] min-h-[30px]"
             )}>
               {product.name}
             </h3>

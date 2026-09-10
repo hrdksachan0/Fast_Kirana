@@ -185,7 +185,7 @@ export function CategoryPageClient({
     }
     return 2
   })
-  const [visibleCount, setVisibleCount] = useState(12)
+  const [visibleCount, setVisibleCount] = useState(24)
 
   const toggleColumns = () => {
     const newCols = columns === 2 ? 3 : 2
@@ -195,7 +195,7 @@ export function CategoryPageClient({
 
   // Reset visibleCount when filters change
   useEffect(() => {
-    setVisibleCount(12)
+    setVisibleCount(24)
   }, [searchQuery, activeSubcategoryId, sort, vegFilter, maxPrice])
 
   // Reset maxPrice & subcategory when switching categories

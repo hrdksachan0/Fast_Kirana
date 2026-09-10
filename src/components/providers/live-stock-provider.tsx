@@ -94,10 +94,11 @@ export function LiveStockProvider({ children }: { children: React.ReactNode }) {
   const registerProduct = useCallback((id: string) => {
     const currentCount = registryRef.current[id] || 0
     registryRef.current[id] = currentCount + 1
-    if (currentCount === 0) {
-      triggerBatchFetch()
+    // Mark newly mounted products from SSR as fresh so we don't hit Supabase immediately on mount
+    if (!lastFetchedRef.current[id]) {
+      lastFetchedRef.current[id] = Date.now()
     }
-  }, [triggerBatchFetch])
+  }, [])
 
   const unregisterProduct = useCallback((id: string) => {
     const currentCount = registryRef.current[id] || 0

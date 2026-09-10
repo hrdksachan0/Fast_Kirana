@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
 import '../../data/models/category.dart';
-import '../../providers/category_provider.dart';
+import '../../data/models/product.dart';
 import '../../providers/product_provider.dart';
 import '../../widgets/product_card.dart';
 
@@ -20,17 +20,22 @@ class _SubcategoryScreenState extends ConsumerState<SubcategoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final productsAsync = ref.watch(productsProvider(widget.category.id));
+    final catKey = widget.category.id.isNotEmpty ? widget.category.id : widget.category.slug;
+    final productsAsync = ref.watch(productsProvider(catKey));
+    final catalogProducts = ref.watch(homeProductCatalogProvider).valueOrNull ?? [];
     final categoriesAsync = ref.watch(categoriesProvider);
     final allCats = categoriesAsync.valueOrNull ?? [];
+    final catIdLower = widget.category.id.toLowerCase().trim();
+    final catSlugLower = widget.category.slug.toLowerCase().trim();
+
     final dbSubcats = allCats.where((c) =>
       c.parentId != null && c.parentId!.isNotEmpty &&
-      (c.parentId == widget.category.id || c.parentId == widget.category.slug)
+      (c.parentId!.toLowerCase().trim() == catIdLower || c.parentId!.toLowerCase().trim() == catSlugLower)
     ).toList();
 
     final List<String> subcategories = [
       'All Items',
-      ...dbSubcats.map((c) => c.name),
+      ...dbSubcats.map((c) => c.name.trim()),
     ];
 
     return Scaffold(
@@ -84,15 +89,40 @@ class _SubcategoryScreenState extends ConsumerState<SubcategoryScreen> {
           Expanded(
             child: productsAsync.when(
               data: (products) {
-                var list = products;
+                var list = List<Product>.from(products);
+                if (list.isEmpty && catalogProducts.isNotEmpty) {
+                  list = catalogProducts.where((p) {
+                    final pCatId = (p.categoryId ?? '').toLowerCase().trim();
+                    final pSubId = (p.category?.id ?? '').toLowerCase().trim();
+                    final pSubSlug = (p.category?.slug ?? '').toLowerCase().trim();
+                    final pParentId = (p.category?.parentId ?? '').toLowerCase().trim();
+                    return pCatId == catIdLower || pSubId == catIdLower || pParentId == catIdLower ||
+                           (catSlugLower.isNotEmpty && (pSubSlug == catSlugLower || pSubSlug.contains(catSlugLower)));
+                  }).toList();
+                }
+
                 if (_selectedSubIdx > 0 && _selectedSubIdx < subcategories.length && dbSubcats.isNotEmpty) {
                   final target = dbSubcats[_selectedSubIdx - 1];
-                  list = list.where((p) =>
-                    p.categoryId == target.id ||
-                    p.category?.id == target.id ||
-                    p.category?.parentId == target.id ||
-                    p.category?.name.toLowerCase() == target.name.toLowerCase()
-                  ).toList();
+                  final targetId = target.id.toLowerCase().trim();
+                  final targetSlug = target.slug.toLowerCase().trim();
+                  final targetName = target.name.toLowerCase().trim();
+
+                  list = list.where((p) {
+                    final pCatId = (p.categoryId ?? '').toLowerCase().trim();
+                    final pSubId = (p.category?.id ?? '').toLowerCase().trim();
+                    final pSubSlug = (p.category?.slug ?? '').toLowerCase().trim();
+                    final pSubName = (p.category?.name ?? '').toLowerCase().trim();
+                    final pParentId = (p.category?.parentId ?? '').toLowerCase().trim();
+                    final pName = p.name.toLowerCase().trim();
+
+                    return pCatId == targetId ||
+                           pSubId == targetId ||
+                           pParentId == targetId ||
+                           (targetSlug.isNotEmpty && pSubSlug == targetSlug) ||
+                           (targetName.isNotEmpty && (pSubName == targetName || pSubName.contains(targetName) || targetName.contains(pSubName))) ||
+                           p.tags.any((t) => t.toLowerCase().trim() == targetSlug || t.toLowerCase().trim() == targetName) ||
+                           (targetName.length >= 4 && pName.contains(targetName));
+                  }).toList();
                 }
                 if (list.isEmpty) {
                   return Center(

@@ -4,11 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/design_system.dart';
-import '../../core/theme/responsive.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../data/models/category.dart';
 import '../../providers/product_provider.dart';
 import 'category_products_screen.dart';
+import '../../widgets/voice_search_sheet.dart';
 
 class CategoriesScreen extends ConsumerStatefulWidget {
   const CategoriesScreen({super.key});
@@ -106,6 +106,20 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
       'btnColor': AppDesignSystem.cyan600,
       'asset': 'assets/categories/household_category.webp',
       'webImage': 'https://www.fastkirana.in/home-cleaning.png',
+    },
+    'groceries': {
+      'tagline': 'Daily Essentials, Sugar & Oil',
+      'items': 106,
+      'btnColor': AppDesignSystem.emerald600,
+      'asset': 'assets/categories/atta_rice_dal_category.webp',
+      'webImage': 'https://www.fastkirana.in/kitchen-needs.png',
+    },
+    'kirana-ration': {
+      'tagline': 'Atta, Rice, Dal & Grains',
+      'items': 42,
+      'btnColor': AppDesignSystem.emerald600,
+      'asset': 'assets/categories/atta_rice_dal_category.webp',
+      'webImage': 'https://www.fastkirana.in/kitchen-needs.png',
     },
     'restaurant-food': {
       'tagline': 'Hot Burgers, Rolls & Meals',
@@ -238,50 +252,145 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
               ),
             ),
 
-            // 2. Search Input Bar (Pill style matching reference)
+            // 2. Search Input Bar (Pill style matching modern aesthetic)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
                 child: Container(
-                  height: 44,
+                  height: 46,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: AppDesignSystem.slate200),
+                    border: Border.all(
+                      color: _searchQuery.isNotEmpty ? AppDesignSystem.primary : const Color(0xFFE2E8F0),
+                      width: _searchQuery.isNotEmpty ? 1.4 : 1.1,
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.02),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
+                        color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
                       ),
+                      if (_searchQuery.isNotEmpty)
+                        BoxShadow(
+                          color: AppDesignSystem.primary.withValues(alpha: 0.12),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
                     ],
                   ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
-                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w500),
-                    decoration: InputDecoration(
-                      hintText: 'Search categories...',
-                      hintStyle: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 12.5),
-                        fontWeight: FontWeight.w500,
-                        color: AppDesignSystem.slate400,
+                  child: Row(
+                    children: [
+                      // Circular lens badge
+                      Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: _searchQuery.isNotEmpty
+                              ? const Color(0xFFFEF2F2)
+                              : const Color(0xFFF1F5F9),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.search_rounded,
+                          size: 16,
+                          color: _searchQuery.isNotEmpty
+                              ? AppDesignSystem.primary
+                              : const Color(0xFF64748B),
+                        ),
                       ),
-                      prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppDesignSystem.slate400),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.close_rounded, size: 16, color: AppDesignSystem.slate500),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() => _searchQuery = '');
+                      const SizedBox(width: 10),
+
+                      // Search text input
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 13),
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF0F172A),
+                          ),
+                          cursorColor: AppDesignSystem.primary,
+                          decoration: InputDecoration(
+                            isDense: true,
+                            hintText: 'Search categories...',
+                            hintStyle: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 12.5),
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF94A3B8),
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                        ),
+                      ),
+
+                      // Clear or Voice Search
+                      if (_searchQuery.isNotEmpty)
+                        GestureDetector(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                          child: Container(
+                            width: 24,
+                            height: 24,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFE2E8F0),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close_rounded,
+                              size: 14,
+                              color: Color(0xFF475569),
+                            ),
+                          ),
+                        )
+                      else
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              height: 16,
+                              width: 1,
+                              color: const Color(0xFFE2E8F0),
+                              margin: const EdgeInsets.symmetric(horizontal: 6),
+                            ),
+                            GestureDetector(
+                              onTap: () {
+                                HapticFeedback.lightImpact();
+                                VoiceSearchSheet.show(
+                                  context,
+                                  onResult: (voiceText) {
+                                    if (voiceText.trim().isNotEmpty) {
+                                      setState(() {
+                                        _searchController.text = voiceText.trim();
+                                        _searchQuery = voiceText.trim().toLowerCase();
+                                      });
+                                    }
+                                  },
+                                );
                               },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 11),
-                    ),
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFFEF2F2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.mic_rounded,
+                                  size: 15,
+                                  color: AppDesignSystem.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -417,6 +526,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
   // 1:1 Replica of Category Card in Screenshot with Ultra-Premium Finish
   Widget _buildReferenceCategoryCard(BuildContext context, Category category) {
     final meta = _categoryMetadata[category.slug] ??
+        _categoryMetadata[category.id] ??
         {
           'tagline': 'Essential Products',
           'items': category.productCount ?? 15,

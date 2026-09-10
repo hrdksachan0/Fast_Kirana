@@ -12,6 +12,7 @@ interface LazyProductSectionProps {
   itemClassName?: string
   horizontal?: boolean
   gapClassName?: string
+  endCard?: ReactNode
 }
 
 export function LazyProductSection({
@@ -21,26 +22,30 @@ export function LazyProductSection({
   itemClassName = '',
   horizontal = true,
   gapClassName = 'gap-2.5 md:gap-4',
+  endCard,
 }: LazyProductSectionProps) {
-  const [visibleCount, setVisibleCount] = useState(BATCH_SIZE)
+  const [visibleCount, setVisibleCount] = useState(24)
   const [isLoading, setIsLoading] = useState(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
-  const visibleProducts = products.slice(0, visibleCount)
-  const hasMore = visibleCount < products.length
+  // For horizontal carousels, show all items in the shelf so horizontal scrolling accesses 100% of the subcategory inventory.
+  // For vertical grids, paginate in batches of 24 as user scrolls down.
+  const visibleProducts = horizontal ? products : products.slice(0, visibleCount)
+  const hasMore = !horizontal && visibleCount < products.length
 
   const loadMore = useCallback(() => {
     if (isLoading || !hasMore) return
     setIsLoading(true)
     // Small delay to allow the browser to paint current items before adding more
     requestAnimationFrame(() => {
-      setVisibleCount(prev => Math.min(prev + BATCH_SIZE, products.length))
+      setVisibleCount(prev => Math.min(prev + 24, products.length))
       setIsLoading(false)
     })
   }, [isLoading, hasMore, products.length])
 
-  // Intersection Observer — auto-load more when sentinel is visible
+  // Intersection Observer — auto-load more when sentinel is visible (primarily for vertical mode)
   useEffect(() => {
+    if (horizontal) return
     const sentinel = sentinelRef.current
     if (!sentinel || !hasMore) return
 
@@ -55,14 +60,14 @@ export function LazyProductSection({
 
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [hasMore, loadMore])
+  }, [hasMore, loadMore, horizontal])
 
   return (
     <div className={containerClassName}>
       <div
         className={cn(
           horizontal
-            ? `flex ${gapClassName} overflow-x-auto pb-2 md:pb-4 scroll-smooth snap-x snap-mandatory`
+            ? `flex ${gapClassName} overflow-x-auto pb-2 md:pb-3 scroll-smooth snap-x snap-mandatory`
             : `grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 ${gapClassName}`,
           { scrollbarWidth: 'none', msOverflowStyle: 'none' }
         )}
@@ -77,15 +82,26 @@ export function LazyProductSection({
                 : 'min-w-0',
               itemClassName
             )}
-            style={!horizontal ? undefined : undefined}
           >
             {renderItem(product, index)}
           </div>
         ))}
+
+        {/* Optional End Card for horizontal carousel (e.g. See All / Explore) */}
+        {horizontal && endCard && (
+          <div
+            className={cn(
+              'w-[130px] min-[375px]:w-[140px] sm:w-[150px] md:w-[190px] flex-shrink-0 snap-start',
+              itemClassName
+            )}
+          >
+            {endCard}
+          </div>
+        )}
       </div>
 
-      {/* Load More trigger */}
-      {hasMore && (
+      {/* Load More trigger (vertical layout only) */}
+      {!horizontal && hasMore && (
         <div
           ref={sentinelRef}
           className="flex items-center justify-center py-4"
@@ -101,15 +117,6 @@ export function LazyProductSection({
           )}
           <span className="text-[10px] text-zinc-400">
             {visibleCount} of {products.length} items
-          </span>
-        </div>
-      )}
-
-      {/* See All link at end if there are more products */}
-      {hasMore && (
-        <div className="flex justify-center mt-1">
-          <span className="text-[10px] text-zinc-400">
-            Scroll right for more, or see all in category page
           </span>
         </div>
       )}

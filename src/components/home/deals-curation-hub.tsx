@@ -1,13 +1,12 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { ProductCard } from '@/components/product/product-card'
 import { cn } from '@/lib/utils'
 import { ShoppingBag, ArrowRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LazyProductSection } from '@/components/shared/lazy-product-section'
-import { triggerHaptic } from '@/lib/haptic'
 
 // ==========================================
 // --- PREMIUM INLINE VECTOR SVG COMPONENT DESIGN ---
@@ -393,10 +392,46 @@ function PremiumLateNightIcon({ className }: { className?: string }) {
   )
 }
 
+function getSubcategoryEmoji(name: string, slug: string): string {
+  const n = (name + ' ' + slug).toLowerCase()
+  if (n.includes('fruit')) return '🍎'
+  if (n.includes('veg')) return '🥦'
+  if (n.includes('atta') || n.includes('rice') || n.includes('wheat') || n.includes('sugar')) return '🌾'
+  if (n.includes('oil') || n.includes('ghee')) return '🫒'
+  if (n.includes('dal') || n.includes('pulse')) return '🥣'
+  if (n.includes('spice') || n.includes('masala')) return '🌶️'
+  if (n.includes('tea') || n.includes('coffee')) return '☕'
+  if (n.includes('dry fruit') || n.includes('nut')) return '🥜'
+  if (n.includes('biscuit') || n.includes('cookie')) return '🍪'
+  if (n.includes('namkeen') || n.includes('bhujia')) return '🍿'
+  if (n.includes('noodle') || n.includes('magg') || n.includes('breakfast')) return '🍜'
+  if (n.includes('dishwash') || n.includes('clean')) return '🧼'
+  if (n.includes('pest')) return '🦟'
+  if (n.includes('hair') || n.includes('cosmetic')) return '🧴'
+  if (n.includes('oral') || n.includes('paste') || n.includes('hygiene') || n.includes('hygeine')) return '🪥'
+  if (n.includes('choc') || n.includes('sweet')) return '🍫'
+  if (n.includes('ice') || n.includes('kulfi')) return '🍦'
+  if (n.includes('drink') || n.includes('juice') || n.includes('beverage')) return '🥤'
+  if (n.includes('bakery') || n.includes('bread')) return '🥐'
+  return '✨'
+}
+
+// ==========================================
+// Viewport-aware lazy container for off-screen category shelves
+// Reduces initial DOM node count and image requests for lightning-fast loads
+function LazyCategorySection({ children }: { children: React.ReactNode; priority?: boolean }) {
+  return (
+    <div style={{ contentVisibility: 'auto', containIntrinsicSize: '0 320px' }}>
+      {children}
+    </div>
+  )
+}
+
 // ==========================================
 
 interface DealsCurationHubProps {
   categories?: any[]
+  allProducts?: any[]
   flashDeals: any[]
   bestSellers: any[]
   topPicks: any[]
@@ -409,6 +444,7 @@ interface DealsCurationHubProps {
 
 export function DealsCurationHub({
   categories = [],
+  allProducts: incomingAllProducts,
   flashDeals,
   bestSellers,
   topPicks,
@@ -418,8 +454,7 @@ export function DealsCurationHub({
   nightProducts,
   sortRules = {}
 }: DealsCurationHubProps) {
-  const [activeCuration, setActiveCuration] = useState<string>('all')
-  const [selectedSubcatByGroup, setSelectedSubcatByGroup] = useState<Record<string, string>>({})
+  const [activeCuration, setActiveCuration] = useState<'all' | 'flash-deals' | 'best-in-town' | 'trending' | 'dynamic-craving'>('all')
   const [currentHour, setCurrentHour] = useState<number>(0) // default to 0 (Night Mode)
   const [mounted, setMounted] = useState(false)
 
@@ -511,9 +546,11 @@ export function DealsCurationHub({
     }
   }, [currentHour, breakfastProducts, lunchProducts, teaProducts, nightProducts])
 
-  // Combine products for "All" curation dynamically to ensure they stay up-to-date
+  // Combine products for "All" curation dynamically to ensure they stay up-to-date and include complete catalog
   const allProducts = useMemo(() => {
-    const combined = [...flashDeals, ...bestSellers, ...topPicks, ...breakfastProducts, ...lunchProducts, ...teaProducts, ...nightProducts]
+    const combined = (incomingAllProducts && incomingAllProducts.length > 0)
+      ? incomingAllProducts
+      : [...flashDeals, ...bestSellers, ...topPicks]
     const seen = new Set()
     return combined.filter((p) => {
       if (!p || !p.id) return false
@@ -521,106 +558,81 @@ export function DealsCurationHub({
       seen.add(p.id)
       return true
     })
-  }, [flashDeals, bestSellers, topPicks, breakfastProducts, lunchProducts, teaProducts, nightProducts])
+  }, [incomingAllProducts, flashDeals, bestSellers, topPicks])
 
-  // Filter root grocery categories (strictly no restaurant/cafe or subcategories)
-  const rootGroceryCategories = useMemo(() => {
-    return (categories || []).filter((c) => {
-      if (c.parentId) return false
-      const slug = (c.slug || '').toLowerCase().trim()
-      const name = (c.name || '').toLowerCase().trim()
-      if (
-        slug === 'restaurant' ||
-        slug === 'cafe' ||
-        slug === 'restaurant-food' ||
-        slug === 'fast-food-kitchen' ||
-        slug.includes('restaurant') ||
-        slug.includes('fastfood') ||
-        name.includes('restaurant') ||
-        name.includes('cafe')
-      ) {
-        return false
-      }
-      return true
-    })
-  }, [categories])
-
-  // All curation options: "All" + real grocery categories ONLY (No fake/mock curation tabs)
-  const curations = useMemo(() => {
-    const list: any[] = [
-      {
-        id: 'all',
-        title: 'All',
-        subtitle: '🔥 All Categories',
-        icon: PremiumEssentialsIcon,
-        emoji: '🛒',
-        imageUrl: null,
-        gradient: 'from-indigo-600 via-indigo-500 to-purple-600',
-        activeBorderColor: '#6366F1',
-        products: allProducts,
-        activeShadow: 'shadow-[0_12px_25px_-5px_rgba(99,102,241,0.22)]',
-        inactiveBg: 'bg-indigo-500/[0.02]',
-        inactiveHover: 'hover:border-indigo-500/20',
-      },
-    ]
-
-    const colorPalettes = [
-      { border: '#10B981', gradient: 'from-emerald-500 via-teal-500 to-green-600', icon: PremiumEssentialsIcon, emoji: '🥦' },
-      { border: '#3B82F6', gradient: 'from-blue-600 via-sky-500 to-indigo-600', icon: PremiumBreakfastIcon, emoji: '🥛' },
-      { border: '#F59E0B', gradient: 'from-amber-500 via-orange-500 to-yellow-600', icon: PremiumLunchIcon, emoji: '🌾' },
-      { border: '#EF4444', gradient: 'from-rose-500 via-pink-500 to-red-600', icon: PremiumSnacksIcon, emoji: '🍿' },
-      { border: '#06B6D4', gradient: 'from-cyan-500 via-teal-500 to-blue-600', icon: PremiumLightningDealsIcon, emoji: '🥤' },
-      { border: '#8B5CF6', gradient: 'from-purple-600 via-fuchsia-500 to-pink-600', icon: PremiumTrendingIcon, emoji: '🍨' },
-      { border: '#EC4899', gradient: 'from-pink-500 via-rose-500 to-amber-500', icon: PremiumTrendingFlameIcon, emoji: '🍫' },
-      { border: '#14B8A6', gradient: 'from-teal-500 via-emerald-500 to-cyan-600', icon: PremiumEssentialsIcon, emoji: '🧴' },
-      { border: '#6366F1', gradient: 'from-indigo-500 via-purple-500 to-blue-600', icon: PremiumEssentialsIcon, emoji: '🧼' },
-    ]
-
-    rootGroceryCategories.forEach((cat, idx) => {
-      const palette = colorPalettes[idx % colorPalettes.length]
-      const catId = (cat.id || '').toLowerCase()
-      const catSlug = (cat.slug || '').toLowerCase()
-      const catName = (cat.name || '').toLowerCase()
-
-      const catProducts = allProducts.filter((p) => {
-        const pCatId = (p.categoryId || p.category?.id || '').toLowerCase()
-        const pCatSlug = (p.category?.slug || '').toLowerCase()
-        const pParentId = (p.category?.parentId || '').toLowerCase()
-        const pCatName = (p.category?.name || '').toLowerCase()
-
-        if (pCatId === catId || pCatSlug === catSlug || pParentId === catId || pCatName === catName) return true
-        if (p.tags && Array.isArray(p.tags) && p.tags.some((t: string) => t.toLowerCase() === catSlug || t.toLowerCase() === catName)) return true
-        return false
-      })
-
-      list.push({
-        id: cat.slug || cat.id,
-        title: cat.name,
-        subtitle: `${cat.name} fresh picks`,
-        icon: palette.icon,
-        emoji: palette.emoji,
-        imageUrl: cat.imageUrl && (cat.imageUrl.startsWith('http') || cat.imageUrl.startsWith('/')) ? cat.imageUrl : null,
-        gradient: palette.gradient,
-        activeBorderColor: palette.border,
-        products: catProducts,
-        activeShadow: `shadow-[0_12px_25px_-5px_${palette.border}35]`,
-        inactiveBg: 'bg-zinc-500/[0.02]',
-        inactiveHover: 'hover:border-zinc-500/20',
-      })
-    })
-
-    return list
-  }, [allProducts, rootGroceryCategories])
+  // All curation options linked directly to backend admin (isFlashDeal, isBestSeller, isTopPick)
+  const curations = useMemo(() => [
+    {
+      id: 'all' as const,
+      title: 'All',
+      subtitle: '🔥 Mega collections',
+      icon: PremiumEssentialsIcon,
+      gradient: 'from-indigo-600 via-indigo-500 to-purple-600',
+      activeBorderColor: '#6366F1',
+      products: allProducts,
+      activeShadow: 'shadow-[0_12px_25px_-5px_rgba(99,102,241,0.22)]',
+      inactiveBg: 'bg-indigo-500/[0.02]',
+      inactiveHover: 'hover:border-indigo-500/20',
+    },
+    {
+      id: 'flash-deals' as const,
+      title: 'Flash Deals',
+      subtitle: '⚡ Instant discounts',
+      icon: PremiumLightningDealsIcon,
+      gradient: 'from-amber-500 via-orange-500 to-rose-500',
+      activeBorderColor: '#EF4444',
+      products: flashDeals,
+      activeShadow: 'shadow-[0_12px_25px_-5px_rgba(239,68,68,0.22)]',
+      inactiveBg: 'bg-orange-500/[0.02]',
+      inactiveHover: 'hover:border-orange-500/20',
+    },
+    {
+      id: 'best-in-town' as const,
+      title: 'Best Sellers',
+      subtitle: '🏆 Customer favorites',
+      icon: PremiumTrendingIcon,
+      gradient: 'from-blue-600 via-indigo-500 to-cyan-500',
+      activeBorderColor: '#3B82F6',
+      products: bestSellers,
+      activeShadow: 'shadow-[0_12px_25px_-5px_rgba(59,130,246,0.22)]',
+      inactiveBg: 'bg-blue-500/[0.02]',
+      inactiveHover: 'hover:border-blue-500/20',
+    },
+    {
+      id: 'trending' as const,
+      title: 'Trending',
+      subtitle: '🔥 Popular in town',
+      icon: PremiumTrendingFlameIcon,
+      gradient: 'from-orange-600 via-amber-500 to-red-500',
+      activeBorderColor: '#F97316',
+      products: topPicks,
+      activeShadow: 'shadow-[0_12px_25px_-5px_rgba(249,115,22,0.22)]',
+      inactiveBg: 'bg-orange-500/[0.02]',
+      inactiveHover: 'hover:border-orange-500/20',
+    },
+    {
+      ...dynamicCravingConfig
+    }
+  ], [allProducts, flashDeals, bestSellers, topPicks, dynamicCravingConfig])
 
   // Active curation data
   const currentCuration = useMemo(() => {
     return curations.find((c) => c.id === activeCuration) || curations[0]
   }, [activeCuration, curations])
 
-  // Group products of the active curation by their category dynamically
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, any>()
+    ;(categories || []).forEach((c: any) => {
+      if (c.id) map.set(c.id, c)
+      if (c.slug) map.set(c.slug, c)
+    })
+    return map
+  }, [categories])
+
+  // Group products of the active curation strictly by main parent category (no subcategories)
   const groupedProducts = useMemo(() => {
     const groups: Record<string, { categoryName: string; categorySlug: string; sortOrder: number; products: any[] }> = {}
-    currentCuration.products.forEach((product: any) => {
+    currentCuration.products.forEach((product) => {
       // Exclude Classic Cold Coffee and prepared restaurant dishes from Grocery home page sections
       const isClassicColdCoffee = /classic.?cold.?coffee/i.test(product.name || '')
       
@@ -635,46 +647,26 @@ export function DealsCurationHub({
         return
       }
 
-      let categoryName = activeCuration !== 'all' ? currentCuration.title : (product.category?.name || 'Other Essentials')
-      let categorySlug = activeCuration !== 'all' ? currentCuration.id : (product.category?.slug || '')
-      let sortOrder = product.category?.sortOrder ?? 999
+      // Always roll up to main parent category so subcategories never appear as separate headings
+      const directCat = product.category
+      let mainCategory = directCat
 
-      if (activeCuration === 'all') {
-        const pName = (product.name || '').toLowerCase()
-        const pTags = Array.isArray(product.tags) ? product.tags.map((t: string) => t.toLowerCase()) : []
-        const isPersonalCareOrHousehold = ['personal-care', 'personal_care', 'skincare', 'household', 'beauty'].includes(categorySlug) ||
-          /face|facewash|skincare|mamaearth|lotion|cream|moisturizer|wash|oil|conditioner|serum|soap|shampoo|cleaner|detergent/i.test(pName)
-        const isChocolateOrBakery = /chocolate|cadbury|kitkat|cake|pastry|brownie|muffin|biscuit|cookie|bread|toast|rusk|dark fantasy|amul dark/i.test(pName)
-        const isIceCreamProduct = categorySlug === 'ice-cream' ||
-          categoryName.toLowerCase().includes('ice cream') ||
-          pTags.includes('ice-cream') ||
-          /ice.?cream|kulfi|chocobar|cornetto|cassatta|sundae|scoop|matka|kwality|havmor|vadilal|baskin|cup masti/i.test(pName)
-
-        // Ensure Ice Cream items (including Choco Brownie Sundae) stay in Ice Cream
-        if (isIceCreamProduct) {
-          categoryName = 'Ice Cream'
-          categorySlug = 'ice-cream'
-          sortOrder = 4
-        }
-        // Ensure cakes, pastries, brownies, muffins, and bakery items group cleanly into Bakery (excluding Ice Creams)
-        else if (/cake|pastry|brownie|muffin|bakery/i.test(pName) || pTags.some((t: string) => /cake|pastry|brownie|bakery/i.test(t))) {
-          categoryName = 'Bakery'
-          categorySlug = 'bakery'
-          sortOrder = 6
-        }
-        // Ensure all packaged beverages (Energy Campa, Coca Cola, Pepsi, Juices, etc.) group cleanly into Beverages section
-        else if (!isChocolateOrBakery && !isPersonalCareOrHousehold) {
-          const isBeverageProduct = categorySlug === 'beverages' || 
-            pTags.includes('beverages') || pTags.includes('drinks') || pTags.includes('soft-drink') ||
-            /thums|pepsi|coke|sprite|7up|limca|fanta|mirinda|\bdew\b|mountain.?dew|campa|hell|soda|cold|drink|soft|cola|juice|real|tropicana|frooti|maaza|slice|appy|paper|water|bisleri|kinley|aquafina|sting|red.?bull|monster|charged|coconut/i.test(pName)
-
-          if (isBeverageProduct) {
-            categoryName = 'Beverages'
-            categorySlug = 'beverages'
-            sortOrder = 5
-          }
+      if (directCat?.parent) {
+        mainCategory = directCat.parent
+      } else if (directCat?.parentId && categoryMap.has(directCat.parentId)) {
+        mainCategory = categoryMap.get(directCat.parentId)
+      } else if (product.categoryId && categoryMap.has(product.categoryId)) {
+        const found = categoryMap.get(product.categoryId)
+        if (found?.parentId && categoryMap.has(found.parentId)) {
+          mainCategory = categoryMap.get(found.parentId)
+        } else {
+          mainCategory = found
         }
       }
+
+      let categoryName = (mainCategory?.name || 'Other Essentials').replace(/^FastKirana\s+/i, '').trim()
+      let categorySlug = mainCategory?.slug || ''
+      let sortOrder = mainCategory?.sortOrder ?? 999
 
       if (!groups[categoryName]) {
         groups[categoryName] = {
@@ -731,14 +723,56 @@ export function DealsCurationHub({
         return 0
       })
 
+      // 4. Group products by their real database subcategory for dedicated shelves
+      const subMap: Record<string, {
+        subcategoryId: string
+        subcategoryName: string
+        subcategorySlug: string
+        sortOrder: number
+        products: any[]
+      }> = {}
+
+      finalProducts.forEach((product) => {
+        const isSub = Boolean(
+          (product.category?.parentId && product.category?.id) ||
+          (product.categoryId && String(product.categoryId).startsWith('SUB-'))
+        )
+
+        let subId = 'general'
+        let subName = `${group.categoryName} Essentials`
+        let subSlug = ''
+        let subSort = 999
+
+        if (isSub) {
+          subId = product.category?.id || product.categoryId
+          subName = (product.category?.name || '').replace(/^FastKirana\s+/i, '').trim()
+          subSlug = product.category?.slug || ''
+          subSort = product.category?.sortOrder ?? 999
+        }
+
+        if (!subMap[subId]) {
+          subMap[subId] = {
+            subcategoryId: subId,
+            subcategoryName: subName,
+            subcategorySlug: subSlug,
+            sortOrder: subSort,
+            products: [],
+          }
+        }
+        subMap[subId].products.push(product)
+      })
+
+      const subgroups = Object.values(subMap).sort((a, b) => a.sortOrder - b.sortOrder)
+
       return {
         ...group,
         products: finalProducts,
+        subgroups,
       }
     })
 
     return result.sort((a, b) => a.sortOrder - b.sortOrder)
-  }, [currentCuration, sortRules])
+  }, [currentCuration, sortRules, categoryMap])
 
   return (
     <section className="relative py-4 md:py-8 space-y-6 px-1 transition-all duration-500">
@@ -787,24 +821,16 @@ export function DealsCurationHub({
               {/* Clean minimal organic circle */}
               <div
                 className={cn(
-                  'relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 border bg-white dark:bg-zinc-950 overflow-hidden',
+                  'relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 border bg-white dark:bg-zinc-950',
                   isActive
                     ? 'shadow-md border-solid scale-105'
                     : 'border-zinc-200/50 dark:border-zinc-800/40 hover:border-zinc-350 dark:hover:border-zinc-750 shadow-2xs'
                 )}
                 style={isActive ? { borderColor: c.activeBorderColor, boxShadow: `0 0 12px ${c.activeBorderColor}30` } : {}}
               >
-                {c.imageUrl ? (
-                  <img
-                    src={c.imageUrl}
-                    alt={c.title}
-                    className="w-full h-full object-cover p-1 rounded-full relative z-10"
-                    onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none' }}
-                  />
-                ) : c.icon ? (
+                {/* Premium Vector inline SVG icon */}
+                {c.icon && (
                   <c.icon className="w-[75%] h-[75%] transition-transform duration-500 group-hover:scale-108 relative z-10" />
-                ) : (
-                  <span className="text-xl leading-none select-none">{c.emoji || '🛍️'}</span>
                 )}
               </div>
 
@@ -858,20 +884,11 @@ export function DealsCurationHub({
               } : {}}
               suppressHydrationWarning
             >
-              {/* Category image or vector icon inside the pill */}
-              {c.imageUrl ? (
-                <img
-                  src={c.imageUrl}
-                  alt={c.title}
-                  className="w-5 h-5 rounded-full object-cover shrink-0 select-none"
-                  onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none' }}
-                />
-              ) : c.icon ? (
+              {/* Small sized vector icon inside the pill */}
+              {c.icon && (
                 <div className="w-5 h-5 shrink-0 flex items-center justify-center rounded-full bg-white dark:bg-zinc-950 p-0.5 border border-zinc-100 dark:border-zinc-800 shadow-2xs group-hover:scale-108 transition-transform">
                   <c.icon className="w-full h-full" />
                 </div>
-              ) : (
-                <span className="text-sm select-none">{c.emoji || '🛍️'}</span>
               )}
               <span>{c.title}</span>
             </button>
@@ -897,134 +914,143 @@ export function DealsCurationHub({
                 <p className="text-[10px] text-text-secondary mt-0.5">Please check back later!</p>
               </div>
             ) : (
-              <div className="space-y-6">
-                {groupedProducts.map((group) => {
-                  const parentCat = (categories || []).find(
-                    (c) =>
-                      c.name.toLowerCase().trim() === group.categoryName.toLowerCase().trim() ||
-                      c.slug.toLowerCase().trim() === group.categorySlug.toLowerCase().trim()
+              <div className="space-y-8 sm:space-y-10">
+                {groupedProducts.map((group, groupIndex) => {
+                  const hasMultipleSubgroups = group.subgroups && (
+                    group.subgroups.length > 1 ||
+                    (group.subgroups.length === 1 && group.subgroups[0].subcategoryId !== 'general')
                   )
-                  const childSubcategories = parentCat
-                    ? (categories || []).filter(
-                        (c) =>
-                          c.parentId &&
-                          c.parentId.toLowerCase().trim() === parentCat.id.toLowerCase().trim()
-                      )
-                    : []
 
-                  const activeSubId = selectedSubcatByGroup[group.categoryName] || 'all'
-                  const displayProducts =
-                    activeSubId === 'all'
-                      ? group.products
-                      : group.products.filter((p: any) => {
-                          const targetSub = childSubcategories.find((s) => s.id === activeSubId)
-                          if (!targetSub) return true
-                          const pCatId = (p.categoryId || '').toLowerCase().trim()
-                          const pSubId = (p.category?.id || '').toLowerCase().trim()
-                          const pSubSlug = (p.category?.slug || '').toLowerCase().trim()
-                          const pSubName = (p.category?.name || '').toLowerCase().trim()
-                          const tId = targetSub.id.toLowerCase().trim()
-                          const tSlug = targetSub.slug.toLowerCase().trim()
-                          const tName = targetSub.name.toLowerCase().trim()
-                          return (
-                            pCatId === tId ||
-                            pSubId === tId ||
-                            pSubSlug === tSlug ||
-                            pSubName === tName ||
-                            (Array.isArray(p.tags) && p.tags.some((t: string) => t.toLowerCase().trim() === tName)) ||
-                            p.name.toLowerCase().includes(tName)
-                          )
-                        })
+                  const seeAllCategoryHref = group.categorySlug === 'cafe'
+                    ? '/food/as-cafe'
+                    : group.categorySlug
+                    ? `/category/${group.categorySlug}`
+                    : '/category'
 
                   return (
-                    <div key={group.categoryName} className="space-y-2.5">
-                      {/* Category Subheader */}
-                      <div className="flex items-center justify-between px-1">
-                        <div className="flex items-center gap-1">
-                          <h3 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white tracking-tight">
-                            {group.categoryName}
-                          </h3>
-                          <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full bg-[#FFF0F2] dark:bg-rose-950/30 text-[10px] sm:text-xs font-bold text-[#FF2E55] dark:text-rose-400 ml-2">
-                            {displayProducts.length} {displayProducts.length === 1 ? 'item' : 'items'}
-                          </span>
-                        </div>
-                        
-                        {/* Interactive See All link */}
-                        <Link
-                          href={group.categorySlug === 'cafe' ? '/food/as-cafe' : (group.categorySlug ? `/category/${group.categorySlug}` : '/category')}
-                          className="group/btn inline-flex items-center gap-0.5 text-xs sm:text-sm font-bold text-[#FF2E55] hover:text-[#e02447] transition-colors select-none"
-                        >
-                          See All
-                          <span className="inline-block transition-transform duration-300 group-hover/btn:translate-x-0.5 font-normal ml-0.5">
-                            →
-                          </span>
-                        </Link>
-                      </div>
-
-                      {/* Subcategory Pills Strip (when real subcategories exist in DB) */}
-                      {childSubcategories.length > 0 && (
-                        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none select-none px-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              triggerHaptic()
-                              setSelectedSubcatByGroup((prev) => ({ ...prev, [group.categoryName]: 'all' }))
-                            }}
-                            className={cn(
-                              'px-3.5 py-1 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer border',
-                              activeSubId === 'all'
-                                ? 'bg-[#FF2E55] text-white border-[#FF2E55] shadow-xs'
-                                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200/70'
-                            )}
+                    <LazyCategorySection key={group.categoryName} priority={groupIndex < 2}>
+                      <div className="space-y-4 pt-1">
+                        {/* Main Parent Category Header */}
+                        <div className="flex items-center justify-between pb-2 border-b border-zinc-200/70 dark:border-zinc-800/80">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span
+                              className="w-1.5 h-5 rounded-full shrink-0 shadow-2xs"
+                              style={{ backgroundColor: currentCuration.activeBorderColor || '#10B981' }}
+                            />
+                            <h3 className="text-lg sm:text-xl font-black text-zinc-900 dark:text-white tracking-tight truncate">
+                              {group.categoryName}
+                            </h3>
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[10px] sm:text-xs font-bold text-zinc-600 dark:text-zinc-300 shrink-0 border border-zinc-200/40 dark:border-zinc-700/40">
+                              {group.products.length} {group.products.length === 1 ? 'item' : 'items'}
+                            </span>
+                          </div>
+                          
+                          {/* Interactive See All Pill */}
+                          <Link
+                            href={seeAllCategoryHref}
+                            className="group/btn inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-zinc-700 dark:text-zinc-200 bg-zinc-100/90 hover:bg-zinc-200/90 dark:bg-zinc-800/90 dark:hover:bg-zinc-700/90 transition-all shadow-2xs border border-zinc-200/60 dark:border-zinc-700/60 select-none active:scale-95 shrink-0"
                           >
-                            All
-                          </button>
-                          {childSubcategories.map((subcat) => {
-                            const isSelected = activeSubId === subcat.id
-                            return (
-                              <button
-                                key={subcat.id}
-                                type="button"
-                                onClick={() => {
-                                  triggerHaptic()
-                                  setSelectedSubcatByGroup((prev) => ({ ...prev, [group.categoryName]: subcat.id }))
-                                }}
-                                className={cn(
-                                  'px-3.5 py-1 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer border flex items-center gap-1.5',
-                                  isSelected
-                                    ? 'bg-[#FF2E55] text-white border-[#FF2E55] shadow-xs'
-                                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200/70'
-                                )}
-                              >
-                                {subcat.imageUrl && (
-                                  <img
-                                    src={subcat.imageUrl}
-                                    alt={subcat.name}
-                                    className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
-                                    onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none' }}
-                                  />
-                                )}
-                                <span>{subcat.name}</span>
-                              </button>
-                            )
-                          })}
+                            <span>See All</span>
+                            <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover/btn:translate-x-0.5 text-zinc-400 group-hover/btn:text-zinc-800 dark:group-hover/btn:text-zinc-100" />
+                          </Link>
                         </div>
-                      )}
 
-                      {/* Category Products */}
-                      {displayProducts.length === 0 ? (
-                        <div className="py-8 text-center text-xs font-medium text-zinc-400 bg-zinc-50 dark:bg-zinc-900/40 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">
-                          No items in this subcategory yet
-                        </div>
-                      ) : (
-                        <LazyProductSection
-                          products={displayProducts}
-                          renderItem={(product) => (
-                            <ProductCard product={product} />
-                          )}
-                        />
-                      )}
-                    </div>
+                        {/* Subcategory Shelves (Separated by Subcategory) */}
+                        {hasMultipleSubgroups ? (
+                          <div className="space-y-6 pl-0.5 sm:pl-1">
+                            {group.subgroups.map((sub) => {
+                              const subHref = group.categorySlug
+                                ? `/category/${group.categorySlug}?sub=${sub.subcategoryId}`
+                                : '/category'
+
+                              return (
+                                <div key={sub.subcategoryId} className="space-y-2.5">
+                                  {/* Subcategory Subheader - Clean Typography Only (No Emoji) */}
+                                  <div className="flex items-center justify-between px-0.5 pt-0.5">
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                      {/* Visual hierarchy branch connector */}
+                                      <span className="text-zinc-350 dark:text-zinc-600 text-xs font-semibold select-none shrink-0">
+                                        ↳
+                                      </span>
+
+                                      {/* Subcategory Name: Premium Clean Typography */}
+                                      <h4 className="text-xs sm:text-sm font-black text-zinc-900 dark:text-zinc-100 tracking-tight truncate">
+                                        {sub.subcategoryName}
+                                      </h4>
+
+                                      {/* Product count badge */}
+                                      <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 px-2 py-0.5 rounded-full border border-zinc-200/50 dark:border-zinc-700/50 shrink-0">
+                                        {sub.products.length} {sub.products.length === 1 ? 'item' : 'items'}
+                                      </span>
+
+                                      {/* Elegant hairline gradient divider extending right */}
+                                      <div className="hidden sm:block flex-1 h-px bg-gradient-to-r from-zinc-200/70 via-zinc-200/20 to-transparent dark:from-zinc-800/70 dark:via-zinc-800/20 ml-2" />
+                                    </div>
+
+                                    {/* Direct subcategory explore link */}
+                                    <Link
+                                      href={subHref}
+                                      className="group/sublink inline-flex items-center gap-1 text-[11px] font-bold text-zinc-500 hover:text-emerald-600 dark:text-zinc-400 dark:hover:text-emerald-400 transition-colors ml-2 select-none shrink-0"
+                                    >
+                                      <span>See All</span>
+                                      <ArrowRight className="w-3 h-3 transition-transform duration-200 group-hover/sublink:translate-x-0.5" />
+                                    </Link>
+                                  </div>
+
+                                  {/* Products Horizontal Slider for this Subcategory: Top 6 items followed by See All */}
+                                  <LazyProductSection
+                                    products={sub.products.slice(0, 6)}
+                                    renderItem={(product) => (
+                                      <ProductCard product={product} />
+                                    )}
+                                    endCard={
+                                      sub.products.length >= 6 ? (
+                                        <Link
+                                          href={subHref}
+                                          className="h-full min-h-[220px] rounded-[20px] border border-dashed border-emerald-500/30 hover:border-emerald-500/60 bg-gradient-to-b from-emerald-50/40 via-white to-zinc-50/50 dark:from-emerald-950/20 dark:via-[#121215] dark:to-[#121215] flex flex-col items-center justify-center p-4 text-center transition-all duration-300 group select-none shadow-xs hover:shadow-md active:scale-[0.98] cursor-pointer"
+                                        >
+                                          <div className="w-11 h-11 rounded-full bg-emerald-500 text-white flex items-center justify-center mb-2.5 shadow-[0_4px_12px_rgba(16,185,129,0.35)] group-hover:scale-110 group-hover:bg-emerald-600 transition-all duration-300">
+                                            <ArrowRight className="w-5 h-5 stroke-[2.5]" />
+                                          </div>
+                                          <span className="text-xs sm:text-sm font-black text-zinc-900 dark:text-white tracking-tight">See All</span>
+                                          <span className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-400 mt-1 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                                            {sub.products.length > 6 ? `+${sub.products.length - 6} more` : `${sub.products.length} items`}
+                                          </span>
+                                        </Link>
+                                      ) : undefined
+                                    }
+                                  />
+                                </div>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          /* Direct single shelf if no subcategories exist: Top 6 items followed by See All */
+                          <LazyProductSection
+                            products={group.products.slice(0, 6)}
+                            renderItem={(product) => (
+                              <ProductCard product={product} />
+                            )}
+                            endCard={
+                              group.products.length >= 6 ? (
+                                <Link
+                                  href={seeAllCategoryHref}
+                                  className="h-full min-h-[220px] rounded-[20px] border border-dashed border-emerald-500/30 hover:border-emerald-500/60 bg-gradient-to-b from-emerald-50/40 via-white to-zinc-50/50 dark:from-emerald-950/20 dark:via-[#121215] dark:to-[#121215] flex flex-col items-center justify-center p-4 text-center transition-all duration-300 group select-none shadow-xs hover:shadow-md active:scale-[0.98] cursor-pointer"
+                                >
+                                  <div className="w-11 h-11 rounded-full bg-emerald-500 text-white flex items-center justify-center mb-2.5 shadow-[0_4px_12px_rgba(16,185,129,0.35)] group-hover:scale-110 group-hover:bg-emerald-600 transition-all duration-300">
+                                    <ArrowRight className="w-5 h-5 stroke-[2.5]" />
+                                  </div>
+                                  <span className="text-xs sm:text-sm font-black text-zinc-900 dark:text-white tracking-tight">See All</span>
+                                  <span className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-400 mt-1 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                                    {group.products.length > 6 ? `+${group.products.length - 6} more` : `${group.products.length} items`}
+                                  </span>
+                                </Link>
+                              ) : undefined
+                            }
+                          />
+                        )}
+                      </div>
+                    </LazyCategorySection>
                   )
                 })}
               </div>

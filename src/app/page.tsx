@@ -13,8 +13,8 @@ export const metadata: Metadata = {
   }
 }
 
-// Revalidate home page every 30s with ISR for lightning-fast loads
-export const revalidate = 120
+// Revalidate home page every 180s with ISR for lightning-fast loads and low DB load
+export const revalidate = 180
 
 const productSelect = {
   id: true,
@@ -53,6 +53,15 @@ const productSelect = {
       imageUrl: true,
       parentId: true,
       sortOrder: true,
+      parent: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          imageUrl: true,
+          sortOrder: true,
+        }
+      }
     }
   }
 }
@@ -74,21 +83,17 @@ const getCachedCategories = unstable_cache(
   async () => {
     return prisma.category.findMany({
       where: {
-        parentId: null,
         slug: { notIn: ['cafe', 'restaurant', 'fastkirana-cafe', 'fastkirana-restaurant', 'restaurant-food', 'fast-food-kitchen'] },
       },
       orderBy: { sortOrder: 'asc' },
       include: {
-        children: {
-          orderBy: { sortOrder: 'asc' },
-        },
         _count: {
           select: { products: true },
         },
       },
     })
   },
-  ['storefront-categories-v20'],
+  ['storefront-categories-v32'],
   { revalidate: 3600, tags: ['categories'] }
 )
 
@@ -111,6 +116,24 @@ const getCachedTrendingOrderItems = unstable_cache(
   { revalidate: 3600, tags: ['trending'] }
 )
 
+const getCachedAllGroceryProducts = unstable_cache(
+  async () => {
+    return prisma.product.findMany({
+      where: {
+        isAvailable: true,
+        restaurantId: null,
+      },
+      orderBy: [
+        { sortOrder: 'desc' },
+        { createdAt: 'desc' }
+      ],
+      select: productSelect,
+    })
+  },
+  ['storefront-all-grocery-products-v3'],
+  { revalidate: 3600, tags: ['products'] }
+)
+
 const getCachedFlashDeals = unstable_cache(
   async () => {
     return prisma.product.findMany({
@@ -124,11 +147,11 @@ const getCachedFlashDeals = unstable_cache(
         { sortOrder: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 200,
+      take: 60,
       select: productSelect,
     })
   },
-  ['storefront-flash-deals-v18'],
+  ['storefront-flash-deals-v26'],
   { revalidate: 3600, tags: ['products', 'flash-deals'] }
 )
 
@@ -144,11 +167,11 @@ const getCachedBestSellers = unstable_cache(
         { sortOrder: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 200,
+      take: 60,
       select: productSelect,
     })
   },
-  ['storefront-best-sellers-v18'],
+  ['storefront-best-sellers-v26'],
   { revalidate: 3600, tags: ['products', 'best-sellers'] }
 )
 
@@ -163,11 +186,11 @@ const getCachedBreakfastDeals = unstable_cache(
           { category: { slug: { in: ['dairy-breakfast', 'beverages', 'fruits-vegetables'] } } },
         ],
       },
-      take: 80,
+      take: 36,
       select: productSelect,
     })
   },
-  ['storefront-breakfast-deals-v18'],
+  ['storefront-breakfast-deals-v26'],
   { revalidate: 3600, tags: ['products', 'breakfast-deals'] }
 )
 
@@ -182,11 +205,11 @@ const getCachedLunchDeals = unstable_cache(
           { category: { slug: { in: ['kitchen-needs', 'grocery-essential', 'beverages'] } } },
         ],
       },
-      take: 80,
+      take: 36,
       select: productSelect,
     })
   },
-  ['storefront-lunch-deals-v18'],
+  ['storefront-lunch-deals-v26'],
   { revalidate: 3600, tags: ['products', 'lunch-deals'] }
 )
 
@@ -201,11 +224,11 @@ const getCachedTeaDeals = unstable_cache(
           { category: { slug: { in: ['snacks-munchies', 'beverages', 'ice-cream', 'chocolates', 'bakery'] } } },
         ],
       },
-      take: 80,
+      take: 36,
       select: productSelect,
     })
   },
-  ['storefront-tea-deals-v18'],
+  ['storefront-tea-deals-v26'],
   { revalidate: 3600, tags: ['products', 'tea-deals'] }
 )
 
@@ -224,11 +247,11 @@ const getCachedNightCravings = unstable_cache(
         { isBestSeller: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 150,
+      take: 48,
       select: productSelect,
     })
   },
-  ['storefront-night-cravings-v18'],
+  ['storefront-night-cravings-v26'],
   { revalidate: 3600, tags: ['products', 'night-cravings'] }
 )
 
@@ -348,6 +371,7 @@ export default async function Home() {
   let settingsRaw: any[] = []
   let sortRulesRaw: any[] = []
   let restaurantsRaw: any[] = []
+  let allGroceryRaw: any[] = []
 
   // Fetch independent data pools in parallel using cached functions to avoid sequence waterfalls and DB load
   let manualTopPicks: any[] = []
@@ -369,6 +393,7 @@ export default async function Home() {
       popularProductsRes,
       sortRulesRes,
       restaurantsRes,
+      allGroceryRes,
     ] = await Promise.all([
       getCachedBanners(),
       getCachedCategories(),
@@ -384,6 +409,7 @@ export default async function Home() {
       getCachedPopularProducts(),
       getCachedCategorySortRules(),
       getCachedRestaurants(),
+      getCachedAllGroceryProducts(),
     ])
 
     promoBanners = bannersRes
@@ -400,6 +426,7 @@ export default async function Home() {
     popularProducts = popularProductsRes
     sortRulesRaw = sortRulesRes
     restaurantsRaw = restaurantsRes
+    allGroceryRaw = allGroceryRes
   } catch (error) {
     console.error('Failed to execute parallel queries on home page:', error)
   }
@@ -472,6 +499,13 @@ export default async function Home() {
       imageUrl: p.category.imageUrl,
       parentId: p.category.parentId,
       sortOrder: p.category.sortOrder,
+      parent: p.category.parent ? {
+        id: p.category.parent.id,
+        name: p.category.parent.name,
+        slug: p.category.parent.slug,
+        imageUrl: p.category.parent.imageUrl,
+        sortOrder: p.category.parent.sortOrder,
+      } : undefined,
     } : undefined,
   })
 
@@ -482,6 +516,7 @@ export default async function Home() {
   const lunchProducts = sortProductsByStock(lunchRaw.map(mapProduct))
   const teaProducts = sortProductsByStock(teaRaw.map(mapProduct))
   const nightProducts = sortProductsByStock(nightRaw.map(mapProduct))
+  const allGroceryProducts = sortProductsByStock(allGroceryRaw.map(mapProduct))
 
   const settingsMap: Record<string, string> = {
     avg_delivery_time: 'Fast',
@@ -504,6 +539,7 @@ export default async function Home() {
       <StorefrontClient
         categories={categories}
         promoBanners={promoBanners}
+        allGroceryProducts={allGroceryProducts}
         flashDeals={flashDeals}
         bestSellers={bestSellers}
         topPicks={topPicks}

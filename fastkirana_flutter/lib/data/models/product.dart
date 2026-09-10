@@ -289,12 +289,14 @@ class CategoryInfo {
   final String name;
   final String slug;
   final String? imageUrl;
+  final String? parentId;
 
   CategoryInfo({
     required this.id,
     required this.name,
     required this.slug,
     this.imageUrl,
+    this.parentId,
   });
 
   factory CategoryInfo.fromJson(Map<String, dynamic> json) => CategoryInfo(
@@ -302,6 +304,7 @@ class CategoryInfo {
         name: json['name']?.toString() ?? '',
         slug: json['slug']?.toString() ?? '',
         imageUrl: json['imageUrl']?.toString(),
+        parentId: json['parentId']?.toString() ?? json['parent_id']?.toString(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -309,6 +312,7 @@ class CategoryInfo {
         'name': name,
         'slug': slug,
         'imageUrl': imageUrl,
+        'parentId': parentId,
       };
 }
 

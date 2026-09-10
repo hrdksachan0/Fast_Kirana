@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
-import '../../core/theme/responsive.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../data/models/product.dart';
 import '../../data/models/category.dart';
@@ -13,16 +12,19 @@ import '../../providers/cart_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/floating_cart_bar.dart';
+import '../../widgets/voice_search_sheet.dart';
 import '../products/product_detail_screen.dart';
 
 class _SubcatItem {
   final String id;
   final String name;
+  final String slug;
   final String emoji;
   final String? imageUrl;
   const _SubcatItem({
     required this.id,
     required this.name,
+    required this.slug,
     required this.emoji,
     this.imageUrl,
   });
@@ -42,7 +44,6 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   String _searchQuery = '';
-  final bool _isSearchActive = false;
   final ScrollController _scrollController = ScrollController();
   int _visibleCount = 12;
 
@@ -85,24 +86,30 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final productsAsync = ref.watch(productsProvider(widget.category.slug));
+    // Watch category products using ID (or slug as fallback)
+    final catKey = widget.category.id.isNotEmpty ? widget.category.id : widget.category.slug;
+    final productsAsync = ref.watch(productsProvider(catKey));
+    final catalogProducts = ref.watch(homeProductCatalogProvider).valueOrNull ?? [];
     final categoriesAsync = ref.watch(categoriesProvider);
-    final cart = ref.watch(cartProvider).value;
-    final cartCount = cart?.totalItems ?? 0;
-    final cartSubtotal = cart?.subtotal ?? 0.0;
+    final cartCount = ref.watch(cartProvider).value?.totalItems ?? 0;
 
     final allCats = categoriesAsync.valueOrNull ?? [];
-    final dbSubcats = allCats.where((c) =>
-      c.parentId != null && c.parentId!.isNotEmpty &&
-      (c.parentId == widget.category.id || c.parentId == widget.category.slug)
-    ).toList();
+    final catIdLower = widget.category.id.toLowerCase().trim();
+    final catSlugLower = widget.category.slug.toLowerCase().trim();
+
+    final dbSubcats = allCats.where((c) {
+      if (c.parentId == null || c.parentId!.isEmpty) return false;
+      final pId = c.parentId!.toLowerCase().trim();
+      return pId == catIdLower || pId == catSlugLower;
+    }).toList();
 
     final List<_SubcatItem> subcats = [
-      const _SubcatItem(id: 'all', name: 'All Items', emoji: '✨'),
+      const _SubcatItem(id: 'all', name: 'All Items', slug: 'all', emoji: '✨'),
       if (dbSubcats.isNotEmpty)
         ...dbSubcats.map((sc) => _SubcatItem(
           id: sc.id,
-          name: sc.name,
+          name: sc.name.trim(),
+          slug: sc.slug.trim(),
           emoji: (sc.imageUrl != null && !sc.imageUrl!.startsWith('http') && sc.imageUrl!.length < 5) ? sc.imageUrl! : '🏷️',
           imageUrl: (sc.imageUrl != null && sc.imageUrl!.startsWith('http')) ? sc.imageUrl : null,
         )),
@@ -253,42 +260,158 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                       padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                       decoration: const BoxDecoration(
                         color: Colors.white,
-                        border: Border(bottom: BorderSide(color: AppDesignSystem.surfaceMuted)),
+                        border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1.2)),
                       ),
                       child: Column(
                         children: [
-                          // Search Input inside category
+                          // Modern Aesthetic Search Input inside category
                           Container(
-                            height: 38,
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            height: 40,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
                             decoration: BoxDecoration(
-                              color: AppDesignSystem.surfaceMuted,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: TextField(
-                              controller: _searchController,
-                              onChanged: (val) {
-                                _searchQuery = val.trim().toLowerCase();
-                                _resetPagination();
-                              },
-                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.gray900),
-                              decoration: InputDecoration(
-                                hintText: 'Search in ${widget.category.name}...',
-                                hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: AppDesignSystem.textTertiary),
-                                prefixIcon: const Icon(Icons.search_rounded, size: 16, color: AppDesignSystem.textTertiary),
-                                suffixIcon: _searchQuery.isNotEmpty
-                                    ? GestureDetector(
-                                        onTap: () {
-                                          _searchController.clear();
-                                          _searchQuery = '';
-                                          _resetPagination();
-                                        },
-                                        child: const Icon(Icons.clear_rounded, size: 16, color: AppDesignSystem.textTertiary),
-                                      )
-                                    : null,
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: _searchQuery.isNotEmpty
+                                    ? AppDesignSystem.primary
+                                    : const Color(0xFFE2E8F0),
+                                width: _searchQuery.isNotEmpty ? 1.4 : 1.0,
                               ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                                if (_searchQuery.isNotEmpty)
+                                  BoxShadow(
+                                    color: AppDesignSystem.primary.withValues(alpha: 0.12),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                // Circular lens badge
+                                Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: _searchQuery.isNotEmpty
+                                        ? const Color(0xFFFEF2F2)
+                                        : const Color(0xFFF1F5F9),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.search_rounded,
+                                    size: 15,
+                                    color: _searchQuery.isNotEmpty
+                                        ? AppDesignSystem.primary
+                                        : const Color(0xFF64748B),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+
+                                // Input Field
+                                Expanded(
+                                  child: TextField(
+                                    controller: _searchController,
+                                    focusNode: _searchFocusNode,
+                                    onChanged: (val) {
+                                      setState(() {
+                                        _searchQuery = val.trim().toLowerCase();
+                                      });
+                                      _resetPagination();
+                                    },
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 12),
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF0F172A),
+                                    ),
+                                    cursorColor: AppDesignSystem.primary,
+                                    decoration: InputDecoration(
+                                      isDense: true,
+                                      hintText: 'Search in ${widget.category.name}...',
+                                      hintStyle: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 11),
+                                        fontWeight: FontWeight.w500,
+                                        color: const Color(0xFF94A3B8),
+                                      ),
+                                      border: InputBorder.none,
+                                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                                    ),
+                                  ),
+                                ),
+
+                                // Clear or Voice Search
+                                if (_searchQuery.isNotEmpty)
+                                  GestureDetector(
+                                    onTap: () {
+                                      HapticFeedback.lightImpact();
+                                      _searchController.clear();
+                                      setState(() {
+                                        _searchQuery = '';
+                                      });
+                                      _resetPagination();
+                                    },
+                                    child: Container(
+                                      width: 22,
+                                      height: 22,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFE2E8F0),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.close_rounded,
+                                        size: 13,
+                                        color: Color(0xFF475569),
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        height: 14,
+                                        width: 1,
+                                        color: const Color(0xFFE2E8F0),
+                                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                                      ),
+                                      GestureDetector(
+                                        onTap: () {
+                                          HapticFeedback.lightImpact();
+                                          VoiceSearchSheet.show(
+                                            context,
+                                            onResult: (voiceText) {
+                                              if (voiceText.trim().isNotEmpty) {
+                                                setState(() {
+                                                  _searchController.text = voiceText.trim();
+                                                  _searchQuery = voiceText.trim().toLowerCase();
+                                                });
+                                                _resetPagination();
+                                              }
+                                            },
+                                          );
+                                        },
+                                        child: Container(
+                                          width: 26,
+                                          height: 26,
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFFEF2F2),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            Icons.mic_rounded,
+                                            size: 14,
+                                            color: AppDesignSystem.primary,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -320,6 +443,22 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                         data: (products) {
                           var list = List<Product>.from(products);
 
+                          // Fallback to global catalog cache if direct category query returned empty
+                          if (list.isEmpty && catalogProducts.isNotEmpty) {
+                            list = catalogProducts.where((p) {
+                              final pCatId = (p.categoryId ?? '').toLowerCase().trim();
+                              final pSubId = (p.category?.id ?? '').toLowerCase().trim();
+                              final pSubSlug = (p.category?.slug ?? '').toLowerCase().trim();
+                              final pParentId = (p.category?.parentId ?? '').toLowerCase().trim();
+                              final isDirectId = pCatId == catIdLower || pSubId == catIdLower || pParentId == catIdLower;
+                              final isSlug = catSlugLower.isNotEmpty && (pSubSlug == catSlugLower || pSubSlug.contains(catSlugLower));
+                              final isSubCode = catIdLower.startsWith('cat-') &&
+                                  (pCatId.startsWith('sub-${catIdLower.replaceFirst('cat-', '')}-') ||
+                                   pSubId.startsWith('sub-${catIdLower.replaceFirst('cat-', '')}-'));
+                              return isDirectId || isSlug || isSubCode;
+                            }).toList();
+                          }
+
                           // Search filter (searches across the whole category)
                           if (_searchQuery.isNotEmpty) {
                             list = list.where((p) {
@@ -331,14 +470,42 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                             }).toList();
                           } else if (_selectedSubcatIndex > 0 && _selectedSubcatIndex < subcats.length) {
                             final selectedSubcat = subcats[_selectedSubcatIndex];
-                            if (selectedSubcat.id != 'all' && dbSubcats.isNotEmpty) {
+                            if (selectedSubcat.id != 'all') {
+                              final targetId = selectedSubcat.id.toLowerCase().trim();
+                              final targetSlug = selectedSubcat.slug.toLowerCase().trim();
+                              final targetName = selectedSubcat.name.toLowerCase().trim();
+
                               list = list.where((p) {
-                                final pCatId = (p.category?.id ?? p.categoryId ?? '').toLowerCase().trim();
+                                final pCatId = (p.categoryId ?? '').toLowerCase().trim();
+                                final pSubId = (p.category?.id ?? '').toLowerCase().trim();
+                                final pSubSlug = (p.category?.slug ?? '').toLowerCase().trim();
+                                final pSubName = (p.category?.name ?? '').toLowerCase().trim();
                                 final pParentId = (p.category?.parentId ?? '').toLowerCase().trim();
-                                final targetId = selectedSubcat.id.toLowerCase().trim();
-                                final targetName = selectedSubcat.name.toLowerCase().trim();
-                                final pCatName = (p.category?.name ?? '').toLowerCase().trim();
-                                return pCatId == targetId || pParentId == targetId || pCatName == targetName;
+                                final pName = p.name.toLowerCase().trim();
+
+                                // 1. Direct subcategory ID match
+                                if (pCatId == targetId || pSubId == targetId || pParentId == targetId) return true;
+
+                                // 2. Direct subcategory slug match
+                                if (targetSlug.isNotEmpty && (pSubSlug == targetSlug || pSubSlug.contains(targetSlug))) return true;
+
+                                // 3. Subcategory name match
+                                if (targetName.isNotEmpty &&
+                                    (pSubName == targetName || pSubName.contains(targetName) || targetName.contains(pSubName))) {
+                                  return true;
+                                }
+
+                                // 4. Tag match
+                                if (p.tags.any((t) =>
+                                    t.toLowerCase().trim() == targetSlug ||
+                                    t.toLowerCase().trim() == targetName)) {
+                                  return true;
+                                }
+
+                                // 5. Product name contains subcategory name
+                                if (targetName.length >= 4 && pName.contains(targetName)) return true;
+
+                                return false;
                               }).toList();
                             }
                           }
@@ -522,23 +689,43 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
-        _selectedSort = title;
+        setState(() {
+          _selectedSort = title;
+        });
         _resetPagination();
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5.5),
         decoration: BoxDecoration(
-          color: isSelected ? primaryRed : AppDesignSystem.surfaceMuted,
+          color: isSelected ? primaryRed : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: isSelected ? null : Border.all(color: AppDesignSystem.border),
+          border: Border.all(
+            color: isSelected ? primaryRed : const Color(0xFFE2E8F0),
+            width: 1.1,
+          ),
+          boxShadow: [
+            if (isSelected)
+              BoxShadow(
+                color: primaryRed.withValues(alpha: 0.22),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              )
+            else
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+          ],
         ),
         child: Text(
           title,
           style: GoogleFonts.inter(
             fontSize: Responsive.scaledFontSize(context, 10.5),
-            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-            color: isSelected ? Colors.white : AppDesignSystem.gray700,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+            color: isSelected ? Colors.white : const Color(0xFF475569),
           ),
         ),
       ),

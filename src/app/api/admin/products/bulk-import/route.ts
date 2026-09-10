@@ -276,6 +276,30 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Seed store-level inventory for all dark stores for newly created/updated products
+    try {
+      const allStores = await prisma.darkStore.findMany({ select: { id: true } })
+      if (allStores.length > 0 && createdProducts.length > 0) {
+        const inventoryData: { storeId: string; productId: string; stock: number }[] = []
+        for (const p of createdProducts) {
+          const pStock = typeof p.stock === 'number' ? p.stock : 0
+          for (const s of allStores) {
+            inventoryData.push({
+              storeId: s.id,
+              productId: p.id,
+              stock: pStock,
+            })
+          }
+        }
+        await prisma.storeInventory.createMany({
+          data: inventoryData,
+          skipDuplicates: true,
+        })
+      }
+    } catch (seedErr) {
+      console.warn('Could not seed store_inventories in bulk-import:', seedErr)
+    }
+
     // Revalidate storefront
     try {
       revalidateStorefront()

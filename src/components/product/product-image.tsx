@@ -122,6 +122,7 @@ interface ProductImageProps {
   categorySlug?: string
   className?: string
   isBestseller?: boolean
+  priority?: boolean
   width?: number
 }
 
@@ -131,7 +132,8 @@ export function ProductImage({
   categorySlug = '',
   className = '',
   isBestseller = false,
-  width = 300,
+  priority = false,
+  width = 240,
 }: ProductImageProps) {
   const [imgError, setImgError] = useState(false)
   const [currentSrc, setCurrentSrc] = useState(src)
@@ -191,6 +193,8 @@ export function ProductImage({
             alt={alt}
             className={className || "h-full w-full object-contain"}
             onError={handleError}
+            loading="lazy"
+            decoding="async"
           />
         </div>
       )
@@ -202,10 +206,12 @@ export function ProductImage({
           src={optimizedSrc!}
           alt={alt}
           fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
+          sizes="(max-width: 640px) 150px, (max-width: 1024px) 180px, 220px"
           className={className}
           onError={handleError}
-          priority={isBestseller}
+          priority={priority}
+          loading={priority ? undefined : 'lazy'}
+          decoding="async"
         />
       </div>
     )

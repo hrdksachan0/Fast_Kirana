@@ -23,6 +23,7 @@ import { FoodEditorialCuration } from '@/components/home/food-editorial-curation
 interface StorefrontClientProps {
   categories: Category[]
   promoBanners: any[]
+  allGroceryProducts?: Product[]
   flashDeals: Product[]
   bestSellers: Product[]
   topPicks: Product[]
@@ -40,6 +41,7 @@ type ActiveTab = 'grocery' | 'food'
 export function StorefrontClient({
   categories,
   promoBanners,
+  allGroceryProducts = [],
   flashDeals,
   bestSellers,
   topPicks,
@@ -191,6 +193,7 @@ export function StorefrontClient({
             <div className="section-lazy-render">
               <DealsCurationHub
                 categories={categories}
+                allProducts={allGroceryProducts}
                 flashDeals={flashDeals}
                 bestSellers={bestSellers}
                 topPicks={topPicks}

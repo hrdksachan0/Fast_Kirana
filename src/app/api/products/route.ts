@@ -127,7 +127,10 @@ export async function GET(request: NextRequest) {
       const ids = categoryId.split(',').map(s => s.trim()).filter(Boolean)
       const catOrClause = [
         { categoryId: { in: ids } },
+        { category: { id: { in: ids } } },
         { category: { parentId: { in: ids } } },
+        { category: { slug: { in: ids } } },
+        { category: { parent: { slug: { in: ids } } } },
       ]
       where.AND = where.AND ? (Array.isArray(where.AND) ? [...where.AND, { OR: catOrClause }] : [where.AND, { OR: catOrClause }]) : [{ OR: catOrClause }]
       if (!restaurantId && !restaurantSlug) {
@@ -138,6 +141,9 @@ export async function GET(request: NextRequest) {
       const catOrClause = [
         { category: { slug: { in: slugs } } },
         { category: { parent: { slug: { in: slugs } } } },
+        { categoryId: { in: slugs } },
+        { category: { id: { in: slugs } } },
+        { category: { parentId: { in: slugs } } },
       ]
       where.AND = where.AND ? (Array.isArray(where.AND) ? [...where.AND, { OR: catOrClause }] : [where.AND, { OR: catOrClause }]) : [{ OR: catOrClause }]
       // In grocery context (browsing by category without restaurant), enforce grocery only
@@ -751,6 +757,24 @@ export async function POST(request: NextRequest) {
         category: true,
       }
     })
+
+    // Seed store-level inventory for all dark stores
+    try {
+      const allStores = await prisma.darkStore.findMany({ select: { id: true } })
+      if (allStores.length > 0) {
+        const initialStockNum = finalRestaurantId ? 99999 : (parseInt(String(stock), 10) || 0)
+        await prisma.storeInventory.createMany({
+          data: allStores.map((s) => ({
+            storeId: s.id,
+            productId: product.id,
+            stock: initialStockNum,
+          })),
+          skipDuplicates: true,
+        })
+      }
+    } catch (seedErr) {
+      console.warn('Could not seed store_inventories for new product:', seedErr)
+    }
 
     // Invalidate storefront caches on-demand
     revalidateStorefront((product as any).category?.slug)

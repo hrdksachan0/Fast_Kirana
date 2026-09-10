@@ -412,7 +412,13 @@ export function CategoriesTab({
                 const childCats = groceryCats.filter(c => !!c.parentId)
                 const processedChildIds = new Set<string>()
 
-                const renderRow = (c: CategoryWithCount, isSub: boolean, parentCat?: CategoryWithCount | null) => (
+                const renderRow = (c: CategoryWithCount, isSub: boolean, parentCat?: CategoryWithCount | null) => {
+                  const directCount = c._count?.products || 0
+                  const subCats = !isSub ? childCats.filter(sub => sub.parentId === c.id) : []
+                  const subProductsCount = subCats.reduce((sum, s) => sum + (s._count?.products || 0), 0)
+                  const totalCount = directCount + subProductsCount
+
+                  return (
                   <tr key={c.id} className={`hover:bg-muted/30 transition-colors ${isSub ? 'bg-amber-500/[0.03] dark:bg-amber-500/[0.02]' : 'bg-card'}`}>
                     <td className="py-3 px-4 font-mono text-[11px] font-bold text-text-muted">
                       <span className={isSub ? 'text-amber-600 dark:text-amber-400 pl-4 inline-block' : 'text-primary'}>
@@ -458,9 +464,31 @@ export function CategoriesTab({
                     <td className="py-3 px-4 text-center font-black">{c.sortOrder}</td>
 
                     <td className="py-3 px-4 text-center">
-                      <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-[10px] font-black">
-                        {c._count?.products || 0} Products
-                      </span>
+                      {isSub ? (
+                        <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-[10px] font-black">
+                          {directCount} Products
+                        </span>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${
+                            totalCount > 0 
+                              ? 'bg-primary/10 text-primary' 
+                              : 'bg-muted text-text-muted'
+                          }`}>
+                            {totalCount} Products
+                          </span>
+                          {subCats.length > 0 && subProductsCount > 0 && directCount > 0 && (
+                            <span className="text-[9px] text-text-muted mt-0.5 font-bold">
+                              ({directCount} direct + {subProductsCount} in {subCats.length} sub)
+                            </span>
+                          )}
+                          {subCats.length > 0 && subProductsCount > 0 && directCount === 0 && (
+                            <span className="text-[9px] text-amber-600 dark:text-amber-400 mt-0.5 font-bold">
+                              (Sum of {subCats.length} subcategories)
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </td>
 
                     <td className="py-3 px-4 text-right">
@@ -502,7 +530,8 @@ export function CategoriesTab({
                       </div>
                     </td>
                   </tr>
-                )
+                  )
+                }
 
                 const rows: React.ReactNode[] = []
 

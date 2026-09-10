@@ -470,7 +470,7 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
                         elevation: 0,
                       ),
                       onPressed: () {
-                        final restId = p.restaurantId ?? p.restaurant?.id;
+                        final restId = p.restaurantId ?? p.restaurant?.id ?? (isRest ? (widget.restaurantId ?? outletWedsonId) : null);
                         final outletName = isRest ? getOutletName(p) : 'FastKirana Grocery';
                         widget.onProductSelected({
                           'productId': p.id,
@@ -479,7 +479,7 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
                           'quantity': 1,
                           'imageUrl': p.imageUrl,
                           'isCustom': false,
-                          'restaurantId': isRest ? restId : null,
+                          'restaurantId': isRest ? (restId ?? widget.restaurantId) : null,
                           'shopName': outletName,
                         });
                         Navigator.pop(context);

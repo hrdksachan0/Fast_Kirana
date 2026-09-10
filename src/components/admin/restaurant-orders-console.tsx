@@ -803,7 +803,9 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
       price: item.price,
       quantity: item.quantity,
       selectedVariant: item.selectedVariant || null,
-      notes: item.notes || null
+      notes: item.notes || null,
+      restaurantId: order.restaurantId,
+      shopName: order.shopName
     })))
     setOutOfStockIds([])
     setSearchQuery('')
@@ -882,7 +884,9 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
         price: product.price,
         quantity: 1,
         selectedVariant: null,
-        notes: null
+        notes: null,
+        restaurantId: product.restaurantId || restaurant?.id || editingOrder?.restaurantId,
+        shopName: product.restaurant?.name || restaurant?.name || editingOrder?.shopName || 'Restaurant'
       }])
     }
     setSearchQuery('')

@@ -259,7 +259,10 @@ class ProductRepository {
         'includeRestaurants': 'true',
         if (search != null && search.isNotEmpty) 'search': search,
         if (restaurantId != null && restaurantId.isNotEmpty) 'restaurantId': restaurantId,
-        if (category != null && category.isNotEmpty) 'category': category,
+        if (category != null && category.isNotEmpty) ...{
+          'category': category,
+          'categoryId': category,
+        },
         if (effectiveStoreId != null) 'storeId': effectiveStoreId,
       },
     );
@@ -443,6 +446,8 @@ class ProductRepository {
 
   static const Map<String, List<String>> _categoryAliases = {
     'CAT-101': ['fruits-vegetables', 'fruits & vegetables', 'fruits', 'vegetables', 'fresh', 'farm'],
+    'SUB-101-01': ['fresh-fruits', 'fresh fruits', 'fruits', 'fruits-vegetables', 'fruits & vegetables'],
+    'SUB-101-02': ['fresh-vegetables', 'fresh vegetables', 'vegetables', 'fruits-vegetables', 'fruits & vegetables'],
     'CAT-102': ['snacks-munchies', 'snacks & munchies', 'snacks', 'munchies', 'chips', 'namkeen', 'biscuits'],
     'CAT-103': ['kitchen-needs', 'kitchen needs', 'atta-rice-dal', 'atta', 'rice', 'dal', 'oil', 'grocery', 'spices'],
     'CAT-104': ['packaged-foods', 'packaged foods', 'instant', 'noodles', 'maggie', 'pasta'],
@@ -453,6 +458,9 @@ class ProductRepository {
     'CAT-109': ['personal-care', 'personal care & hygiene', 'personal care', 'soap', 'shampoo', 'creams'],
     'CAT-110': ['healthy-foods', 'healthy foods', 'healthy', 'diet', 'dry-fruits', 'oats'],
     'CAT-111': ['bakery', 'bakery & biscuits', 'biscuits', 'cookies', 'bread', 'rusk'],
+    'CAT-112': ['groceries', 'grocery', 'ration', 'kirana', 'oil', 'sugar', 'dry fruits', 'seeds', 'pooja'],
+    'CAT-113': ['kirana-ration', 'kirana & ration', 'kirana', 'ration', 'atta-rice-dal', 'atta', 'rice', 'dal', 'flour'],
+    'SUB-113-01': ['atta-rice-dal', 'atta, rice & dal', 'kirana-ration', 'kirana & ration', 'atta', 'rice', 'dal'],
     // Legacy CUID mappings for backwards compatibility
     'cmqh1haw30000zcid4vj7i1yj': ['fruits-vegetables'],
     'cmt76olwr000104l18kcelx0i': ['healthy-foods'],
@@ -491,28 +499,43 @@ class ProductRepository {
       final catLower = category.toLowerCase().trim();
       final catSlugNormalized = catLower.replaceAll(' ', '-').replaceAll('&', 'and').replaceAll('---', '-');
       result = result.where((p) {
-        final prodCatSlug = (p.category?.slug ?? '').toLowerCase();
-        final prodCatId = (p.category?.id ?? p.categoryId ?? '').toLowerCase();
-        final prodCatName = (p.category?.name ?? '').toLowerCase();
-        final pCatIdLower = (p.categoryId ?? '').toLowerCase();
+        final prodCatSlug = (p.category?.slug ?? '').toLowerCase().trim();
+        final prodCatId = (p.category?.id ?? p.categoryId ?? '').toLowerCase().trim();
+        final prodCatParentId = (p.category?.parentId ?? '').toLowerCase().trim();
+        final prodCatName = (p.category?.name ?? '').toLowerCase().trim();
+        final pCatIdLower = (p.categoryId ?? '').toLowerCase().trim();
 
-        // Direct ID match
+        // 1. Direct ID match
         if (prodCatId == catLower || (pCatIdLower.isNotEmpty && pCatIdLower == catLower)) return true;
 
-        // Direct Slug match
+        // 2. Direct Parent ID match (Product belongs to a subcategory of this category)
+        if (prodCatParentId.isNotEmpty && (prodCatParentId == catLower || prodCatParentId == catSlugNormalized)) return true;
+
+        // 3. Subcategory code match: SUB-<codeId>-XX belongs to CAT-<codeId>
+        if (catLower.startsWith('cat-')) {
+          final catCode = catLower.replaceFirst('cat-', '');
+          if (prodCatId.startsWith('sub-$catCode-') || pCatIdLower.startsWith('sub-$catCode-')) return true;
+        }
+
+        // 4. Direct Slug match
         if (prodCatSlug.isNotEmpty && (prodCatSlug == catLower || prodCatSlug == catSlugNormalized)) return true;
 
-        // Direct Category Name match
+        // 5. Direct Category Name match
         if (prodCatName.isNotEmpty && (prodCatName == catLower || prodCatName == catSlugNormalized)) return true;
 
-        // Alias lookup by ID
-        final aliasesForProd = (p.categoryId != null ? _categoryAliases[p.categoryId] : null) ?? _categoryAliases[prodCatId] ?? [];
+        // 6. Alias lookup by ID or Parent ID
+        final aliasesForProd = (p.categoryId != null ? _categoryAliases[p.categoryId] : null) ??
+            _categoryAliases[prodCatId] ??
+            (prodCatParentId.isNotEmpty ? _categoryAliases[prodCatParentId] : null) ??
+            [];
         if (aliasesForProd.contains(catLower) || aliasesForProd.contains(catSlugNormalized)) return true;
 
-        // Alias lookup by query key
+        // 7. Alias lookup by query key
         for (final entry in _categoryAliases.entries) {
           if (entry.value.contains(catLower) || entry.value.contains(catSlugNormalized)) {
-            if ((pCatIdLower.isNotEmpty && entry.key.toLowerCase() == pCatIdLower) || entry.key.toLowerCase() == prodCatId) {
+            if ((pCatIdLower.isNotEmpty && entry.key.toLowerCase() == pCatIdLower) ||
+                entry.key.toLowerCase() == prodCatId ||
+                (prodCatParentId.isNotEmpty && entry.key.toLowerCase() == prodCatParentId)) {
               return true;
             }
           }

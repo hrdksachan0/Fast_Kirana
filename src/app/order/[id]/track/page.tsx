@@ -130,17 +130,20 @@ async function getOrderDetails(id: string) {
         const grocerySub = subOrders.find(s => s.type === 'GROCERY')
         const restaurantSub = subOrders.find(s => s.type === 'RESTAURANT')
 
+        const activeOrders = combinedOrders.filter(o => o.status !== 'CANCELLED')
+        const ordersToSum = activeOrders.length > 0 ? activeOrders : combinedOrders
+
         return {
           ...order,
           readableId: baseReadableId,
           baseReadableId,
           status: combinedStatus,
-          subtotal: combinedOrders.reduce((sum, o) => sum + Number(o.subtotal || 0), 0),
-          discount: combinedOrders.reduce((sum, o) => sum + Number(o.discount || 0), 0),
-          deliveryFee: combinedOrders.reduce((sum, o) => sum + Number(o.deliveryFee || 0), 0),
-          taxes: combinedOrders.reduce((sum, o) => sum + Number(o.taxes || 0), 0),
-          miscFee: combinedOrders.reduce((sum, o) => sum + Number(o.miscFee || 0), 0),
-          total: combinedOrders.reduce((sum, o) => sum + Number(o.total || 0), 0),
+          subtotal: ordersToSum.reduce((sum, o) => sum + Number(o.subtotal || 0), 0),
+          discount: ordersToSum.reduce((sum, o) => sum + Number(o.discount || 0), 0),
+          deliveryFee: ordersToSum.reduce((sum, o) => sum + Number(o.deliveryFee || 0), 0),
+          taxes: ordersToSum.reduce((sum, o) => sum + Number(o.taxes || 0), 0),
+          miscFee: ordersToSum.reduce((sum, o) => sum + Number(o.miscFee || 0), 0),
+          total: ordersToSum.reduce((sum, o) => sum + Number(o.total || 0), 0),
           estimatedDelivery: order.estimatedDelivery ? new Date(order.estimatedDelivery).toISOString() : null,
           createdAt: order.createdAt ? new Date(order.createdAt).toISOString() : new Date().toISOString(),
           updatedAt: order.updatedAt ? new Date(order.updatedAt).toISOString() : new Date().toISOString(),

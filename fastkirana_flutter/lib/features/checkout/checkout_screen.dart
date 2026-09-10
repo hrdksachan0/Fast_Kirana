@@ -222,9 +222,49 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   void _handleCashfreeError(CFErrorResponse errorResponse, String cfOrderId) {
     HapticFeedback.lightImpact();
+
+    final errorMsg = errorResponse.getMessage() ?? '';
+    final isSideloadError = errorMsg.contains('packageinstaller') ||
+        errorMsg.contains('trusted source') ||
+        errorMsg.contains('whitelisted app store');
+
+    if (isSideloadError && _razorpay != null && _pendingGrandTotal != null) {
+      debugPrint('Sideloaded APK detected by Cashfree PG. Automatically switching to Razorpay fallback...');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF0F172A),
+            duration: const Duration(seconds: 3),
+            content: Row(
+              children: [
+                const Icon(Icons.swap_horiz_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Direct APK testing detected. Switching to Razorpay Gateway...',
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      fontSize: Responsive.scaledFontSize(context, 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+      _launchRazorpayDirectly(_pendingGrandTotal!);
+      return;
+    }
+
     if (mounted) setState(() => _isPlacingOrder = false);
 
-    final errorMsg = errorResponse.getMessage() ?? 'Payment cancelled or could not be completed. Please retry or choose Cash on Delivery (COD).';
+    final displayMsg = errorMsg.isNotEmpty
+        ? errorMsg
+        : 'Payment cancelled or could not be completed. Please retry or choose Cash on Delivery (COD).';
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -236,8 +276,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  errorMsg,
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white, fontSize: Responsive.scaledFontSize(context, 12)),
+                  displayMsg,
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    fontSize: Responsive.scaledFontSize(context, 12),
+                  ),
                 ),
               ),
             ],
@@ -246,6 +290,77 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
+    }
+  }
+
+  Future<void> _launchRazorpayDirectly(double grandTotal) async {
+    if (_razorpay == null) {
+      if (mounted) setState(() => _isPlacingOrder = false);
+      return;
+    }
+
+    final user = ref.read(authProvider).value;
+    final prefs = await SharedPreferences.getInstance();
+    final rawPhone = user?.phone ?? prefs.getString('user_phone') ?? '';
+    final cleanPhone = rawPhone.replaceAll(RegExp(r'[^\d]'), '').replaceAll(RegExp(r'^91'), '');
+    final email = user?.email ?? (user?.name != null && user!.name!.isNotEmpty ? '${user.name!.replaceAll(' ', '').toLowerCase()}@fastkirana.in' : 'customer@fastkirana.in');
+
+    String? serverRzpOrderId;
+    try {
+      final dio = ref.read(dioProvider);
+      final rzpRes = await dio.post(
+        '/api/payment/razorpay/create-order',
+        data: {'amount': grandTotal},
+        options: Options(sendTimeout: const Duration(milliseconds: 3000), receiveTimeout: const Duration(milliseconds: 3000)),
+      );
+      if (rzpRes.data != null && rzpRes.data['razorpayOrderId'] != null) {
+        serverRzpOrderId = rzpRes.data['razorpayOrderId']?.toString();
+        _pendingRazorpayOrderId = serverRzpOrderId;
+      }
+    } catch (e) {
+      debugPrint('Razorpay fast preflight note: $e');
+    }
+
+    final options = {
+      'key': AppConfig.razorpayKeyId,
+      'amount': (grandTotal * 100).toInt(),
+      if (serverRzpOrderId != null) 'order_id': serverRzpOrderId,
+      'name': 'FastKirana Express',
+      'description': 'Express Grocery & Food Delivery',
+      'prefill': {
+        if (cleanPhone.isNotEmpty) 'contact': cleanPhone,
+        'email': email,
+      },
+      'theme': {
+        'color': '#E20A22',
+      },
+      'external': {
+        'wallets': ['paytm', 'phonepe', 'gpay', 'mobikwik'],
+      },
+      'retry': {
+        'enabled': true,
+        'max_count': 3,
+      },
+      'send_sms_hash': true,
+    };
+
+    try {
+      _razorpay!.open(options);
+    } catch (e) {
+      debugPrint('Razorpay direct open error: $e');
+      if (mounted) {
+        setState(() => _isPlacingOrder = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: primaryRed,
+            content: Text(
+              'Could not open payment gateway. Please choose Cash on Delivery (COD).',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -1093,37 +1208,33 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  RichText(
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    text: TextSpan(
-                                      children: [
-                                        TextSpan(
-                                          text: 'Deliver to ',
-                                          style: GoogleFonts.inter(
-                                            fontSize: Responsive.scaledFontSize(context, 12),
-                                            fontWeight: FontWeight.w600,
-                                            color: slateMuted,
-                                          ),
-                                        ),
-                                        TextSpan(
-                                          text: () {
-                                            if (selectedAddress == null || selectedAddress.label.trim().isEmpty || selectedAddress.label.trim() == '.') {
-                                              return 'Home';
-                                            }
-                                            final clean = selectedAddress.label.replaceAll('📍', '').trim();
-                                            return clean.isNotEmpty ? clean : 'Home';
-                                          }(),
-                                          style: GoogleFonts.inter(
-                                            fontSize: Responsive.scaledFontSize(context, 13),
-                                            fontWeight: FontWeight.w900,
-                                            color: slateDark,
-                                          ),
-                                        ),
-                                      ],
+                                  Text(
+                                    'DELIVER TO',
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 10),
+                                      fontWeight: FontWeight.w800,
+                                      color: slateMuted,
+                                      letterSpacing: 0.5,
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
+                                  const SizedBox(height: 1),
+                                  Text(
+                                    () {
+                                      if (selectedAddress == null || selectedAddress.label.trim().isEmpty || selectedAddress.label.trim() == '.') {
+                                        return 'Home';
+                                      }
+                                      final clean = selectedAddress.label.replaceAll('📍', '').trim();
+                                      return clean.isNotEmpty ? clean : 'Home';
+                                    }(),
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 13.5),
+                                      fontWeight: FontWeight.w900,
+                                      color: slateDark,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 1),
                                   Text(
                                     (selectedAddress?.area != null &&
                                             selectedAddress!.area.trim().isNotEmpty &&
@@ -1132,7 +1243,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                         ? selectedAddress.area.trim()
                                         : 'Ghatampur Zone',
                                     style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 11.5),
+                                      fontSize: Responsive.scaledFontSize(context, 11),
                                       fontWeight: FontWeight.w700,
                                       color: AppDesignSystem.orange600,
                                     ),
@@ -1364,8 +1475,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         ),
                         const SizedBox(height: 8),
 
-                        // Row 2: Customer Name & Phone Number (Full Width — NO TRUNCATION!)
-                        Row(
+                        // Row 2: Customer Name & Phone Number (Responsive Wrap — Zero Overlap / Overflow)
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 8,
+                          runSpacing: 2,
                           children: [
                             Text(
                               customerName,
@@ -1375,8 +1489,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                 color: slateDark,
                               ),
                             ),
-                            if (customerPhone.isNotEmpty) ...[
-                              const SizedBox(width: 8),
+                            if (customerPhone.isNotEmpty)
                               Text(
                                 '•   $customerPhone',
                                 style: GoogleFonts.inter(
@@ -1385,7 +1498,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                   color: AppDesignSystem.slate600,
                                 ),
                               ),
-                            ],
                           ],
                         ),
                         const SizedBox(height: 2),
@@ -2898,18 +3010,29 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 
   Widget _buildBottomProceedBar(double grandTotal, Cart cart) {
-    final bottomInset = MediaQuery.of(context).padding.bottom;
     return Container(
-      padding: EdgeInsets.fromLTRB(14, 8, 14, 10 + (bottomInset > 0 ? bottomInset * 0.5 : 0)),
-      color: Colors.white,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x0F000000),
+            blurRadius: 8,
+            offset: Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               Text(
                 'TOTAL BILL',
                 style: GoogleFonts.inter(
@@ -2980,7 +3103,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           ),
         ],
       ),
-    );
+    ),
+  ),
+);
   }
 
   void _showPaymentMethodBottomSheet(BuildContext context, double grandTotal, Cart cart) {

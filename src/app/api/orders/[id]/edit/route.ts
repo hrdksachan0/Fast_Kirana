@@ -5,6 +5,7 @@ import { sendPushNotification } from '@/lib/push-notification'
 import { sseEmitter } from '@/lib/sse-emitter'
 import { normalizeRestaurantId } from '@/lib/restaurant-ids'
 import { requireRole } from '@/lib/auth-guard'
+import { COMBINED_FREE_DELIVERY_THRESHOLD } from '@/lib/constants'
 
 export async function POST(
   request: Request,
@@ -203,28 +204,68 @@ export async function POST(
       let resolvedShopPhone: string | null = null
 
       if (product) {
-        isRestaurant = Boolean(
-          product.restaurantId ||
-          product.restaurant?.id ||
-          itemRestId ||
-          product.category?.slug === 'cafe' ||
-          product.category?.slug === 'restaurant' ||
-          product.category?.slug === 'restaurant-food' ||
-          product.tags?.some((t: string) => ['restaurant', 'cafe', 'cooked', 'dish', 'wedson', 'as-restaurant', 'bal-udyan'].includes(t.toLowerCase()))
-        )
+        if (order.orderType === 'GROCERY') {
+          // In a grocery order, only classify as restaurant if explicitly assigned to a restaurant or restaurant food category
+          isRestaurant = Boolean(
+            product.restaurantId ||
+            product.restaurant?.id ||
+            itemRestId ||
+            product.category?.slug === 'cafe' ||
+            product.category?.slug === 'restaurant' ||
+            product.category?.slug === 'restaurant-food' ||
+            product.category?.slug === 'cat-112'
+          )
+        } else {
+          // Restaurant order or unspecified: check restaurant properties, categories, tags, or inherit from order
+          isRestaurant = Boolean(
+            product.restaurantId ||
+            product.restaurant?.id ||
+            itemRestId ||
+            product.category?.slug === 'cafe' ||
+            product.category?.slug === 'restaurant' ||
+            product.category?.slug === 'restaurant-food' ||
+            product.category?.slug === 'cat-112' ||
+            product.tags?.some((t: string) => ['restaurant', 'cafe', 'cooked', 'dish', 'wedson', 'as-restaurant', 'bal-udyan', 'pari-milk'].includes(t.toLowerCase())) ||
+            (order.orderType === 'RESTAURANT' && !product.category?.slug?.includes('grocery') && !product.category?.slug?.includes('kitchen-needs'))
+          )
+        }
+
         if (isRestaurant) {
-          resolvedRestId = normalizeRestaurantId(product.restaurantId || product.restaurant?.id || itemRestId) || null
-          resolvedShopName = product.restaurant?.name || itemShopName || null
-          resolvedShopPhone = product.restaurant?.ownerPhone || (product.restaurant as any)?.phone || null
+          resolvedRestId = normalizeRestaurantId(
+            product.restaurantId ||
+            product.restaurant?.id ||
+            itemRestId ||
+            order.restaurantId
+          ) || normalizeRestaurantId(order.restaurantId) || 'REST-101'
+
+          resolvedShopName = product.restaurant?.name || itemShopName || order.shopName || (resolvedRestId ? (resolvedRestId.includes('101') ? 'A.S. Restaurant' : resolvedRestId.includes('102') ? 'Wedson Restaurant' : resolvedRestId.includes('103') ? 'Bal Udyan Restaurant' : resolvedRestId.includes('104') ? 'Pari Milk Dairy & Sweets' : 'Restaurant') : 'Restaurant')
+          resolvedShopPhone = product.restaurant?.ownerPhone || (product.restaurant as any)?.phone || order.shopPhone || null
         }
       } else {
         // Custom item
-        if (itemRestId) {
+        if (itemRestId || order.orderType === 'RESTAURANT' || order.restaurantId) {
           isRestaurant = true
-          resolvedRestId = normalizeRestaurantId(itemRestId) || itemRestId
-          resolvedShopName = itemShopName || (itemRestId.includes('101') ? 'A.S. Restaurant' : itemRestId.includes('102') ? 'Wedson Restaurant' : itemRestId.includes('103') ? 'Bal Udyan Restaurant' : itemRestId.includes('104') ? 'Pari Milk Dairy & Sweets' : 'Restaurant')
+          resolvedRestId = normalizeRestaurantId(itemRestId || order.restaurantId) || order.restaurantId || 'REST-101'
+          resolvedShopName = itemShopName || order.shopName || (resolvedRestId?.includes('101') ? 'A.S. Restaurant' : resolvedRestId?.includes('102') ? 'Wedson Restaurant' : resolvedRestId?.includes('103') ? 'Bal Udyan Restaurant' : resolvedRestId?.includes('104') ? 'Pari Milk Dairy & Sweets' : 'Restaurant')
+          resolvedShopPhone = order.shopPhone || null
         }
-        // Custom item with no restaurantId → grocery
+      }
+
+      // If the original order is a RESTAURANT order, and item is not a packaged darkstore grocery item, keep it in this restaurant!
+      if (!isRestaurant && order.orderType === 'RESTAURANT' && order.restaurantId) {
+        const isDefinitiveGrocery = product && (
+          product.category?.slug === 'fruits-vegetables' ||
+          product.category?.slug === 'atta-rice-dal' ||
+          product.category?.slug === 'kitchen-needs' ||
+          product.category?.slug === 'personal-care' ||
+          product.category?.slug === 'cleaning-household'
+        )
+        if (!isDefinitiveGrocery) {
+          isRestaurant = true
+          resolvedRestId = normalizeRestaurantId(order.restaurantId) || 'REST-101'
+          resolvedShopName = order.shopName || 'Restaurant'
+          resolvedShopPhone = order.shopPhone || null
+        }
       }
 
       const classified: ClassifiedItem = {
@@ -235,10 +276,10 @@ export async function POST(
         shopPhone: resolvedShopPhone,
       }
 
-      if (isRestaurant && resolvedRestId) {
-        const key = resolvedRestId
+      if (isRestaurant) {
+        const key = resolvedRestId || normalizeRestaurantId(order.restaurantId) || 'REST-101'
         if (!restaurantGroups[key]) {
-          restaurantGroups[key] = { items: [], shopName: resolvedShopName || 'Restaurant', shopPhone: resolvedShopPhone }
+          restaurantGroups[key] = { items: [], shopName: resolvedShopName || order.shopName || 'Restaurant', shopPhone: resolvedShopPhone || order.shopPhone }
         }
         restaurantGroups[key].items.push(classified)
       } else {
@@ -262,7 +303,7 @@ export async function POST(
     const miscFeeSetting = parseFloat(settingsMap['misc_fee'] || '5')
 
     // Helper: Calculate delivery/misc fees for a sub-order
-    const calcFees = async (subtotal: number, ordType: string, shopNm: string | null, existingOrder: typeof order, allCompanionIds: string[]) => {
+    const calcFees = async (subtotal: number, ordType: string, shopNm: string | null, existingOrder: { deliveryMethod?: string | null; deliveryFee?: number | null }, allCompanionIds: string[]) => {
       let calcDeliveryFee = 0
       let calcMiscFee = 0
       
@@ -283,7 +324,11 @@ export async function POST(
           combinedSubtotal = companions.reduce((sum, c) => sum + c.subtotal, 0) + subtotal
         }
 
-        if (companionHasDelivery || combinedSubtotal >= threshold) {
+        const combinedThreshold = settingsMap['combined_free_delivery_threshold']
+          ? parseFloat(settingsMap['combined_free_delivery_threshold'])
+          : COMBINED_FREE_DELIVERY_THRESHOLD
+
+        if (companionHasDelivery || combinedSubtotal >= threshold || combinedSubtotal >= combinedThreshold) {
           calcDeliveryFee = 0
         } else if (existingOrder.deliveryFee === 0 && subtotal > 0) {
           calcDeliveryFee = 0
@@ -369,18 +414,31 @@ export async function POST(
       let dynamicShopName = order.shopName
       let dynamicShopPhone = order.shopPhone
 
-      if (!hasRestaurantItems) {
+      if (order.orderType === 'RESTAURANT') {
+        dynamicOrderType = 'RESTAURANT'
+        dynamicRestaurantId = normalizeRestaurantId(order.restaurantId) || (restaurantKeys[0] ? normalizeRestaurantId(restaurantKeys[0]) : 'REST-101')
+        const firstGroup = dynamicRestaurantId ? restaurantGroups[dynamicRestaurantId] : Object.values(restaurantGroups)[0]
+        dynamicShopName = firstGroup?.shopName || order.shopName || 'Restaurant'
+        dynamicShopPhone = firstGroup?.shopPhone || order.shopPhone || null
+      } else if (order.orderType === 'GROCERY') {
         dynamicOrderType = 'GROCERY'
         dynamicRestaurantId = null
         dynamicShopName = 'FastKirana Grocery'
         dynamicShopPhone = null
       } else {
-        const firstKey = restaurantKeys[0]
-        const firstGroup = restaurantGroups[firstKey]
-        dynamicOrderType = 'RESTAURANT'
-        dynamicRestaurantId = normalizeRestaurantId(firstKey)
-        dynamicShopName = firstGroup.shopName || order.shopName || 'Restaurant'
-        if (firstGroup.shopPhone) dynamicShopPhone = firstGroup.shopPhone
+        if (!hasRestaurantItems) {
+          dynamicOrderType = 'GROCERY'
+          dynamicRestaurantId = null
+          dynamicShopName = 'FastKirana Grocery'
+          dynamicShopPhone = null
+        } else {
+          const firstKey = restaurantKeys[0]
+          const firstGroup = restaurantGroups[firstKey]
+          dynamicOrderType = 'RESTAURANT'
+          dynamicRestaurantId = normalizeRestaurantId(firstKey)
+          dynamicShopName = firstGroup?.shopName || order.shopName || 'Restaurant'
+          if (firstGroup?.shopPhone) dynamicShopPhone = firstGroup.shopPhone
+        }
       }
 
       // Find companion order ids (exclude self)
@@ -413,6 +471,32 @@ export async function POST(
           ...(dynamicOrderType === 'GROCERY' ? { assignedChefId: null } : { assignedPickerId: null })
         }
       })
+
+      // Sync and clean up companion orders if order was part of a combined order
+      if (order.combinedId) {
+        const companions = await prisma.order.findMany({
+          where: { combinedId: order.combinedId, id: { not: order.id } },
+          include: { items: true }
+        })
+        for (const comp of companions) {
+          if (comp.items.length === 0) {
+            await prisma.orderItem.deleteMany({ where: { orderId: comp.id } })
+            await prisma.order.delete({ where: { id: comp.id } })
+          } else {
+            const otherIds = [order.id, ...companions.filter(c => c.id !== comp.id).map(c => c.id)]
+            const compFees = await calcFees(comp.subtotal, comp.orderType, comp.shopName, comp, otherIds)
+            const compTotal = comp.subtotal + compFees.calcDeliveryFee + comp.taxes + compFees.calcMiscFee - comp.discount
+            await prisma.order.update({
+              where: { id: comp.id },
+              data: {
+                deliveryFee: compFees.calcDeliveryFee,
+                miscFee: compFees.calcMiscFee,
+                total: compTotal
+              }
+            })
+          }
+        }
+      }
 
       // Push notification for out of stock
       if (Array.isArray(outOfStockProductIds) && outOfStockProductIds.length > 0) {
@@ -542,60 +626,67 @@ export async function POST(
       let targetOrderId = spec.orderId
 
       if (spec.isNew) {
-        // Create a new companion order cloning base fields from the original
-        const newOrder = await prisma.order.create({
-          data: {
-            userId: order.userId,
-            readableId: spec.readableId,
-            addressId: order.addressId,
-            combinedId,
-            orderType: spec.type,
-            status: order.status,
-            subtotal: 0,
-            discount: 0,
-            deliveryFee: 0,
-            taxes: 0,
-            miscFee: 0,
-            total: 0,
-            paymentMethod: order.paymentMethod,
-            paymentStatus: order.paymentStatus,
-            estimatedDelivery: order.estimatedDelivery,
-            deliveryMethod: order.deliveryMethod,
-            isB2B: order.isB2B,
-            storeId: order.storeId,
-            couponCode: order.couponCode,
-            shopName: spec.shopName,
-            shopPhone: spec.shopPhone,
-            restaurantId: spec.restaurantId,
-            deliveryLat: order.deliveryLat,
-            deliveryLng: order.deliveryLng,
-            notes: order.notes,
-            ...(spec.type === 'GROCERY' ? { assignedPickerId: order.assignedPickerId } : {}),
-            ...(spec.type === 'RESTAURANT' ? { assignedChefId: order.assignedChefId } : {}),
-          }
+        // Prevent Prisma Unique constraint violation on readableId
+        const existingByReadable = await prisma.order.findFirst({
+          where: { readableId: spec.readableId }
         })
-        targetOrderId = newOrder.id
-      } else if (targetOrderId === order.id) {
-        // This IS the order being edited — delete old items, replace with new
-        await prisma.orderItem.deleteMany({ where: { orderId: targetOrderId } })
+        if (existingByReadable) {
+          targetOrderId = existingByReadable.id
+          await prisma.order.update({
+            where: { id: targetOrderId },
+            data: {
+              combinedId,
+              status: order.status,
+              orderType: spec.type,
+              restaurantId: spec.restaurantId,
+              shopName: spec.shopName,
+              shopPhone: spec.shopPhone
+            }
+          })
+        } else {
+          // Create a new companion order cloning base fields from the original
+          const newOrder = await prisma.order.create({
+            data: {
+              userId: order.userId,
+              readableId: spec.readableId,
+              addressId: order.addressId,
+              combinedId,
+              orderType: spec.type,
+              status: order.status,
+              subtotal: 0,
+              discount: 0,
+              deliveryFee: 0,
+              taxes: 0,
+              miscFee: 0,
+              total: 0,
+              paymentMethod: order.paymentMethod,
+              paymentStatus: order.paymentStatus,
+              estimatedDelivery: order.estimatedDelivery,
+              deliveryMethod: order.deliveryMethod,
+              isB2B: order.isB2B,
+              storeId: order.storeId,
+              couponCode: order.couponCode,
+              shopName: spec.shopName,
+              shopPhone: spec.shopPhone,
+              restaurantId: spec.restaurantId,
+              deliveryLat: order.deliveryLat,
+              deliveryLng: order.deliveryLng,
+              notes: order.notes,
+              ...(spec.type === 'GROCERY' ? { assignedPickerId: order.assignedPickerId } : {}),
+              ...(spec.type === 'RESTAURANT' ? { assignedChefId: order.assignedChefId } : {}),
+            }
+          })
+          targetOrderId = newOrder.id
+        }
       }
-      // else: existing companion order — APPEND items (don't delete its existing items)
+
+      // Cleanly replace items for this targetOrderId to eliminate duplicate items
+      await prisma.orderItem.deleteMany({ where: { orderId: targetOrderId! } })
 
       allOrderIds.push(targetOrderId!)
 
-      // Insert items
-      const insertedSubtotal = await insertItemsForOrder(targetOrderId!, spec.items)
-
-      // For companion orders (not the edited order, not new), include existing items in subtotal
-      let subtotalVal = insertedSubtotal
-      if (!spec.isNew && targetOrderId !== order.id) {
-        const existingCompanionItems = await prisma.orderItem.findMany({
-          where: { orderId: targetOrderId! },
-          select: { price: true, quantity: true }
-        })
-        // existingCompanionItems includes both old items + newly inserted items
-        subtotalVal = existingCompanionItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-      }
+      // Insert exact items for this sub-order
+      const subtotalVal = await insertItemsForOrder(targetOrderId!, spec.items)
 
       // Collect all companion IDs (all sub-orders except this one)
       const companionIds = allOrderIds.filter(oid => oid !== targetOrderId)
@@ -652,6 +743,17 @@ export async function POST(
       })
     }
 
+    // Clean up any companion orders belonging to this combinedId that are no longer part of the edit
+    if (existingCompanions.length > 0) {
+      for (const ec of existingCompanions) {
+        if (!allOrderIds.includes(ec.id)) {
+          await prisma.orderItem.deleteMany({ where: { orderId: ec.id } })
+          await prisma.order.delete({ where: { id: ec.id } })
+          console.log(`[OrderEdit] Cleaned up orphaned companion sub-order: ${ec.readableId || ec.id}`)
+        }
+      }
+    }
+
     // Push notification for out of stock
     if (Array.isArray(outOfStockProductIds) && outOfStockProductIds.length > 0) {
       try {
@@ -698,6 +800,6 @@ export async function POST(
     })
   } catch (err: any) {
     console.error('Order edit API error:', err)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    return NextResponse.json({ error: err?.message || 'Internal Server Error' }, { status: 500 })
   }
 }

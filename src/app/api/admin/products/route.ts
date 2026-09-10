@@ -84,11 +84,20 @@ export async function GET(request: Request) {
         OR: [
           {
             restaurantId: null,
-            inventories: {
-              some: {
-                storeId
+            OR: [
+              {
+                inventories: {
+                  some: {
+                    storeId
+                  }
+                }
+              },
+              {
+                inventories: {
+                  none: {}
+                }
               }
-            }
+            ]
           },
           ...(storeCity ? [{
             restaurant: { city: { contains: storeCity, mode: 'insensitive' as const } }
@@ -133,7 +142,7 @@ export async function GET(request: Request) {
     }
 
     const products = productsRaw.map((p) => {
-      const localStock = (storeId && storeId !== 'all') ? (inventoryMap.get(p.id) ?? 0) : p.stock
+      const localStock = (storeId && storeId !== 'all') ? (inventoryMap.has(p.id) ? (inventoryMap.get(p.id) ?? 0) : p.stock) : p.stock
       return {
         id: p.id,
         name: p.name,
