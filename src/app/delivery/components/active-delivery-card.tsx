@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { MapPin, Phone, User, ShoppingBag, CheckCircle2, Loader2, Navigation, ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
+import { MapPin, Phone, User, ShoppingBag, CheckCircle2, Loader2, Navigation, ChevronDown, ChevronUp, Sparkles, QrCode } from 'lucide-react'
 import { formatPrice, formatPhone, formatAddress } from '@/lib/utils'
 
 interface ActiveDeliveryCardProps {
@@ -10,6 +10,7 @@ interface ActiveDeliveryCardProps {
   idx: number
   updatingId: string | null
   onMarkDelivered: (orderId: string) => void
+  onOpenQr?: (order: any) => void
 }
 
 const itemVariants = {
@@ -23,6 +24,7 @@ export default function ActiveDeliveryCard({
   idx,
   updatingId,
   onMarkDelivered,
+  onOpenQr,
 }: ActiveDeliveryCardProps) {
   const [showAllItems, setShowAllItems] = useState(false)
   const isCod = order.paymentMethod === 'COD'
@@ -284,30 +286,44 @@ export default function ActiveDeliveryCard({
         </div>
 
         {/* Footer: Total to Collect & Primary Action Button */}
-        <div className="flex items-center justify-between gap-3 pt-3 border-t border-border/40">
-          <div>
-            <span className="text-[9px] font-black uppercase tracking-wider text-text-muted block">
-              {isCod ? '💵 Collect at Doorstep' : '✅ Order Value (Paid)'}
+        <div className="flex items-center justify-between gap-2.5 pt-3 border-t border-border/40">
+          <div className="min-w-0">
+            <span className="text-[9px] font-black uppercase tracking-wider text-text-muted block truncate">
+              {isCod ? '💵 Collect (COD)' : '✅ Order Value (Paid)'}
             </span>
-            <span className="text-xl font-black text-text-primary tracking-tight">
+            <span className="text-lg sm:text-xl font-black text-text-primary tracking-tight">
               {formatPrice(totalAmount)}
             </span>
           </div>
 
-          <button
-            onClick={() => onMarkDelivered(order.id)}
-            disabled={updatingId === order.id}
-            className="flex-1 max-w-[200px] flex items-center justify-center gap-2 py-3.5 px-4 min-h-[48px] bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black rounded-2xl transition-all shadow-lg shadow-emerald-500/25 active:scale-95 disabled:opacity-60 cursor-pointer"
-          >
-            {updatingId === order.id ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <>
-                <CheckCircle2 className="h-4 w-4" />
-                <span>{order.companionOrder ? 'Deliver Both ✅' : 'Mark Delivered ✅'}</span>
-              </>
+          <div className="flex items-center gap-2 shrink-0">
+            {isCod && onOpenQr && (
+              <button
+                type="button"
+                onClick={() => onOpenQr(order)}
+                className="flex items-center justify-center gap-1.5 py-3 px-3 min-h-[44px] bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-black rounded-2xl transition-all shadow-xs active:scale-95 cursor-pointer"
+                title="Doorstep Cashfree QR"
+              >
+                <QrCode className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Doorstep QR</span>
+              </button>
             )}
-          </button>
+
+            <button
+              onClick={() => onMarkDelivered(order.id)}
+              disabled={updatingId === order.id}
+              className="flex items-center justify-center gap-2 py-3 px-3.5 min-h-[44px] bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black rounded-2xl transition-all shadow-lg shadow-emerald-500/25 active:scale-95 disabled:opacity-60 cursor-pointer"
+            >
+              {updatingId === order.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>{order.companionOrder ? 'Deliver Both ✅' : 'Mark Delivered ✅'}</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>

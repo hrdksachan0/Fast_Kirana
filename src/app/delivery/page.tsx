@@ -697,8 +697,13 @@ export default function DeliveryDashboard() {
   }
 
   const handleSelectOnline = (orderId: string) => {
+    const matchingOrder = orders.find((o) => o.id === orderId)
     setPaymentChoiceOrderId(null)
-    executeDeliveryCompletion(orderId, false, 'ONLINE')
+    if (matchingOrder) {
+      setQrModalOrder(matchingOrder)
+    } else {
+      executeDeliveryCompletion(orderId, false, 'ONLINE')
+    }
   }
 
   const handleSelectCustomCash = (orderId: string, cashAmount: number) => {
@@ -869,6 +874,7 @@ export default function DeliveryDashboard() {
                       idx={idx}
                       updatingId={updatingId}
                       onMarkDelivered={handleMarkDelivered}
+                      onOpenQr={(o) => setQrModalOrder(o)}
                     />
                   ))
                 )}

@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { ShoppingBag, ArrowRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LazyProductSection } from '@/components/shared/lazy-product-section'
+import { triggerHaptic } from '@/lib/haptic'
 
 // ==========================================
 // --- PREMIUM INLINE VECTOR SVG COMPONENT DESIGN ---
@@ -418,6 +419,7 @@ export function DealsCurationHub({
   sortRules = {}
 }: DealsCurationHubProps) {
   const [activeCuration, setActiveCuration] = useState<string>('all')
+  const [selectedSubcatByGroup, setSelectedSubcatByGroup] = useState<Record<string, string>>({})
   const [currentHour, setCurrentHour] = useState<number>(0) // default to 0 (Night Mode)
   const [mounted, setMounted] = useState(false)
 
@@ -896,40 +898,135 @@ export function DealsCurationHub({
               </div>
             ) : (
               <div className="space-y-6">
-                {groupedProducts.map((group) => (
-                  <div key={group.categoryName} className="space-y-2.5">
-                    {/* Category Subheader */}
-                    <div className="flex items-center justify-between px-1">
-                      <div className="flex items-center gap-1">
-                        <h3 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white tracking-tight">
-                          {group.categoryName}
-                        </h3>
-                        <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full bg-[#FFF0F2] dark:bg-rose-950/30 text-[10px] sm:text-xs font-bold text-[#FF2E55] dark:text-rose-400 ml-2">
-                          {group.products.length} {group.products.length === 1 ? 'item' : 'items'}
-                        </span>
-                      </div>
-                      
-                      {/* Interactive See All link */}
-                      <Link
-                        href={group.categorySlug === 'cafe' ? '/food/as-cafe' : (group.categorySlug ? `/category/${group.categorySlug}` : '/category')}
-                        className="group/btn inline-flex items-center gap-0.5 text-xs sm:text-sm font-bold text-[#FF2E55] hover:text-[#e02447] transition-colors select-none"
-                      >
-                        See All
-                        <span className="inline-block transition-transform duration-300 group-hover/btn:translate-x-0.5 font-normal ml-0.5">
-                          →
-                        </span>
-                      </Link>
-                    </div>
+                {groupedProducts.map((group) => {
+                  const parentCat = (categories || []).find(
+                    (c) =>
+                      c.name.toLowerCase().trim() === group.categoryName.toLowerCase().trim() ||
+                      c.slug.toLowerCase().trim() === group.categorySlug.toLowerCase().trim()
+                  )
+                  const childSubcategories = parentCat
+                    ? (categories || []).filter(
+                        (c) =>
+                          c.parentId &&
+                          c.parentId.toLowerCase().trim() === parentCat.id.toLowerCase().trim()
+                      )
+                    : []
 
-                    {/* Category Products — Lazy Loaded Horizontal Snap Track */}
-                    <LazyProductSection
-                      products={group.products}
-                      renderItem={(product) => (
-                        <ProductCard product={product} />
+                  const activeSubId = selectedSubcatByGroup[group.categoryName] || 'all'
+                  const displayProducts =
+                    activeSubId === 'all'
+                      ? group.products
+                      : group.products.filter((p: any) => {
+                          const targetSub = childSubcategories.find((s) => s.id === activeSubId)
+                          if (!targetSub) return true
+                          const pCatId = (p.categoryId || '').toLowerCase().trim()
+                          const pSubId = (p.category?.id || '').toLowerCase().trim()
+                          const pSubSlug = (p.category?.slug || '').toLowerCase().trim()
+                          const pSubName = (p.category?.name || '').toLowerCase().trim()
+                          const tId = targetSub.id.toLowerCase().trim()
+                          const tSlug = targetSub.slug.toLowerCase().trim()
+                          const tName = targetSub.name.toLowerCase().trim()
+                          return (
+                            pCatId === tId ||
+                            pSubId === tId ||
+                            pSubSlug === tSlug ||
+                            pSubName === tName ||
+                            (Array.isArray(p.tags) && p.tags.some((t: string) => t.toLowerCase().trim() === tName)) ||
+                            p.name.toLowerCase().includes(tName)
+                          )
+                        })
+
+                  return (
+                    <div key={group.categoryName} className="space-y-2.5">
+                      {/* Category Subheader */}
+                      <div className="flex items-center justify-between px-1">
+                        <div className="flex items-center gap-1">
+                          <h3 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white tracking-tight">
+                            {group.categoryName}
+                          </h3>
+                          <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full bg-[#FFF0F2] dark:bg-rose-950/30 text-[10px] sm:text-xs font-bold text-[#FF2E55] dark:text-rose-400 ml-2">
+                            {displayProducts.length} {displayProducts.length === 1 ? 'item' : 'items'}
+                          </span>
+                        </div>
+                        
+                        {/* Interactive See All link */}
+                        <Link
+                          href={group.categorySlug === 'cafe' ? '/food/as-cafe' : (group.categorySlug ? `/category/${group.categorySlug}` : '/category')}
+                          className="group/btn inline-flex items-center gap-0.5 text-xs sm:text-sm font-bold text-[#FF2E55] hover:text-[#e02447] transition-colors select-none"
+                        >
+                          See All
+                          <span className="inline-block transition-transform duration-300 group-hover/btn:translate-x-0.5 font-normal ml-0.5">
+                            →
+                          </span>
+                        </Link>
+                      </div>
+
+                      {/* Subcategory Pills Strip (when real subcategories exist in DB) */}
+                      {childSubcategories.length > 0 && (
+                        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none select-none px-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic()
+                              setSelectedSubcatByGroup((prev) => ({ ...prev, [group.categoryName]: 'all' }))
+                            }}
+                            className={cn(
+                              'px-3.5 py-1 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer border',
+                              activeSubId === 'all'
+                                ? 'bg-[#FF2E55] text-white border-[#FF2E55] shadow-xs'
+                                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200/70'
+                            )}
+                          >
+                            All
+                          </button>
+                          {childSubcategories.map((subcat) => {
+                            const isSelected = activeSubId === subcat.id
+                            return (
+                              <button
+                                key={subcat.id}
+                                type="button"
+                                onClick={() => {
+                                  triggerHaptic()
+                                  setSelectedSubcatByGroup((prev) => ({ ...prev, [group.categoryName]: subcat.id }))
+                                }}
+                                className={cn(
+                                  'px-3.5 py-1 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer border flex items-center gap-1.5',
+                                  isSelected
+                                    ? 'bg-[#FF2E55] text-white border-[#FF2E55] shadow-xs'
+                                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200/70'
+                                )}
+                              >
+                                {subcat.imageUrl && (
+                                  <img
+                                    src={subcat.imageUrl}
+                                    alt={subcat.name}
+                                    className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
+                                    onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none' }}
+                                  />
+                                )}
+                                <span>{subcat.name}</span>
+                              </button>
+                            )
+                          })}
+                        </div>
                       )}
-                    />
-                  </div>
-                ))}
+
+                      {/* Category Products */}
+                      {displayProducts.length === 0 ? (
+                        <div className="py-8 text-center text-xs font-medium text-zinc-400 bg-zinc-50 dark:bg-zinc-900/40 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">
+                          No items in this subcategory yet
+                        </div>
+                      ) : (
+                        <LazyProductSection
+                          products={displayProducts}
+                          renderItem={(product) => (
+                            <ProductCard product={product} />
+                          )}
+                        />
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </motion.div>

@@ -19,13 +19,15 @@ export default function UpiQrModal({
 }: UpiQrModalProps) {
   const [qrData, setQrData] = useState<{
     qrImageUrl: string
-    razorpayQrImageUrl?: string
+    cashfreeQrUrl?: string
+    directUpiQrUrl?: string
     paymentStatus?: string
     paymentMethod?: string
     paymentLinkUrl?: string
     upiVpa?: string
+    gateway?: string
   } | null>(null)
-  const [qrMode, setQrMode] = useState<'razorpay' | 'direct_upi'>('razorpay')
+  const [qrMode, setQrMode] = useState<'cashfree' | 'direct_upi'>('cashfree')
   const [isLoading, setIsLoading] = useState(true)
   const [livePaid, setLivePaid] = useState(false)
 
@@ -41,11 +43,13 @@ export default function UpiQrModal({
           if (!isCancelled) {
             setQrData({
               qrImageUrl: data.qrImageUrl,
-              razorpayQrImageUrl: data.razorpayQrImageUrl,
+              cashfreeQrUrl: data.cashfreeQrUrl,
+              directUpiQrUrl: data.directUpiQrUrl,
               paymentStatus: data.paymentStatus,
               paymentMethod: data.paymentMethod,
               paymentLinkUrl: data.paymentLinkUrl,
               upiVpa: data.upiVpa,
+              gateway: data.gateway,
             })
             if (data.paymentStatus === 'PAID') {
               if (!livePaid) {
@@ -66,7 +70,7 @@ export default function UpiQrModal({
 
     loadQrData()
 
-    // 3-Second Live Polling for Automatic Razorpay Payment Detection
+    // 3-Second Live Polling for Automatic Cashfree Payment Detection
     const pollInterval = setInterval(() => {
       if (document.visibilityState === 'visible' && !livePaid) {
         loadQrData()
@@ -86,10 +90,10 @@ export default function UpiQrModal({
   const displayId = String(order.readableId || order.id.slice(0, 8))
   const upiVpa = qrData?.upiVpa || '7054470303@paytm'
   const defaultUpiUri = `upi://pay?pa=${upiVpa}&pn=FastKirana%20Store&am=${Number(order.total).toFixed(2)}&cu=INR&tn=Order%20%23${displayId}&tr=FK${displayId}`
-  const directUpiQrSrc = qrData?.qrImageUrl || `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(defaultUpiUri)}`
-  const razorpayQrSrc = qrData?.razorpayQrImageUrl || directUpiQrSrc
+  const directUpiQrSrc = qrData?.directUpiQrUrl || qrData?.qrImageUrl || `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(defaultUpiUri)}`
+  const cashfreeQrSrc = qrData?.cashfreeQrUrl || qrData?.qrImageUrl || directUpiQrSrc
 
-  const activeQrSrc = qrMode === 'razorpay' && qrData?.razorpayQrImageUrl ? razorpayQrSrc : directUpiQrSrc
+  const activeQrSrc = qrMode === 'cashfree' && qrData?.cashfreeQrUrl ? cashfreeQrSrc : directUpiQrSrc
 
   return (
     <AnimatePresence>
@@ -141,15 +145,15 @@ export default function UpiQrModal({
             <div className="flex bg-muted/50 p-1 rounded-2xl border border-border/50 w-full text-xs font-black">
               <button
                 type="button"
-                onClick={() => setQrMode('razorpay')}
+                onClick={() => setQrMode('cashfree')}
                 className={`flex-1 py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  qrMode === 'razorpay'
+                  qrMode === 'cashfree'
                     ? 'bg-card text-emerald-600 shadow-md border border-emerald-500/20'
                     : 'text-text-secondary hover:text-text-primary'
                 }`}
               >
                 <Zap className="h-3.5 w-3.5 fill-emerald-500" />
-                <span>Razorpay Gateway</span>
+                <span>Cashfree Gateway</span>
               </button>
               <button
                 type="button"
@@ -201,7 +205,7 @@ export default function UpiQrModal({
                       className="w-full h-full object-contain"
                     />
                     <div className="absolute bottom-1 bg-emerald-600 text-white text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full shadow-sm flex items-center gap-1">
-                      <span>{qrMode === 'razorpay' ? 'RAZORPAY AUTO-DETECT ⚡' : 'DIRECT UPI VPA 📱'}</span>
+                      <span>{qrMode === 'cashfree' ? 'CASHFREE AUTO-DETECT ⚡' : 'DIRECT UPI VPA 📱'}</span>
                     </div>
                   </>
                 )}
@@ -210,8 +214,8 @@ export default function UpiQrModal({
               {/* Instructional Text */}
               <div className="text-center space-y-1">
                 <p className="text-[11px] font-extrabold text-text-primary">
-                  {qrMode === 'razorpay'
-                    ? 'Scan with GPay, PhonePe or Paytm to pay on Razorpay Gateway'
+                  {qrMode === 'cashfree'
+                    ? 'Scan with GPay, PhonePe or Paytm to pay on Cashfree Gateway'
                     : 'Scan with GPay, PhonePe, Paytm or BHIM for direct transfer'}
                 </p>
                 <p className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
@@ -222,14 +226,23 @@ export default function UpiQrModal({
               {/* Status Indicator */}
               <div className="flex items-center justify-center gap-2 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-3.5 py-2 rounded-xl border border-emerald-300 dark:border-emerald-500/20 w-full">
                 <RefreshCw className="h-3.5 w-3.5 animate-spin text-emerald-500 shrink-0" />
-                <span className="leading-tight">Live Checking Razorpay Payment Every 3s...</span>
+                <span className="leading-tight">Live Checking Cashfree Payment Every 3s...</span>
               </div>
             </>
           )}
 
           {/* Action Buttons */}
           <div className="flex flex-col gap-2 w-full pt-1">
-            {!isAlreadyPaid && (
+            {isAlreadyPaid ? (
+              <button
+                type="button"
+                onClick={() => onConfirmPaid(order.id)}
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                Complete Delivery ✅
+              </button>
+            ) : (
               <button
                 type="button"
                 onClick={() => onConfirmPaid(order.id)}
@@ -239,15 +252,17 @@ export default function UpiQrModal({
                 Confirm Payment Received ✅
               </button>
             )}
-            <p className="text-[10px] text-center text-text-muted px-2">
-              💡 Customer shows PhonePe/GPay success screen → Rider taps button above to confirm.
-            </p>
+            {!isAlreadyPaid && (
+              <p className="text-[10px] text-center text-text-muted px-2">
+                💡 Customer shows PhonePe/GPay success screen → Rider taps button above to confirm.
+              </p>
+            )}
             <button
               type="button"
               onClick={onBack}
               className="w-full py-2.5 border border-border hover:bg-muted/40 text-text-secondary font-bold text-xs rounded-xl transition-colors cursor-pointer text-center"
             >
-              {isAlreadyPaid ? 'Close Window' : 'Back to Order Details'}
+              {isAlreadyPaid ? 'Cancel' : 'Back to Order Details'}
             </button>
           </div>
         </motion.div>

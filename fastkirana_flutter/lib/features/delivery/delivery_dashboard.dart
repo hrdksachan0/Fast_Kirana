@@ -899,107 +899,20 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     final orderId = order['id']?.toString() ?? '';
     final orderNum = order['readableId'] ?? orderId.substring(0, math.min(8, orderId.length));
     final total = (order['total'] as num?)?.toDouble() ?? 0.0;
-    final settings = ref.read(storeSettingsProvider).valueOrNull;
-    final upiVpa = settings?.adminWhatsappPhone.isNotEmpty == true
-        ? '${settings!.adminWhatsappPhone}@ibl'
-        : '';
-    if (upiVpa.isEmpty) {
-      AppToast.showError(context, 'UPI not configured', subtitle: 'Store UPI ID is not set. Contact admin.');
-      return;
-    }
-    final payeeName = Uri.encodeComponent('FastKirana Store');
-    final note = Uri.encodeComponent('Payment for Order #$orderNum');
-    final amount = total.toStringAsFixed(2);
-    final upiUri = 'upi://pay?pa=$upiVpa&pn=$payeeName&am=$amount&cu=INR&tn=$note';
-    final qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${Uri.encodeComponent(upiUri)}';
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(color: slateBorder, borderRadius: BorderRadius.circular(2)),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Doorstep UPI QR Collection',
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: slateDark)),
-                    Text('Order #$orderNum • ₹${total.toInt()}',
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: slateMuted)),
-                  ],
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded, color: slateDark),
-                  onPressed: () => Navigator.pop(ctx),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppDesignSystem.slate50,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: slateBorder, width: 1.5),
-              ),
-              child: Column(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: CachedNetworkImage(
-                      imageUrl: qrUrl,
-                      width: 220,
-                      height: 220,
-                      placeholder: (c, u) => const Center(child: CircularProgressIndicator(color: brandGreen)),
-                      errorWidget: (c, u, e) => const Icon(Icons.qr_code_2_rounded, size: 100, color: slateMuted),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text('Scan via Google Pay, PhonePe, Paytm or any UPI App',
-                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w600, color: slateMuted),
-                      textAlign: TextAlign.center),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.pop(ctx);
-                await _updateOrderStatus(orderId, 'DELIVERED', extra: {
-                  'paymentMethod': 'UPI',
-                  'paymentStatus': 'PAID',
-                  'paymentCollectedBy': 'ONLINE',
-                  'isRiderCash': false,
-                  'notes': 'Paid via Doorstep QR scan',
-                });
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: brandGreen,
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text(
-                'Confirm Customer Paid ₹${total.toInt()} via QR',
-                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w800, color: Colors.white),
-              ),
-            ),
-          ],
-        ),
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _DoorstepCashfreeQrSheet(
+        order: order,
+        orderId: orderId,
+        orderNum: orderNum.toString(),
+        total: total,
+        onConfirmPaid: (extra) async {
+          Navigator.pop(ctx);
+          await _updateOrderStatus(orderId, 'DELIVERED', extra: extra);
+        },
       ),
     );
   }
@@ -3962,3 +3875,481 @@ class _DeliveryPaymentSheetState extends State<_DeliveryPaymentSheet> {
     );
   }
 }
+
+/// Doorstep Cashfree Dynamic UPI QR Bottom Sheet with Live Auto-Detection
+class _DoorstepCashfreeQrSheet extends ConsumerStatefulWidget {
+  final Map<String, dynamic> order;
+  final String orderId;
+  final String orderNum;
+  final double total;
+  final Future<void> Function(Map<String, dynamic> extra) onConfirmPaid;
+
+  const _DoorstepCashfreeQrSheet({
+    required this.order,
+    required this.orderId,
+    required this.orderNum,
+    required this.total,
+    required this.onConfirmPaid,
+  });
+
+  @override
+  ConsumerState<_DoorstepCashfreeQrSheet> createState() => _DoorstepCashfreeQrSheetState();
+}
+
+class _DoorstepCashfreeQrSheetState extends ConsumerState<_DoorstepCashfreeQrSheet> {
+  bool _isLoading = true;
+  bool _isPaid = false;
+  String _qrMode = 'cashfree'; // 'cashfree' | 'direct_upi'
+  String _cashfreeQrUrl = '';
+  String _directUpiQrUrl = '';
+  String _qrImageUrl = '';
+  String _upiVpa = '';
+  Timer? _pollTimer;
+  bool _isCompleting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchQrData();
+    _startPolling();
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchQrData() async {
+    try {
+      final dio = ref.read(dioProvider);
+      final res = await dio.get('/api/delivery/orders/${widget.orderId}/qr?t=${DateTime.now().millisecondsSinceEpoch}');
+      if (res.statusCode == 200 && res.data != null && mounted) {
+        final data = res.data;
+        final status = data['paymentStatus']?.toString().toUpperCase();
+        setState(() {
+          _cashfreeQrUrl = data['cashfreeQrUrl']?.toString() ?? '';
+          _directUpiQrUrl = data['directUpiQrUrl']?.toString() ?? '';
+          _qrImageUrl = data['qrImageUrl']?.toString() ?? '';
+          _upiVpa = data['upiVpa']?.toString() ?? '';
+          _isLoading = false;
+        });
+
+        if (status == 'PAID' && !_isPaid) {
+          _onPaymentReceived();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        final settings = ref.read(storeSettingsProvider).valueOrNull;
+        final vpa = settings?.adminWhatsappPhone.isNotEmpty == true ? '${settings!.adminWhatsappPhone}@ibl' : '7054470303@paytm';
+        final payee = Uri.encodeComponent('FastKirana Store');
+        final note = Uri.encodeComponent('Payment for Order #${widget.orderNum}');
+        final upiUri = 'upi://pay?pa=$vpa&pn=$payee&am=${widget.total.toStringAsFixed(2)}&cu=INR&tn=$note';
+        final fallbackQr = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${Uri.encodeComponent(upiUri)}';
+
+        setState(() {
+          _qrImageUrl = fallbackQr;
+          _directUpiQrUrl = fallbackQr;
+          _upiVpa = vpa;
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _startPolling() {
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+      if (!mounted || _isPaid) {
+        timer.cancel();
+        return;
+      }
+      try {
+        final dio = ref.read(dioProvider);
+        final res = await dio.get('/api/delivery/orders/${widget.orderId}/qr?t=${DateTime.now().millisecondsSinceEpoch}');
+        if (res.statusCode == 200 && res.data != null && mounted) {
+          final status = res.data['paymentStatus']?.toString().toUpperCase();
+          if (status == 'PAID') {
+            timer.cancel();
+            _onPaymentReceived();
+          }
+        }
+      } catch (_) {}
+    });
+  }
+
+  void _onPaymentReceived() {
+    HapticFeedback.heavyImpact();
+    if (mounted) {
+      setState(() {
+        _isPaid = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final activeQr = (_qrMode == 'cashfree' && _cashfreeQrUrl.isNotEmpty)
+        ? _cashfreeQrUrl
+        : (_qrImageUrl.isNotEmpty ? _qrImageUrl : _directUpiQrUrl);
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: EdgeInsets.fromLTRB(20, 14, 20, MediaQuery.of(context).viewInsets.bottom + 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Drag Handle
+          Container(
+            width: 38,
+            height: 4,
+            decoration: BoxDecoration(color: AppDesignSystem.slate200, borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(height: 14),
+
+          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          _isPaid ? 'Payment Confirmed' : 'Doorstep QR Collection',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 16),
+                            fontWeight: FontWeight.w900,
+                            color: _isPaid ? AppDesignSystem.emerald700 : AppDesignSystem.slate900,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: _isPaid ? AppDesignSystem.green100 : AppDesignSystem.blue50,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: _isPaid ? AppDesignSystem.green200 : AppDesignSystem.blue200,
+                            ),
+                          ),
+                          child: Text(
+                            _isPaid ? 'PAID ✅' : 'CASHFREE ⚡',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 9.5),
+                              fontWeight: FontWeight.w900,
+                              color: _isPaid ? AppDesignSystem.green700 : AppDesignSystem.blue700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Order #${widget.orderNum} • ₹${widget.total.toInt()}',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 12.5),
+                        fontWeight: FontWeight.w600,
+                        color: AppDesignSystem.slate500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded, color: AppDesignSystem.slate900),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Unpaid: Mode switch tabs (Cashfree Gateway vs Direct VPA)
+          if (!_isPaid && _cashfreeQrUrl.isNotEmpty && _directUpiQrUrl.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: AppDesignSystem.slate100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => setState(() => _qrMode = 'cashfree'),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _qrMode == 'cashfree' ? Colors.white : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: _qrMode == 'cashfree'
+                              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4)]
+                              : null,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '⚡ Cashfree Dynamic',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 11),
+                              fontWeight: FontWeight.w800,
+                              color: _qrMode == 'cashfree' ? AppDesignSystem.blue700 : AppDesignSystem.slate500,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => setState(() => _qrMode = 'direct_upi'),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _qrMode == 'direct_upi' ? Colors.white : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: _qrMode == 'direct_upi'
+                              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4)]
+                              : null,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '📱 Direct UPI VPA',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 11),
+                              fontWeight: FontWeight.w800,
+                              color: _qrMode == 'direct_upi' ? AppDesignSystem.blue700 : AppDesignSystem.slate500,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Display: PAID Screen OR QR Code
+          if (_isPaid) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppDesignSystem.green50,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppDesignSystem.green200, width: 1.5),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: const BoxDecoration(
+                      color: AppDesignSystem.success,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.check_rounded, color: Colors.white, size: 36),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Payment Verified! ✅',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 16),
+                      fontWeight: FontWeight.w900,
+                      color: AppDesignSystem.green800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '₹${widget.total.toInt()} credited via Cashfree',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 12.5),
+                      fontWeight: FontWeight.w600,
+                      color: AppDesignSystem.green700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppDesignSystem.green200),
+                    ),
+                    child: Text(
+                      'Collect ₹0 Cash from Customer 🚀',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 11.5),
+                        fontWeight: FontWeight.w800,
+                        color: AppDesignSystem.green800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            ElevatedButton(
+              onPressed: _isCompleting
+                  ? null
+                  : () async {
+                      setState(() => _isCompleting = true);
+                      await widget.onConfirmPaid({
+                        'paymentMethod': 'UPI',
+                        'paymentStatus': 'PAID',
+                        'paymentCollectedBy': 'ONLINE',
+                        'isRiderCash': false,
+                        'notes': 'Paid via Doorstep Cashfree QR',
+                      });
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppDesignSystem.success,
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: _isCompleting
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Text(
+                      'Complete Delivery ✅',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 14),
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                    ),
+            ),
+          ] else ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppDesignSystem.slate50,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppDesignSystem.slate200, width: 1.5),
+              ),
+              child: Column(
+                children: [
+                  if (_isLoading) ...[
+                    const SizedBox(
+                      width: 220,
+                      height: 220,
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(color: AppDesignSystem.success),
+                            SizedBox(height: 14),
+                            Text('Generating Cashfree QR...', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppDesignSystem.slate900)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: CachedNetworkImage(
+                        imageUrl: activeQr,
+                        width: 220,
+                        height: 220,
+                        placeholder: (c, u) => const Center(child: CircularProgressIndicator(color: AppDesignSystem.success)),
+                        errorWidget: (c, u, e) => const Icon(Icons.qr_code_2_rounded, size: 100, color: AppDesignSystem.slate500),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  Text(
+                    'Scan via Google Pay, PhonePe, Paytm, BHIM or Cred',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 11),
+                      fontWeight: FontWeight.w600,
+                      color: AppDesignSystem.slate500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  if (_upiVpa.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Store VPA: $_upiVpa',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 10),
+                        fontWeight: FontWeight.w700,
+                        color: AppDesignSystem.emerald600,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Live Checking Indicator
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppDesignSystem.green50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppDesignSystem.green100),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppDesignSystem.emerald600),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Auto-checking payment status every 3s...',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 11),
+                      fontWeight: FontWeight.w700,
+                      color: AppDesignSystem.emerald700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Manual confirmation button if needed
+            ElevatedButton(
+              onPressed: () async {
+                await widget.onConfirmPaid({
+                  'paymentMethod': 'UPI',
+                  'paymentStatus': 'PAID',
+                  'paymentCollectedBy': 'ONLINE',
+                  'isRiderCash': false,
+                  'notes': 'Paid via Doorstep Cashfree QR scan',
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppDesignSystem.success,
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: Text(
+                'Confirm Customer Paid ₹${widget.total.toInt()} via QR',
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 13.5),
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+

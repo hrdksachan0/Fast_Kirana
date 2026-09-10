@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { IndianRupee, CheckCircle2, ArrowLeftRight, Wallet, AlertTriangle, ChevronRight } from 'lucide-react'
+import { IndianRupee, CheckCircle2, ArrowLeftRight, Wallet, AlertTriangle, ChevronRight, QrCode } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 
 interface CodPaymentModalProps {
@@ -196,7 +196,7 @@ export default function CodPaymentModal({
                 <ChevronRight className="h-5 w-5 text-amber-500/60 group-hover:text-amber-500 transition-colors shrink-0" />
               </button>
 
-              {/* Option 2: Online Mila */}
+              {/* Option 2: Online Mila / Show Cashfree QR */}
               <button
                 type="button"
                 onClick={() => onSelectOnline(order.id)}
@@ -204,20 +204,20 @@ export default function CodPaymentModal({
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="h-12 w-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-2xl shrink-0">
-                    📱
+                    ⚡
                   </div>
                   <div className="min-w-0">
-                    <p className="text-emerald-700 dark:text-emerald-300 font-black text-sm">
-                      Online Mila (ऑनलाइन मिला)
+                    <p className="text-emerald-700 dark:text-emerald-300 font-black text-sm flex items-center gap-1.5">
+                      <span>Online Mila / Show QR (ऑनलाइन मिला)</span>
                     </p>
                     <p className="text-[11px] text-text-muted mt-0.5 font-semibold">
-                      Poora GPay / PhonePe / UPI se aaya
+                      Customer scans Cashfree Dynamic QR via GPay/PhonePe
                     </p>
                   </div>
                 </div>
                 <span className="px-2.5 py-1 rounded-lg bg-emerald-500 text-white text-[10px] font-black shrink-0 flex items-center gap-1 shadow-xs">
-                  <CheckCircle2 className="h-3 w-3" />
-                  UPI
+                  <QrCode className="h-3 w-3" />
+                  QR ⚡
                 </span>
               </button>
             </div>

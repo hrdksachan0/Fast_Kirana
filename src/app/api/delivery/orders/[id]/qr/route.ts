@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/auth-guard'
+import {
+  isCashfreeConfigured,
+  createCashfreeOrder,
+  getCashfreeOrder,
+  createCashfreeUpiQrSession,
+  createCashfreePaymentLink,
+  checkCashfreeOrderPaid,
+} from '@/lib/cashfree'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,8 +16,14 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { error, session } = await requireRole(['DELIVERY', 'ADMIN'], request)
-  if (error) return error
+  // Check auth: NextAuth / Bearer JWT, with fallback to mobile app headers
+  const { error } = await requireRole(['DELIVERY', 'ADMIN'], request)
+  if (error) {
+    const headerRole = request.headers.get('x-user-role')?.toUpperCase()
+    if (!['DELIVERY', 'ADMIN', 'PICKER'].includes(headerRole || '')) {
+      return error
+    }
+  }
 
   try {
     const { id } = await params
@@ -22,7 +36,22 @@ export async function GET(
         paymentMethod: true,
         paymentStatus: true,
         status: true,
-        shopName: true
+        shopName: true,
+        combinedId: true,
+        userId: true,
+        notes: true,
+        user: {
+          select: {
+            name: true,
+            phone: true,
+            email: true,
+          }
+        },
+        address: {
+          select: {
+            phone: true,
+          }
+        }
       }
     })
 
@@ -30,45 +59,37 @@ export async function GET(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
-    const keySecret = process.env.RAZORPAY_KEY_SECRET
-    if (!keyId || !keySecret) {
-      return NextResponse.json({ error: 'Payment service unavailable' }, { status: 503 })
-    }
-    const authHeader = 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64')
+    const displayId = String(order.readableId || order.id.slice(0, 8))
+    const sanitizedOrderId = order.id.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 45)
 
-    // Live Razorpay API Check: If Razorpay captured payment for this order, auto-update paymentStatus to PAID
-    if (order.paymentStatus !== 'PAID') {
+    // 1. Live Cashfree Status Check: If payment was captured, auto-update paymentStatus to PAID
+    if (order.paymentStatus !== 'PAID' && isCashfreeConfigured()) {
       try {
-        const rzpCheck = await fetch(`https://api.razorpay.com/v1/payments?count=15`, {
-          headers: { 'Authorization': authHeader },
-        })
-        if (rzpCheck.ok) {
-          const rzpPayments = await rzpCheck.json()
-          const items = rzpPayments.items || []
-          const paidTxn = items.find((p: any) => 
-            p.status === 'captured' && 
-            (p.notes?.orderId === order.id || p.notes?.readableId === String(order.readableId || ''))
-          )
-          if (paidTxn) {
-            const updateFilter = (order as any).combinedId
-              ? { combinedId: (order as any).combinedId }
-              : { id: order.id }
+        const checkResult = await checkCashfreeOrderPaid(sanitizedOrderId)
+        if (checkResult.isPaid) {
+          const updateFilter = order.combinedId
+            ? { combinedId: order.combinedId }
+            : { id: order.id }
 
-            await prisma.order.updateMany({
-              where: updateFilter,
-              data: { paymentStatus: 'PAID', paymentMethod: 'UPI' }
-            })
-            order.paymentStatus = 'PAID'
-            order.paymentMethod = 'UPI'
-          }
+          await prisma.order.updateMany({
+            where: updateFilter,
+            data: {
+              paymentStatus: 'PAID',
+              paymentMethod: 'UPI',
+              notes: order.notes
+                ? `${order.notes} | Cashfree Auto-Paid (${checkResult.paymentId || 'Captured'})`
+                : `Cashfree Auto-Paid (${checkResult.paymentId || 'Captured'})`
+            }
+          })
+          order.paymentStatus = 'PAID'
+          order.paymentMethod = 'UPI'
         }
-      } catch (e) {
-        console.warn('Razorpay live poll check warning:', e)
+      } catch (checkErr) {
+        console.warn('Cashfree live poll check notice:', checkErr)
       }
     }
 
-    // Fetch store UPI VPA setting or fallback to default
+    // 2. Fetch Store UPI VPA fallback
     let upiVpa = '7054470303@paytm'
     try {
       const setting = await prisma.storeSetting.findUnique({
@@ -81,68 +102,90 @@ export async function GET(
       console.warn('Could not fetch store_upi_vpa setting:', e)
     }
 
-    const displayId = String(order.readableId || order.id.slice(0, 8))
     const amountStr = Number(order.total).toFixed(2)
     const payeeName = encodeURIComponent('FastKirana Store')
     const note = encodeURIComponent(`Payment for Order #${displayId}`)
     const tr = `FK${displayId}`
 
-    // 1. Native Universal Indian UPI Intent URI (Scans on PhonePe, GPay, Paytm, BHIM, Mobikwik, WhatsApp)
-    const upiUri = `upi://pay?pa=${upiVpa}&pn=${payeeName}&am=${amountStr}&cu=INR&tn=${note}&tr=${tr}`
-    const upiQrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(upiUri)}`
+    // Standard Universal Indian UPI Intent URI (Fallback)
+    const directUpiUri = `upi://pay?pa=${upiVpa}&pn=${payeeName}&am=${amountStr}&cu=INR&tn=${note}&tr=${tr}`
+    const directUpiQrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(directUpiUri)}`
 
+    let cashfreeQrUrl = ''
+    let cashfreeUpiUri = ''
     let paymentLinkUrl = ''
-    let razorpayQrImageUrl = ''
 
-    // 2. Try official Razorpay Payment Link
-    if (order.paymentStatus !== 'PAID') {
+    // 3. Generate Cashfree Dynamic UPI QR Code if order is unpaid
+    if (order.paymentStatus !== 'PAID' && isCashfreeConfigured()) {
       try {
-        const rzpRes = await fetch('https://api.razorpay.com/v1/payment_links', {
-          method: 'POST',
-          headers: {
-            'Authorization': authHeader,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            amount: Math.round(Number(order.total) * 100),
-            currency: 'INR',
-            accept_partial: false,
-            reference_id: `FK_${displayId}_${Date.now()}`,
-            description: `FastKirana Order #${displayId}`,
-            notify: {
-              sms: false,
-              email: false,
-            },
-            reminder_enable: false,
-            notes: {
-              orderId: order.id,
-              readableId: displayId,
-            },
-          }),
-        })
-
-        const rzpData = await rzpRes.json()
-
-        if (rzpRes.ok && rzpData.short_url) {
-          paymentLinkUrl = rzpData.short_url
-          razorpayQrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(paymentLinkUrl)}`
-        } else {
-          console.warn('Razorpay Payment Link API notice:', rzpData)
+        let cfOrder: any = null
+        try {
+          cfOrder = await getCashfreeOrder(sanitizedOrderId)
+        } catch (e) {
+          // Cashfree order doesn't exist yet, create one
+          const cleanPhone = (order.address?.phone || order.user?.phone || '9999999999').replace(/\D/g, '').slice(-10)
+          cfOrder = await createCashfreeOrder({
+            orderId: sanitizedOrderId,
+            amount: Number(order.total),
+            customerId: order.userId || `guest_${order.id.slice(0, 10)}`,
+            customerName: order.user?.name || 'Customer',
+            customerPhone: cleanPhone.length === 10 ? cleanPhone : '9999999999',
+            customerEmail: order.user?.email || 'customer@fastkirana.in',
+            note: `Doorstep Payment Order #${displayId}`,
+          })
         }
-      } catch (e) {
-        console.warn('Failed to generate Razorpay Payment Link:', e)
+
+        // Generate Dynamic UPI QR session from Cashfree Order
+        if (cfOrder?.payment_session_id) {
+          try {
+            const qrSession = await createCashfreeUpiQrSession(cfOrder.payment_session_id)
+            if (qrSession.qrImageUrl) {
+              cashfreeQrUrl = qrSession.qrImageUrl
+            }
+            if (qrSession.upiUri) {
+              cashfreeUpiUri = qrSession.upiUri
+              if (!cashfreeQrUrl) {
+                cashfreeQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(cashfreeUpiUri)}`
+              }
+            }
+          } catch (qrSessionErr) {
+            console.warn('Cashfree UPI QR session notice (trying payment link fallback):', qrSessionErr)
+          }
+        }
+
+        // Fallback to Cashfree Payment Link if session QR is unavailable
+        if (!cashfreeQrUrl) {
+          const cleanPhone = (order.address?.phone || order.user?.phone || '9999999999').replace(/\D/g, '').slice(-10)
+          const linkResult = await createCashfreePaymentLink({
+            linkId: `FK_L_${displayId}_${Date.now().toString().slice(-6)}`,
+            amount: Number(order.total),
+            customerPhone: cleanPhone.length === 10 ? cleanPhone : '9999999999',
+            customerName: order.user?.name || 'Customer',
+            customerEmail: order.user?.email || 'customer@fastkirana.in',
+            purpose: `Order #${displayId} Payment`,
+          })
+          paymentLinkUrl = linkResult.linkUrl
+          cashfreeQrUrl = linkResult.linkQrUrl
+        }
+      } catch (cfErr) {
+        console.warn('Cashfree dynamic QR generation warning:', cfErr)
       }
     }
+
+    const activeQrImageUrl = cashfreeQrUrl || directUpiQrImageUrl
 
     return NextResponse.json({
       orderId: order.id,
       readableId: order.readableId,
       amount: order.total,
+      gateway: isCashfreeConfigured() ? 'CASHFREE' : 'DIRECT_UPI',
       upiVpa,
-      upiUri,
+      upiUri: directUpiUri,
+      directUpiQrUrl: directUpiQrImageUrl,
+      cashfreeQrUrl,
+      cashfreeUpiUri,
       paymentLinkUrl,
-      qrImageUrl: upiQrImageUrl,
-      razorpayQrImageUrl,
+      qrImageUrl: activeQrImageUrl,
       paymentStatus: order.paymentStatus,
       paymentMethod: order.paymentMethod
     })
@@ -157,12 +200,17 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { error, session } = await requireRole(['DELIVERY', 'ADMIN'], request)
-  if (error) return error
+  const { error } = await requireRole(['DELIVERY', 'ADMIN'], request)
+  if (error) {
+    const headerRole = request.headers.get('x-user-role')?.toUpperCase()
+    if (!['DELIVERY', 'ADMIN', 'PICKER'].includes(headerRole || '')) {
+      return error
+    }
+  }
 
   try {
     const { id } = await params
-    const { referenceId } = await request.json()
+    const { referenceId } = await request.json().catch(() => ({}))
 
     const order = await prisma.order.findUnique({
       where: { id }
