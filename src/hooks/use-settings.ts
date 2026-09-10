@@ -31,7 +31,6 @@ export function useSettings(): UseSettingsReturn {
       setError(null)
 
       const res = await fetch('/api/settings', {
-        cache: 'no-store',
         headers: {
           'Content-Type': 'application/json',
         },

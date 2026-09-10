@@ -4,7 +4,7 @@ import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
 import { getRedis, CACHE_KEYS, DEFAULT_TTL } from '@/lib/redis-client'
 import { evaluateSurgeStatus } from '@/lib/surge-manager'
 
-export const revalidate = 10
+export const revalidate = 60
 
 const DEFAULT_SETTINGS: Record<string, string> = {
   deliveries_count: '10,000+',
@@ -228,7 +228,7 @@ export async function GET(request: NextRequest) {
     if (cached) {
       return NextResponse.json(cached, {
         headers: {
-          'Cache-Control': 'public, max-age=3, stale-while-revalidate=10',
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
         },
       })
     }
@@ -238,7 +238,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(settingsMap, {
       headers: {
-        'Cache-Control': 'public, max-age=3, stale-while-revalidate=10',
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
       },
     })
   } catch (error) {
@@ -250,7 +250,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(settingsMap, {
       headers: {
-        'Cache-Control': 'public, max-age=3, stale-while-revalidate=10',
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
       },
     })
   }

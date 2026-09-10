@@ -358,6 +358,10 @@ export async function GET(request: NextRequest) {
           limit: 8,
           totalPages: 1
         }
+      }, {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=180',
+        }
       })
     }
 
@@ -553,7 +557,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(responseData, {
       headers: {
         'Cache-Control': isCacheable
-          ? 'public, s-maxage=15, stale-while-revalidate=30'
+          ? 'public, s-maxage=60, stale-while-revalidate=180'
           : 'no-store, max-age=0, must-revalidate',
       }
     })

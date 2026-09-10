@@ -748,7 +748,7 @@
       "label": "Coupon",
       "file_type": "code",
       "source_file": "src/types/index.ts",
-      "source_location": "L146",
+      "source_location": "L147",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
@@ -761,7 +761,7 @@
       "label": "Order",
       "file_type": "code",
       "source_file": "src/types/index.ts",
-      "source_location": "L102",
+      "source_location": "L103",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
@@ -774,7 +774,7 @@
       "label": "OrderItem",
       "file_type": "code",
       "source_file": "src/types/index.ts",
-      "source_location": "L125",
+      "source_location": "L126",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
@@ -800,7 +800,7 @@
       "label": "ProductImage",
       "file_type": "code",
       "source_file": "src/types/index.ts",
-      "source_location": "L72",
+      "source_location": "L73",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
@@ -813,7 +813,7 @@
       "label": "Review",
       "file_type": "code",
       "source_file": "src/types/index.ts",
-      "source_location": "L136",
+      "source_location": "L137",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
@@ -951,6 +951,19 @@
       "community": 14,
       "community_name": "date-helpers.ts",
       "norm_label": "deliveryheaderprops"
+    },
+    {
+      "label": "DeliveryHistoryViewProps",
+      "file_type": "code",
+      "source_file": "src/app/delivery/components/delivery-history-view.tsx",
+      "source_location": "L8",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_app_delivery_components_delivery_history_view_deliveryhistoryviewprops",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "deliveryhistoryviewprops"
     },
     {
       "label": "OrderConfirmPageProps",
@@ -1109,6 +1122,58 @@
       "norm_label": "topproduct"
     },
     {
+      "label": "AdminRiderCashProps",
+      "file_type": "code",
+      "source_file": "src/components/admin/admin-rider-cash.tsx",
+      "source_location": "L64",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_components_admin_admin_rider_cash_adminridercashprops",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "adminridercashprops"
+    },
+    {
+      "label": "DepositLog",
+      "file_type": "code",
+      "source_file": "src/components/admin/admin-rider-cash.tsx",
+      "source_location": "L54",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_components_admin_admin_rider_cash_depositlog",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "depositlog"
+    },
+    {
+      "label": "RiderCashInfo",
+      "file_type": "code",
+      "source_file": "src/components/admin/admin-rider-cash.tsx",
+      "source_location": "L26",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_components_admin_admin_rider_cash_ridercashinfo",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "ridercashinfo"
+    },
+    {
+      "label": "SummaryInfo",
+      "file_type": "code",
+      "source_file": "src/components/admin/admin-rider-cash.tsx",
+      "source_location": "L45",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_components_admin_admin_rider_cash_summaryinfo",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "summaryinfo"
+    },
+    {
       "label": "AlertsTabProps",
       "file_type": "code",
       "source_file": "src/components/admin/alerts-tab.tsx",
@@ -1226,6 +1291,19 @@
       "norm_label": "reviewstabprops"
     },
     {
+      "label": "RiderCashTabProps",
+      "file_type": "code",
+      "source_file": "src/components/admin/rider-cash-tab.tsx",
+      "source_location": "L5",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_components_admin_rider_cash_tab_ridercashtabprops",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "ridercashtabprops"
+    },
+    {
       "label": "UsersTabProps",
       "file_type": "code",
       "source_file": "src/components/admin/users-tab.tsx",
@@ -1265,69 +1343,82 @@
       "norm_label": "orderconfirmationstatusprops"
     },
     {
-      "label": "DishTimingStatus",
+      "label": "Order",
       "file_type": "code",
-      "source_file": "src/lib/dish-timing.ts",
-      "source_location": "L3",
+      "source_file": "src/components/order/order-tracker.tsx",
+      "source_location": "L85",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "src_lib_dish_timing_dishtimingstatus",
+      "id": "src_components_order_order_tracker_order",
       "community": 14,
       "community_name": "date-helpers.ts",
-      "norm_label": "dishtimingstatus"
+      "norm_label": "order"
     },
     {
-      "label": "AdminRestaurantReportProps",
+      "label": "OrderAddress",
       "file_type": "code",
-      "source_file": "src/components/admin/admin-restaurant-report.tsx",
-      "source_location": "L60",
+      "source_file": "src/components/order/order-tracker.tsx",
+      "source_location": "L74",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "src_components_admin_admin_restaurant_report_adminrestaurantreportprops",
-      "community": 141,
-      "community_name": "admin-restaurant-report.tsx",
-      "norm_label": "adminrestaurantreportprops"
+      "id": "src_components_order_order_tracker_orderaddress",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "orderaddress"
     },
     {
-      "label": "RestaurantSalesData",
+      "label": "OrderItem",
       "file_type": "code",
-      "source_file": "src/components/admin/admin-restaurant-report.tsx",
-      "source_location": "L23",
+      "source_file": "src/components/order/order-tracker.tsx",
+      "source_location": "L66",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "src_components_admin_admin_restaurant_report_restaurantsalesdata",
-      "community": 141,
-      "community_name": "admin-restaurant-report.tsx",
-      "norm_label": "restaurantsalesdata"
+      "id": "src_components_order_order_tracker_orderitem",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "orderitem"
     },
     {
-      "label": "SettlementLog",
+      "label": "OrderTrackerProps",
       "file_type": "code",
-      "source_file": "src/components/admin/admin-restaurant-report.tsx",
-      "source_location": "L47",
+      "source_file": "src/components/order/order-tracker.tsx",
+      "source_location": "L123",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "src_components_admin_admin_restaurant_report_settlementlog",
-      "community": 141,
-      "community_name": "admin-restaurant-report.tsx",
-      "norm_label": "settlementlog"
+      "id": "src_components_order_order_tracker_ordertrackerprops",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "ordertrackerprops"
     },
     {
-      "label": "RestaurantReportTabProps",
+      "label": "PayOnlineButtonProps",
       "file_type": "code",
-      "source_file": "src/components/admin/restaurant-report-tab.tsx",
-      "source_location": "L5",
+      "source_file": "src/components/order/pay-online-button.tsx",
+      "source_location": "L9",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "src_components_admin_restaurant_report_tab_restaurantreporttabprops",
-      "community": 141,
-      "community_name": "admin-restaurant-report.tsx",
-      "norm_label": "restaurantreporttabprops"
+      "id": "src_components_order_pay_online_button_payonlinebuttonprops",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "payonlinebuttonprops"
+    },
+    {
+      "label": "TrackingPageClientProps",
+      "file_type": "code",
+      "source_file": "src/components/order/tracking-page-client.tsx",
+      "source_location": "L9",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_components_order_tracking_page_client_trackingpageclientprops",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "trackingpageclientprops"
     },
     {
       "label": "RateLimitOptions",
@@ -1928,32 +2019,6 @@
       "norm_label": "masterproduct"
     },
     {
-      "label": "AdminBannersProps",
-      "file_type": "code",
-      "source_file": "src/components/admin/admin-banners.tsx",
-      "source_location": "L134",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_components_admin_admin_banners_adminbannersprops",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "adminbannersprops"
-    },
-    {
-      "label": "PromoBanner",
-      "file_type": "code",
-      "source_file": "src/components/admin/admin-banners.tsx",
-      "source_location": "L24",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_components_admin_admin_banners_promobanner",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "promobanner"
-    },
-    {
       "label": "AdminBulkUpdateProps",
       "file_type": "code",
       "source_file": "src/components/admin/admin-bulk-update.tsx",
@@ -2045,56 +2110,30 @@
       "norm_label": "tabtype"
     },
     {
-      "label": "AdminInventoryCenterProps",
+      "label": "AdminSortManagerProps",
       "file_type": "code",
-      "source_file": "src/components/admin/admin-inventory-center.tsx",
-      "source_location": "L71",
+      "source_file": "src/components/admin/admin-sort-manager.tsx",
+      "source_location": "L8",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "src_components_admin_admin_inventory_center_admininventorycenterprops",
+      "id": "src_components_admin_admin_sort_manager_adminsortmanagerprops",
       "community": 23,
       "community_name": "admin-dashboard.tsx",
-      "norm_label": "admininventorycenterprops"
+      "norm_label": "adminsortmanagerprops"
     },
     {
-      "label": "CartItem",
+      "label": "ProductItem",
       "file_type": "code",
-      "source_file": "src/components/admin/admin-inventory-center.tsx",
-      "source_location": "L49",
+      "source_file": "src/components/admin/admin-sort-manager.tsx",
+      "source_location": "L14",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "src_components_admin_admin_inventory_center_cartitem",
+      "id": "src_components_admin_admin_sort_manager_productitem",
       "community": 23,
       "community_name": "admin-dashboard.tsx",
-      "norm_label": "cartitem"
-    },
-    {
-      "label": "Product",
-      "file_type": "code",
-      "source_file": "src/components/admin/admin-inventory-center.tsx",
-      "source_location": "L33",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_components_admin_admin_inventory_center_product",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "product"
-    },
-    {
-      "label": "StockHistoryLog",
-      "file_type": "code",
-      "source_file": "src/components/admin/admin-inventory-center.tsx",
-      "source_location": "L55",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_components_admin_admin_inventory_center_stockhistorylog",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "stockhistorylog"
+      "norm_label": "productitem"
     },
     {
       "label": "BannersTabProps",
@@ -2279,6 +2318,32 @@
       "norm_label": "livecartspanelprops"
     },
     {
+      "label": "DashboardStats",
+      "file_type": "code",
+      "source_file": "src/components/admin/dashboard/stats-cards.tsx",
+      "source_location": "L7",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_components_admin_dashboard_stats_cards_dashboardstats",
+      "community": 23,
+      "community_name": "admin-dashboard.tsx",
+      "norm_label": "dashboardstats"
+    },
+    {
+      "label": "DashboardStatsCardsProps",
+      "file_type": "code",
+      "source_file": "src/components/admin/dashboard/stats-cards.tsx",
+      "source_location": "L20",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_components_admin_dashboard_stats_cards_dashboardstatscardsprops",
+      "community": 23,
+      "community_name": "admin-dashboard.tsx",
+      "norm_label": "dashboardstatscardsprops"
+    },
+    {
       "label": "StoreControlBarProps",
       "file_type": "code",
       "source_file": "src/components/admin/dashboard/store-control-bar.tsx",
@@ -2316,19 +2381,6 @@
       "community": 23,
       "community_name": "admin-dashboard.tsx",
       "norm_label": "whatsapptargetuser"
-    },
-    {
-      "label": "InwardTabProps",
-      "file_type": "code",
-      "source_file": "src/components/admin/inward-tab.tsx",
-      "source_location": "L5",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_components_admin_inward_tab_inwardtabprops",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "inwardtabprops"
     },
     {
       "label": "LiveOpsTabProps",
@@ -2435,56 +2487,17 @@
       "norm_label": "restaurant"
     },
     {
-      "label": "Category",
+      "label": "RestaurantConsoleTabProps",
       "file_type": "code",
-      "source_file": "src/components/admin/restaurant-catalog-manager.tsx",
-      "source_location": "L54",
+      "source_file": "src/components/admin/restaurant-console-tab.tsx",
+      "source_location": "L5",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "src_components_admin_restaurant_catalog_manager_category",
+      "id": "src_components_admin_restaurant_console_tab_restaurantconsoletabprops",
       "community": 23,
       "community_name": "admin-dashboard.tsx",
-      "norm_label": "category"
-    },
-    {
-      "label": "Product",
-      "file_type": "code",
-      "source_file": "src/components/admin/restaurant-catalog-manager.tsx",
-      "source_location": "L31",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_components_admin_restaurant_catalog_manager_product",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "product"
-    },
-    {
-      "label": "RestaurantCatalogManagerProps",
-      "file_type": "code",
-      "source_file": "src/components/admin/restaurant-catalog-manager.tsx",
-      "source_location": "L60",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_components_admin_restaurant_catalog_manager_restaurantcatalogmanagerprops",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "restaurantcatalogmanagerprops"
-    },
-    {
-      "label": "RestaurantFormProps",
-      "file_type": "code",
-      "source_file": "src/components/admin/restaurant-form.tsx",
-      "source_location": "L17",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_components_admin_restaurant_form_restaurantformprops",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "restaurantformprops"
+      "norm_label": "restaurantconsoletabprops"
     },
     {
       "label": "RestaurantMenuSectionsEditorProps",
@@ -2602,19 +2615,6 @@
       "community": 23,
       "community_name": "admin-dashboard.tsx",
       "norm_label": "productdata"
-    },
-    {
-      "label": "PresetPhoto",
-      "file_type": "code",
-      "source_file": "src/lib/preset-photos.ts",
-      "source_location": "L1",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_lib_preset_photos_presetphoto",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "presetphoto"
     },
     {
       "label": "Order",
@@ -3488,19 +3488,6 @@
       "norm_label": "modalstep"
     },
     {
-      "label": "DeliveryHistoryViewProps",
-      "file_type": "code",
-      "source_file": "src/app/delivery/components/delivery-history-view.tsx",
-      "source_location": "L8",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_app_delivery_components_delivery_history_view_deliveryhistoryviewprops",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "deliveryhistoryviewprops"
-    },
-    {
       "label": "PendingPickupCardProps",
       "file_type": "code",
       "source_file": "src/app/delivery/components/pending-pickup-card.tsx",
@@ -3551,6 +3538,32 @@
       "community": 336,
       "community_name": "utils.ts",
       "norm_label": "deliverywalletcardprops"
+    },
+    {
+      "label": "AdminBannersProps",
+      "file_type": "code",
+      "source_file": "src/components/admin/admin-banners.tsx",
+      "source_location": "L134",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_components_admin_admin_banners_adminbannersprops",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "adminbannersprops"
+    },
+    {
+      "label": "PromoBanner",
+      "file_type": "code",
+      "source_file": "src/components/admin/admin-banners.tsx",
+      "source_location": "L24",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_components_admin_admin_banners_promobanner",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "promobanner"
     },
     {
       "label": "AdminForecastProps",
@@ -3618,82 +3631,43 @@
       "norm_label": "product"
     },
     {
-      "label": "AdminRiderCashProps",
+      "label": "AdminRestaurantReportProps",
       "file_type": "code",
-      "source_file": "src/components/admin/admin-rider-cash.tsx",
-      "source_location": "L64",
+      "source_file": "src/components/admin/admin-restaurant-report.tsx",
+      "source_location": "L60",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "src_components_admin_admin_rider_cash_adminridercashprops",
+      "id": "src_components_admin_admin_restaurant_report_adminrestaurantreportprops",
       "community": 336,
       "community_name": "utils.ts",
-      "norm_label": "adminridercashprops"
+      "norm_label": "adminrestaurantreportprops"
     },
     {
-      "label": "DepositLog",
+      "label": "RestaurantSalesData",
       "file_type": "code",
-      "source_file": "src/components/admin/admin-rider-cash.tsx",
-      "source_location": "L54",
+      "source_file": "src/components/admin/admin-restaurant-report.tsx",
+      "source_location": "L23",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "src_components_admin_admin_rider_cash_depositlog",
+      "id": "src_components_admin_admin_restaurant_report_restaurantsalesdata",
       "community": 336,
       "community_name": "utils.ts",
-      "norm_label": "depositlog"
+      "norm_label": "restaurantsalesdata"
     },
     {
-      "label": "RiderCashInfo",
+      "label": "SettlementLog",
       "file_type": "code",
-      "source_file": "src/components/admin/admin-rider-cash.tsx",
-      "source_location": "L26",
+      "source_file": "src/components/admin/admin-restaurant-report.tsx",
+      "source_location": "L47",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "src_components_admin_admin_rider_cash_ridercashinfo",
+      "id": "src_components_admin_admin_restaurant_report_settlementlog",
       "community": 336,
       "community_name": "utils.ts",
-      "norm_label": "ridercashinfo"
-    },
-    {
-      "label": "SummaryInfo",
-      "file_type": "code",
-      "source_file": "src/components/admin/admin-rider-cash.tsx",
-      "source_location": "L45",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_components_admin_admin_rider_cash_summaryinfo",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "summaryinfo"
-    },
-    {
-      "label": "AdminSortManagerProps",
-      "file_type": "code",
-      "source_file": "src/components/admin/admin-sort-manager.tsx",
-      "source_location": "L8",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_components_admin_admin_sort_manager_adminsortmanagerprops",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "adminsortmanagerprops"
-    },
-    {
-      "label": "ProductItem",
-      "file_type": "code",
-      "source_file": "src/components/admin/admin-sort-manager.tsx",
-      "source_location": "L14",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_components_admin_admin_sort_manager_productitem",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "productitem"
+      "norm_label": "settlementlog"
     },
     {
       "label": "BlockCustomerModalProps",
@@ -3774,32 +3748,6 @@
       "norm_label": "selecteditem"
     },
     {
-      "label": "DashboardStats",
-      "file_type": "code",
-      "source_file": "src/components/admin/dashboard/stats-cards.tsx",
-      "source_location": "L7",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_components_admin_dashboard_stats_cards_dashboardstats",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "dashboardstats"
-    },
-    {
-      "label": "DashboardStatsCardsProps",
-      "file_type": "code",
-      "source_file": "src/components/admin/dashboard/stats-cards.tsx",
-      "source_location": "L20",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_components_admin_dashboard_stats_cards_dashboardstatscardsprops",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "dashboardstatscardsprops"
-    },
-    {
       "label": "ForecastTabProps",
       "file_type": "code",
       "source_file": "src/components/admin/forecast-tab.tsx",
@@ -3865,17 +3813,69 @@
       "norm_label": "ordertrackingmodalprops"
     },
     {
-      "label": "RestaurantConsoleTabProps",
+      "label": "Category",
       "file_type": "code",
-      "source_file": "src/components/admin/restaurant-console-tab.tsx",
-      "source_location": "L5",
+      "source_file": "src/components/admin/restaurant-catalog-manager.tsx",
+      "source_location": "L54",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "src_components_admin_restaurant_console_tab_restaurantconsoletabprops",
+      "id": "src_components_admin_restaurant_catalog_manager_category",
       "community": 336,
       "community_name": "utils.ts",
-      "norm_label": "restaurantconsoletabprops"
+      "norm_label": "category"
+    },
+    {
+      "label": "Product",
+      "file_type": "code",
+      "source_file": "src/components/admin/restaurant-catalog-manager.tsx",
+      "source_location": "L31",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_components_admin_restaurant_catalog_manager_product",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "product"
+    },
+    {
+      "label": "RestaurantCatalogManagerProps",
+      "file_type": "code",
+      "source_file": "src/components/admin/restaurant-catalog-manager.tsx",
+      "source_location": "L60",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_components_admin_restaurant_catalog_manager_restaurantcatalogmanagerprops",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "restaurantcatalogmanagerprops"
+    },
+    {
+      "label": "RestaurantFormProps",
+      "file_type": "code",
+      "source_file": "src/components/admin/restaurant-form.tsx",
+      "source_location": "L17",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_components_admin_restaurant_form_restaurantformprops",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "restaurantformprops"
+    },
+    {
+      "label": "RestaurantManagerProps",
+      "file_type": "code",
+      "source_file": "src/components/admin/restaurant-manager.tsx",
+      "source_location": "L30",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_components_admin_restaurant_manager_restaurantmanagerprops",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "restaurantmanagerprops"
     },
     {
       "label": "Payout",
@@ -3902,6 +3902,19 @@
       "community": 336,
       "community_name": "utils.ts",
       "norm_label": "restaurantpayoutsledgerprops"
+    },
+    {
+      "label": "RestaurantReportTabProps",
+      "file_type": "code",
+      "source_file": "src/components/admin/restaurant-report-tab.tsx",
+      "source_location": "L5",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_components_admin_restaurant_report_tab_restaurantreporttabprops",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "restaurantreporttabprops"
     },
     {
       "label": "ChannelMetrics",
@@ -3969,101 +3982,23 @@
       "norm_label": "topproduct"
     },
     {
-      "label": "RiderCashTabProps",
+      "label": "PresetPhoto",
       "file_type": "code",
-      "source_file": "src/components/admin/rider-cash-tab.tsx",
-      "source_location": "L5",
+      "source_file": "src/lib/preset-photos.ts",
+      "source_location": "L1",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "src_components_admin_rider_cash_tab_ridercashtabprops",
+      "id": "src_lib_preset_photos_presetphoto",
       "community": 336,
       "community_name": "utils.ts",
-      "norm_label": "ridercashtabprops"
-    },
-    {
-      "label": "Order",
-      "file_type": "code",
-      "source_file": "src/components/order/order-tracker.tsx",
-      "source_location": "L85",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_components_order_order_tracker_order",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "order"
-    },
-    {
-      "label": "OrderAddress",
-      "file_type": "code",
-      "source_file": "src/components/order/order-tracker.tsx",
-      "source_location": "L74",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_components_order_order_tracker_orderaddress",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "orderaddress"
-    },
-    {
-      "label": "OrderItem",
-      "file_type": "code",
-      "source_file": "src/components/order/order-tracker.tsx",
-      "source_location": "L66",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_components_order_order_tracker_orderitem",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "orderitem"
-    },
-    {
-      "label": "OrderTrackerProps",
-      "file_type": "code",
-      "source_file": "src/components/order/order-tracker.tsx",
-      "source_location": "L123",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_components_order_order_tracker_ordertrackerprops",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "ordertrackerprops"
-    },
-    {
-      "label": "PayOnlineButtonProps",
-      "file_type": "code",
-      "source_file": "src/components/order/pay-online-button.tsx",
-      "source_location": "L9",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_components_order_pay_online_button_payonlinebuttonprops",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "payonlinebuttonprops"
-    },
-    {
-      "label": "TrackingPageClientProps",
-      "file_type": "code",
-      "source_file": "src/components/order/tracking-page-client.tsx",
-      "source_location": "L9",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_components_order_tracking_page_client_trackingpageclientprops",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "trackingpageclientprops"
+      "norm_label": "presetphoto"
     },
     {
       "label": "Address",
       "file_type": "code",
       "source_file": "src/types/index.ts",
-      "source_location": "L87",
+      "source_location": "L88",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
@@ -4076,7 +4011,7 @@
       "label": "CartItem",
       "file_type": "code",
       "source_file": "src/types/index.ts",
-      "source_location": "L79",
+      "source_location": "L80",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
@@ -4268,6 +4203,19 @@
       "norm_label": "activetab"
     },
     {
+      "label": "DishTimingStatus",
+      "file_type": "code",
+      "source_file": "src/lib/dish-timing.ts",
+      "source_location": "L3",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_lib_dish_timing_dishtimingstatus",
+      "community": 344,
+      "community_name": "storefront-client.tsx",
+      "norm_label": "dishtimingstatus"
+    },
+    {
       "label": "Settings",
       "file_type": "code",
       "source_file": "fastkirana_fastapi/app/core/config.py",
@@ -4292,6 +4240,19 @@
       "community": 35,
       "community_name": "api/orders/route.ts",
       "norm_label": "darkstoreinfo"
+    },
+    {
+      "label": "SurgeStatus",
+      "file_type": "code",
+      "source_file": "src/lib/surge-manager.ts",
+      "source_location": "L3",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_lib_surge_manager_surgestatus",
+      "community": 35,
+      "community_name": "api/orders/route.ts",
+      "norm_label": "surgestatus"
     },
     {
       "label": "CategoryOut",
@@ -4528,19 +4489,6 @@
       "norm_label": "accountdashboardprops"
     },
     {
-      "label": "RestaurantManagerProps",
-      "file_type": "code",
-      "source_file": "src/components/admin/restaurant-manager.tsx",
-      "source_location": "L30",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "src_components_admin_restaurant_manager_restaurantmanagerprops",
-      "community": 5,
-      "community_name": "cn",
-      "norm_label": "restaurantmanagerprops"
-    },
-    {
       "label": "LogoProps",
       "file_type": "code",
       "source_file": "src/components/layout/logo.tsx",
@@ -4671,17 +4619,69 @@
       "norm_label": "connectionmanager"
     },
     {
-      "label": "SurgeStatus",
+      "label": "AdminInventoryCenterProps",
       "file_type": "code",
-      "source_file": "src/lib/surge-manager.ts",
-      "source_location": "L3",
+      "source_file": "src/components/admin/admin-inventory-center.tsx",
+      "source_location": "L71",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "src_lib_surge_manager_surgestatus",
+      "id": "src_components_admin_admin_inventory_center_admininventorycenterprops",
       "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "surgestatus"
+      "community_name": "admin-inventory-center.tsx",
+      "norm_label": "admininventorycenterprops"
+    },
+    {
+      "label": "CartItem",
+      "file_type": "code",
+      "source_file": "src/components/admin/admin-inventory-center.tsx",
+      "source_location": "L49",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_components_admin_admin_inventory_center_cartitem",
+      "community": 8,
+      "community_name": "admin-inventory-center.tsx",
+      "norm_label": "cartitem"
+    },
+    {
+      "label": "Product",
+      "file_type": "code",
+      "source_file": "src/components/admin/admin-inventory-center.tsx",
+      "source_location": "L33",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_components_admin_admin_inventory_center_product",
+      "community": 8,
+      "community_name": "admin-inventory-center.tsx",
+      "norm_label": "product"
+    },
+    {
+      "label": "StockHistoryLog",
+      "file_type": "code",
+      "source_file": "src/components/admin/admin-inventory-center.tsx",
+      "source_location": "L55",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_components_admin_admin_inventory_center_stockhistorylog",
+      "community": 8,
+      "community_name": "admin-inventory-center.tsx",
+      "norm_label": "stockhistorylog"
+    },
+    {
+      "label": "InwardTabProps",
+      "file_type": "code",
+      "source_file": "src/components/admin/inward-tab.tsx",
+      "source_location": "L5",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "src_components_admin_inward_tab_inwardtabprops",
+      "community": 8,
+      "community_name": "admin-inventory-center.tsx",
+      "norm_label": "inwardtabprops"
     },
     {
       "label": "FastApiClient",
@@ -6883,6 +6883,18 @@
       "norm_label": "accordiontrigger()"
     },
     {
+      "label": "getTotalMinutes()",
+      "file_type": "code",
+      "source_file": "src/lib/date-helpers.ts",
+      "source_location": "L68",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_lib_date_helpers_gettotalminutes",
+      "community": 12,
+      "community_name": "index.ts",
+      "norm_label": "gettotalminutes()"
+    },
+    {
       "label": "getProductPrice()",
       "file_type": "code",
       "source_file": "src/lib/utils.ts",
@@ -7423,6 +7435,18 @@
       "norm_label": "liveclock()"
     },
     {
+      "label": "DeliveryHistoryView()",
+      "file_type": "code",
+      "source_file": "src/app/delivery/components/delivery-history-view.tsx",
+      "source_location": "L13",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_app_delivery_components_delivery_history_view_deliveryhistoryview",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "deliveryhistoryview()"
+    },
+    {
       "label": "OrderConfirmPage()",
       "file_type": "code",
       "source_file": "src/app/order/[id]/page.tsx",
@@ -7481,6 +7505,18 @@
       "community": 14,
       "community_name": "date-helpers.ts",
       "norm_label": "getcategorymeta()"
+    },
+    {
+      "label": "AdminRiderCash()",
+      "file_type": "code",
+      "source_file": "src/components/admin/admin-rider-cash.tsx",
+      "source_location": "L68",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_components_admin_admin_rider_cash_adminridercash",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "adminridercash()"
     },
     {
       "label": "AlertsTab()",
@@ -7543,6 +7579,18 @@
       "norm_label": "reviewstab()"
     },
     {
+      "label": "RiderCashTab()",
+      "file_type": "code",
+      "source_file": "src/components/admin/rider-cash-tab.tsx",
+      "source_location": "L9",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_components_admin_rider_cash_tab_ridercashtab",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "ridercashtab()"
+    },
+    {
       "label": "UsersTab()",
       "file_type": "code",
       "source_file": "src/components/admin/users-tab.tsx",
@@ -7555,6 +7603,18 @@
       "norm_label": "userstab()"
     },
     {
+      "label": "getDeliveryETA()",
+      "file_type": "code",
+      "source_file": "src/components/cart/cart-sticky-bar.tsx",
+      "source_location": "L15",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_components_cart_cart_sticky_bar_getdeliveryeta",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "getdeliveryeta()"
+    },
+    {
       "label": "OrderConfirmationStatus()",
       "file_type": "code",
       "source_file": "src/components/order/order-confirmation-status.tsx",
@@ -7565,6 +7625,54 @@
       "community": 14,
       "community_name": "date-helpers.ts",
       "norm_label": "orderconfirmationstatus()"
+    },
+    {
+      "label": "OrderTracker()",
+      "file_type": "code",
+      "source_file": "src/components/order/order-tracker.tsx",
+      "source_location": "L129",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_components_order_order_tracker_ordertracker",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "ordertracker()"
+    },
+    {
+      "label": "PrepCountdown()",
+      "file_type": "code",
+      "source_file": "src/components/order/order-tracker.tsx",
+      "source_location": "L35",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_components_order_order_tracker_prepcountdown",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "prepcountdown()"
+    },
+    {
+      "label": "PayOnlineButton()",
+      "file_type": "code",
+      "source_file": "src/components/order/pay-online-button.tsx",
+      "source_location": "L20",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_components_order_pay_online_button_payonlinebutton",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "payonlinebutton()"
+    },
+    {
+      "label": "addMinutesTo()",
+      "file_type": "code",
+      "source_file": "src/lib/date-helpers.ts",
+      "source_location": "L64",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_lib_date_helpers_addminutesto",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "addminutesto()"
     },
     {
       "label": "formatDate()",
@@ -7591,6 +7699,18 @@
       "norm_label": "formatdeliveryeta()"
     },
     {
+      "label": "formatOrderTime()",
+      "file_type": "code",
+      "source_file": "src/lib/date-helpers.ts",
+      "source_location": "L15",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_lib_date_helpers_formatordertime",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "formatordertime()"
+    },
+    {
       "label": "formatRelativeTime()",
       "file_type": "code",
       "source_file": "src/lib/date-helpers.ts",
@@ -7601,30 +7721,6 @@
       "community": 14,
       "community_name": "date-helpers.ts",
       "norm_label": "formatrelativetime()"
-    },
-    {
-      "label": "formatTime12h()",
-      "file_type": "code",
-      "source_file": "src/lib/date-helpers.ts",
-      "source_location": "L80",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_lib_date_helpers_formattime12h",
-      "community": 14,
-      "community_name": "date-helpers.ts",
-      "norm_label": "formattime12h()"
-    },
-    {
-      "label": "getTotalMinutes()",
-      "file_type": "code",
-      "source_file": "src/lib/date-helpers.ts",
-      "source_location": "L68",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_lib_date_helpers_gettotalminutes",
-      "community": 14,
-      "community_name": "date-helpers.ts",
-      "norm_label": "gettotalminutes()"
     },
     {
       "label": "parseISODate()",
@@ -7639,16 +7735,16 @@
       "norm_label": "parseisodate()"
     },
     {
-      "label": "checkDishTimeAvailability()",
+      "label": "getDeliveryPin()",
       "file_type": "code",
-      "source_file": "src/lib/dish-timing.ts",
-      "source_location": "L9",
+      "source_file": "src/lib/utils.ts",
+      "source_location": "L292",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_lib_dish_timing_checkdishtimeavailability",
+      "id": "src_lib_utils_getdeliverypin",
       "community": 14,
       "community_name": "date-helpers.ts",
-      "norm_label": "checkdishtimeavailability()"
+      "norm_label": "getdeliverypin()"
     },
     {
       "label": "withRetry()",
@@ -7661,30 +7757,6 @@
       "community": 14,
       "community_name": "date-helpers.ts",
       "norm_label": "withretry()"
-    },
-    {
-      "label": "AdminRestaurantReport()",
-      "file_type": "code",
-      "source_file": "src/components/admin/admin-restaurant-report.tsx",
-      "source_location": "L64",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_components_admin_admin_restaurant_report_adminrestaurantreport",
-      "community": 141,
-      "community_name": "admin-restaurant-report.tsx",
-      "norm_label": "adminrestaurantreport()"
-    },
-    {
-      "label": "RestaurantReportTab()",
-      "file_type": "code",
-      "source_file": "src/components/admin/restaurant-report-tab.tsx",
-      "source_location": "L9",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_components_admin_restaurant_report_tab_restaurantreporttab",
-      "community": 141,
-      "community_name": "admin-restaurant-report.tsx",
-      "norm_label": "restaurantreporttab()"
     },
     {
       "label": "DELETE()",
@@ -9367,6 +9439,18 @@
       "norm_label": "get()"
     },
     {
+      "label": "PATCH()",
+      "file_type": "code",
+      "source_file": "src/app/api/admin/settings/route.ts",
+      "source_location": "L8",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_app_api_admin_settings_route_patch",
+      "community": 2,
+      "community_name": "prisma.ts",
+      "norm_label": "patch()"
+    },
+    {
       "label": "GET()",
       "file_type": "code",
       "source_file": "src/app/api/admin/stores/route.ts",
@@ -9679,6 +9763,42 @@
       "norm_label": "ispointinpolygon()"
     },
     {
+      "label": "DELETE()",
+      "file_type": "code",
+      "source_file": "src/app/api/restaurants/[id]/route.ts",
+      "source_location": "L314",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_app_api_restaurants_id_route_delete",
+      "community": 2,
+      "community_name": "prisma.ts",
+      "norm_label": "delete()"
+    },
+    {
+      "label": "GET()",
+      "file_type": "code",
+      "source_file": "src/app/api/restaurants/[id]/route.ts",
+      "source_location": "L10",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_app_api_restaurants_id_route_get",
+      "community": 2,
+      "community_name": "prisma.ts",
+      "norm_label": "get()"
+    },
+    {
+      "label": "PATCH()",
+      "file_type": "code",
+      "source_file": "src/app/api/restaurants/[id]/route.ts",
+      "source_location": "L74",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_app_api_restaurants_id_route_patch",
+      "community": 2,
+      "community_name": "prisma.ts",
+      "norm_label": "patch()"
+    },
+    {
       "label": "GET()",
       "file_type": "code",
       "source_file": "src/app/api/restaurants/[id]/sections/route.ts",
@@ -9698,6 +9818,30 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_app_api_restaurants_id_sections_route_post",
+      "community": 2,
+      "community_name": "prisma.ts",
+      "norm_label": "post()"
+    },
+    {
+      "label": "GET()",
+      "file_type": "code",
+      "source_file": "src/app/api/restaurants/route.ts",
+      "source_location": "L12",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_app_api_restaurants_route_get",
+      "community": 2,
+      "community_name": "prisma.ts",
+      "norm_label": "get()"
+    },
+    {
+      "label": "POST()",
+      "file_type": "code",
+      "source_file": "src/app/api/restaurants/route.ts",
+      "source_location": "L123",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_app_api_restaurants_route_post",
       "community": 2,
       "community_name": "prisma.ts",
       "norm_label": "post()"
@@ -9763,6 +9907,18 @@
       "norm_label": "getprisma()"
     },
     {
+      "label": "revalidateRestaurant()",
+      "file_type": "code",
+      "source_file": "src/lib/revalidate.ts",
+      "source_location": "L48",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_lib_revalidate_revalidaterestaurant",
+      "community": 2,
+      "community_name": "prisma.ts",
+      "norm_label": "revalidaterestaurant()"
+    },
+    {
       "label": "revalidateStorefront()",
       "file_type": "code",
       "source_file": "src/lib/revalidate.ts",
@@ -9773,6 +9929,18 @@
       "community": 2,
       "community_name": "prisma.ts",
       "norm_label": "revalidatestorefront()"
+    },
+    {
+      "label": "clearSettingsCache()",
+      "file_type": "code",
+      "source_file": "src/lib/settings-cache.ts",
+      "source_location": "L3",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_lib_settings_cache_clearsettingscache",
+      "community": 2,
+      "community_name": "prisma.ts",
+      "norm_label": "clearsettingscache()"
     },
     {
       "label": "isSuperadminPhone()",
@@ -9943,30 +10111,6 @@
       "norm_label": "require_staff()"
     },
     {
-      "label": "AdminBanners()",
-      "file_type": "code",
-      "source_file": "src/components/admin/admin-banners.tsx",
-      "source_location": "L139",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_components_admin_admin_banners_adminbanners",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "adminbanners()"
-    },
-    {
-      "label": "fetchSettings()",
-      "file_type": "code",
-      "source_file": "src/components/admin/admin-banners.tsx",
-      "source_location": "L166",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_components_admin_admin_banners_adminbanners_fetchsettings",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "fetchsettings()"
-    },
-    {
       "label": "AdminBulkUpdate()",
       "file_type": "code",
       "source_file": "src/components/admin/admin-bulk-update.tsx",
@@ -9979,16 +10123,40 @@
       "norm_label": "adminbulkupdate()"
     },
     {
-      "label": "AdminInventoryCenter()",
+      "label": "AdminSortManager()",
       "file_type": "code",
-      "source_file": "src/components/admin/admin-inventory-center.tsx",
-      "source_location": "L76",
+      "source_file": "src/components/admin/admin-sort-manager.tsx",
+      "source_location": "L59",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_components_admin_admin_inventory_center_admininventorycenter",
+      "id": "src_components_admin_admin_sort_manager_adminsortmanager",
       "community": 23,
       "community_name": "admin-dashboard.tsx",
-      "norm_label": "admininventorycenter()"
+      "norm_label": "adminsortmanager()"
+    },
+    {
+      "label": "loadCategoryData()",
+      "file_type": "code",
+      "source_file": "src/components/admin/admin-sort-manager.tsx",
+      "source_location": "L75",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_components_admin_admin_sort_manager_adminsortmanager_loadcategorydata",
+      "community": 23,
+      "community_name": "admin-dashboard.tsx",
+      "norm_label": "loadcategorydata()"
+    },
+    {
+      "label": "getSortedProducts()",
+      "file_type": "code",
+      "source_file": "src/components/admin/admin-sort-manager.tsx",
+      "source_location": "L28",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_components_admin_admin_sort_manager_getsortedproducts",
+      "community": 23,
+      "community_name": "admin-dashboard.tsx",
+      "norm_label": "getsortedproducts()"
     },
     {
       "label": "BannersTab()",
@@ -10075,6 +10243,18 @@
       "norm_label": "livecartspanel()"
     },
     {
+      "label": "DashboardStatsCards()",
+      "file_type": "code",
+      "source_file": "src/components/admin/dashboard/stats-cards.tsx",
+      "source_location": "L24",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_components_admin_dashboard_stats_cards_dashboardstatscards",
+      "community": 23,
+      "community_name": "admin-dashboard.tsx",
+      "norm_label": "dashboardstatscards()"
+    },
+    {
       "label": "StoreControlBar()",
       "file_type": "code",
       "source_file": "src/components/admin/dashboard/store-control-bar.tsx",
@@ -10097,18 +10277,6 @@
       "community": 23,
       "community_name": "admin-dashboard.tsx",
       "norm_label": "whatsappalertmodal()"
-    },
-    {
-      "label": "InwardTab()",
-      "file_type": "code",
-      "source_file": "src/components/admin/inward-tab.tsx",
-      "source_location": "L10",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_components_admin_inward_tab_inwardtab",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "inwardtab()"
     },
     {
       "label": "LiveOpsTab()",
@@ -10147,40 +10315,16 @@
       "norm_label": "productstab()"
     },
     {
-      "label": "RestaurantCatalogManager()",
+      "label": "RestaurantConsoleTab()",
       "file_type": "code",
-      "source_file": "src/components/admin/restaurant-catalog-manager.tsx",
-      "source_location": "L64",
+      "source_file": "src/components/admin/restaurant-console-tab.tsx",
+      "source_location": "L7",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_components_admin_restaurant_catalog_manager_restaurantcatalogmanager",
+      "id": "src_components_admin_restaurant_console_tab_restaurantconsoletab",
       "community": 23,
       "community_name": "admin-dashboard.tsx",
-      "norm_label": "restaurantcatalogmanager()"
-    },
-    {
-      "label": "InputField()",
-      "file_type": "code",
-      "source_file": "src/components/admin/restaurant-form.tsx",
-      "source_location": "L46",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_components_admin_restaurant_form_inputfield",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "inputfield()"
-    },
-    {
-      "label": "SectionCard()",
-      "file_type": "code",
-      "source_file": "src/components/admin/restaurant-form.tsx",
-      "source_location": "L24",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_components_admin_restaurant_form_sectioncard",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "sectioncard()"
+      "norm_label": "restaurantconsoletab()"
     },
     {
       "label": "getCafeSectionImage()",
@@ -10265,18 +10409,6 @@
       "community": 23,
       "community_name": "admin-dashboard.tsx",
       "norm_label": "formattime()"
-    },
-    {
-      "label": "compressImageClient()",
-      "file_type": "code",
-      "source_file": "src/lib/image-compression.ts",
-      "source_location": "L7",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_lib_image_compression_compressimageclient",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "compressimageclient()"
     },
     {
       "label": "Home()",
@@ -13195,18 +13327,6 @@
       "norm_label": "codpaymentmodal()"
     },
     {
-      "label": "DeliveryHistoryView()",
-      "file_type": "code",
-      "source_file": "src/app/delivery/components/delivery-history-view.tsx",
-      "source_location": "L13",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_app_delivery_components_delivery_history_view_deliveryhistoryview",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "deliveryhistoryview()"
-    },
-    {
       "label": "PendingPickupCard()",
       "file_type": "code",
       "source_file": "src/app/delivery/components/pending-pickup-card.tsx",
@@ -13267,6 +13387,30 @@
       "norm_label": "deliverywalletcard()"
     },
     {
+      "label": "AdminBanners()",
+      "file_type": "code",
+      "source_file": "src/components/admin/admin-banners.tsx",
+      "source_location": "L139",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_components_admin_admin_banners_adminbanners",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "adminbanners()"
+    },
+    {
+      "label": "fetchSettings()",
+      "file_type": "code",
+      "source_file": "src/components/admin/admin-banners.tsx",
+      "source_location": "L166",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_components_admin_admin_banners_adminbanners_fetchsettings",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "fetchsettings()"
+    },
+    {
       "label": "AdminForecast()",
       "file_type": "code",
       "source_file": "src/components/admin/admin-forecast.tsx",
@@ -13303,52 +13447,16 @@
       "norm_label": "adminrestaurantconsole()"
     },
     {
-      "label": "AdminRiderCash()",
+      "label": "AdminRestaurantReport()",
       "file_type": "code",
-      "source_file": "src/components/admin/admin-rider-cash.tsx",
-      "source_location": "L68",
+      "source_file": "src/components/admin/admin-restaurant-report.tsx",
+      "source_location": "L64",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_components_admin_admin_rider_cash_adminridercash",
+      "id": "src_components_admin_admin_restaurant_report_adminrestaurantreport",
       "community": 336,
       "community_name": "utils.ts",
-      "norm_label": "adminridercash()"
-    },
-    {
-      "label": "AdminSortManager()",
-      "file_type": "code",
-      "source_file": "src/components/admin/admin-sort-manager.tsx",
-      "source_location": "L59",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_components_admin_admin_sort_manager_adminsortmanager",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "adminsortmanager()"
-    },
-    {
-      "label": "loadCategoryData()",
-      "file_type": "code",
-      "source_file": "src/components/admin/admin-sort-manager.tsx",
-      "source_location": "L75",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_components_admin_admin_sort_manager_adminsortmanager_loadcategorydata",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "loadcategorydata()"
-    },
-    {
-      "label": "getSortedProducts()",
-      "file_type": "code",
-      "source_file": "src/components/admin/admin-sort-manager.tsx",
-      "source_location": "L28",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_components_admin_admin_sort_manager_getsortedproducts",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "getsortedproducts()"
+      "norm_label": "adminrestaurantreport()"
     },
     {
       "label": "BlockCustomerModal()",
@@ -13375,18 +13483,6 @@
       "norm_label": "createordermodal()"
     },
     {
-      "label": "DashboardStatsCards()",
-      "file_type": "code",
-      "source_file": "src/components/admin/dashboard/stats-cards.tsx",
-      "source_location": "L24",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_components_admin_dashboard_stats_cards_dashboardstatscards",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "dashboardstatscards()"
-    },
-    {
       "label": "ForecastTab()",
       "file_type": "code",
       "source_file": "src/components/admin/forecast-tab.tsx",
@@ -13411,16 +13507,52 @@
       "norm_label": "ordertrackingmodal()"
     },
     {
-      "label": "RestaurantConsoleTab()",
+      "label": "RestaurantCatalogManager()",
       "file_type": "code",
-      "source_file": "src/components/admin/restaurant-console-tab.tsx",
-      "source_location": "L7",
+      "source_file": "src/components/admin/restaurant-catalog-manager.tsx",
+      "source_location": "L64",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_components_admin_restaurant_console_tab_restaurantconsoletab",
+      "id": "src_components_admin_restaurant_catalog_manager_restaurantcatalogmanager",
       "community": 336,
       "community_name": "utils.ts",
-      "norm_label": "restaurantconsoletab()"
+      "norm_label": "restaurantcatalogmanager()"
+    },
+    {
+      "label": "InputField()",
+      "file_type": "code",
+      "source_file": "src/components/admin/restaurant-form.tsx",
+      "source_location": "L46",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_components_admin_restaurant_form_inputfield",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "inputfield()"
+    },
+    {
+      "label": "SectionCard()",
+      "file_type": "code",
+      "source_file": "src/components/admin/restaurant-form.tsx",
+      "source_location": "L24",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_components_admin_restaurant_form_sectioncard",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "sectioncard()"
+    },
+    {
+      "label": "RestaurantManager()",
+      "file_type": "code",
+      "source_file": "src/components/admin/restaurant-manager.tsx",
+      "source_location": "L34",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_components_admin_restaurant_manager_restaurantmanager",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "restaurantmanager()"
     },
     {
       "label": "RestaurantPayoutsLedger()",
@@ -13435,6 +13567,18 @@
       "norm_label": "restaurantpayoutsledger()"
     },
     {
+      "label": "RestaurantReportTab()",
+      "file_type": "code",
+      "source_file": "src/components/admin/restaurant-report-tab.tsx",
+      "source_location": "L9",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_components_admin_restaurant_report_tab_restaurantreporttab",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "restaurantreporttab()"
+    },
+    {
       "label": "RestaurantSalesConsole()",
       "file_type": "code",
       "source_file": "src/components/admin/restaurant-sales-console.tsx",
@@ -13447,88 +13591,28 @@
       "norm_label": "restaurantsalesconsole()"
     },
     {
-      "label": "RiderCashTab()",
+      "label": "Badge()",
       "file_type": "code",
-      "source_file": "src/components/admin/rider-cash-tab.tsx",
-      "source_location": "L9",
+      "source_file": "src/components/ui/badge.tsx",
+      "source_location": "L30",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_components_admin_rider_cash_tab_ridercashtab",
+      "id": "src_components_ui_badge_badge",
       "community": 336,
       "community_name": "utils.ts",
-      "norm_label": "ridercashtab()"
+      "norm_label": "badge()"
     },
     {
-      "label": "getDeliveryETA()",
+      "label": "compressImageClient()",
       "file_type": "code",
-      "source_file": "src/components/cart/cart-sticky-bar.tsx",
-      "source_location": "L15",
+      "source_file": "src/lib/image-compression.ts",
+      "source_location": "L7",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_components_cart_cart_sticky_bar_getdeliveryeta",
+      "id": "src_lib_image_compression_compressimageclient",
       "community": 336,
       "community_name": "utils.ts",
-      "norm_label": "getdeliveryeta()"
-    },
-    {
-      "label": "OrderTracker()",
-      "file_type": "code",
-      "source_file": "src/components/order/order-tracker.tsx",
-      "source_location": "L129",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_components_order_order_tracker_ordertracker",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "ordertracker()"
-    },
-    {
-      "label": "PrepCountdown()",
-      "file_type": "code",
-      "source_file": "src/components/order/order-tracker.tsx",
-      "source_location": "L35",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_components_order_order_tracker_prepcountdown",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "prepcountdown()"
-    },
-    {
-      "label": "PayOnlineButton()",
-      "file_type": "code",
-      "source_file": "src/components/order/pay-online-button.tsx",
-      "source_location": "L20",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_components_order_pay_online_button_payonlinebutton",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "payonlinebutton()"
-    },
-    {
-      "label": "addMinutesTo()",
-      "file_type": "code",
-      "source_file": "src/lib/date-helpers.ts",
-      "source_location": "L64",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_lib_date_helpers_addminutesto",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "addminutesto()"
-    },
-    {
-      "label": "formatOrderTime()",
-      "file_type": "code",
-      "source_file": "src/lib/date-helpers.ts",
-      "source_location": "L15",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_lib_date_helpers_formatordertime",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "formatordertime()"
+      "norm_label": "compressimageclient()"
     },
     {
       "label": "formatAddress()",
@@ -13577,18 +13661,6 @@
       "community": 336,
       "community_name": "utils.ts",
       "norm_label": "formatprice()"
-    },
-    {
-      "label": "getDeliveryPin()",
-      "file_type": "code",
-      "source_file": "src/lib/utils.ts",
-      "source_location": "L292",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_lib_utils_getdeliverypin",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "getdeliverypin()"
     },
     {
       "label": "isDummyEmail()",
@@ -13879,6 +13951,30 @@
       "norm_label": "storefrontclient()"
     },
     {
+      "label": "formatTime12h()",
+      "file_type": "code",
+      "source_file": "src/lib/date-helpers.ts",
+      "source_location": "L80",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_lib_date_helpers_formattime12h",
+      "community": 344,
+      "community_name": "storefront-client.tsx",
+      "norm_label": "formattime12h()"
+    },
+    {
+      "label": "checkDishTimeAvailability()",
+      "file_type": "code",
+      "source_file": "src/lib/dish-timing.ts",
+      "source_location": "L9",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_lib_dish_timing_checkdishtimeavailability",
+      "community": 344,
+      "community_name": "storefront-client.tsx",
+      "norm_label": "checkdishtimeavailability()"
+    },
+    {
       "label": "get_admin_all_orders()",
       "file_type": "code",
       "source_file": "fastapi-backend/routers/admin.py",
@@ -14119,28 +14215,52 @@
       "norm_label": "post()"
     },
     {
-      "label": "GET()",
+      "label": "buildSettingsMap()",
       "file_type": "code",
-      "source_file": "src/app/api/restaurants/route.ts",
-      "source_location": "L12",
+      "source_file": "src/app/api/settings/route.ts",
+      "source_location": "L126",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_app_api_restaurants_route_get",
+      "id": "src_app_api_settings_route_buildsettingsmap",
+      "community": 35,
+      "community_name": "api/orders/route.ts",
+      "norm_label": "buildsettingsmap()"
+    },
+    {
+      "label": "checkIsStoreOpen()",
+      "file_type": "code",
+      "source_file": "src/app/api/settings/route.ts",
+      "source_location": "L86",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_app_api_settings_route_checkisstoreopen",
+      "community": 35,
+      "community_name": "api/orders/route.ts",
+      "norm_label": "checkisstoreopen()"
+    },
+    {
+      "label": "GET()",
+      "file_type": "code",
+      "source_file": "src/app/api/settings/route.ts",
+      "source_location": "L219",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_app_api_settings_route_get",
       "community": 35,
       "community_name": "api/orders/route.ts",
       "norm_label": "get()"
     },
     {
-      "label": "POST()",
+      "label": "GET()",
       "file_type": "code",
-      "source_file": "src/app/api/restaurants/route.ts",
-      "source_location": "L123",
+      "source_file": "src/app/api/stores/hubs/route.ts",
+      "source_location": "L7",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_app_api_restaurants_route_post",
+      "id": "src_app_api_stores_hubs_route_get",
       "community": 35,
       "community_name": "api/orders/route.ts",
-      "norm_label": "post()"
+      "norm_label": "get()"
     },
     {
       "label": "AdminDashboard()",
@@ -14153,6 +14273,18 @@
       "community": 35,
       "community_name": "api/orders/route.ts",
       "norm_label": "admindashboard()"
+    },
+    {
+      "label": "getRedis()",
+      "file_type": "code",
+      "source_file": "src/lib/redis-client.ts",
+      "source_location": "L5",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_lib_redis_client_getredis",
+      "community": 35,
+      "community_name": "api/orders/route.ts",
+      "norm_label": "getredis()"
     },
     {
       "label": "resolvePincode()",
@@ -14249,6 +14381,42 @@
       "community": 35,
       "community_name": "api/orders/route.ts",
       "norm_label": "resolvedarkstoreforcustomer()"
+    },
+    {
+      "label": "evaluateSurgeStatus()",
+      "file_type": "code",
+      "source_file": "src/lib/surge-manager.ts",
+      "source_location": "L126",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_lib_surge_manager_evaluatesurgestatus",
+      "community": 35,
+      "community_name": "api/orders/route.ts",
+      "norm_label": "evaluatesurgestatus()"
+    },
+    {
+      "label": "fetchLiveWeather()",
+      "file_type": "code",
+      "source_file": "src/lib/surge-manager.ts",
+      "source_location": "L31",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_lib_surge_manager_fetchliveweather",
+      "community": 35,
+      "community_name": "api/orders/route.ts",
+      "norm_label": "fetchliveweather()"
+    },
+    {
+      "label": "getLiveDemandInfo()",
+      "file_type": "code",
+      "source_file": "src/lib/surge-manager.ts",
+      "source_location": "L84",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_lib_surge_manager_getlivedemandinfo",
+      "community": 35,
+      "community_name": "api/orders/route.ts",
+      "norm_label": "getlivedemandinfo()"
     },
     {
       "label": "DoorstepPayPage()",
@@ -14731,18 +14899,6 @@
       "norm_label": "syncorders()"
     },
     {
-      "label": "RestaurantManager()",
-      "file_type": "code",
-      "source_file": "src/components/admin/restaurant-manager.tsx",
-      "source_location": "L34",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_components_admin_restaurant_manager_restaurantmanager",
-      "community": 5,
-      "community_name": "cn",
-      "norm_label": "restaurantmanager()"
-    },
-    {
       "label": "Logo()",
       "file_type": "code",
       "source_file": "src/components/layout/logo.tsx",
@@ -14753,18 +14909,6 @@
       "community": 5,
       "community_name": "cn",
       "norm_label": "logo()"
-    },
-    {
-      "label": "Badge()",
-      "file_type": "code",
-      "source_file": "src/components/ui/badge.tsx",
-      "source_location": "L30",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_components_ui_badge_badge",
-      "community": 5,
-      "community_name": "cn",
-      "norm_label": "badge()"
     },
     {
       "label": "DialogClose()",
@@ -16399,172 +16543,28 @@
       "norm_label": "root_websocket()"
     },
     {
-      "label": "PATCH()",
+      "label": "AdminInventoryCenter()",
       "file_type": "code",
-      "source_file": "src/app/api/admin/settings/route.ts",
-      "source_location": "L8",
+      "source_file": "src/components/admin/admin-inventory-center.tsx",
+      "source_location": "L76",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_app_api_admin_settings_route_patch",
+      "id": "src_components_admin_admin_inventory_center_admininventorycenter",
       "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "patch()"
+      "community_name": "admin-inventory-center.tsx",
+      "norm_label": "admininventorycenter()"
     },
     {
-      "label": "DELETE()",
+      "label": "InwardTab()",
       "file_type": "code",
-      "source_file": "src/app/api/restaurants/[id]/route.ts",
-      "source_location": "L314",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_app_api_restaurants_id_route_delete",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "delete()"
-    },
-    {
-      "label": "GET()",
-      "file_type": "code",
-      "source_file": "src/app/api/restaurants/[id]/route.ts",
+      "source_file": "src/components/admin/inward-tab.tsx",
       "source_location": "L10",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_app_api_restaurants_id_route_get",
+      "id": "src_components_admin_inward_tab_inwardtab",
       "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "get()"
-    },
-    {
-      "label": "PATCH()",
-      "file_type": "code",
-      "source_file": "src/app/api/restaurants/[id]/route.ts",
-      "source_location": "L74",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_app_api_restaurants_id_route_patch",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "patch()"
-    },
-    {
-      "label": "buildSettingsMap()",
-      "file_type": "code",
-      "source_file": "src/app/api/settings/route.ts",
-      "source_location": "L126",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_app_api_settings_route_buildsettingsmap",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "buildsettingsmap()"
-    },
-    {
-      "label": "checkIsStoreOpen()",
-      "file_type": "code",
-      "source_file": "src/app/api/settings/route.ts",
-      "source_location": "L86",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_app_api_settings_route_checkisstoreopen",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "checkisstoreopen()"
-    },
-    {
-      "label": "GET()",
-      "file_type": "code",
-      "source_file": "src/app/api/settings/route.ts",
-      "source_location": "L219",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_app_api_settings_route_get",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "get()"
-    },
-    {
-      "label": "GET()",
-      "file_type": "code",
-      "source_file": "src/app/api/stores/hubs/route.ts",
-      "source_location": "L7",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_app_api_stores_hubs_route_get",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "get()"
-    },
-    {
-      "label": "getRedis()",
-      "file_type": "code",
-      "source_file": "src/lib/redis-client.ts",
-      "source_location": "L5",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_lib_redis_client_getredis",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "getredis()"
-    },
-    {
-      "label": "revalidateRestaurant()",
-      "file_type": "code",
-      "source_file": "src/lib/revalidate.ts",
-      "source_location": "L48",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_lib_revalidate_revalidaterestaurant",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "revalidaterestaurant()"
-    },
-    {
-      "label": "clearSettingsCache()",
-      "file_type": "code",
-      "source_file": "src/lib/settings-cache.ts",
-      "source_location": "L3",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_lib_settings_cache_clearsettingscache",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "clearsettingscache()"
-    },
-    {
-      "label": "evaluateSurgeStatus()",
-      "file_type": "code",
-      "source_file": "src/lib/surge-manager.ts",
-      "source_location": "L126",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_lib_surge_manager_evaluatesurgestatus",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "evaluatesurgestatus()"
-    },
-    {
-      "label": "fetchLiveWeather()",
-      "file_type": "code",
-      "source_file": "src/lib/surge-manager.ts",
-      "source_location": "L31",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_lib_surge_manager_fetchliveweather",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "fetchliveweather()"
-    },
-    {
-      "label": "getLiveDemandInfo()",
-      "file_type": "code",
-      "source_file": "src/lib/surge-manager.ts",
-      "source_location": "L84",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_lib_surge_manager_getlivedemandinfo",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "getlivedemandinfo()"
+      "community_name": "admin-inventory-center.tsx",
+      "norm_label": "inwardtab()"
     },
     {
       "label": ".constructor()",
@@ -29259,6 +29259,17 @@
       "norm_label": "delivery-header.tsx"
     },
     {
+      "label": "delivery-history-view.tsx",
+      "file_type": "code",
+      "source_file": "src/app/delivery/components/delivery-history-view.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_app_delivery_components_delivery_history_view",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "delivery-history-view.tsx"
+    },
+    {
       "label": "order/[id]/page.tsx",
       "file_type": "code",
       "source_file": "src/app/order/[id]/page.tsx",
@@ -29312,6 +29323,17 @@
       "community": 14,
       "community_name": "date-helpers.ts",
       "norm_label": "admin-reports.tsx"
+    },
+    {
+      "label": "admin-rider-cash.tsx",
+      "file_type": "code",
+      "source_file": "src/components/admin/admin-rider-cash.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_components_admin_admin_rider_cash",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "admin-rider-cash.tsx"
     },
     {
       "label": "alerts-tab.tsx",
@@ -29380,6 +29402,17 @@
       "norm_label": "reviews-tab.tsx"
     },
     {
+      "label": "rider-cash-tab.tsx",
+      "file_type": "code",
+      "source_file": "src/components/admin/rider-cash-tab.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_components_admin_rider_cash_tab",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "rider-cash-tab.tsx"
+    },
+    {
       "label": "users-tab.tsx",
       "file_type": "code",
       "source_file": "src/components/admin/users-tab.tsx",
@@ -29402,6 +29435,39 @@
       "norm_label": "order-confirmation-status.tsx"
     },
     {
+      "label": "order-tracker.tsx",
+      "file_type": "code",
+      "source_file": "src/components/order/order-tracker.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_components_order_order_tracker",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "order-tracker.tsx"
+    },
+    {
+      "label": "pay-online-button.tsx",
+      "file_type": "code",
+      "source_file": "src/components/order/pay-online-button.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_components_order_pay_online_button",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "pay-online-button.tsx"
+    },
+    {
+      "label": "tracking-page-client.tsx",
+      "file_type": "code",
+      "source_file": "src/components/order/tracking-page-client.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_components_order_tracking_page_client",
+      "community": 14,
+      "community_name": "date-helpers.ts",
+      "norm_label": "tracking-page-client.tsx"
+    },
+    {
       "label": "date-helpers.ts",
       "file_type": "code",
       "source_file": "src/lib/date-helpers.ts",
@@ -29411,17 +29477,6 @@
       "community": 14,
       "community_name": "date-helpers.ts",
       "norm_label": "date-helpers.ts"
-    },
-    {
-      "label": "dish-timing.ts",
-      "file_type": "code",
-      "source_file": "src/lib/dish-timing.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_lib_dish_timing",
-      "community": 14,
-      "community_name": "date-helpers.ts",
-      "norm_label": "dish-timing.ts"
     },
     {
       "label": "address_book_screen.dart",
@@ -30700,26 +30755,37 @@
       "norm_label": "wishlist_screen.dart"
     },
     {
-      "label": "admin-restaurant-report.tsx",
-      "file_type": "code",
-      "source_file": "src/components/admin/admin-restaurant-report.tsx",
+      "label": "imagegen-frontend-web/SKILL.md",
+      "file_type": "document",
+      "source_file": ".agents/skills/imagegen-frontend-web/SKILL.md",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "src_components_admin_admin_restaurant_report",
+      "id": "agents_skills_imagegen_frontend_web_skill",
       "community": 141,
-      "community_name": "admin-restaurant-report.tsx",
-      "norm_label": "admin-restaurant-report.tsx"
+      "community_name": "imagegen-frontend-web/SKILL.md",
+      "norm_label": "imagegen-frontend-web/skill.md"
     },
     {
-      "label": "restaurant-report-tab.tsx",
-      "file_type": "code",
-      "source_file": "src/components/admin/restaurant-report-tab.tsx",
-      "source_location": "L1",
+      "label": "HARD OUTPUT RULE \u2014 READ FIRST",
+      "file_type": "document",
+      "source_file": ".agents/skills/imagegen-frontend-web/SKILL.md",
+      "source_location": "L6",
       "_origin": "ast",
-      "id": "src_components_admin_restaurant_report_tab",
+      "id": "agents_skills_imagegen_frontend_web_skill_hard_output_rule_read_first",
       "community": 141,
-      "community_name": "admin-restaurant-report.tsx",
-      "norm_label": "restaurant-report-tab.tsx"
+      "community_name": "imagegen-frontend-web/SKILL.md",
+      "norm_label": "hard output rule \u2014 read first"
+    },
+    {
+      "label": "HERO COMPOSITION BIAS \u2014 READ FIRST",
+      "file_type": "document",
+      "source_file": ".agents/skills/imagegen-frontend-web/SKILL.md",
+      "source_location": "L25",
+      "_origin": "ast",
+      "id": "agents_skills_imagegen_frontend_web_skill_hero_composition_bias_read_first",
+      "community": 141,
+      "community_name": "imagegen-frontend-web/SKILL.md",
+      "norm_label": "hero composition bias \u2014 read first"
     },
     {
       "label": "redesign-existing-projects/SKILL.md",
@@ -35331,6 +35397,17 @@
       "norm_label": "admin_products.dart"
     },
     {
+      "label": "DeliveryLoginScreen",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "deliveryloginscreen",
+      "community": 173,
+      "community_name": "dioProvider",
+      "norm_label": "deliveryloginscreen"
+    },
+    {
       "label": "dioProvider",
       "file_type": "code",
       "source_file": "fastkirana_flutter/lib/core/network/api_client.dart",
@@ -35716,6 +35793,17 @@
       "norm_label": "_adminloginscreenstate"
     },
     {
+      "label": "_DeliveryLoginScreenState",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/auth/delivery_login.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_auth_delivery_login_deliveryloginscreenstate",
+      "community": 173,
+      "community_name": "dioProvider",
+      "norm_label": "_deliveryloginscreenstate"
+    },
+    {
       "label": "_handleVerifyOtp",
       "file_type": "code",
       "source_file": "fastkirana_flutter/lib/features/auth/otp_screen.dart",
@@ -35969,6 +36057,17 @@
       "norm_label": "_startpolling"
     },
     {
+      "label": "_DeliveryLoginScreenState",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/delivery/delivery_login.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_delivery_delivery_login_deliveryloginscreenstate",
+      "community": 173,
+      "community_name": "dioProvider",
+      "norm_label": "_deliveryloginscreenstate"
+    },
+    {
       "label": "build",
       "file_type": "code",
       "source_file": "fastkirana_flutter/lib/features/delivery/picker_dashboard.dart",
@@ -36000,28 +36099,6 @@
       "community": 173,
       "community_name": "dioProvider",
       "norm_label": "_mainshellstate"
-    },
-    {
-      "label": "build",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/location/doorstep_details_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_location_doorstep_details_screen_build",
-      "community": 173,
-      "community_name": "dioProvider",
-      "norm_label": "build"
-    },
-    {
-      "label": "initState",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/location/doorstep_details_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_location_doorstep_details_screen_initstate",
-      "community": 173,
-      "community_name": "dioProvider",
-      "norm_label": "initstate"
     },
     {
       "label": "_fetchLiveOrder",
@@ -36761,17 +36838,6 @@
       "norm_label": "_sparklecontroller"
     },
     {
-      "label": "imagegen-frontend-web/SKILL.md",
-      "file_type": "document",
-      "source_file": ".agents/skills/imagegen-frontend-web/SKILL.md",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "agents_skills_imagegen_frontend_web_skill",
-      "community": 186,
-      "community_name": "CORE DIRECTIVE: AWWWARDS-LEVEL IMAGE ART DIRECTION",
-      "norm_label": "imagegen-frontend-web/skill.md"
-    },
-    {
       "label": "10. SECTION RHYTHM RULE",
       "file_type": "document",
       "source_file": ".agents/skills/imagegen-frontend-web/SKILL.md",
@@ -36924,28 +36990,6 @@
       "community": 186,
       "community_name": "CORE DIRECTIVE: AWWWARDS-LEVEL IMAGE ART DIRECTION",
       "norm_label": "core directive: awwwards-level image art direction"
-    },
-    {
-      "label": "HARD OUTPUT RULE \u2014 READ FIRST",
-      "file_type": "document",
-      "source_file": ".agents/skills/imagegen-frontend-web/SKILL.md",
-      "source_location": "L6",
-      "_origin": "ast",
-      "id": "agents_skills_imagegen_frontend_web_skill_hard_output_rule_read_first",
-      "community": 186,
-      "community_name": "CORE DIRECTIVE: AWWWARDS-LEVEL IMAGE ART DIRECTION",
-      "norm_label": "hard output rule \u2014 read first"
-    },
-    {
-      "label": "HERO COMPOSITION BIAS \u2014 READ FIRST",
-      "file_type": "document",
-      "source_file": ".agents/skills/imagegen-frontend-web/SKILL.md",
-      "source_location": "L25",
-      "_origin": "ast",
-      "id": "agents_skills_imagegen_frontend_web_skill_hero_composition_bias_read_first",
-      "community": 186,
-      "community_name": "CORE DIRECTIVE: AWWWARDS-LEVEL IMAGE ART DIRECTION",
-      "norm_label": "hero composition bias \u2014 read first"
     },
     {
       "label": "industrial-brutalist-ui/SKILL.md",
@@ -40006,6 +40050,17 @@
       "norm_label": "riders/route.ts"
     },
     {
+      "label": "admin/settings/route.ts",
+      "file_type": "code",
+      "source_file": "src/app/api/admin/settings/route.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_app_api_admin_settings_route",
+      "community": 2,
+      "community_name": "prisma.ts",
+      "norm_label": "admin/settings/route.ts"
+    },
+    {
       "label": "stores/route.ts",
       "file_type": "code",
       "source_file": "src/app/api/admin/stores/route.ts",
@@ -40237,6 +40292,17 @@
       "norm_label": "check-store/route.ts"
     },
     {
+      "label": "restaurants/[id]/route.ts",
+      "file_type": "code",
+      "source_file": "src/app/api/restaurants/[id]/route.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_app_api_restaurants_id_route",
+      "community": 2,
+      "community_name": "prisma.ts",
+      "norm_label": "restaurants/[id]/route.ts"
+    },
+    {
       "label": "sections/route.ts",
       "file_type": "code",
       "source_file": "src/app/api/restaurants/[id]/sections/route.ts",
@@ -40246,6 +40312,17 @@
       "community": 2,
       "community_name": "prisma.ts",
       "norm_label": "sections/route.ts"
+    },
+    {
+      "label": "restaurants/route.ts",
+      "file_type": "code",
+      "source_file": "src/app/api/restaurants/route.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_app_api_restaurants_route",
+      "community": 2,
+      "community_name": "prisma.ts",
+      "norm_label": "restaurants/route.ts"
     },
     {
       "label": "revalidate-bridge/route.ts",
@@ -44934,39 +45011,6 @@
       "norm_label": "selecting personas"
     },
     {
-      "label": "admin-banners.tsx",
-      "file_type": "code",
-      "source_file": "src/components/admin/admin-banners.tsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_components_admin_admin_banners",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "admin-banners.tsx"
-    },
-    {
-      "label": "FESTIVAL_TEMPLATES",
-      "file_type": "code",
-      "source_file": "src/components/admin/admin-banners.tsx",
-      "source_location": "L50",
-      "_origin": "ast",
-      "id": "src_components_admin_admin_banners_festival_templates",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "festival_templates"
-    },
-    {
-      "label": "GRADIENT_PRESETS",
-      "file_type": "code",
-      "source_file": "src/components/admin/admin-banners.tsx",
-      "source_location": "L38",
-      "_origin": "ast",
-      "id": "src_components_admin_admin_banners_gradient_presets",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "gradient_presets"
-    },
-    {
       "label": "admin-bulk-update.tsx",
       "file_type": "code",
       "source_file": "src/components/admin/admin-bulk-update.tsx",
@@ -45033,15 +45077,15 @@
       "norm_label": "revieweditmodal"
     },
     {
-      "label": "admin-inventory-center.tsx",
+      "label": "admin-sort-manager.tsx",
       "file_type": "code",
-      "source_file": "src/components/admin/admin-inventory-center.tsx",
+      "source_file": "src/components/admin/admin-sort-manager.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "src_components_admin_admin_inventory_center",
+      "id": "src_components_admin_admin_sort_manager",
       "community": 23,
       "community_name": "admin-dashboard.tsx",
-      "norm_label": "admin-inventory-center.tsx"
+      "norm_label": "admin-sort-manager.tsx"
     },
     {
       "label": "banners-tab.tsx",
@@ -45132,6 +45176,17 @@
       "norm_label": "live-carts-panel.tsx"
     },
     {
+      "label": "stats-cards.tsx",
+      "file_type": "code",
+      "source_file": "src/components/admin/dashboard/stats-cards.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_components_admin_dashboard_stats_cards",
+      "community": 23,
+      "community_name": "admin-dashboard.tsx",
+      "norm_label": "stats-cards.tsx"
+    },
+    {
       "label": "store-control-bar.tsx",
       "file_type": "code",
       "source_file": "src/components/admin/dashboard/store-control-bar.tsx",
@@ -45152,17 +45207,6 @@
       "community": 23,
       "community_name": "admin-dashboard.tsx",
       "norm_label": "whatsapp-alert-modal.tsx"
-    },
-    {
-      "label": "inward-tab.tsx",
-      "file_type": "code",
-      "source_file": "src/components/admin/inward-tab.tsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_components_admin_inward_tab",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "inward-tab.tsx"
     },
     {
       "label": "live-ops-tab.tsx",
@@ -45198,26 +45242,15 @@
       "norm_label": "products-tab.tsx"
     },
     {
-      "label": "restaurant-catalog-manager.tsx",
+      "label": "restaurant-console-tab.tsx",
       "file_type": "code",
-      "source_file": "src/components/admin/restaurant-catalog-manager.tsx",
+      "source_file": "src/components/admin/restaurant-console-tab.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "src_components_admin_restaurant_catalog_manager",
+      "id": "src_components_admin_restaurant_console_tab",
       "community": 23,
       "community_name": "admin-dashboard.tsx",
-      "norm_label": "restaurant-catalog-manager.tsx"
-    },
-    {
-      "label": "restaurant-form.tsx",
-      "file_type": "code",
-      "source_file": "src/components/admin/restaurant-form.tsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_components_admin_restaurant_form",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "restaurant-form.tsx"
+      "norm_label": "restaurant-console-tab.tsx"
     },
     {
       "label": "restaurant-menu-sections-editor.tsx",
@@ -45440,39 +45473,6 @@
       "norm_label": "tax_rate"
     },
     {
-      "label": "image-compression.ts",
-      "file_type": "code",
-      "source_file": "src/lib/image-compression.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_lib_image_compression",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "image-compression.ts"
-    },
-    {
-      "label": "preset-photos.ts",
-      "file_type": "code",
-      "source_file": "src/lib/preset-photos.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_lib_preset_photos",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "preset-photos.ts"
-    },
-    {
-      "label": "PRESET_KITCHEN_PHOTOS",
-      "file_type": "code",
-      "source_file": "src/lib/preset-photos.ts",
-      "source_location": "L7",
-      "_origin": "ast",
-      "id": "src_lib_preset_photos_preset_kitchen_photos",
-      "community": 23,
-      "community_name": "admin-dashboard.tsx",
-      "norm_label": "preset_kitchen_photos"
-    },
-    {
       "label": "search-and-cart.spec.ts",
       "file_type": "code",
       "source_file": "e2e/search-and-cart.spec.ts",
@@ -45484,26 +45484,26 @@
       "norm_label": "search-and-cart.spec.ts"
     },
     {
-      "label": "@auth/prisma-adapter",
+      "label": "class-variance-authority",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L19",
+      "source_location": "L35",
       "_origin": "ast",
-      "id": "package_dependencies_auth_prisma_adapter",
+      "id": "package_dependencies_class_variance_authority",
       "community": 231,
-      "community_name": "@auth/prisma-adapter",
-      "norm_label": "@auth/prisma-adapter"
+      "community_name": "class-variance-authority",
+      "norm_label": "class-variance-authority"
     },
     {
-      "label": "@auth/prisma-adapter",
+      "label": "class-variance-authority",
       "file_type": "concept",
       "source_file": "package.json",
-      "source_location": "L19",
+      "source_location": "L35",
       "_origin": "ast",
-      "id": "auth_prisma_adapter",
+      "id": "class_variance_authority",
       "community": 231,
-      "community_name": "@auth/prisma-adapter",
-      "norm_label": "@auth/prisma-adapter"
+      "community_name": "class-variance-authority",
+      "norm_label": "class-variance-authority"
     },
     {
       "label": "3.1 Audit admin API routes",
@@ -60323,17 +60323,6 @@
       "norm_label": "cod-payment-modal.tsx"
     },
     {
-      "label": "delivery-history-view.tsx",
-      "file_type": "code",
-      "source_file": "src/app/delivery/components/delivery-history-view.tsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_app_delivery_components_delivery_history_view",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "delivery-history-view.tsx"
-    },
-    {
       "label": "pending-pickup-card.tsx",
       "file_type": "code",
       "source_file": "src/app/delivery/components/pending-pickup-card.tsx",
@@ -60387,6 +60376,39 @@
       "community": 336,
       "community_name": "utils.ts",
       "norm_label": "wallet-card.tsx"
+    },
+    {
+      "label": "admin-banners.tsx",
+      "file_type": "code",
+      "source_file": "src/components/admin/admin-banners.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_components_admin_admin_banners",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "admin-banners.tsx"
+    },
+    {
+      "label": "FESTIVAL_TEMPLATES",
+      "file_type": "code",
+      "source_file": "src/components/admin/admin-banners.tsx",
+      "source_location": "L50",
+      "_origin": "ast",
+      "id": "src_components_admin_admin_banners_festival_templates",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "festival_templates"
+    },
+    {
+      "label": "GRADIENT_PRESETS",
+      "file_type": "code",
+      "source_file": "src/components/admin/admin-banners.tsx",
+      "source_location": "L38",
+      "_origin": "ast",
+      "id": "src_components_admin_admin_banners_gradient_presets",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "gradient_presets"
     },
     {
       "label": "CreateOrderModal",
@@ -60444,26 +60466,15 @@
       "norm_label": "admin-restaurant-console.tsx"
     },
     {
-      "label": "admin-rider-cash.tsx",
+      "label": "admin-restaurant-report.tsx",
       "file_type": "code",
-      "source_file": "src/components/admin/admin-rider-cash.tsx",
+      "source_file": "src/components/admin/admin-restaurant-report.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "src_components_admin_admin_rider_cash",
+      "id": "src_components_admin_admin_restaurant_report",
       "community": 336,
       "community_name": "utils.ts",
-      "norm_label": "admin-rider-cash.tsx"
-    },
-    {
-      "label": "admin-sort-manager.tsx",
-      "file_type": "code",
-      "source_file": "src/components/admin/admin-sort-manager.tsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_components_admin_admin_sort_manager",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "admin-sort-manager.tsx"
+      "norm_label": "admin-restaurant-report.tsx"
     },
     {
       "label": "block-customer-modal.tsx",
@@ -60486,17 +60497,6 @@
       "community": 336,
       "community_name": "utils.ts",
       "norm_label": "create-order-modal.tsx"
-    },
-    {
-      "label": "stats-cards.tsx",
-      "file_type": "code",
-      "source_file": "src/components/admin/dashboard/stats-cards.tsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_components_admin_dashboard_stats_cards",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "stats-cards.tsx"
     },
     {
       "label": "forecast-tab.tsx",
@@ -60532,15 +60532,37 @@
       "norm_label": "status_config"
     },
     {
-      "label": "restaurant-console-tab.tsx",
+      "label": "restaurant-catalog-manager.tsx",
       "file_type": "code",
-      "source_file": "src/components/admin/restaurant-console-tab.tsx",
+      "source_file": "src/components/admin/restaurant-catalog-manager.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "src_components_admin_restaurant_console_tab",
+      "id": "src_components_admin_restaurant_catalog_manager",
       "community": 336,
       "community_name": "utils.ts",
-      "norm_label": "restaurant-console-tab.tsx"
+      "norm_label": "restaurant-catalog-manager.tsx"
+    },
+    {
+      "label": "restaurant-form.tsx",
+      "file_type": "code",
+      "source_file": "src/components/admin/restaurant-form.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_components_admin_restaurant_form",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "restaurant-form.tsx"
+    },
+    {
+      "label": "restaurant-manager.tsx",
+      "file_type": "code",
+      "source_file": "src/components/admin/restaurant-manager.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_components_admin_restaurant_manager",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "restaurant-manager.tsx"
     },
     {
       "label": "restaurant-payouts-ledger.tsx",
@@ -60554,6 +60576,17 @@
       "norm_label": "restaurant-payouts-ledger.tsx"
     },
     {
+      "label": "restaurant-report-tab.tsx",
+      "file_type": "code",
+      "source_file": "src/components/admin/restaurant-report-tab.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_components_admin_restaurant_report_tab",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "restaurant-report-tab.tsx"
+    },
+    {
       "label": "restaurant-sales-console.tsx",
       "file_type": "code",
       "source_file": "src/components/admin/restaurant-sales-console.tsx",
@@ -60565,48 +60598,26 @@
       "norm_label": "restaurant-sales-console.tsx"
     },
     {
-      "label": "rider-cash-tab.tsx",
+      "label": "badge.tsx",
       "file_type": "code",
-      "source_file": "src/components/admin/rider-cash-tab.tsx",
+      "source_file": "src/components/ui/badge.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "src_components_admin_rider_cash_tab",
+      "id": "src_components_ui_badge",
       "community": 336,
       "community_name": "utils.ts",
-      "norm_label": "rider-cash-tab.tsx"
+      "norm_label": "badge.tsx"
     },
     {
-      "label": "order-tracker.tsx",
+      "label": "badgeVariants",
       "file_type": "code",
-      "source_file": "src/components/order/order-tracker.tsx",
-      "source_location": "L1",
+      "source_file": "src/components/ui/badge.tsx",
+      "source_location": "L7",
       "_origin": "ast",
-      "id": "src_components_order_order_tracker",
+      "id": "src_components_ui_badge_badgevariants",
       "community": 336,
       "community_name": "utils.ts",
-      "norm_label": "order-tracker.tsx"
-    },
-    {
-      "label": "pay-online-button.tsx",
-      "file_type": "code",
-      "source_file": "src/components/order/pay-online-button.tsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_components_order_pay_online_button",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "pay-online-button.tsx"
-    },
-    {
-      "label": "tracking-page-client.tsx",
-      "file_type": "code",
-      "source_file": "src/components/order/tracking-page-client.tsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_components_order_tracking_page_client",
-      "community": 336,
-      "community_name": "utils.ts",
-      "norm_label": "tracking-page-client.tsx"
+      "norm_label": "badgevariants"
     },
     {
       "label": "DELIVERY_FEE",
@@ -60629,6 +60640,39 @@
       "community": 336,
       "community_name": "utils.ts",
       "norm_label": "order_status_labels"
+    },
+    {
+      "label": "image-compression.ts",
+      "file_type": "code",
+      "source_file": "src/lib/image-compression.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_lib_image_compression",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "image-compression.ts"
+    },
+    {
+      "label": "preset-photos.ts",
+      "file_type": "code",
+      "source_file": "src/lib/preset-photos.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_lib_preset_photos",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "preset-photos.ts"
+    },
+    {
+      "label": "PRESET_KITCHEN_PHOTOS",
+      "file_type": "code",
+      "source_file": "src/lib/preset-photos.ts",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "src_lib_preset_photos_preset_kitchen_photos",
+      "community": 336,
+      "community_name": "utils.ts",
+      "norm_label": "preset_kitchen_photos"
     },
     {
       "label": "utils.ts",
@@ -61742,6 +61786,17 @@
       "norm_label": "storefront-client.tsx"
     },
     {
+      "label": "dish-timing.ts",
+      "file_type": "code",
+      "source_file": "src/lib/dish-timing.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_lib_dish_timing",
+      "community": 344,
+      "community_name": "storefront-client.tsx",
+      "norm_label": "dish-timing.ts"
+    },
+    {
       "label": "admin.py",
       "file_type": "code",
       "source_file": "fastapi-backend/routers/admin.py",
@@ -62237,15 +62292,103 @@
       "norm_label": "inflightorderplacements"
     },
     {
-      "label": "restaurants/route.ts",
+      "label": "api/settings/route.ts",
       "file_type": "code",
-      "source_file": "src/app/api/restaurants/route.ts",
+      "source_file": "src/app/api/settings/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "src_app_api_restaurants_route",
+      "id": "src_app_api_settings_route",
       "community": 35,
       "community_name": "api/orders/route.ts",
-      "norm_label": "restaurants/route.ts"
+      "norm_label": "api/settings/route.ts"
+    },
+    {
+      "label": "DEFAULT_SETTINGS",
+      "file_type": "code",
+      "source_file": "src/app/api/settings/route.ts",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "src_app_api_settings_route_default_settings",
+      "community": 35,
+      "community_name": "api/orders/route.ts",
+      "norm_label": "default_settings"
+    },
+    {
+      "label": "revalidate",
+      "file_type": "code",
+      "source_file": "src/app/api/settings/route.ts",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "src_app_api_settings_route_revalidate",
+      "community": 35,
+      "community_name": "api/orders/route.ts",
+      "norm_label": "revalidate"
+    },
+    {
+      "label": "hubs/route.ts",
+      "file_type": "code",
+      "source_file": "src/app/api/stores/hubs/route.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_app_api_stores_hubs_route",
+      "community": 35,
+      "community_name": "api/orders/route.ts",
+      "norm_label": "hubs/route.ts"
+    },
+    {
+      "label": "dynamic",
+      "file_type": "code",
+      "source_file": "src/app/api/stores/hubs/route.ts",
+      "source_location": "L5",
+      "_origin": "ast",
+      "id": "src_app_api_stores_hubs_route_dynamic",
+      "community": 35,
+      "community_name": "api/orders/route.ts",
+      "norm_label": "dynamic"
+    },
+    {
+      "label": "redis-client.ts",
+      "file_type": "code",
+      "source_file": "src/lib/redis-client.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_lib_redis_client",
+      "community": 35,
+      "community_name": "api/orders/route.ts",
+      "norm_label": "redis-client.ts"
+    },
+    {
+      "label": "CACHE_KEYS",
+      "file_type": "code",
+      "source_file": "src/lib/redis-client.ts",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "src_lib_redis_client_cache_keys",
+      "community": 35,
+      "community_name": "api/orders/route.ts",
+      "norm_label": "cache_keys"
+    },
+    {
+      "label": "DEFAULT_TTL",
+      "file_type": "code",
+      "source_file": "src/lib/redis-client.ts",
+      "source_location": "L26",
+      "_origin": "ast",
+      "id": "src_lib_redis_client_default_ttl",
+      "community": 35,
+      "community_name": "api/orders/route.ts",
+      "norm_label": "default_ttl"
+    },
+    {
+      "label": "settings-cache.ts",
+      "file_type": "code",
+      "source_file": "src/lib/settings-cache.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_lib_settings_cache",
+      "community": 35,
+      "community_name": "api/orders/route.ts",
+      "norm_label": "settings-cache.ts"
     },
     {
       "label": "store-resolver.ts",
@@ -62257,6 +62400,28 @@
       "community": 35,
       "community_name": "api/orders/route.ts",
       "norm_label": "store-resolver.ts"
+    },
+    {
+      "label": "surge-manager.ts",
+      "file_type": "code",
+      "source_file": "src/lib/surge-manager.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_lib_surge_manager",
+      "community": 35,
+      "community_name": "api/orders/route.ts",
+      "norm_label": "surge-manager.ts"
+    },
+    {
+      "label": "weatherCacheMap",
+      "file_type": "code",
+      "source_file": "src/lib/surge-manager.ts",
+      "source_location": "L22",
+      "_origin": "ast",
+      "id": "src_lib_surge_manager_weathercachemap",
+      "community": 35,
+      "community_name": "api/orders/route.ts",
+      "norm_label": "weathercachemap"
     },
     {
       "label": "[orderId]/page.tsx",
@@ -62501,28 +62666,6 @@
       "norm_label": "consumerstatefulwidget"
     },
     {
-      "label": "DeliveryLoginScreen",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "deliveryloginscreen",
-      "community": 357,
-      "community_name": "ConsumerState",
-      "norm_label": "deliveryloginscreen"
-    },
-    {
-      "label": "_DeliveryLoginScreenState",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/auth/delivery_login.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_auth_delivery_login_deliveryloginscreenstate",
-      "community": 357,
-      "community_name": "ConsumerState",
-      "norm_label": "_deliveryloginscreenstate"
-    },
-    {
       "label": "LoginScreen",
       "file_type": "code",
       "source_file": "fastkirana_flutter/lib/features/auth/login_screen.dart",
@@ -62730,17 +62873,6 @@
       "community": 357,
       "community_name": "ConsumerState",
       "norm_label": "_deliverydashboardstate"
-    },
-    {
-      "label": "_DeliveryLoginScreenState",
-      "file_type": "code",
-      "source_file": "fastkirana_flutter/lib/features/delivery/delivery_login.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "fastkirana_flutter_lib_features_delivery_delivery_login_deliveryloginscreenstate",
-      "community": 357,
-      "community_name": "ConsumerState",
-      "norm_label": "_deliveryloginscreenstate"
     },
     {
       "label": "AddPickerProductModal",
@@ -65174,6 +65306,17 @@
       "norm_label": "dependencies"
     },
     {
+      "label": "@auth/prisma-adapter",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "package_dependencies_auth_prisma_adapter",
+      "community": 39,
+      "community_name": "dependencies",
+      "norm_label": "@auth/prisma-adapter"
+    },
+    {
       "label": "@base-ui/react",
       "file_type": "code",
       "source_file": "package.json",
@@ -65194,17 +65337,6 @@
       "community": 39,
       "community_name": "dependencies",
       "norm_label": "bcryptjs"
-    },
-    {
-      "label": "class-variance-authority",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L35",
-      "_origin": "ast",
-      "id": "package_dependencies_class_variance_authority",
-      "community": 39,
-      "community_name": "dependencies",
-      "norm_label": "class-variance-authority"
     },
     {
       "label": "clsx",
@@ -65317,6 +65449,17 @@
       "norm_label": "zod"
     },
     {
+      "label": "@auth/prisma-adapter",
+      "file_type": "concept",
+      "source_file": "package.json",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "auth_prisma_adapter",
+      "community": 39,
+      "community_name": "dependencies",
+      "norm_label": "@auth/prisma-adapter"
+    },
+    {
       "label": "@base-ui/react",
       "file_type": "concept",
       "source_file": "package.json",
@@ -65337,17 +65480,6 @@
       "community": 39,
       "community_name": "dependencies",
       "norm_label": "bcryptjs"
-    },
-    {
-      "label": "class-variance-authority",
-      "file_type": "concept",
-      "source_file": "package.json",
-      "source_location": "L35",
-      "_origin": "ast",
-      "id": "class_variance_authority",
-      "community": 39,
-      "community_name": "dependencies",
-      "norm_label": "class-variance-authority"
     },
     {
       "label": "clsx",
@@ -70421,17 +70553,6 @@
       "norm_label": "account-dashboard.tsx"
     },
     {
-      "label": "restaurant-manager.tsx",
-      "file_type": "code",
-      "source_file": "src/components/admin/restaurant-manager.tsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_components_admin_restaurant_manager",
-      "community": 5,
-      "community_name": "cn",
-      "norm_label": "restaurant-manager.tsx"
-    },
-    {
       "label": "logo.tsx",
       "file_type": "code",
       "source_file": "src/components/layout/logo.tsx",
@@ -70441,28 +70562,6 @@
       "community": 5,
       "community_name": "cn",
       "norm_label": "logo.tsx"
-    },
-    {
-      "label": "badge.tsx",
-      "file_type": "code",
-      "source_file": "src/components/ui/badge.tsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_components_ui_badge",
-      "community": 5,
-      "community_name": "cn",
-      "norm_label": "badge.tsx"
-    },
-    {
-      "label": "badgeVariants",
-      "file_type": "code",
-      "source_file": "src/components/ui/badge.tsx",
-      "source_location": "L7",
-      "_origin": "ast",
-      "id": "src_components_ui_badge_badgevariants",
-      "community": 5,
-      "community_name": "cn",
-      "norm_label": "badgevariants"
     },
     {
       "label": "dialog.tsx",
@@ -80761,147 +80860,26 @@
       "norm_label": "../../widgets/voice_search_sheet.dart"
     },
     {
-      "label": "admin/settings/route.ts",
+      "label": "admin-inventory-center.tsx",
       "file_type": "code",
-      "source_file": "src/app/api/admin/settings/route.ts",
+      "source_file": "src/components/admin/admin-inventory-center.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "src_app_api_admin_settings_route",
+      "id": "src_components_admin_admin_inventory_center",
       "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "admin/settings/route.ts"
+      "community_name": "admin-inventory-center.tsx",
+      "norm_label": "admin-inventory-center.tsx"
     },
     {
-      "label": "restaurants/[id]/route.ts",
+      "label": "inward-tab.tsx",
       "file_type": "code",
-      "source_file": "src/app/api/restaurants/[id]/route.ts",
+      "source_file": "src/components/admin/inward-tab.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "src_app_api_restaurants_id_route",
+      "id": "src_components_admin_inward_tab",
       "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "restaurants/[id]/route.ts"
-    },
-    {
-      "label": "api/settings/route.ts",
-      "file_type": "code",
-      "source_file": "src/app/api/settings/route.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_app_api_settings_route",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "api/settings/route.ts"
-    },
-    {
-      "label": "DEFAULT_SETTINGS",
-      "file_type": "code",
-      "source_file": "src/app/api/settings/route.ts",
-      "source_location": "L9",
-      "_origin": "ast",
-      "id": "src_app_api_settings_route_default_settings",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "default_settings"
-    },
-    {
-      "label": "revalidate",
-      "file_type": "code",
-      "source_file": "src/app/api/settings/route.ts",
-      "source_location": "L7",
-      "_origin": "ast",
-      "id": "src_app_api_settings_route_revalidate",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "revalidate"
-    },
-    {
-      "label": "hubs/route.ts",
-      "file_type": "code",
-      "source_file": "src/app/api/stores/hubs/route.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_app_api_stores_hubs_route",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "hubs/route.ts"
-    },
-    {
-      "label": "dynamic",
-      "file_type": "code",
-      "source_file": "src/app/api/stores/hubs/route.ts",
-      "source_location": "L5",
-      "_origin": "ast",
-      "id": "src_app_api_stores_hubs_route_dynamic",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "dynamic"
-    },
-    {
-      "label": "redis-client.ts",
-      "file_type": "code",
-      "source_file": "src/lib/redis-client.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_lib_redis_client",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "redis-client.ts"
-    },
-    {
-      "label": "CACHE_KEYS",
-      "file_type": "code",
-      "source_file": "src/lib/redis-client.ts",
-      "source_location": "L19",
-      "_origin": "ast",
-      "id": "src_lib_redis_client_cache_keys",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "cache_keys"
-    },
-    {
-      "label": "DEFAULT_TTL",
-      "file_type": "code",
-      "source_file": "src/lib/redis-client.ts",
-      "source_location": "L26",
-      "_origin": "ast",
-      "id": "src_lib_redis_client_default_ttl",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "default_ttl"
-    },
-    {
-      "label": "settings-cache.ts",
-      "file_type": "code",
-      "source_file": "src/lib/settings-cache.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_lib_settings_cache",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "settings-cache.ts"
-    },
-    {
-      "label": "surge-manager.ts",
-      "file_type": "code",
-      "source_file": "src/lib/surge-manager.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_lib_surge_manager",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "surge-manager.ts"
-    },
-    {
-      "label": "weatherCacheMap",
-      "file_type": "code",
-      "source_file": "src/lib/surge-manager.ts",
-      "source_location": "L22",
-      "_origin": "ast",
-      "id": "src_lib_surge_manager_weathercachemap",
-      "community": 8,
-      "community_name": "restaurants/[id]/route.ts",
-      "norm_label": "weathercachemap"
+      "community_name": "admin-inventory-center.tsx",
+      "norm_label": "inward-tab.tsx"
     },
     {
       "label": "CFPaymentGatewayService",
@@ -86063,6 +86041,17 @@
       "norm_label": "areaname"
     },
     {
+      "label": "build",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/location/doorstep_details_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_location_doorstep_details_screen_build",
+      "community": 94,
+      "community_name": "doorstep_details_screen.dart",
+      "norm_label": "build"
+    },
+    {
       "label": "_buildCategoryPill",
       "file_type": "code",
       "source_file": "fastkirana_flutter/lib/features/location/doorstep_details_screen.dart",
@@ -86160,6 +86149,17 @@
       "community": 94,
       "community_name": "doorstep_details_screen.dart",
       "norm_label": "_housenocontroller"
+    },
+    {
+      "label": "initState",
+      "file_type": "code",
+      "source_file": "fastkirana_flutter/lib/features/location/doorstep_details_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "fastkirana_flutter_lib_features_location_doorstep_details_screen_initstate",
+      "community": 94,
+      "community_name": "doorstep_details_screen.dart",
+      "norm_label": "initstate"
     },
     {
       "label": "_isSaving",
@@ -93983,7 +93983,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/app/page.tsx",
-      "source_location": "L512",
+      "source_location": "L513",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_page_home",
@@ -178637,7 +178637,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/types/index.ts",
-      "source_location": "L102",
+      "source_location": "L103",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_types_index",
@@ -178648,7 +178648,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/types/index.ts",
-      "source_location": "L125",
+      "source_location": "L126",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_types_index",
@@ -178659,7 +178659,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/types/index.ts",
-      "source_location": "L136",
+      "source_location": "L137",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_types_index",
@@ -178670,7 +178670,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/types/index.ts",
-      "source_location": "L146",
+      "source_location": "L147",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_types_index",
@@ -178703,7 +178703,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/types/index.ts",
-      "source_location": "L72",
+      "source_location": "L73",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_types_index",
@@ -178714,7 +178714,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/types/index.ts",
-      "source_location": "L79",
+      "source_location": "L80",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_types_index",
@@ -178725,7 +178725,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/types/index.ts",
-      "source_location": "L87",
+      "source_location": "L88",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_types_index",
@@ -241351,5 +241351,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "5fe20f46885c5d79a8f09e6fd3b88dad1f29c6e3"
+  "built_at_commit": "3b127598b3af70ee375631a7eb5087251aef7a42"
 }

@@ -113,7 +113,14 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json(mapped)
+    const isPublic = !isAdmin && !all
+    return NextResponse.json(mapped, {
+      headers: {
+        'Cache-Control': isPublic
+          ? 'public, s-maxage=60, stale-while-revalidate=120'
+          : 'no-store, max-age=0, must-revalidate',
+      }
+    })
   } catch (error: any) {
     console.error('Restaurants API GET Error:', error)
     return NextResponse.json({ error: 'Failed to fetch restaurants' }, { status: 500 })
