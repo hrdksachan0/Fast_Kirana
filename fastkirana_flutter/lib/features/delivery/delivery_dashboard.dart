@@ -3942,9 +3942,9 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<_DoorstepCashfreeQrShe
     } catch (e) {
       if (mounted) {
         final settings = ref.read(storeSettingsProvider).valueOrNull;
-        final vpa = settings?.adminWhatsappPhone.isNotEmpty == true ? '${settings!.adminWhatsappPhone}@ibl' : '7054470303@paytm';
-        final payee = Uri.encodeComponent('FastKirana Store');
-        final note = Uri.encodeComponent('Payment for Order #${widget.orderNum}');
+        final vpa = settings?.storeUpiVpa.isNotEmpty == true ? settings!.storeUpiVpa : '7054470303-2@ibl';
+        final payee = Uri.encodeComponent('FastKirana');
+        final note = Uri.encodeComponent('Order #${widget.orderNum}');
         final upiUri = 'upi://pay?pa=$vpa&pn=$payee&am=${widget.total.toStringAsFixed(2)}&cu=INR&tn=$note';
         final fallbackQr = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${Uri.encodeComponent(upiUri)}';
 
@@ -4069,73 +4069,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<_DoorstepCashfreeQrShe
           ),
           const SizedBox(height: 12),
 
-          // Unpaid: Mode switch tabs (Cashfree Gateway vs Direct VPA)
-          if (!_isPaid && _cashfreeQrUrl.isNotEmpty && _directUpiQrUrl.isNotEmpty) ...[
-            Container(
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                color: AppDesignSystem.slate100,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => setState(() => _qrMode = 'cashfree'),
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          color: _qrMode == 'cashfree' ? Colors.white : Colors.transparent,
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: _qrMode == 'cashfree'
-                              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4)]
-                              : null,
-                        ),
-                        child: Center(
-                          child: Text(
-                            '⚡ Cashfree Dynamic',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 11),
-                              fontWeight: FontWeight.w800,
-                              color: _qrMode == 'cashfree' ? AppDesignSystem.blue700 : AppDesignSystem.slate500,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => setState(() => _qrMode = 'direct_upi'),
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          color: _qrMode == 'direct_upi' ? Colors.white : Colors.transparent,
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: _qrMode == 'direct_upi'
-                              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4)]
-                              : null,
-                        ),
-                        child: Center(
-                          child: Text(
-                            '📱 Direct UPI VPA',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 11),
-                              fontWeight: FontWeight.w800,
-                              color: _qrMode == 'direct_upi' ? AppDesignSystem.blue700 : AppDesignSystem.slate500,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
+
 
           // Display: PAID Screen OR QR Code
           if (_isPaid) ...[

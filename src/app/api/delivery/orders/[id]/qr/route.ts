@@ -89,8 +89,8 @@ export async function GET(
       }
     }
 
-    // 2. Fetch Store UPI VPA fallback
-    let upiVpa = '7054470303@paytm'
+    // 2. Fetch Store UPI VPA fallback (FastKirana Business VPA)
+    let upiVpa = '7054470303-2@ibl'
     try {
       const setting = await prisma.storeSetting.findUnique({
         where: { key: 'store_upi_vpa' }
@@ -103,19 +103,19 @@ export async function GET(
     }
 
     const amountStr = Number(order.total).toFixed(2)
-    const payeeName = encodeURIComponent('FastKirana Store')
-    const note = encodeURIComponent(`Payment for Order #${displayId}`)
+    const payeeName = encodeURIComponent('FastKirana')
+    const note = encodeURIComponent(`Order ${displayId}`)
     const tr = `FK${displayId}`
 
-    // Standard Universal Indian UPI Intent URI (Fallback)
+    // Standard Universal Indian UPI Intent URI (Business VPA)
     const directUpiUri = `upi://pay?pa=${upiVpa}&pn=${payeeName}&am=${amountStr}&cu=INR&tn=${note}&tr=${tr}`
-    const directUpiQrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(directUpiUri)}`
+    const directUpiQrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=8&data=${encodeURIComponent(directUpiUri)}`
 
     let cashfreeQrUrl = ''
-    let cashfreeUpiUri = ''
     let paymentLinkUrl = ''
+    let paymentSessionId = ''
 
-    // 3. Generate Cashfree Dynamic UPI QR Code if order is unpaid
+    // 3. Generate Cashfree Official Gateway Checkout QR Code if order is unpaid
     if (order.paymentStatus !== 'PAID' && isCashfreeConfigured()) {
       try {
         let cfOrder: any = null
@@ -128,51 +128,27 @@ export async function GET(
             orderId: sanitizedOrderId,
             amount: Number(order.total),
             customerId: order.userId || `guest_${order.id.slice(0, 10)}`,
-            customerName: order.user?.name || 'Customer',
+            customerName: order.user?.name || 'FastKirana Customer',
             customerPhone: cleanPhone.length === 10 ? cleanPhone : '9999999999',
             customerEmail: order.user?.email || 'customer@fastkirana.in',
             note: `Doorstep Payment Order #${displayId}`,
           })
         }
 
-        // Generate Dynamic UPI QR session from Cashfree Order
         if (cfOrder?.payment_session_id) {
-          try {
-            const qrSession = await createCashfreeUpiQrSession(cfOrder.payment_session_id)
-            if (qrSession.qrImageUrl) {
-              cashfreeQrUrl = qrSession.qrImageUrl
-            }
-            if (qrSession.upiUri) {
-              cashfreeUpiUri = qrSession.upiUri
-              if (!cashfreeQrUrl) {
-                cashfreeQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(cashfreeUpiUri)}`
-              }
-            }
-          } catch (qrSessionErr) {
-            console.warn('Cashfree UPI QR session notice (trying payment link fallback):', qrSessionErr)
-          }
-        }
-
-        // Fallback to Cashfree Payment Link if session QR is unavailable
-        if (!cashfreeQrUrl) {
-          const cleanPhone = (order.address?.phone || order.user?.phone || '9999999999').replace(/\D/g, '').slice(-10)
-          const linkResult = await createCashfreePaymentLink({
-            linkId: `FK_L_${displayId}_${Date.now().toString().slice(-6)}`,
-            amount: Number(order.total),
-            customerPhone: cleanPhone.length === 10 ? cleanPhone : '9999999999',
-            customerName: order.user?.name || 'Customer',
-            customerEmail: order.user?.email || 'customer@fastkirana.in',
-            purpose: `Order #${displayId} Payment`,
-          })
-          paymentLinkUrl = linkResult.linkUrl
-          cashfreeQrUrl = linkResult.linkQrUrl
+          paymentSessionId = cfOrder.payment_session_id
+          // Official Cashfree Checkout URL for FastKirana
+          paymentLinkUrl = `https://payments.cashfree.com/order/#${cfOrder.payment_session_id}`
+          // High-res QR code that opens FastKirana's Cashfree page directly
+          cashfreeQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=8&data=${encodeURIComponent(paymentLinkUrl)}`
         }
       } catch (cfErr) {
-        console.warn('Cashfree dynamic QR generation warning:', cfErr)
+        console.error('Cashfree order generation error:', cfErr)
       }
     }
 
     const activeQrImageUrl = cashfreeQrUrl || directUpiQrImageUrl
+    const cleanCustomerPhone = (order.address?.phone || order.user?.phone || '').replace(/\D/g, '').slice(-10)
 
     return NextResponse.json({
       orderId: order.id,
@@ -183,8 +159,9 @@ export async function GET(
       upiUri: directUpiUri,
       directUpiQrUrl: directUpiQrImageUrl,
       cashfreeQrUrl,
-      cashfreeUpiUri,
+      paymentSessionId,
       paymentLinkUrl,
+      customerPhone: cleanCustomerPhone,
       qrImageUrl: activeQrImageUrl,
       paymentStatus: order.paymentStatus,
       paymentMethod: order.paymentMethod
