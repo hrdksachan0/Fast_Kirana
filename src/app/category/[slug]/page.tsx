@@ -154,6 +154,8 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
   if (activeCategory && activeCategory.id && !activeCategory.id.startsWith('virtual-')) {
     conditions.push({ categoryId: activeCategory.id })
+    // Also include products belonging to any child subcategory of this parent
+    conditions.push({ category: { parentId: activeCategory.id } })
   }
 
   const productsRaw = await prisma.product.findMany({

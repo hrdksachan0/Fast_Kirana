@@ -14,9 +14,10 @@ export async function GET(request: Request) {
       return NextResponse.json(cached)
     }
 
-    // 1. Fetch All Grocery Categories (excluding restaurant food category)
+    // 1. Fetch All Grocery Categories (excluding restaurant food category, root categories only)
     const categories = await prisma.category.findMany({
       where: {
+        parentId: null,
         slug: { notIn: ['restaurant-food', 'restaurant', 'cafe'] }
       },
       select: {
@@ -26,6 +27,26 @@ export async function GET(request: Request) {
         imageUrl: true,
         parentId: true,
         sortOrder: true,
+        children: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            imageUrl: true,
+            sortOrder: true,
+            _count: {
+              select: {
+                products: {
+                  where: {
+                    restaurantId: null,
+                    isAvailable: true
+                  }
+                }
+              }
+            }
+          },
+          orderBy: { sortOrder: 'asc' }
+        },
         _count: {
           select: {
             products: {
@@ -81,6 +102,14 @@ export async function GET(request: Request) {
       parentId: cat.parentId,
       sortOrder: cat.sortOrder,
       productCount: (cat as any)._count?.products || 0,
+      subcategories: (cat as any).children?.map((sub: any) => ({
+        id: sub.id,
+        name: sub.name,
+        slug: sub.slug,
+        imageUrl: sub.imageUrl,
+        sortOrder: sub.sortOrder,
+        productCount: sub._count?.products || 0
+      })) || [],
       products: (cat as any).products || []
     }))
 

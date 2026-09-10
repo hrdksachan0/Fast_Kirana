@@ -1,65 +1,120 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
 import { requireAdmin } from '@/lib/auth-guard'
 
 // GET - Fetch all active inventory alerts (computed from current product state)
-export async function GET() {
+export async function GET(request: NextRequest) {
   const adminResult = await requireAdmin()
   if (adminResult.error) return adminResult.error
   const session = adminResult.session
 
   try {
+    const { searchParams } = new URL(request.url)
+    const storeId = searchParams.get('storeId') || (session?.user as any)?.assignedStoreId || null
+
     const now = new Date()
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+
+    const storeWhereOrders = storeId && storeId !== 'all'
+      ? Prisma.sql`AND "storeId" = ${storeId}`
+      : Prisma.empty
+
+    const productStoreWhere = storeId && storeId !== 'all'
+      ? { inventories: { some: { storeId } } }
+      : {}
 
     // Run queries in parallel
     const [outOfStockProducts, lowStockProducts, expiringSoonProducts, expiredProducts, confirmedOrdersRaw] =
       await Promise.all([
         // 1. OUT_OF_STOCK: stock === 0 AND isAvailable === true
-        prisma.product.findMany({
-          where: {
-            stock: 0,
-            isAvailable: true,
-            restaurantId: null,
-          },
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            imageUrl: true,
-            stock: true,
-            minStock: true,
-            expiryDate: true,
-            categoryId: true,
-          },
-        }),
+        storeId && storeId !== 'all'
+          ? prisma.$queryRaw<
+              Array<{
+                id: string
+                name: string
+                slug: string
+                imageUrl: string | null
+                stock: number
+                minStock: number
+                expiryDate: Date | null
+                categoryId: string
+              }>
+            >`
+              SELECT p.id, p.name, p.slug, p."imageUrl", si.stock, p."minStock", p."expiryDate", p."categoryId"
+              FROM products p
+              JOIN store_inventories si ON si."productId" = p.id
+              WHERE si."storeId" = ${storeId}
+                AND si.stock = 0
+                AND p."isAvailable" = true
+                AND p."restaurantId" IS NULL
+            `
+          : prisma.product.findMany({
+              where: {
+                stock: 0,
+                isAvailable: true,
+                restaurantId: null,
+              },
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                imageUrl: true,
+                stock: true,
+                minStock: true,
+                expiryDate: true,
+                categoryId: true,
+              },
+            }),
 
         // 2. LOW_STOCK: stock > 0 AND stock <= minStock AND isAvailable === true
-        // Using raw SQL because Prisma doesn't support field-to-field comparisons natively
-        prisma.$queryRaw<
-          Array<{
-            id: string
-            name: string
-            slug: string
-            imageUrl: string | null
-            stock: number
-            minStock: number
-            expiryDate: Date | null
-            categoryId: string
-          }>
-        >`
-          SELECT id, name, slug, "imageUrl", stock, "minStock", "expiryDate", "categoryId"
-          FROM products
-          WHERE stock > 0
-            AND stock <= "minStock"
-            AND "isAvailable" = true
-            AND "categoryId" NOT IN (SELECT id FROM categories WHERE slug = 'cafe')
-        `,
+        storeId && storeId !== 'all'
+          ? prisma.$queryRaw<
+              Array<{
+                id: string
+                name: string
+                slug: string
+                imageUrl: string | null
+                stock: number
+                minStock: number
+                expiryDate: Date | null
+                categoryId: string
+              }>
+            >`
+              SELECT p.id, p.name, p.slug, p."imageUrl", si.stock, p."minStock", p."expiryDate", p."categoryId"
+              FROM products p
+              JOIN store_inventories si ON si."productId" = p.id
+              WHERE si."storeId" = ${storeId}
+                AND si.stock > 0
+                AND si.stock <= p."minStock"
+                AND p."isAvailable" = true
+                AND p."categoryId" NOT IN (SELECT id FROM categories WHERE slug = 'cafe')
+            `
+          : prisma.$queryRaw<
+              Array<{
+                id: string
+                name: string
+                slug: string
+                imageUrl: string | null
+                stock: number
+                minStock: number
+                expiryDate: Date | null
+                categoryId: string
+              }>
+            >`
+              SELECT id, name, slug, "imageUrl", stock, "minStock", "expiryDate", "categoryId"
+              FROM products
+              WHERE stock > 0
+                AND stock <= "minStock"
+                AND "isAvailable" = true
+                AND "categoryId" NOT IN (SELECT id FROM categories WHERE slug = 'cafe')
+            `,
 
         // 3. EXPIRING_SOON: expiryDate is not null AND expiryDate <= 7 days from now AND expiryDate > now
         prisma.product.findMany({
           where: {
+            ...productStoreWhere,
             expiryDate: {
               not: null,
               gt: now,
@@ -81,6 +136,7 @@ export async function GET() {
         // 4. EXPIRED: expiryDate is not null AND expiryDate <= now
         prisma.product.findMany({
           where: {
+            ...productStoreWhere,
             expiryDate: {
               not: null,
               lte: now,
@@ -100,9 +156,10 @@ export async function GET() {
 
         // 5. CONFIRMED ORDERS: Accepted but not packed orders
         prisma.$queryRaw`
-          SELECT id, "readableId", "updatedAt", "shopName"
+          SELECT id, "readableId", "updatedAt", "shopName", "restaurantId", "orderType"
           FROM orders
           WHERE status = 'CONFIRMED'::"OrderStatus"
+            ${storeWhereOrders}
         ` as Promise<any[]>,
       ])
 

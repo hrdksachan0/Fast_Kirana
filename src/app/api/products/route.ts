@@ -125,13 +125,21 @@ export async function GET(request: NextRequest) {
 
     if (categoryId) {
       const ids = categoryId.split(',').map(s => s.trim()).filter(Boolean)
-      where.categoryId = { in: ids }
+      const catOrClause = [
+        { categoryId: { in: ids } },
+        { category: { parentId: { in: ids } } },
+      ]
+      where.AND = where.AND ? (Array.isArray(where.AND) ? [...where.AND, { OR: catOrClause }] : [where.AND, { OR: catOrClause }]) : [{ OR: catOrClause }]
       if (!restaurantId && !restaurantSlug) {
         where.restaurantId = null
       }
     } else if (category) {
       const slugs = category.split(',').map(s => s.trim()).filter(Boolean)
-      where.category = { slug: { in: slugs } }
+      const catOrClause = [
+        { category: { slug: { in: slugs } } },
+        { category: { parent: { slug: { in: slugs } } } },
+      ]
+      where.AND = where.AND ? (Array.isArray(where.AND) ? [...where.AND, { OR: catOrClause }] : [where.AND, { OR: catOrClause }]) : [{ OR: catOrClause }]
       // In grocery context (browsing by category without restaurant), enforce grocery only
       if (!restaurantId && !restaurantSlug) {
         where.restaurantId = null

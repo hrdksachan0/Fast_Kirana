@@ -289,15 +289,16 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
     },
   }
 
-  // Filter categories matching search input
+  // Filter categories matching search input (strictly root categories only)
   const filteredCategories = useMemo(() => {
-    if (!searchQuery) return categories
+    const rootCats = categories.filter((c) => !c.parentId)
+    if (!searchQuery) return rootCats
 
     const lowerQuery = searchQuery.toLowerCase()
-    return categories.filter((c) => {
+    return rootCats.filter((c) => {
       const config = categoryConfigs[c.slug]
       const nameMatch = c.name.toLowerCase().includes(lowerQuery)
-      const subcatsMatch = config?.subcats.some((sub) =>
+      const subcatsMatch = (c.children || config?.subcats || []).some((sub) =>
         sub.name.toLowerCase().includes(lowerQuery)
       )
       return nameMatch || subcatsMatch
@@ -452,6 +453,28 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
                     <span className="text-[10px] sm:text-[11.5px] text-zinc-400 dark:text-zinc-500 font-semibold truncate leading-none mt-1">
                       {config.tagline}
                     </span>
+
+                    {/* Subcategories list inside parent card */}
+                    {c.children && c.children.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {c.children.slice(0, 3).map((sub) => (
+                          <Link
+                            key={sub.id}
+                            href={`/category/${c.slug}?subcat=${sub.id}` as any}
+                            className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-primary/10 hover:text-primary transition-colors border border-zinc-200/60 dark:border-zinc-700/40"
+                            title={`ID: ${sub.id}`}
+                          >
+                            <span>🏷️</span>
+                            <span className="truncate max-w-[90px]">{sub.name}</span>
+                          </Link>
+                        ))}
+                        {c.children.length > 3 && (
+                          <span className="text-[8.5px] font-extrabold text-zinc-400 self-center">
+                            +{c.children.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Custom Shop Now Button */}

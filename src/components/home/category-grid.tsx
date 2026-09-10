@@ -44,7 +44,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
   const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
 
   const allDisplayCategories = useMemo(() => {
-    return categories || []
+    return (categories || []).filter((c) => !c.parentId)
   }, [categories])
 
   // Map of category slugs to visual themes with glowing rings
@@ -119,7 +119,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
     'personal-care': { bg: 'bg-[#fce4ec] dark:bg-pink-950/20', text: 'text-[#c2185b]', label: 'Personal Care', emoji: '🧴' },
     'household': { bg: 'bg-[#e0f7fa] dark:bg-teal-950/20', text: 'text-[#00838f]', label: 'Home Care', emoji: '🧼' },
     'bakery-biscuits': { bg: 'bg-[#efebe9] dark:bg-amber-950/10', text: 'text-[#4e342e]', label: 'Bakery', emoji: '🥐' },
-    'atta-rice-dal': { bg: 'bg-[#fffde7] dark:bg-yellow-950/20', text: 'text-[#fbc02d]', label: 'Staples', emoji: '🌾' },
+    'atta-rice-dal': { bg: 'bg-[#fffde7] dark:bg-yellow-950/20', text: 'text-[#fbc02d]', label: 'Atta, Rice & Dal', emoji: '🌾' },
     'ice-cream': { bg: 'bg-[#e0f2f1] dark:bg-teal-950/20', text: 'text-[#00796b]', label: 'Ice Cream', emoji: '🍦' },
     'cafe': { bg: 'bg-[#fff8e1] dark:bg-amber-950/20', text: 'text-[#f57f17]', label: 'Cafe', emoji: '☕' },
   }
@@ -179,7 +179,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
               emoji: (category as any).emoji || '🍽️'
             }
 
-            const rawLabel = (config.label || category.name || '').replace(/^FastKirana\s+/i, '').trim()
+            const rawLabel = (category.name || config.label || '').replace(/^FastKirana\s+/i, '').trim()
             let formattedLabel = rawLabel
             if (category.slug === 'household' || category.slug?.includes('household') || category.name?.toLowerCase().includes('household')) {
               formattedLabel = 'Home Care'

@@ -29,7 +29,12 @@ export async function GET(request: Request) {
     const andClauses: any[] = []
 
     if (categoryId && categoryId !== 'ALL' && categoryId !== 'undefined' && categoryId !== 'null') {
-      andClauses.push({ categoryId })
+      andClauses.push({
+        OR: [
+          { categoryId },
+          { category: { parentId: categoryId } },
+        ]
+      })
     }
 
     if (lowStock) {

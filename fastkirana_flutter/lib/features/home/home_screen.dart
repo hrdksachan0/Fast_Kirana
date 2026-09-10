@@ -2285,6 +2285,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final categories = categoriesAsync.valueOrNull!;
 
     final groceryCategories = categories.where((c) {
+      // Subcategories must not create separate home shelves!
+      if (c.parentId != null && c.parentId!.isNotEmpty) {
+        return false;
+      }
       final slug = c.slug.toLowerCase().trim();
       final name = c.name.toLowerCase().trim();
       if (slug == 'restaurant-food' ||
@@ -2357,6 +2361,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final pCatSlug = (p.category?.slug ?? '').toLowerCase().trim();
     final pCatId = (p.category?.id ?? p.categoryId ?? '').toLowerCase().trim();
     final pCatName = (p.category?.name ?? '').toLowerCase().trim();
+
+    // 0. Subcategory match (product belongs to a child subcategory of cat)
+    if (p.category?.parentId != null && p.category!.parentId!.toLowerCase().trim() == catId) return true;
 
     // 1. Direct ID / Slug / Name match
     if (pCatId.isNotEmpty && pCatId == catId) return true;
@@ -2647,6 +2654,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ],
       error: (_, __) => [const SliverToBoxAdapter(child: SizedBox.shrink())],
       data: (allProducts) {
+        // When default "All" is active, avoid dumping an unorganized mixed grid of all 200 items.
+        // Instead, show Zepto/Blinkit-style "Explore by Category" Bento Grid + End-of-Aisle Search Prompt!
+        if (_selectedFilterIndex == 0) {
+          return _buildCategoryBentoFeed();
+        }
+
         final filteredProducts = _getFilteredGridProducts(allProducts);
         if (filteredProducts.isEmpty) {
           return [
@@ -2939,6 +2952,304 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 8b. Zepto/Blinkit-Style Category Bento Feed (Clean Department Grid replacing mixed product soup)
+  List<Widget> _buildCategoryBentoFeed() {
+    final categoriesAsync = ref.watch(categoriesProvider);
+
+    return categoriesAsync.when(
+      loading: () => [
+        const SliverToBoxAdapter(child: SizedBox(height: 20)),
+      ],
+      error: (_, __) => [
+        const SliverToBoxAdapter(child: SizedBox.shrink()),
+      ],
+      data: (categories) {
+        final groceryCategories = categories.where((cat) {
+          final slug = cat.slug.toLowerCase().trim();
+          final name = cat.name.toLowerCase().trim();
+          if (cat.parentId != null && cat.parentId!.isNotEmpty) return false;
+          if (slug == 'all' || slug.contains('restaurant') || slug.contains('cafe')) return false;
+          if (name.contains('restaurant') || name.contains('cafe')) return false;
+          return true;
+        }).toList();
+
+        if (groceryCategories.isEmpty) return [const SliverToBoxAdapter(child: SizedBox.shrink())];
+
+        return [
+          // Section Title Header
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 28, 16, 14),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: AppDesignSystem.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.grid_view_rounded, size: 18, color: AppDesignSystem.primary),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Explore All Categories',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 16.5),
+                            fontWeight: FontWeight.w900,
+                            color: AppDesignSystem.textPrimary,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Browse complete aisles & subcategories in Ghatampur',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 11),
+                            fontWeight: FontWeight.w500,
+                            color: AppDesignSystem.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // 2-Column Bento Grid of Categories
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            sliver: SliverGrid(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: Responsive.isTablet(context) ? 3 : 2,
+                childAspectRatio: Responsive.isSmallMobile(context) ? 2.1 : 2.35,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final cat = groceryCategories[index];
+                  final count = cat.productCount ?? 15;
+                  return GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.push(
+                        context,
+                        FadeSlideRoute(page: CategoryProductsScreen(category: cat)),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppDesignSystem.borderLight, width: 1.2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.025),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppDesignSystem.gray50,
+                              border: Border.all(color: AppDesignSystem.border, width: 1.0),
+                            ),
+                            child: ClipOval(
+                              child: _buildCategoryAvatarImage(cat),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  cat.name,
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 11.5),
+                                    fontWeight: FontWeight.w800,
+                                    color: AppDesignSystem.textPrimary,
+                                    height: 1.15,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  '$count+ items',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 9.5),
+                                    fontWeight: FontWeight.w600,
+                                    color: AppDesignSystem.textTertiary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right_rounded, size: 16, color: AppDesignSystem.gray400),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+                childCount: groceryCategories.length,
+              ),
+            ),
+          ),
+
+          // End of Aisle Search & Discovery Prompt Card
+          SliverToBoxAdapter(
+            child: _buildEndOfAisleSearchCard(),
+          ),
+        ];
+      },
+    );
+  }
+
+  Widget _buildEndOfAisleSearchCard() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 22, 16, 10),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            AppDesignSystem.rose50,
+            Colors.white,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppDesignSystem.red200, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: AppDesignSystem.primary.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppDesignSystem.primary.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.search_rounded, size: 22, color: AppDesignSystem.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Looking for something else?',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 14),
+                        fontWeight: FontWeight.w800,
+                        color: AppDesignSystem.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Search 1,000+ items delivered in 10-15 mins',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 11),
+                        fontWeight: FontWeight.w500,
+                        color: AppDesignSystem.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.push(context, FadeSlideRoute(page: const SearchScreen()));
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 11),
+              decoration: BoxDecoration(
+                color: AppDesignSystem.primary,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppDesignSystem.primary.withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.search_rounded, size: 16, color: Colors.white),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Search FastKirana Store',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 12.5),
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              _homeScrollController.animateTo(
+                0,
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.easeOutCubic,
+              );
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.arrow_upward_rounded, size: 13, color: AppDesignSystem.primary),
+                const SizedBox(width: 4),
+                Text(
+                  'Back to top',
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 11),
+                    fontWeight: FontWeight.w700,
+                    color: AppDesignSystem.primary,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

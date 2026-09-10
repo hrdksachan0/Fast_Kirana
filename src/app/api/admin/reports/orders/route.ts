@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { requireAdmin } from '@/lib/auth-guard'
 
 export const dynamic = 'force-dynamic'
@@ -13,6 +14,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const startDateParam = searchParams.get('startDate')
     const endDateParam = searchParams.get('endDate')
+    const storeId = searchParams.get('storeId')
 
     const now = new Date()
     let start: Date
@@ -31,6 +33,10 @@ export async function GET(request: NextRequest) {
       end = new Date(now.getTime())
       end.setHours(23, 59, 59, 999)
     }
+
+    const storeWhere = storeId && storeId !== 'all'
+      ? Prisma.sql`AND o."storeId" = ${storeId}`
+      : Prisma.empty
 
     // Fetch all delivered orders in range with customer name, phone, payment info
     const orders = await prisma.$queryRaw<
@@ -82,6 +88,7 @@ export async function GET(request: NextRequest) {
       WHERE o.status::text = 'DELIVERED'
         AND o."createdAt" >= ${start}
         AND o."createdAt" <= ${end}
+        ${storeWhere}
       ORDER BY o."createdAt" ASC
     `
 

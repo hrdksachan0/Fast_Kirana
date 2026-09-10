@@ -8,13 +8,30 @@ import { revalidateStorefront } from '@/lib/revalidate'
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const includeAll = searchParams.get('admin') === 'true' || searchParams.get('all') === 'true'
+    const rootOnly = searchParams.get('rootOnly') === 'true'
+
+    const where: any = {}
+    if (rootOnly) {
+      where.parentId = null
+    }
 
     const categories = await prisma.category.findMany({
+      where,
       orderBy: {
         sortOrder: 'asc',
       },
       include: {
+        parent: {
+          select: { id: true, name: true, slug: true },
+        },
+        children: {
+          orderBy: { sortOrder: 'asc' },
+          include: {
+            _count: {
+              select: { products: true },
+            },
+          },
+        },
         _count: {
           select: { products: true },
         },

@@ -114,12 +114,12 @@ function getSubcategories(
       list.push({
         id: child.id,
         name: child.name,
-        emoji: child.imageUrl && !child.imageUrl.startsWith('http') ? child.imageUrl : '🛒',
+        emoji: child.imageUrl && !child.imageUrl.startsWith('http') && child.imageUrl.length < 5 ? child.imageUrl : '🏷️',
         filterFn: (p) =>
-          p.categoryId === child.id ||
-          (p.category && (p.category.id === child.id || p.category.slug === child.slug)) ||
-          (p.tags && p.tags.some((t) => t.toLowerCase() === child.name.toLowerCase() || t.toLowerCase() === child.slug.toLowerCase())) ||
-          p.name.toLowerCase().includes(child.name.toLowerCase())
+          Boolean(
+            p.categoryId === child.id ||
+            (p.category && (p.category.id === child.id || p.category.slug === child.slug))
+          )
       })
     })
     return list
@@ -414,19 +414,7 @@ function getSubcategories(
         })
       })
   } else {
-    const uniqueTags = Array.from(
-      new Set(products.flatMap((p) => p.tags || []))
-    ).filter((t) => !['popular', 'essential', 'daily'].includes(t.toLowerCase()))
-
-    uniqueTags.forEach((tag) => {
-      const meta = formatMenuTag(tag)
-      list.push({
-        id: tag.toLowerCase(),
-        name: meta.name,
-        emoji: meta.emoji,
-        filterFn: (p) => p.tags?.map((t) => t.toLowerCase()).includes(tag.toLowerCase()) || false
-      })
-    })
+    // Tags are strictly for search and filter indexing — NEVER convert tags into fake subcategories
   }
 
   // 4. Dynamically append DB Child Subcategories if they exist under activeCategory
@@ -774,7 +762,7 @@ export function CategoryPageClient({
           <aside className="w-64 flex-shrink-0 border border-border bg-card p-4 rounded-2xl h-fit sticky top-[96px] shadow-sm">
             <h3 className="font-bold text-text-primary text-base mb-4 px-2">Categories</h3>
             <div className="space-y-1.5">
-              {categories.map((cat) => {
+              {categories.filter((cat) => !cat.parentId).map((cat) => {
                 const isActive = cat.slug === activeCategory.slug
                 return (
                   <Link
@@ -964,7 +952,7 @@ export function CategoryPageClient({
           id="mobile-category-scrollbar"
           className="flex gap-4 overflow-x-auto pb-3 pt-3 scrollbar-none px-4 select-none w-full justify-start scroll-smooth snap-x snap-mandatory border-b border-zinc-100 dark:border-zinc-900 bg-white dark:bg-zinc-950"
         >
-          {categories.map((cat) => {
+          {categories.filter((c) => !c.parentId).map((cat) => {
             const isActive = cat.slug === activeCategory.slug
             return (
               <Link

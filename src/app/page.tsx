@@ -74,17 +74,21 @@ const getCachedCategories = unstable_cache(
   async () => {
     return prisma.category.findMany({
       where: {
+        parentId: null,
         slug: { notIn: ['cafe', 'restaurant', 'fastkirana-cafe', 'fastkirana-restaurant', 'restaurant-food', 'fast-food-kitchen'] },
       },
       orderBy: { sortOrder: 'asc' },
       include: {
+        children: {
+          orderBy: { sortOrder: 'asc' },
+        },
         _count: {
           select: { products: true },
         },
       },
     })
   },
-  ['storefront-categories-v18'],
+  ['storefront-categories-v20'],
   { revalidate: 3600, tags: ['categories'] }
 )
 

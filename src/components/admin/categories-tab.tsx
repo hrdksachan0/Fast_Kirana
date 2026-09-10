@@ -395,6 +395,7 @@ export function CategoriesTab({
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-border text-text-secondary uppercase tracking-wider font-bold">
+                <th className="py-3 px-4">ID</th>
                 <th className="py-3 px-4">Photo / Icon</th>
                 <th className="py-3 px-4">Category Name</th>
                 <th className="py-3 px-4">Hierarchy Type</th>
@@ -405,97 +406,123 @@ export function CategoriesTab({
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40 font-semibold text-text-primary">
-              {categories
-                .filter(c => c.slug !== 'cafe' && c.slug !== 'restaurant')
-                .map((c) => {
-                  const isSub = Boolean(c.parentId)
-                  const parentCat = isSub ? categories.find(p => p.id === c.parentId) : null
+              {(() => {
+                const groceryCats = categories.filter(c => c.slug !== 'cafe' && c.slug !== 'restaurant')
+                const parentCats = groceryCats.filter(c => !c.parentId)
+                const childCats = groceryCats.filter(c => !!c.parentId)
+                const processedChildIds = new Set<string>()
 
-                  return (
-                    <tr key={c.id} className={`hover:bg-muted/30 ${isSub ? 'bg-muted/10' : ''}`}>
-                      <td className="py-3 px-4">
-                        <span className="h-9 w-9 bg-muted/50 border flex items-center justify-center rounded-xl overflow-hidden shadow-2xs">
-                          {c.imageUrl && (c.imageUrl.startsWith('data:image/') || c.imageUrl.startsWith('/') || c.imageUrl.startsWith('http')) ? (
-                            <img src={c.imageUrl} alt={c.name} className="h-full w-full object-cover" />
-                          ) : c.imageUrl && c.imageUrl.length < 5 ? (
-                            <span className="text-lg">{c.imageUrl}</span>
-                          ) : (
-                            <span className="text-base">📦</span>
-                          )}
-                        </span>
-                      </td>
+                const renderRow = (c: CategoryWithCount, isSub: boolean, parentCat?: CategoryWithCount | null) => (
+                  <tr key={c.id} className={`hover:bg-muted/30 transition-colors ${isSub ? 'bg-amber-500/[0.03] dark:bg-amber-500/[0.02]' : 'bg-card'}`}>
+                    <td className="py-3 px-4 font-mono text-[11px] font-bold text-text-muted">
+                      <span className={isSub ? 'text-amber-600 dark:text-amber-400 pl-4 inline-block' : 'text-primary'}>
+                        {isSub && <span className="text-text-muted mr-1 font-sans">↳</span>}
+                        {c.id}
+                      </span>
+                    </td>
 
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-1.5">
-                          {isSub && <span className="text-text-muted font-mono font-bold text-xs">└──</span>}
-                          <span className={`font-black ${isSub ? 'text-xs text-text-primary' : 'text-sm text-text-primary'}`}>
-                            {c.name}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td className="py-3 px-4">
-                        {isSub ? (
-                          <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-500/20">
-                            🏷️ Subcategory {parentCat ? `(${parentCat.name})` : ''}
-                          </span>
+                    <td className="py-3 px-4">
+                      <span className="h-9 w-9 bg-muted/50 border flex items-center justify-center rounded-xl overflow-hidden shadow-2xs">
+                        {c.imageUrl && (c.imageUrl.startsWith('data:image/') || c.imageUrl.startsWith('/') || c.imageUrl.startsWith('http')) ? (
+                          <img src={c.imageUrl} alt={c.name} className="h-full w-full object-cover" />
+                        ) : c.imageUrl && c.imageUrl.length < 5 ? (
+                          <span className="text-lg">{c.imageUrl}</span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-500/20">
-                            📁 Main Category
-                          </span>
+                          <span className="text-base">📦</span>
                         )}
-                      </td>
+                      </span>
+                    </td>
 
-                      <td className="py-3 px-4 font-mono text-[10px] text-text-muted">{c.slug}</td>
-                      <td className="py-3 px-4 text-center font-black">{c.sortOrder}</td>
-
-                      <td className="py-3 px-4 text-center">
-                        <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-[10px] font-black">
-                          {c._count?.products || 0} Products
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-1.5">
+                        {isSub && <span className="text-amber-500/70 font-mono font-bold text-xs pl-2">└──</span>}
+                        <span className={`font-black ${isSub ? 'text-xs text-text-secondary' : 'text-sm text-text-primary'}`}>
+                          {c.name}
                         </span>
-                      </td>
+                      </div>
+                    </td>
 
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {!isSub && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setNewCategory({ name: '', imageUrl: '', sortOrder: '0', parentId: c.id })
-                                setShowAddCategory(true)
-                              }}
-                              className="px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-bold rounded-lg transition-all cursor-pointer"
-                              title="Add subcategory to this parent"
-                            >
-                              + Sub
-                            </button>
+                    <td className="py-3 px-4">
+                      {isSub ? (
+                        <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-500/20">
+                          🏷️ Subcategory of {parentCat?.name || c.parentId}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-500/20">
+                          📁 Main Category
+                        </span>
+                      )}
+                    </td>
+
+                    <td className="py-3 px-4 font-mono text-[10px] text-text-muted">{c.slug}</td>
+                    <td className="py-3 px-4 text-center font-black">{c.sortOrder}</td>
+
+                    <td className="py-3 px-4 text-center">
+                      <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-[10px] font-black">
+                        {c._count?.products || 0} Products
+                      </span>
+                    </td>
+
+                    <td className="py-3 px-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {!isSub && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewCategory({ name: '', imageUrl: '', sortOrder: '0', parentId: c.id })
+                              setShowAddCategory(true)
+                            }}
+                            className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-extrabold rounded-lg transition-all cursor-pointer inline-flex items-center gap-1"
+                            title="Add subcategory directly inside this parent category"
+                          >
+                            <span>+ Sub</span>
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => startEditingCategory(c)}
+                          className="px-2.5 py-1 border border-border hover:bg-muted text-[10px] font-bold rounded-lg text-text-secondary transition-all cursor-pointer"
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCategory(c.id)}
+                          disabled={deletingCategoryId === c.id}
+                          className="p-1.5 border border-border text-discount hover:bg-discount/10 hover:border-discount/20 rounded-lg transition-colors inline-flex items-center justify-center cursor-pointer"
+                        >
+                          {deletingCategoryId === c.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Trash className="h-3.5 w-3.5" />
                           )}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
 
-                          <button
-                            type="button"
-                            onClick={() => startEditingCategory(c)}
-                            className="px-2.5 py-1 border border-border hover:bg-muted text-[10px] font-bold rounded-lg text-text-secondary transition-all cursor-pointer"
-                          >
-                            Edit
-                          </button>
+                const rows: React.ReactNode[] = []
 
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteCategory(c.id)}
-                            disabled={deletingCategoryId === c.id}
-                            className="p-1.5 border border-border text-discount hover:bg-discount/10 hover:border-discount/20 rounded-lg transition-colors inline-flex items-center justify-center cursor-pointer"
-                          >
-                            {deletingCategoryId === c.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash className="h-3.5 w-3.5" />
-                            )}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                parentCats.forEach((parent) => {
+                  rows.push(renderRow(parent, false))
+                  const subs = childCats.filter(sub => sub.parentId === parent.id)
+                  subs.forEach((sub) => {
+                    processedChildIds.add(sub.id)
+                    rows.push(renderRow(sub, true, parent))
+                  })
+                })
+
+                // Orphaned subcategories (if any)
+                const orphans = childCats.filter(c => !processedChildIds.has(c.id))
+                orphans.forEach((orphan) => {
+                  rows.push(renderRow(orphan, true, null))
+                })
+
+                return rows
+              })()}
             </tbody>
           </table>
         </div>

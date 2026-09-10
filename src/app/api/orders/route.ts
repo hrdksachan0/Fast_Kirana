@@ -1304,22 +1304,13 @@ export async function POST(request: NextRequest) {
                   timestamp: Date.now().toString(),
                 }
               )
-              const staffTokens = await prisma.fcmToken.findMany({
-                where: { user: { role: { in: staffRoles as any } } },
-                select: { token: true },
-                orderBy: { createdAt: 'desc' },
-                take: 15,
-              })
-              const uniqueStaffTokens = Array.from(new Set(staffTokens.map(t => t.token)))
-              for (const token of uniqueStaffTokens) {
-                if (!sentFcmTokensThisCheckout.has(token)) {
-                  sentFcmTokensThisCheckout.add(token)
-                  fcmMessaging.send({ token, ...staffPayload }).catch(() => {})
-                }
-              }
-              // Always broadcast to admin & staff topics for 100% delivery even when phone is locked
+              // Send FCM Push Notification to Staff (Admin, Delivery, Picker)
+              // Broadcast to admin_orders (reaches all admins) and staff_orders (reaches delivery & pickers)
+              // This guarantees EXACTLY ONE notification per device instead of 3x duplicates
               sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders', ...staffPayload }).catch(() => {})
-              sendTopicWithRetry(fcmMessaging, { topic: 'staff_orders', ...staffPayload }).catch(() => {})
+              if (!isRestaurant) {
+                sendTopicWithRetry(fcmMessaging, { topic: 'staff_orders', ...staffPayload }).catch(() => {})
+              }
 
               // 3. Direct device token push STRICTLY to the specific restaurant owner ONLY (WITHOUT AMOUNT)
               if (isRestaurant && order.restaurantId) {

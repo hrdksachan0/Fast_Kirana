@@ -17,13 +17,22 @@ export async function generateMetadata(): Promise<Metadata> {
 
 async function CategoriesLoader() {
   try {
-    // Fetch all grocery categories from database (exclude restaurant food)
+    // Fetch all grocery root categories from database with their nested subcategories
     const categoriesRaw = await prisma.category.findMany({
       where: {
+        parentId: null,
         slug: { notIn: ['cafe', 'restaurant', 'fastkirana-cafe', 'fastkirana-restaurant', 'restaurant-food', 'fast-food-kitchen'] },
       },
       orderBy: { sortOrder: 'asc' },
       include: {
+        children: {
+          orderBy: { sortOrder: 'asc' },
+          include: {
+            _count: {
+              select: { products: true },
+            },
+          },
+        },
         _count: {
           select: { products: true },
         },
@@ -39,6 +48,15 @@ async function CategoriesLoader() {
       parentId: c.parentId,
       sortOrder: c.sortOrder,
       _count: c._count,
+      children: c.children?.map((sub) => ({
+        id: sub.id,
+        name: sub.name,
+        slug: sub.slug,
+        imageUrl: sub.imageUrl,
+        parentId: sub.parentId,
+        sortOrder: sub.sortOrder,
+        _count: sub._count,
+      })),
     }))
 
     return <CategoriesDirectoryClient categories={categories} />

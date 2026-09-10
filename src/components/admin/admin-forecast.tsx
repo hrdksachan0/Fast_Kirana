@@ -51,9 +51,10 @@ interface ForecastItem {
 interface AdminForecastProps {
   onRestockCompleted?: () => void
   categories: Array<{ id: string; name: string; slug: string }>
+  storeId?: string | null
 }
 
-export function AdminForecast({ onRestockCompleted, categories }: AdminForecastProps) {
+export function AdminForecast({ onRestockCompleted, categories, storeId }: AdminForecastProps) {
   const [forecastList, setForecastList] = useState<ForecastItem[]>([])
   const [metrics, setMetrics] = useState({ itemsAtRisk: 0, totalRevenueAtRisk: 0, averageVelocity: 0 })
   const [loading, setLoading] = useState(true)
@@ -64,7 +65,8 @@ export function AdminForecast({ onRestockCompleted, categories }: AdminForecastP
   const fetchForecast = async (showToast = false) => {
     try {
       setLoading(true)
-      const res = await fetch('/api/admin/forecast')
+      const storeParam = storeId && storeId !== 'all' ? `?storeId=${encodeURIComponent(storeId)}` : ''
+      const res = await fetch(`/api/admin/forecast${storeParam}`)
       if (!res.ok) throw new Error('Failed to fetch forecast analytics')
       const data = await res.json()
       setForecastList(data.forecast || [])
@@ -82,7 +84,7 @@ export function AdminForecast({ onRestockCompleted, categories }: AdminForecastP
 
   useEffect(() => {
     fetchForecast()
-  }, [])
+  }, [storeId])
 
   // Auto-replenish all at-risk products
   const handleAutoReplenish = async () => {
@@ -116,7 +118,8 @@ export function AdminForecast({ onRestockCompleted, categories }: AdminForecastP
             batchCode,
             quantity: item.recommendedReorder,
             costPrice: item.costPrice,
-            expiryDate: expiryDate.toISOString()
+            expiryDate: expiryDate.toISOString(),
+            storeId: storeId && storeId !== 'all' ? storeId : undefined,
           })
         })
 
@@ -162,19 +165,22 @@ export function AdminForecast({ onRestockCompleted, categories }: AdminForecastP
   return (
     <div className="space-y-6">
       
-      {/* Page Title & Reload */}
-      <div className="flex justify-between items-center bg-muted/20 p-4 rounded-2xl border border-border/40">
-        <div className="flex items-center gap-2.5">
-          <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary border border-primary/20">
-            <BrainCircuit className="h-5.5 w-5.5" />
+      {/* Top Section Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card border border-border p-5 rounded-2xl shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center shrink-0">
+            <BrainCircuit className="h-6 w-6" />
           </div>
           <div>
-            <h3 className="text-sm font-extrabold text-text-primary flex items-center gap-1.5">
+            <h3 className="text-sm font-extrabold text-text-primary flex items-center gap-2">
               AI-Driven Demand Forecasting
               <Sparkles className="h-4 w-4 text-amber-500 fill-amber-500/20" />
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                {storeId === 'hub-224122' ? 'Akbarpur Hub' : storeId === 'hub-209206' ? 'Ghatampur Central Hub' : (storeId || 'All Stores')}
+              </span>
             </h3>
             <p className="text-[10px] text-text-secondary leading-snug font-semibold mt-0.5">
-              Predict stock depletion timelines and auto-generate inward replenishment sheets.
+              Predict stock depletion timelines and auto-generate inward replenishment sheets isolated for this store.
             </p>
           </div>
         </div>

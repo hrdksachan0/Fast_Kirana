@@ -1359,25 +1359,26 @@ export function AdminDashboard({
     }
   }, [activeTab, coupons.length])
 
-  // 3. Background loader for all products (used in dropdown selectors, banners, etc.)
+  // 3. Background loader for all products (used in dropdown selectors, banners, BI Analytics, etc.)
   useEffect(() => {
-    if (allProducts.length === 0) {
-      const loadAllProducts = async () => {
-        try {
-          const res = await fetch(`/api/products?limit=1000&t=${Date.now()}`)
-          if (res.ok) {
-            const data = await res.json()
-            if (data.products) {
-              setAllProducts(data.products)
-            }
+    let active = true
+    const loadAllProducts = async () => {
+      try {
+        const storeQuery = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
+        const res = await fetch(`/api/products?limit=1000${storeQuery}&t=${Date.now()}`)
+        if (res.ok && active) {
+          const data = await res.json()
+          if (data.products) {
+            setAllProducts(data.products)
           }
-        } catch (err) {
-          console.error('Failed to load full products list:', err)
         }
+      } catch (err) {
+        console.error('Failed to load full products list:', err)
       }
-      loadAllProducts()
     }
-  }, [allProducts.length])
+    loadAllProducts()
+    return () => { active = false }
+  }, [selectedHubId])
 
   const toggleTag = (form: 'new' | 'edit', tag: string, checked: boolean) => {
     const currentForm = form === 'new' ? newProduct : productEditForm
@@ -2864,12 +2865,13 @@ export function AdminDashboard({
 
       {activeTab === 'analytics' && (
         <AnalyticsTab
+          storeId={selectedHubId}
           products={allProducts || []}
           orders={liveOrders || []}
           categories={categories || []}
           stats={{
-            revenue: stats?.revenue ?? stats?.todaySales ?? 0,
-            orderCount: stats?.orderCount ?? (orders || []).length ?? 0,
+            revenue: (typeof apiTodaySales === 'number' ? apiTodaySales : stats?.revenue) ?? stats?.todaySales ?? 0,
+            orderCount: (typeof apiTodayOrdersCount === 'number' ? apiTodayOrdersCount : (orders || []).length) ?? 0,
             lowStockCount: stats?.lowStockCount ?? 0
           }}
         />
@@ -2877,10 +2879,12 @@ export function AdminDashboard({
 
       {activeTab === 'forecast' && (
         <ForecastTab
+          storeId={selectedHubId}
           categories={categories}
           onRestockCompleted={async () => {
             try {
-              const res = await fetch(`/api/products?limit=1000&t=${Date.now()}`)
+              const storeQuery = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
+              const res = await fetch(`/api/products?limit=1000${storeQuery}&t=${Date.now()}`)
               if (res.ok) {
                 const data = await res.json()
                 if (data.products) {
@@ -2897,9 +2901,11 @@ export function AdminDashboard({
 
       {activeTab === 'alerts' && (
         <AlertsTab
+          storeId={selectedHubId}
           onProductUpdated={async () => {
             try {
-              const res = await fetch(`/api/products?limit=1000&t=${Date.now()}`)
+              const storeQuery = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
+              const res = await fetch(`/api/products?limit=1000${storeQuery}&t=${Date.now()}`)
               if (res.ok) {
                 const data = await res.json()
                 if (data.products) {

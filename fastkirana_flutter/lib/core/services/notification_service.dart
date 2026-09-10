@@ -435,7 +435,8 @@ class NotificationService {
       try {
         if (role == 'ADMIN') {
           await _fcm?.subscribeToTopic('admin_orders');
-          await _fcm?.subscribeToTopic('staff_orders');
+          // Admin only needs admin_orders topic — prevent duplicate push from staff_orders
+          await _fcm?.unsubscribeFromTopic('staff_orders');
         } else if (role == 'RESTAURANT' || assignedRestaurantId != null) {
           final rId = assignedRestaurantId ?? prefs.getString('assigned_restaurant_id');
           if (rId != null && rId.isNotEmpty) {
@@ -444,6 +445,7 @@ class NotificationService {
           }
         } else if (role == 'DELIVERY' || role == 'PICKER') {
           await _fcm?.subscribeToTopic('staff_orders');
+          await _fcm?.unsubscribeFromTopic('admin_orders');
         }
 
         if (userId != null && userId.isNotEmpty) {

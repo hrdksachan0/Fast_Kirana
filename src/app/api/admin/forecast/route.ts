@@ -35,15 +35,50 @@ export async function GET(request: NextRequest) {
   const session = adminResult.session
 
   try {
+    const { searchParams } = new URL(request.url)
+    const storeId = searchParams.get('storeId') || (session?.user as any)?.assignedStoreId || null
+
+    const productWhere: any = {
+      isAvailable: true,
+      restaurantId: null,
+    }
+    if (storeId && storeId !== 'all') {
+      productWhere.inventories = {
+        some: {
+          storeId,
+        },
+      }
+    }
 
     // Load active products from categories other than cafe
-    const products = await prisma.product.findMany({
-      where: {
-        isAvailable: true,
-        restaurantId: null
-      },
+    const productsRaw = await prisma.product.findMany({
+      where: productWhere,
       include: {
-        category: true
+        category: true,
+      },
+    })
+
+    // Localize stock from store_inventories if a specific store is selected
+    let inventoryMap = new Map<string, number>()
+    if (storeId && storeId !== 'all') {
+      try {
+        const inventories = await prisma.storeInventory.findMany({
+          where: {
+            storeId,
+            productId: { in: productsRaw.map((p) => p.id) },
+          },
+        })
+        inventoryMap = new Map(inventories.map((inv) => [inv.productId, inv.stock]))
+      } catch (invErr) {
+        console.warn('Could not query store_inventories in forecast:', invErr)
+      }
+    }
+
+    const products = productsRaw.map((p) => {
+      const localStock = storeId && storeId !== 'all' ? (inventoryMap.get(p.id) ?? 0) : p.stock
+      return {
+        ...p,
+        stock: localStock,
       }
     })
 
@@ -51,16 +86,21 @@ export async function GET(request: NextRequest) {
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
+    const orderWhere: any = {
+      status: { in: ['DELIVERED', 'SHIPPED', 'PACKED', 'CONFIRMED'] },
+      createdAt: { gte: thirtyDaysAgo },
+    }
+    if (storeId && storeId !== 'all') {
+      orderWhere.storeId = storeId
+    }
+
     const orderItems = await prisma.orderItem.findMany({
       where: {
-        order: {
-          status: { in: ['DELIVERED', 'SHIPPED', 'PACKED', 'CONFIRMED'] },
-          createdAt: { gte: thirtyDaysAgo }
-        }
+        order: orderWhere,
       },
       include: {
-        order: true
-      }
+        order: true,
+      },
     })
 
     // Map to count quantities by product and day-of-week
@@ -93,8 +133,8 @@ export async function GET(request: NextRequest) {
       let weekdayVelocity = parseFloat((sales.weekdayQty / 16).toFixed(2)) // 16 weekdays in 30 days
       let weekendVelocity = parseFloat((sales.weekendQty / 14).toFixed(2)) // 14 weekend days in 30 days
 
-      // High-fidelity fallback simulated velocity for demo purposes if sales are sparse/empty
-      const isDemoMode = sales.totalQty === 0
+      // High-fidelity fallback simulated velocity ONLY when viewing global all-stores without any orders
+      const isDemoMode = (!storeId || storeId === 'all') && sales.totalQty === 0
       if (isDemoMode) {
         const nameLower = p.name.toLowerCase()
         if (nameLower.includes('milk') || nameLower.includes('dairy')) {

@@ -11,12 +11,13 @@ interface AnalyticsTabProps {
     orderCount: number
     lowStockCount: number
   }
+  storeId?: string | null
 }
 
-export function AnalyticsTab({ products, orders, categories, stats }: AnalyticsTabProps) {
+export function AnalyticsTab({ products, orders, categories, stats, storeId }: AnalyticsTabProps) {
   return (
     <div className="animate-fade-in">
-      <AdminAnalytics products={products} orders={orders} categories={categories} stats={stats} />
+      <AdminAnalytics products={products} orders={orders} categories={categories} stats={stats} storeId={storeId} />
     </div>
   )
 }

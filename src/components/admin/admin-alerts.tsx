@@ -44,9 +44,10 @@ interface Counts {
 
 interface AdminAlertsProps {
   onProductUpdated?: () => void
+  storeId?: string | null
 }
 
-export function AdminAlerts({ onProductUpdated }: AdminAlertsProps) {
+export function AdminAlerts({ onProductUpdated, storeId }: AdminAlertsProps) {
   const [alerts, setAlerts] = useState<AlertItem[]>([])
   const [counts, setCounts] = useState<Counts>({ outOfStock: 0, lowStock: 0, expiringSoon: 0, expired: 0, packingDelay: 0, total: 0 })
   const [loading, setLoading] = useState(true)
@@ -65,7 +66,8 @@ export function AdminAlerts({ onProductUpdated }: AdminAlertsProps) {
   const fetchAlerts = async (showToast = false) => {
     try {
       setLoading(true)
-      const res = await fetch('/api/admin/alerts')
+      const storeParam = storeId && storeId !== 'all' ? `?storeId=${encodeURIComponent(storeId)}` : ''
+      const res = await fetch(`/api/admin/alerts${storeParam}`)
       if (!res.ok) throw new Error('Failed to fetch')
       const data = await res.json()
       setAlerts(data.alerts || [])
@@ -83,7 +85,7 @@ export function AdminAlerts({ onProductUpdated }: AdminAlertsProps) {
 
   useEffect(() => {
     fetchAlerts()
-  }, [])
+  }, [storeId])
 
   // Force recalculate alerts in database
   const handleRecalculate = async () => {
@@ -124,6 +126,7 @@ export function AdminAlerts({ onProductUpdated }: AdminAlertsProps) {
           updateType: 'STOCK',
           mode: 'SET_VALUE',
           value: currentStock + amount,
+          storeId: storeId && storeId !== 'all' ? storeId : undefined,
         })
       })
 
@@ -233,12 +236,15 @@ export function AdminAlerts({ onProductUpdated }: AdminAlertsProps) {
       {/* Tab Header Controls */}
       <div className="p-6 border-b border-border/60 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-muted/20">
         <div>
-          <h3 className="text-base font-bold text-text-primary flex items-center gap-1.5">
+          <h3 className="text-base font-bold text-text-primary flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-orange-500" />
             Inventory Stock & Expiry Alerts
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+              {storeId === 'hub-224122' ? 'Akbarpur Hub' : storeId === 'hub-209206' ? 'Ghatampur Central Hub' : (storeId || 'All Stores')}
+            </span>
           </h3>
           <p className="text-xs text-text-secondary mt-0.5">
-            Monitor and resolve out of stock items, critical low levels, and products nearing expiration dates.
+            Monitor and resolve out of stock items, critical low levels, and products nearing expiration dates isolated for this store.
           </p>
         </div>
         <div className="flex items-center gap-2 self-start md:self-auto">

@@ -291,6 +291,10 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
             categoriesAsync.when(
               data: (categories) {
                 var filtered = categories.where((c) {
+                  // Subcategories should NEVER appear as separate top-level cards!
+                  if (c.parentId != null && c.parentId!.isNotEmpty) {
+                    return false;
+                  }
                   final slug = c.slug.toLowerCase().trim();
                   final name = c.name.toLowerCase().trim();
                   if (slug == 'restaurant' ||
@@ -311,8 +315,12 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                 }).toList();
                 if (_searchQuery.isNotEmpty) {
                   filtered = filtered.where((c) {
-                    return c.name.toLowerCase().contains(_searchQuery) ||
+                    final matchName = c.name.toLowerCase().contains(_searchQuery) ||
                         c.slug.toLowerCase().contains(_searchQuery);
+                    final matchChild = categories.any((sub) =>
+                        sub.parentId == c.id &&
+                        (sub.name.toLowerCase().contains(_searchQuery) || sub.slug.toLowerCase().contains(_searchQuery)));
+                    return matchName || matchChild;
                   }).toList();
                 }
 

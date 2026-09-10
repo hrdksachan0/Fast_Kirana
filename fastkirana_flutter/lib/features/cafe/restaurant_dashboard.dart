@@ -70,6 +70,18 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
   double _commissionRate = 25.0;
 
   double _getCommissionRateForOutlet(String? restId, String? restName) {
+    if (restId != null && restId.isNotEmpty) {
+      final matched = _availableOutlets.firstWhere(
+        (o) => o['id'] == restId,
+        orElse: () => {},
+      );
+      if (matched.isNotEmpty && matched['commissionRate'] != null) {
+        final parsed = double.tryParse(matched['commissionRate']!);
+        if (parsed != null && parsed > 0) {
+          return parsed > 1 ? parsed : parsed * 100;
+        }
+      }
+    }
     final id = (restId ?? '').toLowerCase().trim();
     final name = (restName ?? '').toLowerCase().trim();
     if (id == outletWedsonId || id.contains('wedson') || name.contains('wedson')) {
@@ -294,7 +306,37 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
   }
 
   Future<void> _initOutletDetails() async {
-    // 1. Initial args
+    final dio = ref.read(dioProvider);
+
+    // 1. First fetch dynamic active restaurants from backend to support ANY new outlet with ZERO code
+    try {
+      final res = await dio.get('/api/restaurants');
+      if (res.statusCode == 200 && res.data is List) {
+        final List list = res.data as List;
+        for (final item in list) {
+          if (item is Map) {
+            final id = item['id']?.toString() ?? '';
+            final name = item['name']?.toString() ?? '';
+            if (id.isNotEmpty && name.isNotEmpty) {
+              final idx = _availableOutlets.indexWhere((o) => o['id'] == id);
+              final outletData = {
+                'id': id,
+                'name': name,
+                'ownerPhone': item['ownerPhone']?.toString() ?? '',
+                'commissionRate': item['commissionRate']?.toString() ?? '25',
+              };
+              if (idx >= 0) {
+                _availableOutlets[idx] = outletData;
+              } else {
+                _availableOutlets.add(outletData);
+              }
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 2. Initial args if passed explicitly
     if (widget.initialRestaurantId != null && widget.initialRestaurantId!.isNotEmpty) {
       _assignedRestaurantId = widget.initialRestaurantId;
       if (widget.initialRestaurantName != null && widget.initialRestaurantName!.isNotEmpty) {
@@ -302,58 +344,65 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       }
     }
 
-    // 2. Logged in user profile & assigned restaurant
+    // 3. Logged in user profile & assigned restaurant
     final user = ref.read(authProvider).valueOrNull;
 
     if (_assignedRestaurantId == null || _assignedRestaurantId!.isEmpty) {
       final userPhone = (user?.phone ?? '').replaceAll(RegExp(r'[^0-9]'), '');
       final last10 = userPhone.length >= 10 ? userPhone.substring(userPhone.length - 10) : userPhone;
-      if (last10 == '8112849854') {
-        _assignedRestaurantId = outletAsRestaurantId;
-        _restaurantName = 'A.S. Restaurant';
-      } else if (last10 == '9250138656') {
-        _assignedRestaurantId = outletWedsonId;
-        _restaurantName = 'Wedson Restaurant';
-      } else if (last10 == '7991488783') {
-        _assignedRestaurantId = outletBalUdyanId;
-        _restaurantName = 'Bal Udyan Restaurant';
-      } else if (last10 == '9900112233') {
-        _assignedRestaurantId = outletPariMilkId;
-        _restaurantName = 'Pari Milk Dairy & Sweets';
-      } else if (user?.assignedRestaurantId != null && user!.assignedRestaurantId!.isNotEmpty) {
+
+      // a) Check explicit assignedRestaurantId from user profile
+      if (user?.assignedRestaurantId != null && user!.assignedRestaurantId!.isNotEmpty) {
         _assignedRestaurantId = user.assignedRestaurantId;
-      } else {
-        final prefs = await SharedPreferences.getInstance();
-        final rawUserData = prefs.getString('user_data');
-        if (rawUserData != null && rawUserData.isNotEmpty) {
-          try {
-            final json = jsonDecode(rawUserData) as Map<String, dynamic>;
-            final savedPhone = (json['phone']?.toString() ?? '').replaceAll(RegExp(r'[^0-9]'), '');
-            final savedLast10 = savedPhone.length >= 10 ? savedPhone.substring(savedPhone.length - 10) : savedPhone;
-            if (savedLast10 == '8112849854') {
-              _assignedRestaurantId = outletAsRestaurantId;
-              _restaurantName = 'A.S. Restaurant';
-            } else if (savedLast10 == '9250138656') {
-              _assignedRestaurantId = outletWedsonId;
-              _restaurantName = 'Wedson Restaurant';
-            } else if (savedLast10 == '7991488783') {
-              _assignedRestaurantId = outletBalUdyanId;
-              _restaurantName = 'Bal Udyan Restaurant';
-            } else if (savedLast10 == '9900112233') {
-              _assignedRestaurantId = outletPariMilkId;
-              _restaurantName = 'Pari Milk Dairy & Sweets';
-            } else {
+      }
+
+      // b) Check if phone matches any restaurant ownerPhone dynamically from backend
+      if ((_assignedRestaurantId == null || _assignedRestaurantId!.isEmpty) && last10.isNotEmpty) {
+        final matchedByPhone = _availableOutlets.firstWhere(
+          (o) {
+            final oPhone = (o['ownerPhone'] ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+            final oLast10 = oPhone.length >= 10 ? oPhone.substring(oPhone.length - 10) : oPhone;
+            return oLast10.isNotEmpty && oLast10 == last10;
+          },
+          orElse: () => {},
+        );
+        if (matchedByPhone.isNotEmpty) {
+          _assignedRestaurantId = matchedByPhone['id'];
+          _restaurantName = matchedByPhone['name'] ?? _restaurantName;
+        }
+      }
+
+      // c) Legacy fallback for existing 4 outlets (Wedson, AS, Bal Udyan, Pari Milk)
+      if (_assignedRestaurantId == null || _assignedRestaurantId!.isEmpty) {
+        if (last10 == '8112849854') {
+          _assignedRestaurantId = outletAsRestaurantId;
+          _restaurantName = 'A.S. Restaurant';
+        } else if (last10 == '9250138656') {
+          _assignedRestaurantId = outletWedsonId;
+          _restaurantName = 'Wedson Restaurant';
+        } else if (last10 == '7991488783') {
+          _assignedRestaurantId = outletBalUdyanId;
+          _restaurantName = 'Bal Udyan Restaurant';
+        } else if (last10 == '9900112233') {
+          _assignedRestaurantId = outletPariMilkId;
+          _restaurantName = 'Pari Milk Dairy & Sweets';
+        } else {
+          final prefs = await SharedPreferences.getInstance();
+          final rawUserData = prefs.getString('user_data');
+          if (rawUserData != null && rawUserData.isNotEmpty) {
+            try {
+              final json = jsonDecode(rawUserData) as Map<String, dynamic>;
               final rId = json['assignedRestaurantId']?.toString();
               if (rId != null && rId.isNotEmpty) {
                 _assignedRestaurantId = rId;
               }
-            }
-          } catch (e, _) { LoggerService.error('RestaurantDashboard: silent catch', e); }
+            } catch (_) {}
+          }
         }
       }
     }
 
-    // Fallback default
+    // 4. Fallback default & resolve name
     if (_assignedRestaurantId == null || _assignedRestaurantId!.isEmpty) {
       _assignedRestaurantId = outletWedsonId;
       _restaurantName = 'Wedson Restaurant';
@@ -368,31 +417,6 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
     _commissionRate = _getCommissionRateForOutlet(_assignedRestaurantId, _restaurantName);
 
     if (mounted) setState(() {});
-
-    // Dynamically fetch all active restaurants to keep outlet switcher fresh
-    try {
-      final dio = ref.read(dioProvider);
-      dio.get('/api/restaurants').then((res) {
-        if (res.statusCode == 200 && res.data is List) {
-          final List list = res.data as List;
-          bool updated = false;
-          for (final item in list) {
-            if (item is Map) {
-              final id = item['id']?.toString() ?? '';
-              final name = item['name']?.toString() ?? '';
-              if (id.isNotEmpty && name.isNotEmpty) {
-                final exists = _availableOutlets.any((o) => o['id'] == id);
-                if (!exists) {
-                  _availableOutlets.add({'id': id, 'name': name});
-                  updated = true;
-                }
-              }
-            }
-          }
-          if (updated && mounted) setState(() {});
-        }
-      }).catchError((_) {});
-    } catch (_) {}
 
     // Only fetch live orders on init (the active tab). Menu and Sales load lazily.
     if (_cachedOrders.isNotEmpty) {
@@ -459,6 +483,38 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
   /// Statuses that should NOT trigger a chime sound (terminal/non-actionable)
   static const _silentStatuses = {'CANCELLED', 'REJECTED', 'DELIVERED', 'FAILED', 'REFUNDED'};
 
+  /// Checks if an order belongs to the currently active restaurant console
+  bool _isOrderForThisOutlet(dynamic restaurantId, [dynamic restaurantName]) {
+    if (_assignedRestaurantId == null || _assignedRestaurantId!.isEmpty || _assignedRestaurantId == 'ALL') {
+      return true;
+    }
+    final rId = (restaurantId ?? '').toString().trim().toLowerCase();
+    final rName = (restaurantName ?? '').toString().toLowerCase().trim();
+    final myId = (_assignedRestaurantId ?? '').toLowerCase().trim();
+    final myName = (_restaurantName).toLowerCase().trim();
+
+    // 1. Direct dynamic ID match (REST-101, REST-105, CUID, UUID, etc.)
+    if (rId.isNotEmpty && rId == myId) return true;
+
+    // 2. Direct dynamic Name match (Works for ANY new restaurant created in admin/DB)
+    if (myName.isNotEmpty && rName.isNotEmpty) {
+      if (rName == myName || rName.contains(myName) || myName.contains(rName)) return true;
+    }
+
+    // 3. Legacy CUIDs / aliases for existing outlets
+    if (_assignedRestaurantId == outletWedsonId && (rId == 'wedson' || rId == 'wedson-restaurant' || rId == legacyWedsonId.toLowerCase())) return true;
+    if (_assignedRestaurantId == outletAsRestaurantId && (rId == 'as-restaurant' || rId == 'as-cafe' || rId == legacyAsRestaurantId.toLowerCase())) return true;
+    if (_assignedRestaurantId == outletBalUdyanId && (rId == 'bal-udyan-restaurant' || rId == 'bal-udyan' || rId == legacyBalUdyanId.toLowerCase())) return true;
+    if (_assignedRestaurantId == outletPariMilkId && (rId == 'pari-milk-dairy-sweets' || rId == 'pari-milk' || rId == legacyPariMilkId.toLowerCase())) return true;
+
+    if (_assignedRestaurantId == outletWedsonId && rName.contains('wedson')) return true;
+    if (_assignedRestaurantId == outletAsRestaurantId && (rName.contains('as ') || rName.contains('a.s') || rName.contains('as-'))) return true;
+    if (_assignedRestaurantId == outletBalUdyanId && (rName.contains('bal') || rName.contains('udyan'))) return true;
+    if (_assignedRestaurantId == outletPariMilkId && (rName.contains('pari') || rName.contains('milk'))) return true;
+
+    return false;
+  }
+
   void _initSupabaseRealtime() {
     try {
       final supabase = SupabaseService.client;
@@ -472,17 +528,30 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
             schema: 'public',
             table: 'orders',
             callback: (payload) {
+              final newRecord = payload.newRecord;
+              final rId = newRecord['restaurantId'];
+              final rName = newRecord['restaurantName'] ?? newRecord['shopName'];
+              final belongsToThisOutlet = _isOrderForThisOutlet(rId, rName);
+
+              // Always sync order list silently
               _fetchOrders(silent: true);
 
+              // If order belongs to a different outlet, do NOT trigger chime or alarm
+              if (!belongsToThisOutlet) {
+                return;
+              }
+
               // Only play chime if the new status is actionable (not cancelled/rejected/delivered)
-              final newRecord = payload.newRecord;
-              final newStatus = (newRecord?['status'] ?? '').toString().toUpperCase();
+              final newStatus = (newRecord['status'] ?? '').toString().toUpperCase();
               if (newStatus.isNotEmpty && _silentStatuses.contains(newStatus)) {
                 // Order was cancelled/rejected/delivered — stop alarm instead of playing chime
                 _syncAlarmStateWithOrders(_orders);
                 return;
               }
-              _playChime();
+
+              if (newStatus == 'PENDING' || newStatus == 'PLACED') {
+                _playChime();
+              }
             },
           );
       _restaurantOrdersChannel?.subscribe();
@@ -500,8 +569,14 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
           .onBroadcast(
             event: 'new_order',
             callback: (payload) {
+              final rId = payload['restaurantId'];
+              final rName = payload['restaurantName'] ?? payload['shopName'];
+              final belongsToThisOutlet = _isOrderForThisOutlet(rId, rName);
+
               _fetchOrders(silent: true);
-              _playChime();
+              if (belongsToThisOutlet) {
+                _playChime();
+              }
             },
           );
       _restaurantBroadcastChannel?.subscribe();
@@ -628,23 +703,9 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
         // Ensure ID-wise outlet filtering
         if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty && _assignedRestaurantId != 'ALL') {
           parsed = parsed.where((o) {
-            final rId = (o['restaurantId'] ?? o['restaurant']?['id'] ?? '').toString();
-            final rName = (o['restaurantName'] ?? o['shopName'] ?? '').toString().toLowerCase();
-            
-            if (rId.isNotEmpty) {
-              if (rId == _assignedRestaurantId) return true;
-              if (_assignedRestaurantId == outletWedsonId && (rId == 'wedson' || rId == 'wedson-restaurant')) return true;
-              if (_assignedRestaurantId == outletAsRestaurantId && (rId == 'as-restaurant' || rId == 'as-cafe')) return true;
-              if (_assignedRestaurantId == outletBalUdyanId && (rId == 'bal-udyan-restaurant' || rId == 'bal-udyan')) return true;
-              if (_assignedRestaurantId == outletPariMilkId && (rId == 'pari-milk-dairy-sweets' || rId == 'pari-milk')) return true;
-            }
-
-            if (_assignedRestaurantId == outletWedsonId && rName.contains('wedson')) return true;
-            if (_assignedRestaurantId == outletAsRestaurantId && (rName.contains('as ') || rName.contains('a.s') || rName.contains('as-'))) return true;
-            if (_assignedRestaurantId == outletBalUdyanId && (rName.contains('bal') || rName.contains('udyan'))) return true;
-            if (_assignedRestaurantId == outletPariMilkId && (rName.contains('pari') || rName.contains('milk'))) return true;
-
-            return false;
+            final rId = o['restaurantId'] ?? o['restaurant']?['id'];
+            final rName = o['restaurantName'] ?? o['shopName'];
+            return _isOrderForThisOutlet(rId, rName);
           }).toList();
         }
 

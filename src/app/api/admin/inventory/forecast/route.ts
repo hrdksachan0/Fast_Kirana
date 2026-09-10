@@ -9,8 +9,21 @@ export async function GET(request: NextRequest) {
   const session = adminResult.session
 
   try {
+    const { searchParams } = new URL(request.url)
+    const storeId = searchParams.get('storeId') || (session?.user as any)?.assignedStoreId || null
+
     const now = new Date()
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+
+    const orderWhere: any = {
+      status: 'DELIVERED',
+      createdAt: {
+        gte: thirtyDaysAgo,
+      },
+    }
+    if (storeId && storeId !== 'all') {
+      orderWhere.storeId = storeId
+    }
 
     // Query aggregate quantities sold for all products in the last 30 days for DELIVERED orders
     const salesData = await prisma.orderItem.groupBy({
@@ -19,12 +32,7 @@ export async function GET(request: NextRequest) {
         quantity: true,
       },
       where: {
-        order: {
-          status: 'DELIVERED',
-          createdAt: {
-            gte: thirtyDaysAgo,
-          },
-        },
+        order: orderWhere,
       },
     })
 
@@ -35,11 +43,20 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    const productWhere: any = {
+      isAvailable: true,
+    }
+    if (storeId && storeId !== 'all') {
+      productWhere.inventories = {
+        some: {
+          storeId,
+        },
+      }
+    }
+
     // Fetch all products with their categories
-    const products = await prisma.product.findMany({
-      where: {
-        isAvailable: true,
-      },
+    const productsRaw = await prisma.product.findMany({
+      where: productWhere,
       select: {
         id: true,
         name: true,
@@ -57,6 +74,30 @@ export async function GET(request: NextRequest) {
           },
         },
       },
+    })
+
+    // Localize stock from store_inventories if a specific store is selected
+    let inventoryMap = new Map<string, number>()
+    if (storeId && storeId !== 'all') {
+      try {
+        const inventories = await prisma.storeInventory.findMany({
+          where: {
+            storeId,
+            productId: { in: productsRaw.map((p) => p.id) },
+          },
+        })
+        inventoryMap = new Map(inventories.map((inv) => [inv.productId, inv.stock]))
+      } catch (invErr) {
+        console.warn('Could not query store_inventories in inventory forecast:', invErr)
+      }
+    }
+
+    const products = productsRaw.map((p) => {
+      const localStock = storeId && storeId !== 'all' ? (inventoryMap.get(p.id) ?? 0) : p.stock
+      return {
+        ...p,
+        stock: localStock,
+      }
     })
 
     const forecast = products.map((product) => {

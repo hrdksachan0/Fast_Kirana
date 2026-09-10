@@ -60,9 +60,10 @@ interface AdminAnalyticsProps {
     orderCount: number
     lowStockCount: number
   }
+  storeId?: string | null
 }
 
-export function AdminAnalytics({ products, orders, categories, stats }: AdminAnalyticsProps) {
+export function AdminAnalytics({ products, orders, categories, stats, storeId }: AdminAnalyticsProps) {
   const [forecast, setForecast] = useState<any[]>([])
   const [loadingForecast, setLoadingForecast] = useState(true)
   const [inwardingId, setInwardingId] = useState<string | null>(null)
@@ -70,7 +71,8 @@ export function AdminAnalytics({ products, orders, categories, stats }: AdminAna
   const fetchForecast = async () => {
     try {
       setLoadingForecast(true)
-      const res = await fetch('/api/admin/inventory/forecast')
+      const storeParam = storeId && storeId !== 'all' ? `?storeId=${encodeURIComponent(storeId)}` : ''
+      const res = await fetch(`/api/admin/inventory/forecast${storeParam}`)
       if (res.ok) {
         const data = await res.json()
         setForecast(data.forecast || [])
@@ -84,7 +86,7 @@ export function AdminAnalytics({ products, orders, categories, stats }: AdminAna
 
   useEffect(() => {
     fetchForecast()
-  }, [])
+  }, [storeId])
 
   const handleQuickRestock = async (product: any) => {
     if (product.suggestedRestock <= 0) return
@@ -98,7 +100,8 @@ export function AdminAnalytics({ products, orders, categories, stats }: AdminAna
           batchCode: `AUTO_AI_${Date.now().toString().slice(-6)}`,
           quantity: product.suggestedRestock,
           costPrice: product.costPrice,
-          expiryDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          expiryDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          storeId: storeId && storeId !== 'all' ? storeId : undefined,
         })
       })
 
@@ -208,6 +211,26 @@ export function AdminAnalytics({ products, orders, categories, stats }: AdminAna
   return (
     <div className="space-y-6">
       
+      {/* Store Isolation Banner */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-card border border-border/70 px-4 py-3 rounded-2xl shadow-xs">
+        <div className="flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center font-bold text-xs">
+            BI
+          </div>
+          <div>
+            <h3 className="text-sm font-extrabold text-text-primary flex items-center gap-2">
+              Business Intelligence & Valuation
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                {storeId === 'hub-224122' ? 'Akbarpur Hub' : storeId === 'hub-209206' ? 'Ghatampur Central Hub' : (storeId || 'All Stores')}
+              </span>
+            </h3>
+            <p className="text-[11px] text-text-muted">
+              Live inventory valuation, margins, healthy SKUs, and replenishment forecast isolated for this store.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Grocery Analytics Section Header */}
       <div className="border-b border-border/60 pb-2">
         <h4 className="text-xs font-extrabold text-text-secondary uppercase tracking-wider flex items-center gap-1.5">
