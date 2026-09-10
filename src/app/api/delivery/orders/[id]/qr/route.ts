@@ -147,14 +147,16 @@ export async function GET(
       }
     }
 
-    const activeQrImageUrl = cashfreeQrUrl || directUpiQrImageUrl
+    // Universal dynamic UPI QR code (Amazon/Flipkart delivery boy style)
+    // Directly opens GPay / PhonePe / Paytm / BHIM with FastKirana as payee and exact amount pre-filled
+    const activeQrImageUrl = directUpiQrImageUrl
     const cleanCustomerPhone = (order.address?.phone || order.user?.phone || '').replace(/\D/g, '').slice(-10)
 
     return NextResponse.json({
       orderId: order.id,
       readableId: order.readableId,
       amount: order.total,
-      gateway: isCashfreeConfigured() ? 'CASHFREE' : 'DIRECT_UPI',
+      gateway: 'DIRECT_UPI',
       upiVpa,
       upiUri: directUpiUri,
       directUpiQrUrl: directUpiQrImageUrl,
