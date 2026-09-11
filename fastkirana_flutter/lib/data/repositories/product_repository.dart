@@ -509,35 +509,13 @@ class ProductRepository {
         if (prodCatId == catLower || (pCatIdLower.isNotEmpty && pCatIdLower == catLower)) return true;
 
         // 2. Direct Parent ID match (Product belongs to a subcategory of this category)
-        if (prodCatParentId.isNotEmpty && (prodCatParentId == catLower || prodCatParentId == catSlugNormalized)) return true;
+        if (prodCatParentId.isNotEmpty && prodCatParentId == catLower) return true;
 
         // 3. Subcategory code match: SUB-<codeId>-XX belongs to CAT-<codeId>
         if (catLower.startsWith('cat-')) {
           final catCode = catLower.replaceFirst('cat-', '');
-          if (prodCatId.startsWith('sub-$catCode-') || pCatIdLower.startsWith('sub-$catCode-')) return true;
-        }
-
-        // 4. Direct Slug match
-        if (prodCatSlug.isNotEmpty && (prodCatSlug == catLower || prodCatSlug == catSlugNormalized)) return true;
-
-        // 5. Direct Category Name match
-        if (prodCatName.isNotEmpty && (prodCatName == catLower || prodCatName == catSlugNormalized)) return true;
-
-        // 6. Alias lookup by ID or Parent ID
-        final aliasesForProd = (p.categoryId != null ? _categoryAliases[p.categoryId] : null) ??
-            _categoryAliases[prodCatId] ??
-            (prodCatParentId.isNotEmpty ? _categoryAliases[prodCatParentId] : null) ??
-            [];
-        if (aliasesForProd.contains(catLower) || aliasesForProd.contains(catSlugNormalized)) return true;
-
-        // 7. Alias lookup by query key
-        for (final entry in _categoryAliases.entries) {
-          if (entry.value.contains(catLower) || entry.value.contains(catSlugNormalized)) {
-            if ((pCatIdLower.isNotEmpty && entry.key.toLowerCase() == pCatIdLower) ||
-                entry.key.toLowerCase() == prodCatId ||
-                (prodCatParentId.isNotEmpty && entry.key.toLowerCase() == prodCatParentId)) {
-              return true;
-            }
+          if (prodCatId.startsWith('sub-$catCode-') || pCatIdLower.startsWith('sub-$catCode-') || prodCatParentId.startsWith('cat-$catCode')) {
+            return true;
           }
         }
 

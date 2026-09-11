@@ -100,7 +100,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
     final dbSubcats = allCats.where((c) {
       if (c.parentId == null || c.parentId!.isEmpty) return false;
       final pId = c.parentId!.toLowerCase().trim();
-      return pId == catIdLower || pId == catSlugLower;
+      return pId == catIdLower;
     }).toList();
 
     final List<_SubcatItem> subcats = [
@@ -462,14 +462,13 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                             list = catalogProducts.where((p) {
                               final pCatId = (p.categoryId ?? '').toLowerCase().trim();
                               final pSubId = (p.category?.id ?? '').toLowerCase().trim();
-                              final pSubSlug = (p.category?.slug ?? '').toLowerCase().trim();
                               final pParentId = (p.category?.parentId ?? '').toLowerCase().trim();
                               final isDirectId = pCatId == catIdLower || pSubId == catIdLower || pParentId == catIdLower;
-                              final isSlug = catSlugLower.isNotEmpty && (pSubSlug == catSlugLower || pSubSlug.contains(catSlugLower));
                               final isSubCode = catIdLower.startsWith('cat-') &&
                                   (pCatId.startsWith('sub-${catIdLower.replaceFirst('cat-', '')}-') ||
-                                   pSubId.startsWith('sub-${catIdLower.replaceFirst('cat-', '')}-'));
-                              return isDirectId || isSlug || isSubCode;
+                                   pSubId.startsWith('sub-${catIdLower.replaceFirst('cat-', '')}-') ||
+                                   pParentId.startsWith('cat-${catIdLower.replaceFirst('cat-', '')}'));
+                              return isDirectId || isSubCode;
                             }).toList();
                           }
 
@@ -486,40 +485,14 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                             final selectedSubcat = subcats[_selectedSubcatIndex];
                             if (selectedSubcat.id != 'all') {
                               final targetId = selectedSubcat.id.toLowerCase().trim();
-                              final targetSlug = selectedSubcat.slug.toLowerCase().trim();
-                              final targetName = selectedSubcat.name.toLowerCase().trim();
 
                               list = list.where((p) {
                                 final pCatId = (p.categoryId ?? '').toLowerCase().trim();
                                 final pSubId = (p.category?.id ?? '').toLowerCase().trim();
-                                final pSubSlug = (p.category?.slug ?? '').toLowerCase().trim();
-                                final pSubName = (p.category?.name ?? '').toLowerCase().trim();
                                 final pParentId = (p.category?.parentId ?? '').toLowerCase().trim();
-                                final pName = p.name.toLowerCase().trim();
 
-                                // 1. Direct subcategory ID match
-                                if (pCatId == targetId || pSubId == targetId || pParentId == targetId) return true;
-
-                                // 2. Direct subcategory slug match
-                                if (targetSlug.isNotEmpty && (pSubSlug == targetSlug || pSubSlug.contains(targetSlug))) return true;
-
-                                // 3. Subcategory name match
-                                if (targetName.isNotEmpty &&
-                                    (pSubName == targetName || pSubName.contains(targetName) || targetName.contains(pSubName))) {
-                                  return true;
-                                }
-
-                                // 4. Tag match
-                                if (p.tags.any((t) =>
-                                    t.toLowerCase().trim() == targetSlug ||
-                                    t.toLowerCase().trim() == targetName)) {
-                                  return true;
-                                }
-
-                                // 5. Product name contains subcategory name
-                                if (targetName.length >= 4 && pName.contains(targetName)) return true;
-
-                                return false;
+                                // Strictly match Subcategory ID only
+                                return pCatId == targetId || pSubId == targetId || pParentId == targetId;
                               }).toList();
                             }
                           }

@@ -2642,38 +2642,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     if (p.restaurantId != null && p.restaurantId!.isNotEmpty) return false;
     if (p.restaurant != null) return false;
 
-    final catSlug = cat.slug.toLowerCase().trim();
     final catId = cat.id.toLowerCase().trim();
-    final catName = cat.name.toLowerCase().trim();
-
-    final pCatSlug = (p.category?.slug ?? '').toLowerCase().trim();
     final pCatId = (p.category?.id ?? p.categoryId ?? '').toLowerCase().trim();
-    final pCatName = (p.category?.name ?? '').toLowerCase().trim();
     final pParentId = (p.category?.parentId ?? '').toLowerCase().trim();
 
-    // 0. Subcategory match (product belongs to a child subcategory of cat)
-    if (pParentId.isNotEmpty && (pParentId == catId || pParentId == catSlug)) return true;
+    // 0. Direct Category ID match
+    if (pCatId.isNotEmpty && pCatId == catId) return true;
 
-    // 1. Subcategory code match: SUB-<codeId>-XX belongs to CAT-<codeId>
+    // 1. Direct Parent ID match (Product's subcategory has parentId == cat.id)
+    if (pParentId.isNotEmpty && pParentId == catId) return true;
+
+    // 2. Subcategory code match: SUB-<codeId>-XX belongs to CAT-<codeId>
     if (catId.startsWith('cat-')) {
       final code = catId.replaceFirst('cat-', '');
-      if (pCatId.startsWith('sub-$code-') ||
-          (p.category?.id.toLowerCase().trim().startsWith('sub-$code-') ?? false) ||
-          pParentId.startsWith('cat-$code')) {
+      if (pCatId.startsWith('sub-$code-') || pParentId.startsWith('cat-$code')) {
         return true;
       }
-    }
-
-    // 2. Direct ID / Slug / Name match
-    if (pCatId.isNotEmpty && pCatId == catId) return true;
-    if (pCatSlug.isNotEmpty && pCatSlug == catSlug) return true;
-    if (pCatName.isNotEmpty && (pCatName == catName || pCatName == catSlug)) return true;
-
-    // 3. Exact normalized slug match (e.g. fruits-vegetables vs fruitsvegetables)
-    final normCat = catSlug.replaceAll(RegExp(r'[-_ &]'), '');
-    final normPCat = pCatSlug.replaceAll(RegExp(r'[-_ &]'), '');
-    if (normCat.isNotEmpty && normPCat.isNotEmpty && normCat == normPCat) {
-      return true;
     }
 
     return false;
@@ -2756,20 +2740,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         orElse: () => childSubcategories.first,
       );
       final targetId = selectedSub.id.toLowerCase().trim();
-      final targetSlug = selectedSub.slug.toLowerCase().trim();
-      final targetName = selectedSub.name.toLowerCase().trim();
 
       products = allCategoryProducts.where((p) {
         final pCatId = (p.categoryId ?? '').toLowerCase().trim();
         final pSubId = (p.category?.id ?? '').toLowerCase().trim();
-        final pSubSlug = (p.category?.slug ?? '').toLowerCase().trim();
-        final pSubName = (p.category?.name ?? '').toLowerCase().trim();
 
-        return pCatId == targetId ||
-            pSubId == targetId ||
-            pSubSlug == targetSlug ||
-            pSubName == targetName ||
-            (p.tags.any((t) => t.toLowerCase().trim() == targetName || t.toLowerCase().trim() == targetSlug));
+        return pCatId == targetId || pSubId == targetId;
       }).toList();
     }
 

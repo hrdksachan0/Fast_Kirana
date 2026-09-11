@@ -129,8 +129,6 @@ export async function GET(request: NextRequest) {
         { categoryId: { in: ids } },
         { category: { id: { in: ids } } },
         { category: { parentId: { in: ids } } },
-        { category: { slug: { in: ids } } },
-        { category: { parent: { slug: { in: ids } } } },
       ]
       where.AND = where.AND ? (Array.isArray(where.AND) ? [...where.AND, { OR: catOrClause }] : [where.AND, { OR: catOrClause }]) : [{ OR: catOrClause }]
       if (!restaurantId && !restaurantSlug) {

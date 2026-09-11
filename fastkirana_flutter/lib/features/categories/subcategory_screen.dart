@@ -94,34 +94,26 @@ class _SubcategoryScreenState extends ConsumerState<SubcategoryScreen> {
                   list = catalogProducts.where((p) {
                     final pCatId = (p.categoryId ?? '').toLowerCase().trim();
                     final pSubId = (p.category?.id ?? '').toLowerCase().trim();
-                    final pSubSlug = (p.category?.slug ?? '').toLowerCase().trim();
                     final pParentId = (p.category?.parentId ?? '').toLowerCase().trim();
-                    return pCatId == catIdLower || pSubId == catIdLower || pParentId == catIdLower ||
-                           (catSlugLower.isNotEmpty && (pSubSlug == catSlugLower || pSubSlug.contains(catSlugLower)));
+                    final isDirectId = pCatId == catIdLower || pSubId == catIdLower || pParentId == catIdLower;
+                    final isSubCode = catIdLower.startsWith('cat-') &&
+                        (pCatId.startsWith('sub-${catIdLower.replaceFirst('cat-', '')}-') ||
+                         pSubId.startsWith('sub-${catIdLower.replaceFirst('cat-', '')}-') ||
+                         pParentId.startsWith('cat-${catIdLower.replaceFirst('cat-', '')}'));
+                    return isDirectId || isSubCode;
                   }).toList();
                 }
 
                 if (_selectedSubIdx > 0 && _selectedSubIdx < subcategories.length && dbSubcats.isNotEmpty) {
                   final target = dbSubcats[_selectedSubIdx - 1];
                   final targetId = target.id.toLowerCase().trim();
-                  final targetSlug = target.slug.toLowerCase().trim();
-                  final targetName = target.name.toLowerCase().trim();
 
                   list = list.where((p) {
                     final pCatId = (p.categoryId ?? '').toLowerCase().trim();
                     final pSubId = (p.category?.id ?? '').toLowerCase().trim();
-                    final pSubSlug = (p.category?.slug ?? '').toLowerCase().trim();
-                    final pSubName = (p.category?.name ?? '').toLowerCase().trim();
                     final pParentId = (p.category?.parentId ?? '').toLowerCase().trim();
-                    final pName = p.name.toLowerCase().trim();
 
-                    return pCatId == targetId ||
-                           pSubId == targetId ||
-                           pParentId == targetId ||
-                           (targetSlug.isNotEmpty && pSubSlug == targetSlug) ||
-                           (targetName.isNotEmpty && (pSubName == targetName || pSubName.contains(targetName) || targetName.contains(pSubName))) ||
-                           p.tags.any((t) => t.toLowerCase().trim() == targetSlug || t.toLowerCase().trim() == targetName) ||
-                           (targetName.length >= 4 && pName.contains(targetName));
+                    return pCatId == targetId || pSubId == targetId || pParentId == targetId;
                   }).toList();
                 }
                 if (list.isEmpty) {
