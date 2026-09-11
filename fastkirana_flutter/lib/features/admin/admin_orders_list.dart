@@ -32,6 +32,7 @@ import 'package:audioplayers/audioplayers.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/order_alarm_service.dart';
 import '../common/widgets/battery_optimization_dialog.dart';
+import '../../core/services/secure_storage_service.dart';
 
 class AdminOrdersScreen extends ConsumerStatefulWidget {
   final bool showAppBar;
@@ -114,18 +115,44 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
 
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   bool _isDeviceOffline = false;
+  String? _assignedStoreId;
 
-  List<Map<String, String>> _availableRiders = [
-    {'id': 'cmqgzqf630003vkiderv1r9ur', 'name': 'Aryan', 'phone': '+919696503759'},
-  ];
+  List<Map<String, String>> _availableRiders = [];
+
+  Future<void> _fetchAdminProfile() async {
+    try {
+      final dio = ref.read(dioProvider);
+      final res = await dio.get('/api/admin/me', options: AdminAuthorization.options());
+      if (res.data != null) {
+        final sId = res.data['assignedStoreId']?.toString();
+        if (sId != null && sId.isNotEmpty && mounted) {
+          setState(() {
+            _assignedStoreId = sId;
+          });
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('assigned_store_id', sId);
+          await SecureStorage.write('assigned_store_id', sId);
+          _fetchDeliveryRiders();
+          _silentFetchAdminOrders();
+        }
+      }
+    } catch (e) {
+      debugPrint('[Admin] Profile fetch error: $e');
+    }
+  }
 
   Future<void> _fetchDeliveryRiders() async {
     try {
       final dio = ref.read(dioProvider);
-      final res = await dio.get('/api/admin/riders');
+      final prefs = await SharedPreferences.getInstance();
+      final storeId = _assignedStoreId ?? prefs.getString('assigned_store_id');
+      final res = await dio.get(
+        '/api/admin/riders',
+        queryParameters: (storeId != null && storeId.isNotEmpty) ? {'storeId': storeId} : null,
+      );
       if (res.data != null && res.data['riders'] is List) {
         final List list = res.data['riders'];
-        if (mounted && list.isNotEmpty) {
+        if (mounted) {
           setState(() {
             _availableRiders = list.map<Map<String, String>>((r) => {
               'id': r['id']?.toString() ?? '',
@@ -144,6 +171,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
   void initState() {
     super.initState();
     _initConnectivityAndOfflineQueue();
+    _fetchAdminProfile();
     _fetchDeliveryRiders();
     _initAudioPlayer();
     _initNotificationSubscriptions();
@@ -167,6 +195,12 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
     _realtimeOrdersChannel = SupabaseService.subscribeToAllOrdersRealtime(
       onOrderChange: (record) {
         if (!_isDeviceOffline) {
+          final orderStoreId = record['storeId']?.toString();
+          if (_assignedStoreId != null && _assignedStoreId!.isNotEmpty &&
+              orderStoreId != null && orderStoreId.isNotEmpty &&
+              _assignedStoreId != orderStoreId) {
+            return; // Ignore order updates from other dark store hubs
+          }
           debugPrint('[Admin WebSocket] Live order update event: ${record['id']}');
           _silentFetchAdminOrders();
           _playChime();
@@ -275,7 +309,13 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
       await notif.init();
       await notif.requestPermissions();
       final dio = ref.read(dioProvider);
-      await notif.registerDeviceToken(dio, role: 'ADMIN');
+      final prefs = await SharedPreferences.getInstance();
+      final storeId = _assignedStoreId ?? prefs.getString('assigned_store_id');
+      if (storeId != null && storeId.isNotEmpty) {
+        await notif.subscribeToTopic('admin_orders_$storeId');
+        await notif.unsubscribeFromTopic('admin_orders');
+      }
+      await notif.registerDeviceToken(dio, role: 'ADMIN', assignedStoreId: storeId);
     } catch (e) {
       debugPrint('[Admin] Notification init error: $e');
     }
@@ -357,24 +397,35 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
           final sb = SupabaseService.client;
           if (sb == null) return;
           try {
-            final res = await sb
+            final prefs = await SharedPreferences.getInstance();
+            final storeId = _assignedStoreId ?? prefs.getString('assigned_store_id');
+            var query = sb
                 .from('orders')
-                .select('*, order_items(*), customer:users!orders_userId_fkey(name,phone)')
+                .select('*, order_items(*), customer:users!orders_userId_fkey(name,phone)');
+            if (storeId != null && storeId.isNotEmpty) {
+              query = query.eq('storeId', storeId);
+            }
+            final res = await query
                 .order('createdAt', ascending: false)
                 .limit(100);
             for (final j in res) {
               try { addUnique(Order.fromJson(j)); } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
-                        }
-                    } catch (e) {
+            }
+          } catch (e) {
             debugPrint('Supabase orders fetch error: $e');
           }
         }(),
         // Source 2: REST API
         () async {
           try {
+            final prefs = await SharedPreferences.getInstance();
+            final storeId = _assignedStoreId ?? prefs.getString('assigned_store_id');
             final response = await dio.get(
               '/api/admin/orders',
-              queryParameters: {'limit': 100},
+              queryParameters: {
+                'limit': 100,
+                if (storeId != null && storeId.isNotEmpty) 'storeId': storeId,
+              },
               options: AdminAuthorization.options(),
             );
             final data = response.data;
@@ -511,11 +562,23 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
         return isRest ? '🍽️ Restaurant' : '🛒 Dark Store';
       }).toList();
 
+      final combinedDeliveryFee = subOrders.fold<double>(
+        0.0,
+        (sum, o) => sum + o.deliveryFee,
+      );
+
+      final combinedMiscFee = subOrders.fold<double>(
+        0.0,
+        (sum, o) => sum + o.miscFee,
+      );
+
       final merged = primary.copyWith(
         readableId: baseReadableId.isNotEmpty ? baseReadableId : primary.readableId,
         items: allItems,
         total: combinedTotal,
         refundAmount: combinedRefundAmount,
+        deliveryFee: combinedDeliveryFee,
+        miscFee: combinedMiscFee,
         status: combinedStatus(statuses),
         shopName: subLabels.join(' + '),
         combinedId: entry.key,
@@ -553,22 +616,33 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
           final sb = SupabaseService.client;
           if (sb == null) return;
           try {
-            final res = await sb
+            final prefs = await SharedPreferences.getInstance();
+            final storeId = _assignedStoreId ?? prefs.getString('assigned_store_id');
+            var query = sb
                 .from('orders')
-                .select('*, order_items(*), customer:users!orders_userId_fkey(name,phone)')
+                .select('*, order_items(*), customer:users!orders_userId_fkey(name,phone)');
+            if (storeId != null && storeId.isNotEmpty) {
+              query = query.eq('storeId', storeId);
+            }
+            final res = await query
                 .order('createdAt', ascending: false)
                 .limit(100);
             for (final j in res) {
               try { addUnique(Order.fromJson(j)); } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
-                        }
-                    } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
+            }
+          } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
         }(),
         // 2. REST API
         () async {
           try {
+            final prefs = await SharedPreferences.getInstance();
+            final storeId = _assignedStoreId ?? prefs.getString('assigned_store_id');
             final response = await dio.get(
               '/api/admin/orders',
-              queryParameters: {'limit': 100},
+              queryParameters: {
+                'limit': 100,
+                if (storeId != null && storeId.isNotEmpty) 'storeId': storeId,
+              },
               options: AdminAuthorization.options(),
             );
             final data = response.data;
@@ -1855,15 +1929,23 @@ $formattedItems
                 (o.deliveryMethod?.toUpperCase() != 'RETAIL')
               ).toList();
 
-              // Today's Sales: sum of all non-cancelled orders placed today (minus refunds)
+              // Today's Sales: sum of all non-cancelled orders placed today (gross — before refunds)
               final todaySales = todayOrders
                   .where((o) => o.status != OrderStatus.cancelled)
-                  .fold<double>(0.0, (sum, o) => sum + (o.total - o.refundAmount).clamp(0.0, double.infinity));
+                  .fold<double>(0.0, (sum, o) => sum + o.total);
 
-              // Today's Net Sales: sum of DELIVERED orders placed today (minus refunds)
+              // Today's Net Sales: sum of DELIVERED orders placed today (net — after refunds)
               final todayNetSales = todayOrders
                   .where((o) => o.status == OrderStatus.delivered)
                   .fold<double>(0.0, (sum, o) => sum + (o.total - o.refundAmount).clamp(0.0, double.infinity));
+
+              final todayDeliveryFee = todayOrders
+                  .where((o) => o.status != OrderStatus.cancelled)
+                  .fold<double>(0.0, (sum, o) => sum + o.deliveryFee);
+
+              final todayPackagingFee = todayOrders
+                  .where((o) => o.status != OrderStatus.cancelled)
+                  .fold<double>(0.0, (sum, o) => sum + o.miscFee);
 
               // Today's Orders count
               final todayOrdersCount = todayOrders.length;
@@ -1886,6 +1968,9 @@ $formattedItems
                           child: _buildStatCard(
                             title: "Today's Sales",
                             value: '₹${todaySales.toInt()}',
+                            subtitle: (todayDeliveryFee > 0 || todayPackagingFee > 0)
+                                ? 'Incl. ₹${todayDeliveryFee.toInt()} del + ₹${todayPackagingFee.toInt()} pack'
+                                : 'Gross order total',
                             icon: Icons.currency_rupee_rounded,
                             iconColor: AppDesignSystem.emerald600,
                             bgColor: AppDesignSystem.green50,
@@ -1898,6 +1983,7 @@ $formattedItems
                           child: _buildStatCard(
                             title: "Net Sales",
                             value: '₹${todayNetSales.toInt()}',
+                            subtitle: 'Delivered net of refunds',
                             icon: Icons.trending_up_rounded,
                             iconColor: AppDesignSystem.teal600,
                             bgColor: AppDesignSystem.teal50,
@@ -3329,6 +3415,7 @@ $formattedItems
     required Color iconColor,
     required Color bgColor,
     required Color borderColor,
+    String? subtitle,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -3375,6 +3462,19 @@ $formattedItems
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+                if (subtitle != null && subtitle.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 8.5),
+                      fontWeight: FontWeight.w700,
+                      color: AppDesignSystem.slate400,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
             ),
           ),

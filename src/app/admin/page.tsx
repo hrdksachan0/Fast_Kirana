@@ -84,6 +84,8 @@ export default async function AdminPage(props: {
   let todayOrdersCount = 0
   let todayRevenue = 0
   let todayNetRevenue = 0
+  let todayDeliveryFee = 0
+  let todayPackagingFee = 0
 
   try {
     // Exact Indian Standard Time (IST) start of day
@@ -108,11 +110,15 @@ export default async function AdminPage(props: {
         today_orders: number
         today_sales: number
         today_delivered_sales: number
+        today_delivery_fee: number
+        today_packaging_fee: number
       }>>`
         SELECT 
           COUNT(DISTINCT COALESCE("combinedId", id))::int as today_orders,
-          COALESCE(SUM(total - COALESCE("refundAmount", 0)), 0)::float as today_sales,
-          COALESCE(SUM(CASE WHEN status::text = 'DELIVERED' THEN (total - COALESCE("refundAmount", 0)) ELSE 0 END), 0)::float as today_delivered_sales
+          COALESCE(SUM(total), 0)::float as today_sales,
+          COALESCE(SUM(CASE WHEN status::text = 'DELIVERED' THEN GREATEST(0, (total - COALESCE("refundAmount", 0))) ELSE 0 END), 0)::float as today_delivered_sales,
+          COALESCE(SUM("deliveryFee"), 0)::float as today_delivery_fee,
+          COALESCE(SUM("miscFee"), 0)::float as today_packaging_fee
         FROM orders
         WHERE ("deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL)
           AND status::text != 'CANCELLED'
@@ -164,7 +170,7 @@ export default async function AdminPage(props: {
         ? prisma.$queryRaw`
             SELECT "shopName", "restaurantId", "orderType"::text as "orderType", status::text as status,
                    COUNT(DISTINCT COALESCE("combinedId", id))::int as count,
-                   COALESCE(SUM(total - COALESCE("refundAmount", 0)), 0)::float as total,
+                   COALESCE(SUM(total), 0)::float as total,
                    COALESCE(SUM(subtotal), 0)::float as subtotal,
                    COALESCE(SUM(discount), 0)::float as discount
             FROM orders
@@ -175,7 +181,7 @@ export default async function AdminPage(props: {
         : prisma.$queryRaw`
             SELECT "shopName", "restaurantId", "orderType"::text as "orderType", status::text as status,
                    COUNT(DISTINCT COALESCE("combinedId", id))::int as count,
-                   COALESCE(SUM(total - COALESCE("refundAmount", 0)), 0)::float as total,
+                   COALESCE(SUM(total), 0)::float as total,
                    COALESCE(SUM(subtotal), 0)::float as subtotal,
                    COALESCE(SUM(discount), 0)::float as discount
             FROM orders
@@ -216,12 +222,14 @@ export default async function AdminPage(props: {
       }),
     ])
 
-    const todayRow = (todayStatsRaw as any[])?.[0] || { today_orders: 0, today_sales: 0, today_delivered_sales: 0 }
+    const todayRow = (todayStatsRaw as any[])?.[0] || { today_orders: 0, today_sales: 0, today_delivered_sales: 0, today_delivery_fee: 0, today_packaging_fee: 0 }
     const statusRow = (statusStatsRaw as any[])?.[0] || { total: 0, pending: 0, confirmed: 0, packed: 0, shipped: 0, delivered: 0, cancelled: 0 }
 
     todayOrdersCount = todayRow.today_orders || 0
     todayRevenue = todayRow.today_sales || 0
     todayNetRevenue = todayRow.today_delivered_sales || 0
+    todayDeliveryFee = todayRow.today_delivery_fee || 0
+    todayPackagingFee = todayRow.today_packaging_fee || 0
     userCount = (results[0] as number) || 0
     lowStockCount = (results[1] as number) || 0
     const groupStats = (results[2] as any[]) || []
@@ -236,33 +244,38 @@ export default async function AdminPage(props: {
 
     ordersRaw = recentOrdersList
 
+    let platformDeliveredRevenue = 0
     groupStats.forEach((group: any) => {
       const isRestaurant = !!group.restaurantId || group.orderType === 'RESTAURANT' || (group.shopName && group.shopName.toLowerCase().includes('restaurant'))
       
       const count = group.count || 0
+      // Food net sales (strictly food subtotal minus discount - packaging and delivery fees excluded)
       const foodNetSales = (group.subtotal || 0) - (group.discount || 0)
-      const sum = isRestaurant && foodNetSales > 0 ? foodNetSales : (group.total || 0)
+      // Total order value (customer collection: food + delivery fee + packaging miscFee)
+      const totalOrderValue = group.total || 0
 
       if (isRestaurant) {
         restaurantTotalOrders += count
         if (group.status === 'DELIVERED') {
-          restaurantRevenue += sum
+          restaurantRevenue += foodNetSales // Strictly Food Net Sales (no packaging, no delivery fee)
           restaurantDeliveredOrders += count
+          platformDeliveredRevenue += totalOrderValue
         } else if (group.status !== 'CANCELLED') {
           restaurantActiveOrders += count
         }
       } else {
         groceryTotalOrders += count
         if (group.status === 'DELIVERED') {
-          groceryRevenue += sum
+          groceryRevenue += totalOrderValue
           groceryDeliveredOrders += count
+          platformDeliveredRevenue += totalOrderValue
         } else if (group.status !== 'CANCELLED') {
           groceryActiveOrders += count
         }
       }
     })
 
-    revenue = groceryRevenue + restaurantRevenue + cafeRevenue
+    revenue = platformDeliveredRevenue + cafeRevenue
     totalOrdersCount = statusRow.total || 0
     activeOrdersCount = (statusRow.pending || 0) + (statusRow.confirmed || 0) + (statusRow.packed || 0) + (statusRow.shipped || 0)
     deliveredOrdersCount = statusRow.delivered || 0
@@ -419,8 +432,8 @@ export default async function AdminPage(props: {
 
   const statsList = [
     { label: 'Active Live Orders', value: activeOrdersCount.toString(), icon: RotateCw, color: 'text-amber-500 bg-amber-500/10' },
-    { label: "Today's Net Revenue", value: formatPrice(todayRevenue), icon: IndianRupee, color: 'text-emerald-500 bg-emerald-500/10' },
-    { label: "Today's Orders", value: todayOrdersCount.toString(), icon: ShoppingBag, color: 'text-primary bg-primary/10' },
+    { label: "Today's Sales", value: formatPrice(todayRevenue), icon: IndianRupee, color: 'text-emerald-500 bg-emerald-500/10' },
+    { label: "Today's Net Revenue", value: formatPrice(todayNetRevenue), icon: TrendingUp, color: 'text-teal-500 bg-teal-500/10' },
     { label: 'Total Sales Revenue', value: formatPrice(revenue), icon: TrendingUp, color: 'text-blue-500 bg-blue-500/10' },
   ]
 
@@ -490,6 +503,8 @@ export default async function AdminPage(props: {
             todaySales: todayRevenue,
             netSales: todayNetRevenue,
             todayOrdersCount: todayOrdersCount,
+            todayDeliveryFee,
+            todayPackagingFee,
             orderCount: totalOrdersCount,
             activeOrderCount: activeOrdersCount,
             userCount,

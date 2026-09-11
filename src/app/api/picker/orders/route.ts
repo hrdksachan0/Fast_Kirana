@@ -17,6 +17,10 @@ export async function GET(request: Request) {
   const paramRestId = searchParams.get('restaurantId')
   const isPlatformAdmin = role === 'ADMIN'
   
+  const paramStoreId = searchParams.get('storeId')
+  const userAssignedStoreId = (session?.user as any)?.assignedStoreId
+  const effectiveStoreId = userAssignedStoreId || (paramStoreId && paramStoreId !== 'all' ? paramStoreId : null)
+
   let assignedRestaurantId = (session?.user as any)?.assignedRestaurantId
 
   // If not admin, lock strictly to assignedRestaurantId
@@ -107,21 +111,40 @@ export async function GET(request: Request) {
         ORDER BY o."createdAt" ASC
       `
     } else {
-      orders = await prisma.$queryRaw`
-        SELECT o.id, o."userId", o."addressId", o."readableId",
-               o.status::text as status,
-               o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
-               o."paymentMethod"::text as "paymentMethod",
-               o."paymentStatus"::text as "paymentStatus",
-               o."estimatedDelivery", o."createdAt", o."deliveryMethod",
-               o."shopName", o."assignedPickerId", o."assignedChefId", o.notes,
-               o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId"
-        FROM orders o
-        WHERE o.status IN ('PENDING', 'CONFIRMED')
-          AND o."restaurantId" IS NULL
-          AND (o."orderType"::text = 'GROCERY' OR o."orderType" IS NULL)
-        ORDER BY o."createdAt" ASC
-      `
+      if (effectiveStoreId) {
+        orders = await prisma.$queryRaw`
+          SELECT o.id, o."userId", o."addressId", o."readableId",
+                 o.status::text as status,
+                 o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+                 o."paymentMethod"::text as "paymentMethod",
+                 o."paymentStatus"::text as "paymentStatus",
+                 o."estimatedDelivery", o."createdAt", o."deliveryMethod",
+                 o."shopName", o."assignedPickerId", o."assignedChefId", o.notes,
+                 o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId", o."storeId"
+          FROM orders o
+          WHERE o.status IN ('PENDING', 'CONFIRMED')
+            AND o."restaurantId" IS NULL
+            AND (o."orderType"::text = 'GROCERY' OR o."orderType" IS NULL)
+            AND o."storeId" = ${effectiveStoreId}
+          ORDER BY o."createdAt" ASC
+        `
+      } else {
+        orders = await prisma.$queryRaw`
+          SELECT o.id, o."userId", o."addressId", o."readableId",
+                 o.status::text as status,
+                 o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+                 o."paymentMethod"::text as "paymentMethod",
+                 o."paymentStatus"::text as "paymentStatus",
+                 o."estimatedDelivery", o."createdAt", o."deliveryMethod",
+                 o."shopName", o."assignedPickerId", o."assignedChefId", o.notes,
+                 o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId", o."storeId"
+          FROM orders o
+          WHERE o.status IN ('PENDING', 'CONFIRMED')
+            AND o."restaurantId" IS NULL
+            AND (o."orderType"::text = 'GROCERY' OR o."orderType" IS NULL)
+          ORDER BY o."createdAt" ASC
+        `
+      }
     }
 
     const orderIds = orders.map(o => o.id)

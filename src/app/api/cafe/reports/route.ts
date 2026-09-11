@@ -74,7 +74,11 @@ export async function GET(request: NextRequest) {
         SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "createdAt"
         FROM orders
         WHERE status::text = 'DELIVERED'
-          AND "restaurantId" = ${assignedRestId}
+          AND ("restaurantId" = ${assignedRestId} OR id IN (
+            SELECT oi."orderId" FROM order_items oi
+            JOIN products p ON oi."productId" = p.id
+            WHERE p."restaurantId" = ${assignedRestId}
+          ))
           AND "createdAt" >= ${start}
           AND "createdAt" <= ${end}
         ORDER BY "createdAt" ASC
@@ -90,7 +94,7 @@ export async function GET(request: NextRequest) {
         LEFT JOIN products p ON oi."productId" = p.id
         LEFT JOIN categories c ON p."categoryId" = c.id
         WHERE o.status::text = 'DELIVERED'
-          AND o."restaurantId" = ${assignedRestId}
+          AND (o."restaurantId" = ${assignedRestId} OR p."restaurantId" = ${assignedRestId})
           AND o."createdAt" >= ${start}
           AND o."createdAt" <= ${end}
       `

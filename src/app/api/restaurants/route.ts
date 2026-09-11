@@ -58,8 +58,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 2. Filter by storeId: If browsing by dark store hub, only restaurants from that store's city!
-    const storeId = searchParams.get('storeId')
+    // 2. Filter by storeId: If browsing by dark store hub (or store-assigned admin), only restaurants from that store's city!
+    const userAssignedStoreId = (session?.user as any)?.assignedStoreId
+    const storeId = searchParams.get('storeId') || userAssignedStoreId
     if (storeId && storeId !== 'all') {
       const store = await prisma.darkStore.findUnique({
         where: { id: storeId },
@@ -68,6 +69,10 @@ export async function GET(request: NextRequest) {
       const storeCity = store ? extractCityFromStoreName(store.name) : ''
       if (storeCity) {
         where.city = { contains: storeCity, mode: 'insensitive' }
+      } else if (store) {
+        where.city = { contains: store.name, mode: 'insensitive' }
+      } else {
+        where.city = '__NO_MATCHING_CITY__'
       }
     }
 
@@ -178,12 +183,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const targetStoreId = body.storeId || (session?.user as any)?.assignedStoreId
+    if (targetStoreId && (!createData.city || createData.city.trim() === '')) {
+      const store = await prisma.darkStore.findUnique({
+        where: { id: targetStoreId },
+        select: { name: true }
+      })
+      if (store) {
+        createData.city = extractCityFromStoreName(store.name) || store.name
+      }
+    }
+
     // Auto-generate Series ID (REST-1xx for Ghatampur, REST-2xx for Hamirpur, etc.)
     if (!createData.id) {
       let seriesBase = 100
       const cityLower = (createData.city || '').toLowerCase()
       if (cityLower.includes('hamirpur') || cityLower.includes('210301')) seriesBase = 200
-      else if (cityLower.includes('pukhrayan') || cityLower.includes('209111')) seriesBase = 300
+      else if (cityLower.includes('pukhrayan') || cityLower.includes('pukhraya') || cityLower.includes('209111')) seriesBase = 300
+      else if (cityLower.includes('akbarpur') || cityLower.includes('224122')) seriesBase = 500
       else if (cityLower.includes('kanpur') || cityLower.includes('208001')) seriesBase = 400
 
       const existingInSeries = await prisma.restaurant.findMany({

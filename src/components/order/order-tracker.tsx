@@ -1357,11 +1357,11 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                               <p className="text-xs font-bold text-text-primary truncate">
                                 {item.name} {item.selectedVariant ? `(${item.selectedVariant})` : ''}
                               </p>
-                              {(item.isRefunded || (item.refundAmount && item.refundAmount > 0) || item.notes?.includes('Refund')) && (
+                              {(item.isRefunded || (Number(item.refundAmount) > 0) || item.notes?.includes('Refund')) ? (
                                 <span className="text-[9px] bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold px-1.5 py-0.5 rounded mt-0.5 inline-block">
                                   ↩️ Refunded (-₹{item.refundAmount || item.price})
                                 </span>
-                              )}
+                              ) : null}
                               {item.notes && !item.notes.includes('Refund') && (
                                 <p className="text-[9px] text-amber-600 dark:text-amber-400 font-medium">
                                   📝 {item.notes}
@@ -1389,11 +1389,11 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                       <p className="text-xs font-bold text-text-primary truncate">
                         {item.name} {item.selectedVariant ? `(${item.selectedVariant})` : ''}
                       </p>
-                      {(item.isRefunded || (item.refundAmount && item.refundAmount > 0) || item.notes?.includes('Refund')) && (
+                      {(item.isRefunded || (Number(item.refundAmount) > 0) || item.notes?.includes('Refund')) ? (
                         <span className="text-[9px] bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold px-1.5 py-0.5 rounded mt-0.5 inline-block">
                           ↩️ Refunded (-₹{item.refundAmount || item.price})
                         </span>
-                      )}
+                      ) : null}
                       {item.shopName && (
                         <p className="text-[9px] text-text-muted font-semibold flex items-center gap-0.5 mt-0.5">
                           <span>🏢</span> {item.shopName}

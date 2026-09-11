@@ -190,8 +190,12 @@ export async function GET(request: Request) {
     const addressIds = [...new Set(ordersRaw.map(o => o.addressId))].filter(Boolean)
     const restaurantIds = [...new Set(ordersRaw.map(o => o.restaurantId))].filter(Boolean)
 
-    const startOfToday = new Date()
-    startOfToday.setHours(0, 0, 0, 0)
+    // Exact Indian Standard Time (IST) start of day
+    const now = new Date()
+    const istOffset = 5.5 * 60 * 60 * 1000
+    const istDate = new Date(now.getTime() + istOffset)
+    istDate.setUTCHours(0, 0, 0, 0)
+    const startOfToday = new Date(istDate.getTime() - istOffset)
 
     const [allUsers, allAddresses, allOrderItems, allRestaurants] = await Promise.all([
       userIds.length > 0
@@ -240,11 +244,15 @@ export async function GET(request: Request) {
         today_orders: number
         today_sales: number
         today_delivered_sales: number
+        today_delivery_fee: number
+        today_packaging_fee: number
       }>>`
         SELECT 
           COUNT(DISTINCT COALESCE("combinedId", id))::int as today_orders,
-          COALESCE(SUM(total - COALESCE("refundAmount", 0)), 0)::float as today_sales,
-          COALESCE(SUM(CASE WHEN status::text = 'DELIVERED' THEN (total - COALESCE("refundAmount", 0)) ELSE 0 END), 0)::float as today_delivered_sales
+          COALESCE(SUM(total), 0)::float as today_sales,
+          COALESCE(SUM(CASE WHEN status::text = 'DELIVERED' THEN GREATEST(0, (total - COALESCE("refundAmount", 0))) ELSE 0 END), 0)::float as today_delivered_sales,
+          COALESCE(SUM("deliveryFee"), 0)::float as today_delivery_fee,
+          COALESCE(SUM("miscFee"), 0)::float as today_packaging_fee
         FROM orders
         WHERE ("deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL)
           AND status::text != 'CANCELLED'
@@ -254,7 +262,7 @@ export async function GET(request: Request) {
     ])
 
     const statRow = (statusStatsRaw as any[])?.[0] || { total: 0, pending: 0, confirmed: 0, packed: 0, shipped: 0, delivered: 0, cancelled: 0 }
-    const todayRow = (todayStatsRaw as any[])?.[0] || { today_orders: 0, today_sales: 0, today_delivered_sales: 0 }
+    const todayRow = (todayStatsRaw as any[])?.[0] || { today_orders: 0, today_sales: 0, today_delivered_sales: 0, today_delivery_fee: 0, today_packaging_fee: 0 }
 
     const allCount = statRow.total || 0
     const pendingCount = statRow.pending || 0
@@ -389,6 +397,8 @@ export async function GET(request: Request) {
       todaySales,
       todayNetSales,
       todayOrdersCount,
+      todayDeliveryFee: todayRow.today_delivery_fee || 0,
+      todayPackagingFee: todayRow.today_packaging_fee || 0,
       counts: {
         ALL: allCount,
         PENDING: pendingCount,

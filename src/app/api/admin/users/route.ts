@@ -50,9 +50,13 @@ export async function GET(request: Request) {
     }
 
     if (storeId && storeId !== 'all') {
-      const userStoreFilter = await getStoreUserFilter(storeId)
-      if (Object.keys(userStoreFilter).length > 0) {
-        andClauses.push(userStoreFilter)
+      if (role === 'DELIVERY' || role === 'PICKER') {
+        andClauses.push({ assignedStoreId: storeId })
+      } else {
+        const userStoreFilter = await getStoreUserFilter(storeId)
+        if (Object.keys(userStoreFilter).length > 0) {
+          andClauses.push(userStoreFilter)
+        }
       }
     }
 

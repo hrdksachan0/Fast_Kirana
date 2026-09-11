@@ -907,13 +907,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           'price': i.product.price,
           'name': i.product.name,
           'selectedVariant': i.selectedVariant,
+          'restaurantId': i.product.restaurantId ?? i.product.restaurant?.id,
           'product': {
             'id': i.product.id,
             'name': i.product.name,
             'price': i.product.price,
             'imageUrl': i.product.imageUrl,
             'slug': i.product.slug,
-            'restaurantId': i.product.restaurantId,
+            'restaurantId': i.product.restaurantId ?? i.product.restaurant?.id,
           }
         }).toList(),
       };

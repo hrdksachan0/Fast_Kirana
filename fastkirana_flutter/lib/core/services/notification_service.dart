@@ -420,6 +420,7 @@ class NotificationService {
     Dio dio, {
     String? role,
     String? assignedRestaurantId,
+    String? assignedStoreId,
   }) async {
     if (kIsWeb) return;
     try {
@@ -433,8 +434,14 @@ class NotificationService {
 
       // Subscribe to role-based and user-specific topics
       try {
+        final storeId = assignedStoreId ?? prefs.getString('assigned_store_id');
         if (role == 'ADMIN') {
-          await _fcm?.subscribeToTopic('admin_orders');
+          if (storeId != null && storeId.isNotEmpty) {
+            await _fcm?.subscribeToTopic('admin_orders_$storeId');
+            await _fcm?.unsubscribeFromTopic('admin_orders');
+          } else {
+            await _fcm?.subscribeToTopic('admin_orders');
+          }
           // Admin only needs admin_orders topic — prevent duplicate push from staff_orders
           await _fcm?.unsubscribeFromTopic('staff_orders');
         } else if (role == 'RESTAURANT' || assignedRestaurantId != null) {
@@ -444,7 +451,12 @@ class NotificationService {
             await _fcm?.subscribeToTopic('kitchen_$rId');
           }
         } else if (role == 'DELIVERY' || role == 'PICKER') {
-          await _fcm?.subscribeToTopic('staff_orders');
+          if (storeId != null && storeId.isNotEmpty) {
+            await _fcm?.subscribeToTopic('staff_orders_$storeId');
+            await _fcm?.unsubscribeFromTopic('staff_orders');
+          } else {
+            await _fcm?.subscribeToTopic('staff_orders');
+          }
           await _fcm?.unsubscribeFromTopic('admin_orders');
         }
 
@@ -470,6 +482,7 @@ class NotificationService {
           'phone': phone,
           if (role != null) 'role': role,
           if (assignedRestaurantId != null) 'assignedRestaurantId': assignedRestaurantId,
+          if (assignedStoreId != null) 'assignedStoreId': assignedStoreId,
         },
       );
 

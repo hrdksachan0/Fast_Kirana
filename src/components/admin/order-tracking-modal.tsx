@@ -466,6 +466,11 @@ export default function OrderTrackingModal({
                                         📝 {item.notes}
                                       </span>
                                     )}
+                                    {(item.isRefunded || (Number(item.refundAmount) > 0)) ? (
+                                      <span className="text-[9px] bg-rose-500/15 text-rose-600 dark:text-rose-400 px-1.5 py-px rounded font-bold">
+                                        ↩️ Refunded (-{formatPrice(item.refundAmount || item.price)})
+                                      </span>
+                                    ) : null}
                                   </div>
                                 </div>
                                 <div className="text-right shrink-0 pl-2">
@@ -512,11 +517,11 @@ export default function OrderTrackingModal({
                                 📝 {item.notes}
                               </span>
                             )}
-                            {(item.isRefunded || (item.refundAmount && item.refundAmount > 0)) && (
+                            {(item.isRefunded || (Number(item.refundAmount) > 0)) ? (
                               <span className="text-[9px] bg-rose-500/15 text-rose-600 dark:text-rose-400 px-1.5 py-px rounded font-bold">
                                 ↩️ Refunded (-{formatPrice(item.refundAmount || item.price)})
                               </span>
-                            )}
+                            ) : null}
                           </div>
                         </div>
 

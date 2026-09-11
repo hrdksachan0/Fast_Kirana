@@ -3,12 +3,35 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { RestaurantManager } from '@/components/admin/restaurant-manager'
 
+import { extractCityFromStoreName } from '@/lib/store-resolver'
+
 export const revalidate = 0
 
-export default async function AdminRestaurantsPage() {
+export default async function AdminRestaurantsPage(props: {
+  searchParams?: Promise<{ storeId?: string }>
+}) {
   const session = await auth()
   if (!session || session.user?.role !== 'ADMIN') {
     redirect('/')
+  }
+
+  const searchParams = props.searchParams ? await props.searchParams : undefined
+  const initialStoreId = searchParams?.storeId || (session.user as any)?.assignedStoreId || null
+
+  let restaurantWhere: any = {}
+  if (initialStoreId && initialStoreId !== 'all') {
+    const store = await prisma.darkStore.findUnique({
+      where: { id: initialStoreId },
+      select: { name: true }
+    })
+    const storeCity = store ? extractCityFromStoreName(store.name) : ''
+    if (storeCity) {
+      restaurantWhere.city = { contains: storeCity, mode: 'insensitive' }
+    } else if (store) {
+      restaurantWhere.city = { contains: store.name, mode: 'insensitive' }
+    } else {
+      restaurantWhere.city = '__NO_MATCH__'
+    }
   }
 
   const thirtyDaysAgo = new Date()
@@ -16,6 +39,7 @@ export default async function AdminRestaurantsPage() {
 
   const [restaurants, orderStats] = await Promise.all([
     prisma.restaurant.findMany({
+      where: restaurantWhere,
       orderBy: { sortOrder: 'asc' },
       include: {
         _count: {

@@ -74,6 +74,11 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
   const [mapZoom, setMapZoom] = useState<number>(18)
   const [pasteInput, setPasteInput] = useState('')
 
+  // Dark Stores / Hub Territories
+  const [darkStores, setDarkStores] = useState<any[]>([])
+  const sessionAssignedStoreId = (session?.user as any)?.assignedStoreId
+  const [selectedStoreHubId, setSelectedStoreHubId] = useState<string>(() => sessionAssignedStoreId || '')
+
   const handleExtractFromGoogleMaps = (rawText: string) => {
     const text = rawText.trim()
     if (!text) {
@@ -189,8 +194,30 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
         })
         .catch(console.error)
         .finally(() => setLoadingUsers(false))
+
+      fetch('/api/admin/stores')
+        .then(res => res.json())
+        .then(stores => {
+          if (Array.isArray(stores)) {
+            setDarkStores(stores)
+            if (!restaurant) {
+              const targetStore = (sessionAssignedStoreId ? stores.find(s => s.id === sessionAssignedStoreId) : null) || stores[0]
+              if (targetStore) {
+                setSelectedStoreHubId(targetStore.id)
+                const clean = targetStore.name.replace(/\s*(central\s*hub|dark\s*store|hub|store)\s*/gi, '').trim()
+                setFormData(prev => ({ ...prev, city: prev.city || clean }))
+              }
+            } else if (restaurant.city) {
+              const matched = stores.find(s => s.name.toLowerCase().includes(restaurant.city.toLowerCase()) || restaurant.city.toLowerCase().includes(s.name.toLowerCase().replace(/central|hub|dark\s*store/gi, '').trim()))
+              if (matched) {
+                setSelectedStoreHubId(matched.id)
+              }
+            }
+          }
+        })
+        .catch(console.error)
     }
-  }, [isAdmin, restaurant?.id])
+  }, [isAdmin, restaurant?.id, sessionAssignedStoreId])
 
   // Image File Upload states and refs
   const logoFileInputRef = useRef<HTMLInputElement>(null)
@@ -324,6 +351,7 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
         rating: parseNumDefault(formData.rating, 4.0),
         lat: parseNum(formData.lat),
         lng: parseNum(formData.lng),
+        storeId: selectedStoreHubId || undefined,
       }
 
       const url = isEditing ? `/api/restaurants/${restaurant.id}` : '/api/restaurants'
@@ -1195,13 +1223,37 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
             </InputField>
           </div>
 
+          <InputField label="Dark Store Hub / Territory" id="storeHub">
+            <select
+              id="storeHub"
+              value={selectedStoreHubId}
+              onChange={(e) => {
+                const sId = e.target.value
+                setSelectedStoreHubId(sId)
+                const st = darkStores.find(s => s.id === sId)
+                if (st) {
+                  const clean = st.name.replace(/\s*(central\s*hub|dark\s*store|hub|store)\s*/gi, '').trim()
+                  setFormData(prev => ({ ...prev, city: clean }))
+                }
+              }}
+              className={inputClass}
+            >
+              <option value="">-- Select Associated Dark Store Hub --</option>
+              {darkStores.map((st: any) => (
+                <option key={st.id} value={st.id}>
+                  🏢 {st.name} ({st.id})
+                </option>
+              ))}
+            </select>
+          </InputField>
+
           <InputField label="City" id="city">
             <input
               id="city"
               name="city"
               value={formData.city}
               onChange={handleChange}
-              placeholder="e.g. Lucknow"
+              placeholder="e.g. Akbarpur / Ghatampur"
               className={inputClass}
             />
           </InputField>

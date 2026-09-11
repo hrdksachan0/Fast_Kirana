@@ -120,6 +120,8 @@ interface AdminDashboardProps {
     todaySales?: number
     netSales?: number
     todayOrdersCount?: number
+    todayDeliveryFee?: number
+    todayPackagingFee?: number
     orderCount: number
     activeOrderCount?: number
     userCount: number
@@ -242,6 +244,8 @@ export function AdminDashboard({
   const [apiTodaySales, setApiTodaySales] = useState<number | null>(() => (typeof stats?.todaySales === 'number' ? stats.todaySales : null))
   const [apiTodayNetSales, setApiTodayNetSales] = useState<number | null>(() => (typeof stats?.netSales === 'number' ? stats.netSales : null))
   const [apiTodayOrdersCount, setApiTodayOrdersCount] = useState<number | null>(() => (typeof stats?.todayOrdersCount === 'number' ? stats.todayOrdersCount : null))
+  const [apiTodayDeliveryFee, setApiTodayDeliveryFee] = useState<number | null>(() => (typeof (stats as any)?.todayDeliveryFee === 'number' ? (stats as any).todayDeliveryFee : null))
+  const [apiTodayPackagingFee, setApiTodayPackagingFee] = useState<number | null>(() => (typeof (stats as any)?.todayPackagingFee === 'number' ? (stats as any).todayPackagingFee : null))
 
   // WhatsApp Custom Alert States
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false)
@@ -693,7 +697,8 @@ export function AdminDashboard({
   const [savingProductId, setSavingProductId] = useState<string | null>(null)
 
   const fetchStoresAndRestaurants = useCallback(() => {
-    fetch('/api/restaurants?all=true')
+    const storeParam = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
+    fetch(`/api/restaurants?all=true${storeParam}`)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) setRestaurantsList(data)
@@ -965,8 +970,8 @@ export function AdminDashboard({
 
   const netSales = useMemo(() => {
     return (orders || [])
-      .filter((o: any) => o.status !== 'CANCELLED')
-      .reduce((sum: number, o: any) => sum + (o.total || 0), 0)
+      .filter((o: any) => o.status === 'DELIVERED')
+      .reduce((sum: number, o: any) => sum + Math.max(0, (o.total || 0) - (o.refundAmount || 0)), 0)
   }, [orders])
 
   const currentActiveOrdersCount = useMemo(() => {
@@ -1017,6 +1022,8 @@ export function AdminDashboard({
           if (typeof data.todaySales === 'number') setApiTodaySales(data.todaySales)
           if (typeof data.todayNetSales === 'number') setApiTodayNetSales(data.todayNetSales)
           if (typeof data.todayOrdersCount === 'number') setApiTodayOrdersCount(data.todayOrdersCount)
+          if (typeof data.todayDeliveryFee === 'number') setApiTodayDeliveryFee(data.todayDeliveryFee)
+          if (typeof data.todayPackagingFee === 'number') setApiTodayPackagingFee(data.todayPackagingFee)
           if (data.counts) {
             setOrderCounts(data.counts)
           }
@@ -2577,8 +2584,9 @@ export function AdminDashboard({
   }, [orderTotal, activeCartsCount, productTotal, categories.length, stats.lowStockCount, userTotal, reviews.length, coupons.length])
 
   const activeStoreHub = storesList.find(s => s.id === selectedHubId) || storesList[0]
+  const hubCity = activeStoreHub?.name ? activeStoreHub.name.replace(/\s*(central\s*hub|dark\s*store|hub|store)\s*/gi, '').trim().toLowerCase() : ''
   const hubRestaurants = restaurantsList.filter(r => 
-    !activeStoreHub || (r.city && activeStoreHub.name && r.city.toLowerCase().trim() === activeStoreHub.name.toLowerCase().trim())
+    !hubCity || (r.city && r.city.toLowerCase().trim().includes(hubCity))
   )
 
   return (
@@ -2602,7 +2610,7 @@ export function AdminDashboard({
       <StoreControlBar
         storeHubName={activeStoreHub?.name || storesList[0]?.name || 'Central Hub'}
         storesList={storesList}
-        restaurantsList={restaurantsList}
+        restaurantsList={hubRestaurants}
         selectedHubId={selectedHubId}
         onSelectHub={handleSelectHub}
         onOpenHubManager={() => setIsStoreHubsModalOpen(true)}
@@ -2619,6 +2627,8 @@ export function AdminDashboard({
           todaySales: apiTodaySales ?? stats?.todaySales ?? 0,
           todayOrdersCount: apiTodayOrdersCount ?? stats?.todayOrdersCount ?? 0,
           netSales: apiTodayNetSales ?? stats?.netSales ?? 0,
+          todayDeliveryFee: apiTodayDeliveryFee ?? (stats as any)?.todayDeliveryFee ?? 0,
+          todayPackagingFee: apiTodayPackagingFee ?? (stats as any)?.todayPackagingFee ?? 0,
           groceryRevenue: stats?.groceryRevenue ?? 0,
           restaurantRevenue: stats?.restaurantRevenue ?? 0,
           orderCount: stats?.orderCount || orderTotal || 0,
@@ -2674,7 +2684,7 @@ export function AdminDashboard({
         <ProductsTab
           products={products}
           categories={categories}
-          restaurantsList={restaurantsList}
+          restaurantsList={hubRestaurants}
           settingsMap={settingsMap}
           filteredProducts={filteredProducts}
           searchQuery={searchQuery}
@@ -3039,7 +3049,7 @@ export function AdminDashboard({
           isUploading={isUploading}
           isEditProductCafe={isEditProductCafe}
           isEditProductRestaurant={isEditProductRestaurant}
-          restaurantsList={restaurantsList}
+          restaurantsList={hubRestaurants}
           categories={categories}
           settingsMap={settingsMap}
           editProductVariants={editProductVariants}
@@ -3150,7 +3160,7 @@ export function AdminDashboard({
         isOpen={isStoreHubsModalOpen}
         onClose={() => setIsStoreHubsModalOpen(false)}
         stores={storesList}
-        restaurants={restaurantsList}
+        restaurants={hubRestaurants}
         selectedHubId={selectedHubId}
         isHubAdmin={!isSuperAdmin}
         assignedStoreId={sessionAssignedStoreId}

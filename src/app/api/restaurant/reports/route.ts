@@ -115,7 +115,11 @@ export async function GET(request: NextRequest) {
       SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "deliveryMethod", "createdAt"
       FROM orders
       WHERE status::text = 'DELIVERED'
-        AND "restaurantId" = ${effectiveRestId}
+        AND ("restaurantId" = ${effectiveRestId} OR id IN (
+          SELECT oi."orderId" FROM order_items oi
+          JOIN products p ON oi."productId" = p.id
+          WHERE p."restaurantId" = ${effectiveRestId}
+        ))
         AND ("shopName" IS NULL OR ("shopName" != 'FastKirana Dark Store' AND "shopName" != 'FastKirana Grocery'))
         AND "createdAt" >= ${start}
         AND "createdAt" <= ${end}
@@ -127,7 +131,7 @@ export async function GET(request: NextRequest) {
              COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
              c.name as "categoryName",
              c.slug as "categorySlug",
-             p."restaurantId" as "restaurantId",
+             COALESCE(p."restaurantId", o."restaurantId") as "restaurantId",
              COALESCE(oi.variants, p.variants) as "variants", 
              oi."selectedVariant"
       FROM order_items oi
@@ -135,7 +139,7 @@ export async function GET(request: NextRequest) {
       LEFT JOIN products p ON oi."productId" = p.id
       LEFT JOIN categories c ON p."categoryId" = c.id
       WHERE o.status::text = 'DELIVERED'
-        AND o."restaurantId" = ${effectiveRestId}
+        AND (o."restaurantId" = ${effectiveRestId} OR p."restaurantId" = ${effectiveRestId})
         AND ("shopName" IS NULL OR ("shopName" != 'FastKirana Dark Store' AND "shopName" != 'FastKirana Grocery'))
         AND o."createdAt" >= ${start}
         AND o."createdAt" <= ${end}
@@ -249,9 +253,12 @@ export async function GET(request: NextRequest) {
       const orderRestSalesRaw = items.length > 0
         ? items.reduce((sum, item) => {
             if (isPureGroceryItem(item)) return sum
+            if (item.restaurantId && item.restaurantId !== effectiveRestId) return sum
             return sum + (item.price * item.quantity)
           }, 0)
         : (o.subtotal || o.total || 0)
+
+      if (orderRestSalesRaw <= 0) return
 
       const discountShare = o.subtotal > 0 ? (o.discount * (orderRestSalesRaw / o.subtotal)) : 0
       const foodSales = Math.max(0, orderRestSalesRaw - discountShare)
@@ -262,6 +269,7 @@ export async function GET(request: NextRequest) {
       if (items.length > 0) {
         items.forEach(item => {
           if (isPureGroceryItem(item)) return
+          if (item.restaurantId && item.restaurantId !== effectiveRestId) return
           
           const metrics = getItemMetrics(item)
           orderRestProfit += metrics.restaurantProfit

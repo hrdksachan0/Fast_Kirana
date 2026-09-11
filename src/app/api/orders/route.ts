@@ -437,7 +437,8 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const isRestaurantItem = !!dbProduct.restaurantId
+      const resolvedRestId = dbProduct.restaurantId || item.product.restaurantId || null
+      const isRestaurantItem = !!resolvedRestId
 
       if (isRestaurantItem) {
         dbStock = 999999
@@ -448,11 +449,15 @@ export async function POST(request: NextRequest) {
         dbProduct
       }
 
-      if (isRestaurantItem) {
-        const rId = dbProduct.restaurantId as string
+      if (isRestaurantItem && resolvedRestId) {
+        const rId = resolvedRestId as string
         if (!restaurantGroups[rId]) {
+          let rObj = dbProduct.restaurant
+          if (!rObj) {
+            rObj = await prisma.restaurant.findUnique({ where: { id: rId } })
+          }
           restaurantGroups[rId] = {
-            restaurant: dbProduct.restaurant,
+            restaurant: rObj,
             items: []
           }
         }
@@ -1337,12 +1342,20 @@ export async function POST(request: NextRequest) {
                 }
               )
               // Send FCM Push Notification to Staff (Admin, Delivery, Picker)
-              // Broadcast to admin_orders (reaches all admins) and staff_orders (reaches delivery & pickers)
-              // This guarantees EXACTLY ONE notification per device instead of 3x duplicates
-              sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders', ...staffPayload }).catch(() => {})
-              if (!isRestaurant) {
-                sendTopicWithRetry(fcmMessaging, { topic: 'staff_orders', ...staffPayload }).catch(() => {})
+              // Strictly partitioned by storeId ("id wise") so Pukhraya/Akbarpur admins don't get Ghatampur notifications!
+              if (order.storeId) {
+                sendTopicWithRetry(fcmMessaging, { topic: `admin_orders_${order.storeId}`, ...staffPayload }).catch(() => {})
+                if (!isRestaurant) {
+                  sendTopicWithRetry(fcmMessaging, { topic: `staff_orders_${order.storeId}`, ...staffPayload }).catch(() => {})
+                }
+              } else {
+                sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders', ...staffPayload }).catch(() => {})
+                if (!isRestaurant) {
+                  sendTopicWithRetry(fcmMessaging, { topic: 'staff_orders', ...staffPayload }).catch(() => {})
+                }
               }
+              // Super admin / HQ global listener
+              sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders_all', ...staffPayload }).catch(() => {})
 
               // 3. Direct device token push STRICTLY to the specific restaurant owner ONLY (WITHOUT AMOUNT)
               if (isRestaurant && order.restaurantId) {

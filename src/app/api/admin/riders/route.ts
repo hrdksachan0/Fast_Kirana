@@ -1,18 +1,30 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { auth } from '@/auth'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const session = await auth()
+    const { searchParams } = new URL(request.url)
+    const storeId = searchParams.get('storeId') || (session?.user as any)?.assignedStoreId || null
+
+    const where: any = {
+      role: 'DELIVERY',
+    }
+
+    if (storeId && storeId !== 'all' && storeId !== 'ALL') {
+      where.assignedStoreId = storeId
+    }
+
     const riders = await prisma.user.findMany({
-      where: {
-        role: 'DELIVERY',
-      },
+      where,
       select: {
         id: true,
         name: true,
         phone: true,
         email: true,
         role: true,
+        assignedStoreId: true,
       },
       orderBy: { name: 'asc' },
     })
@@ -22,8 +34,9 @@ export async function GET() {
       riders: riders.map((r) => ({
         id: r.id,
         name: r.name || 'Delivery Partner',
-        phone: r.phone || '+919696503759',
+        phone: r.phone || '',
         role: r.role,
+        assignedStoreId: r.assignedStoreId,
       })),
     })
   } catch (error: any) {

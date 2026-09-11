@@ -290,7 +290,7 @@ export async function POST(
     const hasGroceryItems = groceryGroup.length > 0
     const restaurantKeys = Object.keys(restaurantGroups)
     const hasRestaurantItems = restaurantKeys.length > 0
-    const isMixed = hasGroceryItems && hasRestaurantItems
+    const isMixed = (hasGroceryItems && hasRestaurantItems) || restaurantKeys.length > 1
 
     // 5. Fetch fee settings once
     const settings = await prisma.storeSetting.findMany()

@@ -183,13 +183,18 @@ export function StoreHubsManager({
 
     setIsSubmitting(true)
     try {
+      const targetStore = stores.find(s => s.name === newOutletCity || s.id === selectedHubId) || activeStore
+      const rawCity = (isHubAdmin ? (activeStore?.name || 'Ghatampur') : (targetStore?.name || newOutletCity || 'Ghatampur'))
+      const cleanCity = rawCity.replace(/central|hub|dark\s*store|market|branch/gi, '').trim() || rawCity.trim()
+
       const res = await fetch('/api/restaurants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: newOutletName.trim(),
           slug,
-          city: (isHubAdmin ? (activeStore?.name || 'Ghatampur') : newOutletCity).trim(),
+          city: cleanCity,
+          storeId: targetStore?.id,
           ownerPhone: phone ? `+91${phone.slice(-10)}` : undefined,
           commissionRate: parseFloat(newOutletCommission) || 15,
           deliveryRadiusKm: parseFloat(newOutletRadius) || 5.0,
@@ -258,14 +263,24 @@ export function StoreHubsManager({
 
   if (!isOpen) return null
 
-  const activeStore = stores.find(s => s.id === selectedHubId) || stores[0]
-  const hubCityName = activeStore?.name ? activeStore.name.replace(/\s*(market|hub|dark\s*store).*$/i, '').trim().toLowerCase() : ''
+  const activeStore = stores.find(s => s.id === selectedHubId) || (selectedHubId && selectedHubId !== 'all' ? stores.find(s => s.id === selectedHubId) : stores[0])
+  const hubCityName = activeStore?.name 
+    ? activeStore.name.replace(/central|hub|dark\s*store|market|branch/gi, '').trim().toLowerCase()
+    : ''
   const hubRestaurants = restaurants.filter(r => {
     if (!activeStore) return true
     if (!r.city) return false
     const rCity = r.city.trim().toLowerCase()
-    return rCity === activeStore.name.toLowerCase().trim() || 
-           (hubCityName && (rCity.includes(hubCityName) || hubCityName.includes(rCity)))
+    const cleanStoreName = activeStore.name.toLowerCase().trim()
+    // Explicit storeId link takes precedence
+    if (r.storeId && activeStore.id) {
+      return r.storeId === activeStore.id
+    }
+    // Strict city matching (normalized clean city name comparison)
+    if (hubCityName && rCity) {
+      return rCity === hubCityName || rCity === cleanStoreName || rCity.startsWith(hubCityName) || hubCityName.startsWith(rCity)
+    }
+    return rCity === cleanStoreName
   })
 
   return (

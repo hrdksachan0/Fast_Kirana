@@ -206,51 +206,77 @@ export async function GET(request: NextRequest) {
     }
 
     for (const o of orders) {
-      const rStats = restaurantMap.get(o.restaurantId)
-      if (!rStats) continue
-
       const items = itemsByOrder[o.id] || []
-      const orderRestSalesRaw = items.reduce((sum, item) => {
-        if (isPureGroceryItem(item)) return sum
-        if (item.isRefunded && (!item.refundAmount || item.refundAmount >= Number(item.price) * Number(item.quantity))) {
-          return sum
+
+      // Group items in this order by their actual target restaurant
+      const itemsByRest: Record<string, typeof items> = {}
+      for (const item of items) {
+        if (isPureGroceryItem(item)) continue
+        const itemTargetRestId = item.prodRestaurantId || item.restaurantId || o.restaurantId
+        if (!itemTargetRestId) continue
+        if (!itemsByRest[itemTargetRestId]) {
+          itemsByRest[itemTargetRestId] = []
         }
-        const itemLineTotal = Number(item.price) * Number(item.quantity)
-        const netItemTotal = Math.max(0, itemLineTotal - (Number(item.refundAmount) || 0))
-        return sum + netItemTotal
-      }, 0)
+        itemsByRest[itemTargetRestId].push(item)
+      }
 
-      // Also account for any order-level refundAmount not attributed to specific items
-      const totalItemRefunds = items.reduce((sum, item) => sum + (Number(item.refundAmount) || 0), 0)
-      const unallocatedRefund = Math.max(0, (Number(o.refundAmount) || 0) - totalItemRefunds)
-      const adjustedRestSales = Math.max(0, orderRestSalesRaw - unallocatedRefund)
+      // If order has no items assigned yet, fallback to order.restaurantId
+      if (Object.keys(itemsByRest).length === 0 && o.restaurantId) {
+        itemsByRest[o.restaurantId] = []
+      }
 
-      const discountShare = o.subtotal > 0 ? (o.discount * (adjustedRestSales / o.subtotal)) : 0
-      const productSales = Math.max(0, adjustedRestSales - discountShare)
+      for (const restId in itemsByRest) {
+        const rStats = restaurantMap.get(restId)
+        if (!rStats) continue
 
-      const commRate = rStats.commissionRate
-      const adminComm = productSales * commRate
-      const restShare = productSales - adminComm
+        const restItems = itemsByRest[restId]
+        const orderRestSalesRaw = restItems.reduce((sum, item) => {
+          if (item.isRefunded && (!item.refundAmount || item.refundAmount >= Number(item.price) * Number(item.quantity))) {
+            return sum
+          }
+          const itemLineTotal = Number(item.price) * Number(item.quantity)
+          const netItemTotal = Math.max(0, itemLineTotal - (Number(item.refundAmount) || 0))
+          return sum + netItemTotal
+        }, 0)
 
-      rStats.totalOrders++
-      rStats.totalProductSales += productSales
-      rStats.adminCommission += adminComm
-      rStats.restaurantShare += restShare
-      rStats.totalDeliveryFee += Number(o.deliveryFee) || 0
-      rStats.totalPackaging += Number(o.miscFee) || 0
+        // Account for any item-level refund
+        const totalItemRefunds = restItems.reduce((sum, item) => sum + (Number(item.refundAmount) || 0), 0)
+        // If order was primary for this restaurant, also check unallocated refunds
+        const unallocatedRefund = (restId === o.restaurantId)
+          ? Math.max(0, (Number(o.refundAmount) || 0) - items.reduce((sum, item) => sum + (Number(item.refundAmount) || 0), 0))
+          : 0
+        const adjustedRestSales = Math.max(0, orderRestSalesRaw - unallocatedRefund)
 
-      if (o.deliveryMethod === 'PICKUP') {
-        rStats.pickupOrders++
-        rStats.pickupSales += productSales
-        rStats.pickupShare += restShare
-        grandTotal.pickupOrders++
-        grandTotal.pickupSales += productSales
-      } else {
-        rStats.deliveryOrders++
-        rStats.deliverySales += productSales
-        rStats.deliveryShare += restShare
-        grandTotal.deliveryOrders++
-        grandTotal.deliverySales += productSales
+        const discountShare = o.subtotal > 0 ? (o.discount * (adjustedRestSales / o.subtotal)) : 0
+        const productSales = Math.max(0, adjustedRestSales - discountShare)
+
+        const commRate = rStats.commissionRate
+        const adminComm = productSales * commRate
+        const restShare = productSales - adminComm
+
+        rStats.totalOrders++
+        rStats.totalProductSales += productSales
+        rStats.adminCommission += adminComm
+        rStats.restaurantShare += restShare
+
+        if (restId === o.restaurantId) {
+          rStats.totalDeliveryFee += Number(o.deliveryFee) || 0
+          rStats.totalPackaging += Number(o.miscFee) || 0
+        }
+
+        if (o.deliveryMethod === 'PICKUP') {
+          rStats.pickupOrders++
+          rStats.pickupSales += productSales
+          rStats.pickupShare += restShare
+          grandTotal.pickupOrders++
+          grandTotal.pickupSales += productSales
+        } else {
+          rStats.deliveryOrders++
+          rStats.deliverySales += productSales
+          rStats.deliveryShare += restShare
+          grandTotal.deliveryOrders++
+          grandTotal.deliverySales += productSales
+        }
       }
     }
 
@@ -258,7 +284,8 @@ export async function GET(request: NextRequest) {
       if (isPureGroceryItem(oi)) continue // Skip grocery/cold drinks
       if (oi.isRefunded) continue // Skip refunded items from top dishes
       
-      const rStats = restaurantMap.get(oi.restaurantId)
+      const restId = oi.prodRestaurantId || oi.restaurantId
+      const rStats = restaurantMap.get(restId)
       if (!rStats) continue
 
       const count = rStats._itemCounts.get(oi.name) || 0
