@@ -16,7 +16,7 @@ android {
     namespace = "com.fastkirana.app"
     compileSdk = 36
 
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "27.1.12297006"
 
     compileOptions {
         coreLibraryDesugaringEnabled true
@@ -86,6 +86,9 @@ android {
     packagingOptions {
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
+        }
+        jniLibs {
+            keepDebugSymbols += '**/*.so'
         }
     }
 }

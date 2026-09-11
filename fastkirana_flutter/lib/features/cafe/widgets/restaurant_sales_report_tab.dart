@@ -121,8 +121,20 @@ class _RestaurantSalesReportTabState extends State<RestaurantSalesReportTab> {
 
     final filteredOrdersList = widget.salesOrders.where((o) {
       final status = o['status']?.toString().toUpperCase() ?? '';
-      if (status == 'CANCELLED') return false;
-      final dt = DateTime.tryParse(o['createdAt']?.toString() ?? '');
+      if (status == 'CANCELLED' || status == 'REJECTED') return false;
+      DateTime? dt;
+      final rawDt = o['createdAt']?.toString();
+      if (rawDt != null && rawDt.isNotEmpty) {
+        try {
+          String s = rawDt.trim();
+          if (!s.endsWith('Z') && !s.contains('+') && !RegExp(r'-\d{2}:\d{2}$').hasMatch(s)) {
+            s = '${s.replaceAll(' ', 'T')}Z';
+          }
+          dt = DateTime.parse(s).toLocal();
+        } catch (_) {
+          dt = DateTime.tryParse(rawDt)?.toLocal();
+        }
+      }
       if (dt == null) return true;
 
       switch (_selectedSalesPeriod) {
@@ -180,9 +192,11 @@ class _RestaurantSalesReportTabState extends State<RestaurantSalesReportTab> {
         ? (widget.salesSummary['totalSales'] as num)
         : (num.tryParse(widget.salesSummary['totalSales']?.toString() ?? '0') ?? 0);
 
-    final double totalSales = (_selectedSalesPeriod == 'TODAY' && calculatedGrossSales == 0 && apiTotalSales > 0)
-        ? apiTotalSales.toDouble()
-        : calculatedGrossSales;
+    final double totalSales = calculatedGrossSales > 0
+        ? calculatedGrossSales
+        : (_selectedSalesPeriod == 'TODAY' && apiTotalSales > 0
+            ? apiTotalSales.toDouble()
+            : 0.0);
 
     final int ordersCount = filteredOrdersList.length;
     final double commPercent = widget.commissionRate;
