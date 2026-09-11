@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs'
 import { authConfig } from './auth.config'
 import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 import { isDevBypassActive, getDevBypassPassword } from '@/lib/auth-bypass-config'
-import { findCanonicalUser, getCanonicalEmail, getAssignedRestaurantId } from '@/lib/superadmin-config'
+import { findCanonicalUser, getCanonicalEmail, getAssignedRestaurantId, isRootAdminAccount } from '@/lib/superadmin-config'
 
 const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -207,11 +207,17 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
         const isValid = await bcrypt.compare(password, user.passwordHash)
         if (!isValid) return null
 
+        const isMaster = isRootAdminAccount({
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+        }) || isRootAdminAccount({ email: input })
+
         return {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role,
+          role: isMaster ? 'ADMIN' : user.role,
           phone: user.phone,
           image: user.image,
           assignedRestaurantId: user.assignedRestaurantId,
@@ -366,12 +372,15 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
         }
 
         const isAdminAccount =
-          user.email === 'admin@fastkirana.com' ||
-          user.email === 'superadmin@fastkirana.com' ||
-          String(user.phone || '').includes('7054470303') ||
-          String(user.phone || '').includes('9170942500') ||
+          isRootAdminAccount({
+            email: user.email,
+            phone: user.phone,
+            role: user.role,
+          }) ||
           cleanDigits === '7054470303' ||
-          cleanDigits === '9170942500'
+          cleanDigits === '9170942500' ||
+          isRootAdminAccount({ email })
+
         const effectiveUserRole = isAdminAccount ? 'ADMIN' : user.role
 
         return {

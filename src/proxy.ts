@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
+import { isRootAdminAccount } from '@/lib/superadmin-config'
 
 const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
 
@@ -13,11 +14,11 @@ export async function proxy(req: NextRequest) {
 
   const isLoggedIn = !!token
   const isMasterAdmin =
-    token?.email === 'admin@fastkirana.com' ||
-    token?.email === 'superadmin@fastkirana.com' ||
-    String(token?.phone || '').includes('7054470303') ||
-    String(token?.phone || '').includes('9170942500') ||
-    token?.role === 'ADMIN'
+    isRootAdminAccount({
+      email: token?.email as string,
+      phone: token?.phone as string,
+      role: token?.role as string,
+    })
 
   const effectiveRole = isMasterAdmin ? 'ADMIN' : (token?.role as string | undefined)
   const userRole = effectiveRole
@@ -37,7 +38,7 @@ export async function proxy(req: NextRequest) {
 
   // Helper to get target console URL for staff roles
   const getStaffConsoleUrl = (role?: string) => {
-    if (isMasterAdmin) return null
+    if (isMasterAdmin || role === 'ADMIN') return null
     if (role === 'RESTAURANT_OWNER' || role === 'CHEF') return '/restaurant-kitchen'
     if (role === 'DELIVERY') return '/delivery'
     if (role === 'PICKER') return '/picker'
@@ -132,7 +133,7 @@ export async function proxy(req: NextRequest) {
       const callbackUrl = encodeURIComponent(nextUrl.pathname + nextUrl.search)
       return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, baseUrl))
     }
-    if (userRole?.toUpperCase() !== 'ADMIN') {
+    if (!isMasterAdmin && userRole?.toUpperCase() !== 'ADMIN') {
       return NextResponse.redirect(new URL('/', baseUrl))
     }
   }

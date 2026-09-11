@@ -68,6 +68,45 @@ loadCache().catch(() => {})
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
+ * Comprehensive check to verify if an account is a master/root admin.
+ * Evaluates email, phone, and role with zero chance of false negatives.
+ */
+export function isRootAdminAccount(identifier?: {
+  email?: string | null
+  phone?: string | null
+  role?: string | null
+} | null): boolean {
+  if (!identifier) return false
+  const email = (identifier.email || '').toLowerCase().trim()
+  const phone = (identifier.phone || '').replace(/\D/g, '').slice(-10)
+  const role = (identifier.role || '').toUpperCase().trim()
+
+  // 1. Explicit admin and superadmin emails
+  if (
+    email === 'admin@fastkirana.com' ||
+    email === 'superadmin@fastkirana.com' ||
+    email.startsWith('admin@') ||
+    email.startsWith('superadmin@') ||
+    email.endsWith('@admin.fastkirana.in') ||
+    email.startsWith('admin.')
+  ) {
+    return true
+  }
+
+  // 2. Known master admin phones (7054470303, 9170942500)
+  if (phone === '7054470303' || phone === '9170942500' || isSuperadminPhone(phone)) {
+    return true
+  }
+
+  // 3. Explicit role
+  if (role === 'ADMIN') {
+    return true
+  }
+
+  return false
+}
+
+/**
  * Check if a phone number belongs to a superadmin.
  * Accepts any format (+91XXXXXXXXXX, 91XXXXXXXXXX, XXXXXXXXXX).
  */

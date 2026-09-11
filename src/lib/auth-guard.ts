@@ -5,7 +5,7 @@
 
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { isSuperadminPhone } from '@/lib/superadmin-config'
+import { isSuperadminPhone, isRootAdminAccount } from '@/lib/superadmin-config'
 
 /**
  * Requires an authenticated user with one of the given roles.
@@ -60,7 +60,12 @@ export async function requireRole(allowedRoles: string[], request?: Request) {
   const phoneDigits = userPhone.replace(/\D/g, '').slice(-10)
   const assignedStoreId = (session?.user as any)?.assignedStoreId
 
-  const isSuper = userEmail.startsWith('admin') || 
+  const isSuper = isRootAdminAccount({
+    email: userEmail,
+    phone: userPhone,
+    role: sessionRole,
+  }) ||
+    userEmail.startsWith('admin') || 
     userEmail.includes('hrdk') || 
     isSuperadminPhone(phoneDigits) ||
     (sessionRole === 'ADMIN' && !assignedStoreId)

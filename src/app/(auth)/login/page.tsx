@@ -12,8 +12,18 @@ import { getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 
 const getRoleRedirect = (role: string, email: string, callbackUrl: string) => {
   const cleanEmail = (email || '').toLowerCase().trim()
+  const cleanPhone = cleanEmail.replace(/\D/g, '')
   
-  if (role === 'ADMIN' || cleanEmail.startsWith('admin') || cleanEmail.startsWith('superadmin') || cleanEmail.includes('7054470303') || cleanEmail.includes('9170942500')) return '/admin'
+  const isMaster =
+    role === 'ADMIN' ||
+    cleanEmail === 'admin@fastkirana.com' ||
+    cleanEmail === 'superadmin@fastkirana.com' ||
+    cleanEmail.startsWith('admin') ||
+    cleanEmail.startsWith('superadmin') ||
+    cleanPhone.endsWith('7054470303') ||
+    cleanPhone.endsWith('9170942500')
+
+  if (isMaster) return '/admin'
   if (cleanEmail.startsWith('restaurant') || role === 'RESTAURANT_OWNER') return '/restaurant-kitchen'
   if (role === 'CHEF' || cleanEmail.startsWith('chef')) return '/cafe-kitchen'
   if (role === 'PICKER' || cleanEmail.startsWith('picker')) return '/picker'

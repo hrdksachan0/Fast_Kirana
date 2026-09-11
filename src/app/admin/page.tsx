@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { formatPrice, withRetry } from '@/lib/utils'
 import { AdminDashboard } from '@/components/admin/admin-dashboard'
 import { getStoreUserFilter } from '@/lib/store-resolver'
+import { isRootAdminAccount } from '@/lib/superadmin-config'
 import {
   IndianRupee,
   ShoppingBag,
@@ -26,8 +27,14 @@ export default async function AdminPage(props: {
     redirect('/login?callbackUrl=/admin')
   }
 
+  const isMaster = isRootAdminAccount({
+    email: session.user?.email,
+    phone: (session.user as any)?.phone,
+    role: session.user?.role,
+  })
+
   const role = session.user?.role?.toUpperCase()
-  if (role !== 'ADMIN') {
+  if (!isMaster && role !== 'ADMIN') {
     redirect('/')
   }
 

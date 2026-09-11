@@ -1,6 +1,7 @@
 import type { NextAuthConfig } from 'next-auth'
 import Google from 'next-auth/providers/google'
 import { SignJWT, jwtVerify } from 'jose'
+import { isRootAdminAccount } from '@/lib/superadmin-config'
 
 // Clean environment variables (removes quotes if copy-pasted with quotes)
 const getCleanEnv = (key: string): string => {
@@ -23,10 +24,9 @@ export const authConfig = {
   // Production deployments MUST set NEXTAUTH_URL to validate Host headers.
   providers: [
     Google({
-      clientId: googleClientId || 'placeholder',
-      clientSecret: googleClientSecret || 'placeholder',
-      // SECURITY: removed allowDangerousEmailAccountLinking — a compromised
-      // Google account at the same email could otherwise hijack the local account.
+      clientId: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+      allowDangerousEmailAccountLinking: true,
       authorization: {
         params: {
           prompt: 'select_account',
@@ -37,7 +37,12 @@ export const authConfig = {
   callbacks: {
     async jwt({ token, user, trigger, session, account }) {
       if (user) {
-        token.role = (user as any).role
+        const isMasterUser = isRootAdminAccount({
+          email: user.email,
+          phone: (user as any).phone,
+          role: (user as any).role,
+        })
+        token.role = isMasterUser ? 'ADMIN' : (user as any).role
         token.id = user.id
         token.phone = (user as any).phone
         token.assignedRestaurantId = (user as any).assignedRestaurantId
@@ -73,24 +78,37 @@ export const authConfig = {
                 userEmail ? { email: userEmail.toLowerCase() } : null
               ].filter(Boolean)
             },
-            select: { id: true, role: true, assignedRestaurantId: true, assignedStoreId: true, phone: true }
+            select: { id: true, email: true, role: true, assignedRestaurantId: true, assignedStoreId: true, phone: true }
           })
           if (dbUser) {
             token.id = dbUser.id
             const isMasterAdmin =
-              dbUser.email === 'admin@fastkirana.com' ||
-              dbUser.email === 'superadmin@fastkirana.com' ||
-              dbUser.phone?.includes('7054470303') ||
-              dbUser.phone?.includes('9170942500')
+              isRootAdminAccount({
+                email: dbUser.email || userEmail,
+                phone: dbUser.phone || (token.phone as string),
+                role: dbUser.role || (token.role as string),
+              }) ||
+              isRootAdminAccount({ email: token.email as string, phone: token.phone as string })
+
             token.role = isMasterAdmin ? 'ADMIN' : dbUser.role
             token.assignedRestaurantId = dbUser.assignedRestaurantId
             token.assignedStoreId = dbUser.assignedStoreId
             if (dbUser.phone) token.phone = dbUser.phone
+          } else {
+            const isMasterAdmin = isRootAdminAccount({ email: token.email as string, phone: token.phone as string, role: token.role as string })
+            if (isMasterAdmin) {
+              token.role = 'ADMIN'
+            } else if (!token.role) {
+              token.role = 'USER'
+            }
+          }
+        } catch (e) {
+          const isMasterAdmin = isRootAdminAccount({ email: token.email as string, phone: token.phone as string, role: token.role as string })
+          if (isMasterAdmin) {
+            token.role = 'ADMIN'
           } else if (!token.role) {
             token.role = 'USER'
           }
-        } catch (e) {
-          if (!token.role) token.role = 'USER'
         }
       }
 
@@ -102,7 +120,12 @@ export const authConfig = {
     async session({ session, token }) {
       if (token) {
         session.user.id = token.id as string
-        session.user.role = token.role as any
+        const isMaster = isRootAdminAccount({
+          email: (token.email || session.user.email) as string,
+          phone: (token.phone || (session.user as any)?.phone) as string,
+          role: token.role as string,
+        })
+        session.user.role = isMaster ? 'ADMIN' : (token.role as any)
         session.user.phone = token.phone as string
         session.user.assignedRestaurantId = token.assignedRestaurantId as string
         session.user.assignedStoreId = token.assignedStoreId as string

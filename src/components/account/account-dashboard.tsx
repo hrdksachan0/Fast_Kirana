@@ -529,41 +529,50 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
 
         {/* Action Controls */}
         <div className="relative z-10 flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-start sm:justify-end border-t sm:border-t-0 border-border/50 pt-3 sm:pt-0">
-          {user.role === 'ADMIN' && (
+          {(user.role === 'ADMIN' ||
+            user.email?.toLowerCase().trim() === 'admin@fastkirana.com' ||
+            user.email?.toLowerCase().trim() === 'superadmin@fastkirana.com' ||
+            user.email?.toLowerCase().trim().startsWith('admin') ||
+            user.email?.toLowerCase().trim().startsWith('superadmin') ||
+            user.phone?.replace(/\D/g, '').endsWith('7054470303') ||
+            user.phone?.replace(/\D/g, '').endsWith('9170942500')) ? (
             <Link href="/admin" className="flex-1 sm:flex-initial">
               <Button className="w-full bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-700 hover:to-red-800 text-white rounded-2xl text-xs h-10 px-5 font-black shadow-md shadow-rose-600/25 transition-all active:scale-95 flex items-center justify-center gap-1.5 border-0 cursor-pointer">
                 <Zap className="h-3.5 w-3.5 fill-current" />
                 <span>Admin Console</span>
               </Button>
             </Link>
-          )}
-          {user.role === 'PICKER' && (
-            <Link href="/picker" className="flex-1 sm:flex-initial">
-              <Button className="w-full bg-primary hover:bg-primary/90 text-white rounded-2xl text-xs h-10 px-5 font-black shadow-md shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
-                <span>📦 Picker Console</span>
-              </Button>
-            </Link>
-          )}
-          {user.role === 'RESTAURANT_OWNER' && (
-            <Link href="/restaurant-kitchen" className="flex-1 sm:flex-initial">
-              <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-2xl text-xs h-10 px-5 font-black shadow-md shadow-orange-600/20 transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
-                <span>🏪 Outlet Console</span>
-              </Button>
-            </Link>
-          )}
-          {user.role === 'CHEF' && (
-            <Link href={user.email?.toLowerCase().startsWith('restaurant') ? '/restaurant-kitchen' : '/cafe-kitchen'} className="flex-1 sm:flex-initial">
-              <Button className="w-full bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-xs h-10 px-5 font-black shadow-md shadow-rose-600/20 transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
-                <span>👨‍🍳 Chef Console</span>
-              </Button>
-            </Link>
-          )}
-          {user.role === 'DELIVERY' && (
-            <Link href="/delivery" className="flex-1 sm:flex-initial">
-              <Button className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-2xl text-xs h-10 px-5 font-black shadow-md shadow-emerald-500/20 transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
-                <span>🚴 Rider Console</span>
-              </Button>
-            </Link>
+          ) : (
+            <>
+              {user.role === 'PICKER' && (
+                <Link href="/picker" className="flex-1 sm:flex-initial">
+                  <Button className="w-full bg-primary hover:bg-primary/90 text-white rounded-2xl text-xs h-10 px-5 font-black shadow-md shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                    <span>📦 Picker Console</span>
+                  </Button>
+                </Link>
+              )}
+              {user.role === 'RESTAURANT_OWNER' && (
+                <Link href="/restaurant-kitchen" className="flex-1 sm:flex-initial">
+                  <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-2xl text-xs h-10 px-5 font-black shadow-md shadow-orange-600/20 transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                    <span>🏪 Outlet Console</span>
+                  </Button>
+                </Link>
+              )}
+              {user.role === 'CHEF' && (
+                <Link href={user.email?.toLowerCase().startsWith('restaurant') ? '/restaurant-kitchen' : '/cafe-kitchen'} className="flex-1 sm:flex-initial">
+                  <Button className="w-full bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-xs h-10 px-5 font-black shadow-md shadow-rose-600/20 transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                    <span>👨‍🍳 Chef Console</span>
+                  </Button>
+                </Link>
+              )}
+              {user.role === 'DELIVERY' && (
+                <Link href="/delivery" className="flex-1 sm:flex-initial">
+                  <Button className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-2xl text-xs h-10 px-5 font-black shadow-md shadow-emerald-500/20 transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                    <span>🚴 Rider Console</span>
+                  </Button>
+                </Link>
+              )}
+            </>
           )}
 
           <Button

@@ -77,12 +77,25 @@ export function Navbar() {
   const getDashboardLink = useCallback(() => {
     if (!session?.user) return '/account'
     const role = session.user.role
-    const email = session.user.email || ''
+    const email = (session.user.email || '').toLowerCase().trim()
+    const phone = ((session.user as any).phone || '').replace(/\D/g, '')
+
+    if (
+      role === 'ADMIN' ||
+      email === 'admin@fastkirana.com' ||
+      email === 'superadmin@fastkirana.com' ||
+      email.startsWith('admin') ||
+      email.startsWith('superadmin') ||
+      phone.endsWith('7054470303') ||
+      phone.endsWith('9170942500')
+    ) {
+      return '/admin'
+    }
+
     switch (role) {
-      case 'ADMIN': return '/admin'
       case 'RESTAURANT_OWNER': return '/restaurant-kitchen'
       case 'CHEF':
-        if (email.toLowerCase().startsWith('restaurant')) return '/restaurant-kitchen'
+        if (email.startsWith('restaurant')) return '/restaurant-kitchen'
         return '/cafe-kitchen'
       case 'PICKER': return '/picker'
       case 'DELIVERY': return '/delivery'

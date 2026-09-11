@@ -112,7 +112,7 @@ export function StoreControlBar({
             )}
 
             <span
-              className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+              className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
                 groceryMartOpen
                   ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
                   : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
@@ -120,11 +120,6 @@ export function StoreControlBar({
             >
               {groceryMartOpen ? '● Grocery Mart OPEN' : '○ Grocery Mart CLOSED'}
             </span>
-            {groceryAutoTiming && (
-              <span className="text-[10px] font-bold text-amber-600 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                ⏰ Auto-Schedule Active
-              </span>
-            )}
           </div>
           <p className="text-xs text-text-secondary mt-0.5 font-medium truncate">
             {groceryMartOpen
