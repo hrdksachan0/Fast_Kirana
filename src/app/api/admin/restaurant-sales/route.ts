@@ -71,9 +71,11 @@ export async function GET(request: NextRequest) {
         deliveryMethod: string
         restaurantId: string
         createdAt: Date
+        refundAmount: number
       }>
     >`
-      SELECT o.id, o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o."deliveryMethod", o."restaurantId", o."createdAt"
+      SELECT o.id, o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o."deliveryMethod", o."restaurantId", o."createdAt",
+             COALESCE(o."refundAmount", 0)::float as "refundAmount"
       FROM orders o
       WHERE o.status::text = 'DELIVERED'
         AND o."restaurantId" IS NOT NULL
@@ -93,10 +95,14 @@ export async function GET(request: NextRequest) {
         prodRestaurantId?: string | null
         categoryName?: string | null
         categorySlug?: string | null
+        refundAmount: number
+        isRefunded: boolean
       }>
     >`
       SELECT oi."orderId", oi.name, oi.quantity, oi.price, o."restaurantId", 
-             p."restaurantId" as "prodRestaurantId", c.name as "categoryName", c.slug as "categorySlug"
+             p."restaurantId" as "prodRestaurantId", c.name as "categoryName", c.slug as "categorySlug",
+             COALESCE(oi."refundAmount", 0)::float as "refundAmount",
+             COALESCE(oi."isRefunded", false) as "isRefunded"
       FROM order_items oi
       JOIN orders o ON oi."orderId" = o.id
       LEFT JOIN products p ON oi."productId" = p.id
@@ -206,11 +212,21 @@ export async function GET(request: NextRequest) {
       const items = itemsByOrder[o.id] || []
       const orderRestSalesRaw = items.reduce((sum, item) => {
         if (isPureGroceryItem(item)) return sum
-        return sum + (Number(item.price) * Number(item.quantity))
+        if (item.isRefunded && (!item.refundAmount || item.refundAmount >= Number(item.price) * Number(item.quantity))) {
+          return sum
+        }
+        const itemLineTotal = Number(item.price) * Number(item.quantity)
+        const netItemTotal = Math.max(0, itemLineTotal - (Number(item.refundAmount) || 0))
+        return sum + netItemTotal
       }, 0)
 
-      const discountShare = o.subtotal > 0 ? (o.discount * (orderRestSalesRaw / o.subtotal)) : 0
-      const productSales = orderRestSalesRaw - discountShare
+      // Also account for any order-level refundAmount not attributed to specific items
+      const totalItemRefunds = items.reduce((sum, item) => sum + (Number(item.refundAmount) || 0), 0)
+      const unallocatedRefund = Math.max(0, (Number(o.refundAmount) || 0) - totalItemRefunds)
+      const adjustedRestSales = Math.max(0, orderRestSalesRaw - unallocatedRefund)
+
+      const discountShare = o.subtotal > 0 ? (o.discount * (adjustedRestSales / o.subtotal)) : 0
+      const productSales = Math.max(0, adjustedRestSales - discountShare)
 
       const commRate = rStats.commissionRate
       const adminComm = productSales * commRate
@@ -240,12 +256,16 @@ export async function GET(request: NextRequest) {
 
     for (const oi of orderItems) {
       if (isPureGroceryItem(oi)) continue // Skip grocery/cold drinks
+      if (oi.isRefunded) continue // Skip refunded items from top dishes
       
       const rStats = restaurantMap.get(oi.restaurantId)
       if (!rStats) continue
 
       const count = rStats._itemCounts.get(oi.name) || 0
-      rStats._itemCounts.set(oi.name, count + Number(oi.quantity))
+      const netQty = oi.refundAmount > 0 ? 0 : Number(oi.quantity)
+      if (netQty > 0) {
+        rStats._itemCounts.set(oi.name, count + netQty)
+      }
     }
 
     const resultRestaurants = Array.from(restaurantMap.values()).map(r => {

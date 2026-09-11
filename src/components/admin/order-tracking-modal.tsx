@@ -12,11 +12,13 @@ import {
   Clock,
   Package,
   Navigation,
-  ShoppingBag
+  ShoppingBag,
+  RotateCcw
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { formatAddress, formatPrice } from '@/lib/utils'
+import { RecordRefundModal } from '@/components/admin/record-refund-modal'
 
 interface Address {
   phone?: string
@@ -33,6 +35,8 @@ interface OrderItem {
   imageUrl?: string
   selectedVariant?: string
   notes?: string
+  refundAmount?: number
+  isRefunded?: boolean
 }
 
 interface Order {
@@ -60,6 +64,7 @@ interface Order {
   paymentMethod?: string
   paymentStatus?: string
   total: number
+  refundAmount?: number
   isCombined?: boolean
   groceryStatus?: string | null
   groceryItems?: OrderItem[]
@@ -90,6 +95,7 @@ export default function OrderTrackingModal({
   setSelectedOrderForTracking,
 }: OrderTrackingModalProps) {
   const [copied, setCopied] = useState(false)
+  const [showRefundModal, setShowRefundModal] = useState(false)
   const order = selectedOrderForTracking
 
   const isPickup = (
@@ -506,6 +512,11 @@ export default function OrderTrackingModal({
                                 📝 {item.notes}
                               </span>
                             )}
+                            {(item.isRefunded || (item.refundAmount && item.refundAmount > 0)) && (
+                              <span className="text-[9px] bg-rose-500/15 text-rose-600 dark:text-rose-400 px-1.5 py-px rounded font-bold">
+                                ↩️ Refunded (-{formatPrice(item.refundAmount || item.price)})
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -534,17 +545,34 @@ export default function OrderTrackingModal({
                   {order.paymentMethod || 'COD'}
                 </span>
                 <span className={`text-[10px] font-extrabold uppercase ${
-                  order.paymentStatus === 'PAID' ? 'text-emerald-600' : 'text-amber-600'
+                  order.paymentStatus === 'PAID' ? 'text-emerald-600' : (order.paymentStatus === 'REFUNDED' ? 'text-rose-600' : 'text-amber-600')
                 }`}>
                   {order.paymentStatus || 'PENDING'}
                 </span>
               </div>
             </div>
             <div className="text-right">
-              <span className="text-[10px] text-text-muted font-medium block">Total</span>
-              <span className="text-lg font-black text-text-primary tabular-nums tracking-tight">
-                {formatPrice(order.total)}
-              </span>
+              {order.refundAmount && order.refundAmount > 0 ? (
+                <div>
+                  <div className="flex items-center justify-end gap-1.5 text-[10.5px]">
+                    <span className="text-text-muted">Total: {formatPrice(order.total)}</span>
+                    <span className="font-bold text-rose-600 dark:text-rose-400">-₹{order.refundAmount} Refunded</span>
+                  </div>
+                  <div className="flex items-center justify-end gap-1 mt-0.5">
+                    <span className="text-[10px] text-text-muted font-medium">Net Paid:</span>
+                    <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tight">
+                      {formatPrice(order.total - order.refundAmount)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <span className="text-[10px] text-text-muted font-medium block">Total</span>
+                  <span className="text-lg font-black text-text-primary tabular-nums tracking-tight">
+                    {formatPrice(order.total)}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -571,6 +599,17 @@ export default function OrderTrackingModal({
             {copied ? <Check className="h-4 w-4 text-emerald-500" strokeWidth={2.5} /> : <Copy className="h-4 w-4 text-text-secondary" strokeWidth={1.8} />}
           </button>
 
+          {/* Refund Button */}
+          <button
+            type="button"
+            onClick={() => setShowRefundModal(true)}
+            className="h-10 px-3.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center gap-1.5 active:scale-[0.97] shrink-0"
+            title="Record Refund on this order"
+          >
+            <RotateCcw className="h-3.5 w-3.5" strokeWidth={2.2} />
+            <span>Refund</span>
+          </button>
+
           {/* Track / Map */}
           {!isPickup && (
             <Link
@@ -584,6 +623,23 @@ export default function OrderTrackingModal({
           )}
         </div>
 
+        {/* Record Refund Modal */}
+        {showRefundModal && (
+          <RecordRefundModal
+            order={order}
+            isOpen={showRefundModal}
+            onClose={() => setShowRefundModal(false)}
+            onSuccess={(updated) => {
+              order.refundAmount = updated.refundAmount
+              order.notes = updated.notes
+              order.paymentStatus = updated.paymentStatus
+              if (updated.items) {
+                order.items = updated.items
+              }
+              setSelectedOrderForTracking({ ...order })
+            }}
+          />
+        )}
       </div>
     </div>
   )

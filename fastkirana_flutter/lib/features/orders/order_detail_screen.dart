@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/order.dart';
+import 'order_tracking_screen.dart';
 
 class OrderDetailScreen extends StatelessWidget {
   final Order order;
@@ -152,6 +153,87 @@ class OrderDetailScreen extends StatelessWidget {
             // 1. Premium Live Express ETA & Status Header Card
             _buildStatusHeaderCard(),
             const SizedBox(height: 14),
+
+            // Refund Notice Banner
+            if (order.refundAmount > 0 || (order.notes != null && order.notes!.toLowerCase().contains('refund'))) ...[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFFFFF1F2),
+                      Color(0xFFFFFBEB),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFFDA4AF), width: 1.2),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFE4E6),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.replay_rounded, size: 20, color: Color(0xFFE11D48)),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                order.refundAmount > 0
+                                    ? '₹${order.refundAmount.toInt()} Refund Credited'
+                                    : 'Refund Processed',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF9F1239),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFE4E6),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  'REFUNDED',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFFE11D48),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            order.notes != null && order.notes!.toLowerCase().contains('refund')
+                                ? order.notes!
+                                : 'Refund has been credited back to your original payment method.',
+                            style: GoogleFonts.inter(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFFBE123C),
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
 
             // Pay Online Banner (if COD)
             if (order.paymentStatus != 'PAID' && order.status != OrderStatus.cancelled) ...[
@@ -447,47 +529,70 @@ class OrderDetailScreen extends StatelessWidget {
                       ),
                     )
                   else
-                    ...itemsList.map((item) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppDesignSystem.slate100,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  '${item.quantity}x',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppDesignSystem.slate700,
-                                  ),
-                                ),
+                    ...itemsList.map((item) {
+                      final isRefunded = item.isRefunded || item.refundAmount > 0;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 5),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isRefunded ? const Color(0xFFFFE4E6) : AppDesignSystem.slate100,
+                                borderRadius: BorderRadius.circular(4),
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  item.name,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: textDark,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                '₹${(item.price * item.quantity).toInt()}',
+                              child: Text(
+                                '${item.quantity}x',
                                 style: GoogleFonts.inter(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: textDark,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: isRefunded ? const Color(0xFFE11D48) : AppDesignSystem.slate700,
                                 ),
                               ),
-                            ],
-                          ),
-                        )),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.name,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: isRefunded ? textMuted : textDark,
+                                      decoration: isRefunded ? TextDecoration.lineThrough : null,
+                                    ),
+                                  ),
+                                  if (isRefunded)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: Text(
+                                        '↩️ Refunded ${item.refundAmount > 0 ? "(-₹${item.refundAmount.toInt()})" : ""}',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFFE11D48),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              '₹${(item.price * item.quantity).toInt()}',
+                              style: GoogleFonts.inter(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: isRefunded ? textMuted : textDark,
+                                decoration: isRefunded ? TextDecoration.lineThrough : null,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
                   const SizedBox(height: 12),
                   const Divider(color: AppDesignSystem.slate100),
                   const SizedBox(height: 8),
@@ -504,6 +609,12 @@ class OrderDetailScreen extends StatelessWidget {
                     order.miscFee > 0 ? '₹${order.miscFee.toInt()}' : '₹5',
                   ),
                   _buildBillRow('Handling & Taxes', '₹0', isGreen: true),
+                  if (order.refundAmount > 0)
+                    _buildBillRow(
+                      'Refund Credited',
+                      '-₹${order.refundAmount.toInt()}',
+                      customColor: const Color(0xFFE11D48),
+                    ),
                   const SizedBox(height: 10),
                   const Divider(color: AppDesignSystem.slate200),
                   const SizedBox(height: 10),
@@ -514,7 +625,7 @@ class OrderDetailScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Total Paid',
+                            order.refundAmount > 0 ? 'Net Paid Total' : 'Total Paid',
                             style: GoogleFonts.inter(
                               fontSize: 14.5,
                               fontWeight: FontWeight.w900,
@@ -522,13 +633,15 @@ class OrderDetailScreen extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            order.paymentMethod.displayName,
+                            order.refundAmount > 0
+                                ? 'Original: ₹${order.total.toInt()} • ${order.paymentMethod.displayName}'
+                                : order.paymentMethod.displayName,
                             style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: textMuted),
                           ),
                         ],
                       ),
                       Text(
-                        '₹${order.total.toInt()}',
+                        '₹${(order.total - order.refundAmount).clamp(0, double.infinity).toInt()}',
                         style: GoogleFonts.inter(
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
@@ -798,11 +911,10 @@ class OrderDetailScreen extends StatelessWidget {
           const SizedBox(height: 12),
           GestureDetector(
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Opening secure UPI gateway...'),
-                  backgroundColor: AppDesignSystem.green600,
-                  duration: Duration(seconds: 2),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => OrderTrackingScreen(orderId: order.id),
                 ),
               );
             },
@@ -908,7 +1020,7 @@ class OrderDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBillRow(String label, String value, {bool isGreen = false}) {
+  Widget _buildBillRow(String label, String value, {bool isGreen = false, Color? customColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3.5),
       child: Row(
@@ -918,16 +1030,16 @@ class OrderDetailScreen extends StatelessWidget {
             label,
             style: GoogleFonts.inter(
               fontSize: 12.5,
-              fontWeight: FontWeight.w500,
-              color: textMuted,
+              fontWeight: customColor != null ? FontWeight.w700 : FontWeight.w500,
+              color: customColor ?? textMuted,
             ),
           ),
           Text(
             value,
             style: GoogleFonts.inter(
               fontSize: 12.5,
-              fontWeight: isGreen ? FontWeight.w800 : FontWeight.w600,
-              color: isGreen ? AppDesignSystem.green600 : textDark,
+              fontWeight: (isGreen || customColor != null) ? FontWeight.w800 : FontWeight.w600,
+              color: customColor ?? (isGreen ? AppDesignSystem.green600 : textDark),
             ),
           ),
         ],

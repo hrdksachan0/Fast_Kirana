@@ -178,6 +178,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       final dio = ref.read(dioProvider);
       await dio.post('/api/payment/cashfree/verify', data: {
         'orderId': widget.orderId,
+        'cfOrderId': cfOrderId,
       });
       await _fetchLiveOrder();
       if (mounted) {
@@ -307,7 +308,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           'customerEmail': email,
           'customerName': customerName,
         },
-        options: Options(sendTimeout: const Duration(seconds: 4), receiveTimeout: const Duration(seconds: 4)),
+        options: Options(sendTimeout: const Duration(seconds: 15), receiveTimeout: const Duration(seconds: 15)),
       );
 
       if (cfRes.data != null && cfRes.data['paymentSessionId'] != null) {
@@ -1334,6 +1335,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                           },
                         ),
                         const SizedBox(height: 14),
+
+                        // Refund Notice Card
+                        if ((_order?.refundAmount ?? 0) > 0 || ((_order?.notes ?? '').toLowerCase().contains('refund'))) ...[
+                          _buildRefundNoticeCard(),
+                          const SizedBox(height: 14),
+                        ],
 
                         // 3. Rider Profile & Contact Card (When Assigned/Out for Delivery)
                         if (statusStep >= 2 && !isDelivered && !isCancelled) ...[
@@ -2709,40 +2716,75 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
             ],
           ),
           const SizedBox(height: 14),
-          ...items.map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Row(
-                  children: [
-                    // Qty badge
-                    Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(5),
-                        border: Border.all(color: slateBorder),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${item.quantity}x',
-                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w800, color: slateDark),
+          ...items.map((item) {
+            final isItemRefunded = item.isRefunded || item.refundAmount > 0;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Qty badge
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: isItemRefunded ? const Color(0xFFFFE4E6) : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(color: isItemRefunded ? const Color(0xFFFDA4AF) : slateBorder),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${item.quantity}x',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 10),
+                          fontWeight: FontWeight.w800,
+                          color: isItemRefunded ? const Color(0xFFE11D48) : slateDark,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        item.name,
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w600, color: slateDark),
-                      ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.name,
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 12.5),
+                            fontWeight: FontWeight.w600,
+                            color: isItemRefunded ? slateMuted : slateDark,
+                            decoration: isItemRefunded ? TextDecoration.lineThrough : null,
+                          ),
+                        ),
+                        if (isItemRefunded)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              '↩️ Refunded ${item.refundAmount > 0 ? "(-₹${item.refundAmount.toInt()})" : ""}',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 10),
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFFE11D48),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                    Text(
-                      '₹${(item.price * item.quantity).toInt()}',
-                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w700, color: slateDark),
+                  ),
+                  Text(
+                    '₹${(item.price * item.quantity).toInt()}',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 12.5),
+                      fontWeight: FontWeight.w700,
+                      color: isItemRefunded ? slateMuted : slateDark,
+                      decoration: isItemRefunded ? TextDecoration.lineThrough : null,
                     ),
-                  ],
-                ),
-              )),
+                  ),
+                ],
+              ),
+            );
+          }),
           const SizedBox(height: 4),
           const Divider(height: 1, color: slateBorder),
           const SizedBox(height: 10),
@@ -2798,6 +2840,30 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
               ],
             ),
           ],
+          if ((_order?.refundAmount ?? 0) > 0) ...[
+            const SizedBox(height: 5),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Refund Credited',
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 12),
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFE11D48),
+                  ),
+                ),
+                Text(
+                  '-₹${_order!.refundAmount.toInt()}',
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 12),
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFFE11D48),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 8),
           const Divider(height: 1, color: slateBorder),
           const SizedBox(height: 10),
@@ -2807,18 +2873,107 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Total Paid', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: slateDark)),
                   Text(
-                    _order?.paymentMethod.displayName ?? 'COD',
+                    (_order?.refundAmount ?? 0) > 0 ? 'Net Paid Total' : 'Total Paid',
+                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: slateDark),
+                  ),
+                  Text(
+                    (_order?.refundAmount ?? 0) > 0
+                        ? 'Original: ₹${total.toInt()} • ${_order?.paymentMethod.displayName ?? "COD"}'
+                        : (_order?.paymentMethod.displayName ?? 'COD'),
                     style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w600, color: slateMuted),
                   ),
                 ],
               ),
               Text(
-                '₹${total.toInt()}',
+                '₹${((total - (_order?.refundAmount ?? 0.0)).clamp(0.0, double.infinity)).toInt()}',
                 style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: primaryRed),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Refund Notice Card
+  Widget _buildRefundNoticeCard() {
+    final refundAmount = _order?.refundAmount ?? 0.0;
+    final notes = _order?.notes ?? '';
+    final hasRefundNote = notes.toLowerCase().contains('refund');
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFFFF1F2),
+            Color(0xFFFFFBEB),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFDA4AF), width: 1.2),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFE4E6),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.replay_rounded, size: 20, color: Color(0xFFE11D48)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      refundAmount > 0
+                          ? '₹${refundAmount.toInt()} Refund Credited'
+                          : 'Refund Processed',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 13),
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF9F1239),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFE4E6),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'REFUNDED',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 8.5),
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFFE11D48),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  hasRefundNote
+                      ? notes
+                      : 'Refund has been credited back to your original payment method.',
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 11.5),
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFFBE123C),
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

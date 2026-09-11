@@ -77,6 +77,7 @@ class Order {
   final double taxes;
   final double miscFee;
   final double total;
+  final double refundAmount;
   final PaymentMethod paymentMethod;
   final String paymentStatus;
   final DateTime? estimatedDelivery;
@@ -119,6 +120,7 @@ class Order {
     required this.taxes,
     required this.miscFee,
     required this.total,
+    this.refundAmount = 0.0,
     required this.paymentMethod,
     required this.paymentStatus,
     this.estimatedDelivery,
@@ -336,6 +338,7 @@ class Order {
       taxes: (json['taxes'] as num?)?.toDouble() ?? 0.0,
       miscFee: (json['miscFee'] as num?)?.toDouble() ?? 0.0,
       total: (json['total'] as num?)?.toDouble() ?? 0.0,
+      refundAmount: (json['refundAmount'] as num?)?.toDouble() ?? 0.0,
       paymentMethod: _parsePaymentMethod(json['paymentMethod']),
       paymentStatus: json['paymentStatus']?.toString() ?? 'PENDING',
       estimatedDelivery: parseNullableDate(json['estimatedDelivery']),
@@ -424,6 +427,7 @@ class Order {
     double? taxes,
     double? miscFee,
     double? total,
+    double? refundAmount,
     PaymentMethod? paymentMethod,
     String? paymentStatus,
     DateTime? estimatedDelivery,
@@ -463,6 +467,7 @@ class Order {
       taxes: taxes ?? this.taxes,
       miscFee: miscFee ?? this.miscFee,
       total: total ?? this.total,
+      refundAmount: refundAmount ?? this.refundAmount,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       paymentStatus: paymentStatus ?? this.paymentStatus,
       estimatedDelivery: estimatedDelivery ?? this.estimatedDelivery,
@@ -504,6 +509,7 @@ class Order {
     'taxes': taxes,
     'miscFee': miscFee,
     'total': total,
+    'refundAmount': refundAmount,
     'paymentMethod': paymentMethod.name.toUpperCase(),
     'paymentStatus': paymentStatus,
     'estimatedDelivery': estimatedDelivery?.toIso8601String(),
@@ -536,6 +542,8 @@ class OrderItem {
   final String? imageUrl;
   final String? selectedVariant;
   final String? notes;
+  final double refundAmount;
+  final bool isRefunded;
 
   String? get variant => selectedVariant;
 
@@ -548,9 +556,14 @@ class OrderItem {
     this.imageUrl,
     this.selectedVariant,
     this.notes,
+    this.refundAmount = 0.0,
+    this.isRefunded = false,
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
+    final noteStr = json['notes']?.toString() ?? '';
+    final hasRefundInNotes = noteStr.toLowerCase().contains('refund');
+    final itemRefund = (json['refundAmount'] as num?)?.toDouble() ?? 0.0;
     return OrderItem(
       id: json['id']?.toString() ?? '',
       productId: json['productId']?.toString(),
@@ -560,6 +573,8 @@ class OrderItem {
       imageUrl: json['imageUrl']?.toString(),
       selectedVariant: json['selectedVariant']?.toString() ?? json['variant']?.toString(),
       notes: json['notes']?.toString(),
+      refundAmount: itemRefund,
+      isRefunded: json['isRefunded'] == true || hasRefundInNotes || itemRefund > 0,
     );
   }
 
@@ -572,6 +587,8 @@ class OrderItem {
     'imageUrl': imageUrl,
     'selectedVariant': selectedVariant,
     'notes': notes,
+    'refundAmount': refundAmount,
+    'isRefunded': isRefunded,
   };
 
   double get lineTotal => price * quantity;

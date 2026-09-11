@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { formatPrice, formatAddress } from '@/lib/utils'
 import { printKOTReceipt, printCustomerInvoice } from '@/lib/kot-print'
 import { supabase } from '@/lib/supabase-client'
+import { RecordRefundModal } from '@/components/admin/record-refund-modal'
 
 export interface OrdersTabProps {
   orders: any[]
@@ -50,6 +51,7 @@ export function OrdersTab({
   livePendingOrders = [],
 }: OrdersTabProps) {
   const [cancelConfirmOrder, setCancelConfirmOrder] = React.useState<any | null>(null)
+  const [refundOrder, setRefundOrder] = React.useState<any | null>(null)
   const [updatingPaymentId, setUpdatingPaymentId] = React.useState<string | null>(null)
   const [syncingOrderId, setSyncingOrderId] = React.useState<string | null>(null)
 
@@ -887,6 +889,14 @@ export function OrdersTab({
                         </td>
                         <td className="py-3 px-3 whitespace-nowrap">
                           <div className="font-black text-text-primary text-sm">{formatPrice(o.total)}</div>
+                          {o.refundAmount > 0 && (
+                            <div className="text-[9.5px] font-black text-rose-600 dark:text-rose-400 mt-0.5 leading-tight">
+                              -₹{o.refundAmount} Refunded
+                              <span className="text-[8.5px] text-text-muted block font-bold">
+                                (Net: {formatPrice(o.total - o.refundAmount)})
+                              </span>
+                            </div>
+                          )}
                           <button
                             type="button"
                             onClick={(e) => handleTogglePaymentStatus(o, e)}
@@ -994,14 +1004,24 @@ export function OrdersTab({
                             <Loader2 className="h-4 w-4 animate-spin text-primary mx-auto" />
                           ) : (
                             <div className="flex flex-col items-center justify-center gap-1.5 min-w-[120px]">
-                              <button
-                                type="button"
-                                onClick={() => onOpenOrderModal(o)}
-                                className="inline-flex items-center justify-center w-full py-1 px-2 rounded-md bg-rose-500/10 dark:bg-rose-500/20 text-[#e20a22] dark:text-red-400 border border-red-500/20 hover:bg-rose-500/20 text-[10px] font-black tracking-wide transition-all shadow-2xs cursor-pointer whitespace-nowrap active:scale-95"
-                                title="View full ordered items & details"
-                              >
-                                👁️ Quick View
-                              </button>
+                              <div className="flex items-center gap-1 w-full">
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenOrderModal(o)}
+                                  className="flex-1 py-1 px-1.5 rounded-md bg-rose-500/10 dark:bg-rose-500/20 text-[#e20a22] dark:text-red-400 border border-red-500/20 hover:bg-rose-500/20 text-[10px] font-black tracking-wide transition-all shadow-2xs cursor-pointer whitespace-nowrap active:scale-95 text-center"
+                                  title="View full ordered items & details"
+                                >
+                                  👁️ View
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setRefundOrder(o)}
+                                  className="py-1 px-1.5 rounded-md bg-zinc-500/10 dark:bg-zinc-500/20 text-text-secondary hover:text-rose-600 border border-border/80 hover:border-rose-500/30 text-[10px] font-black transition-all shadow-2xs cursor-pointer whitespace-nowrap active:scale-95 text-center"
+                                  title="Issue / Record Refund on this order"
+                                >
+                                  ↩️ Refund
+                                </button>
+                              </div>
                               <div className="flex items-center justify-center gap-1 w-full">
                                 {(() => {
                                   const isRest = o.restaurantId || o.orderType === 'RESTAURANT' || o.isCombined
@@ -1461,6 +1481,25 @@ export function OrdersTab({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Record Refund Modal */}
+      {refundOrder && (
+        <RecordRefundModal
+          order={refundOrder}
+          isOpen={!!refundOrder}
+          onClose={() => setRefundOrder(null)}
+          onSuccess={(updated) => {
+            // Update local order reference
+            refundOrder.refundAmount = updated.refundAmount
+            refundOrder.notes = updated.notes
+            refundOrder.paymentStatus = updated.paymentStatus
+            if (updated.items && refundOrder.items) {
+              refundOrder.items = updated.items
+            }
+            onUpdateOrderStatus(refundOrder.id, refundOrder.status)
+          }}
+        />
       )}
     </div>
   )

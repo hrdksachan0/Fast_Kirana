@@ -37,7 +37,8 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
                o."paymentStatus"::text as "paymentStatus",
                o."estimatedDelivery", o."createdAt", o."updatedAt",
                o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone",
-               o."combinedId", o."restaurantId", o."orderType"::text as "orderType"
+               o."combinedId", o."restaurantId", o."orderType"::text as "orderType",
+               o.notes, COALESCE(o."refundAmount", 0)::float as "refundAmount"
         FROM orders o WHERE o.id = ${id} OR o."readableId" = ${id} LIMIT 1
       `
 
@@ -55,7 +56,8 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
                    o."paymentStatus"::text as "paymentStatus",
                    o."estimatedDelivery", o."createdAt", o."updatedAt",
                    o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone",
-                   o."combinedId", o."restaurantId", o."orderType"::text as "orderType"
+                   o."combinedId", o."restaurantId", o."orderType"::text as "orderType",
+                   o.notes, COALESCE(o."refundAmount", 0)::float as "refundAmount"
             FROM orders o WHERE o."combinedId" = ${orderRaw.combinedId}
             ORDER BY o."createdAt" ASC
           `
@@ -82,6 +84,8 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
         const mergedTaxes = allCombinedOrders.reduce((sum, o) => sum + Number(o.taxes || 0), 0)
         const mergedMiscFee = allCombinedOrders.reduce((sum, o) => sum + Number(o.miscFee || 0), 0)
         const mergedTotal = allCombinedOrders.reduce((sum, o) => sum + Number(o.total || 0), 0)
+        const mergedRefundAmount = allCombinedOrders.reduce((sum, o) => sum + Number(o.refundAmount || 0), 0)
+        const mergedNotes = allCombinedOrders.map(o => o.notes).filter(Boolean).join(' | ') || orderRaw.notes || null
 
         order = {
           ...orderRaw,
@@ -93,6 +97,8 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
           taxes: mergedTaxes,
           miscFee: mergedMiscFee,
           total: mergedTotal,
+          refundAmount: mergedRefundAmount,
+          notes: mergedNotes,
           items,
           isCombined,
           shopName: isCombined ? 'Multi-Store (FastKirana Darkstore + Restaurant)' : orderRaw.shopName,

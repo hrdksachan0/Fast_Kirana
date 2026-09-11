@@ -69,6 +69,9 @@ interface OrderItem {
   price: number
   quantity: number
   selectedVariant?: string | null
+  notes?: string | null
+  refundAmount?: number
+  isRefunded?: boolean
 }
 
 interface OrderAddress {
@@ -93,6 +96,8 @@ interface Order {
   taxes: number
   miscFee: number
   total: number
+  refundAmount?: number
+  notes?: string | null
   paymentMethod: string
   paymentStatus: string
   estimatedDelivery: string | null
@@ -651,6 +656,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
   const combinedTotal = (order.total || 0) + (compOrder?.total || 0)
   const feeDiff = Math.max(0, combinedTotal - (combinedSubtotal - combinedDiscount + combinedDeliveryFee + combinedTaxes))
   const combinedMiscFee = rawMiscFee > 0 ? rawMiscFee : feeDiff
+  const combinedRefundAmount = (order.refundAmount || 0) + (compOrder?.refundAmount || 0)
 
   // Live rider distance and ETA
   const trackingMetrics = useMemo(() => {
@@ -716,6 +722,28 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
         </div>
       )}
       
+      {/* Refund Notice Banner */}
+      {combinedRefundAmount > 0 && (
+        <div className="bg-gradient-to-r from-rose-500/10 via-amber-500/10 to-rose-500/5 border-2 border-rose-500/30 p-4 rounded-2xl flex items-start gap-3.5 shadow-xs animate-fade-in">
+          <div className="h-10 w-10 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 text-xl font-bold">
+            ↩️
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-black text-rose-800 dark:text-rose-400">
+                ₹{combinedRefundAmount} Refund Initiated / Credited
+              </h2>
+              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-700 dark:text-rose-300">
+                Refunded
+              </span>
+            </div>
+            <p className="text-xs text-rose-700 dark:text-rose-300/90 mt-1 leading-relaxed font-medium">
+              {order.notes?.includes('Refund') ? order.notes : `A refund of ₹${combinedRefundAmount} has been credited to your original payment method.`}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Payment Status Reassurance or Pay Online Option */}
       {order.paymentStatus === 'PAID' ? (
         <div className="p-4 sm:p-5 bg-emerald-50/90 dark:bg-emerald-950/30 border border-emerald-500/30 rounded-3xl shadow-sm flex items-center gap-3.5">
@@ -1329,7 +1357,12 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                               <p className="text-xs font-bold text-text-primary truncate">
                                 {item.name} {item.selectedVariant ? `(${item.selectedVariant})` : ''}
                               </p>
-                              {item.notes && (
+                              {(item.isRefunded || (item.refundAmount && item.refundAmount > 0) || item.notes?.includes('Refund')) && (
+                                <span className="text-[9px] bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold px-1.5 py-0.5 rounded mt-0.5 inline-block">
+                                  ↩️ Refunded (-₹{item.refundAmount || item.price})
+                                </span>
+                              )}
+                              {item.notes && !item.notes.includes('Refund') && (
                                 <p className="text-[9px] text-amber-600 dark:text-amber-400 font-medium">
                                   📝 {item.notes}
                                 </p>
@@ -1356,6 +1389,11 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                       <p className="text-xs font-bold text-text-primary truncate">
                         {item.name} {item.selectedVariant ? `(${item.selectedVariant})` : ''}
                       </p>
+                      {(item.isRefunded || (item.refundAmount && item.refundAmount > 0) || item.notes?.includes('Refund')) && (
+                        <span className="text-[9px] bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold px-1.5 py-0.5 rounded mt-0.5 inline-block">
+                          ↩️ Refunded (-₹{item.refundAmount || item.price})
+                        </span>
+                      )}
                       {item.shopName && (
                         <p className="text-[9px] text-text-muted font-semibold flex items-center gap-0.5 mt-0.5">
                           <span>🏢</span> {item.shopName}
@@ -1401,12 +1439,29 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                 <span className="font-bold text-text-primary">₹{combinedMiscFee}</span>
               </div>
             )}
+            {combinedRefundAmount > 0 && (
+              <div className="flex justify-between text-rose-600 dark:text-rose-400 font-black bg-rose-500/10 px-2.5 py-1.5 rounded-lg border border-rose-500/20">
+                <span className="flex items-center gap-1">↩️ Refund Credited</span>
+                <span>-₹{combinedRefundAmount}</span>
+              </div>
+            )}
           </div>
 
           {/* Grand Total */}
           <div className="flex justify-between items-center text-text-primary font-black border-t-2 border-dashed border-border/80 pt-4 mt-1">
-            <span className="text-xs uppercase tracking-wider text-text-secondary">Grand Total</span>
-            <span className="text-primary text-lg font-black tracking-tight">₹{combinedTotal.toFixed(0)}</span>
+            <div>
+              <span className="text-xs uppercase tracking-wider text-text-secondary block">
+                {combinedRefundAmount > 0 ? 'Net Paid Total' : 'Grand Total'}
+              </span>
+              {combinedRefundAmount > 0 && (
+                <span className="text-[10px] text-text-muted font-medium">
+                  Original: ₹{combinedTotal.toFixed(0)}
+                </span>
+              )}
+            </div>
+            <span className="text-primary text-lg font-black tracking-tight">
+              ₹{(combinedTotal - combinedRefundAmount).toFixed(0)}
+            </span>
           </div>
         </div>
       </div>

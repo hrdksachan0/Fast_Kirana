@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/theme/design_system.dart';
 
@@ -15,6 +16,7 @@ class RestaurantSalesReportTab extends StatefulWidget {
   final Color slateDark;
   final Color slateMuted;
   final Color slateBorder;
+  final void Function(DateTime? start, DateTime? end)? onDateRangeChanged;
 
   const RestaurantSalesReportTab({
     super.key,
@@ -26,6 +28,7 @@ class RestaurantSalesReportTab extends StatefulWidget {
     this.slateDark = AppDesignSystem.slate900,
     this.slateMuted = AppDesignSystem.slate500,
     this.slateBorder = AppDesignSystem.slate200,
+    this.onDateRangeChanged,
   });
 
   @override
@@ -34,6 +37,79 @@ class RestaurantSalesReportTab extends StatefulWidget {
 
 class _RestaurantSalesReportTabState extends State<RestaurantSalesReportTab> {
   String _selectedSalesPeriod = 'TODAY';
+  DateTime? _customStartDate;
+  DateTime? _customEndDate;
+
+  Future<void> _selectCustomDateRange() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2023),
+      lastDate: DateTime(now.year + 1),
+      initialDateRange: DateTimeRange(
+        start: _customStartDate ?? now.subtract(const Duration(days: 7)),
+        end: _customEndDate ?? now,
+      ),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: widget.primaryRed,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: widget.slateDark,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedSalesPeriod = 'CUSTOM';
+        _customStartDate = picked.start;
+        _customEndDate = picked.end;
+      });
+      widget.onDateRangeChanged?.call(picked.start, picked.end);
+    }
+  }
+
+  void _onPeriodTap(String periodId) {
+    HapticFeedback.lightImpact();
+    if (periodId == 'CUSTOM') {
+      _selectCustomDateRange();
+      return;
+    }
+
+    final now = DateTime.now();
+    DateTime? start;
+    DateTime? end;
+
+    if (periodId == 'TODAY') {
+      start = DateTime(now.year, now.month, now.day);
+      end = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    } else if (periodId == 'YESTERDAY') {
+      final y = now.subtract(const Duration(days: 1));
+      start = DateTime(y.year, y.month, y.day);
+      end = DateTime(y.year, y.month, y.day, 23, 59, 59);
+    } else if (periodId == 'WEEK') {
+      start = now.subtract(const Duration(days: 7));
+      end = now;
+    } else if (periodId == 'MONTH') {
+      start = DateTime(now.year, now.month, 1);
+      end = now;
+    } else if (periodId == 'ALL') {
+      start = null;
+      end = null;
+    }
+
+    setState(() {
+      _selectedSalesPeriod = periodId;
+    });
+
+    widget.onDateRangeChanged?.call(start, end);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +132,14 @@ class _RestaurantSalesReportTabState extends State<RestaurantSalesReportTab> {
           return dt.isAfter(weekStart);
         case 'MONTH':
           return dt.isAfter(monthStart);
+        case 'CUSTOM':
+          if (_customStartDate != null && _customEndDate != null) {
+            final start = DateTime(_customStartDate!.year, _customStartDate!.month, _customStartDate!.day);
+            final end = DateTime(_customEndDate!.year, _customEndDate!.month, _customEndDate!.day, 23, 59, 59);
+            return (dt.isAfter(start) || dt.isAtSameMomentAs(start)) &&
+                (dt.isBefore(end) || dt.isAtSameMomentAs(end));
+          }
+          return true;
         case 'ALL':
           return true;
         case 'TODAY':
@@ -109,6 +193,9 @@ class _RestaurantSalesReportTabState extends State<RestaurantSalesReportTab> {
       periodTitle = "Last 7 Days Net Settlement";
     } else if (_selectedSalesPeriod == 'MONTH') {
       periodTitle = "This Month's Net Settlement";
+    } else if (_selectedSalesPeriod == 'CUSTOM' && _customStartDate != null && _customEndDate != null) {
+      final df = DateFormat('dd MMM');
+      periodTitle = "Net Settlement (${df.format(_customStartDate!)} - ${df.format(_customEndDate!)})";
     } else if (_selectedSalesPeriod == 'ALL') {
       periodTitle = "All Time Net Settlement";
     }
@@ -118,6 +205,7 @@ class _RestaurantSalesReportTabState extends State<RestaurantSalesReportTab> {
       {'id': 'YESTERDAY', 'label': 'Yesterday'},
       {'id': 'WEEK', 'label': 'Last 7 Days'},
       {'id': 'MONTH', 'label': 'This Month'},
+      {'id': 'CUSTOM', 'label': 'Custom Date 📅'},
       {'id': 'ALL', 'label': 'All Time'},
     ];
 
@@ -137,10 +225,7 @@ class _RestaurantSalesReportTabState extends State<RestaurantSalesReportTab> {
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: Bounceable(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      setState(() => _selectedSalesPeriod = p['id']!);
-                    },
+                    onTap: () => _onPeriodTap(p['id']!),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
                       decoration: BoxDecoration(
@@ -171,6 +256,52 @@ class _RestaurantSalesReportTabState extends State<RestaurantSalesReportTab> {
               }).toList(),
             ),
           ),
+          if (_selectedSalesPeriod == 'CUSTOM' && _customStartDate != null && _customEndDate != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppDesignSystem.amber50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.date_range_rounded, size: 16, color: AppDesignSystem.warning),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Filtered: ${DateFormat('dd MMM yyyy').format(_customStartDate!)}  to  ${DateFormat('dd MMM yyyy').format(_customEndDate!)}',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 11.5),
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF92400E),
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _selectCustomDateRange,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFDE68A)),
+                      ),
+                      child: Text(
+                        'Change',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 11),
+                          fontWeight: FontWeight.w800,
+                          color: widget.primaryRed,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
 
           // 2. Net Settlement Highlight Card

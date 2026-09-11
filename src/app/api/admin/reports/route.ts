@@ -58,9 +58,11 @@ export async function GET(request: NextRequest) {
         deliveryMethod: string
         createdAt: Date
         combinedId: string | null
+        refundAmount: number
       }>
     >`
-      SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "deliveryMethod", "createdAt", "combinedId"
+      SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "deliveryMethod", "createdAt", "combinedId",
+             COALESCE("refundAmount", 0)::float as "refundAmount"
       FROM orders
       WHERE status::text = 'DELIVERED'
         AND "createdAt" >= ${start}
@@ -89,6 +91,8 @@ export async function GET(request: NextRequest) {
         restaurantName: string | null
         restaurantCommissionRate: number | null
         orderType: string | null
+        refundAmount: number
+        isRefunded: boolean
       }>
     >`
       SELECT oi."orderId", oi."productId", oi.price, COALESCE(p.mrp, oi.price) as mrp, oi.quantity, oi.name, 
@@ -102,7 +106,9 @@ export async function GET(request: NextRequest) {
              COALESCE(p."restaurantId", o."restaurantId") as "restaurantId",
              r.name as "restaurantName",
              r."commissionRate" as "restaurantCommissionRate",
-             o."orderType"::text as "orderType"
+             o."orderType"::text as "orderType",
+             COALESCE(oi."refundAmount", 0)::float as "refundAmount",
+             COALESCE(oi."isRefunded", false) as "isRefunded"
       FROM order_items oi
       JOIN orders o ON oi."orderId" = o.id
       LEFT JOIN products p ON oi."productId" = p.id
@@ -189,7 +195,11 @@ export async function GET(request: NextRequest) {
     }
 
     const getItemMetrics = (item: typeof orderItems[0]) => {
-      const itemRevenue = (item.price || 0) * (item.quantity || 1)
+      const grossRevenue = (item.price || 0) * (item.quantity || 1)
+      const itemRevenue = Math.max(0, grossRevenue - (item.refundAmount || 0))
+      if (item.isRefunded && itemRevenue === 0) {
+        return { cost: 0, revenue: 0, profit: 0, matchedRest: null }
+      }
       const isGrocery = isPureGroceryItem(item)
       const matchedRest = !isGrocery ? resolveRestaurantForItem(item) : null
       const catNameLower = (item.categoryName || '').toLowerCase().trim()
@@ -321,7 +331,8 @@ export async function GET(request: NextRequest) {
       const orderMasterKey = order.combinedId || order.id
       const createdAtDate = order.createdAt instanceof Date ? order.createdAt : new Date(order.createdAt)
       const dateString = createdAtDate.toISOString().split('T')[0]
-      const orderSales = isRetail ? (order.total || order.subtotal || 0) : ((order.subtotal || 0) - (order.discount || 0))
+      const rawSales = isRetail ? (order.total || order.subtotal || 0) : ((order.subtotal || 0) - (order.discount || 0))
+      const orderSales = Math.max(0, rawSales - (order.refundAmount || 0))
       
       // Ensure dailyData has the key (in case it fell outside initialized range due to timezone)
       if (!dailyData[dateString]) {

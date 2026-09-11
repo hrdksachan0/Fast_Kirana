@@ -320,6 +320,7 @@ model Order {
   couponCode        String?
   cashSettledToAdmin Boolean   @default(false)
   cashSettledAt      DateTime?
+  refundAmount      Float     @default(0)
 
   user    User        @relation(fields: [userId], references: [id])
   address Address     @relation(fields: [addressId], references: [id])
@@ -362,6 +363,8 @@ model OrderItem {
   costPrice       Float    @default(0)
   variants        Json?
   notes           String?
+  refundAmount    Float    @default(0)
+  isRefunded      Boolean  @default(false)
 
   order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)

@@ -12,13 +12,15 @@ export async function POST(req: NextRequest) {
   if (limited) return limited
 
   try {
-    const { orderId } = await req.json()
+    const { orderId, cfOrderId } = await req.json()
 
-    if (!orderId) {
-      return NextResponse.json({ error: 'orderId is required' }, { status: 400 })
+    if (!orderId && !cfOrderId) {
+      return NextResponse.json({ error: 'orderId or cfOrderId is required' }, { status: 400 })
     }
 
-    const cleanId = String(orderId).trim()
+    const rawId = String(orderId || cfOrderId).trim()
+    // Strip retry suffix if any to locate original DB order
+    const cleanId = rawId.replace(/_r\d+$/, '')
 
     const orders: any[] = await prisma.$queryRaw`
       SELECT o.id, o."userId", o."combinedId", o."readableId",
@@ -30,13 +32,14 @@ export async function POST(req: NextRequest) {
              u.name as "userName", u.phone as "userPhone", u.email as "userEmail"
       FROM orders o
       LEFT JOIN users u ON o."userId" = u.id
-      WHERE o.id = ${cleanId} OR o."readableId" = ${cleanId} LIMIT 1
+      WHERE o.id = ${cleanId} OR o."readableId" = ${cleanId} OR o.id = ${rawId} LIMIT 1
     `
 
     if (!orders || orders.length === 0) {
       // Check if this is a preflight Cashfree order before DB record creation (e.g. Flutter mobile checkout)
       try {
-        const cfOrder = await getCashfreeOrder(cleanId)
+        const checkId = cfOrderId || cleanId
+        const cfOrder = await getCashfreeOrder(checkId)
         if (cfOrder && cfOrder.order_status === 'PAID') {
           return NextResponse.json({
             success: true,
@@ -46,7 +49,7 @@ export async function POST(req: NextRequest) {
             orderAmount: cfOrder.order_amount,
           })
         }
-        const payments = await getCashfreeOrderPayments(cleanId)
+        const payments = await getCashfreeOrderPayments(checkId)
         const successfulPayment = payments.find(p => p.payment_status === 'SUCCESS')
         if (successfulPayment) {
           return NextResponse.json({
@@ -70,18 +73,22 @@ export async function POST(req: NextRequest) {
     let cfPaymentId = ''
     let paymentMode = 'UPI'
 
-    try {
-      const cfOrder = await getCashfreeOrder(order.id)
-      if (cfOrder && cfOrder.order_status === 'PAID') {
-        isPaid = true
-      }
-    } catch (cfErr) {
-      console.warn('Direct order status check note:', cfErr)
-    }
+    const idsToCheck = Array.from(new Set([cfOrderId, rawId, order.id].filter(Boolean))) as string[]
 
-    if (!isPaid) {
+    for (const idToCheck of idsToCheck) {
+      if (isPaid) break
       try {
-        const payments = await getCashfreeOrderPayments(order.id)
+        const cfOrder = await getCashfreeOrder(idToCheck)
+        if (cfOrder && cfOrder.order_status === 'PAID') {
+          isPaid = true
+          break
+        }
+      } catch (cfErr) {
+        console.warn(`Direct order status check note for ${idToCheck}:`, cfErr)
+      }
+
+      try {
+        const payments = await getCashfreeOrderPayments(idToCheck)
         const successfulPayment = payments.find(p => p.payment_status === 'SUCCESS')
         if (successfulPayment) {
           isPaid = true
@@ -89,9 +96,10 @@ export async function POST(req: NextRequest) {
           if (successfulPayment.payment_method) {
             paymentMode = 'UPI'
           }
+          break
         }
       } catch (payErr) {
-        console.warn('Payments check note:', payErr)
+        console.warn(`Payments check note for ${idToCheck}:`, payErr)
       }
     }
 

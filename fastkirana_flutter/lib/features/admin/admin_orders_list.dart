@@ -483,6 +483,11 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
         (sum, o) => sum + o.total,
       );
 
+      final combinedRefundAmount = subOrders.fold<double>(
+        0.0,
+        (sum, o) => sum + o.refundAmount,
+      );
+
       OrderStatus combinedStatus(List<OrderStatus> statuses) {
         final active = statuses.where((s) => s != OrderStatus.cancelled).toList();
         if (active.isEmpty) return OrderStatus.cancelled;
@@ -510,6 +515,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
         readableId: baseReadableId.isNotEmpty ? baseReadableId : primary.readableId,
         items: allItems,
         total: combinedTotal,
+        refundAmount: combinedRefundAmount,
         status: combinedStatus(statuses),
         shopName: subLabels.join(' + '),
         combinedId: entry.key,
@@ -1063,6 +1069,262 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
     );
   }
 
+  void _showRecordRefundModal(Order order) {
+    HapticFeedback.selectionClick();
+    final remainingRefundable = (order.total - order.refundAmount).clamp(0.0, double.infinity);
+    final amountController = TextEditingController();
+    final reasonController = TextEditingController();
+    final selectedItems = <String, double>{};
+    bool isSubmitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final items = order.items ?? [];
+          return Container(
+            padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(color: AppDesignSystem.slate300, borderRadius: BorderRadius.circular(2)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFE4E6),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.replay_rounded, color: Color(0xFFE11D48), size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Record Refund',
+                              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: AppDesignSystem.slate900),
+                            ),
+                            Text(
+                              'Order #${order.readableId ?? order.id} • Max: ₹${remainingRefundable.toInt()}',
+                              style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppDesignSystem.slate500),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded, size: 20, color: AppDesignSystem.slate500),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Financial exclusion disclaimer
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFFBEB),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFFDE68A)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFFD97706)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Refunded amount is excluded from Restaurant Payouts & FastKirana Sales.',
+                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF92400E)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  if (items.isNotEmpty) ...[
+                    Text(
+                      'Select Items to Refund (Optional):',
+                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: AppDesignSystem.slate700),
+                    ),
+                    const SizedBox(height: 8),
+                    ...items.map((it) {
+                      final isSelected = selectedItems.containsKey(it.id);
+                      final isAlreadyRefunded = it.isRefunded || it.refundAmount > 0;
+                      final itemVal = (it.price * it.quantity);
+
+                      return CheckboxListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        value: isSelected,
+                        title: Text(
+                          '${it.quantity}x ${it.name} (₹${itemVal.toInt()})',
+                          style: GoogleFonts.inter(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: isAlreadyRefunded ? AppDesignSystem.slate400 : AppDesignSystem.slate800,
+                            decoration: isAlreadyRefunded ? TextDecoration.lineThrough : null,
+                          ),
+                        ),
+                        subtitle: isAlreadyRefunded
+                            ? Text('Already refunded (-₹${it.refundAmount.toInt()})', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFFE11D48)))
+                            : null,
+                        onChanged: isAlreadyRefunded
+                            ? null
+                            : (val) {
+                                setModalState(() {
+                                  if (val == true && it.id != null) {
+                                    selectedItems[it.id!] = itemVal;
+                                  } else if (it.id != null) {
+                                    selectedItems.remove(it.id);
+                                  }
+                                  final totalSelected = selectedItems.values.fold<double>(0.0, (sum, v) => sum + v);
+                                  if (totalSelected > 0) {
+                                    amountController.text = totalSelected.toInt().toString();
+                                  }
+                                });
+                              },
+                      );
+                    }),
+                    const SizedBox(height: 10),
+                  ],
+
+                  Text(
+                    'Refund Amount (₹):',
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: AppDesignSystem.slate700),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: amountController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      hintText: 'Enter amount (e.g. 165)',
+                      prefixText: '₹ ',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppDesignSystem.slate300)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  Text(
+                    'Refund Reason / Notes:',
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: AppDesignSystem.slate700),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: reasonController,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Item unavailable / spoilt / customer cancelled',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppDesignSystem.slate300)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE11D48),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              final amt = double.tryParse(amountController.text.trim()) ?? 0.0;
+                              if (amt <= 0) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Please enter a valid refund amount > 0')),
+                                );
+                                return;
+                              }
+                              if (amt > remainingRefundable) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Refund amount cannot exceed remaining balance (₹${remainingRefundable.toInt()})')),
+                                );
+                                return;
+                              }
+
+                              setModalState(() => isSubmitting = true);
+                              try {
+                                final dio = ref.read(dioProvider);
+                                final itemsPayload = selectedItems.entries.map((e) => {
+                                  'id': e.key,
+                                  'refundAmount': e.value,
+                                }).toList();
+
+                                await dio.post(
+                                  '/api/admin/orders/${order.id}/refund',
+                                  data: {
+                                    'amount': amt,
+                                    'reason': reasonController.text.trim(),
+                                    'items': itemsPayload,
+                                  },
+                                  options: AdminAuthorization.options(),
+                                );
+
+                                if (mounted) {
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Refund of ₹${amt.toInt()} recorded successfully!'),
+                                      backgroundColor: const Color(0xFF059669),
+                                    ),
+                                  );
+                                  _fetchAdminOrders();
+                                }
+                              } catch (err) {
+                                setModalState(() => isSubmitting = false);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Failed to record refund: $err'),
+                                    backgroundColor: const Color(0xFFDC2626),
+                                  ),
+                                );
+                              }
+                            },
+                      child: isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : Text(
+                              'Confirm & Process Refund',
+                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   String _formatOrderDate(DateTime dt) {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
@@ -1593,15 +1855,15 @@ $formattedItems
                 (o.deliveryMethod?.toUpperCase() != 'RETAIL')
               ).toList();
 
-              // Today's Sales: sum of all non-cancelled orders placed today
+              // Today's Sales: sum of all non-cancelled orders placed today (minus refunds)
               final todaySales = todayOrders
                   .where((o) => o.status != OrderStatus.cancelled)
-                  .fold<double>(0.0, (sum, o) => sum + o.total);
+                  .fold<double>(0.0, (sum, o) => sum + (o.total - o.refundAmount).clamp(0.0, double.infinity));
 
-              // Today's Net Sales: sum of DELIVERED orders placed today
+              // Today's Net Sales: sum of DELIVERED orders placed today (minus refunds)
               final todayNetSales = todayOrders
                   .where((o) => o.status == OrderStatus.delivered)
-                  .fold<double>(0.0, (sum, o) => sum + o.total);
+                  .fold<double>(0.0, (sum, o) => sum + (o.total - o.refundAmount).clamp(0.0, double.infinity));
 
               // Today's Orders count
               final todayOrdersCount = todayOrders.length;
@@ -2287,14 +2549,56 @@ $formattedItems
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        '₹${order.total.toInt()}',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 16.5),
-                          fontWeight: FontWeight.w900,
-                          color: primaryRed,
+                      if (order.refundAmount > 0) ...[
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '₹${(order.total - order.refundAmount).clamp(0.0, double.infinity).toInt()}',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 16.5),
+                                fontWeight: FontWeight.w900,
+                                color: primaryRed,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '₹${order.total.toInt()}',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 11),
+                                fontWeight: FontWeight.w600,
+                                color: AppDesignSystem.slate400,
+                                decoration: TextDecoration.lineThrough,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
+                        Container(
+                          margin: const EdgeInsets.only(top: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFE4E6),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '↩️ -₹${order.refundAmount.toInt()} REFUND',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 8.5),
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFFE11D48),
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        Text(
+                          '₹${order.total.toInt()}',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 16.5),
+                            fontWeight: FontWeight.w900,
+                            color: primaryRed,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 3),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
@@ -2552,14 +2856,15 @@ $formattedItems
                     spacing: 6,
                     runSpacing: 4,
                     children: itemsList.map((item) {
+                      final isItemRefunded = item.isRefunded || item.refundAmount > 0;
                       return GestureDetector(
                         onTap: () => _showSubstitutionModal(order, item),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppDesignSystem.slate50,
+                            color: isItemRefunded ? const Color(0xFFFFE4E6) : AppDesignSystem.slate50,
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppDesignSystem.slate200),
+                            border: Border.all(color: isItemRefunded ? const Color(0xFFFDA4AF) : AppDesignSystem.slate200),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -2569,11 +2874,24 @@ $formattedItems
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 11),
                                   fontWeight: FontWeight.w700,
-                                  color: AppDesignSystem.slate700,
+                                  color: isItemRefunded ? const Color(0xFFBE123C) : AppDesignSystem.slate700,
+                                  decoration: isItemRefunded ? TextDecoration.lineThrough : null,
                                 ),
                               ),
-                              const SizedBox(width: 4),
-                              const Icon(Icons.swap_horiz_rounded, size: 12, color: AppDesignSystem.slate400),
+                              if (isItemRefunded) ...[
+                                const SizedBox(width: 4),
+                                Text(
+                                  '↩️ -₹${item.refundAmount > 0 ? item.refundAmount.toInt() : (item.price * item.quantity).toInt()}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 9.5),
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFFE11D48),
+                                  ),
+                                ),
+                              ] else ...[
+                                const SizedBox(width: 4),
+                                const Icon(Icons.swap_horiz_rounded, size: 12, color: AppDesignSystem.slate400),
+                              ],
                             ],
                           ),
                         ),
@@ -2850,6 +3168,40 @@ $formattedItems
                         fontSize: Responsive.scaledFontSize(context, 12),
                         fontWeight: FontWeight.w800,
                         color: const Color(0xFFB45309),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // 3.6 Refund Action Button
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => _showRecordRefundModal(order),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF1F2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFDA4AF), width: 1.2),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.replay_rounded, size: 16, color: Color(0xFFE11D48)),
+                    const SizedBox(width: 6),
+                    Text(
+                      order.refundAmount > 0
+                          ? '↩️ Refunded ₹${order.refundAmount.toInt()} (Record More)'
+                          : '↩️ Record Refund (Deduct from Finance)',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 12),
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFFBE123C),
                       ),
                     ),
                   ],

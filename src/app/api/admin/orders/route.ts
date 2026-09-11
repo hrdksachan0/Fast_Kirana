@@ -243,8 +243,8 @@ export async function GET(request: Request) {
       }>>`
         SELECT 
           COUNT(DISTINCT COALESCE("combinedId", id))::int as today_orders,
-          COALESCE(SUM(total), 0)::float as today_sales,
-          COALESCE(SUM(CASE WHEN status::text = 'DELIVERED' THEN total ELSE 0 END), 0)::float as today_delivered_sales
+          COALESCE(SUM(total - COALESCE("refundAmount", 0)), 0)::float as today_sales,
+          COALESCE(SUM(CASE WHEN status::text = 'DELIVERED' THEN (total - COALESCE("refundAmount", 0)) ELSE 0 END), 0)::float as today_delivered_sales
         FROM orders
         WHERE ("deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL)
           AND status::text != 'CANCELLED'

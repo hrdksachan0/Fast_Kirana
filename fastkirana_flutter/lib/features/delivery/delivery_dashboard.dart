@@ -570,11 +570,16 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       // Build base readableId (strip -G/-R suffix)
       final baseId = (primary['readableId'] ?? '').toString().replaceAll(RegExp(r'-[GR]\d*$', caseSensitive: false), '');
 
-      // Determine payment: if ANY sub is unpaid COD, the combined is COD; if all paid or UPI, it's ONLINE
-      final anyUnpaidCod = subOrders.any((o) {
-        final pm = (o['paymentMethod'] ?? '').toString().toUpperCase().trim();
+      // Determine payment:
+      // An order is only PAID if ALL sub-orders have paymentStatus == 'PAID'
+      final allSubOrdersPaid = subOrders.every((o) {
         final ps = (o['paymentStatus'] ?? '').toString().toUpperCase().trim();
-        return (pm == 'COD' || pm.isEmpty) && ps != 'PAID';
+        return ps == 'PAID';
+      });
+
+      final anyCod = subOrders.any((o) {
+        final pm = (o['paymentMethod'] ?? '').toString().toUpperCase().trim();
+        return pm == 'COD' || pm.isEmpty;
       });
 
       // Build sub-order type labels for display
@@ -590,8 +595,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       merged['items'] = allItems;
       merged['total'] = combinedTotal;
       merged['status'] = combinedStatus(statuses);
-      merged['paymentMethod'] = anyUnpaidCod ? 'COD' : 'UPI';
-      merged['paymentStatus'] = anyUnpaidCod ? (primary['paymentStatus'] ?? 'PENDING') : 'PAID';
+      merged['paymentMethod'] = anyCod ? 'COD' : (primary['paymentMethod'] ?? 'UPI');
+      merged['paymentStatus'] = allSubOrdersPaid ? 'PAID' : (primary['paymentStatus'] ?? 'PENDING');
       merged['isCombined'] = true;
       merged['subOrders'] = subOrders;
       merged['subOrderIds'] = subOrders.map((o) => o['id']?.toString()).where((id) => id != null).toList();
@@ -922,7 +927,9 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     final orderId = order['id']?.toString() ?? '';
     final orderNum = order['readableId'] ?? orderId.substring(0, math.min(8, orderId.length));
     final total = (order['total'] as num?)?.toDouble() ?? 0.0;
-    final isCod = order['paymentMethod'] == 'COD';
+    final rawPayStatus = (order['paymentStatus'] ?? '').toString().toUpperCase().trim();
+    final isAlreadyPaid = rawPayStatus == 'PAID';
+    final isCod = !isAlreadyPaid; // If not yet PAID, rider must collect payment before delivering!
     final wallet = _walletInfo?['wallet'] ?? {};
     final cashInHand = (wallet['cashInHand'] as num?)?.toDouble() ?? 0.0;
     final cashLimit = (wallet['cashLimit'] as num?)?.toDouble() ?? 10000.0;
@@ -1293,9 +1300,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     final total = (order['total'] as num?)?.toDouble() ?? 0.0;
     final rawPayMethod = (order['paymentMethod'] ?? '').toString().toUpperCase().trim();
     final rawPayStatus = (order['paymentStatus'] ?? '').toString().toUpperCase().trim();
-    final isOnlineMethod = rawPayMethod == 'UPI' || rawPayMethod == 'ONLINE' || rawPayMethod == 'RAZORPAY' || rawPayMethod == 'CARD' || rawPayMethod == 'WALLET';
-    final isPaid = rawPayStatus == 'PAID' || (isOnlineMethod && rawPayMethod != 'COD');
-    final isCod = !isPaid && (rawPayMethod == 'COD' || rawPayMethod.isEmpty);
+    final isPaid = rawPayStatus == 'PAID';
+    final isCod = rawPayMethod == 'COD' || rawPayMethod.isEmpty;
     final items = (order['items'] as List<dynamic>?) ?? [];
     final lat = (address?['lat'] as num?)?.toDouble() ?? AppConfig.darkstoreLat;
     final lng = (address?['lng'] as num?)?.toDouble() ?? AppConfig.darkstoreLng;
@@ -1835,18 +1841,26 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: isCod ? AppDesignSystem.statusPending : AppDesignSystem.green100,
+                                  color: isPaid
+                                      ? AppDesignSystem.green100
+                                      : (isCod ? AppDesignSystem.statusPending : AppDesignSystem.statusCancelled),
                                   borderRadius: BorderRadius.circular(6),
                                   border: Border.all(
-                                    color: isCod ? AppDesignSystem.yellow200 : AppDesignSystem.emerald200,
+                                    color: isPaid
+                                        ? AppDesignSystem.emerald200
+                                        : (isCod ? AppDesignSystem.yellow200 : AppDesignSystem.red200),
                                   ),
                                 ),
                                 child: Text(
-                                  isCod ? '💵 COD' : '✅ PAID',
+                                  isPaid
+                                      ? '✅ PAID'
+                                      : (isCod ? '💵 COD' : '⚠️ UNPAID (${rawPayMethod.isNotEmpty ? rawPayMethod : 'ONLINE'})'),
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 9),
                                     fontWeight: FontWeight.w900,
-                                    color: isCod ? AppDesignSystem.amber700 : AppDesignSystem.green700,
+                                    color: isPaid
+                                        ? AppDesignSystem.green700
+                                        : (isCod ? AppDesignSystem.amber700 : AppDesignSystem.red600),
                                   ),
                                 ),
                               ),
@@ -1855,15 +1869,19 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                           const SizedBox(height: 2),
                           Row(
                             children: [
-                              Text(isCod ? '🔥' : '💳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
+                              Text(isPaid ? '💳' : (isCod ? '🔥' : '⚠️'), style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
                               const SizedBox(width: 3),
                               Expanded(
                                 child: Text(
-                                  isCod ? 'Collect ₹${total.toInt()} Cash' : 'Paid Online',
+                                  isPaid
+                                      ? 'Paid Online'
+                                      : (isCod ? 'Collect ₹${total.toInt()} Cash' : 'Collect ₹${total.toInt()} (Payment Pending)'),
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 9.5),
                                     fontWeight: FontWeight.w800,
-                                    color: isCod ? AppDesignSystem.amber600 : AppDesignSystem.emerald600,
+                                    color: isPaid
+                                        ? AppDesignSystem.emerald600
+                                        : (isCod ? AppDesignSystem.amber600 : AppDesignSystem.red600),
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -1977,9 +1995,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     final total = (order['total'] as num?)?.toDouble() ?? 0.0;
     final rawPayMethod = (order['paymentMethod'] ?? '').toString().toUpperCase().trim();
     final rawPayStatus = (order['paymentStatus'] ?? '').toString().toUpperCase().trim();
-    final isOnlineMethod = rawPayMethod == 'UPI' || rawPayMethod == 'ONLINE' || rawPayMethod == 'RAZORPAY' || rawPayMethod == 'CARD' || rawPayMethod == 'WALLET';
-    final isPaid = rawPayStatus == 'PAID' || (isOnlineMethod && rawPayMethod != 'COD');
-    final isCod = !isPaid && (rawPayMethod == 'COD' || rawPayMethod.isEmpty);
+    final isPaid = rawPayStatus == 'PAID';
+    final isCod = rawPayMethod == 'COD' || rawPayMethod.isEmpty;
     final items = (order['items'] as List<dynamic>?) ?? [];
     final lat = (address?['lat'] as num?)?.toDouble() ?? AppConfig.darkstoreLat;
     final lng = (address?['lng'] as num?)?.toDouble() ?? AppConfig.darkstoreLng;
@@ -2364,10 +2381,14 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: isCod ? AppDesignSystem.statusPending : AppDesignSystem.green100,
+                    color: isPaid
+                        ? AppDesignSystem.green100
+                        : (isCod ? AppDesignSystem.statusPending : AppDesignSystem.statusCancelled),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isCod ? AppDesignSystem.yellow200 : AppDesignSystem.emerald200,
+                      color: isPaid
+                          ? AppDesignSystem.emerald200
+                          : (isCod ? AppDesignSystem.yellow200 : AppDesignSystem.red200),
                       width: 1.2,
                     ),
                   ),
@@ -2376,26 +2397,36 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                     children: [
                       Row(
                         children: [
-                          Text(isCod ? '💵' : '💳', style: const TextStyle(fontSize: 15)),
+                          Text(isPaid ? '💳' : (isCod ? '💵' : '⚠️'), style: const TextStyle(fontSize: 15)),
                           const SizedBox(width: 8),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                isCod ? 'CASH ON DELIVERY' : 'PAID ONLINE (PREPAID)',
+                                isPaid
+                                    ? 'PAID ONLINE (PREPAID)'
+                                    : (isCod ? 'CASH ON DELIVERY' : 'PAYMENT PENDING / UNPAID (${rawPayMethod.isNotEmpty ? rawPayMethod : 'ONLINE'})'),
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 10),
                                   fontWeight: FontWeight.w900,
-                                  color: isCod ? const Color(0xFFD97706) : AppDesignSystem.statusDeliveredText,
+                                  color: isPaid
+                                      ? AppDesignSystem.statusDeliveredText
+                                      : (isCod ? const Color(0xFFD97706) : AppDesignSystem.red600),
                                   letterSpacing: 0.3,
                                 ),
                               ),
                               Text(
-                                isCod ? 'Collect ₹${total.toInt()} cash from customer' : '₹0 to collect • Payment already done',
+                                isPaid
+                                    ? '₹0 to collect • Payment already done'
+                                    : (isCod
+                                        ? 'Collect ₹${total.toInt()} cash from customer'
+                                        : '⚠️ Payment NOT received! Collect ₹${total.toInt()} via QR or Cash'),
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 11),
                                   fontWeight: FontWeight.w700,
-                                  color: isCod ? const Color(0xFF78350F) : AppDesignSystem.statusDeliveredText,
+                                  color: isPaid
+                                      ? AppDesignSystem.statusDeliveredText
+                                      : (isCod ? const Color(0xFF78350F) : AppDesignSystem.red700),
                                 ),
                               ),
                             ],
@@ -2407,7 +2438,9 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 17),
                           fontWeight: FontWeight.w900,
-                          color: isCod ? const Color(0xFF78350F) : AppDesignSystem.statusDeliveredText,
+                          color: isPaid
+                              ? AppDesignSystem.statusDeliveredText
+                              : (isCod ? const Color(0xFF78350F) : AppDesignSystem.red700),
                         ),
                       ),
                     ],
@@ -2417,7 +2450,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                 // Action Buttons: Doorstep UPI QR + Delivered
                 Row(
                   children: [
-                    if (isCod) ...[
+                    if (!isPaid) ...[
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () => _showDoorstepUpiQrModal(order),
@@ -2440,7 +2473,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                             ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                             : const Icon(Icons.check_circle_rounded, size: 16, color: Colors.white),
                         label: Text(
-                          isCod ? 'Collect ₹${total.toInt()} & Deliver' : 'Mark Delivered',
+                          !isPaid ? 'Collect ₹${total.toInt()} & Deliver' : 'Mark Delivered',
                           style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: Colors.white),
                         ),
                         style: ElevatedButton.styleFrom(
@@ -2885,8 +2918,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
               final totalAmt = (item['total'] as num?)?.toInt() ?? 0;
               final rawPm = (item['paymentMethod'] ?? '').toString().toUpperCase().trim();
               final rawPs = (item['paymentStatus'] ?? '').toString().toUpperCase().trim();
-              final isOnlinePaid = rawPm == 'UPI' || rawPm == 'ONLINE' || rawPm == 'RAZORPAY' || (rawPs == 'PAID' && rawPm != 'COD');
-              final isCod = !isOnlinePaid && (rawPm == 'COD' || rawPm.isEmpty);
+              final isCod = rawPm == 'COD' || rawPm.isEmpty;
+              final isPaid = rawPs == 'PAID';
               final userObj = item['user'] is Map ? item['user'] : null;
               final userName = userObj?['name'] ?? item['userName'] ?? 'Customer';
               final addrObj = item['address'] is Map ? item['address'] : null;
@@ -3005,15 +3038,17 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                                       decoration: BoxDecoration(
-                                        color: isCod ? AppDesignSystem.statusPending : AppDesignSystem.green100,
+                                        color: isPaid ? AppDesignSystem.green100 : (isCod ? AppDesignSystem.statusPending : AppDesignSystem.statusCancelled),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Text(
-                                        isCod ? '💵 COD' : (rawPm == 'UPI' ? '⚡ UPI RECEIVED' : '💳 ONLINE RECEIVED'),
+                                        isPaid
+                                            ? (isCod ? '💵 COD RECEIVED' : (rawPm == 'UPI' ? '⚡ UPI RECEIVED' : '💳 ONLINE RECEIVED'))
+                                            : (isCod ? '💵 COD' : '⚠️ UNPAID (${rawPm.isNotEmpty ? rawPm : 'ONLINE'})'),
                                         style: GoogleFonts.inter(
                                           fontSize: Responsive.scaledFontSize(context, 8.5),
                                           fontWeight: FontWeight.w900,
-                                          color: isCod ? AppDesignSystem.amber700 : AppDesignSystem.green700,
+                                          color: isPaid ? AppDesignSystem.green700 : (isCod ? AppDesignSystem.amber700 : AppDesignSystem.red600),
                                         ),
                                       ),
                                     ),

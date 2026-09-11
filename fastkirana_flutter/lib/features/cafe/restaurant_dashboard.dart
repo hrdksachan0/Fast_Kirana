@@ -464,7 +464,6 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
 
   // Lazy tab loading flags
   bool _menuTabLoaded = false;
-  bool _salesTabLoaded = false;
 
   /// Called when user switches tabs — lazy-loads data for Menu and Sales tabs
   void _onTabChanged(int newTab) {
@@ -473,8 +472,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
     if (newTab == 1 && !_menuTabLoaded) {
       _menuTabLoaded = true;
       _fetchMenuItems();
-    } else if (newTab == 2 && !_salesTabLoaded) {
-      _salesTabLoaded = true;
+    } else if (newTab == 2) {
       _fetchSalesSummary();
       _fetchSalesOrders();
     }
@@ -785,12 +783,21 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
   }
 
   /// Fetch ALL orders (including DELIVERED) for the Sales tab - separate from live queue
-  Future<void> _fetchSalesOrders() async {
+  Future<void> _fetchSalesOrders({DateTime? startDate, DateTime? endDate}) async {
     try {
       final dio = ref.read(dioProvider);
-      final url = _assignedRestaurantId != null
-          ? '/api/restaurant-dashboard/orders?restaurantId=$_assignedRestaurantId'
-          : '/api/restaurant-dashboard/orders';
+      final params = <String>[];
+      if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty) {
+        params.add('restaurantId=$_assignedRestaurantId');
+      }
+      if (startDate != null) {
+        params.add('startDate=${DateFormat('yyyy-MM-dd').format(startDate)}');
+      }
+      if (endDate != null) {
+        params.add('endDate=${DateFormat('yyyy-MM-dd').format(endDate)}');
+      }
+      final queryStr = params.isNotEmpty ? '?${params.join('&')}' : '';
+      final url = '/api/restaurant-dashboard/orders$queryStr';
       final res = await dio.get(url);
       if (res.statusCode == 200 && res.data != null) {
         final dynamic raw = res.data;
@@ -2054,6 +2061,9 @@ $formattedItems
                                 slateDark: slateDark,
                                 slateMuted: slateMuted,
                                 slateBorder: slateBorder,
+                                onDateRangeChanged: (start, end) {
+                                  _fetchSalesOrders(startDate: start, endDate: end);
+                                },
                               )
                             : _buildStoreSettingsTab(),
           ),
@@ -2646,10 +2656,6 @@ $formattedItems
       ),
     );
   }
-
-
-
-
 
   Widget _buildStoreSettingsTab() {
     return ListView(

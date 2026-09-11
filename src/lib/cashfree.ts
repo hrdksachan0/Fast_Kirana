@@ -94,6 +94,34 @@ export async function createCashfreeOrder(params: CreateCashfreeOrderParams): Pr
   const data = await response.json()
 
   if (!response.ok) {
+    // If order already exists in Cashfree (409 Conflict):
+    if (response.status === 409 || data?.code === 'order_already_exists' || (typeof data?.message === 'string' && data.message.toLowerCase().includes('already exists'))) {
+      try {
+        const existing = await getCashfreeOrder(sanitizedOrderId)
+        if (existing && existing.order_status === 'ACTIVE' && existing.payment_session_id) {
+          return existing
+        }
+      } catch (_) {}
+
+      // If existing order is EXPIRED or terminal, create a fresh Cashfree order with retry suffix
+      const retrySuffix = `_r${Date.now().toString().slice(-4)}`
+      const retryOrderId = `${sanitizedOrderId.slice(0, 45 - retrySuffix.length)}${retrySuffix}`
+      payload.order_id = retryOrderId
+      if (payload.order_meta?.return_url) {
+        payload.order_meta.return_url = `${payload.order_meta.return_url}&cf_order_id=${retryOrderId}`
+      }
+
+      const retryResponse = await fetch(`${BASE_URL}/orders`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(payload),
+      })
+      const retryData = await retryResponse.json()
+      if (retryResponse.ok && retryData?.payment_session_id) {
+        return retryData as CashfreeOrderResponse
+      }
+    }
+
     const message = data?.message || data?.error || JSON.stringify(data)
     throw new Error(`Cashfree order creation failed (${response.status}): ${message}`)
   }

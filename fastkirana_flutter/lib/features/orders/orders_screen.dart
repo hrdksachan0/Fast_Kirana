@@ -525,36 +525,59 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                         letterSpacing: -0.2,
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
-                      decoration: BoxDecoration(
-                        color: statusBg,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (isActive)
-                            Container(
-                              width: 6,
-                              height: 6,
-                              margin: const EdgeInsets.only(right: 5),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: statusColor,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (order.refundAmount > 0)
+                          Container(
+                            margin: const EdgeInsets.only(right: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFE4E6),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: const Color(0xFFFDA4AF), width: 0.8),
+                            ),
+                            child: Text(
+                              '₹${order.refundAmount.toInt()} REFUNDED',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 9.5),
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFFE11D48),
                               ),
                             ),
-                          Text(
-                            statusText,
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 10),
-                              fontWeight: FontWeight.w900,
-                              color: statusColor,
-                              letterSpacing: 0.3,
-                            ),
                           ),
-                        ],
-                      ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+                          decoration: BoxDecoration(
+                            color: statusBg,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (isActive)
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  margin: const EdgeInsets.only(right: 5),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: statusColor,
+                                  ),
+                                ),
+                              Text(
+                                statusText,
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 10),
+                                  fontWeight: FontWeight.w900,
+                                  color: statusColor,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -697,10 +720,31 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Total Bill', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w500, color: slateMuted)),
                     Text(
-                      '₹${order.total.toInt()}',
-                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: slateDark),
+                      order.refundAmount > 0 ? 'Net Paid' : 'Total Bill',
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w500, color: slateMuted),
+                    ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          '₹${(order.total - order.refundAmount).clamp(0.0, double.infinity).toInt()}',
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: slateDark),
+                        ),
+                        if (order.refundAmount > 0) ...[
+                          const SizedBox(width: 5),
+                          Text(
+                            '₹${order.total.toInt()}',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 11),
+                              fontWeight: FontWeight.w600,
+                              color: slateMuted,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),

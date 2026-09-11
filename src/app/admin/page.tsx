@@ -111,8 +111,8 @@ export default async function AdminPage(props: {
       }>>`
         SELECT 
           COUNT(DISTINCT COALESCE("combinedId", id))::int as today_orders,
-          COALESCE(SUM(total), 0)::float as today_sales,
-          COALESCE(SUM(CASE WHEN status::text = 'DELIVERED' THEN total ELSE 0 END), 0)::float as today_delivered_sales
+          COALESCE(SUM(total - COALESCE("refundAmount", 0)), 0)::float as today_sales,
+          COALESCE(SUM(CASE WHEN status::text = 'DELIVERED' THEN (total - COALESCE("refundAmount", 0)) ELSE 0 END), 0)::float as today_delivered_sales
         FROM orders
         WHERE ("deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL)
           AND status::text != 'CANCELLED'
@@ -164,7 +164,7 @@ export default async function AdminPage(props: {
         ? prisma.$queryRaw`
             SELECT "shopName", "restaurantId", "orderType"::text as "orderType", status::text as status,
                    COUNT(DISTINCT COALESCE("combinedId", id))::int as count,
-                   COALESCE(SUM(total), 0)::float as total,
+                   COALESCE(SUM(total - COALESCE("refundAmount", 0)), 0)::float as total,
                    COALESCE(SUM(subtotal), 0)::float as subtotal,
                    COALESCE(SUM(discount), 0)::float as discount
             FROM orders
@@ -175,7 +175,7 @@ export default async function AdminPage(props: {
         : prisma.$queryRaw`
             SELECT "shopName", "restaurantId", "orderType"::text as "orderType", status::text as status,
                    COUNT(DISTINCT COALESCE("combinedId", id))::int as count,
-                   COALESCE(SUM(total), 0)::float as total,
+                   COALESCE(SUM(total - COALESCE("refundAmount", 0)), 0)::float as total,
                    COALESCE(SUM(subtotal), 0)::float as subtotal,
                    COALESCE(SUM(discount), 0)::float as discount
             FROM orders
@@ -197,6 +197,9 @@ export default async function AdminPage(props: {
               quantity: true,
               imageUrl: true,
               selectedVariant: true,
+              notes: true,
+              refundAmount: true,
+              isRefunded: true,
             }
           }
         },
@@ -294,6 +297,8 @@ export default async function AdminPage(props: {
       paymentStatus: o.paymentStatus || 'PENDING',
       paymentMethod: o.paymentMethod || 'COD',
       total: o.total,
+      refundAmount: o.refundAmount || 0,
+      notes: o.notes || null,
       createdAt: new Date(o.createdAt).toISOString(),
       updatedAt: new Date(o.updatedAt).toISOString(),
       userName: user.name,
@@ -311,6 +316,9 @@ export default async function AdminPage(props: {
         quantity: item.quantity,
         imageUrl: item.imageUrl,
         selectedVariant: item.selectedVariant,
+        notes: item.notes || null,
+        refundAmount: item.refundAmount || 0,
+        isRefunded: item.isRefunded || false,
       })),
       address: address ? {
         houseNo: address.houseNo,

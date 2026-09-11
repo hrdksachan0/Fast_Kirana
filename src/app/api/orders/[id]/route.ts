@@ -31,7 +31,8 @@ export async function GET(
              o."deliveryUserId",
              o."deliveryPhoto", o."deliveryLat", o."deliveryLng",
              o."combinedId", o."restaurantId", o."orderType"::text as "orderType",
-             o.notes, o."couponCode"
+             o.notes, o."couponCode",
+             COALESCE(o."refundAmount", 0)::float as "refundAmount"
       FROM orders o WHERE o.id = ${id} OR o."readableId" = ${id} LIMIT 1
     `
 
@@ -109,7 +110,8 @@ export async function GET(
                o."deliveryUserId",
                o."deliveryPhoto", o."deliveryLat", o."deliveryLng",
                o."combinedId", o."restaurantId", o."orderType"::text as "orderType",
-               o.notes, o."couponCode"
+               o.notes, o."couponCode",
+               COALESCE(o."refundAmount", 0)::float as "refundAmount"
         FROM orders o WHERE o."combinedId" = ${order.combinedId}
         ORDER BY o."createdAt" ASC
       `
