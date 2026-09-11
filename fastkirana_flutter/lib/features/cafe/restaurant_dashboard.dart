@@ -811,12 +811,13 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
         }
         final parsed = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
 
-        // Filter by current outlet
+        // Filter by current outlet using robust matcher
         List<Map<String, dynamic>> filtered = parsed;
-        if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty) {
+        if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty && _assignedRestaurantId != 'ALL') {
           filtered = parsed.where((o) {
-            final rId = (o['restaurantId'] ?? '').toString();
-            return rId == _assignedRestaurantId;
+            final rId = o['restaurantId'] ?? o['restaurant']?['id'];
+            final rName = o['restaurantName'] ?? o['shopName'];
+            return _isOrderForThisOutlet(rId, rName);
           }).toList();
         }
 

@@ -2669,87 +2669,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     if (pCatSlug.isNotEmpty && pCatSlug == catSlug) return true;
     if (pCatName.isNotEmpty && (pCatName == catName || pCatName == catSlug)) return true;
 
-    // 3. Normalized slug match
+    // 3. Exact normalized slug match (e.g. fruits-vegetables vs fruitsvegetables)
     final normCat = catSlug.replaceAll(RegExp(r'[-_ &]'), '');
     final normPCat = pCatSlug.replaceAll(RegExp(r'[-_ &]'), '');
-    if (normCat.isNotEmpty && normPCat.isNotEmpty &&
-        (normCat == normPCat || normCat.contains(normPCat) || normPCat.contains(normCat))) {
+    if (normCat.isNotEmpty && normPCat.isNotEmpty && normCat == normPCat) {
       return true;
-    }
-
-    // 4. Robust Category Aliases & Keywords:
-    // Snacks & Munchies (CAT-115 / snacks-munchies / SUB-115-xx)
-    if (catSlug.contains('snack') || catName.contains('snack') || catId == 'cat-115') {
-      if (pCatId.startsWith('sub-115-') ||
-          pCatSlug.contains('snack') || pCatSlug.contains('biscuit') || pCatSlug.contains('namkeen') ||
-          pCatSlug.contains('chocolate') || pCatSlug.contains('cookie') || pCatSlug.contains('cake') ||
-          pCatSlug.contains('munch') || pCatName.contains('snack') || pCatName.contains('biscuit') ||
-          pCatName.contains('namkeen') || pCatName.contains('chocolate') || pCatName.contains('cookie') ||
-          pCatName.contains('cake') || p.tags.any((t) {
-            final tl = t.toLowerCase().trim();
-            return tl == 'snack' || tl == 'snacks' || tl == 'namkeen' || tl == 'chips' ||
-                   tl == 'biscuit' || tl == 'biscuits' || tl == 'cookies' || tl == 'chocolate';
-          })) {
-        return true;
-      }
-    }
-
-    // Kitchen & Ration / Atta, Rice & Dal (CAT-113 / kitchen-ration / SUB-113-xx)
-    if (catSlug.contains('kitchen') || catSlug.contains('ration') || catName.contains('kitchen') || catName.contains('ration') || catId == 'cat-113') {
-      if (pCatId.startsWith('sub-113-') ||
-          pCatSlug.contains('atta') || pCatSlug.contains('rice') || pCatSlug.contains('dal') ||
-          pCatSlug.contains('oil') || pCatSlug.contains('ghee') || pCatSlug.contains('sugar') ||
-          pCatSlug.contains('spice') || pCatSlug.contains('masala') || pCatSlug.contains('tea') ||
-          pCatName.contains('atta') || pCatName.contains('rice') || pCatName.contains('dal') ||
-          pCatName.contains('oil') || pCatName.contains('masala')) {
-        return true;
-      }
-    }
-
-    // Fruits & Vegetables (CAT-101 / fruits-vegetables / SUB-101-xx)
-    if (catSlug.contains('fruit') || catSlug.contains('veg') || catName.contains('fruit') || catName.contains('veg') || catId == 'cat-101') {
-      if (pCatId.startsWith('sub-101-') ||
-          pCatSlug.contains('fruit') || pCatSlug.contains('veg') ||
-          pCatName.contains('fruit') || pCatName.contains('veg')) {
-        return true;
-      }
-    }
-
-    // Dry Fruits (CAT-114 / dry-fruits-super-foods / SUB-114-xx)
-    if (catSlug.contains('dry-fruit') || catName.contains('dry fruit') || catId == 'cat-114') {
-      if (pCatId.startsWith('sub-114-') ||
-          pCatSlug.contains('dry-fruit') || pCatSlug.contains('nut') || pCatSlug.contains('seed') ||
-          pCatName.contains('dry fruit') || pCatName.contains('nut')) {
-        return true;
-      }
-    }
-
-    // Packaged Food (CAT-104 / packaged-food / SUB-104-xx)
-    if (catSlug.contains('packaged') || catName.contains('packaged') || catId == 'cat-104') {
-      if (pCatId.startsWith('sub-104-') ||
-          pCatSlug.contains('noodle') || pCatSlug.contains('sauce') || pCatSlug.contains('spread') ||
-          pCatSlug.contains('breakfast') || pCatSlug.contains('pasta') ||
-          pCatName.contains('noodle') || pCatName.contains('sauce')) {
-        return true;
-      }
-    }
-
-    // Home Needs & Cleaning (CAT-107 / SUB-107-xx)
-    if (catSlug.contains('home') || catSlug.contains('clean') || catName.contains('home') || catId == 'cat-107') {
-      if (pCatId.startsWith('sub-107-') ||
-          pCatSlug.contains('dishwash') || pCatSlug.contains('pest') || pCatSlug.contains('clean') ||
-          pCatName.contains('clean') || pCatName.contains('wash')) {
-        return true;
-      }
-    }
-
-    // Personal Care & Hygiene (CAT-109 / SUB-109-xx)
-    if (catSlug.contains('personal') || catSlug.contains('care') || catName.contains('personal') || catId == 'cat-109') {
-      if (pCatId.startsWith('sub-109-') ||
-          pCatSlug.contains('hair') || pCatSlug.contains('oral') || pCatSlug.contains('cosmetic') ||
-          pCatName.contains('hair') || pCatName.contains('oral') || pCatName.contains('soap')) {
-        return true;
-      }
     }
 
     return false;
@@ -2840,14 +2764,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         final pSubId = (p.category?.id ?? '').toLowerCase().trim();
         final pSubSlug = (p.category?.slug ?? '').toLowerCase().trim();
         final pSubName = (p.category?.name ?? '').toLowerCase().trim();
-        final pName = p.name.toLowerCase();
 
         return pCatId == targetId ||
             pSubId == targetId ||
             pSubSlug == targetSlug ||
             pSubName == targetName ||
-            (p.tags.any((t) => t.toLowerCase().trim() == targetName)) ||
-            pName.contains(targetName);
+            (p.tags.any((t) => t.toLowerCase().trim() == targetName || t.toLowerCase().trim() == targetSlug));
       }).toList();
     }
 

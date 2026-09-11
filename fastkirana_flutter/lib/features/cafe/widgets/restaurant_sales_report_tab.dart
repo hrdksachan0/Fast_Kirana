@@ -150,6 +150,10 @@ class _RestaurantSalesReportTabState extends State<RestaurantSalesReportTab> {
 
     double calculatedGrossSales = 0.0;
     for (final o in filteredOrdersList) {
+      final num refund = (o['refundAmount'] is num)
+          ? (o['refundAmount'] as num)
+          : (num.tryParse(o['refundAmount']?.toString() ?? '0') ?? 0);
+
       final dynamic rawItems = o['items'];
       if (rawItems is List && rawItems.isNotEmpty) {
         double orderFoodSum = 0.0;
@@ -158,16 +162,16 @@ class _RestaurantSalesReportTabState extends State<RestaurantSalesReportTab> {
           final int q = (it['quantity'] is num) ? (it['quantity'] as num).toInt() : (int.tryParse(it['quantity']?.toString() ?? '1') ?? 1);
           orderFoodSum += (p * q).toDouble();
         }
-        calculatedGrossSales += orderFoodSum;
+        calculatedGrossSales += math.max(0.0, orderFoodSum - refund.toDouble());
       } else {
         final num sub = (o['subtotal'] is num) ? (o['subtotal'] as num) : (num.tryParse(o['subtotal']?.toString() ?? '0') ?? 0);
         if (sub > 0) {
-          calculatedGrossSales += sub.toDouble();
+          calculatedGrossSales += math.max(0.0, sub.toDouble() - refund.toDouble());
         } else {
           final num tot = (o['total'] is num) ? (o['total'] as num) : (num.tryParse(o['total']?.toString() ?? '0') ?? 0);
           final num del = (o['deliveryFee'] is num) ? (o['deliveryFee'] as num) : (num.tryParse(o['deliveryFee']?.toString() ?? '0') ?? 0);
           final num misc = (o['miscFee'] is num) ? (o['miscFee'] as num) : (num.tryParse(o['miscFee']?.toString() ?? '0') ?? 0);
-          calculatedGrossSales += math.max(0.0, (tot - del - misc).toDouble());
+          calculatedGrossSales += math.max(0.0, (tot - del - misc - refund).toDouble());
         }
       }
     }
@@ -422,6 +426,10 @@ class _RestaurantSalesReportTabState extends State<RestaurantSalesReportTab> {
               } else {
                 orderFoodSum = tot.toDouble();
               }
+              final num refundAmt = (o['refundAmount'] is num)
+                  ? (o['refundAmount'] as num)
+                  : (num.tryParse(o['refundAmount']?.toString() ?? '0') ?? 0);
+              final double netOrderSum = math.max(0.0, orderFoodSum - refundAmt.toDouble());
               final String itemsDesc = items.isNotEmpty
                   ? items.map((i) => '${i['quantity'] ?? 1}x ${i['name'] ?? 'Dish'}').join(', ')
                   : 'Food Items';
@@ -455,16 +463,39 @@ class _RestaurantSalesReportTabState extends State<RestaurantSalesReportTab> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                displayId,
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 13.5),
-                                  fontWeight: FontWeight.w900,
-                                  color: widget.slateDark,
-                                ),
+                              Row(
+                                children: [
+                                  Text(
+                                    displayId,
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 13.5),
+                                      fontWeight: FontWeight.w900,
+                                      color: widget.slateDark,
+                                    ),
+                                  ),
+                                  if (refundAmt > 0) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.shade50,
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(color: Colors.red.shade200, width: 0.5),
+                                      ),
+                                      child: Text(
+                                        '-₹${refundAmt.toStringAsFixed(0)} Ref',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.red.shade700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                               Text(
-                                '₹${orderFoodSum.toStringAsFixed(0)}',
+                                '₹${netOrderSum.toStringAsFixed(0)}',
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 14),
                                   fontWeight: FontWeight.w900,

@@ -101,11 +101,13 @@ export async function GET(request: NextRequest) {
       prisma.order.count({ where: { ...where, status: 'PENDING' } }),
       prisma.order.aggregate({
         where: { ...where, status: { in: ['CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED'] } },
-        _sum: { total: true },
+        _sum: { total: true, refundAmount: true },
       }),
     ])
 
-    const totalSales = totalRevenueAgg._sum.total || 0
+    const rawTotal = totalRevenueAgg._sum.total || 0
+    const rawRefund = totalRevenueAgg._sum.refundAmount || 0
+    const totalSales = Math.max(0, Math.round((rawTotal - rawRefund) * 100) / 100)
     const commissionPercent = Math.round(commissionRate * 100)
     const restaurantProfit = Math.round(totalSales * (1 - commissionRate) * 100) / 100
 
