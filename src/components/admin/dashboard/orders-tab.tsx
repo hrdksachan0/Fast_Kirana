@@ -491,7 +491,7 @@ export function OrdersTab({
 
   // Filter Active Table by status, store, method & search query
   const filteredActiveOrders = rawActiveList.filter((o) => {
-    const matchesFilter = orderStatusFilter === 'ALL' || !activeStatuses.includes(orderStatusFilter) || o.status === orderStatusFilter
+    const matchesFilter = orderStatusFilter === 'ALL' || !activeStatuses.includes(orderStatusFilter) || o.status === orderStatusFilter || (o.subOrders && o.subOrders.some((s: any) => s.status === orderStatusFilter))
     const matchesShop = orderShopFilter === 'ALL' || getOrderStoreType(o) === orderShopFilter
     const matchesMethod = orderMethodFilter === 'ALL' || getOrderMethod(o) === orderMethodFilter
     const q = orderSearchQuery.toLowerCase().trim().replace(/^#/, '')
@@ -508,7 +508,7 @@ export function OrdersTab({
 
   // Filter History Table by status, store, method & search query
   const filteredHistoryOrders = rawHistoryList.filter((o) => {
-    const matchesFilter = orderStatusFilter === 'ALL' || activeStatuses.includes(orderStatusFilter) || o.status === orderStatusFilter
+    const matchesFilter = orderStatusFilter === 'ALL' || activeStatuses.includes(orderStatusFilter) || o.status === orderStatusFilter || (o.subOrders && o.subOrders.some((s: any) => s.status === orderStatusFilter))
     const matchesShop = orderShopFilter === 'ALL' || getOrderStoreType(o) === orderShopFilter
     const matchesMethod = orderMethodFilter === 'ALL' || getOrderMethod(o) === orderMethodFilter
     const q = orderSearchQuery.toLowerCase().trim().replace(/^#/, '')

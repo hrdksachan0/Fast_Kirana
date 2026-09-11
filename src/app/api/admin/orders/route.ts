@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
 import { requireAdmin } from '@/lib/auth-guard'
 
@@ -192,7 +193,7 @@ export async function GET(request: Request) {
     const startOfToday = new Date()
     startOfToday.setHours(0, 0, 0, 0)
 
-    const [allUsers, allAddresses, allOrderItems, allRestaurants, total, allCount, pendingCount, confirmedCount, packedCount, shippedCount, deliveredCount, cancelledCount, todaySalesAgg, todayDeliveredSalesAgg] = await Promise.all([
+    const [allUsers, allAddresses, allOrderItems, allRestaurants] = await Promise.all([
       userIds.length > 0
         ? (prisma.$queryRaw`
             SELECT id, name, email, phone FROM users WHERE id = ANY(${userIds})
@@ -207,38 +208,68 @@ export async function GET(request: Request) {
       restaurantIds.length > 0
         ? prisma.restaurant.findMany({ where: { id: { in: restaurantIds as string[] } }, select: { id: true, name: true, slug: true, address: true, logoUrl: true } })
         : [],
-      prisma.order.count({ where }),
-      prisma.order.count({ where: { ...whereForCounts, deliveryMethod: { not: 'RETAIL' } } }),
-      prisma.order.count({ where: { ...whereForCounts, status: 'PENDING', deliveryMethod: { not: 'RETAIL' } } }),
-      prisma.order.count({ where: { ...whereForCounts, status: 'CONFIRMED', deliveryMethod: { not: 'RETAIL' } } }),
-      prisma.order.count({ where: { ...whereForCounts, status: 'PACKED', deliveryMethod: { not: 'RETAIL' } } }),
-      prisma.order.count({ where: { ...whereForCounts, status: 'SHIPPED', deliveryMethod: { not: 'RETAIL' } } }),
-      prisma.order.count({ where: { ...whereForCounts, status: 'DELIVERED', deliveryMethod: { not: 'RETAIL' } } }),
-      prisma.order.count({ where: { ...whereForCounts, status: 'CANCELLED', deliveryMethod: { not: 'RETAIL' } } }),
-      prisma.order.aggregate({
-        where: {
-          ...whereForCounts,
-          createdAt: { gte: startOfToday },
-          status: { not: 'CANCELLED' },
-          deliveryMethod: { not: 'RETAIL' },
-        },
-        _sum: { total: true },
-        _count: { id: true },
-      }),
-      prisma.order.aggregate({
-        where: {
-          ...whereForCounts,
-          createdAt: { gte: startOfToday },
-          status: 'DELIVERED',
-          deliveryMethod: { not: 'RETAIL' },
-        },
-        _sum: { total: true },
-      }),
     ])
 
-    const todaySales = todaySalesAgg._sum?.total || 0
-    const todayNetSales = todayDeliveredSalesAgg._sum?.total || 0
-    const todayOrdersCount = todaySalesAgg._count?.id || 0
+    const storeSqlWhere = effectiveStoreId
+      ? Prisma.sql`AND "storeId" = ${effectiveStoreId}`
+      : Prisma.empty
+
+    const [statusStatsRaw, todayStatsRaw] = await Promise.all([
+      prisma.$queryRaw<Array<{
+        total: number
+        pending: number
+        confirmed: number
+        packed: number
+        shipped: number
+        delivered: number
+        cancelled: number
+      }>>`
+        SELECT 
+          COUNT(DISTINCT COALESCE("combinedId", id))::int as total,
+          COUNT(DISTINCT CASE WHEN status::text = 'PENDING' THEN COALESCE("combinedId", id) END)::int as pending,
+          COUNT(DISTINCT CASE WHEN status::text = 'CONFIRMED' THEN COALESCE("combinedId", id) END)::int as confirmed,
+          COUNT(DISTINCT CASE WHEN status::text = 'PACKED' THEN COALESCE("combinedId", id) END)::int as packed,
+          COUNT(DISTINCT CASE WHEN status::text = 'SHIPPED' THEN COALESCE("combinedId", id) END)::int as shipped,
+          COUNT(DISTINCT CASE WHEN status::text = 'DELIVERED' THEN COALESCE("combinedId", id) END)::int as delivered,
+          COUNT(DISTINCT CASE WHEN status::text = 'CANCELLED' THEN COALESCE("combinedId", id) END)::int as cancelled
+        FROM orders
+        WHERE ("deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL)
+          ${storeSqlWhere}
+      `,
+      prisma.$queryRaw<Array<{
+        today_orders: number
+        today_sales: number
+        today_delivered_sales: number
+      }>>`
+        SELECT 
+          COUNT(DISTINCT COALESCE("combinedId", id))::int as today_orders,
+          COALESCE(SUM(total), 0)::float as today_sales,
+          COALESCE(SUM(CASE WHEN status::text = 'DELIVERED' THEN total ELSE 0 END), 0)::float as today_delivered_sales
+        FROM orders
+        WHERE ("deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL)
+          AND status::text != 'CANCELLED'
+          AND "createdAt" >= ${startOfToday}
+          ${storeSqlWhere}
+      `
+    ])
+
+    const statRow = (statusStatsRaw as any[])?.[0] || { total: 0, pending: 0, confirmed: 0, packed: 0, shipped: 0, delivered: 0, cancelled: 0 }
+    const todayRow = (todayStatsRaw as any[])?.[0] || { today_orders: 0, today_sales: 0, today_delivered_sales: 0 }
+
+    const allCount = statRow.total || 0
+    const pendingCount = statRow.pending || 0
+    const confirmedCount = statRow.confirmed || 0
+    const packedCount = statRow.packed || 0
+    const shippedCount = statRow.shipped || 0
+    const deliveredCount = statRow.delivered || 0
+    const cancelledCount = statRow.cancelled || 0
+
+    const todaySales = todayRow.today_sales || 0
+    const todayNetSales = todayRow.today_delivered_sales || 0
+    const todayOrdersCount = todayRow.today_orders || 0
+    const total = status && status !== 'ALL'
+      ? (statRow[status.toLowerCase() as keyof typeof statRow] ?? allCount)
+      : allCount
 
     // Background auto-sync: Automatically check Razorpay for recent unpaid orders (last 2 hours)
     const recentUnpaid = ordersRaw.filter((o: any) => 

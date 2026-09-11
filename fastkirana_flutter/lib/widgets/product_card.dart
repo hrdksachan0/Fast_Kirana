@@ -409,7 +409,13 @@ class PriceRow extends StatelessWidget {
       children: [
         Text(
           priceText,
-          style: GoogleFonts.inter(fontSize: s * 13.5, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A), letterSpacing: -0.3, height: 1.1),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: s * 14,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF0F172A),
+            letterSpacing: -0.3,
+            height: 1.1,
+          ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -418,7 +424,13 @@ class PriceRow extends StatelessWidget {
             padding: EdgeInsets.only(top: s * 1.5),
             child: Text(
               mrpText!,
-              style: GoogleFonts.inter(fontSize: s * 9.5, fontWeight: FontWeight.w500, decoration: TextDecoration.lineThrough, color: const Color(0xFF94A3B8), height: 1.1),
+              style: GoogleFonts.inter(
+                fontSize: s * 10,
+                fontWeight: FontWeight.w500,
+                decoration: TextDecoration.lineThrough,
+                color: const Color(0xFF94A3B8),
+                height: 1.1,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -466,17 +478,14 @@ class AddToCartButton extends ConsumerWidget {
     // 1. Out of Stock
     if (isOutOfStock) {
       btn = _soldOut();
-    } else if (isTimingClosed) {
-      // 2. Timing Closed
-      btn = _timingClosed();
     } else if (!isStoreOpen) {
-      // 3. Store Closed
+      // 2. Store Closed
       btn = _storeClosed();
     } else if (inCartQty > 0) {
-      // 4. In Cart Stepper
+      // 3. In Cart Stepper
       btn = _stepper(context, ref);
     } else {
-      // 5. Default ADD
+      // 4. Default ADD (Fast Delivery)
       btn = _addButton(context, ref);
     }
 
@@ -489,23 +498,27 @@ class AddToCartButton extends ConsumerWidget {
 
   Widget _soldOut() {
     return Container(
-      height: s(30),
+      height: s(31),
       padding: EdgeInsets.symmetric(horizontal: s(10)),
-      decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(s(8)), border: Border.all(color: const Color(0xFFE2E8F0), width: s(1))),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(s(9)),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: s(1)),
+      ),
       alignment: Alignment.center,
-      child: Text('SOLD OUT', style: GoogleFonts.inter(fontSize: s(9), fontWeight: FontWeight.w800, color: const Color(0xFF94A3B8), letterSpacing: 0.3)),
+      child: Text(
+        'SOLD OUT',
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: s(9),
+          fontWeight: FontWeight.w800,
+          color: const Color(0xFF94A3B8),
+          letterSpacing: 0.4,
+        ),
+      ),
     );
   }
 
-  Widget _timingClosed() {
-    return Container(
-      height: s(30),
-      padding: EdgeInsets.symmetric(horizontal: s(8)),
-      decoration: BoxDecoration(color: const Color(0xFFFFFBEB), borderRadius: BorderRadius.circular(s(8)), border: Border.all(color: const Color(0xFFFDE68A), width: s(1))),
-      alignment: Alignment.center,
-      child: Text(nextSlot != null ? 'Next @ $nextSlot' : 'Closed', style: GoogleFonts.inter(fontSize: s(9), fontWeight: FontWeight.w800, color: const Color(0xFFD97706), letterSpacing: 0.1)),
-    );
-  }
+
 
   Widget _storeClosed() {
     return GestureDetector(
@@ -534,41 +547,81 @@ class AddToCartButton extends ConsumerWidget {
         );
       },
       child: Container(
-        height: s(30),
+        height: s(31),
         padding: EdgeInsets.symmetric(horizontal: s(10)),
-        decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(s(8)), border: Border.all(color: const Color(0xFFE2E8F0), width: s(1))),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(s(9)),
+          border: Border.all(color: const Color(0xFFE2E8F0), width: s(1)),
+        ),
         alignment: Alignment.center,
-        child: Text('CLOSED', style: GoogleFonts.inter(fontSize: s(9), fontWeight: FontWeight.w800, color: const Color(0xFF94A3B8), letterSpacing: 0.3)),
+        child: Text(
+          'CLOSED',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: s(9),
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF94A3B8),
+            letterSpacing: 0.3,
+          ),
+        ),
       ),
     );
   }
 
   Widget _stepper(BuildContext context, WidgetRef ref) {
     return Container(
-      height: s(30),
+      height: s(31),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: gradientColors, begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(s(8)),
-        boxShadow: [BoxShadow(color: primaryColor.withValues(alpha: 0.28), blurRadius: s(6), offset: Offset(0, s(2)))],
+        gradient: LinearGradient(
+          colors: gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(s(9)),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withValues(alpha: 0.35),
+            blurRadius: s(8),
+            offset: Offset(0, s(2.5)),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           InkWell(
-            borderRadius: BorderRadius.horizontal(left: Radius.circular(s(8))),
+            borderRadius: BorderRadius.horizontal(left: Radius.circular(s(9))),
             onTap: () {
+              HapticFeedback.lightImpact();
               if (hasVariants) {
                 VariantSelectorSheet.show(context, product);
               } else {
-                HapticFeedback.lightImpact();
                 ref.read(cartProvider.notifier).decrement(product.id);
               }
             },
-            child: SizedBox(width: s(26), height: s(30), child: Center(child: Icon(Icons.remove_rounded, size: s(14), color: Colors.white))),
+            child: SizedBox(
+              width: s(26),
+              height: s(31),
+              child: Center(
+                child: Icon(Icons.remove_rounded, size: s(15), color: Colors.white),
+              ),
+            ),
           ),
-          Container(constraints: BoxConstraints(minWidth: s(18)), alignment: Alignment.center, child: Text('$inCartQty', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w900, fontSize: s(12), letterSpacing: -0.2))),
+          Container(
+            constraints: BoxConstraints(minWidth: s(20)),
+            alignment: Alignment.center,
+            child: Text(
+              '$inCartQty',
+              style: GoogleFonts.plusJakartaSans(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: s(12.5),
+                letterSpacing: -0.2,
+              ),
+            ),
+          ),
           InkWell(
-            borderRadius: BorderRadius.horizontal(right: Radius.circular(s(8))),
+            borderRadius: BorderRadius.horizontal(right: Radius.circular(s(9))),
             onTap: () {
               if (hasVariants) {
                 VariantSelectorSheet.show(context, product);
@@ -587,7 +640,13 @@ class AddToCartButton extends ConsumerWidget {
                 }
               }
             },
-            child: SizedBox(width: s(26), height: s(30), child: Center(child: Icon(Icons.add_rounded, size: s(14), color: Colors.white))),
+            child: SizedBox(
+              width: s(26),
+              height: s(31),
+              child: Center(
+                child: Icon(Icons.add_rounded, size: s(15), color: Colors.white),
+              ),
+            ),
           ),
         ],
       ),
@@ -596,8 +655,9 @@ class AddToCartButton extends ConsumerWidget {
 
   Widget _addButton(BuildContext context, WidgetRef ref) {
     return Bounceable(
-      scaleFactor: 0.94,
+      scaleFactor: 0.92,
       onTap: () {
+        HapticFeedback.lightImpact();
         if (hasVariants) {
           VariantSelectorSheet.show(context, product);
         } else {
@@ -605,21 +665,38 @@ class AddToCartButton extends ConsumerWidget {
         }
       },
       child: Container(
-        height: s(30),
-        padding: EdgeInsets.symmetric(horizontal: s(11)),
+        height: s(31),
+        padding: EdgeInsets.symmetric(horizontal: s(12)),
         decoration: BoxDecoration(
-          color: isFood ? const Color(0xFFFFF7ED) : const Color(0xFFF0FDF4),
-          borderRadius: BorderRadius.circular(s(8)),
-          border: Border.all(color: isFood ? const Color(0xFFFDBA74) : const Color(0xFF86EFAC), width: s(1.2)),
-          boxShadow: [BoxShadow(color: primaryColor.withValues(alpha: 0.12), blurRadius: s(5), offset: Offset(0, s(2)))],
+          color: isFood ? const Color(0xFFFFF7ED) : Colors.white,
+          borderRadius: BorderRadius.circular(s(9)),
+          border: Border.all(
+            color: isFood ? const Color(0xFFEA580C) : const Color(0xFF16A34A),
+            width: s(1.4),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: primaryColor.withValues(alpha: 0.16),
+              blurRadius: s(6),
+              offset: Offset(0, s(2)),
+            ),
+          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('ADD', style: GoogleFonts.inter(fontSize: s(11), fontWeight: FontWeight.w900, color: primaryColor, letterSpacing: 0.4)),
+            Text(
+              'ADD',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: s(11.5),
+                fontWeight: FontWeight.w900,
+                color: primaryColor,
+                letterSpacing: 0.5,
+              ),
+            ),
             SizedBox(width: s(3)),
-            Icon(Icons.add_rounded, size: s(14), color: primaryColor),
+            Icon(Icons.add_rounded, size: s(15), color: primaryColor),
           ],
         ),
       ),
@@ -939,17 +1016,7 @@ class _ImageShowcase extends StatelessWidget {
               ),
             ),
 
-          // Time Slot Badge
-          if (!timingStatus.isAvailableNow && timingStatus.formattedTimeSlot != null)
-            Positioned(
-              top: (resolvedDiscount > 0 || hasBadges) ? s * 24 : s * 5,
-              left: s * 5,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: s * 5, vertical: s * 2),
-                decoration: BoxDecoration(color: const Color(0xFFF59E0B), borderRadius: BorderRadius.circular(s * 6), boxShadow: [BoxShadow(color: const Color(0xFFF59E0B).withValues(alpha: 0.3), blurRadius: s * 4, offset: Offset(0, s))]),
-                child: Text('⏰ ${timingStatus.formattedTimeSlot}', style: GoogleFonts.inter(fontSize: s * 8, fontWeight: FontWeight.w900, color: Colors.white)),
-              ),
-            ),
+
 
           // Wishlist Heart
           Positioned(top: s * 5, right: s * 5, child: WishlistButton(product: product, s: s)),

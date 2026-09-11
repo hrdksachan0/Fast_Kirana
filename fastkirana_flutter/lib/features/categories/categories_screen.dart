@@ -158,36 +158,28 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Breadcrumb Pill
+                          // Speed Pill & Breadcrumb
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
                             decoration: BoxDecoration(
-                              color: AppDesignSystem.rose50,
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFFEF2F2), Color(0xFFFFFBEB)],
+                              ),
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: AppDesignSystem.rose100, width: 0.8),
+                              border: Border.all(color: const Color(0xFFFECACA), width: 0.8),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  'HOME',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 9.5),
-                                    fontWeight: FontWeight.w800,
-                                    color: AppDesignSystem.slate600,
-                                    letterSpacing: 0.4,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Icon(Icons.arrow_forward_ios_rounded, size: 8, color: AppDesignSystem.slate400),
+                                const Text('⚡', style: TextStyle(fontSize: 10)),
                                 const SizedBox(width: 4),
                                 Text(
-                                  'CATEGORIES DIRECTORY',
-                                  style: GoogleFonts.inter(
+                                  'FAST DELIVERY',
+                                  style: GoogleFonts.plusJakartaSans(
                                     fontSize: Responsive.scaledFontSize(context, 9.5),
                                     fontWeight: FontWeight.w900,
-                                    color: AppDesignSystem.rose600,
-                                    letterSpacing: 0.4,
+                                    color: AppDesignSystem.primary,
+                                    letterSpacing: 0.3,
                                   ),
                                 ),
                               ],
@@ -198,21 +190,21 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                           // Heading
                           Text(
                             'Shop by Category',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: Responsive.scaledFontSize(context, 23),
                               fontWeight: FontWeight.w900,
                               color: AppDesignSystem.slate900,
-                              letterSpacing: -0.5,
+                              letterSpacing: -0.6,
                             ),
                           ),
                           const SizedBox(height: 4),
 
                           // Subtitle
                           Text(
-                            'Explore our curated catalog of groceries\nand hot café treats',
-                            style: GoogleFonts.inter(
+                            'Fresh groceries delivered fast\nfrom your local Ghatampur darkstore',
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: Responsive.scaledFontSize(context, 11.5),
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                               color: AppDesignSystem.slate500,
                               height: 1.3,
                             ),
@@ -652,42 +644,42 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
             // Category Name
             Text(
               category.name,
-              style: GoogleFonts.inter(
-                fontSize: context.isCompact ? 11.5 : 13,
-                fontWeight: FontWeight.w900,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: context.isCompact ? 12 : 13.5,
+                fontWeight: FontWeight.w800,
                 color: category.slug.contains('fruit')
                     ? AppDesignSystem.emerald600
                     : AppDesignSystem.slate900,
-                letterSpacing: -0.2,
+                letterSpacing: -0.3,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 1.5),
+            const SizedBox(height: 2),
 
             // Tagline
             Text(
               tagline,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: context.isCompact ? 9 : 10,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
                 color: AppDesignSystem.slate500,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            SizedBox(height: context.isCompact ? 5 : 8),
+            SizedBox(height: context.isCompact ? 6 : 8),
 
             // Luxury "SHOP NOW" Action Button (Securely Contained Inside Box)
             Container(
               height: context.isCompact ? 28 : 31,
-              padding: EdgeInsets.symmetric(horizontal: context.isCompact ? 7 : 10),
+              padding: EdgeInsets.symmetric(horizontal: context.isCompact ? 8 : 11),
               decoration: BoxDecoration(
                 color: btnColor,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: btnColor.withValues(alpha: 0.28),
+                    color: btnColor.withValues(alpha: 0.25),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -698,11 +690,11 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                 children: [
                   Text(
                     'SHOP NOW',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: context.isCompact ? 9 : 10,
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
-                      letterSpacing: 0.5,
+                      letterSpacing: 0.4,
                     ),
                   ),
                   Container(

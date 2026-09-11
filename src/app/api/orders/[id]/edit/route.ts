@@ -330,8 +330,6 @@ export async function POST(
 
         if (companionHasDelivery || combinedSubtotal >= threshold || combinedSubtotal >= combinedThreshold) {
           calcDeliveryFee = 0
-        } else if (existingOrder.deliveryFee === 0 && subtotal > 0) {
-          calcDeliveryFee = 0
         } else {
           calcDeliveryFee = deliveryFeeSetting
         }
@@ -614,7 +612,14 @@ export async function POST(
       })
     }
 
-    // Process each sub-order: delete old items, insert new, calc fees, update/create
+    // Process each sub-order: delete old items, insert new items, compute subtotals
+    interface PreparedSubOrder {
+      targetOrderId: string
+      spec: SubOrderSpec
+      subtotalVal: number
+    }
+
+    const preparedSubOrders: PreparedSubOrder[] = []
     const allOrderIds: string[] = []
     const sseEvents: any[] = []
     let primaryTotal = 0
@@ -688,50 +693,72 @@ export async function POST(
       // Insert exact items for this sub-order
       const subtotalVal = await insertItemsForOrder(targetOrderId!, spec.items)
 
-      // Collect all companion IDs (all sub-orders except this one)
-      const companionIds = allOrderIds.filter(oid => oid !== targetOrderId)
-      // Also add existing companions not in this edit
-      for (const ec of existingCompanions) {
-        if (!allOrderIds.includes(ec.id)) companionIds.push(ec.id)
+      preparedSubOrders.push({
+        targetOrderId: targetOrderId!,
+        spec,
+        subtotalVal
+      })
+    }
+
+    // Rule 4: Global combined delivery fee & miscFee calculation
+    const totalCombinedSubtotal = preparedSubOrders.reduce((sum, p) => sum + p.subtotalVal, 0)
+    const combinedThreshold = settingsMap['combined_free_delivery_threshold']
+      ? parseFloat(settingsMap['combined_free_delivery_threshold'])
+      : COMBINED_FREE_DELIVERY_THRESHOLD
+
+    const isCombinedFree = order.deliveryMethod !== 'DELIVERY' || totalCombinedSubtotal >= combinedThreshold
+    let singleDeliveryFeeAssigned = isCombinedFree // If free, none will be charged
+    let singleMiscFeeAssigned = order.deliveryMethod !== 'DELIVERY'
+
+    for (const p of preparedSubOrders) {
+      let calcDeliveryFee = 0
+      if (!singleDeliveryFeeAssigned && p.subtotalVal > 0) {
+        calcDeliveryFee = deliveryFeeSetting
+        singleDeliveryFeeAssigned = true
       }
 
-      const { calcDeliveryFee, calcMiscFee } = await calcFees(subtotalVal, spec.type, spec.shopName, order, companionIds)
+      let calcMiscFee = 0
+      if (!singleMiscFeeAssigned && p.subtotalVal > 0) {
+        calcMiscFee = miscFeeSetting
+        singleMiscFeeAssigned = true
+      }
+
       const taxesVal = 0.00
-      const discount = spec.isNew ? 0 : order.discount
-      const totalVal = subtotalVal + calcDeliveryFee + taxesVal + calcMiscFee - discount
+      const discount = p.spec.isNew ? 0 : order.discount
+      const totalVal = p.subtotalVal + calcDeliveryFee + taxesVal + calcMiscFee - discount
 
       await prisma.order.update({
-        where: { id: targetOrderId! },
+        where: { id: p.targetOrderId },
         data: {
           combinedId,
-          readableId: spec.readableId,
-          subtotal: subtotalVal,
+          readableId: p.spec.readableId,
+          subtotal: p.subtotalVal,
           deliveryFee: calcDeliveryFee,
           miscFee: calcMiscFee,
           taxes: taxesVal,
           total: totalVal,
-          orderType: spec.type,
-          restaurantId: spec.restaurantId,
-          shopName: spec.shopName,
-          shopPhone: spec.shopPhone,
-          ...(spec.type === 'GROCERY' ? { assignedChefId: null } : { assignedPickerId: null })
+          orderType: p.spec.type,
+          restaurantId: p.spec.restaurantId,
+          shopName: p.spec.shopName,
+          shopPhone: p.spec.shopPhone,
+          ...(p.spec.type === 'GROCERY' ? { assignedChefId: null } : { assignedPickerId: null })
         }
       })
 
       sseEvents.push({
         type: 'order-edited',
-        orderId: targetOrderId,
-        shopName: spec.shopName,
-        restaurantId: spec.restaurantId,
-        orderType: spec.type
+        orderId: p.targetOrderId,
+        shopName: p.spec.shopName,
+        restaurantId: p.spec.restaurantId,
+        orderType: p.spec.type
       })
 
       // Track primary order (the one originally edited) for the response
-      if (targetOrderId === order.id) {
+      if (p.targetOrderId === order.id) {
         primaryTotal = totalVal
-        primaryOrderType = spec.type
-        primaryRestaurantId = spec.restaurantId
-        primaryShopName = spec.shopName
+        primaryOrderType = p.spec.type
+        primaryRestaurantId = p.spec.restaurantId
+        primaryShopName = p.spec.shopName
       }
     }
 

@@ -1563,6 +1563,7 @@ export async function GET(request: NextRequest) {
                  o."paymentStatus"::text as "paymentStatus",
                  o."estimatedDelivery", o."createdAt", o."updatedAt",
                  o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone", o."restaurantId", o."storeId",
+                 o."combinedId", o."orderType"::text as "orderType",
                  u.name as "userName", u.email as "userEmail", u.phone as "userPhone"
           FROM orders o
           LEFT JOIN users u ON o."userId" = u.id
@@ -1579,6 +1580,7 @@ export async function GET(request: NextRequest) {
                  o."paymentStatus"::text as "paymentStatus",
                  o."estimatedDelivery", o."createdAt", o."updatedAt",
                  o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone", o."restaurantId", o."storeId",
+                 o."combinedId", o."orderType"::text as "orderType",
                  u.name as "userName", u.email as "userEmail", u.phone as "userPhone"
           FROM orders o
           LEFT JOIN users u ON o."userId" = u.id

@@ -37,9 +37,20 @@ export async function GET(request: Request) {
         },
       },
     })
-    return NextResponse.json(categories, {
+
+    const enrichedCategories = categories.map(cat => {
+      const childCount = (cat.children || []).reduce((sum, child) => sum + (child._count?.products || 0), 0)
+      return {
+        ...cat,
+        _count: {
+          products: (cat._count?.products || 0) + childCount
+        }
+      }
+    })
+
+    return NextResponse.json(enrichedCategories, {
       headers: {
-        'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=300',
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
       }
     })
   } catch (error: any) {

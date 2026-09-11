@@ -79,8 +79,8 @@ interface ReportSummary {
 }
 
 // Category Icon & Color Mapping for Premium Polish
-const getCategoryMeta = (catName: string) => {
-  const name = catName.toLowerCase()
+const getCategoryMeta = (catName?: string | null) => {
+  const name = (catName || '').toLowerCase()
   if (name.includes('restaurant') || name.includes('wedson') || name.includes('meal') || name.includes('thali') || name.includes('biryani')) {
     return { icon: '🍽️', badge: 'bg-rose-500/10 text-rose-600 border-rose-500/20 dark:text-rose-400' }
   }
@@ -227,7 +227,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
   const summary = useMemo(() => {
     if (selectedCategory === 'all') return rawSummary
 
-    const targetCat = rawCategorySales.find(c => c.categoryName.toLowerCase() === selectedCategory.toLowerCase())
+    const targetCat = rawCategorySales.find(c => (c.categoryName || '').toLowerCase() === (selectedCategory || '').toLowerCase())
     const catSales = targetCat?.sales || 0
     const catProfit = targetCat?.profit || 0
     const catCost = targetCat?.cost ?? (catSales - catProfit)
@@ -811,7 +811,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
 
           {rawCategorySales.map((cat) => {
             const meta = getCategoryMeta(cat.categoryName)
-            const isSelected = selectedCategory.toLowerCase() === cat.categoryName.toLowerCase()
+            const isSelected = (selectedCategory || '').toLowerCase() === (cat.categoryName || '').toLowerCase()
             return (
               <button
                 key={cat.categoryName}
@@ -1076,7 +1076,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
                     const catCost = cat.cost ?? (cat.sales - cat.profit)
                     const margin = cat.sales > 0 ? Math.round((cat.profit / cat.sales) * 100) : 0
                     const percentOfStore = Math.round((cat.sales / (rawSummary.totalSales || 1)) * 100)
-                    const isSelected = selectedCategory.toLowerCase() === cat.categoryName.toLowerCase()
+                    const isSelected = (selectedCategory || '').toLowerCase() === (cat.categoryName || '').toLowerCase()
 
                     return (
                       <tr 

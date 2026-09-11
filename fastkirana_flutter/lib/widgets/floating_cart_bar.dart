@@ -1,5 +1,4 @@
 import '../core/theme/design_system.dart';
-import '../core/theme/responsive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,7 +35,6 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
     final itemCount = cart.totalItems;
     final tier = ref.watch(deliveryTierProvider);
     final screenWidth = MediaQuery.of(context).size.width;
-    final bottomInset = MediaQuery.of(context).padding.bottom;
     final barWidth = (screenWidth * 0.93).clamp(290.0, 440.0);
 
     final isFreeDelivery = tier.deliveryFee == 0;
@@ -161,25 +159,25 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                           children: [
                             Text(
                               '$itemCount ${itemCount == 1 ? 'Item' : 'Items'} • ₹${total.toInt()}',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.plusJakartaSans(
                                 fontSize: Responsive.scaledFontSize(context, 13.5),
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.w800,
                                 color: Colors.white,
                                 letterSpacing: -0.2,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 1),
+                            const SizedBox(height: 1.5),
                             Text(
                               !tier.isServiceable
                                   ? '⚠️ Outside 5.0 km Hub'
                                   : (isFreeDelivery
                                       ? '✨ Free Delivery Unlocked'
                                       : 'Add ₹${remainingForFree.toInt()} for FREE Delivery'),
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.plusJakartaSans(
                                 fontSize: Responsive.scaledFontSize(context, 10),
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w600,
                                 color: Colors.white.withValues(alpha: 0.94),
                               ),
                               maxLines: 1,
@@ -209,7 +207,7 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                             children: [
                               Text(
                                 'VIEW CART',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.plusJakartaSans(
                                   fontSize: Responsive.scaledFontSize(context, 11.5),
                                   fontWeight: FontWeight.w900,
                                   color: AppDesignSystem.primary,

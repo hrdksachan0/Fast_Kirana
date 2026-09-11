@@ -978,10 +978,14 @@ export function AdminDashboard({
       return pending + confirmed + packed + shipped
     }
     if (Array.isArray(orders) && orders.length > 0) {
-      return orders.filter((o: any) => {
+      const uniqueActive = new Set<string>()
+      orders.forEach((o: any) => {
         const st = (o.status || '').toUpperCase().trim()
-        return st !== 'DELIVERED' && st !== 'CANCELLED'
-      }).length
+        if (st !== 'DELIVERED' && st !== 'CANCELLED') {
+          uniqueActive.add(o.combinedId || o.id)
+        }
+      })
+      return uniqueActive.size
     }
     return stats.activeOrderCount || 0
   }, [orderCounts, orders, stats.activeOrderCount])

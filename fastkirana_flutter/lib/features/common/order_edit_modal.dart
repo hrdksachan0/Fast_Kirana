@@ -736,61 +736,150 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                   ),
           ),
 
-          const Divider(height: 24, color: slateBorder),
+          const Divider(height: 20, color: slateBorder),
 
-          // Total & Save Button
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          // Rule 4: Delivery Fee Preview Badge
+          () {
+            final isPickup = widget.order['deliveryMethod'] == 'PICKUP';
+            final isFreeDelivery = isPickup || subtotal >= 199.0;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: isFreeDelivery ? const Color(0xFFF0FDF4) : const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isFreeDelivery ? const Color(0xFFBBF7D0) : const Color(0xFFFDE68A),
+                ),
+              ),
+              child: Row(
                 children: [
-                  Text(
-                    'NEW SUBTOTAL',
-                    style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 10),
-                      fontWeight: FontWeight.w900,
-                      color: slateMuted,
-                      letterSpacing: 0.5,
+                  Icon(
+                    isFreeDelivery ? Icons.check_circle_outline_rounded : Icons.info_outline_rounded,
+                    size: 15,
+                    color: isFreeDelivery ? brandGreen : brandAmber,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      isPickup
+                          ? 'Store Self-Pickup (Free Delivery)'
+                          : (isFreeDelivery
+                              ? 'FREE Delivery (Subtotal ≥ ₹199)'
+                              : 'Single Delivery Fee: ₹25 (Subtotal < ₹199)'),
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 11),
+                        fontWeight: FontWeight.w700,
+                        color: isFreeDelivery ? const Color(0xFF166534) : const Color(0xFF92400E),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '₹${subtotal.toStringAsFixed(0)}',
-                    style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 20),
-                      fontWeight: FontWeight.w900,
-                      color: slateDark,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: isFreeDelivery ? brandGreen : brandAmber,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      isPickup ? 'PICKUP' : (isFreeDelivery ? 'FREE' : '+₹25'),
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 9.5),
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],
               ),
-              ElevatedButton.icon(
-                onPressed: _isSaving ? null : _saveChanges,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: themeColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 0,
+            );
+          }(),
+
+          // Total & Save Button
+          () {
+            final isPickup = widget.order['deliveryMethod'] == 'PICKUP';
+            final isFreeDelivery = isPickup || subtotal >= 199.0;
+            final estDeliveryFee = isFreeDelivery ? 0.0 : 25.0;
+            final rawMisc = widget.order['miscFee'] ?? widget.order['packagingFee'] ?? 0.0;
+            final miscFee = (rawMisc is num) ? rawMisc.toDouble() : (double.tryParse(rawMisc.toString()) ?? 0.0);
+            final rawDiscount = widget.order['discount'] ?? 0.0;
+            final discount = (rawDiscount is num) ? rawDiscount.toDouble() : (double.tryParse(rawDiscount.toString()) ?? 0.0);
+            final estGrandTotal = (subtotal + estDeliveryFee + miscFee - discount).clamp(0.0, 999999.0);
+
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'SUBTOTAL: ₹${subtotal.toStringAsFixed(0)}',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 10),
+                            fontWeight: FontWeight.w700,
+                            color: slateMuted,
+                          ),
+                        ),
+                        if (estDeliveryFee > 0) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            '+ ₹25 fee',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 10),
+                              fontWeight: FontWeight.w800,
+                              color: brandAmber,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '₹${estGrandTotal.toStringAsFixed(0)}',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 20),
+                        fontWeight: FontWeight.w900,
+                        color: slateDark,
+                      ),
+                    ),
+                    Text(
+                      'Est. Grand Total',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 9),
+                        fontWeight: FontWeight.w600,
+                        color: slateMuted,
+                      ),
+                    ),
+                  ],
                 ),
-                icon: _isSaving
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                      )
-                    : const Icon(Icons.check_rounded, size: 18),
-                label: Text(
-                  _isSaving ? 'Saving...' : (widget.isAdmin ? 'Save Order ⚡' : 'Save Changes'),
-                  style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 13.5),
-                    fontWeight: FontWeight.w900,
+                ElevatedButton.icon(
+                  onPressed: _isSaving ? null : _saveChanges,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: themeColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Icon(Icons.check_rounded, size: 18),
+                  label: Text(
+                    _isSaving ? 'Saving...' : (widget.isAdmin ? 'Save Order ⚡' : 'Save Changes'),
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 13.5),
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            );
+          }(),
         ],
       ),
     );

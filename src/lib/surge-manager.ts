@@ -1,4 +1,5 @@
 import { prisma } from './prisma'
+import { Prisma } from '@prisma/client'
 
 export interface SurgeStatus {
   isSurgeActive: boolean
@@ -89,13 +90,9 @@ export async function getLiveDemandInfo(storeId?: string | null): Promise<{
   try {
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000)
     
-    const orderWhere: any = {
-      status: { in: ['PENDING', 'CONFIRMED', 'PACKED'] },
-      createdAt: { gte: thirtyMinutesAgo },
-    }
-    if (storeId && storeId !== 'all') {
-      orderWhere.storeId = storeId
-    }
+    const storeSqlWhere = storeId && storeId !== 'all'
+      ? Prisma.sql`AND "storeId" = ${storeId}`
+      : Prisma.empty
 
     const riderWhere: any = {
       role: 'DELIVERY',
@@ -107,10 +104,18 @@ export async function getLiveDemandInfo(storeId?: string | null): Promise<{
       ]
     }
 
-    const [activeOrdersCount, activeRidersCount] = await Promise.all([
-      prisma.order.count({ where: orderWhere }),
+    const [activeOrdersRes, activeRidersCount] = await Promise.all([
+      prisma.$queryRaw<Array<{ count: number }>>`
+        SELECT COUNT(DISTINCT COALESCE("combinedId", id))::int as count
+        FROM orders
+        WHERE status::text IN ('PENDING', 'CONFIRMED', 'PACKED')
+          AND "createdAt" >= ${thirtyMinutesAgo}
+          ${storeSqlWhere}
+      `,
       prisma.user.count({ where: riderWhere }),
     ])
+
+    const activeOrdersCount = activeOrdersRes[0]?.count || 0
 
     const safeRiders = Math.max(1, activeRidersCount)
     return {

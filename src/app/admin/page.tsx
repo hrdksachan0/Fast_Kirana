@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { formatPrice, withRetry } from '@/lib/utils'
 import { AdminDashboard } from '@/components/admin/admin-dashboard'
 import { getStoreUserFilter } from '@/lib/store-resolver'
@@ -98,32 +99,47 @@ export default async function AdminPage(props: {
 
     const userStoreFilter = await getStoreUserFilter(initialStoreId)
 
-    const [todayOrders, todayRevAgg, todayDeliveredAgg, ...results] = await Promise.all([
-      prisma.order.count({
-        where: {
-          createdAt: { gte: startOfToday },
-          deliveryMethod: { not: 'RETAIL' },
-          ...(storeWhere ? storeWhere : {}),
-        },
-      }),
-      prisma.order.aggregate({
-        where: {
-          createdAt: { gte: startOfToday },
-          status: { not: 'CANCELLED' },
-          deliveryMethod: { not: 'RETAIL' },
-          ...(storeWhere ? storeWhere : {}),
-        },
-        _sum: { total: true },
-      }),
-      prisma.order.aggregate({
-        where: {
-          createdAt: { gte: startOfToday },
-          status: 'DELIVERED',
-          deliveryMethod: { not: 'RETAIL' },
-          ...(storeWhere ? storeWhere : {}),
-        },
-        _sum: { total: true },
-      }),
+    const storeSqlWhere = initialStoreId && initialStoreId !== 'all'
+      ? Prisma.sql`AND "storeId" = ${initialStoreId}`
+      : Prisma.empty
+
+    const [todayStatsRaw, statusStatsRaw, ...results] = await Promise.all([
+      prisma.$queryRaw<Array<{
+        today_orders: number
+        today_sales: number
+        today_delivered_sales: number
+      }>>`
+        SELECT 
+          COUNT(DISTINCT COALESCE("combinedId", id))::int as today_orders,
+          COALESCE(SUM(total), 0)::float as today_sales,
+          COALESCE(SUM(CASE WHEN status::text = 'DELIVERED' THEN total ELSE 0 END), 0)::float as today_delivered_sales
+        FROM orders
+        WHERE ("deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL)
+          AND status::text != 'CANCELLED'
+          AND "createdAt" >= ${startOfToday}
+          ${storeSqlWhere}
+      `,
+      prisma.$queryRaw<Array<{
+        total: number
+        pending: number
+        confirmed: number
+        packed: number
+        shipped: number
+        delivered: number
+        cancelled: number
+      }>>`
+        SELECT 
+          COUNT(DISTINCT COALESCE("combinedId", id))::int as total,
+          COUNT(DISTINCT CASE WHEN status::text = 'PENDING' THEN COALESCE("combinedId", id) END)::int as pending,
+          COUNT(DISTINCT CASE WHEN status::text = 'CONFIRMED' THEN COALESCE("combinedId", id) END)::int as confirmed,
+          COUNT(DISTINCT CASE WHEN status::text = 'PACKED' THEN COALESCE("combinedId", id) END)::int as packed,
+          COUNT(DISTINCT CASE WHEN status::text = 'SHIPPED' THEN COALESCE("combinedId", id) END)::int as shipped,
+          COUNT(DISTINCT CASE WHEN status::text = 'DELIVERED' THEN COALESCE("combinedId", id) END)::int as delivered,
+          COUNT(DISTINCT CASE WHEN status::text = 'CANCELLED' THEN COALESCE("combinedId", id) END)::int as cancelled
+        FROM orders
+        WHERE ("deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL)
+          ${storeSqlWhere}
+      `,
       prisma.user.count({
         where: {
           NOT: { email: { startsWith: 'guest-' } },
@@ -147,7 +163,7 @@ export default async function AdminPage(props: {
       initialStoreId && initialStoreId !== 'all'
         ? prisma.$queryRaw`
             SELECT "shopName", "restaurantId", "orderType"::text as "orderType", status::text as status,
-                   COUNT(id)::int as count,
+                   COUNT(DISTINCT COALESCE("combinedId", id))::int as count,
                    COALESCE(SUM(total), 0)::float as total,
                    COALESCE(SUM(subtotal), 0)::float as subtotal,
                    COALESCE(SUM(discount), 0)::float as discount
@@ -158,7 +174,7 @@ export default async function AdminPage(props: {
           `
         : prisma.$queryRaw`
             SELECT "shopName", "restaurantId", "orderType"::text as "orderType", status::text as status,
-                   COUNT(id)::int as count,
+                   COUNT(DISTINCT COALESCE("combinedId", id))::int as count,
                    COALESCE(SUM(total), 0)::float as total,
                    COALESCE(SUM(subtotal), 0)::float as subtotal,
                    COALESCE(SUM(discount), 0)::float as discount
@@ -197,9 +213,12 @@ export default async function AdminPage(props: {
       }),
     ])
 
-    todayOrdersCount = (todayOrders as number) || 0
-    todayRevenue = (todayRevAgg as any)?._sum?.total || 0
-    todayNetRevenue = (todayDeliveredAgg as any)?._sum?.total || 0
+    const todayRow = (todayStatsRaw as any[])?.[0] || { today_orders: 0, today_sales: 0, today_delivered_sales: 0 }
+    const statusRow = (statusStatsRaw as any[])?.[0] || { total: 0, pending: 0, confirmed: 0, packed: 0, shipped: 0, delivered: 0, cancelled: 0 }
+
+    todayOrdersCount = todayRow.today_orders || 0
+    todayRevenue = todayRow.today_sales || 0
+    todayNetRevenue = todayRow.today_delivered_sales || 0
     userCount = (results[0] as number) || 0
     lowStockCount = (results[1] as number) || 0
     const groupStats = (results[2] as any[]) || []
@@ -214,25 +233,12 @@ export default async function AdminPage(props: {
 
     ordersRaw = recentOrdersList
 
-    const statusCountsMap: Record<string, number> = {
-      PENDING: 0,
-      CONFIRMED: 0,
-      PACKED: 0,
-      SHIPPED: 0,
-      DELIVERED: 0,
-      CANCELLED: 0,
-    }
-    
     groupStats.forEach((group: any) => {
       const isRestaurant = !!group.restaurantId || group.orderType === 'RESTAURANT' || (group.shopName && group.shopName.toLowerCase().includes('restaurant'))
       
       const count = group.count || 0
       const foodNetSales = (group.subtotal || 0) - (group.discount || 0)
       const sum = isRestaurant && foodNetSales > 0 ? foodNetSales : (group.total || 0)
-
-      if (group.status && statusCountsMap[group.status] !== undefined) {
-        statusCountsMap[group.status] += count
-      }
 
       if (isRestaurant) {
         restaurantTotalOrders += count
@@ -254,19 +260,19 @@ export default async function AdminPage(props: {
     })
 
     revenue = groceryRevenue + restaurantRevenue + cafeRevenue
-    totalOrdersCount = groceryTotalOrders + restaurantTotalOrders + cafeTotalOrders
-    activeOrdersCount = groceryActiveOrders + restaurantActiveOrders + cafeActiveOrders
-    deliveredOrdersCount = groceryDeliveredOrders + restaurantDeliveredOrders + cafeDeliveredOrders
+    totalOrdersCount = statusRow.total || 0
+    activeOrdersCount = (statusRow.pending || 0) + (statusRow.confirmed || 0) + (statusRow.packed || 0) + (statusRow.shipped || 0)
+    deliveredOrdersCount = statusRow.delivered || 0
     orderCount = deliveredOrdersCount
 
     initialOrderCounts = {
       ALL: totalOrdersCount,
-      PENDING: statusCountsMap.PENDING,
-      CONFIRMED: statusCountsMap.CONFIRMED,
-      PACKED: statusCountsMap.PACKED,
-      SHIPPED: statusCountsMap.SHIPPED,
-      DELIVERED: statusCountsMap.DELIVERED,
-      CANCELLED: statusCountsMap.CANCELLED,
+      PENDING: statusRow.pending || 0,
+      CONFIRMED: statusRow.confirmed || 0,
+      PACKED: statusRow.packed || 0,
+      SHIPPED: statusRow.shipped || 0,
+      DELIVERED: statusRow.delivered || 0,
+      CANCELLED: statusRow.cancelled || 0,
     }
   } catch (error) {
     console.error('Database connection warning in admin page:', error)
@@ -282,6 +288,8 @@ export default async function AdminPage(props: {
     return {
       id: o.id,
       readableId: o.readableId || o.id.slice(-6).toUpperCase(),
+      combinedId: o.combinedId || null,
+      orderType: o.orderType || (o.restaurantId ? 'RESTAURANT' : 'GROCERY'),
       status: o.status,
       paymentStatus: o.paymentStatus || 'PENDING',
       paymentMethod: o.paymentMethod || 'COD',

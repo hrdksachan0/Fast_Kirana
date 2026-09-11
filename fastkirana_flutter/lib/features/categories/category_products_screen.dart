@@ -129,23 +129,37 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
           children: [
             Text(
               widget.category.name,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: Responsive.scaledFontSize(context, 16),
                 fontWeight: FontWeight.w900,
                 color: AppDesignSystem.gray900,
                 letterSpacing: -0.3,
               ),
             ),
+            const SizedBox(height: 2),
             Row(
               children: [
-                const Icon(Icons.bolt_rounded, size: 12, color: AppDesignSystem.emerald600),
-                const SizedBox(width: 2),
-                Text(
-                  'FAST DELIVERY',
-                  style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 9.5),
-                    fontWeight: FontWeight.w800,
-                    color: AppDesignSystem.emerald600,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.bolt_rounded, size: 11, color: AppDesignSystem.primary),
+                      const SizedBox(width: 2),
+                      Text(
+                        'FAST DELIVERY',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: Responsive.scaledFontSize(context, 9),
+                          fontWeight: FontWeight.w900,
+                          color: AppDesignSystem.primary,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -164,8 +178,8 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
               // 1. Left Vertical Subcategory Rail (Blinkit 2-Pane Navigation) - only if DB subcategories exist
               if (subcats.length > 1)
                 Container(
-                  width: Responsive.isSmallMobile(context) ? 64 : 82,
-                  color: AppDesignSystem.gray50,
+                  width: Responsive.isSmallMobile(context) ? 66 : 84,
+                  color: const Color(0xFFF8FAFC),
                   child: ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   itemCount: subcats.length,
@@ -184,15 +198,15 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
                         decoration: BoxDecoration(
                           color: isSelected ? Colors.white : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
                           border: isSelected
-                              ? Border.all(color: AppDesignSystem.orange300, width: 1.5)
+                              ? Border.all(color: AppDesignSystem.primary, width: 1.5)
                               : null,
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.04),
-                                    blurRadius: 6,
+                                    color: AppDesignSystem.primary.withValues(alpha: 0.12),
+                                    blurRadius: 8,
                                     offset: const Offset(0, 2),
                                   ),
                                 ]
@@ -206,7 +220,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                               height: 38,
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? AppDesignSystem.orange50
+                                    ? const Color(0xFFFEF2F2)
                                     : AppDesignSystem.surfaceMuted,
                                 shape: BoxShape.circle,
                               ),
@@ -234,10 +248,10 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                             Text(
                               item.name,
                               textAlign: TextAlign.center,
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.plusJakartaSans(
                                 fontSize: Responsive.scaledFontSize(context, 9.5),
                                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
-                                color: isSelected ? AppDesignSystem.orange600 : AppDesignSystem.gray600,
+                                color: isSelected ? AppDesignSystem.primary : AppDesignSystem.gray700,
                                 height: 1.2,
                               ),
                               maxLines: 2,

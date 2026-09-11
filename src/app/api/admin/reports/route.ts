@@ -57,9 +57,10 @@ export async function GET(request: NextRequest) {
         miscFee: number
         deliveryMethod: string
         createdAt: Date
+        combinedId: string | null
       }>
     >`
-      SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "deliveryMethod", "createdAt"
+      SELECT id, total, subtotal, discount, "deliveryFee", taxes, "miscFee", "deliveryMethod", "createdAt", "combinedId"
       FROM orders
       WHERE status::text = 'DELIVERED'
         AND "createdAt" >= ${start}
@@ -92,8 +93,8 @@ export async function GET(request: NextRequest) {
     >`
       SELECT oi."orderId", oi."productId", oi.price, COALESCE(p.mrp, oi.price) as mrp, oi.quantity, oi.name, 
              COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
-             c.name as "categoryName",
-             c.slug as "categorySlug",
+             COALESCE(c.name, r.name, o."shopName", 'General') as "categoryName",
+             COALESCE(c.slug, r.slug, 'general') as "categorySlug",
              p.tags as "productTags",
              COALESCE(oi.variants, p.variants) as "variants", 
              oi."selectedVariant",
@@ -188,15 +189,16 @@ export async function GET(request: NextRequest) {
     }
 
     const getItemMetrics = (item: typeof orderItems[0]) => {
-      const itemRevenue = item.price * item.quantity
+      const itemRevenue = (item.price || 0) * (item.quantity || 1)
       const isGrocery = isPureGroceryItem(item)
       const matchedRest = !isGrocery ? resolveRestaurantForItem(item) : null
+      const catNameLower = (item.categoryName || '').toLowerCase().trim()
       const isRestaurant = !isGrocery && (
         !!matchedRest ||
         !!item.restaurantId || 
         item.orderType === 'RESTAURANT' || 
-        item.categoryName.toLowerCase().includes('restaurant') || 
-        item.categoryName.toLowerCase().includes('cafe')
+        catNameLower.includes('restaurant') || 
+        catNameLower.includes('cafe')
       )
 
       // Real Restaurant Commission Logic synced from Outlet Setup:
@@ -215,14 +217,14 @@ export async function GET(request: NextRequest) {
         return { cost: itemCost, revenue: itemRevenue, profit: itemProfit, matchedRest }
       }
 
-      let costPrice = item.costPrice
+      let costPrice = item.costPrice || 0
 
       // If there is a selected variant, try to find its cost price in the variants array
       if (item.selectedVariant && item.variants) {
         try {
           const variantsList = typeof item.variants === 'string' ? JSON.parse(item.variants) : item.variants
           if (Array.isArray(variantsList)) {
-            const matchedVariant = variantsList.find((v: any) => v.name === item.selectedVariant)
+            const matchedVariant = variantsList.find((v: any) => v && v.name === item.selectedVariant)
             if (matchedVariant && matchedVariant.costPrice !== undefined) {
               costPrice = parseFloat(matchedVariant.costPrice) || 0
             }
@@ -235,14 +237,15 @@ export async function GET(request: NextRequest) {
       const hasCostPrice = costPrice > 0
       let costPerUnit = costPrice
       if (!hasCostPrice) {
-        costPerUnit = item.price * 0.75
-        missingCostProductsMap[item.productId] = {
-          id: item.productId,
-          name: item.name,
-          price: item.price
+        costPerUnit = (item.price || 0) * 0.75
+        const prodKey = item.productId || `manual_${(item.name || 'item').toLowerCase().replace(/[^a-z0-9]/g, '_')}`
+        missingCostProductsMap[prodKey] = {
+          id: prodKey,
+          name: item.name || 'Unnamed Product',
+          price: item.price || 0
         }
       }
-      const itemCost = costPerUnit * item.quantity
+      const itemCost = costPerUnit * (item.quantity || 1)
       const itemProfit = itemRevenue - itemCost
       
       return { cost: itemCost, revenue: itemRevenue, profit: itemProfit, matchedRest: null }
@@ -256,7 +259,13 @@ export async function GET(request: NextRequest) {
     let totalTaxes = 0
     let totalDeliveryFee = 0
     let totalProductSales = 0 // subtotal - discount
-    const totalOrders = orders.filter(o => o.deliveryMethod !== 'RETAIL').length
+    // Treat combined sub-orders sharing combinedId as 1 single customer order
+    const uniqueDeliveredOrderIds = new Set(
+      orders
+        .filter(o => o.deliveryMethod !== 'RETAIL')
+        .map(o => o.combinedId || o.id)
+    )
+    const totalOrders = uniqueDeliveredOrderIds.size
 
     // Group by Date (YYYY-MM-DD)
     type DailySale = { date: string; sales: number; profit: number; orders: number }
@@ -300,11 +309,18 @@ export async function GET(request: NextRequest) {
     let retailSales = 0
     let retailProfit = 0
 
+    const seenDailyCombined = new Set<string>()
+    const seenDeliveryCombined = new Set<string>()
+    const seenPickupCombined = new Set<string>()
+    const seenRetailCombined = new Set<string>()
+
     // Process each order
     for (const order of orders) {
       const isPickup = order.deliveryMethod === 'PICKUP'
       const isRetail = order.deliveryMethod === 'RETAIL'
-      const dateString = order.createdAt.toISOString().split('T')[0]
+      const orderMasterKey = order.combinedId || order.id
+      const createdAtDate = order.createdAt instanceof Date ? order.createdAt : new Date(order.createdAt)
+      const dateString = createdAtDate.toISOString().split('T')[0]
       const orderSales = isRetail ? (order.total || order.subtotal || 0) : ((order.subtotal || 0) - (order.discount || 0))
       
       // Ensure dailyData has the key (in case it fell outside initialized range due to timezone)
@@ -313,7 +329,11 @@ export async function GET(request: NextRequest) {
       }
 
       if (!isRetail) {
-        dailyData[dateString].orders++
+        const dailyKey = `${dateString}_${orderMasterKey}`
+        if (!seenDailyCombined.has(dailyKey)) {
+          seenDailyCombined.add(dailyKey)
+          dailyData[dateString].orders++
+        }
         dailyData[dateString].sales += orderSales
         totalRevenue += orderSales
         totalMiscFee += order.miscFee || 0
@@ -336,14 +356,14 @@ export async function GET(request: NextRequest) {
         const isGrocery = isPureGroceryItem(item)
         const catNameLower = (item.categoryName || '').toLowerCase().trim()
 
-        let targetCategoryName = item.categoryName
+        let targetCategoryName = item.categoryName || 'General'
         let targetType: 'restaurant' | 'grocery' = 'grocery'
 
         if (isGrocery) {
-          targetCategoryName = item.categoryName
+          targetCategoryName = item.categoryName || 'Grocery Essentials'
           targetType = 'grocery'
         } else if (matchedRest) {
-          targetCategoryName = matchedRest.name
+          targetCategoryName = matchedRest.name || 'Restaurant'
           targetType = 'restaurant'
         } else if (item.restaurantId || item.orderType === 'RESTAURANT' || catNameLower.includes('restaurant') || catNameLower.includes('cafe')) {
           targetType = 'restaurant'
@@ -354,10 +374,10 @@ export async function GET(request: NextRequest) {
           } else if (catNameLower.includes('fastkirana restaurant') || catNameLower.includes('restaurant')) {
             targetCategoryName = 'Wedson Restaurant'
           } else {
-            targetCategoryName = item.categoryName
+            targetCategoryName = item.categoryName || 'Restaurant Food'
           }
         } else {
-          targetCategoryName = item.categoryName
+          targetCategoryName = item.categoryName || 'General Store'
           targetType = 'grocery'
         }
 
@@ -375,15 +395,16 @@ export async function GET(request: NextRequest) {
         categoryData[targetCategoryName].sales += itemRev
         categoryData[targetCategoryName].cost += cost
         categoryData[targetCategoryName].profit += itemProf
-        categoryData[targetCategoryName].quantity += item.quantity
+        categoryData[targetCategoryName].quantity += (item.quantity || 1)
 
         // Product breakdown
-        if (!productData[item.productId]) {
-          productData[item.productId] = {
-            productId: item.productId,
-            name: item.name,
-            mrp: item.mrp || item.price,
-            price: item.price,
+        const prodKey = item.productId || `manual_${(item.name || 'item').toLowerCase().replace(/[^a-z0-9]/g, '_')}`
+        if (!productData[prodKey]) {
+          productData[prodKey] = {
+            productId: prodKey,
+            name: item.name || 'Unnamed Product',
+            mrp: item.mrp || item.price || 0,
+            price: item.price || 0,
             costPrice: item.costPrice || 0,
             quantity: 0,
             sales: 0,
@@ -392,13 +413,13 @@ export async function GET(request: NextRequest) {
             type: targetType
           }
         }
-        productData[item.productId].quantity += item.quantity
-        productData[item.productId].sales += itemRev
-        productData[item.productId].profit += itemProf
+        productData[prodKey].quantity += (item.quantity || 1)
+        productData[prodKey].sales += itemRev
+        productData[prodKey].profit += itemProf
       }
 
       // Order profit = order.total - orderCost
-      const orderProfit = order.total - orderCost
+      const orderProfit = (order.total || 0) - orderCost
       
       if (!isRetail) {
         dailyData[dateString].profit += orderProfit
@@ -407,15 +428,24 @@ export async function GET(request: NextRequest) {
       }
 
       if (isPickup) {
-        pickupOrdersCount++
+        if (!seenPickupCombined.has(orderMasterKey)) {
+          seenPickupCombined.add(orderMasterKey)
+          pickupOrdersCount++
+        }
         pickupSales += orderSales
         pickupProfit += orderProfit
       } else if (isRetail) {
-        retailOrdersCount++
+        if (!seenRetailCombined.has(orderMasterKey)) {
+          seenRetailCombined.add(orderMasterKey)
+          retailOrdersCount++
+        }
         retailSales += orderSales
         retailProfit += orderProfit
       } else {
-        deliveryOrdersCount++
+        if (!seenDeliveryCombined.has(orderMasterKey)) {
+          seenDeliveryCombined.add(orderMasterKey)
+          deliveryOrdersCount++
+        }
         deliverySales += orderSales
         deliveryProfit += orderProfit
       }

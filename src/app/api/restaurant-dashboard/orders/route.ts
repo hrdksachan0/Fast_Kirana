@@ -93,8 +93,20 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const limitParam = parseInt(searchParams.get('limit') || '100', 10)
-    const limit = Math.min(Math.max(limitParam, 1), 300)
+    const startDateParam = searchParams.get('startDate')
+    const endDateParam = searchParams.get('endDate')
+    if (startDateParam || endDateParam) {
+      where.createdAt = {}
+      if (startDateParam) {
+        where.createdAt.gte = new Date(`${startDateParam}T00:00:00.000`)
+      }
+      if (endDateParam) {
+        where.createdAt.lte = new Date(`${endDateParam}T23:59:59.999`)
+      }
+    }
+
+    const limitParam = parseInt(searchParams.get('limit') || '200', 10)
+    const limit = Math.min(Math.max(limitParam, 1), 500)
 
     const rawOrders = await prisma.order.findMany({
       where,
