@@ -753,6 +753,7 @@ export function AdminDashboard({
     sortOrder: '0',
     barcode: '',
     vendor: '',
+    vendorId: '',
   })
   
   // State for Add Product Form
@@ -784,6 +785,7 @@ export function AdminDashboard({
     sortOrder: '0',
     barcode: '',
     vendor: '',
+    vendorId: '',
   })
   // Product type toggles: 'grocery' | 'cafe'
   const [newProductType, setNewProductType] = useState<'grocery' | 'cafe' | 'restaurant'>('grocery')
@@ -1693,6 +1695,7 @@ export function AdminDashboard({
       sortOrder: String(p.sortOrder ?? 0),
       barcode: p.barcode || '',
       vendor: p.vendor || '',
+      vendorId: (p as any).vendorId || '',
     })
 
     setShowAddProduct(true)
@@ -1913,6 +1916,7 @@ export function AdminDashboard({
       sortOrder: String(p.sortOrder ?? 0),
       barcode: p.barcode || '',
       vendor: p.vendor || '',
+      vendorId: (p as any).vendorId || '',
     })
   }
 
@@ -1989,6 +1993,7 @@ export function AdminDashboard({
           sortOrder: parseInt(productEditForm.sortOrder) || 0,
           barcode: productEditForm.barcode || null,
           vendor: productEditForm.vendor?.trim() || null,
+          vendorId: productEditForm.vendorId || null,
           storeId: selectedHubId && selectedHubId !== 'all' ? selectedHubId : undefined,
           variants: sortedEditVariants.length > 0 ? sortedEditVariants.map(v => ({
             name: v.name,
@@ -2091,6 +2096,8 @@ export function AdminDashboard({
         },
         body: JSON.stringify({
           ...newProduct,
+          vendor: newProduct.vendor?.trim() || null,
+          vendorId: newProduct.vendorId || null,
           restaurantId: newProduct.restaurantId || null,
           barcode: newProduct.barcode || null,
           location: newProduct.location || null,
@@ -2144,6 +2151,7 @@ export function AdminDashboard({
           sortOrder: '0',
           barcode: '',
           vendor: '',
+          vendorId: '',
         })
 
       } else {
@@ -2628,7 +2636,7 @@ export function AdminDashboard({
         onSelectHub={handleSelectHub}
         onOpenHubManager={() => setIsStoreHubsModalOpen(true)}
         isSuperAdmin={isSuperAdmin}
-        groceryMartOpen={(activeStoreHub as any)?.groceryOpen !== undefined ? (activeStoreHub as any).groceryOpen : groceryMartOpen}
+        groceryMartOpen={groceryAutoTiming ? groceryMartOpen : ((activeStoreHub as any)?.groceryOpen !== undefined ? (activeStoreHub as any).groceryOpen : groceryMartOpen)}
         groceryAutoTiming={groceryAutoTiming}
         isTogglingStore={isTogglingStore}
         onToggleGroceryMart={handleToggleGroceryMart}

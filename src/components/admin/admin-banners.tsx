@@ -51,11 +51,42 @@ const FESTIVAL_TEMPLATES = [
   {
     name: '📦 Fast Delivery (Ghatampur)',
     title: 'Fast Delivery in Ghatampur',
-    description: 'Milk, Fruits, Vegetables, Snacks & more',
+    description: 'Milk, Fruits, Vegetables, Snacks & more delivered in minutes',
     code: '',
     gradient: 'from-rose-500 via-rose-500 to-orange-400',
-    type: 'express-delivery',
+    type: 'real-image',
+    imageUrl: '/banners/ghatampur-express-real.png',
     linkUrl: '/category/fruits-vegetables'
+  },
+  {
+    name: '🍔 A.S. Restaurant • Burgers, Pizza & Shakes',
+    title: 'A.S. Restaurant • Burgers, Pizza & Shakes',
+    description: 'Juicy burgers, cheesy loaded pizzas, hot momos & thick shakes',
+    code: '',
+    gradient: 'from-rose-600 via-red-500 to-amber-500',
+    type: 'real-image',
+    imageUrl: '/banners/as-restaurant-real.png',
+    linkUrl: '/restaurant/as-restaurant'
+  },
+  {
+    name: '🍲 Wedson Restaurant • Royal Indian & Biryani',
+    title: 'Wedson Restaurant • Royal Indian & Biryani',
+    description: 'Aromatic dum biryani, rich paneer curries, tandoori treats & dal makhani',
+    code: '',
+    gradient: 'from-amber-600 via-orange-500 to-yellow-500',
+    type: 'real-image',
+    imageUrl: '/banners/wedson-restaurant-real.png',
+    linkUrl: '/restaurant/wedson-restaurant'
+  },
+  {
+    name: '🍱 Bal Udyan Restaurant • Family Meals & Thalis',
+    title: 'Bal Udyan Restaurant • Family Meals & Thalis',
+    description: 'Homestyle North Indian thalis, special Chinese bites & evening party snacks',
+    code: '',
+    gradient: 'from-emerald-600 via-teal-500 to-cyan-500',
+    type: 'real-image',
+    imageUrl: '/banners/bal-udyan-real.png',
+    linkUrl: '/restaurant/bal-udyan-restaurant'
   },
   {
     name: '🥬 Farm Fresh Vegetables & Fruits',
@@ -128,6 +159,70 @@ const FESTIVAL_TEMPLATES = [
     gradient: 'from-emerald-700 via-teal-700 to-green-600',
     type: 'festive',
     linkUrl: '/category/atta-rice-dal'
+  }
+]
+
+// Instamart-Grade High-Impact Retina Designs
+export const INSTAMART_PRO_DESIGNS = [
+  {
+    id: 'bappa-sweets',
+    name: '🪔 FastKirana Exclusive Sweets',
+    badge: 'FESTIVE SPECIAL',
+    title: 'FastKirana Exclusive',
+    description: 'Bappa Approved Sweets! Get modaks, laddoos, pedas & dry fruits.',
+    code: 'FESTIVE10',
+    imageUrl: '/banners/fastkirana-bappa-retina.png',
+    linkUrl: '/search?q=sweets',
+    gradient: 'from-rose-600 via-rose-500 to-orange-400',
+    type: 'festival'
+  },
+  {
+    id: 'puja-flowers',
+    name: '🌸 Farm To Home Puja Flowers',
+    badge: 'PUJA & MANDIR',
+    title: 'Farm To Home Puja Flowers',
+    description: 'The freshest marigold, rose petals & lotus for worship.',
+    code: 'PUJA20',
+    imageUrl: '/banners/puja-flowers.png',
+    linkUrl: '/category/pooja-needs',
+    gradient: 'from-amber-600 via-orange-500 to-yellow-500',
+    type: 'fresh'
+  },
+  {
+    id: 'weekend-savings',
+    name: '🛍️ Weekend Kirana Super Savings',
+    badge: 'SUPER SAVER',
+    title: 'Weekend Kirana Super Savings',
+    description: 'Stock up on Atta, Dal, Pure Desi Ghee & Edible Oils at wholesale prices!',
+    code: 'WEEKEND50',
+    imageUrl: '/banners/festive-deals-1.png',
+    linkUrl: '/category/atta-rice-dal',
+    gradient: 'from-emerald-700 via-teal-700 to-green-600',
+    type: 'grocery'
+  },
+  {
+    id: 'late-night-cravings',
+    name: '🌙 Late Night Craving Remedies',
+    badge: 'MIDNIGHT 10-MINS',
+    title: 'Late Night Craving Remedies 🌙',
+    description: 'Chips, Instant Noodles, Chocolates & Beverages under ₹49!',
+    code: 'NIGHT49',
+    imageUrl: '/banners/festive-deals-2.png',
+    linkUrl: '/category/snacks-munchies',
+    gradient: 'from-purple-800 via-indigo-800 to-slate-950',
+    type: 'snacks'
+  },
+  {
+    id: 'instant-pantry',
+    name: '⚡ Instant Kitchen Pantry',
+    badge: 'DAILY ESSENTIALS',
+    title: 'Instant Kitchen Pantry & Essentials',
+    description: 'Milk, Bread, Eggs, Butter, Spices & Cooking Pastes delivered in 10 mins.',
+    code: 'FAST10',
+    imageUrl: '/banners/banner-instant-5.png',
+    linkUrl: '/category/dairy-breakfast',
+    gradient: 'from-blue-600 via-indigo-600 to-cyan-500',
+    type: 'first-order'
   }
 ]
 
@@ -243,9 +338,9 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
     setTitle(tpl.title)
     setDescription(tpl.description)
     setCode(tpl.code || '')
-    setGradient(tpl.gradient)
-    setType(tpl.type)
-    setImageUrl('')
+    setGradient(tpl.gradient || GRADIENT_PRESETS[4].value)
+    setType(tpl.type || 'grocery')
+    setImageUrl(tpl.imageUrl || '')
     
     const link = tpl.linkUrl || ''
     setLinkUrl(link)
@@ -273,7 +368,41 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
       setCustomLinkUrl(link)
     }
 
-    toast.success(`${tpl.name} template applied! Customize below if needed.`)
+    toast.success(`Design "${tpl.name}" loaded into editor!`)
+  }
+
+  // 1-Click Publish Design directly to Storefront
+  const handlePublishDesignDirectly = async (tpl: any) => {
+    try {
+      setSubmitting(true)
+      const res = await fetch('/api/admin/banners', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: tpl.title,
+          description: tpl.description,
+          code: tpl.code || '',
+          gradient: tpl.gradient || GRADIENT_PRESETS[4].value,
+          type: tpl.type || 'grocery',
+          imageUrl: tpl.imageUrl || null,
+          linkUrl: tpl.linkUrl || null,
+          isActive: true,
+          sortOrder: 0
+        })
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Failed to publish banner')
+      }
+
+      toast.success(`🎉 "${tpl.name}" published live to storefront!`)
+      fetchBanners()
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to publish design')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   // Clear Form
@@ -463,27 +592,98 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
       {/* Creation and Edit Panel */}
       <div className="lg:col-span-2 space-y-6">
         
-        {/* Templates Presets */}
+        {/* Instamart Pro Designs Gallery */}
         <div className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-4">
-          <div className="flex items-center gap-1.5">
-            <Sparkles className="h-5 w-5 text-accent animate-pulse-slow" />
-            <h3 className="text-sm font-bold text-text-primary">Apply Festival Templates</h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-amber-500 animate-pulse" />
+                <h3 className="text-base font-black text-text-primary">
+                  Instamart Pro Banner Designs (2x Retina)
+                </h3>
+                <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                  Ready to Publish
+                </span>
+              </div>
+              <p className="text-[11px] text-text-secondary mt-0.5">
+                Swiggy Instamart-grade festive banners with sunburst rays, product stages & instant 1-click publishing.
+              </p>
+            </div>
           </div>
-          <p className="text-[11px] text-text-secondary leading-relaxed">
-            Auto-fill values with pre-configured settings for major Indian holidays and events.
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
-            {FESTIVAL_TEMPLATES.map((tpl) => (
-              <button
-                key={tpl.name}
-                type="button"
-                onClick={() => handleApplyTemplate(tpl)}
-                className="py-2.5 px-3 border border-border/80 text-[10px] font-black rounded-xl bg-muted/20 hover:bg-accent/10 hover:border-accent hover:text-accent transition-all text-center leading-normal cursor-pointer active:scale-95 shadow-sm"
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 pt-1">
+            {INSTAMART_PRO_DESIGNS.map((tpl) => (
+              <div
+                key={tpl.id}
+                className="group relative rounded-2xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md hover:border-primary/50 transition-all flex flex-col justify-between"
               >
-                {tpl.name}
-              </button>
+                {/* Image Preview Container */}
+                <div className="relative aspect-[16/9] w-full overflow-hidden bg-muted/40">
+                  <img
+                    src={tpl.imageUrl}
+                    alt={tpl.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-sm text-[9px] font-black text-white uppercase tracking-wider">
+                    {tpl.badge}
+                  </div>
+                  <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-primary text-[9px] font-black text-white shadow-xs">
+                    Code: {tpl.code}
+                  </div>
+                </div>
+
+                {/* Info & Action Buttons */}
+                <div className="p-3 space-y-2 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h4 className="text-xs font-black text-text-primary line-clamp-1">
+                      {tpl.name}
+                    </h4>
+                    <p className="text-[10px] text-text-secondary line-clamp-2 mt-0.5 leading-snug">
+                      {tpl.description}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-border/40 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handlePublishDesignDirectly(tpl)}
+                      disabled={submitting}
+                      className="flex-1 py-1.5 px-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-[10px] font-black tracking-wide transition-all text-center cursor-pointer shadow-xs disabled:opacity-50"
+                    >
+                      ⚡ 1-Click Publish
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyTemplate(tpl)}
+                      className="py-1.5 px-2.5 rounded-xl border border-border bg-muted/30 hover:bg-muted text-text-primary text-[10px] font-bold transition-all text-center cursor-pointer"
+                    >
+                      ✏️ Edit
+                    </button>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
+
+          {/* Quick Festival Gradient Templates Accordion */}
+          <details className="pt-2 border-t border-border/50 group">
+            <summary className="text-xs font-bold text-text-secondary cursor-pointer hover:text-text-primary transition-colors flex items-center justify-between">
+              <span>🎨 Show Classic Gradient Templates (Diwali, Holi, Eid, Fresh...)</span>
+              <span className="text-[10px] font-bold text-text-muted group-open:rotate-180 transition-transform">▼</span>
+            </summary>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3">
+              {FESTIVAL_TEMPLATES.map((tpl) => (
+                <button
+                  key={tpl.name}
+                  type="button"
+                  onClick={() => handleApplyTemplate(tpl)}
+                  className="py-2 px-2.5 border border-border/80 text-[10px] font-bold rounded-xl bg-muted/20 hover:bg-primary/10 hover:border-primary hover:text-primary transition-all text-center leading-normal cursor-pointer"
+                >
+                  {tpl.name}
+                </button>
+              ))}
+            </div>
+          </details>
         </div>
 
         {/* Input Form */}
@@ -800,15 +1000,17 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
             <h3 className="text-sm font-bold text-text-primary">Live Storefront Preview</h3>
           </div>
           
-          <div className="relative w-full overflow-hidden rounded-xl h-[120px] shadow-sm select-none">
+          <div className="relative w-full overflow-hidden rounded-2xl shadow-md border border-border/80 select-none bg-muted/20">
             {imageUrl ? (
-              <img
-                src={imageUrl}
-                alt={title || "Custom Graphic Banner"}
-                className="w-full h-full object-cover"
-              />
+              <div className="relative aspect-[16/9] w-full overflow-hidden">
+                <img
+                  src={imageUrl}
+                  alt={title || "Custom Graphic Banner"}
+                  className="w-full h-full object-cover"
+                />
+              </div>
             ) : type === 'express-delivery' ? (
-              <div className="absolute inset-0 flex items-center justify-between p-4 bg-[#fdf0f1] text-[#2d2d2d]">
+              <div className="h-[140px] flex items-center justify-between p-4 bg-[#fdf0f1] text-[#2d2d2d]">
                 <div className="text-left space-y-0.5">
                   <span className="text-[8px] font-black text-[#e20a22] uppercase tracking-wider block">Fast Delivery in</span>
                   <h4 className="text-sm font-black text-[#e20a22] tracking-tight leading-tight">{title || SERVICE_AREA_NAME}</h4>
@@ -817,7 +1019,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                 <div className="text-2xl pr-2">🛍️</div>
               </div>
             ) : (
-              <div className={`absolute inset-0 flex flex-col justify-center p-4 text-white bg-gradient-to-br ${gradient}`}>
+              <div className={`h-[140px] flex flex-col justify-center p-4 text-white bg-gradient-to-br ${gradient}`}>
                 <div className="space-y-1">
                   {code.trim() && (
                     <span className="inline-flex items-center gap-1 bg-white/15 border border-white/20 px-2 py-0.5 rounded-full text-[9px] font-extrabold tracking-wide max-w-max">

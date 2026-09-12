@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
 import { Sliders, Save, Loader2, Eye, Heart, Star, Package, FileText, MessageSquare, Smartphone, Download, AlertCircle, RefreshCw, CloudRain, Zap, ShieldCheck } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -39,6 +39,33 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [groceryAutoTiming, setGroceryAutoTiming] = useState(false)
   const [groceryOpenTime, setGroceryOpenTime] = useState('06:00')
   const [groceryCloseTime, setGroceryCloseTime] = useState('23:59')
+
+  const isGroceryCurrentlyOpen = useMemo(() => {
+    if (!groceryAutoTiming) return groceryMartOpen
+    const openTime = groceryOpenTime || '07:00'
+    const closeTime = groceryCloseTime || '22:00'
+    if ((openTime === '00:00' || openTime === '0:00') && (closeTime === '23:59' || closeTime === '24:00')) return true
+
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: false,
+      hourCycle: 'h23',
+    })
+    const parts = formatter.formatToParts(new Date())
+    const curH = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10)
+    const curM = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10)
+    const curTotal = curH * 60 + curM
+
+    const [oH = 0, oM = 0] = openTime.split(':').map(Number)
+    const [cH = 23, cM = 59] = closeTime.split(':').map(Number)
+    const oTotal = oH * 60 + oM
+    const cTotal = cH * 60 + cM
+
+    if (cTotal >= oTotal) return curTotal >= oTotal && curTotal <= cTotal
+    return curTotal >= oTotal || curTotal <= cTotal
+  }, [groceryAutoTiming, groceryMartOpen, groceryOpenTime, groceryCloseTime])
   const [onlyCod, setOnlyCod] = useState(false)
   const [deliveryRadius, setDeliveryRadius] = useState('5')
   const [restaurantEmails, setRestaurantEmails] = useState('')
@@ -503,11 +530,11 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                         </p>
                       </div>
                       <span className={`text-[11px] font-black px-2.5 py-1 rounded-full border shrink-0 ${
-                        groceryMartOpen
+                        isGroceryCurrentlyOpen
                           ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
                           : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
                       }`}>
-                        {groceryMartOpen ? '● OPEN' : '○ CLOSED'}
+                        {isGroceryCurrentlyOpen ? '● OPEN' : '○ CLOSED'}
                       </span>
                     </div>
 
@@ -539,7 +566,6 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                             onChange={(e) => {
                               const checked = e.target.checked
                               setGroceryAutoTiming(checked)
-                              if (checked) setGroceryMartOpen(true)
                             }}
                             className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
                           />

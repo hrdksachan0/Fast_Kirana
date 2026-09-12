@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ChevronLeft, ChevronRight, Gift, Apple, Milk, Leaf, Salad, Zap } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Gift, Apple, Milk, Leaf, Salad, Zap, Sparkles, ShoppingBag } from 'lucide-react'
 
 interface BannerItem {
   id: string | number
@@ -45,7 +45,7 @@ const DEFAULT_BANNERS: BannerItem[] = [
   },
 ]
 
-const INTERVAL_MS = 5000
+const INTERVAL_MS = 3500
 
 function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
   if (currentBanner.imageUrl) {
@@ -107,9 +107,12 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
           </p>
 
           <div className="flex items-center gap-2.5 md:gap-5 pt-0">
-            {/* Shop Now pill button */}
-            <span className="inline-flex items-center gap-1 bg-[#e20a22] md:hover:bg-[#c8081c] text-white font-extrabold px-2 py-1 md:px-5 md:py-2.5 rounded-lg md:rounded-xl text-[8px] min-[375px]:text-[8.5px] sm:text-[10px] md:text-xs shadow-md transition-all active:scale-95 cursor-pointer">
-              Shop Now <span className="font-sans">→</span>
+            {/* Shop Now pill button with continuous shimmer effect */}
+            <span className="relative overflow-hidden inline-flex items-center gap-1 bg-[#e20a22] md:hover:bg-[#c8081c] text-white font-extrabold px-2 py-1 md:px-5 md:py-2.5 rounded-lg md:rounded-xl text-[8px] min-[375px]:text-[8.5px] sm:text-[10px] md:text-xs shadow-md transition-all active:scale-95 cursor-pointer">
+              <span className="relative z-10 flex items-center gap-1">
+                Shop Now <span className="font-sans">→</span>
+              </span>
+              <span className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12" />
             </span>
 
             {/* Fast Delivery Circle Badge */}
@@ -124,8 +127,12 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
           </div>
         </div>
 
-        {/* Right Column Visual Graphic */}
-        <div className="relative w-[35%] h-full flex items-center justify-end select-none pointer-events-none flex-shrink-0 pr-1 md:pr-4">
+        {/* Right Column Visual Graphic with floating breathing motion */}
+        <motion.div 
+          animate={{ y: [-4, 4, -4], rotate: [-1.2, 1.2, -1.2] }}
+          transition={{ repeat: Infinity, duration: 3.5, ease: 'easeInOut' }}
+          className="relative w-[35%] h-full flex items-center justify-end select-none pointer-events-none flex-shrink-0 pr-1 md:pr-4"
+        >
           <Image
             src="/grocery_bag_banner.webp"
             alt="Grocery bag with fresh vegetables"
@@ -133,7 +140,7 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
             sizes="(max-width: 768px) 30vw, 300px"
             className="object-contain max-h-[105px] sm:max-h-[155px] md:max-h-[240px] drop-shadow-[0_8px_16px_rgba(0,0,0,0.1)] translate-y-1 md:translate-y-2"
           />
-        </div>
+        </motion.div>
       </div>
     )
   }
@@ -214,10 +221,68 @@ function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
               </div>
             </div>
           )}
+
+          {currentBanner.type !== 'first-order' && currentBanner.type !== 'fresh' && (
+            <div className="relative flex items-center justify-center w-full h-full">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Sparkles className="h-6 w-6 md:h-14 md:w-14 text-white/70 fill-white/20 animate-pulse" />
+              </div>
+              <div className="absolute top-1 right-1 md:top-3 md:right-3 h-5 w-5 md:h-10 md:w-10 rounded-full bg-white/20 flex items-center justify-center shadow-xs">
+                <Zap className="h-3 w-3 md:h-6 md:w-6 text-amber-200 fill-amber-300" />
+              </div>
+              <div className="absolute bottom-1 left-1 md:bottom-3 md:left-3 h-5 w-5 md:h-10 md:w-10 rounded-full bg-white/20 flex items-center justify-center shadow-xs">
+                <ShoppingBag className="h-3 w-3 md:h-5 md:w-5 text-white/90" />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
   )
+}
+
+// Ultra-smooth cubic bezier curve for 3D physics (similar to iOS cube transition)
+const CUBIC_EASE = [0.16, 1, 0.3, 1] as const
+
+const cubeVariants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? '100%' : direction < 0 ? '-100%' : '0%',
+    rotateY: direction > 0 ? 65 : direction < 0 ? -65 : 0,
+    transformOrigin: direction > 0 ? '0% 50%' : '100% 50%',
+    scale: 0.9,
+    opacity: 0.8,
+    transformPerspective: 1000,
+  }),
+  center: (direction: number) => ({
+    zIndex: 2,
+    x: '0%',
+    rotateY: 0,
+    transformOrigin: direction > 0 ? '0% 50%' : '100% 50%',
+    scale: 1,
+    opacity: 1,
+    transformPerspective: 1000,
+    transition: {
+      x: { duration: 0.7, ease: CUBIC_EASE },
+      rotateY: { duration: 0.7, ease: CUBIC_EASE },
+      scale: { duration: 0.7, ease: CUBIC_EASE },
+      opacity: { duration: 0.35, ease: 'easeOut' as const },
+    },
+  }),
+  exit: (direction: number) => ({
+    zIndex: 1,
+    x: direction > 0 ? '-100%' : '100%',
+    rotateY: direction > 0 ? -65 : 65,
+    transformOrigin: direction > 0 ? '100% 50%' : '0% 50%',
+    scale: 0.9,
+    opacity: 0.2,
+    transformPerspective: 1000,
+    transition: {
+      x: { duration: 0.7, ease: CUBIC_EASE },
+      rotateY: { duration: 0.7, ease: CUBIC_EASE },
+      scale: { duration: 0.7, ease: CUBIC_EASE },
+      opacity: { duration: 0.55, ease: 'easeIn' as const },
+    },
+  }),
 }
 
 export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
@@ -228,22 +293,7 @@ export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
   const [[current, direction], setCurrentAndDirection] = useState([0, 0])
   const [progressKey, setProgressKey] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
-
-  // Auto-slide effect
-  useEffect(() => {
-    if (displayBanners.length <= 1) return
-    
-    if (current >= displayBanners.length) {
-      setCurrentAndDirection([0, 0])
-    }
-
-    const timer = setInterval(() => {
-      setCurrentAndDirection(([prev]) => [(prev + 1) % displayBanners.length, 1])
-      setProgressKey((prev) => prev + 1)
-    }, INTERVAL_MS)
-
-    return () => clearInterval(timer)
-  }, [displayBanners, current])
+  const [isHovered, setIsHovered] = useState(false)
 
   const handleNext = () => {
     if (displayBanners.length <= 1) return
@@ -257,15 +307,25 @@ export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
     setProgressKey((prev) => prev + 1)
   }
 
+  // Auto-slide effect (slows down to 5.5s on hover, never freezes)
+  useEffect(() => {
+    if (displayBanners.length <= 1 || isDragging) return
+
+    const timer = setInterval(() => {
+      handleNext()
+    }, isHovered ? 5500 : INTERVAL_MS)
+
+    return () => clearInterval(timer)
+  }, [displayBanners.length, isHovered, isDragging])
+
   const swipePower = (offset: number, velocity: number) => {
     return Math.abs(offset) * velocity
   }
 
   const handleDragEnd = (e: any, info: any) => {
-    // delay resetting isDragging to let the click handler intercept it
     setTimeout(() => setIsDragging(false), 50)
     
-    const swipeThreshold = 50 // pixels
+    const swipeThreshold = 50
     const offset = info.offset.x
     const velocity = info.velocity.x
     
@@ -290,25 +350,25 @@ export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
   if (!currentBanner) return null
 
   return (
-    <div className="relative w-full overflow-hidden rounded-2xl md:rounded-3xl h-[130px] min-[375px]:h-[135px] sm:h-[185px] md:h-[260px] shadow-elevated select-none group">
-      <AnimatePresence mode="wait">
+    <div 
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="relative w-full overflow-hidden rounded-2xl md:rounded-3xl h-[135px] min-[375px]:h-[145px] sm:h-[195px] md:h-[270px] shadow-elevated select-none group transition-transform duration-300 hover:scale-[1.006] bg-zinc-900/5 dark:bg-zinc-900/30 [perspective:1000px]"
+    >
+      <AnimatePresence initial={false} custom={direction}>
         <motion.div
           key={current}
+          custom={direction}
+          variants={cubeVariants}
+          initial="enter"
+          animate="center"
+          exit="exit"
           drag="x"
           dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.15}
+          dragElastic={0.2}
           onDragStart={() => setIsDragging(true)}
           onDragEnd={handleDragEnd}
-          initial={{ opacity: 0, x: direction === 0 ? 0 : direction > 0 ? 100 : -100 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: direction > 0 ? -100 : 100 }}
-          transition={{
-            type: 'spring',
-            stiffness: 220,
-            damping: 26,
-            mass: 0.8
-          }}
-          className="absolute inset-0 w-full h-full touch-pan-y"
+          className="absolute inset-0 w-full h-full touch-pan-y [backface-visibility:hidden] [transform-style:preserve-3d]"
         >
           {currentBanner.linkUrl ? (
             <Link 
@@ -328,19 +388,19 @@ export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
         </motion.div>
       </AnimatePresence>
 
-      {/* Slide Navigation Buttons (hidden on mobile, visible on hover on desktop) */}
+      {/* Slide Navigation Buttons */}
       {displayBanners.length > 1 && (
         <>
           <button
             onClick={handlePrev}
-            className="absolute left-3 top-1/2 -translate-y-1/2 hidden md:flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 hover:bg-white/30 transition-all shadow-sm z-20 cursor-pointer"
+            className="absolute left-3 top-1/2 -translate-y-1/2 hidden md:flex h-9 w-9 items-center justify-center rounded-full bg-black/30 hover:bg-black/50 text-white backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all shadow-md z-20 cursor-pointer border border-white/20 active:scale-95"
             aria-label="Previous slide"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
           <button
             onClick={handleNext}
-            className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 hover:bg-white/30 transition-all shadow-sm z-20 cursor-pointer"
+            className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:flex h-9 w-9 items-center justify-center rounded-full bg-black/30 hover:bg-black/50 text-white backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all shadow-md z-20 cursor-pointer border border-white/20 active:scale-95"
             aria-label="Next slide"
           >
             <ChevronRight className="h-5 w-5" />
@@ -348,21 +408,34 @@ export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
         </>
       )}
 
-      {/* Auto-Progress Bar at bottom */}
+      {/* Instamart-Style Signature Floating Counter Pill with Animated Progress Line */}
       {displayBanners.length > 1 && (
-        <div className="absolute bottom-0 left-0 right-0 z-20 flex gap-1 px-4 pb-1.5 md:pb-2">
-          {displayBanners.map((_, idx) => (
-            <div key={idx} className="h-0.5 md:h-1 flex-1 rounded-full bg-white/20 overflow-hidden">
-              {idx === current ? (
-                <div
-                  key={progressKey}
-                  className="h-full rounded-full bg-white animate-progress"
-                />
-              ) : idx < current ? (
-                <div className="h-full w-full rounded-full bg-white/50" />
-              ) : null}
-            </div>
-          ))}
+        <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1 bg-black/75 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/20 text-white shadow-xl pointer-events-auto">
+          <div className="flex items-center gap-1.5">
+            <button 
+              onClick={(e) => { e.stopPropagation(); handlePrev(); }}
+              className="h-2 w-2 rounded-full bg-white/60 hover:bg-white hover:scale-125 cursor-pointer transition-all border-none p-0" 
+              aria-label="Previous slide"
+            />
+            <span className="text-[10px] md:text-xs font-black tracking-widest px-1 font-mono">
+              {current + 1}/{displayBanners.length}
+            </span>
+            <button 
+              onClick={(e) => { e.stopPropagation(); handleNext(); }}
+              className="h-2 w-2 rounded-full bg-white/60 hover:bg-white hover:scale-125 cursor-pointer transition-all border-none p-0" 
+              aria-label="Next slide"
+            />
+          </div>
+          {/* Animated timer progress line */}
+          <div className="w-12 h-[2px] bg-white/20 rounded-full overflow-hidden">
+            <motion.div
+              key={progressKey}
+              initial={{ width: '0%' }}
+              animate={{ width: '100%' }}
+              transition={{ duration: isHovered ? 5.5 : 3.5, ease: 'linear' }}
+              className="h-full bg-gradient-to-r from-amber-400 to-rose-400 rounded-full"
+            />
+          </div>
         </div>
       )}
     </div>

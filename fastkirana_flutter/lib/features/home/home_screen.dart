@@ -36,6 +36,8 @@ import '../../widgets/unserviceable_location_banner.dart';
 import '../../widgets/address_selector_sheet.dart';
 import '../../core/services/location_service.dart';
 import '../../widgets/app_update_dialog.dart';
+import '../../widgets/dynamic_hero_banner_carousel.dart';
+import '../../providers/banner_provider.dart';
 import 'main_shell.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -348,6 +350,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 HapticFeedback.mediumImpact();
                 ref.invalidate(cartProvider);
                 ref.invalidate(categoriesProvider);
+                ref.invalidate(bannersProvider('grocery'));
                 ref.invalidate(trendingProductsProvider);
                 ref.invalidate(ordersProvider(''));
                 for (final slug in _sectionCategorySlugs.values) {
@@ -375,8 +378,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   SliverToBoxAdapter(child: _buildCategoryToggle()),
 
                   if (_isGrocerySelected) ...[
-                    // 2.5 Hero Promotional Banner (10-15 Min Fast Delivery Spotlight)
-                    SliverToBoxAdapter(child: _buildHeroPromoBanner()),
+                    // 2.5 Dynamic Hero Promotional Banner Carousel (Matching Web 1:1, Auto-Slide, Zero Coupons)
+                    const SliverToBoxAdapter(child: DynamicHeroBannerCarousel(type: 'grocery')),
 
                     // 3. Top 8 Categories (2 rows) - Premium squircle tiles
                     SliverToBoxAdapter(child: _buildTopCategoriesGrid()),
@@ -1700,14 +1703,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     SizedBox(
                       width: context.isCompact ? 78 : 96,
                       height: context.isCompact ? 78 : 96,
-                      child: Image.asset(
-                        slide['imageAsset'] as String,
+                      child: CachedNetworkImage(
+                        imageUrl: slide['webFallback'] as String,
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => CachedNetworkImage(
-                          imageUrl: slide['webFallback'] as String,
+                        memCacheWidth: 200,
+                        memCacheHeight: 200,
+                        placeholder: (_, __) => Image.asset(
+                          slide['imageAsset'] as String,
                           fit: BoxFit.contain,
-                          memCacheWidth: 200,
-                          memCacheHeight: 200,
+                        ),
+                        errorWidget: (_, __, ___) => Image.asset(
+                          slide['imageAsset'] as String,
+                          fit: BoxFit.contain,
                         ),
                       ),
                     ),
@@ -2206,44 +2213,64 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       );
     }
 
-    // 3. Check exact slug mappings
+    // 3. Match CDN banner image by slug or keyword
     final slug = cat.slug.toLowerCase().trim();
     final name = cat.name.toLowerCase().trim();
+
+    String? webCdnUrl;
+    String fallbackAsset = 'assets/categories/fruits_vegetables_category.webp';
+
     if (slug == 'fruits-vegetables' || slug.contains('fruit') || slug.contains('veg') || name.contains('fruit') || name.contains('veg')) {
-      return Image.asset('assets/categories/fruits_vegetables_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+      webCdnUrl = 'https://www.fastkirana.in/fruits-vegetables.png';
+      fallbackAsset = 'assets/categories/fruits_vegetables_category.webp';
+    } else if (slug.contains('dry-fruit') || slug.contains('super') || name.contains('dry fruit') || name.contains('nuts')) {
+      webCdnUrl = 'https://www.fastkirana.in/healthy-foods.png';
+      fallbackAsset = 'assets/categories/fruits_vegetables_category.webp';
+    } else if (slug == 'dairy-breakfast' || slug.contains('dairy') || slug.contains('milk') || name.contains('milk') || name.contains('dairy')) {
+      webCdnUrl = 'https://www.fastkirana.in/dairy-bread-eggs.png';
+      fallbackAsset = 'assets/categories/dairy_breakfast_category.webp';
+    } else if (slug == 'snacks-munchies' || slug.contains('snack') || slug.contains('munch') || name.contains('snack') || name.contains('munch')) {
+      webCdnUrl = 'https://www.fastkirana.in/snacks-munchies.png';
+      fallbackAsset = 'assets/categories/snacks_munchies_category.webp';
+    } else if (slug == 'beverages' || slug.contains('drink') || slug.contains('cold') || name.contains('beverage') || name.contains('drink')) {
+      webCdnUrl = 'https://www.fastkirana.in/beverages.png';
+      fallbackAsset = 'assets/categories/beverages_category.webp';
+    } else if (slug == 'ice-cream' || slug.contains('ice') || slug.contains('dessert') || name.contains('ice cream')) {
+      webCdnUrl = 'https://www.fastkirana.in/ice-cream.png';
+      fallbackAsset = 'assets/categories/ice_cream_category.webp';
+    } else if (slug == 'atta-rice-dal' || slug.contains('atta') || slug.contains('rice') || slug.contains('kitchen') || slug.contains('ration') || name.contains('kitchen') || name.contains('ration')) {
+      webCdnUrl = 'https://www.fastkirana.in/kitchen-needs.png';
+      fallbackAsset = 'assets/categories/atta_rice_dal_category.webp';
+    } else if (slug.contains('packaged') || name.contains('packaged')) {
+      webCdnUrl = 'https://www.fastkirana.in/packaged-foods.png';
+      fallbackAsset = 'assets/categories/snacks_munchies_category.webp';
+    } else if (slug == 'personal-care' || slug.contains('care') || slug.contains('hygiene') || name.contains('personal care')) {
+      webCdnUrl = 'https://www.fastkirana.in/personal-care.png';
+      fallbackAsset = 'assets/categories/personal_care_category.webp';
+    } else if (slug == 'home-needs-and-cleaning' || slug == 'household' || slug.contains('clean') || slug.contains('home') || name.contains('cleaning') || name.contains('home needs')) {
+      webCdnUrl = 'https://www.fastkirana.in/home-cleaning.png';
+      fallbackAsset = 'assets/categories/household_category.webp';
+    } else if (slug == 'bakery' || slug.contains('biscuit') || name.contains('bakery')) {
+      webCdnUrl = 'https://www.fastkirana.in/bakery.png';
+      fallbackAsset = 'assets/categories/bakery_biscuits_category.webp';
+    } else if (slug == 'restaurant-food' || slug.contains('cafe') || slug.contains('food')) {
+      webCdnUrl = 'https://www.fastkirana.in/restaurant-food.png';
+      fallbackAsset = 'assets/categories/cafe_category.webp';
     }
-    if (slug.contains('dry-fruit') || slug.contains('super') || name.contains('dry fruit') || name.contains('nuts')) {
-      return Image.asset('assets/categories/fruits_vegetables_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
-    }
-    if (slug == 'dairy-breakfast' || slug.contains('dairy') || slug.contains('milk') || name.contains('milk') || name.contains('dairy')) {
-      return Image.asset('assets/categories/dairy_breakfast_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
-    }
-    if (slug == 'snacks-munchies' || slug.contains('snack') || slug.contains('munch') || name.contains('snack') || name.contains('munch')) {
-      return Image.asset('assets/categories/snacks_munchies_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
-    }
-    if (slug == 'beverages' || slug.contains('drink') || slug.contains('cold') || name.contains('beverage') || name.contains('drink')) {
-      return Image.asset('assets/categories/beverages_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
-    }
-    if (slug == 'ice-cream' || slug.contains('ice') || slug.contains('dessert') || name.contains('ice cream')) {
-      return Image.asset('assets/categories/ice_cream_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
-    }
-    if (slug == 'atta-rice-dal' || slug.contains('atta') || slug.contains('rice') || slug.contains('kitchen') || slug.contains('ration') || name.contains('kitchen') || name.contains('ration')) {
-      return Image.asset('assets/categories/atta_rice_dal_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
-    }
-    if (slug.contains('packaged') || name.contains('packaged')) {
-      return Image.asset('assets/categories/snacks_munchies_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
-    }
-    if (slug == 'personal-care' || slug.contains('care') || slug.contains('hygiene') || name.contains('personal care')) {
-      return Image.asset('assets/categories/personal_care_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
-    }
-    if (slug == 'home-needs-and-cleaning' || slug == 'household' || slug.contains('clean') || slug.contains('home') || name.contains('cleaning') || name.contains('home needs')) {
-      return Image.asset('assets/categories/household_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
-    }
-    if (slug == 'bakery' || slug.contains('biscuit') || name.contains('bakery')) {
-      return Image.asset('assets/categories/bakery_biscuits_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
-    }
-    if (slug == 'restaurant-food' || slug.contains('cafe') || slug.contains('food')) {
-      return Image.asset('assets/categories/cafe_category.webp', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildCategoryFallback(cat));
+
+    if (webCdnUrl != null) {
+      return CachedNetworkImage(
+        imageUrl: webCdnUrl,
+        fit: BoxFit.cover,
+        memCacheWidth: 200,
+        memCacheHeight: 200,
+        placeholder: (_, __) => Image.asset(fallbackAsset, fit: BoxFit.cover),
+        errorWidget: (_, __, ___) => Image.asset(
+          fallbackAsset,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildCategoryFallback(cat),
+        ),
+      );
     }
 
     return _buildCategoryFallback(cat);

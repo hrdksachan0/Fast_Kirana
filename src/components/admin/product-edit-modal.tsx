@@ -143,7 +143,8 @@ export function ProductEditModal({
     return null
   }, [productEditForm.price, productEditForm.costPrice])
 
-  const [vendorsList, setVendorsList] = useState<{ id: string; name: string; code?: string }[]>([])
+  const [vendorsList, setVendorsList] = useState<{ id: string; name: string; code?: string; companyName?: string }[]>([])
+  const [isCustomVendor, setIsCustomVendor] = useState(false)
 
   useEffect(() => {
     fetch('/api/admin/vendors')
@@ -154,7 +155,7 @@ export function ProductEditModal({
             data.vendors.map((v: any) =>
               typeof v === 'string'
                 ? { id: '', name: v, code: '' }
-                : { id: v.id, name: v.name, code: v.vendorCode || '' }
+                : { id: v.id, name: v.name, code: v.vendorCode || '', companyName: v.companyName || '' }
             )
           )
         } else if (Array.isArray(data.vendorNames)) {
@@ -163,6 +164,14 @@ export function ProductEditModal({
       })
       .catch(() => {})
   }, [])
+
+  const matchedVendor = useMemo(() => {
+    return vendorsList.find(
+      (v) =>
+        (productEditForm.vendorId && v.id === productEditForm.vendorId) ||
+        (productEditForm.vendor && v.name.toLowerCase() === productEditForm.vendor.toLowerCase())
+    )
+  }, [vendorsList, productEditForm.vendorId, productEditForm.vendor])
 
   // Food type check (Veg vs Non-Veg)
   const isVegDish = useMemo(() => {
@@ -204,29 +213,70 @@ export function ProductEditModal({
         {/* Modal Body / Form */}
         <form onSubmit={saveProductChanges} className="flex-1 overflow-y-auto p-5 space-y-5">
           {/* Card 1: Store / Outlet Assignment */}
-          <div className="p-3.5 rounded-xl border border-primary/20 bg-primary/5 space-y-1.5">
-            <label className="text-[10px] font-black text-primary uppercase tracking-wider block">
-              Store / Restaurant Outlet Assignment *
-            </label>
-            <select
-              value={productEditForm.restaurantId}
-              onChange={(e) => {
-                const newRestId = e.target.value
-                setProductEditForm({
-                  ...productEditForm,
-                  restaurantId: newRestId,
-                  unit: newRestId ? (productEditForm.unit || '1 Serving') : (productEditForm.unit || '1 kg'),
-                })
-              }}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-primary/30 bg-card focus:outline-none focus:border-primary font-bold text-text-primary cursor-pointer shadow-xs"
-            >
-              <option value="">🛒 General Kirana / Grocery Store</option>
-              {restaurantsList.map((r) => (
-                <option key={r.id} value={r.id}>
-                  🍽️ Restaurant: {r.name} ({r.city || 'Outlet'})
-                </option>
-              ))}
-            </select>
+          <div className="p-3.5 rounded-xl border border-primary/20 bg-primary/5 space-y-2">
+            <div>
+              <label className="text-[10px] font-black text-primary uppercase tracking-wider block mb-1">
+                Store / Restaurant Outlet Assignment *
+              </label>
+              <select
+                value={productEditForm.restaurantId}
+                onChange={(e) => {
+                  const newRestId = e.target.value
+                  setProductEditForm({
+                    ...productEditForm,
+                    restaurantId: newRestId,
+                    unit: newRestId ? (productEditForm.unit || '1 Serving') : (productEditForm.unit || '1 kg'),
+                  })
+                }}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-primary/30 bg-card focus:outline-none focus:border-primary font-bold text-text-primary cursor-pointer shadow-xs"
+              >
+                <option value="">🛒 General Kirana / Grocery Store</option>
+                {restaurantsList.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    🍽️ Restaurant: {r.name} ({r.city || 'Outlet'})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Grocery Hub Supplier Toggle / Quick Select */}
+            {!productEditForm.restaurantId && (
+              <div className="pt-2 border-t border-primary/15 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
+                  🏢 Supplier / Vendor:
+                </span>
+                <select
+                  value={
+                    productEditForm.vendorId ||
+                    (matchedVendor ? matchedVendor.id : (productEditForm.vendor ? '__custom__' : ''))
+                  }
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (val === '__custom__') {
+                      setIsCustomVendor(true)
+                    } else if (!val) {
+                      setIsCustomVendor(false)
+                      setProductEditForm({ ...productEditForm, vendor: '', vendorId: undefined })
+                    } else {
+                      setIsCustomVendor(false)
+                      const found = vendorsList.find((v) => v.id === val)
+                      if (found) {
+                        setProductEditForm({ ...productEditForm, vendor: found.name, vendorId: found.id })
+                      }
+                    }
+                  }}
+                  className="px-2.5 py-1.5 text-xs rounded-xl border border-primary/30 bg-card focus:outline-none focus:border-primary font-bold text-text-primary cursor-pointer shadow-2xs"
+                >
+                  <option value="">🛒 Direct FastKirana (In-house / No Vendor)</option>
+                  {vendorsList.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      🏢 {v.code ? `[${v.code}] ` : ''}{v.name}
+                    </option>
+                  ))}
+                  <option value="__custom__">✏️ Custom / Unlisted Vendor...</option>
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Card 2: Essential Details (Name, Photo, Description) */}
@@ -416,39 +466,89 @@ export function ProductEditModal({
                 </div>
               </div>
 
-              {/* Vendor / Supplier (For Month-End Settlement) */}
-              <div className="bg-primary/5 border border-primary/20 p-3 rounded-2xl space-y-1.5">
+              {/* Vendor / Supplier Assignment (Store Hub Supply & Payout Settlement) */}
+              <div className="bg-primary/5 border border-primary/20 p-3.5 rounded-2xl space-y-2.5">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
-                    🏢 Vendor / Supplier Name
+                    🏢 Vendor / Supplier Assignment
                   </label>
                   <span className="text-[10px] font-bold text-text-muted">
-                    Month-End Excel Payout
+                    Month-End Excel Payout & Ledger
                   </span>
                 </div>
-                <input
-                  type="text"
-                  list="vendor-suggestions-edit"
-                  placeholder="e.g. Bansal Foods, Kanpur FMCG, Ram Wholesalers"
-                  value={productEditForm.vendor || ''}
-                  onChange={(e) => {
-                    const typed = e.target.value
-                    const matched = vendorsList.find((v) => v.name.toLowerCase() === typed.toLowerCase())
-                    setProductEditForm({
-                      ...productEditForm,
-                      vendor: typed,
-                      vendorId: matched ? matched.id : undefined,
-                    })
-                  }}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-primary/30 bg-background focus:outline-none focus:border-primary font-bold text-text-primary placeholder:text-text-muted/60"
-                />
-                <datalist id="vendor-suggestions-edit">
-                  {vendorsList.map((v) => (
-                    <option key={v.id || v.name} value={v.name} />
-                  ))}
-                </datalist>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="text-[9px] font-bold text-text-secondary block mb-1">
+                      Choose Registered Vendor:
+                    </label>
+                    <select
+                      value={
+                        productEditForm.vendorId ||
+                        (matchedVendor ? matchedVendor.id : (productEditForm.vendor ? '__custom__' : ''))
+                      }
+                      onChange={(e) => {
+                        const val = e.target.value
+                        if (val === '__custom__') {
+                          setIsCustomVendor(true)
+                        } else if (!val) {
+                          setIsCustomVendor(false)
+                          setProductEditForm({ ...productEditForm, vendor: '', vendorId: undefined })
+                        } else {
+                          setIsCustomVendor(false)
+                          const found = vendorsList.find((v) => v.id === val)
+                          if (found) {
+                            setProductEditForm({ ...productEditForm, vendor: found.name, vendorId: found.id })
+                          }
+                        }
+                      }}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-primary/30 bg-card focus:outline-none focus:border-primary font-bold text-text-primary cursor-pointer shadow-xs"
+                    >
+                      <option value="">🛒 Direct / FastKirana In-House (No Vendor)</option>
+                      {vendorsList.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          🏢 {v.code ? `[${v.code}] ` : ''}{v.name} {v.companyName ? `(${v.companyName})` : ''}
+                        </option>
+                      ))}
+                      <option value="__custom__">✏️ Other / Enter Custom Vendor Name...</option>
+                    </select>
+                  </div>
+
+                  {(isCustomVendor || (productEditForm.vendor && !matchedVendor)) && (
+                    <div>
+                      <label className="text-[9px] font-bold text-text-secondary block mb-1">
+                        Custom Vendor Name:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Bansal Foods, Kanpur FMCG"
+                        value={productEditForm.vendor || ''}
+                        onChange={(e) =>
+                          setProductEditForm({
+                            ...productEditForm,
+                            vendor: e.target.value,
+                            vendorId: undefined,
+                          })
+                        }
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-primary/30 bg-background focus:outline-none focus:border-primary font-bold text-text-primary placeholder:text-text-muted/60"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {productEditForm.vendor && (
+                  <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                    <span>✅ Linked Vendor:</span>
+                    <span className="underline">
+                      {matchedVendor?.code ? `[${matchedVendor.code}] ` : ''}{productEditForm.vendor}
+                    </span>
+                    <span className="text-text-muted font-normal text-[9px]">
+                      (Delivered sales auto-link to vendor ledger & WhatsApp PO)
+                    </span>
+                  </div>
+                )}
                 <p className="text-[10px] text-text-secondary">
-                  Month-end report me is vendor ke binke huye saare items aur total payment (Qty × Cost Price) calculate hoke Excel me aayegi.
+                  Month-end report me is vendor ke bike huye saare items aur total payment (Qty × Cost Price) calculate hoke Excel aur Payout Ledger me aayegi.
                 </p>
               </div>
 

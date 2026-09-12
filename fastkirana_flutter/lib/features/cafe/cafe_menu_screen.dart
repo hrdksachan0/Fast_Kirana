@@ -478,22 +478,14 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
 
   static const Set<String> _bundledCategoryAssets = {
     'as_restaurant_banner.webp',
-    'as_restaurant_banner.png',
-    'wedson_restaurant_bg.png',
     'wedson_restaurant_bg.webp',
-    'wedson_restaurant_banner.png',
     'wedson_restaurant_banner.webp',
-    'cafe_all_menu_category.png',
     'cafe_all_menu_category.webp',
-    'cafe_banner.png',
     'cafe_banner.webp',
-    'food_banner_bg.png',
     'food_banner_bg.webp',
     'food_promo_banner.webp',
     'food_promo_banner_premium.webp',
-    'cafe_category.png',
     'cafe_category.webp',
-    'dairy_breakfast_category.png',
     'dairy_breakfast_category.webp',
   };
 
@@ -512,9 +504,10 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
         );
       } else if (banner.startsWith('/')) {
         final assetName = banner.substring(1);
-        if (_bundledCategoryAssets.contains(assetName)) {
+        final webpName = assetName.endsWith('.png') ? '${assetName.substring(0, assetName.length - 4)}.webp' : assetName;
+        if (_bundledCategoryAssets.contains(webpName)) {
           return Image.asset(
-            'assets/categories/$assetName',
+            'assets/categories/$webpName',
             fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => _buildFallbackBanner(name),
           );
@@ -773,7 +766,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                   background: Stack(
                     fit: StackFit.expand,
                     children: [
-                      _buildBannerImage(currentRestaurant),
+                      _buildRestaurantBanner(currentRestaurant),
                       Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(

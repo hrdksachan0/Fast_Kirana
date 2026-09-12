@@ -75,7 +75,7 @@ const getCachedBanners = unstable_cache(
       orderBy: { sortOrder: 'asc' },
     })
   },
-  ['storefront-banners-v9'],
+  ['storefront-banners-v12'],
   { revalidate: 3600, tags: ['banners'] }
 )
 
@@ -260,13 +260,13 @@ const getCachedStoreSettings = unstable_cache(
     return prisma.storeSetting.findMany({
       where: {
         key: {
-          in: ['avg_delivery_time', 'delivered_today', 'fresh_stock_loaded', 'happy_families']
+          in: ['avg_delivery_time', 'delivered_today', 'fresh_stock_loaded', 'happy_families', 'grocery_mart_open', 'grocery_auto_timing', 'grocery_open_time', 'grocery_close_time']
         }
       }
     })
   },
-  ['storefront-settings'],
-  { revalidate: 3600, tags: ['settings'] }
+  ['storefront-settings-v2'],
+  { revalidate: 60, tags: ['settings'] }
 )
 
 const getCachedCategorySortRules = unstable_cache(

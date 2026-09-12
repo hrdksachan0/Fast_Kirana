@@ -680,7 +680,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
   void _interpolateRiderMarker() {
     if (_prevRiderPosition == null || _targetRiderPosition == null) return;
-    final progress = _riderAnimController.value;
+    final rawProgress = _riderAnimController.value;
+    final progress = Curves.easeInOut.transform(rawProgress);
     final curLat = _prevRiderPosition!.latitude + (_targetRiderPosition!.latitude - _prevRiderPosition!.latitude) * progress;
     final curLng = _prevRiderPosition!.longitude + (_targetRiderPosition!.longitude - _prevRiderPosition!.longitude) * progress;
 
@@ -790,11 +791,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         emoji: '🍽️',
         color: const Color(0xFF7C3AED),
       );
-      _riderMarkerIcon = await _createCustomMarkerBitmap(
-        label: 'RIDER',
-        emoji: '🛵',
-        color: const Color(0xFFEA580C),
-      );
+      _riderMarkerIcon = await _createRiderMarkerBitmap();
       _customerMarkerIcon = await _createCustomMarkerBitmap(
         label: 'HOME',
         emoji: '🏠',
@@ -806,6 +803,60 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         });
       }
     } catch (e) { LoggerService.error("Bare catch", e); }
+  }
+
+  /// Circular oriented rider marker optimized for smooth Google Maps rotation & heading
+  Future<BitmapDescriptor> _createRiderMarkerBitmap() async {
+    final pictureRecorder = ui.PictureRecorder();
+    final canvas = Canvas(pictureRecorder);
+    const size = 96.0;
+    const center = Offset(48, 48);
+
+    // 1. Soft glowing outer pulse shadow
+    final shadowPaint = Paint()
+      ..color = const Color(0xFFEA580C).withValues(alpha: 0.35)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+    canvas.drawCircle(center, 38, shadowPaint);
+
+    // 2. White Disc Fill
+    final whitePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, 34, whitePaint);
+
+    // 3. Vibrant Orange Border Ring
+    final borderPaint = Paint()
+      ..color = const Color(0xFFEA580C)
+      ..strokeWidth = 3.5
+      ..style = PaintingStyle.stroke;
+    canvas.drawCircle(center, 34, borderPaint);
+
+    // 4. Direction Arrow Indicator at top of circle (shows direction of travel)
+    final arrowPaint = Paint()
+      ..color = const Color(0xFFEA580C)
+      ..style = PaintingStyle.fill;
+    final arrowPath = Path()
+      ..moveTo(48, 6)
+      ..lineTo(54, 16)
+      ..lineTo(42, 16)
+      ..close();
+    canvas.drawPath(arrowPath, arrowPaint);
+
+    // 5. Centered Bike Emoji
+    final emojiPainter = TextPainter(
+      text: TextSpan(
+        text: '🛵',
+        style: TextStyle(fontSize: Responsive.scaledFontSize(context, 26)),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    )..layout();
+    emojiPainter.paint(canvas, Offset(48 - emojiPainter.width / 2, 48 - emojiPainter.height / 2));
+
+    final picture = pictureRecorder.endRecording();
+    final img = await picture.toImage(size.toInt(), size.toInt());
+    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
   }
 
   Future<BitmapDescriptor> _createCustomMarkerBitmap({
@@ -1036,7 +1087,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           icon: _riderMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
           rotation: _riderHeading,
           flat: true,
-          anchor: const Offset(0.5, 0.8),
+          anchor: const Offset(0.5, 0.5),
           infoWindow: const InfoWindow(
             title: '🛵 Delivery Executive',
             snippet: 'Live On the Way',

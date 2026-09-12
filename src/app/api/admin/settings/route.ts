@@ -5,6 +5,8 @@ import { revalidateStorefront } from '@/lib/revalidate'
 import { clearSettingsCache } from '@/lib/settings-cache'
 import { requireAdmin } from '@/lib/auth-guard'
 
+import { checkIsStoreOpen } from '@/app/api/settings/route'
+
 export async function PATCH(request: NextRequest) {
   const adminResult = await requireAdmin()
   if (adminResult.error) return adminResult.error
@@ -32,6 +34,19 @@ export async function PATCH(request: NextRequest) {
       })
 
       await Promise.all(updates)
+
+      // Sync dark_stores table if grocery operating state or auto timing changed
+      if (body.grocery_auto_timing !== undefined || body.grocery_mart_open !== undefined || body.grocery_open_time !== undefined || body.grocery_close_time !== undefined) {
+        const mergedSettings: Record<string, string> = { ...Object.fromEntries(currentMap.entries()), ...body }
+        const isEffectiveOpen = checkIsStoreOpen(mergedSettings, 'grocery')
+        try {
+          await prisma.darkStore.updateMany({
+            data: { groceryOpen: isEffectiveOpen }
+          })
+        } catch (syncErr) {
+          console.warn('Failed to sync dark stores status:', syncErr)
+        }
+      }
 
       // Clear shared in-memory settings cache for instant client sync
       clearSettingsCache()

@@ -230,11 +230,21 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(16),
-                        child: Image.asset(
-                          'assets/categories/fruits_vegetables_category.webp',
+                        child: CachedNetworkImage(
+                          imageUrl: 'https://www.fastkirana.in/fruits-vegetables.png',
                           fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => Center(
-                            child: Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 36))),
+                          memCacheWidth: 400,
+                          memCacheHeight: 400,
+                          placeholder: (_, __) => Image.asset(
+                            'assets/categories/fruits_vegetables_category.webp',
+                            fit: BoxFit.contain,
+                          ),
+                          errorWidget: (_, __, ___) => Image.asset(
+                            'assets/categories/fruits_vegetables_category.webp',
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => Center(
+                              child: Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 36))),
+                            ),
                           ),
                         ),
                       ),

@@ -30,22 +30,14 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
 
   static const Set<String> _bundledCategoryAssets = {
     'as_restaurant_banner.webp',
-    'as_restaurant_banner.png',
-    'wedson_restaurant_bg.png',
     'wedson_restaurant_bg.webp',
-    'wedson_restaurant_banner.png',
     'wedson_restaurant_banner.webp',
-    'cafe_all_menu_category.png',
     'cafe_all_menu_category.webp',
-    'cafe_banner.png',
     'cafe_banner.webp',
-    'food_banner_bg.png',
     'food_banner_bg.webp',
     'food_promo_banner.webp',
     'food_promo_banner_premium.webp',
-    'cafe_category.png',
     'cafe_category.webp',
-    'dairy_breakfast_category.png',
     'dairy_breakfast_category.webp',
   };
 
@@ -65,9 +57,10 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
     // 2. If bannerUrl is a local asset path or relative web path starting with '/'
     if (r.bannerUrl != null && r.bannerUrl!.isNotEmpty && r.bannerUrl!.startsWith('/')) {
       final assetName = r.bannerUrl!.substring(1);
-      if (_bundledCategoryAssets.contains(assetName)) {
+      final webpName = assetName.endsWith('.png') ? '${assetName.substring(0, assetName.length - 4)}.webp' : assetName;
+      if (_bundledCategoryAssets.contains(webpName)) {
         return Image.asset(
-          'assets/categories/$assetName',
+          'assets/categories/$webpName',
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => _buildLocalOrFallbackImage(r),
         );

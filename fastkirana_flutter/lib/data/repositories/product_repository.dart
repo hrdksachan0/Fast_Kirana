@@ -597,7 +597,16 @@ class ProductRepository {
           return cats;
         }
       }
-    } catch (e, st) { LoggerService.error('ProductRepository: getCategories failed', e, st); }
+    } catch (e, st) {
+      LoggerService.error('ProductRepository: getCategories failed', e, st);
+    }
+
+    // Disk cache fallback on network failure even if stale
+    final diskCats = await _loadCategoriesFromDisk();
+    if (diskCats != null && diskCats.isNotEmpty) {
+      _cachedCategories = diskCats;
+      return diskCats;
+    }
 
     try {
       final allProducts = await getProducts(limit: 30);

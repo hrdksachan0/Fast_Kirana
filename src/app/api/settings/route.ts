@@ -4,7 +4,7 @@ import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
 import { getRedis, CACHE_KEYS, DEFAULT_TTL } from '@/lib/redis-client'
 import { evaluateSurgeStatus } from '@/lib/surge-manager'
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
 
 const DEFAULT_SETTINGS: Record<string, string> = {
   deliveries_count: '10,000+',
@@ -103,6 +103,7 @@ export function checkIsStoreOpen(settingsMap: Record<string, string>, prefix: 'g
       hour: 'numeric',
       minute: 'numeric',
       hour12: false,
+      hourCycle: 'h23',
     })
     const parts = formatter.formatToParts(new Date())
     const currentHours = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10)
@@ -234,9 +235,11 @@ export async function GET(request: NextRequest) {
     const cached = await redis.get<Record<string, string>>(cacheKey)
 
     if (cached) {
+      const liveGrocery = checkIsStoreOpen(cached, 'grocery')
+      cached['grocery_mart_open'] = liveGrocery ? 'true' : 'false'
       return NextResponse.json(cached, {
         headers: {
-          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
         },
       })
     }
@@ -246,7 +249,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(settingsMap, {
       headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
       },
     })
   } catch (error) {
@@ -258,7 +261,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(settingsMap, {
       headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
       },
     })
   }
