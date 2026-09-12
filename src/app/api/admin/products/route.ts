@@ -167,6 +167,7 @@ export async function GET(request: Request) {
         isFlashDeal: p.isFlashDeal,
         isTopPick: p.isTopPick,
         isBestSeller: p.isBestSeller,
+        vendor: p.vendor || '',
         storeId: storeId || 'all',
         category: p.category ? {
           id: p.category.id,

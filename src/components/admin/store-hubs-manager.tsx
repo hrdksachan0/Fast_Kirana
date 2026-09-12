@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Building2, 
@@ -22,7 +22,8 @@ import {
   Clock,
   Sparkles,
   Phone,
-  Hash
+  Hash,
+  Truck
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -90,6 +91,23 @@ export function StoreHubsManager({
   const [newOutletPhone, setNewOutletPhone] = useState('')
   const [newOutletCommission, setNewOutletCommission] = useState('15')
   const [newOutletRadius, setNewOutletRadius] = useState('5.0')
+
+  // Active Store & Hub Vendors for Hierarchy
+  const activeStore = stores.find(s => s.id === selectedHubId) || (selectedHubId && selectedHubId !== 'all' ? stores.find(s => s.id === selectedHubId) : stores[0])
+  const [hubVendors, setHubVendors] = useState<any[]>([])
+  const [loadingHubVendors, setLoadingHubVendors] = useState(false)
+
+  useEffect(() => {
+    if (!isOpen || !activeStore?.id) return
+    setLoadingHubVendors(true)
+    fetch(`/api/admin/vendors?storeId=${encodeURIComponent(activeStore.id)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data.vendors)) setHubVendors(data.vendors)
+      })
+      .catch(() => {})
+      .finally(() => setLoadingHubVendors(false))
+  }, [isOpen, activeStore?.id])
 
   // Handle Hub Creation
   const handleCreateHub = async (e: React.FormEvent) => {
@@ -263,7 +281,6 @@ export function StoreHubsManager({
 
   if (!isOpen) return null
 
-  const activeStore = stores.find(s => s.id === selectedHubId) || (selectedHubId && selectedHubId !== 'all' ? stores.find(s => s.id === selectedHubId) : stores[0])
   const hubCityName = activeStore?.name 
     ? activeStore.name.replace(/central|hub|dark\s*store|market|branch/gi, '').trim().toLowerCase()
     : ''
@@ -469,8 +486,8 @@ export function StoreHubsManager({
                   </div>
                 </div>
 
-                {/* 2 DOMAIN WINGS GRID */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+                {/* 3 DOMAIN WINGS GRID */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-2">
                   {/* 🏪 1. CENTRAL GROCERY DOMAIN */}
                   <div className="border border-emerald-500/30 rounded-2xl p-4 bg-emerald-500/5 space-y-3">
                     <div className="flex items-center justify-between pb-2 border-b border-emerald-500/20">
@@ -518,13 +535,74 @@ export function StoreHubsManager({
                     </div>
                   </div>
 
-                  {/* 🍳 2. FOOD & RESTAURANT DOMAIN */}
+                  {/* 🚚 2. VENDOR & SUPPLY DOMAIN */}
+                  <div className="border border-blue-500/30 rounded-2xl p-4 bg-blue-500/5 space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-blue-500/20">
+                      <div className="flex items-center gap-2">
+                        <Truck className="w-4 h-4 text-blue-600" />
+                        <h4 className="text-xs font-black uppercase tracking-wider text-blue-700 dark:text-blue-400">
+                          2. Vendor & Supply Domain
+                        </h4>
+                      </div>
+                      <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-300 font-bold">
+                        store_type: VENDOR
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1 scrollbar-none">
+                      {loadingHubVendors ? (
+                        <div className="p-4 text-center text-xs text-text-muted">Loading hub suppliers...</div>
+                      ) : hubVendors.length === 0 ? (
+                        <div className="bg-background/80 rounded-xl p-4 border border-border/60 text-xs text-center text-text-muted">
+                          No vendors linked directly to this hub yet. (All central suppliers supply across hubs).
+                        </div>
+                      ) : (
+                        hubVendors.map((v) => (
+                          <div
+                            key={v.id}
+                            className="bg-background/80 rounded-xl p-3 border border-border/60 text-xs space-y-1.5"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="font-black text-text-primary flex items-center gap-1.5">
+                                <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 font-black">
+                                  {v.vendorCode || 'VND'}
+                                </span>
+                                <span>{v.name}</span>
+                              </div>
+                              <span className="text-[9px] font-bold text-text-muted">
+                                {v.productCount || 0} items
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-[11px] text-text-secondary font-medium">
+                              <span>📞 {v.phone || 'No phone'}</span>
+                              <span className="font-mono text-[10px] text-primary font-bold truncate max-w-[110px]">
+                                {v.upiId || 'No UPI'}
+                              </span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="pt-2 border-t border-blue-500/20 text-center">
+                      <Link
+                        href={`/admin/vendors?storeId=${activeStore?.id}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition shadow-sm"
+                      >
+                        <Truck className="w-3.5 h-3.5" />
+                        <span>Manage {activeStore?.name} Vendors</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </Link>
+                    </div>
+                  </div>
+
+                  {/* 🍳 3. FOOD & RESTAURANT DOMAIN */}
                   <div className="border border-amber-500/30 rounded-2xl p-4 bg-amber-500/5 space-y-3">
                     <div className="flex items-center justify-between pb-2 border-b border-amber-500/20">
                       <div className="flex items-center gap-2">
                         <Utensils className="w-4 h-4 text-amber-600" />
                         <h4 className="text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-400">
-                          2. Food & Restaurant Domain
+                          3. Food & Restaurant Domain
                         </h4>
                       </div>
                       <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 font-bold">

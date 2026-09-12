@@ -54,6 +54,8 @@ export async function POST(request: NextRequest) {
         normalizedEmail = 'superadmin@fastkirana.com'
       } else if (phoneDigits === '7054470303') {
         normalizedEmail = 'admin@fastkirana.com'
+      } else if (phoneDigits === '9696678006') {
+        normalizedEmail = 'admin.hub-224122@fastkirana.in'
       } else {
         normalizedEmail = `phone:${phoneDigits}`
       }

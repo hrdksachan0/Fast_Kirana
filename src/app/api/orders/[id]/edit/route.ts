@@ -105,12 +105,12 @@ export async function POST(
       
       const product = await prisma.product.findUnique({
         where: { id: item.productId },
-        select: { stock: true, name: true, variants: true, category: true, tags: true }
+        select: { stock: true, name: true, variants: true, restaurantId: true }
       })
       if (!product) continue
 
-      // Skip kitchen items
-      if (product.category?.slug === 'cafe' || product.category?.slug === 'restaurant' || product.tags?.includes('cafe') || product.tags?.includes('restaurant')) {
+      // Skip kitchen items (restaurant dishes have restaurantId)
+      if (product.restaurantId || (product as any).restaurant?.id) {
         continue
       }
 
@@ -204,67 +204,40 @@ export async function POST(
       let resolvedShopPhone: string | null = null
 
       if (product) {
-        if (order.orderType === 'GROCERY') {
-          // In a grocery order, only classify as restaurant if explicitly assigned to a restaurant or restaurant food category
-          isRestaurant = Boolean(
-            product.restaurantId ||
-            product.restaurant?.id ||
-            itemRestId ||
-            product.category?.slug === 'cafe' ||
-            product.category?.slug === 'restaurant' ||
-            product.category?.slug === 'restaurant-food' ||
-            product.category?.slug === 'cat-112'
-          )
+        // Pure ID-wise: product belongs to restaurant IF AND ONLY IF it has a restaurantId
+        const rawRestId = product.restaurantId || product.restaurant?.id
+        if (rawRestId) {
+          isRestaurant = true
+          resolvedRestId = normalizeRestaurantId(rawRestId) || rawRestId
+          resolvedShopName = product.restaurant?.name || itemShopName || (resolvedRestId?.includes('101') ? 'A.S. Restaurant' : resolvedRestId?.includes('102') ? 'Wedson Restaurant' : resolvedRestId?.includes('103') ? 'Bal Udyan Restaurant' : resolvedRestId?.includes('104') ? 'Pari Milk Dairy & Sweets' : 'Restaurant')
+          resolvedShopPhone = product.restaurant?.ownerPhone || (product.restaurant as any)?.phone || null
         } else {
-          // Restaurant order or unspecified: check restaurant properties, categories, tags, or inherit from order
-          isRestaurant = Boolean(
-            product.restaurantId ||
-            product.restaurant?.id ||
-            itemRestId ||
-            product.category?.slug === 'cafe' ||
-            product.category?.slug === 'restaurant' ||
-            product.category?.slug === 'restaurant-food' ||
-            product.category?.slug === 'cat-112' ||
-            product.tags?.some((t: string) => ['restaurant', 'cafe', 'cooked', 'dish', 'wedson', 'as-restaurant', 'bal-udyan', 'pari-milk'].includes(t.toLowerCase())) ||
-            (order.orderType === 'RESTAURANT' && !product.category?.slug?.includes('grocery') && !product.category?.slug?.includes('kitchen-needs'))
-          )
-        }
-
-        if (isRestaurant) {
-          resolvedRestId = normalizeRestaurantId(
-            product.restaurantId ||
-            product.restaurant?.id ||
-            itemRestId ||
-            order.restaurantId
-          ) || normalizeRestaurantId(order.restaurantId) || 'REST-101'
-
-          resolvedShopName = product.restaurant?.name || itemShopName || order.shopName || (resolvedRestId ? (resolvedRestId.includes('101') ? 'A.S. Restaurant' : resolvedRestId.includes('102') ? 'Wedson Restaurant' : resolvedRestId.includes('103') ? 'Bal Udyan Restaurant' : resolvedRestId.includes('104') ? 'Pari Milk Dairy & Sweets' : 'Restaurant') : 'Restaurant')
-          resolvedShopPhone = product.restaurant?.ownerPhone || (product.restaurant as any)?.phone || order.shopPhone || null
+          // No restaurantId -> 100% Dark Store GROCERY item (even if added while editing a restaurant order)
+          isRestaurant = false
+          resolvedRestId = null
+          resolvedShopName = 'FastKirana Grocery'
+          resolvedShopPhone = null
         }
       } else {
-        // Custom item
-        if (itemRestId || order.orderType === 'RESTAURANT' || order.restaurantId) {
+        // Custom item (off-menu / phone-in, not in catalog)
+        const explicitRestId = itemRestId ? normalizeRestaurantId(itemRestId) : null
+        if (explicitRestId) {
           isRestaurant = true
-          resolvedRestId = normalizeRestaurantId(itemRestId || order.restaurantId) || order.restaurantId || 'REST-101'
-          resolvedShopName = itemShopName || order.shopName || (resolvedRestId?.includes('101') ? 'A.S. Restaurant' : resolvedRestId?.includes('102') ? 'Wedson Restaurant' : resolvedRestId?.includes('103') ? 'Bal Udyan Restaurant' : resolvedRestId?.includes('104') ? 'Pari Milk Dairy & Sweets' : 'Restaurant')
+          resolvedRestId = explicitRestId
+          resolvedShopName = itemShopName || (resolvedRestId?.includes('101') ? 'A.S. Restaurant' : resolvedRestId?.includes('102') ? 'Wedson Restaurant' : resolvedRestId?.includes('103') ? 'Bal Udyan Restaurant' : resolvedRestId?.includes('104') ? 'Pari Milk Dairy & Sweets' : 'Restaurant')
           resolvedShopPhone = order.shopPhone || null
-        }
-      }
-
-      // If the original order is a RESTAURANT order, and item is not a packaged darkstore grocery item, keep it in this restaurant!
-      if (!isRestaurant && order.orderType === 'RESTAURANT' && order.restaurantId) {
-        const isDefinitiveGrocery = product && (
-          product.category?.slug === 'fruits-vegetables' ||
-          product.category?.slug === 'atta-rice-dal' ||
-          product.category?.slug === 'kitchen-needs' ||
-          product.category?.slug === 'personal-care' ||
-          product.category?.slug === 'cleaning-household'
-        )
-        if (!isDefinitiveGrocery) {
+        } else if (order.orderType === 'RESTAURANT' && order.restaurantId && (effectiveRole === 'CHEF' || effectiveRole === 'RESTAURANT_OWNER')) {
+          // Off-menu item entered by restaurant chef/owner belongs to their restaurant
           isRestaurant = true
-          resolvedRestId = normalizeRestaurantId(order.restaurantId) || 'REST-101'
+          resolvedRestId = normalizeRestaurantId(order.restaurantId) || order.restaurantId
           resolvedShopName = order.shopName || 'Restaurant'
           resolvedShopPhone = order.shopPhone || null
+        } else {
+          // Otherwise default custom item to grocery
+          isRestaurant = false
+          resolvedRestId = null
+          resolvedShopName = 'FastKirana Grocery'
+          resolvedShopPhone = null
         }
       }
 

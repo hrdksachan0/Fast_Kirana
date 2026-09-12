@@ -338,7 +338,7 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
             data: (products) {
               // 1. Apply Domain Filter
               var domainFiltered = products.where((p) {
-                final isRest = isRestaurantProduct(p);
+                final isRest = (p.restaurantId != null && p.restaurantId!.trim().isNotEmpty) || p.restaurant != null;
 
                 if (widget.isAdmin) {
                   // Admin can filter by chip
@@ -470,8 +470,11 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
                         elevation: 0,
                       ),
                       onPressed: () {
-                        final restId = p.restaurantId ?? p.restaurant?.id ?? (isRest ? (widget.restaurantId ?? outletWedsonId) : null);
-                        final outletName = isRest ? getOutletName(p) : 'FastKirana Grocery';
+                        final rawRestId = (p.restaurantId != null && p.restaurantId!.trim().isNotEmpty)
+                            ? p.restaurantId
+                            : (p.restaurant?.id != null && p.restaurant!.id.trim().isNotEmpty ? p.restaurant!.id : null);
+                        final isRestProduct = rawRestId != null && rawRestId.trim().isNotEmpty;
+                        final outletName = isRestProduct ? (p.restaurant?.name ?? getOutletName(p)) : 'FastKirana Grocery';
                         widget.onProductSelected({
                           'productId': p.id,
                           'name': p.name,
@@ -479,7 +482,7 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
                           'quantity': 1,
                           'imageUrl': p.imageUrl,
                           'isCustom': false,
-                          'restaurantId': isRest ? (restId ?? widget.restaurantId) : null,
+                          'restaurantId': isRestProduct ? rawRestId : null,
                           'shopName': outletName,
                         });
                         Navigator.pop(context);

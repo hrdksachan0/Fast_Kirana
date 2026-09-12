@@ -204,7 +204,10 @@ model Product {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   barcode      String?   @unique
+  vendor       String?
+  vendorId     String?
 
+  vendorRel    Vendor?        @relation(fields: [vendorId], references: [id], onDelete: SetNull)
   category     Category?      @relation(fields: [categoryId], references: [id])
   restaurant   Restaurant?    @relation(fields: [restaurantId], references: [id])
   images       ProductImage[]
@@ -226,6 +229,8 @@ model Product {
   @@index([isFlashDeal])
   @@index([isBestSeller])
   @@index([isTopPick])
+  @@index([vendor])
+  @@index([vendorId])
   @@index([createdAt])
   @@index([categoryId, isAvailable, sortOrder, createdAt, id])
   @@map("products")
@@ -778,4 +783,55 @@ model DishVariant {
   @@index([dishId])
   @@map("dish_variants")
 }
+
+model Vendor {
+  id          String         @id @default(cuid())
+  vendorCode  String?        @unique
+  name        String
+  phone       String?
+  email       String?
+  companyName String?
+  gstin       String?
+  upiId       String?
+  bankName    String?
+  accountNo   String?
+  ifscCode    String?
+  address     String?
+  isActive    Boolean        @default(true)
+  storeId     String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  products    Product[]
+  payouts     VendorPayout[]
+
+  @@index([vendorCode])
+  @@index([name])
+  @@index([phone])
+  @@index([isActive])
+  @@map("vendors")
+}
+
+model VendorPayout {
+  id            String    @id @default(cuid())
+  vendorId      String
+  amount        Float
+  startDate     DateTime
+  endDate       DateTime
+  paymentMethod String    @default("UPI") // UPI, NEFT, IMPS, CASH
+  transactionId String?   // UTR / Ref Number
+  paidAt        DateTime?
+  status        String    @default("PAID") // PENDING, PAID
+  notes         String?
+  storeId       String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  vendor        Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@index([vendorId])
+  @@index([createdAt])
+  @@map("vendor_payouts")
+}
+
 

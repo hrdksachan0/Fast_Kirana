@@ -476,7 +476,28 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
     ];
   }
 
-  Widget _buildBannerImage(Restaurant? r) {
+  static const Set<String> _bundledCategoryAssets = {
+    'as_restaurant_banner.webp',
+    'as_restaurant_banner.png',
+    'wedson_restaurant_bg.png',
+    'wedson_restaurant_bg.webp',
+    'wedson_restaurant_banner.png',
+    'wedson_restaurant_banner.webp',
+    'cafe_all_menu_category.png',
+    'cafe_all_menu_category.webp',
+    'cafe_banner.png',
+    'cafe_banner.webp',
+    'food_banner_bg.png',
+    'food_banner_bg.webp',
+    'food_promo_banner.webp',
+    'food_promo_banner_premium.webp',
+    'cafe_category.png',
+    'cafe_category.webp',
+    'dairy_breakfast_category.png',
+    'dairy_breakfast_category.webp',
+  };
+
+  Widget _buildRestaurantBanner(Restaurant? r) {
     final name = (r?.name ?? widget.restaurantName).toLowerCase();
     final banner = r?.bannerUrl;
 
@@ -491,10 +512,19 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
         );
       } else if (banner.startsWith('/')) {
         final assetName = banner.substring(1);
-        return Image.asset(
-          'assets/categories/$assetName',
+        if (_bundledCategoryAssets.contains(assetName)) {
+          return Image.asset(
+            'assets/categories/$assetName',
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _buildFallbackBanner(name),
+          );
+        }
+        return CachedNetworkImage(
+          imageUrl: 'https://www.fastkirana.in$banner',
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildFallbackBanner(name),
+          memCacheWidth: 800,
+          memCacheHeight: 400,
+          errorWidget: (_, __, ___) => _buildFallbackBanner(name),
         );
       }
     }
@@ -566,10 +596,19 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
         );
       } else if (logo.startsWith('/')) {
         final assetName = logo.substring(1);
-        return Image.asset(
-          'assets/categories/$assetName',
+        if (_bundledCategoryAssets.contains(assetName)) {
+          return Image.asset(
+            'assets/categories/$assetName',
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _buildFallbackLogo(name),
+          );
+        }
+        return CachedNetworkImage(
+          imageUrl: 'https://www.fastkirana.in$logo',
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildFallbackLogo(name),
+          memCacheWidth: 200,
+          memCacheHeight: 200,
+          errorWidget: (_, __, ___) => _buildFallbackLogo(name),
         );
       }
     }

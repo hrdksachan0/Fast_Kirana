@@ -46,15 +46,16 @@ class ProductRepository {
       final diskProducts = results[0] as List<Product>?;
       final diskCategories = results[1] as List<Category>?;
 
-      // Only promote to in-memory cache if disk data is fresh (within TTL)
-      final productsFresh = await _isDiskCacheFresh();
-      if (productsFresh && diskProducts != null && diskProducts.isNotEmpty) {
+      // Always promote to in-memory cache on launch so screens show content with 0ms delay (stale-while-revalidate)
+      if (diskProducts != null && diskProducts.isNotEmpty) {
         _cachedProducts = diskProducts;
-        _lastFetchTime = DateTime.now();
+        final productsFresh = await _isDiskCacheFresh();
+        if (productsFresh) {
+          _lastFetchTime = DateTime.now();
+        }
       }
 
-      final categoriesFresh = await _isDiskCategoryCacheFresh();
-      if (categoriesFresh && diskCategories != null && diskCategories.isNotEmpty) {
+      if (diskCategories != null && diskCategories.isNotEmpty) {
         _cachedCategories = diskCategories;
       }
 

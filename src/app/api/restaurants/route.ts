@@ -59,7 +59,16 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. Filter by storeId: If browsing by dark store hub (or store-assigned admin), only restaurants from that store's city!
-    const userAssignedStoreId = (session?.user as any)?.assignedStoreId
+    let userAssignedStoreId = (session?.user as any)?.assignedStoreId
+    if (!userAssignedStoreId && session?.user?.id) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { assignedStoreId: true }
+      })
+      if (dbUser?.assignedStoreId) {
+        userAssignedStoreId = dbUser.assignedStoreId
+      }
+    }
     const storeId = searchParams.get('storeId') || userAssignedStoreId
     if (storeId && storeId !== 'all') {
       const store = await prisma.darkStore.findUnique({

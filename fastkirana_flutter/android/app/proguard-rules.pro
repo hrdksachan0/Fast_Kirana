@@ -55,6 +55,21 @@
 -dontwarn com.razorpay.**
 
 # ──────────────────────────────────────────────
+# Cashfree Payment Gateway
+# ──────────────────────────────────────────────
+-keep class com.cashfree.** { *; }
+-keepclassmembers class com.cashfree.** { *; }
+-dontwarn com.cashfree.**
+
+# ──────────────────────────────────────────────
+# Supabase & Postgrest
+# ──────────────────────────────────────────────
+-keep class io.supabase.** { *; }
+-dontwarn io.supabase.**
+-keepattributes Signature, InnerClasses, EnclosingMethod
+-keepattributes *Annotation*
+
+# ──────────────────────────────────────────────
 # Google Sign-In & Play Services Auth
 # ──────────────────────────────────────────────
 -keep class com.google.android.gms.auth.** { *; }

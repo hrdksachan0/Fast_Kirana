@@ -28,6 +28,27 @@ class RestaurantCard extends ConsumerStatefulWidget {
 class _RestaurantCardState extends ConsumerState<RestaurantCard> {
   bool _isFavorite = false;
 
+  static const Set<String> _bundledCategoryAssets = {
+    'as_restaurant_banner.webp',
+    'as_restaurant_banner.png',
+    'wedson_restaurant_bg.png',
+    'wedson_restaurant_bg.webp',
+    'wedson_restaurant_banner.png',
+    'wedson_restaurant_banner.webp',
+    'cafe_all_menu_category.png',
+    'cafe_all_menu_category.webp',
+    'cafe_banner.png',
+    'cafe_banner.webp',
+    'food_banner_bg.png',
+    'food_banner_bg.webp',
+    'food_promo_banner.webp',
+    'food_promo_banner_premium.webp',
+    'cafe_category.png',
+    'cafe_category.webp',
+    'dairy_breakfast_category.png',
+    'dairy_breakfast_category.webp',
+  };
+
   Widget _buildRestaurantImage(Restaurant r) {
     // 1. Check if bannerUrl is a remote URL (PRIORITY: Banner goes into card hero, matching Web app!)
     if (r.bannerUrl != null && r.bannerUrl!.isNotEmpty && r.bannerUrl!.startsWith('http')) {
@@ -41,13 +62,23 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
       );
     }
 
-    // 2. If bannerUrl is a local asset path starting with '/'
+    // 2. If bannerUrl is a local asset path or relative web path starting with '/'
     if (r.bannerUrl != null && r.bannerUrl!.isNotEmpty && r.bannerUrl!.startsWith('/')) {
       final assetName = r.bannerUrl!.substring(1);
-      return Image.asset(
-        'assets/categories/$assetName',
+      if (_bundledCategoryAssets.contains(assetName)) {
+        return Image.asset(
+          'assets/categories/$assetName',
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildLocalOrFallbackImage(r),
+        );
+      }
+      return CachedNetworkImage(
+        imageUrl: 'https://www.fastkirana.in${r.bannerUrl}',
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _buildLocalOrFallbackImage(r),
+        memCacheWidth: 600,
+        memCacheHeight: 400,
+        placeholder: (_, __) => _buildImagePlaceholder(),
+        errorWidget: (_, __, ___) => _buildLocalOrFallbackImage(r),
       );
     }
 

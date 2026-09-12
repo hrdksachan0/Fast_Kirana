@@ -2,12 +2,14 @@
 
 import { AdminRestaurantConsole } from '@/components/admin/admin-restaurant-console'
 
-interface RestaurantConsoleTabProps {}
+interface RestaurantConsoleTabProps {
+  storeId?: string
+}
 
-export function RestaurantConsoleTab({}: RestaurantConsoleTabProps) {
+export function RestaurantConsoleTab({ storeId }: RestaurantConsoleTabProps) {
   return (
     <div className="animate-fade-in">
-      <AdminRestaurantConsole />
+      <AdminRestaurantConsole storeId={storeId} />
     </div>
   )
 }

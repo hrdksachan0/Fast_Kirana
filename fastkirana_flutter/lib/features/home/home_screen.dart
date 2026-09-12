@@ -443,9 +443,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           activeAddress: selectedAddress,
                           onAddressSelected: (addr) {
                             final distKm = (addr.latitude != null && addr.longitude != null)
-                                ? LocationService.getDistanceKm(addr.latitude!, addr.longitude!)
+                                ? LocationService.getDistanceKm(
+                                    addr.latitude!,
+                                    addr.longitude!,
+                                    originLat: currentHub.latitude,
+                                    originLng: currentHub.longitude,
+                                  )
                                 : 0.0;
-                            if (distKm > LocationService.maxDeliveryRadiusKm) {
+                            if (distKm > currentHub.deliveryRadiusKm) {
                               UnserviceableLocationBanner.showUnserviceableModal(context, ref, distKm);
                             }
                           },

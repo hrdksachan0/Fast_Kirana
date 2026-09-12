@@ -885,8 +885,8 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
         quantity: 1,
         selectedVariant: null,
         notes: null,
-        restaurantId: product.restaurantId || restaurant?.id || editingOrder?.restaurantId,
-        shopName: product.restaurant?.name || restaurant?.name || editingOrder?.shopName || 'Restaurant'
+        restaurantId: product.restaurantId || (product.restaurant?.id ? product.restaurant.id : null),
+        shopName: product.restaurant?.name || (product.restaurantId ? (restaurant?.name || 'Restaurant') : 'FastKirana Grocery')
       }])
     }
     setSearchQuery('')

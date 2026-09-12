@@ -28,19 +28,29 @@ export default async function AdminPage(props: {
     redirect('/login?callbackUrl=/admin')
   }
 
+  const dbUser = session?.user?.id ? await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, role: true, phone: true, email: true, name: true, assignedStoreId: true }
+  }) : null
+
+  const userAssignedStoreId = dbUser?.assignedStoreId || (session.user as any)?.assignedStoreId || null
+
   const isMaster = isRootAdminAccount({
-    email: session.user?.email,
-    phone: (session.user as any)?.phone,
-    role: session.user?.role,
+    email: dbUser?.email || session.user?.email,
+    phone: dbUser?.phone || (session.user as any)?.phone,
+    role: dbUser?.role || session.user?.role,
   })
 
-  const role = session.user?.role?.toUpperCase()
+  const role = (dbUser?.role || session.user?.role)?.toUpperCase()
   if (!isMaster && role !== 'ADMIN') {
     redirect('/')
   }
 
   const searchParams = props.searchParams ? await props.searchParams : undefined
-  const initialStoreId = searchParams?.storeId || (session.user as any)?.assignedStoreId || null
+  // For branch/hub admins (like Akbarpur), STRICTLY lock initialStoreId to their assigned store!
+  const initialStoreId = isMaster
+    ? (searchParams?.storeId || userAssignedStoreId || null)
+    : (userAssignedStoreId || searchParams?.storeId || null)
 
   // 1. Fetch all store data in parallel
   let orderCount = 0
@@ -484,11 +494,11 @@ export default async function AdminPage(props: {
           initialStoreId={initialStoreId}
           serverUser={{
             id: session.user.id,
-            name: session.user.name,
-            email: session.user.email,
-            role: session.user.role,
-            phone: (session.user as any).phone || null,
-            assignedStoreId: (session.user as any).assignedStoreId || null,
+            name: dbUser?.name || session.user.name,
+            email: dbUser?.email || session.user.email,
+            role: dbUser?.role || session.user.role,
+            phone: dbUser?.phone || (session.user as any).phone || null,
+            assignedStoreId: userAssignedStoreId,
           }}
           initialOrders={orders}
           initialProducts={products}

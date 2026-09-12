@@ -4,11 +4,23 @@ import { auth } from '@/auth'
 import { requireAdmin } from '@/lib/auth-guard'
 import { revalidateTag } from 'next/cache'
 import { revalidateStorefront } from '@/lib/revalidate'
+import { cache, CACHE_KEYS, DEFAULT_TTL } from '@/lib/redis-client'
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const rootOnly = searchParams.get('rootOnly') === 'true'
+    const cacheKey = `${CACHE_KEYS.CATEGORIES}:${rootOnly ? 'root' : 'all'}`
+
+    const cached = await cache.get<any[]>(cacheKey)
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+          'X-Cache': 'HIT',
+        }
+      })
+    }
 
     const where: any = {}
     if (rootOnly) {
@@ -48,9 +60,13 @@ export async function GET(request: Request) {
       }
     })
 
+    // Store in hybrid cache
+    await cache.set(cacheKey, enrichedCategories, { ex: DEFAULT_TTL.CATEGORIES })
+
     return NextResponse.json(enrichedCategories, {
       headers: {
         'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+        'X-Cache': 'MISS',
       }
     })
   } catch (error: any) {
@@ -131,6 +147,7 @@ export async function POST(request: Request) {
 
     // Revalidate category lists cache immediately
     try {
+      await cache.delByPrefix(CACHE_KEYS.CATEGORIES)
       revalidateTag('categories', 'max')
       revalidateStorefront()
     } catch (e) {

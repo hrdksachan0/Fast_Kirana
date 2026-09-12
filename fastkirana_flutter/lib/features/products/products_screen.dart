@@ -8,6 +8,7 @@ import '../../data/models/product.dart';
 import '../../data/repositories/product_repository.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/empty_state.dart';
+import '../../core/widgets/loading_widgets.dart';
 import '../products/product_detail_screen.dart';
 
 final productsProvider = FutureProvider<List<Product>>((ref) {
@@ -75,7 +76,7 @@ class ProductsScreen extends ConsumerWidget {
               },
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator(color: AppDesignSystem.primary)),
+          loading: () => const SingleChildScrollView(child: ProductGridShimmer(count: 8)),
           error: (e, _) => Center(
             child: Text('Error: $e', style: const TextStyle(color: AppDesignSystem.danger)),
           ),

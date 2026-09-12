@@ -11,6 +11,7 @@ import '../core/services/location_service.dart';
 import '../data/models/address.dart';
 import '../providers/address_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/store_hub_provider.dart';
 import '../features/location/map_picker_screen.dart';
 import '../core/routes/page_transitions.dart';
 import 'unserviceable_location_banner.dart';
@@ -121,6 +122,7 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
   @override
   Widget build(BuildContext context) {
     final addressesAsync = ref.watch(addressesProvider);
+    final currentHub = ref.watch(currentStoreHubProvider);
 
     return Container(
       constraints: BoxConstraints(
@@ -138,7 +140,7 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
           Center(
             child: Container(
               margin: const EdgeInsets.only(top: 10, bottom: 6),
-              width: 38,
+              width: 36,
               height: 4,
               decoration: BoxDecoration(
                 color: AppDesignSystem.slate200,
@@ -168,7 +170,7 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Express delivery within 5 km of Ghatampur Hub',
+                        'Express delivery within ${currentHub.deliveryRadiusKm.toStringAsFixed(0)} km of ${currentHub.name}',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w500,
@@ -366,9 +368,14 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
                                 widget.activeAddress!.fullAddress == addr.fullAddress));
 
                     final distKm = (addr.latitude != null && addr.longitude != null)
-                        ? LocationService.getDistanceKm(addr.latitude!, addr.longitude!)
+                        ? LocationService.getDistanceKm(
+                            addr.latitude!,
+                            addr.longitude!,
+                            originLat: currentHub.latitude,
+                            originLng: currentHub.longitude,
+                          )
                         : 0.0;
-                    final isServiceable = distKm <= LocationService.maxDeliveryRadiusKm;
+                    final isServiceable = distKm <= currentHub.deliveryRadiusKm;
 
                     return InkWell(
                       onTap: () {

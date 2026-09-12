@@ -55,11 +55,13 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
       _items = rawItems.map((e) {
         final map = Map<String, dynamic>.from(e as Map);
         if (widget.isRestaurant) {
-          if (map['restaurantId'] == null || map['restaurantId'].toString().isEmpty) {
+          final rawPid = map['productId']?.toString();
+          final isCustom = rawPid == null || rawPid.startsWith('custom_');
+          if ((map['restaurantId'] == null || map['restaurantId'].toString().isEmpty) && isCustom) {
             map['restaurantId'] = parentRestId;
           }
           if (map['shopName'] == null || map['shopName'].toString().isEmpty) {
-            map['shopName'] = parentShopName ?? 'Restaurant';
+            map['shopName'] = map['restaurantId'] != null ? (parentShopName ?? 'Restaurant') : 'FastKirana Grocery';
           }
         }
         return map;
@@ -263,8 +265,8 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
             'selectedVariant': it['selectedVariant'],
             'notes': it['notes'],
             'imageUrl': it['imageUrl'],
-            'restaurantId': it['restaurantId'] ?? (widget.isRestaurant ? (widget.restaurantId ?? widget.order['restaurantId']) : null),
-            'shopName': it['shopName'] ?? (widget.isRestaurant ? (widget.order['shopName'] ?? 'Restaurant') : null),
+            'restaurantId': it['restaurantId'],
+            'shopName': it['shopName'] ?? (it['restaurantId'] != null ? (widget.order['shopName'] ?? 'Restaurant') : 'FastKirana Grocery'),
           };
         }).toList(),
         'outOfStockProductIds': _outOfStockProductIds.toList(),

@@ -575,29 +575,38 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                   // Real Image
                   ClipRRect(
                     borderRadius: BorderRadius.circular(14),
-                    child: webUrl != null && webUrl.startsWith('http')
-                        ? CachedNetworkImage(
-                            imageUrl: webUrl,
-                            fit: BoxFit.cover,
-                            memCacheWidth: 400,
-                            memCacheHeight: 400,
-                            maxWidthDiskCache: 600,
-                            maxHeightDiskCache: 600,
-                            errorWidget: (_, __, ___) => Image.asset(
-                              assetPath,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Center(
-                                child: Text('🥬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 38))),
-                              ),
-                            ),
-                          )
-                        : Image.asset(
+                    child: () {
+                      final resolvedWebUrl = (webUrl != null && webUrl.isNotEmpty)
+                          ? (webUrl.startsWith('http')
+                              ? webUrl
+                              : (webUrl.startsWith('/') ? 'https://www.fastkirana.in$webUrl' : null))
+                          : null;
+
+                      if (resolvedWebUrl != null) {
+                        return CachedNetworkImage(
+                          imageUrl: resolvedWebUrl,
+                          fit: BoxFit.cover,
+                          memCacheWidth: 400,
+                          memCacheHeight: 400,
+                          maxWidthDiskCache: 600,
+                          maxHeightDiskCache: 600,
+                          errorWidget: (_, __, ___) => Image.asset(
                             assetPath,
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => Center(
                               child: Text('🥬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 38))),
                             ),
                           ),
+                        );
+                      }
+                      return Image.asset(
+                        assetPath,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Center(
+                          child: Text('🥬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 38))),
+                        ),
+                      );
+                    }(),
                   ),
 
                   // Top Left: Items Badge Pill

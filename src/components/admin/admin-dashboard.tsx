@@ -33,6 +33,7 @@ import { FlashDealsTab } from '@/components/admin/flash-deals-tab'
 import { RiderCashTab } from '@/components/admin/rider-cash-tab'
 import { CsvImportTab } from '@/components/admin/csv-import-tab'
 import { RestaurantConsoleTab } from '@/components/admin/restaurant-console-tab'
+import { VendorConsoleTab } from '@/components/admin/vendor-console-tab'
 import { WhatsAppAlertModal } from '@/components/admin/dashboard/whatsapp-alert-modal'
 import { printKOTReceipt, printCustomerInvoice } from '@/lib/kot-print'
 import { toast } from 'sonner'
@@ -81,6 +82,7 @@ import {
   RefreshCw,
   Wallet,
   Store,
+  Truck,
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -89,6 +91,7 @@ import { StoreHubsManager } from './store-hubs-manager'
 
 const CreateOrderModal = dynamic(() => import('./create-order-modal').then((m) => m.CreateOrderModal), { ssr: false })
 const ProductEditModal = dynamic(() => import('./product-edit-modal'), { ssr: false })
+import type { ProductEditForm } from './product-edit-modal'
 const CategoryEditModal = dynamic(() => import('./category-edit-modal').then((m) => m.CategoryEditModal), { ssr: false })
 const ReviewEditModal = dynamic(() => import('./review-edit-modal').then((m) => m.ReviewEditModal), { ssr: false })
 const BlockCustomerModal = dynamic(() => import('./block-customer-modal').then((m) => m.BlockCustomerModal), { ssr: false })
@@ -131,7 +134,7 @@ interface AdminDashboardProps {
   }
 }
 
-type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'restaurant-report' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals' | 'forecast' | 'rider-cash' | 'restaurant-console' | 'csv-import'
+type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'restaurant-report' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals' | 'forecast' | 'rider-cash' | 'restaurant-console' | 'vendors' | 'csv-import'
 
 export function AdminDashboard({
   initialStoreId,
@@ -152,7 +155,7 @@ export function AdminDashboard({
   const sessionUserRole = activeUser?.role || ''
   const sessionUserEmail = ((activeUser as any)?.email || '').toLowerCase().trim()
   const sessionUserPhone = (activeUser as any)?.phone || ''
-  const sessionAssignedStoreId = (activeUser as any)?.assignedStoreId || null
+  const sessionAssignedStoreId = serverUser?.assignedStoreId || (activeUser as any)?.assignedStoreId || null
   const phoneDigits = sessionUserPhone.replace(/\D/g, '').slice(-10)
 
   const isSuperAdmin = 
@@ -162,7 +165,7 @@ export function AdminDashboard({
 
   const searchParams = useSearchParams()
   const urlStoreId = searchParams?.get('storeId') || null
-  const effectiveInitialHub = sessionAssignedStoreId || initialStoreId || urlStoreId || 'hub-209206'
+  const effectiveInitialHub = sessionAssignedStoreId || initialStoreId || (isSuperAdmin ? (urlStoreId || 'hub-209206') : 'hub-209206')
 
   const [restaurantsList, setRestaurantsList] = useState<any[]>([])
   const [storesList, setStoresList] = useState<any[]>([])
@@ -173,12 +176,12 @@ export function AdminDashboard({
   useEffect(() => {
     if (sessionAssignedStoreId) {
       setSelectedHubId(sessionAssignedStoreId)
-    } else if (urlStoreId && urlStoreId !== selectedHubId) {
+    } else if (isSuperAdmin && urlStoreId && urlStoreId !== selectedHubId) {
       setSelectedHubId(urlStoreId)
     } else if (initialStoreId && initialStoreId !== selectedHubId && !urlStoreId) {
       setSelectedHubId(initialStoreId)
     }
-  }, [sessionAssignedStoreId, urlStoreId, initialStoreId])
+  }, [sessionAssignedStoreId, urlStoreId, initialStoreId, isSuperAdmin])
 
   const handleSelectHub = (hubId: string) => {
     setSelectedHubId(hubId)
@@ -712,23 +715,23 @@ export function AdminDashboard({
           setStoresList(data)
           if (sessionAssignedStoreId) {
             setSelectedHubId(sessionAssignedStoreId)
-          } else if (urlStoreId && data.some(s => s.id === urlStoreId)) {
+          } else if (isSuperAdmin && urlStoreId && data.some(s => s.id === urlStoreId)) {
             setSelectedHubId(urlStoreId)
           } else if (initialStoreId && data.some(s => s.id === initialStoreId)) {
             setSelectedHubId(initialStoreId)
-          } else if (data.length > 0 && !data.some(s => s.id === selectedHubId) && selectedHubId !== 'all') {
+          } else if (isSuperAdmin && data.length > 0 && !data.some(s => s.id === selectedHubId) && selectedHubId !== 'all') {
             setSelectedHubId(data[0].id)
           }
         }
       })
       .catch(console.error)
-  }, [selectedHubId, sessionAssignedStoreId, urlStoreId, initialStoreId])
+  }, [selectedHubId, sessionAssignedStoreId, urlStoreId, initialStoreId, isSuperAdmin])
 
   useEffect(() => {
     fetchStoresAndRestaurants()
   }, [fetchStoresAndRestaurants])
 
-  const [productEditForm, setProductEditForm] = useState({
+  const [productEditForm, setProductEditForm] = useState<ProductEditForm>({
     name: '',
     description: '',
     imageUrl: '',
@@ -749,6 +752,7 @@ export function AdminDashboard({
     isBestSeller: false,
     sortOrder: '0',
     barcode: '',
+    vendor: '',
   })
   
   // State for Add Product Form
@@ -779,6 +783,7 @@ export function AdminDashboard({
     isBestSeller: false,
     sortOrder: '0',
     barcode: '',
+    vendor: '',
   })
   // Product type toggles: 'grocery' | 'cafe'
   const [newProductType, setNewProductType] = useState<'grocery' | 'cafe' | 'restaurant'>('grocery')
@@ -1687,6 +1692,7 @@ export function AdminDashboard({
       isBestSeller: p.isBestSeller || false,
       sortOrder: String(p.sortOrder ?? 0),
       barcode: p.barcode || '',
+      vendor: p.vendor || '',
     })
 
     setShowAddProduct(true)
@@ -1723,7 +1729,7 @@ export function AdminDashboard({
       // Convert products array to CSV string matching the import headers
       // Headers: ID,Name,Category,Unit,MRP,Price,Stock,Tags,Description,Image URL,Cost Price,Min Stock,Location,Barcode,Variants
       const headers = [
-        'ID', 'Name', 'Category', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock', 'Location', 'Barcode', 'Display Order', 'Variants'
+        'ID', 'Name', 'Category', 'Vendor', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock', 'Location', 'Barcode', 'Display Order', 'Variants'
       ]
       
       const csvRows = [headers.join(',')]
@@ -1733,6 +1739,7 @@ export function AdminDashboard({
           p.id || '',
           p.name || '',
           p.category?.name || '',
+          p.vendor || '',
           p.unit || '',
           p.mrp?.toString() || '0',
           p.price?.toString() || '0',
@@ -1905,6 +1912,7 @@ export function AdminDashboard({
       isBestSeller: p.isBestSeller || false,
       sortOrder: String(p.sortOrder ?? 0),
       barcode: p.barcode || '',
+      vendor: p.vendor || '',
     })
   }
 
@@ -1980,6 +1988,7 @@ export function AdminDashboard({
           isBestSeller: productEditForm.isBestSeller,
           sortOrder: parseInt(productEditForm.sortOrder) || 0,
           barcode: productEditForm.barcode || null,
+          vendor: productEditForm.vendor?.trim() || null,
           storeId: selectedHubId && selectedHubId !== 'all' ? selectedHubId : undefined,
           variants: sortedEditVariants.length > 0 ? sortedEditVariants.map(v => ({
             name: v.name,
@@ -2134,6 +2143,7 @@ export function AdminDashboard({
           isBestSeller: false,
           sortOrder: '0',
           barcode: '',
+          vendor: '',
         })
 
       } else {
@@ -2566,6 +2576,7 @@ export function AdminDashboard({
       { key: 'categories', label: 'Categories', icon: Layers, count: categories.length },
       { key: 'alerts', label: 'Stock Alerts', icon: AlertCircle, count: stats.lowStockCount },
       { key: 'inward', label: 'Inward Items (GRN)', icon: Building2 },
+      { key: 'vendors', label: 'Vendor Console', icon: Truck },
       { key: 'bulk-update', label: 'Bulk Update', icon: SlidersHorizontal },
       { key: 'csv-import', label: 'CSV Import', icon: Download },
       { key: 'restaurant-report', label: 'Restaurant Payout', icon: Utensils },
@@ -2583,11 +2594,13 @@ export function AdminDashboard({
     ]
   }, [orderTotal, activeCartsCount, productTotal, categories.length, stats.lowStockCount, userTotal, reviews.length, coupons.length])
 
-  const activeStoreHub = storesList.find(s => s.id === selectedHubId) || storesList[0]
-  const hubCity = activeStoreHub?.name ? activeStoreHub.name.replace(/\s*(central\s*hub|dark\s*store|hub|store)\s*/gi, '').trim().toLowerCase() : ''
-  const hubRestaurants = restaurantsList.filter(r => 
-    !hubCity || (r.city && r.city.toLowerCase().trim().includes(hubCity))
-  )
+  const activeStoreHub = storesList.find(s => s.id === selectedHubId) || (selectedHubId === 'hub-224122' ? { id: 'hub-224122', name: 'Akbarpur' } : (selectedHubId === 'hub-209206' ? storesList.find(s => s.id === 'hub-209206') || storesList[0] : storesList[0]))
+  const rawHubName = activeStoreHub?.name || (selectedHubId === 'hub-224122' ? 'Akbarpur' : (storesList[0]?.name || 'Central Hub'))
+  const hubCity = rawHubName ? rawHubName.replace(/\s*(central\s*hub|dark\s*store|hub|store)\s*/gi, '').trim().toLowerCase() : ''
+  const hubRestaurants = restaurantsList.filter(r => {
+    if (!hubCity) return false
+    return r.city && r.city.toLowerCase().trim().includes(hubCity)
+  })
 
   return (
     <div className="space-y-6">
@@ -2608,14 +2621,14 @@ export function AdminDashboard({
       />
 
       <StoreControlBar
-        storeHubName={activeStoreHub?.name || storesList[0]?.name || 'Central Hub'}
+        storeHubName={rawHubName}
         storesList={storesList}
         restaurantsList={hubRestaurants}
         selectedHubId={selectedHubId}
         onSelectHub={handleSelectHub}
         onOpenHubManager={() => setIsStoreHubsModalOpen(true)}
         isSuperAdmin={isSuperAdmin}
-        groceryMartOpen={activeStoreHub?.groceryOpen !== undefined ? activeStoreHub.groceryOpen : groceryMartOpen}
+        groceryMartOpen={(activeStoreHub as any)?.groceryOpen !== undefined ? (activeStoreHub as any).groceryOpen : groceryMartOpen}
         groceryAutoTiming={groceryAutoTiming}
         isTogglingStore={isTogglingStore}
         onToggleGroceryMart={handleToggleGroceryMart}
@@ -3023,7 +3036,11 @@ export function AdminDashboard({
       )}
 
       {activeTab === 'restaurant-console' && (
-        <RestaurantConsoleTab />
+        <RestaurantConsoleTab storeId={selectedHubId} />
+      )}
+
+      {activeTab === 'vendors' && (
+        <VendorConsoleTab storeId={selectedHubId} />
       )}
 
         </motion.div>

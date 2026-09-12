@@ -316,7 +316,7 @@ export const HUB_CONFIG = [
     description: 'Catalog, categories, stock alerts, inward, bulk updates & CSV import',
     color: 'from-emerald-500/10 to-teal-500/10',
     activeBorder: 'border-emerald-500/60 ring-2 ring-emerald-500/20',
-    tabs: ['products', 'categories', 'alerts', 'inward', 'bulk-update', 'csv-import'] as const
+    tabs: ['products', 'categories', 'alerts', 'inward', 'vendors', 'bulk-update', 'csv-import'] as const
   },
   {
     key: 'food',

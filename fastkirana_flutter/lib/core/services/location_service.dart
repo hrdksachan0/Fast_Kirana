@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_config.dart';
 import '../../data/models/address.dart';
 import '../../data/models/product.dart';
+import '../../data/models/store_hub.dart';
 import '../../providers/address_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/store_hub_provider.dart';
@@ -191,13 +192,18 @@ class LocationService {
   }
 
   /// Reverse geocode coordinates to structured address details
-  static Future<LocationDetails> getAddressFromCoordinates(double lat, double lng) async {
+  static Future<LocationDetails> getAddressFromCoordinates(
+    double lat,
+    double lng, {
+    StoreHub? nearestHub,
+  }) async {
+    final hubCity = nearestHub?.city ?? 'Ghatampur';
     String houseNo = '';
     String street = '';
-    String area = 'Ghatampur';
-    String city = 'Kanpur Nagar';
+    String area = hubCity;
+    String city = hubCity;
     String pincode = '209206';
-    String formatted = 'Ghatampur Market, UP 209206';
+    String formatted = '$hubCity Market, UP';
 
     try {
       if (!kIsWeb) {
@@ -206,8 +212,8 @@ class LocationService {
           final place = placemarks.first;
           houseNo = place.subThoroughfare ?? place.name ?? '';
           street = place.thoroughfare ?? '';
-          area = place.subLocality?.isNotEmpty == true ? place.subLocality! : (place.locality ?? 'Ghatampur');
-          city = place.locality ?? place.administrativeArea ?? 'Kanpur Nagar';
+          area = place.subLocality?.isNotEmpty == true ? place.subLocality! : (place.locality ?? hubCity);
+          city = place.locality ?? place.administrativeArea ?? hubCity;
           pincode = place.postalCode ?? '209206';
 
           final parts = [
@@ -225,7 +231,7 @@ class LocationService {
     }
 
     final distanceKm = getDistanceKm(lat, lng);
-    final isServiceable = distanceKm <= maxDeliveryRadiusKm;
+    final isServiceable = distanceKm <= (nearestHub?.deliveryRadiusKm ?? maxDeliveryRadiusKm);
 
     return LocationDetails(
       latitude: lat,
@@ -242,10 +248,68 @@ class LocationService {
   }
 
   /// Convenience method to get full current location details in one call
-  static Future<LocationDetails?> fetchCurrentLocationDetails() async {
+  static Future<LocationDetails?> fetchCurrentLocationDetails({StoreHub? nearestHub}) async {
     final pos = await getCurrentPosition();
     if (pos == null) return null;
-    return await getAddressFromCoordinates(pos.latitude, pos.longitude);
+    return await getAddressFromCoordinates(pos.latitude, pos.longitude, nearestHub: nearestHub);
+  }
+
+  /// Background bootstrap method on app launch (Blinkit / Zepto style)
+  /// Checks if location permission is granted / requestable and automatically
+  /// updates selectedAddressProvider with live GPS coords if no custom address was selected.
+  static Future<void> bootstrapUserLocation(WidgetRef ref) async {
+    try {
+      // 1. If user already has an active chosen address or saved addresses, don't override
+      final currentAddress = ref.read(selectedAddressProvider);
+      if (currentAddress != null &&
+          currentAddress.id != 'hub_active_default' &&
+          !currentAddress.id.startsWith('addr_bootstrap_gps_')) {
+        return;
+      }
+
+      // Check if location services are enabled
+      final isServiceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!isServiceEnabled) return;
+
+      // Check permission state without triggering aggressive blocking prompts if permanently denied
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+          return;
+        }
+      } else if (permission == LocationPermission.deniedForever) {
+        return;
+      }
+
+      // Fetch position with 6-second quick timeout
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 6),
+      );
+
+      final details = await getAddressFromCoordinates(position.latitude, position.longitude);
+
+      // Create a transient address representing user's current GPS location
+      final gpsAddress = Address(
+        id: 'addr_bootstrap_gps_${DateTime.now().millisecondsSinceEpoch}',
+        userId: 'current',
+        label: 'Current Location',
+        houseNo: details.houseNo,
+        street: details.street,
+        area: details.area,
+        city: details.city,
+        pincode: details.pincode,
+        latitude: details.latitude,
+        longitude: details.longitude,
+        isDefault: true,
+      );
+
+      ref.read(selectedAddressProvider.notifier).state = gpsAddress;
+      debugPrint('📍 Auto-GPS Bootstrap completed: ${details.area}, ${details.city} (${position.latitude}, ${position.longitude})');
+    } catch (e) {
+      debugPrint('Auto-GPS Bootstrap notice: $e');
+    }
   }
 }
 

@@ -450,11 +450,11 @@ export async function PATCH(
           if (!item.productId) continue // Product was deleted, skip stock deduction
           const product = await prisma.product.findUnique({
             where: { id: item.productId },
-            select: { stock: true, name: true, category: { select: { slug: true } }, tags: true }
+            select: { stock: true, name: true, restaurantId: true }
           })
           
           if (product) {
-            if (product.category?.slug === 'cafe' || product.category?.slug === 'restaurant' || product.tags?.includes('cafe') || product.tags?.includes('restaurant')) {
+            if (product.restaurantId) {
               continue
             }
             const newStock = Math.max(0, product.stock - item.quantity)
@@ -701,15 +701,14 @@ export async function PATCH(
                 stock: true,
                 name: true,
                 variants: true,
-                category: { select: { slug: true } },
-                tags: true
+                restaurantId: true
               }
             })
             
             if (!product) continue
             
-            // Skip stock restoration for Cafe & Restaurant items
-            if (product.category?.slug === 'cafe' || product.category?.slug === 'restaurant' || product.tags?.includes('cafe') || product.tags?.includes('restaurant')) {
+            // Skip stock restoration for Cafe & Restaurant items (kitchen items have restaurantId)
+            if (product.restaurantId) {
               continue
             }
 

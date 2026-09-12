@@ -223,13 +223,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   void _handleCashfreeError(CFErrorResponse errorResponse, String cfOrderId) {
     HapticFeedback.lightImpact();
 
-    final errorMsg = errorResponse.getMessage() ?? '';
-    final isSideloadError = errorMsg.contains('packageinstaller') ||
+    final errorMsg = (errorResponse.getMessage() ?? '').toLowerCase();
+    final isSideloadOrWhitelistingError = errorMsg.contains('packageinstaller') ||
         errorMsg.contains('trusted source') ||
-        errorMsg.contains('whitelisted app store');
+        errorMsg.contains('whitelisted') ||
+        errorMsg.contains('not enabled or approved') ||
+        errorMsg.contains('whitelisting request') ||
+        errorMsg.contains('app package') ||
+        errorMsg.contains('merchant.cashfree.com') ||
+        errorMsg.contains('com.fastkirana.app');
 
-    if (isSideloadError && _razorpay != null && _pendingGrandTotal != null) {
-      debugPrint('Sideloaded APK detected by Cashfree PG. Automatically switching to Razorpay fallback...');
+    if (isSideloadOrWhitelistingError && _razorpay != null && _pendingGrandTotal != null) {
+      debugPrint('Cashfree whitelisting/sideload detected. Automatically switching to Razorpay fallback...');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -241,7 +246,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Direct APK testing detected. Switching to Razorpay Gateway...',
+                    'Switching to Razorpay Gateway...',
                     style: GoogleFonts.inter(
                       fontWeight: FontWeight.w700,
                       color: Colors.white,

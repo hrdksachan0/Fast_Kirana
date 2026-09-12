@@ -51,6 +51,7 @@ interface TopProduct {
   sales: number
   profit: number
   categoryName?: string
+  vendor?: string
   type?: 'restaurant' | 'grocery'
 }
 
@@ -361,17 +362,31 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
 
       const wsCategory = XLSX.utils.aoa_to_sheet([catHeader, ...catRows])
 
-      // 3. Tab 3: Product Sales Sheet
-      const prodHeader = ['Product / Dish Name', 'Category / Outlet', 'Selling Price (INR)', 'Cost / Payout (INR)', 'Qty Sold', 'Total Sales (INR)', 'Net Profit (INR)', 'Margin']
+      // 3. Tab 3: Product Sales Sheet (With Vendor & Payable Amount)
+      const prodHeader = [
+        'Product / Dish Name',
+        'Vendor / Supplier',
+        'Category / Outlet',
+        'Selling Price (INR)',
+        'Cost / Purchase Rate (INR)',
+        'Qty Sold',
+        'Total Sales (INR)',
+        'Total Vendor Payable (INR)',
+        'Net Profit (INR)',
+        'Margin'
+      ]
       const prodRows = targetProducts.map((prod: TopProduct) => {
         const margin = prod.sales > 0 ? ((prod.profit / prod.sales) * 100) : 0
+        const vendorPayable = Math.round((prod.costPrice || 0) * prod.quantity * 100) / 100
         return [
           prod.name,
+          prod.vendor || 'Direct / FastKirana',
           prod.categoryName || '-',
           prod.price || 0,
           prod.costPrice || 0,
           prod.quantity,
           prod.sales,
+          vendorPayable,
           prod.profit,
           `${margin.toFixed(1)}%`
         ]
@@ -379,9 +394,70 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
 
       const wsProduct = XLSX.utils.aoa_to_sheet([prodHeader, ...prodRows])
 
+      // 4. Tab 4: Vendor Payout Summary (Month-End Payment Settlement)
+      const vendorSummaryMap: Record<
+        string,
+        {
+          vendor: string
+          productsCount: number
+          unitsSold: number
+          totalSales: number
+          totalPayable: number
+        }
+      > = {}
+
+      targetProducts.forEach((prod: TopProduct) => {
+        const vName = (prod.vendor && prod.vendor.trim()) || 'Direct / FastKirana'
+        if (!vendorSummaryMap[vName]) {
+          vendorSummaryMap[vName] = {
+            vendor: vName,
+            productsCount: 0,
+            unitsSold: 0,
+            totalSales: 0,
+            totalPayable: 0,
+          }
+        }
+        const itemPayable = (prod.costPrice || 0) * (prod.quantity || 0)
+        vendorSummaryMap[vName].productsCount += 1
+        vendorSummaryMap[vName].unitsSold += (prod.quantity || 0)
+        vendorSummaryMap[vName].totalSales += (prod.sales || 0)
+        vendorSummaryMap[vName].totalPayable += itemPayable
+      })
+
+      const vendorSummaryList = Object.values(vendorSummaryMap).sort((a, b) => b.totalPayable - a.totalPayable)
+      const vendorHeader = [
+        'Vendor / Supplier Name',
+        'Products Sold Count',
+        'Total Units Sold',
+        'Total Sales Revenue (INR)',
+        'Total Payable Amount (INR)',
+      ]
+      const vendorRows = vendorSummaryList.map((v) => [
+        v.vendor,
+        v.productsCount,
+        v.unitsSold,
+        Math.round(v.totalSales * 100) / 100,
+        Math.round(v.totalPayable * 100) / 100,
+      ])
+
+      const totalVendorUnits = vendorSummaryList.reduce((sum, v) => sum + v.unitsSold, 0)
+      const totalVendorSales = vendorSummaryList.reduce((sum, v) => sum + v.totalSales, 0)
+      const totalVendorPayable = vendorSummaryList.reduce((sum, v) => sum + v.totalPayable, 0)
+
+      const vendorTotalRow = [
+        'TOTAL VENDOR PAYMENTS',
+        `${vendorSummaryList.length} Vendors`,
+        totalVendorUnits,
+        Math.round(totalVendorSales * 100) / 100,
+        Math.round(totalVendorPayable * 100) / 100,
+      ]
+
+      const wsVendor = XLSX.utils.aoa_to_sheet([vendorHeader, ...vendorRows, [], vendorTotalRow])
+
       // Create Workbook and Append Sheets
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary')
+      XLSX.utils.book_append_sheet(wb, wsVendor, 'Vendor Payout Summary')
       XLSX.utils.book_append_sheet(wb, wsCategory, 'Categories')
       XLSX.utils.book_append_sheet(wb, wsProduct, 'Products')
 

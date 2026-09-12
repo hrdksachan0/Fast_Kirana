@@ -135,7 +135,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'You can only edit products for your assigned restaurant' }, { status: 403 })
     }
 
-    const { name, description, imageUrl, categoryId, restaurantId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode } = body
+    const { name, description, imageUrl, categoryId, restaurantId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode, vendor, vendorId } = body
 
     const updateData: any = {}
     if (name !== undefined && typeof name === 'string') updateData.name = name.trim()
@@ -190,6 +190,29 @@ export async function PATCH(
     }
     
     if (barcode !== undefined) updateData.barcode = (barcode && typeof barcode === 'string') ? barcode.trim() : null
+    if (vendor !== undefined || vendorId !== undefined) {
+      let cleanVendor = (vendor && typeof vendor === 'string' && vendor.trim() !== '') ? vendor.trim() : null
+      let cleanVendorId = (vendorId && typeof vendorId === 'string' && vendorId.trim() !== '') ? vendorId.trim() : null
+
+      if (!cleanVendorId && cleanVendor) {
+        const matchedVendor = await (prisma as any).vendor.findFirst({
+          where: { name: { equals: cleanVendor, mode: 'insensitive' } }
+        })
+        if (matchedVendor) {
+          cleanVendorId = matchedVendor.id
+        }
+      } else if (cleanVendorId && !cleanVendor) {
+        const matchedVendor = await (prisma as any).vendor.findUnique({
+          where: { id: cleanVendorId }
+        })
+        if (matchedVendor) {
+          cleanVendor = matchedVendor.name
+        }
+      }
+
+      updateData.vendor = cleanVendor
+      updateData.vendorId = cleanVendorId
+    }
 
     let parsedMrp = mrp !== undefined ? parseFloat(mrp) : NaN
     let parsedPrice = price !== undefined ? parseFloat(price) : NaN

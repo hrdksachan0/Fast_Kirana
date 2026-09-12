@@ -16,7 +16,13 @@ export default async function AdminRestaurantsPage(props: {
   }
 
   const searchParams = props.searchParams ? await props.searchParams : undefined
-  const initialStoreId = searchParams?.storeId || (session.user as any)?.assignedStoreId || null
+  const dbUser = session?.user?.id ? await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, role: true, phone: true, email: true, assignedStoreId: true }
+  }) : null
+
+  const userAssignedStoreId = dbUser?.assignedStoreId || (session.user as any)?.assignedStoreId || null
+  const initialStoreId = userAssignedStoreId || searchParams?.storeId || null
 
   let restaurantWhere: any = {}
   if (initialStoreId && initialStoreId !== 'all') {

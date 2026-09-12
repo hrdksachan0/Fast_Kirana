@@ -26,13 +26,14 @@ interface Product {
 
 interface AdminRestaurantConsoleProps {
   isAdmin?: boolean
+  storeId?: string
 }
 
 import { Plus, Loader2, Image as ImageIcon } from 'lucide-react'
 
 import { PRESET_KITCHEN_PHOTOS } from '@/lib/preset-photos'
 
-export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConsoleProps) {
+export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestaurantConsoleProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -58,18 +59,22 @@ export function AdminRestaurantConsole({ isAdmin = false }: AdminRestaurantConso
   const [restaurants, setRestaurants] = useState<any[]>([])
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('ALL')
 
-  // Fetch all outlets dynamically
+  // Fetch outlets dynamically scoped by storeId
   useEffect(() => {
-    fetch('/api/restaurants')
+    const storeParam = storeId && storeId !== 'all' ? `?storeId=${encodeURIComponent(storeId)}` : ''
+    fetch(`/api/restaurants${storeParam}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         const list = Array.isArray(data) ? data : (data?.restaurants || [])
+        setRestaurants(list)
         if (list.length > 0) {
-          setRestaurants(list)
+          setSelectedRestaurantId(list[0].id)
+        } else {
+          setSelectedRestaurantId('NONE')
         }
       })
       .catch(console.error)
-  }, [])
+  }, [storeId])
 
   // Fetch all store products & categories so local media gallery shows ALL photos in system
   useEffect(() => {

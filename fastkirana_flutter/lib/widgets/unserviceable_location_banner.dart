@@ -5,9 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import '../core/theme/design_system.dart';
 import '../core/services/location_service.dart';
-import '../core/config/app_config.dart';
 import '../data/models/address.dart';
 import '../providers/address_provider.dart';
+import '../providers/store_hub_provider.dart';
 import '../features/location/delivery_location_screen.dart';
 import '../core/routes/page_transitions.dart';
 
@@ -16,18 +16,18 @@ class UnserviceableLocationBanner extends ConsumerWidget {
 
   static void resetToActiveHub(WidgetRef ref, BuildContext context) {
     HapticFeedback.mediumImpact();
-    // NOTE: cannot be const — AppConfig.darkstoreLat/Lng are now static (mutable)
+    final currentHub = ref.read(currentStoreHubProvider);
     final defaultHub = Address(
       id: 'hub_active_default',
       userId: 'current',
       label: 'FastKirana Active Store Hub',
       houseNo: '',
-      street: 'Central Market',
-      area: 'Central Zone',
-      city: 'Kanpur Nagar',
-      pincode: '209206',
-      latitude: AppConfig.darkstoreLat,
-      longitude: AppConfig.darkstoreLng,
+      street: currentHub.name,
+      area: currentHub.city,
+      city: currentHub.city,
+      pincode: currentHub.id.contains('224122') ? '224122' : '209206',
+      latitude: currentHub.latitude,
+      longitude: currentHub.longitude,
       isDefault: true,
     );
 

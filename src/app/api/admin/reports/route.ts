@@ -81,6 +81,7 @@ export async function GET(request: NextRequest) {
         quantity: number
         name: string
         costPrice: number
+        vendor: string | null
         categoryName: string
         categorySlug: string
         productTags: string[] | null
@@ -97,6 +98,7 @@ export async function GET(request: NextRequest) {
     >`
       SELECT oi."orderId", oi."productId", oi.price, COALESCE(p.mrp, oi.price) as mrp, oi.quantity, oi.name, 
              COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
+             COALESCE(p.vendor, 'Direct / FastKirana') as "vendor",
              COALESCE(c.name, r.name, o."shopName", 'General') as "categoryName",
              COALESCE(c.slug, r.slug, 'general') as "categorySlug",
              p.tags as "productTags",
@@ -305,6 +307,7 @@ export async function GET(request: NextRequest) {
         sales: number; 
         profit: number; 
         categoryName: string; 
+        vendor: string;
         type: 'restaurant' | 'grocery' 
       }
     > = {}
@@ -421,6 +424,7 @@ export async function GET(request: NextRequest) {
             sales: 0,
             profit: 0,
             categoryName: targetCategoryName,
+            vendor: item.vendor || 'Direct / FastKirana',
             type: targetType
           }
         }

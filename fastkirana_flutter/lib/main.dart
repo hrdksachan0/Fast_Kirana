@@ -19,8 +19,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // ─── CRITICAL PERFORMANCE FIX ──────────────────────────────────
-  // Allow runtime fetching on web and debug so GoogleFonts don't crash when individual variant files are missing.
-  GoogleFonts.config.allowRuntimeFetching = kIsWeb || kDebugMode;
+  // Allow runtime fetching on all platforms so GoogleFonts don't crash when individual variant files are missing.
+  GoogleFonts.config.allowRuntimeFetching = true;
 
 
   // Image Cache Memory Bounds (Max 100 images or 60MB RAM)
@@ -29,14 +29,19 @@ void main() async {
 
   // ─── Global Flutter Error Handling ───────────────────────────────
   // When Crashlytics is enabled (Firebase initialized below) we forward
-  // every uncaught Flutter framework error to it. In debug / web we keep
-  // the local console error so devs still see the stack trace.
+  // uncaught Flutter framework errors to it. Silent errors (like image 404s
+  // or asset errors handled by errorBuilder) are recorded as non-fatal
+  // or silenced to prevent false fatal crash spikes in Crashlytics.
   if (!kIsWeb && !kDebugMode) {
     FlutterError.onError = (FlutterErrorDetails details) {
       FlutterError.presentError(details);
-      FirebaseCrashlytics.instance.recordFlutterFatalError(
-        details,
-      );
+      if (details.silent) {
+        // Handled gracefully in UI (e.g. by errorBuilder / CachedNetworkImage.errorWidget)
+        FirebaseCrashlytics.instance.recordFlutterError(details);
+      } else {
+        // Real uncaught fatal framework error
+        FirebaseCrashlytics.instance.recordFlutterFatalError(details);
+      }
     };
   } else {
     FlutterError.onError = (FlutterErrorDetails details) {
@@ -100,7 +105,7 @@ void main() async {
   };
 
   // ─── System UI Configuration ────────────────────────────────────
-  await SystemChrome.setPreferredOrientations([
+  SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
@@ -114,47 +119,55 @@ void main() async {
     ),
   );
 
-  // ─── Firebase Initialization ────────────────────────────────────
-  if (!kIsWeb) {
-    try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+  // ─── High-Performance Concurrent Startup Pipeline (<1s cold start) ───
+  // Run critical initializations in parallel instead of sequential blocking awaits
+  await Future.wait([
+    // 1. Firebase & Background Messaging (non-web)
+    if (!kIsWeb)
+      (() async {
+        try {
+          await Firebase.initializeApp(
+            options: DefaultFirebaseOptions.currentPlatform,
+          );
+          FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+          final notificationService = NotificationService();
+          await notificationService.init();
+          // Note: requestPermissions is moved to non-blocking post-splash to avoid freeze
+        } catch (e) {
+          debugPrint("Firebase initialization failed: $e");
+        }
+      })(),
 
-      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    // 2. Supabase Realtime Initialization
+    (() async {
+      try {
+        await SupabaseService.initialize();
+      } catch (e) {
+        debugPrint("Supabase initialization error: $e");
+      }
+    })(),
 
-      final notificationService = NotificationService();
-      await notificationService.init();
-      await notificationService.requestPermissions();
-    } catch (e) {
-      debugPrint("Firebase initialization failed: $e");
-    }
-  }
+    // 3. Auth Cache Warm-up (zero I/O on subsequent API calls)
+    (() async {
+      try {
+        await SecureStorage.loadCache();
+      } catch (e) {
+        debugPrint("Auth cache load error: $e");
+      }
+    })(),
 
-  // ─── Supabase Realtime Initialization ───────────────────────────
-  try {
-    await SupabaseService.initialize();
-  } catch (e) {
-    debugPrint("Supabase initialization error: $e");
-  }
+    // 4. Deep Linking Initialization (Universal Links & Custom Scheme)
+    if (!kIsWeb)
+      (() async {
+        try {
+          await DeepLinkService.instance.init();
+        } catch (e) {
+          debugPrint("DeepLink initialization error: $e");
+        }
+      })(),
+  ]);
 
-  // ─── Auth Cache Warm-up (zero I/O on subsequent API calls) ───────
-  try {
-    await SecureStorage.loadCache();
-  } catch (e) {
-    debugPrint("Auth cache load error: $e");
-  }
-
-  // ─── Deep Linking Initialization (Universal Links & Custom Scheme) ───
-  if (!kIsWeb) {
-    try {
-      await DeepLinkService.instance.init();
-    } catch (e) {
-      debugPrint("DeepLink initialization error: $e");
-    }
-  }
-
-  // ─── Launch App ─────────────────────────────────────────────────
+  // ─── Launch App Instantly ───────────────────────────────────────
   runApp(const ProviderScope(child: FastKiranaApp()));
 }
 

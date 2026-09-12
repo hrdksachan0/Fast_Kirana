@@ -6,6 +6,7 @@ import '../../data/models/category.dart';
 import '../../data/models/product.dart';
 import '../../providers/product_provider.dart';
 import '../../widgets/product_card.dart';
+import '../../core/widgets/loading_widgets.dart';
 
 class SubcategoryScreen extends ConsumerStatefulWidget {
   final Category category;
@@ -133,7 +134,7 @@ class _SubcategoryScreenState extends ConsumerState<SubcategoryScreen> {
                   itemBuilder: (context, index) => ProductCard(product: list[index]),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator(color: AppDesignSystem.primary)),
+              loading: () => const SingleChildScrollView(child: ProductGridShimmer(count: 6)),
               error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: AppDesignSystem.danger))),
             ),
           ),

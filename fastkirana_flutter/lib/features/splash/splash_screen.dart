@@ -29,12 +29,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _mainController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 500),
     );
 
     _logoScale = CurvedAnimation(
       parent: _mainController,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeOutBack),
+      curve: const Interval(0.0, 0.7, curve: Curves.easeOutBack),
     );
 
     _contentFade = CurvedAnimation(
@@ -52,8 +52,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     _mainController.forward();
     _requestAppPermissions();
 
-    // Fast, reliable 1.1s splash exit
-    Future.delayed(const Duration(milliseconds: 1100), _safeNavigate);
+    // Fast, responsive splash: 450ms minimum brand presentation while resolving auth in parallel
+    final prefFuture = SharedPreferences.getInstance();
+    Future.wait([
+      Future.delayed(const Duration(milliseconds: 450)),
+      prefFuture,
+    ]).then((results) {
+      final prefs = results[1] as SharedPreferences;
+      _safeNavigate(prefs: prefs);
+    }).catchError((_) {
+      _safeNavigate();
+    });
   }
 
   Future<void> _requestAppPermissions() async {
@@ -63,14 +72,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     } catch (e, _) { LoggerService.error('SplashScreen: silent catch', e); }
   }
 
-  Future<void> _safeNavigate() async {
+  Future<void> _safeNavigate({SharedPreferences? prefs}) async {
     if (_hasNavigated || !mounted) return;
     _hasNavigated = true;
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token') ?? prefs.getString('user_id');
-      final hasChosenLocation = prefs.getBool('has_chosen_location') ?? false;
+      final p = prefs ?? await SharedPreferences.getInstance();
+      final token = p.getString('auth_token') ?? p.getString('user_id');
+      final hasChosenLocation = p.getBool('has_chosen_location') ?? false;
 
       if (!mounted) return;
 

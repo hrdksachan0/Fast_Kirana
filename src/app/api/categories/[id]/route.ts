@@ -4,6 +4,7 @@ import { auth } from '@/auth'
 import { requireAdmin } from '@/lib/auth-guard'
 import { revalidateTag } from 'next/cache'
 import { revalidateStorefront } from '@/lib/revalidate'
+import { cache, CACHE_KEYS } from '@/lib/redis-client'
 
 export async function PATCH(
   request: Request,
@@ -60,6 +61,7 @@ export async function PATCH(
 
     // Revalidate category lists cache immediately
     try {
+      await cache.delByPrefix(CACHE_KEYS.CATEGORIES)
       revalidateTag('categories', 'max')
       revalidateStorefront()
     } catch (e) {
@@ -110,6 +112,7 @@ export async function DELETE(
 
     // Revalidate category lists cache immediately
     try {
+      await cache.delByPrefix(CACHE_KEYS.CATEGORIES)
       revalidateTag('categories', 'max')
       revalidateStorefront()
     } catch (e) {

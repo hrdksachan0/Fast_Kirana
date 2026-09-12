@@ -113,6 +113,8 @@ export const createProductSchema = z.object({
   isBestSeller: z.union([z.boolean(), z.string()]).nullable().optional(),
   sortOrder: z.coerce.number().int().nonnegative().nullable().optional().default(0),
   barcode: z.string().nullable().optional(),
+  vendor: z.string().nullable().optional(),
+  vendorId: z.string().nullable().optional(),
 })
 
 // ── Coupon Schema ───────────────────────────────────────────────────

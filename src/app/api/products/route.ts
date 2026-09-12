@@ -7,7 +7,7 @@ import { apiReadLimiter, apiWriteLimiter } from '@/lib/rate-limit'
 import { ApiResponder } from '@/lib/api-response'
 import { createProductSchema, validateBody } from '@/lib/validation'
 import { revalidateStorefront } from '@/lib/revalidate'
-import { getCachedSearch, setCachedSearch } from '@/lib/search-cache'
+import { getCachedSearch, setCachedSearch, getCache, setCache, invalidateProductCache } from '@/lib/search-cache'
 import { OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID } from '@/lib/constants'
 import { getSemanticAiScore } from '@/lib/vector-search'
 import { normalizeRestaurantId } from '@/lib/restaurant-ids'
@@ -62,25 +62,30 @@ export async function GET(request: NextRequest) {
     const session = await auth()
     const role = session?.user?.role
     const isWorker = role === 'ADMIN' || role === 'CHEF'
+    const includeUnavailable = searchParams.get('admin') === 'true' || searchParams.get('includeUnavailable') === 'true'
 
     // Normalize the search query so "Maggi", " maggi ", and "MAGGI" share the
     // same cache entry (and same Levenshtein comparison). Trim + lowercase +
     // collapse internal whitespace.
     const normalizedSearch = search ? search.trim().toLowerCase().replace(/\s+/g, ' ') : ''
 
-    // Cache check for typo-tolerant searches
-    const cacheKey = `search:${normalizedSearch}:${category || ''}:${sort || ''}:${page}:${limit}:${isWorker}:${restaurantId || ''}:${restaurantSlug || ''}`
-    if (normalizedSearch) {
-      const cached = getCachedSearch(cacheKey)
+    // Cache check for public catalog & search requests
+    const cacheKey = `products:${normalizedSearch || 'all'}:${category || ''}:${categoryId || ''}:${sort || ''}:${page}:${limit}:${storeId || ''}:${restaurantId || ''}:${restaurantSlug || ''}:${trending ? '1' : '0'}`
+    if (!isWorker && !includeUnavailable) {
+      const cached = await getCache<any>(cacheKey)
       if (cached) {
-        return NextResponse.json(cached)
+        return NextResponse.json(cached, {
+          headers: {
+            'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=180',
+            'X-Cache': 'HIT',
+          }
+        })
       }
     }
 
     const where: Prisma.ProductWhereInput = {}
 
     // Only filter available products for regular users unless includeUnavailable is requested
-    const includeUnavailable = searchParams.get('admin') === 'true' || searchParams.get('includeUnavailable') === 'true'
     if (!isWorker && !includeUnavailable) {
       where.isAvailable = true
     }
@@ -228,6 +233,8 @@ export async function GET(request: NextRequest) {
       createdAt: true,
       updatedAt: true,
       restaurantId: true,
+      vendor: true,
+      vendorId: true,
       category: {
         select: {
           id: true,
@@ -547,16 +554,17 @@ export async function GET(request: NextRequest) {
       },
     }
 
-    if (normalizedSearch && !isWorker && !includeUnavailable) {
-      setCachedSearch(cacheKey, responseData)
+    const isCacheable = !isWorker && !includeUnavailable
+    if (isCacheable) {
+      await setCache(cacheKey, responseData, 60)
     }
 
-    const isCacheable = !isWorker && !includeUnavailable
     return NextResponse.json(responseData, {
       headers: {
         'Cache-Control': isCacheable
           ? 'public, s-maxage=60, stale-while-revalidate=180'
           : 'no-store, max-age=0, must-revalidate',
+        'X-Cache': isCacheable ? 'MISS' : 'BYPASS',
       }
     })
   } catch (error: any) {
@@ -634,7 +642,7 @@ export async function POST(request: NextRequest) {
     const validation = await validateBody(request, createProductSchema)
     if (!validation.success) return validation.error
 
-    const { name, description, imageUrl, categoryId, restaurantId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode } = validation.data
+    const { name, description, imageUrl, categoryId, restaurantId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode, vendor, vendorId } = validation.data
 
     let finalCategoryId = categoryId
     let tagsList = Array.isArray(tags)
@@ -717,6 +725,7 @@ export async function POST(request: NextRequest) {
       console.warn('Could not query last readableId:', e)
     }
 
+    // Parse expiry date if provided
     let parsedExpiry: Date | null = null
     if (expiryDate && typeof expiryDate === 'string' && expiryDate.trim().length > 0) {
       const parsedTime = Date.parse(expiryDate)
@@ -727,6 +736,25 @@ export async function POST(request: NextRequest) {
 
     const cleanBarcode = (barcode && typeof barcode === 'string' && barcode.trim().length > 0) ? barcode.trim() : null
     const cleanLocation = (location && typeof location === 'string' && location.trim().length > 0) ? location.trim() : null
+    let cleanVendor = (vendor && typeof vendor === 'string' && vendor.trim().length > 0) ? vendor.trim() : null
+    let cleanVendorId = (vendorId && typeof vendorId === 'string' && vendorId.trim().length > 0) ? vendorId.trim() : null
+
+    // Systematically resolve vendorId from name or vice-versa
+    if (!cleanVendorId && cleanVendor) {
+      const matchedVendor = await (prisma as any).vendor.findFirst({
+        where: { name: { equals: cleanVendor, mode: 'insensitive' } }
+      })
+      if (matchedVendor) {
+        cleanVendorId = matchedVendor.id
+      }
+    } else if (cleanVendorId && !cleanVendor) {
+      const matchedVendor = await (prisma as any).vendor.findUnique({
+        where: { id: cleanVendorId }
+      })
+      if (matchedVendor) {
+        cleanVendor = matchedVendor.name
+      }
+    }
 
     const product = await prisma.product.create({
       data: {
@@ -754,6 +782,8 @@ export async function POST(request: NextRequest) {
         isBestSeller: !!isBestSeller,
         sortOrder: Number(sortOrder || 0),
         barcode: cleanBarcode,
+        vendor: cleanVendor,
+        vendorId: cleanVendorId,
       },
       include: {
         category: true,
@@ -779,6 +809,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Invalidate storefront caches on-demand
+    await invalidateProductCache()
     revalidateStorefront((product as any).category?.slug)
 
     return NextResponse.json(product, { status: 201 })

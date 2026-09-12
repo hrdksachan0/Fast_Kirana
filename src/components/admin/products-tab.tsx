@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import {
   Loader2,
@@ -23,6 +23,7 @@ interface Product {
   description: string
   imageUrl: string
   categoryId: string
+  vendor?: string
   restaurantId?: string
   mrp: number
   price: number
@@ -250,6 +251,27 @@ export function ProductsTab({
     }
     return null
   }, [newProduct.price, newProduct.costPrice])
+
+  const [vendorsList, setVendorsList] = useState<{ id: string; name: string; code?: string }[]>([])
+
+  useEffect(() => {
+    fetch('/api/admin/vendors')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data.vendors)) {
+          setVendorsList(
+            data.vendors.map((v: any) =>
+              typeof v === 'string'
+                ? { id: '', name: v, code: '' }
+                : { id: v.id, name: v.name, code: v.vendorCode || '' }
+            )
+          )
+        } else if (Array.isArray(data.vendorNames)) {
+          setVendorsList(data.vendorNames.map((n: string) => ({ id: '', name: n, code: '' })))
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -657,6 +679,42 @@ export function ProductsTab({
                     className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                   />
                 </div>
+              </div>
+
+              {/* Vendor / Supplier (For Month-End Settlement) */}
+              <div className="bg-primary/5 border border-primary/20 p-3 rounded-2xl space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
+                    🏢 Vendor / Supplier Name
+                  </label>
+                  <span className="text-[10px] font-bold text-text-muted">
+                    Month-End Excel Payout
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  list="vendor-suggestions-new"
+                  placeholder="e.g. Bansal Foods, Kanpur FMCG, Ram Wholesalers"
+                  value={newProduct.vendor || ''}
+                  onChange={(e) => {
+                    const typed = e.target.value
+                    const matched = vendorsList.find((v) => v.name.toLowerCase() === typed.toLowerCase())
+                    setNewProduct({
+                      ...newProduct,
+                      vendor: typed,
+                      vendorId: matched ? matched.id : undefined,
+                    })
+                  }}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-primary/30 bg-background focus:outline-none focus:border-primary font-bold text-text-primary placeholder:text-text-muted/60"
+                />
+                <datalist id="vendor-suggestions-new">
+                  {vendorsList.map((v) => (
+                    <option key={v.id || v.name} value={v.name} />
+                  ))}
+                </datalist>
+                <p className="text-[10px] text-text-secondary">
+                  Month-end report me is vendor ke binke huye saare items aur total payment (Qty × Cost Price) calculate hoke Excel me aayegi.
+                </p>
               </div>
 
               {/* Inventory, Unit, Stock & Alerts */}

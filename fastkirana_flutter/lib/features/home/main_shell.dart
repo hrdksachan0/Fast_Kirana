@@ -16,6 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/secure_storage_service.dart';
+import '../../core/services/location_service.dart';
 import 'home_screen.dart';
 import '../search/search_screen.dart';
 import '../categories/categories_screen.dart';
@@ -47,6 +48,9 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
         try {
           NotificationService().registerDeviceToken(ref.read(dioProvider));
         } catch (e, _) { LoggerService.error('MainShell: _reRegisterPendingToken', e); }
+
+        // Automatically detect device GPS and set nearest store hub on launch
+        LocationService.bootstrapUserLocation(ref);
       }
     });
   }

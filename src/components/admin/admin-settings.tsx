@@ -491,18 +491,18 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
             {settingsTab === 'ops' && (
               <div className="space-y-4 animate-fade-in">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Grocery Mart Operating Control — Manual Status & Store Timings */}
-                  <div className="space-y-3 bg-muted/20 p-4 rounded-2xl border border-border/40 text-left">
-                    <div className="flex items-center justify-between">
+                  {/* Grocery Mart Automated Store Timings & Schedule Control */}
+                  <div className="space-y-3.5 bg-muted/20 p-4 sm:p-5 rounded-2xl border border-border/60 text-left">
+                    <div className="flex items-center justify-between gap-3">
                       <div>
                         <label className="text-xs font-black uppercase tracking-wider text-text-primary flex items-center gap-1.5">
-                          🏪 Grocery Mart Status
+                          ⏰ Grocery Mart Timings & Auto-Schedule
                         </label>
                         <p className="text-[11px] text-text-secondary mt-0.5 font-medium">
-                          Live store operating status & timing control.
+                          Store timings ke hisaab se rozana automatically ON/OFF hoga.
                         </p>
                       </div>
-                      <span className={`text-[11px] font-black px-2.5 py-1 rounded-full border ${
+                      <span className={`text-[11px] font-black px-2.5 py-1 rounded-full border shrink-0 ${
                         groceryMartOpen
                           ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
                           : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
@@ -511,66 +511,59 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                       </span>
                     </div>
 
-                    {/* Quick Manual Toggle Buttons */}
-                    <div className="grid grid-cols-2 gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setGroceryMartOpen(true)}
-                        className={`py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${
-                          groceryMartOpen
-                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                            : 'bg-background hover:bg-muted text-text-secondary border-border'
-                        }`}
-                      >
-                        🟢 Turn ON (Open)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setGroceryMartOpen(false)}
-                        className={`py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${
-                          !groceryMartOpen
-                            ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
-                            : 'bg-background hover:bg-muted text-text-secondary border-border'
-                        }`}
-                      >
-                        🔴 Turn OFF (Closed)
-                      </button>
+                    {/* Auto-Timing Status Banner */}
+                    <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 flex items-start gap-2.5">
+                      <span className="text-base leading-none">✨</span>
+                      <div className="text-xs">
+                        <p className="font-bold text-text-primary">
+                          {groceryAutoTiming ? 'Auto-Schedule Active (Roj Automatic On/Off)' : 'Manual Override Active'}
+                        </p>
+                        <p className="text-[11px] text-text-secondary mt-0.5">
+                          {groceryAutoTiming 
+                            ? `Store subah ${groceryOpenTime || '07:00'} baje apne aap khulega aur raat ${groceryCloseTime || '22:00'} baje band hoga. Roj manually ON karne ki zaroorat nahi hai.`
+                            : 'Auto-timing off hai. Store manual mode par chal raha hai.'}
+                        </p>
+                      </div>
                     </div>
 
                     {/* Store Timings (Opening & Closing Hours) */}
-                    <div className="pt-2 border-t border-border/40 space-y-2">
+                    <div className="pt-2 border-t border-border/40 space-y-3">
                       <div className="flex items-center justify-between">
                         <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                          ⏰ Store Timings
+                          ⏰ Operating Hours
                         </label>
                         <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold text-text-secondary">
                           <input
                             type="checkbox"
                             checked={groceryAutoTiming}
-                            onChange={(e) => setGroceryAutoTiming(e.target.checked)}
+                            onChange={(e) => {
+                              const checked = e.target.checked
+                              setGroceryAutoTiming(checked)
+                              if (checked) setGroceryMartOpen(true)
+                            }}
                             className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
                           />
                           <span>Auto-timing apply</span>
                         </label>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-2 gap-2.5">
                         <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-text-muted block">Open Time</span>
+                          <span className="text-[10px] font-bold text-text-muted block">Open Time (Subah)</span>
                           <input
                             type="time"
                             value={groceryOpenTime}
                             onChange={(e) => setGroceryOpenTime(e.target.value)}
-                            className="w-full bg-background border border-border px-2.5 py-1.5 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                            className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold shadow-xs"
                           />
                         </div>
                         <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-text-muted block">Close Time</span>
+                          <span className="text-[10px] font-bold text-text-muted block">Close Time (Raat)</span>
                           <input
                             type="time"
                             value={groceryCloseTime}
                             onChange={(e) => setGroceryCloseTime(e.target.value)}
-                            className="w-full bg-background border border-border px-2.5 py-1.5 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                            className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold shadow-xs"
                           />
                         </div>
                       </div>

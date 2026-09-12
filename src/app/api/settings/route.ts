@@ -84,43 +84,45 @@ const DEFAULT_SETTINGS: Record<string, string> = {
 }
 
 export function checkIsStoreOpen(settingsMap: Record<string, string>, prefix: 'grocery' | 'cafe' | 'restaurant'): boolean {
+  const autoTiming = settingsMap[`${prefix}_auto_timing`] === 'true'
   const isManuallyOpen = prefix === 'grocery'
     ? settingsMap['grocery_mart_open'] !== 'false'
     : prefix === 'cafe'
     ? settingsMap['cafe_open'] !== 'false'
     : settingsMap['restaurant_open'] !== 'false'
 
-  if (!isManuallyOpen) return false
+  // When auto timing is active, store automatically opens & closes strictly according to schedule
+  if (autoTiming) {
+    const openTime = settingsMap[`${prefix}_open_time`] || '07:00'
+    const closeTime = settingsMap[`${prefix}_close_time`] || '22:00'
 
-  const autoTiming = settingsMap[`${prefix}_auto_timing`] === 'true'
-  if (!autoTiming) return isManuallyOpen
+    if ((openTime === '00:00' || openTime === '0:00') && (closeTime === '23:59' || closeTime === '24:00')) return true
 
-  const openTime = settingsMap[`${prefix}_open_time`] || '00:00'
-  const closeTime = settingsMap[`${prefix}_close_time`] || '23:59'
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: false,
+    })
+    const parts = formatter.formatToParts(new Date())
+    const currentHours = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10)
+    const currentMinutes = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10)
+    const currentTotal = currentHours * 60 + currentMinutes
 
-  if ((openTime === '00:00' || openTime === '0:00') && (closeTime === '23:59' || closeTime === '24:00')) return true
+    const [openH = 0, openM = 0] = openTime.split(':').map(Number)
+    const openTotal = openH * 60 + openM
 
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Kolkata',
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: false,
-  })
-  const parts = formatter.formatToParts(new Date())
-  const currentHours = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10)
-  const currentMinutes = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10)
-  const currentTotal = currentHours * 60 + currentMinutes
+    const [closeH = 23, closeM = 59] = closeTime.split(':').map(Number)
+    const closeTotal = closeH * 60 + closeM
 
-  const [openH = 0, openM = 0] = openTime.split(':').map(Number)
-  const openTotal = openH * 60 + openM
-
-  const [closeH = 23, closeM = 59] = closeTime.split(':').map(Number)
-  const closeTotal = closeH * 60 + closeM
-
-  if (closeTotal >= openTotal) {
-    return currentTotal >= openTotal && currentTotal <= closeTotal
+    if (closeTotal >= openTotal) {
+      return currentTotal >= openTotal && currentTotal <= closeTotal
+    }
+    return currentTotal >= openTotal || currentTotal <= closeTotal
   }
-  return currentTotal >= openTotal || currentTotal <= closeTotal
+
+  // If auto timing is off, fall back to manual toggle
+  return isManuallyOpen
 }
 
 async function buildSettingsMap(storeId?: string | null): Promise<Record<string, string>> {
@@ -187,7 +189,13 @@ async function buildSettingsMap(storeId?: string | null): Promise<Record<string,
     if (cafe.closeTime) settingsMap['cafe_close_time'] = cafe.closeTime
   }
 
-  if (!storeId || storeId === 'all') {
+  // Grocery store status calculation:
+  // If auto timing is enabled, both general and hub-level follow the automated schedule.
+  // If auto timing is disabled, specific hub follows hub.groceryOpen (if queried) or general grocery_mart_open.
+  const autoTiming = settingsMap['grocery_auto_timing'] === 'true'
+  if (autoTiming) {
+    settingsMap['grocery_mart_open'] = checkIsStoreOpen(settingsMap, 'grocery') ? 'true' : 'false'
+  } else if (!storeId || storeId === 'all') {
     settingsMap['grocery_mart_open'] = checkIsStoreOpen(settingsMap, 'grocery') ? 'true' : 'false'
   }
 
