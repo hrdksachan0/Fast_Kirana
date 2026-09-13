@@ -73,7 +73,7 @@ export function PaymentSelectionModal({
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm sm:text-base font-black tracking-wide">
-                    {deliveryMethod === 'PICKUP' ? 'Cash on Pickup (काउंटर पर नकद)' : 'Cash on Delivery (कैश ऑन डिलीवरी)'}
+                    {deliveryMethod === 'PICKUP' ? 'Cash on Pickup' : 'Cash on Delivery (COD)'}
                   </span>
                   <span className="bg-white/25 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm">
                     POPULAR ⚡
@@ -81,8 +81,8 @@ export function PaymentSelectionModal({
                 </div>
                 <p className="text-xs text-emerald-100 font-medium mt-0.5">
                   {deliveryMethod === 'PICKUP'
-                    ? 'दुकान काउंटर पर कैश या UPI से भुगतान करें'
-                    : 'सामान मिलने पर डिलीवरी बॉय को कैश या UPI दें'}
+                    ? 'Pay cash or UPI at the store counter'
+                    : 'Pay cash or UPI to rider at doorstep'}
                 </p>
               </div>
             </div>
@@ -105,12 +105,12 @@ export function PaymentSelectionModal({
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm sm:text-base font-black tracking-wide">
-                      Online Payment (ऑनलाइन पेमेंट)
+                      Online Payment (Instant)
                     </span>
                     <span className="text-xs font-black text-primary">₹{grandTotal.toFixed(0)}</span>
                   </div>
                   <p className="text-xs text-text-secondary font-medium mt-0.5">
-                    GPay, PhonePe, Paytm UPI, कार्ड या नेट बैंकिंग
+                    Google Pay, PhonePe, Paytm, UPI &amp; Cards
                   </p>
                 </div>
               </div>

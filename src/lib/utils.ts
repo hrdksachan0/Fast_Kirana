@@ -119,8 +119,18 @@ export function formatAddress(
   }
   const parts: string[] = []
   
-  if (addr.houseNo && addr.houseNo !== '.' && String(addr.houseNo).toLowerCase() !== 'n/a' && String(addr.houseNo).toLowerCase() !== 'ghatampur') {
-    parts.push(`House No ${addr.houseNo}`)
+  const hNo = addr.houseNo ? String(addr.houseNo).trim() : ''
+  const hNoLower = hNo.toLowerCase()
+  if (
+    hNo &&
+    hNo !== '.' &&
+    hNoLower !== 'n/a' &&
+    hNoLower !== 'ghatampur' &&
+    !hNoLower.includes('current') &&
+    !hNoLower.includes('pin') &&
+    !hNoLower.includes('location')
+  ) {
+    parts.push(hNoLower.startsWith('house') ? hNo : `House No ${hNo}`)
   }
   
   if (addr.street && addr.street !== '.' && String(addr.street).toLowerCase() !== 'n/a') {

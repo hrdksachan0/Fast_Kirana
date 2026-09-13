@@ -1279,13 +1279,13 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
           <span className="text-2xl shrink-0">🎁</span>
           <div className="min-w-0 flex-1">
             <div className="text-[10px] font-black uppercase text-amber-700 dark:text-amber-400 tracking-wider">
-              Ordering For Someone Else (किसी और के लिए)
+              Order For Someone Else
             </div>
             <div className="text-xs sm:text-sm font-black text-text-primary mt-0.5 truncate">
               {order.notes.split('|')[0].replace('🎁 Order for:', '').trim()}
             </div>
             <div className="text-[11px] text-text-secondary font-medium mt-0.5">
-              डिलीवरी राइडर सीधे प्राप्तकर्ता से संपर्क करेगा।
+              Delivery partner will directly contact the recipient on arrival.
             </div>
           </div>
         </div>

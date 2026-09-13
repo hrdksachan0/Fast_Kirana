@@ -1326,7 +1326,7 @@ export default function CheckoutPage() {
     if (orderForSomeone) {
       if (!recipientName.trim()) {
         triggerHaptic('warning')
-        toast.error('Please enter recipient name (कृपया प्राप्तकर्ता का नाम लिखें)')
+        toast.error('Please enter recipient name')
         const el = document.getElementById('order-for-someone-section')
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
         return
@@ -1334,7 +1334,7 @@ export default function CheckoutPage() {
       const cleanP = recipientPhone.replace(/\D/g, '')
       if (cleanP && cleanP.length !== 10) {
         triggerHaptic('warning')
-        toast.error('Please enter a valid 10-digit phone number (कृपया 10 अंकों का फोन नंबर लिखें)')
+        toast.error('Please enter a valid 10-digit mobile number')
         const el = document.getElementById('order-for-someone-section')
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
         return
@@ -1501,59 +1501,36 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="container mx-auto px-2 min-[375px]:px-4 py-4 min-[375px]:py-6 max-w-5xl space-y-6 md:space-y-8 pb-28 md:pb-8">
-      {/* Premium Header */}
-      <div className="flex items-center justify-between border-b border-border pb-4">
+    <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-6 max-w-5xl space-y-4 sm:space-y-6 pb-24 sm:pb-8">
+      {/* Sleek Compact Header */}
+      <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
         <div>
-          <h1 className="text-xl md:text-2xl font-black text-text-primary flex items-center gap-2">
-            <span>⚡</span> Quick Checkout
+          <h1 className="text-lg sm:text-xl font-black text-text-primary flex items-center gap-1.5">
+            <span className="text-amber-500">⚡</span> Quick Checkout
           </h1>
-          <p className="text-[11px] md:text-xs text-text-secondary mt-0.5">
-            Confirm your order details below to place order instantly
+          <p className="text-[11px] text-text-secondary">
+            Confirm your delivery address and place order
           </p>
         </div>
-        <div className="hidden lg:flex items-center gap-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-full text-xs font-extrabold border border-emerald-500/20">
-          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          Secured Checkout
+        <div className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-2.5 py-1 rounded-full text-[11px] font-bold border border-emerald-500/20">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          100% Secure
         </div>
       </div>
 
-      {/* Near Closing Time Warnings */}
-      {(isCafeNearClosing || isGroceryNearClosing) && (
-        <div className="bg-amber-50 dark:bg-amber-950/20 border-2 border-amber-200 dark:border-amber-900/50 p-4 rounded-2xl flex items-start gap-3 shadow-md animate-pulse-gentle">
-          <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 font-bold text-lg select-none">
-            ⚠️
-          </div>
-          <div className="space-y-1">
-            <h2 className="text-xs sm:text-sm font-black text-amber-800 dark:text-amber-400 tracking-tight">Hurry Up! Shop is closing soon</h2>
-            <p className="text-[10px] sm:text-xs text-amber-700 dark:text-amber-500 leading-relaxed font-bold">
-              {isCafeNearClosing && isGroceryNearClosing ? (
-                `FastKirana Cafe (closes at ${formatTime12h(cafeCloseTime)}) and Mart (closes at ${formatTime12h(groceryCloseTime)}) are closing in less than 30 minutes! Place your order now to ensure tonight's delivery.`
-              ) : isCafeNearClosing ? (
-                `Our Cafe kitchen closes at ${formatTime12h(cafeCloseTime)} (in less than 30 minutes!). Please place your order immediately to get your hot food prepared and dispatched.`
-              ) : (
-                `Our Grocery Mart closes at ${formatTime12h(groceryCloseTime)} (in less than 30 minutes!). Please complete your checkout now to receive your groceries tonight.`
-              )}
-            </p>
-          </div>
-        </div>
-      )}
-
-
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         
         {/* Left: Checkout Details */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
           
           {/* Main Checkout Box */}
-          <div className="bg-card border border-border p-3.5 min-[375px]:p-5 md:p-6 rounded-2xl shadow-sm space-y-6 md:space-y-8 animate-fade-in">
+          <div className="bg-card border border-border p-3.5 sm:p-5 rounded-2xl shadow-xs space-y-5 sm:space-y-6 animate-fade-in">
               {/* Delivery Address Section */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-base sm:text-lg font-black text-text-primary flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    <span>Delivery Address (डिलीवरी पता)</span>
+                  <h2 className="text-sm sm:text-base font-black text-text-primary flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    <span>Delivery Address</span>
                   </h2>
                   {!showNewAddressForm && addresses.length > 0 && (
                     <button
@@ -1575,26 +1552,26 @@ export default function CheckoutPage() {
                         setShowNewAddressForm(true)
                         setIsChangingAddress(false)
                       }}
-                      className="text-xs font-black text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                      className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Plus className="h-3.5 w-3.5" />
-                      <span>+ Add New</span>
+                      <span>Add New</span>
                     </button>
                   )}
                 </div>
 
                 {isAddressesLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <div className="flex justify-center py-6">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
                   </div>
                 ) : (
                   <div id="address-section" className="space-y-3 scroll-mt-24">
                     {/* Primary Selected Address Card */}
                     {!showNewAddressForm && selectedAddress && (
-                      <div className="rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/[0.03] to-emerald-500/[0.02] p-4 sm:p-5 relative overflow-hidden transition-all shadow-xs">
+                      <div className="rounded-2xl border border-border bg-card p-3.5 sm:p-4 relative overflow-hidden transition-all shadow-xs hover:border-primary/40">
                         <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-start gap-3.5 min-w-0">
-                            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 text-xl font-bold">
+                          <div className="flex items-start gap-3 min-w-0">
+                            <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 text-lg font-bold">
                               {selectedAddress.label === 'Work' ? '🏢' : selectedAddress.label === 'Other' ? '📍' : '🏠'}
                             </div>
                             <div className="min-w-0 flex-1">
@@ -1602,21 +1579,21 @@ export default function CheckoutPage() {
                                 <span className="font-black text-sm text-text-primary">
                                   {selectedAddress.label || 'Home'}
                                 </span>
-                                <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                  15–25 Mins Express
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                  Express Delivery
                                 </span>
                                 {selectedAddress.isDefault && (
-                                  <span className="text-[9px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-md">
+                                  <span className="text-[9px] font-bold text-accent bg-accent/10 px-1.5 py-0.5 rounded-md">
                                     Default
                                   </span>
                                 )}
                               </div>
-                              <p className="text-xs text-text-secondary mt-1 font-semibold leading-relaxed break-words">
+                              <p className="text-xs text-text-secondary mt-1 font-medium leading-snug break-words">
                                 {formatAddress(selectedAddress)}
                               </p>
                               {selectedAddress.phone && (
-                                <p className="text-[11px] text-text-muted mt-1 font-medium flex items-center gap-1">
+                                <p className="text-[11px] text-text-muted mt-0.5 font-medium flex items-center gap-1">
                                   <span>📞</span> {formatPhone(selectedAddress.phone)}
                                 </p>
                               )}
@@ -1626,9 +1603,9 @@ export default function CheckoutPage() {
                             <button
                               type="button"
                               onClick={() => setIsChangingAddress(!isChangingAddress)}
-                              className="px-3 py-1.5 rounded-xl border border-primary/30 bg-white dark:bg-zinc-800 text-primary text-xs font-black hover:bg-primary/5 active:scale-95 transition-all shadow-xs cursor-pointer"
+                              className="px-3 py-1.5 rounded-xl border border-border/80 bg-muted/30 hover:bg-muted text-text-primary text-xs font-bold transition-all shadow-xs cursor-pointer"
                             >
-                              {isChangingAddress ? 'Done' : 'Change / बदलें'}
+                              {isChangingAddress ? 'Done' : 'Change'}
                             </button>
                           </div>
                         </div>
@@ -1697,17 +1674,17 @@ export default function CheckoutPage() {
 
                     {/* Clean, Simple & Modern Address Form */}
                     {showNewAddressForm && (
-                      <form id="new-address-form" onSubmit={handleSaveAddress} className="border-2 border-primary/25 p-4 sm:p-5 rounded-2xl space-y-4 bg-card shadow-sm animate-slide-up">
-                        <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                      <form id="new-address-form" onSubmit={handleSaveAddress} className="border border-border/80 p-3.5 sm:p-5 rounded-2xl space-y-3.5 bg-card shadow-xs animate-slide-up">
+                        <div className="flex items-center justify-between border-b border-border/40 pb-2.5">
                           <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
-                              <MapPin className="h-4 w-4" />
+                            <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
+                              <MapPin className="h-3.5 w-3.5" />
                             </div>
                             <div>
-                              <h3 className="font-black text-sm text-text-primary">
-                                {editingAddressId ? 'Edit Address' : 'Add Delivery Address (डिलीवरी पता)'}
+                              <h3 className="font-black text-xs sm:text-sm text-text-primary">
+                                {editingAddressId ? 'Edit Address' : 'Add Delivery Address'}
                               </h3>
-                              <p className="text-[10.5px] text-text-muted">Ghatampur express delivery (15-25 mins)</p>
+                              <p className="text-[10px] text-text-muted">Ghatampur local delivery</p>
                             </div>
                           </div>
                           {addresses.length > 0 && (
@@ -1726,36 +1703,36 @@ export default function CheckoutPage() {
                           type="button"
                           onClick={handleDetectLocationForCheckout}
                           disabled={isDetectingLocation}
-                          className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/25 border-2 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/30 transition-all font-black text-xs active:scale-[0.99] shadow-xs cursor-pointer"
+                          className="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/25 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100/50 transition-all font-bold text-xs active:scale-[0.99] cursor-pointer"
                         >
                           {isDetectingLocation ? (
                             <>
-                              <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
-                              <span>GPS लोकेशन ढूंढी जा रही है...</span>
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-600" />
+                              <span>Detecting GPS location...</span>
                             </>
                           ) : (
                             <>
-                              <span className="text-base">📍</span>
-                              <span>Use Current Location (मेरी वर्तमान लोकेशन लगाएं)</span>
+                              <span className="text-sm">📍</span>
+                              <span>Use Current Location</span>
                             </>
                           )}
                         </button>
 
                         {/* Address Label Selector */}
                         <div>
-                          <Label className="text-[11px] font-bold text-text-secondary uppercase tracking-wider">Address Type</Label>
-                          <div className="grid grid-cols-3 gap-2 mt-1.5">
+                          <Label className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">Save As</Label>
+                          <div className="grid grid-cols-3 gap-2 mt-1">
                             {[
-                              { key: 'Home', label: 'Home / घर', icon: '🏠' },
-                              { key: 'Work', label: 'Work / ऑफिस', icon: '🏢' },
-                              { key: 'Other', label: 'Other / अन्य', icon: '📍' },
+                              { key: 'Home', label: 'Home', icon: '🏠' },
+                              { key: 'Work', label: 'Work', icon: '🏢' },
+                              { key: 'Other', label: 'Other', icon: '📍' },
                             ].map((item) => (
                               <button
                                 key={item.key}
                                 type="button"
                                 onClick={() => setAddressForm({ ...addressForm, label: item.key })}
                                 className={cn(
-                                  "h-10 text-xs font-black rounded-xl border transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer",
+                                  "h-9 text-xs font-bold rounded-xl border transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer",
                                   addressForm.label === item.key
                                     ? "bg-primary text-white border-primary shadow-xs"
                                     : "bg-background border-border text-text-secondary hover:border-primary/40"
@@ -1770,26 +1747,26 @@ export default function CheckoutPage() {
 
                         {/* Complete Delivery Address */}
                         <div>
-                          <Label htmlFor="street" className="text-[11px] font-bold text-text-secondary uppercase tracking-wider flex items-center justify-between">
-                            <span>Complete Address (मकान नं., रास्ता, लैंडमार्क)</span>
+                          <Label htmlFor="street" className="text-[10px] font-bold text-text-secondary uppercase tracking-wider flex items-center justify-between">
+                            <span>Complete Address</span>
                             <span className="text-red-500 font-bold">*</span>
                           </Label>
                           <textarea
                             id="street"
                             required
                             rows={2}
-                            placeholder="उदा. मकान नं. 12, स्टेशन रोड, स्टेट बैंक के पास, घाटमपुर"
+                            placeholder="House / Flat No., Street, Landmark, Ghatampur"
                             value={addressForm.street}
                             onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })}
-                            className="mt-1.5 block w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs font-semibold focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-text-muted/60"
+                            className="mt-1 block w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-medium focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-text-muted/60"
                           />
                         </div>
 
                         {/* Phone & Pincode/City Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                           <div>
-                            <Label htmlFor="phone" className="text-[11px] font-bold text-text-secondary uppercase tracking-wider flex items-center justify-between">
-                              <span>Phone Number (मोबाइल नंबर)</span>
+                            <Label htmlFor="phone" className="text-[10px] font-bold text-text-secondary uppercase tracking-wider flex items-center justify-between">
+                              <span>Phone Number</span>
                               <span className="text-red-500 font-bold">*</span>
                             </Label>
                             <Input
@@ -1797,17 +1774,17 @@ export default function CheckoutPage() {
                               type="tel"
                               required
                               maxLength={10}
-                              placeholder="10 अंकों का मोबाइल नंबर"
+                              placeholder="10-digit mobile number"
                               value={addressForm.phone}
                               onChange={(e) => setAddressForm({ ...addressForm, phone: getLast10Digits(e.target.value) })}
-                              className="mt-1 h-10 text-xs font-bold rounded-xl border-border bg-background"
+                              className="mt-1 h-9 text-xs font-medium rounded-xl border-border bg-background"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="city-pincode" className="text-[11px] font-bold text-text-secondary uppercase tracking-wider">
+                            <Label htmlFor="city-pincode" className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">
                               <span>City & Pincode</span>
                             </Label>
-                            <div className="mt-1 h-10 px-3 flex items-center justify-between rounded-xl border border-border bg-muted/30 text-xs font-bold text-text-secondary">
+                            <div className="mt-1 h-9 px-3 flex items-center justify-between rounded-xl border border-border bg-muted/30 text-xs font-bold text-text-secondary">
                               <span>Ghatampur</span>
                               <span className="text-primary font-black">209206</span>
                             </div>
@@ -1815,17 +1792,17 @@ export default function CheckoutPage() {
                         </div>
 
                         {/* Optional Map Toggle */}
-                        <div className="pt-1">
+                        <div className="pt-0.5">
                           <button
                             type="button"
                             onClick={() => setShowMapPicker(!showMapPicker)}
                             className="text-xs font-bold text-primary flex items-center gap-1.5 hover:underline cursor-pointer"
                           >
                             <span>🗺️</span>
-                            <span>{showMapPicker ? 'Hide map pin' : 'Adjust pin on map (वैकल्पिक)'}</span>
+                            <span>{showMapPicker ? 'Hide map pin' : 'Adjust pin on map (optional)'}</span>
                           </button>
                           {showMapPicker && (
-                            <div className="mt-2.5 rounded-xl overflow-hidden border border-border animate-slide-down">
+                            <div className="mt-2 rounded-xl overflow-hidden border border-border animate-slide-down">
                               <MapPicker
                                 initialLat={addressForm.lat ?? null}
                                 initialLng={addressForm.lng ?? null}
@@ -1847,14 +1824,14 @@ export default function CheckoutPage() {
                         </div>
 
                         {/* Form Action Buttons */}
-                        <div className="flex gap-2.5 justify-end pt-2 border-t border-border/40">
+                        <div className="flex gap-2 justify-end pt-2 border-t border-border/40">
                           {addresses.length > 0 && (
                             <Button
                               type="button"
                               variant="ghost"
                               onClick={handleCancelAddressForm}
                               disabled={isSavingAddress}
-                              className="rounded-xl text-xs font-bold h-10 px-4 cursor-pointer"
+                              className="rounded-xl text-xs font-bold h-9 px-3.5 cursor-pointer"
                             >
                               Cancel
                             </Button>
@@ -1862,7 +1839,7 @@ export default function CheckoutPage() {
                           <Button
                             type="submit"
                             disabled={isSavingAddress}
-                            className="bg-primary text-white rounded-xl text-xs font-black px-6 h-10 hover:bg-primary/95 shadow-md active:scale-98 transition-all flex items-center gap-2 cursor-pointer"
+                            className="bg-primary text-white rounded-xl text-xs font-black px-5 h-9 hover:bg-primary/95 shadow-sm active:scale-98 transition-all flex items-center gap-1.5 cursor-pointer"
                           >
                             {isSavingAddress ? (
                               <>
@@ -1870,7 +1847,7 @@ export default function CheckoutPage() {
                                 <span>Saving...</span>
                               </>
                             ) : (
-                              <span>{editingAddressId ? 'Update Address' : 'Deliver to this Address (इस पते पर मंगवाएं) »'}</span>
+                              <span>{editingAddressId ? 'Update Address' : 'Deliver to this Address »'}</span>
                             )}
                           </Button>
                         </div>
@@ -1881,7 +1858,7 @@ export default function CheckoutPage() {
               </div>
 
               {/* Order For Someone Else Card */}
-              <div id="order-for-someone-section" className="rounded-2xl border border-border/80 bg-card p-3.5 sm:p-4 shadow-sm space-y-3 transition-all">
+              <div id="order-for-someone-section" className="rounded-2xl border border-border/80 bg-card p-3 sm:p-3.5 shadow-xs space-y-2.5 transition-all">
                 <div
                   role="button"
                   tabIndex={0}
@@ -1897,81 +1874,76 @@ export default function CheckoutPage() {
                   }}
                   className="flex items-center justify-between cursor-pointer select-none"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     <div className={cn(
-                      "h-9 w-9 rounded-xl flex items-center justify-center text-lg shrink-0 transition-colors",
-                      orderForSomeone ? "bg-amber-500 text-white shadow-md shadow-amber-500/20" : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                      "h-8 w-8 rounded-xl flex items-center justify-center text-base shrink-0 transition-colors",
+                      orderForSomeone ? "bg-amber-500 text-white shadow-xs" : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
                     )}>
                       🎁
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs sm:text-sm font-black text-text-primary">
-                          Ordering for someone else?
-                        </span>
-                        <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded-full">
-                          किसी और के लिए?
-                        </span>
+                    <div className="min-w-0">
+                      <div className="text-xs sm:text-sm font-black text-text-primary truncate">
+                        Order for someone else?
                       </div>
-                      <p className="text-[11px] text-text-secondary font-medium mt-0.5">
-                        दोस्त या परिवार के सदस्य के लिए सामान मंगवाएं
+                      <p className="text-[11px] text-text-muted truncate mt-0.5">
+                        Send this order to family or friends
                       </p>
                     </div>
                   </div>
 
                   {/* Switch Pill */}
                   <div className={cn(
-                    "w-11 h-6 rounded-full p-0.5 transition-colors duration-200 flex items-center shrink-0",
+                    "w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 flex items-center shrink-0 ml-2",
                     orderForSomeone ? "bg-primary" : "bg-muted-foreground/25"
                   )}>
                     <div className={cn(
-                      "w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-200 flex items-center justify-center text-[10px]",
-                      orderForSomeone ? "translate-x-5 text-primary" : "translate-x-0"
+                      "w-4.5 h-4.5 rounded-full bg-white shadow-xs transform transition-transform duration-200 flex items-center justify-center text-[9px]",
+                      orderForSomeone ? "translate-x-4.5 text-primary" : "translate-x-0"
                     )}>
-                      {orderForSomeone && <Check className="h-3 w-3 stroke-[3]" />}
+                      {orderForSomeone && <Check className="h-2.5 w-2.5 stroke-[3]" />}
                     </div>
                   </div>
                 </div>
 
                 {/* Collapsible Details Inputs */}
                 {orderForSomeone && (
-                  <div className="pt-2 border-t border-border/40 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="pt-2 border-t border-border/40 space-y-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       <div>
-                        <Label htmlFor="recipient-name" className="text-[11px] font-bold text-text-secondary uppercase tracking-wider flex items-center justify-between">
-                          <span>Recipient's Name (नाम)</span>
+                        <Label htmlFor="recipient-name" className="text-[10px] font-bold text-text-secondary uppercase tracking-wider flex items-center justify-between">
+                          <span>Receiver's Name</span>
                           <span className="text-red-500 font-bold">*</span>
                         </Label>
                         <Input
                           id="recipient-name"
                           type="text"
                           required
-                          placeholder="उदा. राहुल शर्मा (Recipient Name)"
+                          placeholder="e.g. Rahul Sharma"
                           value={recipientName}
                           onChange={(e) => setRecipientName(e.target.value)}
-                          className="mt-1 h-10 text-xs font-bold rounded-xl border-border bg-background"
+                          className="mt-1 h-9 text-xs font-medium rounded-xl border-border bg-background"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="recipient-phone" className="text-[11px] font-bold text-text-secondary uppercase tracking-wider flex items-center justify-between">
-                          <span>Phone Number (मोबाइल नंबर)</span>
-                          <span className="text-text-muted font-normal text-[10px]">वैकल्पिक / Optional</span>
+                        <Label htmlFor="recipient-phone" className="text-[10px] font-bold text-text-secondary uppercase tracking-wider flex items-center justify-between">
+                          <span>Receiver's Phone</span>
+                          <span className="text-text-muted font-normal text-[9px]">Optional</span>
                         </Label>
                         <Input
                           id="recipient-phone"
                           type="tel"
                           maxLength={10}
-                          placeholder="10 अंकों का मोबाइल नंबर"
+                          placeholder="10-digit mobile number"
                           value={recipientPhone}
                           onChange={(e) => setRecipientPhone(getLast10Digits(e.target.value))}
-                          className="mt-1 h-10 text-xs font-bold rounded-xl border-border bg-background"
+                          className="mt-1 h-9 text-xs font-medium rounded-xl border-border bg-background"
                         />
                       </div>
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-2">
-                      <span className="text-base shrink-0">📞</span>
-                      <span>डिलीवरी राइडर सीधे इस नंबर पर संपर्क करेगा और सही व्यक्ति को सामान डिलीवर होगा।</span>
+                    <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] font-medium text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                      <span className="text-sm shrink-0">📞</span>
+                      <span>Delivery rider will call this number directly upon arrival.</span>
                     </div>
                   </div>
                 )}
@@ -2017,7 +1989,7 @@ export default function CheckoutPage() {
                       <span className="text-sm shrink-0">📝</span>
                       <input
                         type="text"
-                        placeholder="Add note for restaurant / rider (उदा. कम मिर्च, रिंग बेल बजाएं)..."
+                        placeholder="Add delivery instructions (e.g. Ring bell, leave at door)..."
                         value={cookingInstruction}
                         onChange={(e) => setCookingInstruction(e.target.value)}
                         className="w-full text-xs font-semibold bg-transparent placeholder:text-text-muted/60 focus:outline-none"
@@ -2236,7 +2208,7 @@ export default function CheckoutPage() {
 
             {/* Grand Total */}
             <div className="border-t-2 border-dashed border-border/60 pt-3 mt-3 flex justify-between items-center text-base font-black text-text-primary">
-              <span>To Pay (कुल भुगतान)</span>
+              <span>To Pay</span>
               <span className="text-primary text-xl font-black">₹{grandTotal.toFixed(0)}</span>
             </div>
           </div>
