@@ -6,43 +6,58 @@ import '../models/banner.dart';
 
 class BannerRepository {
   final Dio dio;
-  static const _diskBannersKey = 'cached_promo_banners';
+  static const _diskBannersKey = 'cached_promo_banners_v4';
   static List<Banner>? _inMemoryBanners;
 
   BannerRepository(this.dio);
 
   static final List<Banner> defaultBanners = [
     const Banner(
-      id: 'default-1',
+      id: 'banner-ghatampur-express',
       title: 'Fast Delivery in Ghatampur',
-      description: 'Milk, Fruits, Vegetables, Snacks & more',
+      description: 'Milk, Fruits, Vegetables, Snacks & more delivered in minutes',
       code: '',
       gradient: 'from-rose-500 via-rose-500 to-orange-400',
-      type: 'express-delivery',
+      type: 'real-image',
+      imageUrl: '/banners/ghatampur-express-real.png',
       linkUrl: '/category/fruits-vegetables',
       sortOrder: 0,
       isActive: true,
     ),
     const Banner(
-      id: 'default-2',
-      title: 'Farm Fresh Vegetables & Fruits',
-      description: 'Directly sourced from local farms. Handpicked for premium quality.',
+      id: 'banner-as-restaurant',
+      title: 'A.S. Restaurant • Burgers, Pizza & Shakes',
+      description: 'Juicy burgers, cheesy loaded pizzas, hot momos & thick shakes',
       code: '',
-      gradient: 'from-emerald-600 via-emerald-500 to-teal-400',
-      type: 'fresh',
-      linkUrl: '/category/fruits-vegetables',
+      gradient: 'from-rose-600 via-red-500 to-amber-500',
+      type: 'real-image',
+      imageUrl: '/banners/as-restaurant-real.png',
+      linkUrl: '/restaurant/as-restaurant',
       sortOrder: 1,
       isActive: true,
     ),
     const Banner(
-      id: 'default-3',
-      title: 'Super Savings Everyday!',
-      description: 'Best wholesale prices on fruits, veggies, dairy, and snacks.',
+      id: 'banner-wedson-restaurant',
+      title: 'Wedson Restaurant • Royal Indian & Biryani',
+      description: 'Aromatic dum biryani, rich paneer curries, tandoori treats & dal makhani',
       code: '',
-      gradient: 'from-rose-600 via-rose-500 to-orange-400',
-      type: 'first-order',
-      linkUrl: '/category/dairy-breakfast',
+      gradient: 'from-amber-600 via-orange-500 to-yellow-500',
+      type: 'real-image',
+      imageUrl: '/banners/wedson-restaurant-real.png',
+      linkUrl: '/restaurant/wedson-restaurant',
       sortOrder: 2,
+      isActive: true,
+    ),
+    const Banner(
+      id: 'banner-bal-udyan',
+      title: 'Bal Udyan Restaurant • Family Meals & Thalis',
+      description: 'Homestyle North Indian thalis, special Chinese bites & evening party snacks',
+      code: '',
+      gradient: 'from-emerald-600 via-teal-500 to-cyan-500',
+      type: 'real-image',
+      imageUrl: '/banners/bal-udyan-real.png',
+      linkUrl: '/restaurant/bal-udyan-restaurant',
+      sortOrder: 3,
       isActive: true,
     ),
   ];
@@ -53,16 +68,29 @@ class BannerRepository {
       return _inMemoryBanners!;
     }
 
-    // 2. Disk cache hit (instant 0ms hydration)
+    // 2. Disk cache hit (instant 0ms hydration + async background refresh)
     if (!forceRefresh) {
       final diskBanners = await _loadBannersFromDisk();
       if (diskBanners != null && diskBanners.isNotEmpty) {
         _inMemoryBanners = diskBanners;
+        // Background revalidation to keep disk cache fresh with admin updates
+        _fetchFromNetwork(type: type);
         return diskBanners;
       }
     }
 
-    // 3. Network fetch
+    // 3. Network fetch (first load or pull-to-refresh)
+    final networkBanners = await _fetchFromNetwork(type: type);
+    if (networkBanners != null && networkBanners.isNotEmpty) {
+      return networkBanners;
+    }
+
+    // 4. Fallback to bundled real banners
+    _inMemoryBanners = defaultBanners;
+    return defaultBanners;
+  }
+
+  Future<List<Banner>?> _fetchFromNetwork({String? type}) async {
     try {
       final response = await dio.get(
         '/api/banners',
@@ -75,24 +103,14 @@ class BannerRepository {
         final banners = data.map((json) => Banner.fromJson(json as Map<String, dynamic>)).toList();
         if (banners.isNotEmpty) {
           _inMemoryBanners = banners;
-          _saveBannersToDisk(banners);
+          await _saveBannersToDisk(banners);
           return banners;
         }
       }
     } catch (e, st) {
-      LoggerService.error('BannerRepository: getBanners failed', e, st);
+      LoggerService.error('BannerRepository: _fetchFromNetwork failed', e, st);
     }
-
-    // 4. Disk cache fallback on network failure
-    final diskBanners = await _loadBannersFromDisk();
-    if (diskBanners != null && diskBanners.isNotEmpty) {
-      _inMemoryBanners = diskBanners;
-      return diskBanners;
-    }
-
-    // 5. Default static banners matching web app
-    _inMemoryBanners = defaultBanners;
-    return defaultBanners;
+    return null;
   }
 
   static Future<List<Banner>?> _loadBannersFromDisk() async {

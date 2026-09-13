@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -85,10 +86,8 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
     );
 
     if (shouldLogout == true && mounted) {
-      await ref.read(authProvider.notifier).clear();
-      if (mounted) {
-        Navigator.pop(context);
-      }
+      Navigator.pop(context);
+      unawaited(ref.read(authProvider.notifier).clear());
     }
   }
 

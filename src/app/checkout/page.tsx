@@ -235,10 +235,18 @@ export default function CheckoutPage() {
   const [activePendingOrderId, setActivePendingOrderId] = useState<string | null>(null)
   const [cookingInstruction, setCookingInstruction] = useState('')
 
+  // Order for someone else state
+  const [orderForSomeone, setOrderForSomeone] = useState(false)
+  const [recipientName, setRecipientName] = useState('')
+  const [recipientPhone, setRecipientPhone] = useState('')
+
   // New Address Form State
   const [showNewAddressForm, setShowNewAddressForm] = useState(false)
   const [isSavingAddress, setIsSavingAddress] = useState(false)
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null)
+  const [isChangingAddress, setIsChangingAddress] = useState(false)
+  const [showMapPicker, setShowMapPicker] = useState(false)
+  const activeCheckoutAddressRef = useRef<{ id: string; addresses: Address[] } | null>(null)
   const [addressForm, setAddressForm] = useState<{
     label: string
     houseNo: string
@@ -546,8 +554,11 @@ export default function CheckoutPage() {
           if (deliveryAddrs.length > 0) {
             const def = deliveryAddrs.find((a: any) => a.isDefault)
             setSelectedAddressId(def ? def.id : deliveryAddrs[0].id)
+            setShowNewAddressForm(false)
+            setIsChangingAddress(false)
           } else {
             setSelectedAddressId('')
+            setShowNewAddressForm(true)
           }
 
           // Automatically geocode in background if any saved address lacks coordinates
@@ -592,27 +603,26 @@ export default function CheckoutPage() {
 
 
 
-  // Create New Address
-  const handleSaveAddress = async (e: React.FormEvent) => {
-    e.preventDefault()
+  // Reusable core address saving logic for both explicit submit and on-the-fly checkout auto-save
+  const saveAddressCore = async (): Promise<{ savedAddress: Address; newAddresses: Address[] } | null> => {
     const { label, street, pincode, phone, isDefault } = addressForm
 
     if (!street || !pincode || !phone) {
       toast.error('Please fill in all address details, including pincode and phone number')
-      return
+      return null
     }
 
     const cleanPincode = pincode.trim()
 
     if (!/^\d{6}$/.test(cleanPincode)) {
       toast.error('Pincode must be a 6-digit number')
-      return
+      return null
     }
 
     const serviceablePincode = resolveStorePincode(storeSettingsMap)
     if (cleanPincode !== serviceablePincode) {
       toast.error(`FastKirana only delivers to pincode ${serviceablePincode}.`)
-      return
+      return null
     }
 
     const trimmedPhone = phone.trim()
@@ -623,7 +633,7 @@ export default function CheckoutPage() {
 
     if (cleanPhone.length !== 10) {
       toast.error('Mobile number must be a valid 10-digit number')
-      return
+      return null
     }
 
     const inferredCity = 'Ghatampur'
@@ -675,15 +685,18 @@ export default function CheckoutPage() {
       })
 
       if (res.ok) {
-        const savedAddress = await res.json()
+        const savedAddress: Address = await res.json()
+        let nextAddresses: Address[]
         if (editingAddressId) {
-          setAddresses(addresses.map(a => a.id === editingAddressId ? savedAddress : a))
+          nextAddresses = addresses.map(a => a.id === editingAddressId ? savedAddress : a)
           toast.success('Address updated successfully!')
         } else {
-          setAddresses([savedAddress, ...addresses])
+          nextAddresses = [savedAddress, ...addresses.filter(a => a.id !== savedAddress.id)]
           toast.success('Address saved successfully!')
         }
+        setAddresses(nextAddresses)
         setSelectedAddressId(savedAddress.id)
+        activeCheckoutAddressRef.current = { id: savedAddress.id, addresses: nextAddresses }
         setShowNewAddressForm(false)
         setEditingAddressId(null)
         setAddressForm({
@@ -698,15 +711,24 @@ export default function CheckoutPage() {
           lat: null,
           lng: null,
         })
+        return { savedAddress, newAddresses: nextAddresses }
       } else {
         const errorData = await res.json()
         toast.error(errorData.error || 'Failed to save address')
+        return null
       }
     } catch (err) {
       toast.error('Something went wrong')
+      return null
     } finally {
       setIsSavingAddress(false)
     }
+  }
+
+  // Create / Update New Address from explicit button click
+  const handleSaveAddress = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await saveAddressCore()
   }
 
   const handleEditAddressClick = (addr: any) => {
@@ -731,6 +753,8 @@ export default function CheckoutPage() {
     triggerHaptic('light')
     setShowNewAddressForm(false)
     setEditingAddressId(null)
+    setIsChangingAddress(false)
+    setShowMapPicker(false)
     setAddressForm({
       label: 'Home',
       houseNo: '.',
@@ -738,16 +762,41 @@ export default function CheckoutPage() {
       area: '.',
       city: 'Ghatampur',
       pincode: DEFAULT_STORE_PINCODE,
-      phone: '',
+      phone: addressForm.phone,
       isDefault: false,
       lat: null,
       lng: null,
     })
   }
 
+  // Order Helpers for Notes & Recipient Phone
+  const getOrderNotes = () => {
+    const cleanP = recipientPhone.replace(/\D/g, '')
+    const orderForNote = (orderForSomeone && recipientName.trim())
+      ? `🎁 Order for: ${recipientName.trim()}${cleanP ? ` (${cleanP})` : ''}`
+      : ''
+    return [orderForNote, cookingInstruction.trim()].filter(Boolean).join(' | ') || undefined
+  }
+
+  const getEffectiveCustomerPhone = (activeSelectedAddress?: Address) => {
+    const cleanP = recipientPhone.replace(/\D/g, '')
+    if (orderForSomeone && cleanP.length === 10) {
+      return cleanP
+    }
+    return activeSelectedAddress?.phone || addressForm.phone || (session?.user as any)?.phone || ''
+  }
+
   // Place Order
-  const handlePlaceOrder = async (overrideMethod?: 'COD' | 'UPI' | 'CARD' | 'WALLET') => {
+  const handlePlaceOrder = async (
+    overrideMethod?: 'COD' | 'UPI' | 'CARD' | 'WALLET',
+    overrideAddressId?: string,
+    overrideAddresses?: Address[]
+  ) => {
     const selectedMethod = overrideMethod || paymentMethod
+    const activeAddresses = overrideAddresses || addresses
+    const activeAddressId = overrideAddressId || selectedAddressId
+    const activeSelectedAddress = activeAddresses.find(a => a.id === activeAddressId) || selectedAddress
+
     setIsPlacingOrder(true)
     try {
       const settingsRes = await fetch('/api/settings', { cache: 'no-store' })
@@ -755,8 +804,8 @@ export default function CheckoutPage() {
 
       const validation = await validateCheckoutEligibility({
         items: items.map(i => ({ product: i.product as CartItem['product'] })),
-        addresses,
-        selectedAddressId,
+        addresses: activeAddresses,
+        selectedAddressId: activeAddressId,
         deliveryMethod,
         settings,
       })
@@ -768,7 +817,8 @@ export default function CheckoutPage() {
         return
       }
 
-      const effectiveCustomerPhone = selectedAddress?.phone || addressForm.phone || (session?.user as any)?.phone || ''
+      const effectiveCustomerPhone = getEffectiveCustomerPhone(activeSelectedAddress)
+      const finalNotes = getOrderNotes()
 
       const payload = buildOrderPayload({
         finalAddressId: validation.finalAddressId!,
@@ -789,7 +839,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           ...payload,
           existingOrderId: activePendingOrderId || undefined,
-          notes: cookingInstruction.trim() || undefined
+          notes: finalNotes
         }),
       })
 
@@ -846,8 +896,16 @@ export default function CheckoutPage() {
     loadRazorpayScript()
   }, [])
 
-  const handleCashfreeCheckout = async (overrideMethod?: 'COD' | 'UPI' | 'CARD' | 'WALLET') => {
+  const handleCashfreeCheckout = async (
+    overrideMethod?: 'COD' | 'UPI' | 'CARD' | 'WALLET',
+    overrideAddressId?: string,
+    overrideAddresses?: Address[]
+  ) => {
     const selectedMethod = overrideMethod || paymentMethod
+    const activeAddresses = overrideAddresses || addresses
+    const activeAddressId = overrideAddressId || selectedAddressId
+    const activeSelectedAddress = activeAddresses.find(a => a.id === activeAddressId) || selectedAddress
+
     setIsPlacingOrder(true)
     try {
       // 1. Validate checkout eligibility
@@ -856,8 +914,8 @@ export default function CheckoutPage() {
 
       const validation = await validateCheckoutEligibility({
         items: items.map(i => ({ product: i.product as CartItem['product'] })),
-        addresses,
-        selectedAddressId,
+        addresses: activeAddresses,
+        selectedAddressId: activeAddressId,
         deliveryMethod,
         settings,
       })
@@ -870,7 +928,8 @@ export default function CheckoutPage() {
       }
 
       // 2. Pre-create DB Order in PENDING / UNPAID state
-      const effectiveCustomerPhone = selectedAddress?.phone || addressForm.phone || (session?.user as any)?.phone || ''
+      const effectiveCustomerPhone = getEffectiveCustomerPhone(activeSelectedAddress)
+      const finalNotes = getOrderNotes()
 
       const payload = buildOrderPayload({
         finalAddressId: validation.finalAddressId!,
@@ -891,7 +950,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           ...payload,
           existingOrderId: activePendingOrderId || undefined,
-          notes: cookingInstruction.trim() || undefined
+          notes: finalNotes
         }),
       })
 
@@ -916,13 +975,13 @@ export default function CheckoutPage() {
 
       if (!cfRes.ok || !cfData.paymentSessionId) {
         console.warn('Cashfree session failed, falling back to Razorpay:', cfData.error)
-        return handleRazorpayCheckout('UPI')
+        return handleRazorpayCheckout('UPI', activeAddressId, activeAddresses)
       }
 
       const loaded = await loadCashfreeScript()
       if (!loaded || !(window as any).Cashfree) {
         console.warn('Cashfree SDK failed to load, falling back to Razorpay')
-        return handleRazorpayCheckout('UPI')
+        return handleRazorpayCheckout('UPI', activeAddressId, activeAddresses)
       }
 
       const cashfree = (window as any).Cashfree({
@@ -1001,8 +1060,16 @@ export default function CheckoutPage() {
     }
   }
 
-  const handleRazorpayCheckout = async (overrideMethod?: 'COD' | 'UPI' | 'CARD' | 'WALLET') => {
+  const handleRazorpayCheckout = async (
+    overrideMethod?: 'COD' | 'UPI' | 'CARD' | 'WALLET',
+    overrideAddressId?: string,
+    overrideAddresses?: Address[]
+  ) => {
     const selectedMethod = overrideMethod || paymentMethod
+    const activeAddresses = overrideAddresses || addresses
+    const activeAddressId = overrideAddressId || selectedAddressId
+    const activeSelectedAddress = activeAddresses.find(a => a.id === activeAddressId) || selectedAddress
+
     setIsPlacingOrder(true)
     try {
       // 1. Validate checkout eligibility
@@ -1011,8 +1078,8 @@ export default function CheckoutPage() {
 
       const validation = await validateCheckoutEligibility({
         items: items.map(i => ({ product: i.product as CartItem['product'] })),
-        addresses,
-        selectedAddressId,
+        addresses: activeAddresses,
+        selectedAddressId: activeAddressId,
         deliveryMethod,
         settings,
       })
@@ -1025,7 +1092,8 @@ export default function CheckoutPage() {
       }
 
       // 2. Pre-create DB Order in PENDING / UNPAID state BEFORE opening Razorpay (reuses existing pending order on retry)
-      const effectiveCustomerPhone = selectedAddress?.phone || addressForm.phone || (session?.user as any)?.phone || ''
+      const effectiveCustomerPhone = getEffectiveCustomerPhone(activeSelectedAddress)
+      const finalNotes = getOrderNotes()
 
       const payload = buildOrderPayload({
         finalAddressId: validation.finalAddressId!,
@@ -1046,7 +1114,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           ...payload,
           existingOrderId: activePendingOrderId || undefined,
-          notes: cookingInstruction.trim() || undefined
+          notes: finalNotes
         }),
       })
 
@@ -1191,19 +1259,44 @@ export default function CheckoutPage() {
     }
   }
 
-  const handlePlaceOrderClick = () => {
-    if (isPlacingOrder) return
+  const handlePlaceOrderClick = async () => {
+    if (isPlacingOrder || isSavingAddress) return
+
+    let effectiveAddressId = selectedAddressId
+    let effectiveAddresses = addresses
 
     if (showNewAddressForm) {
-      triggerHaptic('warning')
-      toast.error('Please save your new address first by clicking Save & Select')
-      const el = document.getElementById('new-address-form')
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      return
+      const hasEnteredStreet = addressForm.street && addressForm.street.trim().length > 0
+      if (hasEnteredStreet) {
+        // Seamlessly auto-save the address on-the-fly without forcing the user to find/click 'Save & Select'
+        const result = await saveAddressCore()
+        if (!result) {
+          const el = document.getElementById('new-address-form')
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          return
+        }
+        effectiveAddressId = result.savedAddress.id
+        effectiveAddresses = result.newAddresses
+      } else if (addresses.length > 0) {
+        // Address form was open but empty; fall back to already selected or primary address
+        setShowNewAddressForm(false)
+        setEditingAddressId(null)
+        effectiveAddressId = selectedAddressId || addresses[0].id
+        setSelectedAddressId(effectiveAddressId)
+      } else {
+        // No saved address and empty address form
+        triggerHaptic('warning')
+        toast.error('Please enter your delivery address')
+        const el = document.getElementById('new-address-form')
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        return
+      }
     }
 
+    activeCheckoutAddressRef.current = { id: effectiveAddressId, addresses: effectiveAddresses }
+
     if (deliveryMethod === 'DELIVERY') {
-      const targetId = selectedAddressId || (addresses.length > 0 ? addresses[0].id : '')
+      const targetId = effectiveAddressId || (effectiveAddresses.length > 0 ? effectiveAddresses[0].id : '')
       if (!targetId) {
         triggerHaptic('warning')
         toast.error('Please select or add a delivery address')
@@ -1212,16 +1305,45 @@ export default function CheckoutPage() {
         return
       }
 
-      if (deliveryRules && !deliveryRules.isServiceable) {
+      const activeAddress = effectiveAddresses.find(a => a.id === targetId)
+      if (activeAddress && activeAddress.lat && activeAddress.lng && storeSettingsMap.store_lat && storeSettingsMap.store_lng) {
+        const storeLatVal = parseFloat(storeSettingsMap.store_lat) || DEFAULT_STORE_LAT
+        const storeLngVal = parseFloat(storeSettingsMap.store_lng) || DEFAULT_STORE_LNG
+        const maxDist = parseFloat(storeSettingsMap.delivery_radius || String(DEFAULT_DELIVERY_RADIUS_KM))
+        const dist = getDistanceKm(storeLatVal, storeLngVal, activeAddress.lat, activeAddress.lng)
+        if (dist > maxDist) {
+          triggerHaptic('warning')
+          toast.error(`Your address is outside our delivery zone (${dist.toFixed(1)} km away). We deliver only up to ${maxDist} km.`)
+          return
+        }
+      } else if (deliveryRules && !deliveryRules.isServiceable) {
         triggerHaptic('warning')
         toast.error(`Your address is outside our delivery zone (${distanceKm?.toFixed(1)} km away). We deliver only up to 3 km.`)
         return
       }
     }
 
+    if (orderForSomeone) {
+      if (!recipientName.trim()) {
+        triggerHaptic('warning')
+        toast.error('Please enter recipient name (कृपया प्राप्तकर्ता का नाम लिखें)')
+        const el = document.getElementById('order-for-someone-section')
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        return
+      }
+      const cleanP = recipientPhone.replace(/\D/g, '')
+      if (cleanP && cleanP.length !== 10) {
+        triggerHaptic('warning')
+        toast.error('Please enter a valid 10-digit phone number (कृपया 10 अंकों का फोन नंबर लिखें)')
+        const el = document.getElementById('order-for-someone-section')
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        return
+      }
+    }
+
     if (onlyCod) {
       setPaymentMethod('COD')
-      handlePlaceOrder('COD')
+      handlePlaceOrder('COD', effectiveAddressId, effectiveAddresses)
     } else {
       triggerHaptic('light')
       setIsPaymentModalOpen(true)
@@ -1426,467 +1548,543 @@ export default function CheckoutPage() {
           
           {/* Main Checkout Box */}
           <div className="bg-card border border-border p-3.5 min-[375px]:p-5 md:p-6 rounded-2xl shadow-sm space-y-6 md:space-y-8 animate-fade-in">
+              {/* Delivery Address Section */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-base sm:text-lg font-black text-text-primary flex items-center gap-2">
                     <MapPin className="h-5 w-5 text-primary" />
-                    Delivery Address
+                    <span>Delivery Address (डिलीवरी पता)</span>
                   </h2>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAddressForm({
-                        label: 'Home',
-                        houseNo: '',
-                        street: '',
-                        area: '',
-                        city: 'Ghatampur',
-                        pincode: '209206',
-                        phone: addressForm.phone,
-                        isDefault: false,
-                        lat: null,
-                        lng: null,
-                      })
-                      setShowNewAddressForm(true)
-                    }}
-                    className="text-xs font-black text-primary hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>Add New</span>
-                  </button>
+                  {!showNewAddressForm && addresses.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAddressForm({
+                          label: 'Home',
+                          houseNo: '.',
+                          street: '',
+                          area: '.',
+                          city: 'Ghatampur',
+                          pincode: DEFAULT_STORE_PINCODE,
+                          phone: addressForm.phone,
+                          isDefault: false,
+                          lat: null,
+                          lng: null,
+                        })
+                        setEditingAddressId(null)
+                        setShowNewAddressForm(true)
+                        setIsChangingAddress(false)
+                      }}
+                      className="text-xs font-black text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>+ Add New</span>
+                    </button>
+                  )}
                 </div>
 
                 {isAddressesLoading ? (
-                  <div className="flex justify-center py-10">
+                  <div className="flex justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
                 ) : (
-                  <div id="address-section" className="space-y-4 scroll-mt-24">
-                      {addresses.map((addr) => (
-                        <div
-                          key={addr.id}
-                          onClick={() => setSelectedAddressId(addr.id)}
-                          className={cn(
-                            "flex items-start gap-3.5 p-4 rounded-2xl border-2 cursor-pointer transition-all duration-300 relative overflow-hidden bg-white dark:bg-zinc-900/50",
-                            selectedAddressId === addr.id
-                              ? "border-primary bg-primary/[0.01] shadow-[0_4px_20px_rgba(251,37,118,0.06)]"
-                              : "border-border/60 hover:border-primary/30"
-                          )}
-                        >
-                          {/* Premium Radio Selector */}
-                          <div className={cn(
-                            "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all duration-200",
-                            selectedAddressId === addr.id ? "border-primary bg-primary" : "border-border"
-                          )}>
-                            {selectedAddressId === addr.id && (
-                              <div className="w-2 h-2 rounded-full bg-white" />
-                            )}
-                          </div>
-                          
-                          <div className="flex-grow text-xs">
-                            <div className="flex items-center justify-between gap-2 mb-1.5">
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-[10px] text-text-primary uppercase bg-muted px-2 py-0.5 rounded-md tracking-wider">
-                                  {addr.label}
+                  <div id="address-section" className="space-y-3 scroll-mt-24">
+                    {/* Primary Selected Address Card */}
+                    {!showNewAddressForm && selectedAddress && (
+                      <div className="rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/[0.03] to-emerald-500/[0.02] p-4 sm:p-5 relative overflow-hidden transition-all shadow-xs">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3.5 min-w-0">
+                            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 text-xl font-bold">
+                              {selectedAddress.label === 'Work' ? '🏢' : selectedAddress.label === 'Other' ? '📍' : '🏠'}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-black text-sm text-text-primary">
+                                  {selectedAddress.label || 'Home'}
                                 </span>
-                                {addr.isDefault && (
-                                  <span className="text-[9px] text-accent font-bold bg-accent/10 px-2 py-0.5 rounded-md">
+                                <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                  15–25 Mins Express
+                                </span>
+                                {selectedAddress.isDefault && (
+                                  <span className="text-[9px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-md">
                                     Default
                                   </span>
                                 )}
                               </div>
+                              <p className="text-xs text-text-secondary mt-1 font-semibold leading-relaxed break-words">
+                                {formatAddress(selectedAddress)}
+                              </p>
+                              {selectedAddress.phone && (
+                                <p className="text-[11px] text-text-muted mt-1 font-medium flex items-center gap-1">
+                                  <span>📞</span> {formatPhone(selectedAddress.phone)}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setIsChangingAddress(!isChangingAddress)}
+                              className="px-3 py-1.5 rounded-xl border border-primary/30 bg-white dark:bg-zinc-800 text-primary text-xs font-black hover:bg-primary/5 active:scale-95 transition-all shadow-xs cursor-pointer"
+                            >
+                              {isChangingAddress ? 'Done' : 'Change / बदलें'}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Distance / zone check */}
+                        {(() => {
+                          const addrDist = (selectedAddress.lat && selectedAddress.lng) ? getDistanceKm(storeLat, storeLng, selectedAddress.lat, selectedAddress.lng) : null
+                          const maxRadiusKm = parseFloat(storeSettingsMap['delivery_radius'] || storeSettingsMap['max_delivery_radius'] || '5.0')
+                          if (addrDist !== null && addrDist > maxRadiusKm) {
+                            return (
+                              <div className="mt-3 text-xs font-bold text-rose-600 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20 flex items-center gap-2">
+                                <span>⚠️</span>
+                                <span>This address is {addrDist.toFixed(1)} km away (outside our 5 km delivery zone). Please pick an address in Ghatampur.</span>
+                              </div>
+                            )
+                          }
+                          return null
+                        })()}
+                      </div>
+                    )}
+
+                    {/* Expandable list of saved addresses (when user taps 'Change') */}
+                    {!showNewAddressForm && isChangingAddress && addresses.length > 1 && (
+                      <div className="space-y-2.5 pt-1 animate-slide-down">
+                        <div className="text-[11px] font-bold text-text-muted px-1">
+                          Select delivery address:
+                        </div>
+                        {addresses.map((addr) => (
+                          <div
+                            key={addr.id}
+                            onClick={() => {
+                              setSelectedAddressId(addr.id)
+                              setIsChangingAddress(false)
+                            }}
+                            className={cn(
+                              "p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center justify-between gap-3 text-xs bg-card",
+                              selectedAddressId === addr.id
+                                ? "border-primary bg-primary/[0.02] shadow-xs"
+                                : "border-border/60 hover:border-primary/40"
+                            )}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="text-base">{addr.label === 'Work' ? '🏢' : addr.label === 'Other' ? '📍' : '🏠'}</span>
+                              <div className="min-w-0">
+                                <span className="font-bold text-text-primary mr-2">{addr.label}</span>
+                                <span className="text-text-secondary truncate">{formatAddress(addr)}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleEditAddressClick(addr)
+                                  setIsChangingAddress(false)
                                 }}
-                                className="text-[10.5px] font-black text-primary hover:underline cursor-pointer active:scale-95 transition-all"
+                                className="text-[11px] font-bold text-primary hover:underline"
                               >
-                                ✏️ Edit
+                                Edit
                               </button>
                             </div>
-                            <p className="text-text-secondary leading-relaxed font-semibold">
-                              {formatAddress(addr)}
-                            </p>
-                            
-                            {/* Distance & Delivery Fee Zone Badge */}
-                            {(() => {
-                              const addrDist = (addr.lat && addr.lng) ? getDistanceKm(storeLat, storeLng, addr.lat, addr.lng) : null
-                              const maxRadiusKm = parseFloat(storeSettingsMap['delivery_radius'] || storeSettingsMap['max_delivery_radius'] || '5.0')
-                              const surgeFee = parseFloat(storeSettingsMap['surge_charge'] || '0')
-                              const addrRules = addrDist !== null ? getDeliveryRules(addrDist, { maxRadiusKm, surgeFee }) : null
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
-                              if (addrDist === null || !addrRules) return null
+                    {/* Clean, Simple & Modern Address Form */}
+                    {showNewAddressForm && (
+                      <form id="new-address-form" onSubmit={handleSaveAddress} className="border-2 border-primary/25 p-4 sm:p-5 rounded-2xl space-y-4 bg-card shadow-sm animate-slide-up">
+                        <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
+                              <MapPin className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <h3 className="font-black text-sm text-text-primary">
+                                {editingAddressId ? 'Edit Address' : 'Add Delivery Address (डिलीवरी पता)'}
+                              </h3>
+                              <p className="text-[10.5px] text-text-muted">Ghatampur express delivery (15-25 mins)</p>
+                            </div>
+                          </div>
+                          {addresses.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={handleCancelAddressForm}
+                              className="text-xs font-bold text-text-muted hover:text-text-primary p-1 rounded-lg hover:bg-muted"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
 
-                              if (!addrRules.isServiceable || addrDist > maxRadiusKm) {
-                                return (
-                                  <div className="mt-2 flex items-center gap-1.5 text-[9.5px] font-black text-rose-600 dark:text-rose-400 bg-rose-500/10 px-2 py-1 rounded-lg border border-rose-500/20">
-                                    <span>⚠️</span>
-                                    <span>{addrDist.toFixed(1)} km away • Outside 5 km delivery zone</span>
-                                  </div>
-                                )
-                              }
+                        {/* 1-Tap Use Current Location Button */}
+                        <button
+                          type="button"
+                          onClick={handleDetectLocationForCheckout}
+                          disabled={isDetectingLocation}
+                          className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/25 border-2 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/30 transition-all font-black text-xs active:scale-[0.99] shadow-xs cursor-pointer"
+                        >
+                          {isDetectingLocation ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                              <span>GPS लोकेशन ढूंढी जा रही है...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-base">📍</span>
+                              <span>Use Current Location (मेरी वर्तमान लोकेशन लगाएं)</span>
+                            </>
+                          )}
+                        </button>
 
-                              return (
-                                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[9.5px] font-black">
-                                  <span className="inline-flex items-center gap-1 text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
-                                    📍 {addrDist.toFixed(1)} km away
-                                  </span>
-                                  <span className={cn(
-                                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-md border",
-                                    addrDist <= 2.0
-                                      ? "text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border-emerald-500/30"
-                                      : addrDist <= 3.0
-                                      ? "text-blue-700 dark:text-blue-300 bg-blue-500/10 border-blue-500/30"
-                                      : "text-amber-800 dark:text-amber-300 bg-amber-500/15 border-amber-500/30"
-                                  )}>
-                                    🛵 Fee: ₹{addrRules.deliveryFee} · FREE above ₹{addrRules.freeDeliveryThreshold}
-                                  </span>
-                                </div>
-                              )
-                            })()}
-
-                            {addr.phone && (
-                              <p className="text-[10px] text-text-secondary mt-1.5 font-bold flex items-center gap-1">
-                                <span className="opacity-80">📞</span> Phone: <span className="text-text-primary">{formatPhone(addr.phone)}</span>
-                              </p>
-                            )}
+                        {/* Address Label Selector */}
+                        <div>
+                          <Label className="text-[11px] font-bold text-text-secondary uppercase tracking-wider">Address Type</Label>
+                          <div className="grid grid-cols-3 gap-2 mt-1.5">
+                            {[
+                              { key: 'Home', label: 'Home / घर', icon: '🏠' },
+                              { key: 'Work', label: 'Work / ऑफिस', icon: '🏢' },
+                              { key: 'Other', label: 'Other / अन्य', icon: '📍' },
+                            ].map((item) => (
+                              <button
+                                key={item.key}
+                                type="button"
+                                onClick={() => setAddressForm({ ...addressForm, label: item.key })}
+                                className={cn(
+                                  "h-10 text-xs font-black rounded-xl border transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer",
+                                  addressForm.label === item.key
+                                    ? "bg-primary text-white border-primary shadow-xs"
+                                    : "bg-background border-border text-text-secondary hover:border-primary/40"
+                                )}
+                              >
+                                <span>{item.icon}</span>
+                                <span>{item.label}</span>
+                              </button>
+                            ))}
                           </div>
                         </div>
-                      ))}
 
-                      {/* Add New Address Button */}
-                      {!showNewAddressForm && (
-                        <Button
-                          onClick={() => setShowNewAddressForm(true)}
-                          variant="outline"
-                          className="w-full border-dashed border-2 hover:border-primary/50 hover:bg-primary/[0.02] rounded-2xl h-12 transition-all font-bold text-xs"
-                        >
-                          <Plus className="h-4 w-4 mr-1.5 text-primary" />
-                          Add New Address
-                        </Button>
-                      )}
-
-                      {/* New Address Collapsible Form */}
-                      {showNewAddressForm && (
-                        <form id="new-address-form" onSubmit={handleSaveAddress} className="border border-border/80 p-5 sm:p-6 rounded-2xl space-y-5 bg-card/60 backdrop-blur-sm animate-slide-up shadow-sm">
-                          <div className="flex justify-between items-center border-b border-border/40 pb-3">
-                            <h3 className="font-black text-sm text-text-primary text-primary flex items-center gap-2">
-                              <MapPin className="h-4 w-4 text-primary animate-pulse" />
-                              {editingAddressId ? 'Edit Delivery Location' : 'Choose Delivery Location'}
-                            </h3>
-                          </div>
-                          
-                          {addressForm.lat && addressForm.lng && (
-                            <div className="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 p-3 rounded-xl border border-emerald-200/50 dark:border-emerald-900/30 flex items-center gap-2 font-bold">
-                              <span className="text-sm shrink-0">📍</span>
-                              <span>GPS Location Pinned! Coordinates: {addressForm.lat.toFixed(6)}, {addressForm.lng.toFixed(6)}</span>
-                            </div>
-                          )}
-                          
-                          <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20 p-3.5 rounded-xl border border-blue-200/50 dark:border-blue-900/30 flex items-start gap-2.5 leading-relaxed font-medium">
-                            <span className="text-base shrink-0 mt-0.5">ℹ️</span>
-                            <span>
-                              <strong>Ordering for someone else?</strong> Drag the map marker to pin your exact address. If ordering for a home in Ghatampur while elsewhere, use the search bar or drag the pin manually.
-                            </span>
-                          </div>
-
-                          {/* Interactive Swiggy/Zomato Map Picker */}
-                          <MapPicker
-                            initialLat={addressForm.lat ?? null}
-                            initialLng={addressForm.lng ?? null}
-                            storeLat={storeLat}
-                            storeLng={storeLng}
-                            onLocationSelect={(loc) => {
-                              setAddressForm((prev) => ({
-                                ...prev,
-                                lat: loc.lat,
-                                lng: loc.lng,
-                                street: loc.street,
-                                city: loc.city,
-                                pincode: loc.pincode,
-                              }))
-                            }}
+                        {/* Complete Delivery Address */}
+                        <div>
+                          <Label htmlFor="street" className="text-[11px] font-bold text-text-secondary uppercase tracking-wider flex items-center justify-between">
+                            <span>Complete Address (मकान नं., रास्ता, लैंडमार्क)</span>
+                            <span className="text-red-500 font-bold">*</span>
+                          </Label>
+                          <textarea
+                            id="street"
+                            required
+                            rows={2}
+                            placeholder="उदा. मकान नं. 12, स्टेशन रोड, स्टेट बैंक के पास, घाटमपुर"
+                            value={addressForm.street}
+                            onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })}
+                            className="mt-1.5 block w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs font-semibold focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-text-muted/60"
                           />
-                          
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            <div>
-                              <Label htmlFor="phone" className="text-xs font-bold text-text-primary flex items-center gap-1">
-                                Phone Number <span className="text-red-500 font-bold">*</span>
-                              </Label>
-                              <Input
-                                id="phone"
-                                type="tel"
-                                required
-                                placeholder="Enter 10-digit mobile number"
-                                value={addressForm.phone}
-                                onChange={(e) => setAddressForm({ ...addressForm, phone: getLast10Digits(e.target.value) })}
-                                className="mt-1.5 h-11 text-xs font-semibold rounded-xl border-border focus-visible:ring-primary focus-visible:border-primary bg-background"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-xs font-bold text-text-primary">Address Label</Label>
-                              <div className="flex gap-2.5 mt-1.5">
-                                {['Home', 'Work'].map((lbl) => (
-                                  <button
-                                    key={lbl}
-                                    type="button"
-                                    onClick={() => setAddressForm({ ...addressForm, label: lbl })}
-                                    className={cn(
-                                      "px-4 py-2 h-11 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 select-none w-full justify-center active:scale-95",
-                                      addressForm.label === lbl
-                                        ? "bg-primary text-white border-primary shadow-md"
-                                        : "bg-background border-border text-text-secondary hover:border-primary/40 hover:bg-muted/10"
-                                    )}
-                                  >
-                                    <span>{lbl === 'Home' ? '🏠' : '🏢'}</span>
-                                    <span>{lbl}</span>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
+                        </div>
 
+                        {/* Phone & Pincode/City Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
-                            <Label htmlFor="pincode" className="text-xs font-bold text-text-primary flex items-center gap-1">
-                              Pincode (6 digits) <span className="text-red-500 font-bold">*</span>
+                            <Label htmlFor="phone" className="text-[11px] font-bold text-text-secondary uppercase tracking-wider flex items-center justify-between">
+                              <span>Phone Number (मोबाइल नंबर)</span>
+                              <span className="text-red-500 font-bold">*</span>
                             </Label>
                             <Input
-                              id="pincode"
+                              id="phone"
+                              type="tel"
                               required
-                              maxLength={6}
-                              placeholder="e.g. 209206"
-                              value={addressForm.pincode}
-                              onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value })}
-                              className="mt-1.5 h-11 text-xs font-semibold rounded-xl border-border focus-visible:ring-primary focus-visible:border-primary bg-background"
+                              maxLength={10}
+                              placeholder="10 अंकों का मोबाइल नंबर"
+                              value={addressForm.phone}
+                              onChange={(e) => setAddressForm({ ...addressForm, phone: getLast10Digits(e.target.value) })}
+                              className="mt-1 h-10 text-xs font-bold rounded-xl border-border bg-background"
                             />
                           </div>
-
                           <div>
-                            <Label htmlFor="street" className="text-xs font-bold text-text-primary flex items-center gap-1">
-                              Complete Delivery Address <span className="text-red-500 font-bold">*</span>
+                            <Label htmlFor="city-pincode" className="text-[11px] font-bold text-text-secondary uppercase tracking-wider">
+                              <span>City & Pincode</span>
                             </Label>
-                            <textarea
-                              id="street"
-                              required
-                              rows={3}
-                              placeholder="Enter landmark, house number, building, road, and locality details..."
-                              value={addressForm.street}
-                              onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })}
-                              className="mt-1.5 block w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs font-semibold focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary focus:ring-offset-0 placeholder:text-text-muted/60"
-                            />
+                            <div className="mt-1 h-10 px-3 flex items-center justify-between rounded-xl border border-border bg-muted/30 text-xs font-bold text-text-secondary">
+                              <span>Ghatampur</span>
+                              <span className="text-primary font-black">209206</span>
+                            </div>
                           </div>
+                        </div>
 
-                          <div className="flex gap-3 justify-end pt-3">
+                        {/* Optional Map Toggle */}
+                        <div className="pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setShowMapPicker(!showMapPicker)}
+                            className="text-xs font-bold text-primary flex items-center gap-1.5 hover:underline cursor-pointer"
+                          >
+                            <span>🗺️</span>
+                            <span>{showMapPicker ? 'Hide map pin' : 'Adjust pin on map (वैकल्पिक)'}</span>
+                          </button>
+                          {showMapPicker && (
+                            <div className="mt-2.5 rounded-xl overflow-hidden border border-border animate-slide-down">
+                              <MapPicker
+                                initialLat={addressForm.lat ?? null}
+                                initialLng={addressForm.lng ?? null}
+                                storeLat={storeLat}
+                                storeLng={storeLng}
+                                onLocationSelect={(loc) => {
+                                  setAddressForm((prev) => ({
+                                    ...prev,
+                                    lat: loc.lat,
+                                    lng: loc.lng,
+                                    street: loc.street,
+                                    city: loc.city,
+                                    pincode: loc.pincode,
+                                  }))
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Form Action Buttons */}
+                        <div className="flex gap-2.5 justify-end pt-2 border-t border-border/40">
+                          {addresses.length > 0 && (
                             <Button
                               type="button"
                               variant="ghost"
                               onClick={handleCancelAddressForm}
                               disabled={isSavingAddress}
-                              className="rounded-xl text-xs font-bold hover:bg-muted h-10 px-4"
+                              className="rounded-xl text-xs font-bold h-10 px-4 cursor-pointer"
                             >
                               Cancel
                             </Button>
-                            <Button
-                              type="submit"
-                              className="bg-primary text-white rounded-xl text-xs font-black px-5 h-10 hover:bg-primary/95 shadow-md active:scale-98 transition-all"
-                              disabled={isSavingAddress}
-                            >
-                              {isSavingAddress ? (
-                                <span className="flex items-center gap-1.5">
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                  Saving...
-                                </span>
-                              ) : editingAddressId ? 'Update & Select' : 'Save & Select'}
-                            </Button>
-                          </div>
-                        </form>
-                      )}
-                    </div>
-                  )}
-              </div>
-
-
-
-              {/* Cart Items Review */}
-              <div className="border-t border-border/40 pt-5 md:pt-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-black text-text-primary flex items-center gap-2">
-                    <ShoppingBag className="h-5 w-5 text-primary" />
-                    Review Your Cart Items
-                  </h3>
-                  <span className="text-[10px] font-bold text-text-muted bg-muted px-2 py-0.5 rounded-md">
-                    {items.length} {items.length === 1 ? 'item' : 'items'}
-                  </span>
-                </div>
-
-                <div className="space-y-4">
-                  {/* 1. Grocery & Daily Essentials Section */}
-                  {groceryCartItems.length > 0 && (
-                    <div className="rounded-2xl border border-border/70 bg-muted/10 p-3.5 sm:p-4 space-y-3">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-black text-primary flex items-center gap-1.5">
-                          📦 Grocery & Daily Essentials
-                        </span>
-                        <span className="text-[10px] text-text-muted font-bold ml-0.5 mt-0.5">
-                          Delivered from FastKirana Darkstore
-                        </span>
-                      </div>
-                      <div className="divide-y divide-border/30">
-                        {groceryCartItems.map((item) => (
-                          <div key={item.product.id} className="flex justify-between items-center py-2.5 first:pt-0 last:pb-0 text-xs font-semibold">
-                            <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                              {item.product.imageUrl && (
-                                <img src={item.product.imageUrl} alt={item.product.name} className="w-9 h-9 object-cover rounded-lg border border-border/40 shrink-0" />
-                              )}
-                              <div className="truncate">
-                                <h4 className="text-text-primary font-bold truncate">{item.product.name}</h4>
-                                <p className="text-[10px] text-text-secondary mt-0.5 font-medium">{item.product.unit || '1 unit'} × {item.quantity}</p>
-                              </div>
-                            </div>
-                            <span className="text-text-primary font-black shrink-0">₹{(item.product.price * item.quantity).toFixed(0)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 2. Restaurant / Kitchen Sections (Grouped by Outlet) */}
-                  {(() => {
-                    const restaurantGroups: Record<string, typeof cafeCartItems> = {}
-                    for (const item of cafeCartItems) {
-                      const outlet = getOutletName(item.product)
-                      if (!restaurantGroups[outlet]) restaurantGroups[outlet] = []
-                      restaurantGroups[outlet].push(item)
-                    }
-
-                    return Object.entries(restaurantGroups).map(([outletName, rItems]) => {
-                      const isWedson = outletName.toLowerCase().includes('wedson')
-                      return (
-                        <div key={outletName} className="rounded-2xl border border-rose-500/20 bg-rose-500/[0.02] p-3.5 sm:p-4 space-y-3">
-                          <div className="flex flex-col">
-                            <span className="text-xs font-black text-rose-600 flex items-center gap-1.5">
-                              {isWedson ? '🥘' : '☕'} {outletName}
-                            </span>
-                            <span className="text-[10px] text-rose-500/80 font-bold ml-0.5 mt-0.5">
-                              Freshly prepared at outlet kitchen
-                            </span>
-                          </div>
-                          <div className="divide-y divide-border/30">
-                            {rItems.map((item) => (
-                              <div key={item.product.id} className="flex justify-between items-center py-2.5 first:pt-0 last:pb-0 text-xs font-semibold">
-                                <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                                  {item.product.imageUrl && (
-                                    <img src={item.product.imageUrl} alt={item.product.name} className="w-9 h-9 object-cover rounded-lg border border-border/40 shrink-0" />
-                                  )}
-                                  <div className="truncate">
-                                    <h4 className="text-text-primary font-bold truncate">{item.product.name}</h4>
-                                    <p className="text-[10px] text-text-secondary mt-0.5 font-medium">Qty: {item.quantity}</p>
-                                  </div>
-                                </div>
-                                <span className="text-text-primary font-black shrink-0">₹{(item.product.price * item.quantity).toFixed(0)}</span>
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Cooking instructions input */}
-                          <div className="pt-2 border-t border-border/30">
-                            <input
-                              type="text"
-                              placeholder="Cooking instruction (e.g. less sugar, extra spicy)..."
-                              value={cookingInstruction}
-                              onChange={(e) => setCookingInstruction(e.target.value)}
-                              className="w-full h-9 px-3 text-[11px] font-semibold rounded-xl border border-border/60 bg-background placeholder:text-text-muted/60 focus:outline-none focus:border-rose-500"
-                            />
-                          </div>
+                          )}
+                          <Button
+                            type="submit"
+                            disabled={isSavingAddress}
+                            className="bg-primary text-white rounded-xl text-xs font-black px-6 h-10 hover:bg-primary/95 shadow-md active:scale-98 transition-all flex items-center gap-2 cursor-pointer"
+                          >
+                            {isSavingAddress ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                <span>Saving...</span>
+                              </>
+                            ) : (
+                              <span>{editingAddressId ? 'Update Address' : 'Deliver to this Address (इस पते पर मंगवाएं) »'}</span>
+                            )}
+                          </Button>
                         </div>
-                      )
-                    })
-                  })()}
-                </div>
+                      </form>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Food Packaging Option Selection (Only shown when food / cafe items exist in cart) */}
-              {(hasCafeItems || cafeCartItems.length > 0) && (
-                <div className="border-t border-border/40 pt-5 md:pt-6 space-y-3.5">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-base sm:text-lg font-black text-text-primary flex items-center gap-2">
-                      <span className="text-xl">🍱</span>
-                      <span>Food Packaging Option</span>
-                    </h3>
-                    <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                      Hot Prepared Food
-                    </span>
+              {/* Order For Someone Else Card */}
+              <div id="order-for-someone-section" className="rounded-2xl border border-border/80 bg-card p-3.5 sm:p-4 shadow-sm space-y-3 transition-all">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    triggerHaptic('light')
+                    setOrderForSomeone(!orderForSomeone)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setOrderForSomeone(!orderForSomeone)
+                    }
+                  }}
+                  className="flex items-center justify-between cursor-pointer select-none"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "h-9 w-9 rounded-xl flex items-center justify-center text-lg shrink-0 transition-colors",
+                      orderForSomeone ? "bg-amber-500 text-white shadow-md shadow-amber-500/20" : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                    )}>
+                      🎁
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs sm:text-sm font-black text-text-primary">
+                          Ordering for someone else?
+                        </span>
+                        <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded-full">
+                          किसी और के लिए?
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-text-secondary font-medium mt-0.5">
+                        दोस्त या परिवार के सदस्य के लिए सामान मंगवाएं
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    {/* Normal Packaging (₹0) */}
+                  {/* Switch Pill */}
+                  <div className={cn(
+                    "w-11 h-6 rounded-full p-0.5 transition-colors duration-200 flex items-center shrink-0",
+                    orderForSomeone ? "bg-primary" : "bg-muted-foreground/25"
+                  )}>
+                    <div className={cn(
+                      "w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-200 flex items-center justify-center text-[10px]",
+                      orderForSomeone ? "translate-x-5 text-primary" : "translate-x-0"
+                    )}>
+                      {orderForSomeone && <Check className="h-3 w-3 stroke-[3]" />}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Collapsible Details Inputs */}
+                {orderForSomeone && (
+                  <div className="pt-2 border-t border-border/40 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <Label htmlFor="recipient-name" className="text-[11px] font-bold text-text-secondary uppercase tracking-wider flex items-center justify-between">
+                          <span>Recipient's Name (नाम)</span>
+                          <span className="text-red-500 font-bold">*</span>
+                        </Label>
+                        <Input
+                          id="recipient-name"
+                          type="text"
+                          required
+                          placeholder="उदा. राहुल शर्मा (Recipient Name)"
+                          value={recipientName}
+                          onChange={(e) => setRecipientName(e.target.value)}
+                          className="mt-1 h-10 text-xs font-bold rounded-xl border-border bg-background"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="recipient-phone" className="text-[11px] font-bold text-text-secondary uppercase tracking-wider flex items-center justify-between">
+                          <span>Phone Number (मोबाइल नंबर)</span>
+                          <span className="text-text-muted font-normal text-[10px]">वैकल्पिक / Optional</span>
+                        </Label>
+                        <Input
+                          id="recipient-phone"
+                          type="tel"
+                          maxLength={10}
+                          placeholder="10 अंकों का मोबाइल नंबर"
+                          value={recipientPhone}
+                          onChange={(e) => setRecipientPhone(getLast10Digits(e.target.value))}
+                          className="mt-1 h-10 text-xs font-bold rounded-xl border-border bg-background"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                      <span className="text-base shrink-0">📞</span>
+                      <span>डिलीवरी राइडर सीधे इस नंबर पर संपर्क करेगा और सही व्यक्ति को सामान डिलीवर होगा।</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Cart Items Review */}
+              <div className="border-t border-border/40 pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-black text-text-primary flex items-center gap-2">
+                    <ShoppingBag className="h-4 w-4 text-primary" />
+                    <span>Order Items ({items.length})</span>
+                  </h3>
+                  <Link href="/cart" className="text-xs font-bold text-primary hover:underline">
+                    Edit Cart
+                  </Link>
+                </div>
+
+                <div className="rounded-2xl border border-border/70 bg-muted/10 p-3 sm:p-4 space-y-3">
+                  <div className="divide-y divide-border/40">
+                    {items.map((item) => (
+                      <div key={item.product.id} className="flex justify-between items-center py-2.5 first:pt-0 last:pb-0 text-xs font-semibold">
+                        <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                          {item.product.imageUrl && (
+                            <img src={item.product.imageUrl} alt={item.product.name} className="w-10 h-10 object-cover rounded-xl border border-border/50 shrink-0 bg-white" />
+                          )}
+                          <div className="truncate">
+                            <h4 className="text-text-primary font-bold truncate text-xs">{item.product.name}</h4>
+                            <p className="text-[10.5px] text-text-muted mt-0.5">
+                              {item.product.unit || '1 unit'} × <span className="font-bold text-text-primary">{item.quantity}</span>
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-text-primary font-black shrink-0 text-xs">
+                          ₹{(item.product.price * item.quantity).toFixed(0)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Single Delivery / Cooking Note Input */}
+                  <div className="pt-2 border-t border-border/30">
+                    <div className="flex items-center gap-2 p-2 rounded-xl border border-border/70 bg-background focus-within:border-primary">
+                      <span className="text-sm shrink-0">📝</span>
+                      <input
+                        type="text"
+                        placeholder="Add note for restaurant / rider (उदा. कम मिर्च, रिंग बेल बजाएं)..."
+                        value={cookingInstruction}
+                        onChange={(e) => setCookingInstruction(e.target.value)}
+                        className="w-full text-xs font-semibold bg-transparent placeholder:text-text-muted/60 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Food Packaging Option (Shown only when cafe/restaurant items are present) */}
+              {(hasCafeItems || cafeCartItems.length > 0) && (
+                <div className="border-t border-border/40 pt-4 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs sm:text-sm font-black text-text-primary flex items-center gap-1.5">
+                      <span>🍱</span>
+                      <span>Food Packaging</span>
+                    </h3>
+                    <span className="text-[10px] font-bold text-text-muted">Safe & Hot Delivery</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {/* Standard Packaging (₹0) */}
                     <div
                       onClick={() => {
                         triggerHaptic('light')
                         setPackagingOption('NORMAL')
                       }}
                       className={cn(
-                        "flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 relative overflow-hidden select-none bg-white dark:bg-zinc-900/50",
+                        "p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center justify-between select-none",
                         packagingOption === 'NORMAL'
                           ? "border-primary bg-primary/[0.02] shadow-xs"
-                          : "border-border/60 hover:border-primary/40"
+                          : "border-border/60 hover:border-border"
                       )}
                     >
-                      <div className={cn(
-                        "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all duration-200",
-                        packagingOption === 'NORMAL' ? "border-primary bg-primary" : "border-border"
-                      )}>
-                        {packagingOption === 'NORMAL' && <div className="w-2 h-2 rounded-full bg-white" />}
-                      </div>
-                      <div className="flex-grow text-xs">
-                        <div className="flex items-center justify-between font-extrabold text-text-primary mb-1">
-                          <span className="flex items-center gap-1.5 text-sm">
-                            <span>📦</span> Normal Packaging
-                          </span>
-                          <span className="text-emerald-600 dark:text-emerald-400 font-black text-xs bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                            FREE (₹0)
-                          </span>
+                      <div>
+                        <div className="flex items-center gap-1.5 font-bold text-xs text-text-primary">
+                          <span>📦</span> Standard Eco Box
                         </div>
-                        <p className="text-[11px] text-text-secondary leading-relaxed font-semibold">
-                          Standard eco-friendly containers & paper bag packaging.
-                        </p>
+                        <p className="text-[10.5px] text-text-muted mt-0.5">Eco-friendly packaging</p>
                       </div>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-black text-[11px] bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">
+                        FREE
+                      </span>
                     </div>
 
-                    {/* Premium Packaging (₹15) */}
+                    {/* Premium Thermal Packaging (₹15) */}
                     <div
                       onClick={() => {
                         triggerHaptic('light')
                         setPackagingOption('PREMIUM')
                       }}
                       className={cn(
-                        "flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 relative overflow-hidden select-none bg-white dark:bg-zinc-900/50",
+                        "p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center justify-between select-none",
                         packagingOption === 'PREMIUM'
                           ? "border-amber-500 bg-amber-500/[0.04] shadow-xs ring-1 ring-amber-500/20"
                           : "border-border/60 hover:border-amber-500/40"
                       )}
                     >
-                      <div className={cn(
-                        "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all duration-200",
-                        packagingOption === 'PREMIUM' ? "border-amber-500 bg-amber-500" : "border-border"
-                      )}>
-                        {packagingOption === 'PREMIUM' && <div className="w-2 h-2 rounded-full bg-white" />}
-                      </div>
-                      <div className="flex-grow text-xs">
-                        <div className="flex items-center justify-between font-extrabold text-text-primary mb-1">
-                          <span className="flex items-center gap-1.5 text-sm">
-                            <span>✨</span> Premium Packaging
-                          </span>
-                          <span className="text-amber-600 dark:text-amber-400 font-black text-xs bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-500/20">
-                            +₹15
-                          </span>
+                      <div>
+                        <div className="flex items-center gap-1.5 font-bold text-xs text-text-primary">
+                          <span>✨</span> Thermal Hot Box
                         </div>
-                        <p className="text-[11px] text-text-secondary leading-relaxed font-semibold">
-                          Insulated thermal pouch + heavy-duty spill-proof boxes & cutlery set.
-                        </p>
+                        <p className="text-[10.5px] text-text-muted mt-0.5">Insulated + spill-proof</p>
                       </div>
+                      <span className="text-amber-600 dark:text-amber-400 font-black text-[11px] bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md">
+                        +₹15
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1902,7 +2100,7 @@ export default function CheckoutPage() {
               <div className="hidden md:block border-t border-border/40 pt-5 md:pt-6">
                 <SlideToOrder
                   onConfirm={handlePlaceOrderClick}
-                  isPlacingOrder={isPlacingOrder}
+                  isPlacingOrder={isPlacingOrder || isSavingAddress}
                   amount={grandTotal}
                 />
               </div>
@@ -2026,15 +2224,26 @@ export default function CheckoutPage() {
               </>
             )}
 
+            {/* Savings Callout */}
+            {(grocerySavings + groceryB2BDiscount + cafeSavings + cafeB2BDiscount + couponDiscount) > 0 && (
+              <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 p-2.5 rounded-xl text-xs font-black flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <span>🎉</span> You Save on this Order
+                </span>
+                <span>₹{(grocerySavings + groceryB2BDiscount + cafeSavings + cafeB2BDiscount + couponDiscount).toFixed(0)}</span>
+              </div>
+            )}
+
             {/* Grand Total */}
             <div className="border-t-2 border-dashed border-border/60 pt-3 mt-3 flex justify-between items-center text-base font-black text-text-primary">
-              <span>Grand Total</span>
-              <span className="text-primary text-lg font-black">₹{grandTotal.toFixed(0)}</span>
+              <span>To Pay (कुल भुगतान)</span>
+              <span className="text-primary text-xl font-black">₹{grandTotal.toFixed(0)}</span>
             </div>
           </div>
           
-          <div className="text-[10px] text-text-muted text-center pt-2 leading-relaxed">
-            By placing the order you agree to our terms & conditions.
+          <div className="text-[10px] text-text-muted text-center pt-2 leading-relaxed flex items-center justify-center gap-1.5">
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+            <span>100% Safe &amp; Contactless Delivery</span>
           </div>
         </div>
 
@@ -2042,15 +2251,15 @@ export default function CheckoutPage() {
 
       {/* Mobile Sticky Bottom Checkout Bar (Zepto/Blinkit Style) */}
       <div 
-        className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white dark:bg-zinc-950 border-t border-border/80 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] px-4 py-3.5 flex items-center justify-between"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 14px)' }}
+        className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white dark:bg-zinc-950 border-t border-border/80 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] px-4 py-3 flex items-center justify-between"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}
       >
-        <div className="flex flex-col">
-          <span className="text-[9px] text-text-secondary font-medium leading-none">Grand Total</span>
-          <span className="text-base font-black text-primary mt-1">₹{grandTotal.toFixed(0)}</span>
-          <div className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-0.5 mt-0.5 max-w-[140px] truncate">
+        <div className="flex flex-col min-w-0 pr-2">
+          <span className="text-[10px] text-text-secondary font-medium leading-none">To Pay</span>
+          <span className="text-lg font-black text-primary leading-tight mt-0.5">₹{grandTotal.toFixed(0)}</span>
+          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 mt-0.5 truncate">
             {selectedAddress ? (
-              <span className="truncate">📍 {selectedAddress.street}</span>
+              <span className="truncate">📍 {selectedAddress.label || selectedAddress.street}</span>
             ) : (
               <span className="text-rose-500">📍 Select Address</span>
             )}
@@ -2059,24 +2268,24 @@ export default function CheckoutPage() {
 
         <button
           type="button"
-          disabled={isPlacingOrder}
+          disabled={isPlacingOrder || isSavingAddress}
           onClick={handlePlaceOrderClick}
           className={cn(
-            "group relative overflow-hidden text-white rounded-full font-black text-xs sm:text-sm tracking-wide uppercase px-6 h-12 transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg",
+            "group relative overflow-hidden text-white rounded-2xl font-black text-xs sm:text-sm tracking-wide px-5 h-12 transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg shrink-0",
             paymentMethod !== 'COD'
               ? "bg-gradient-to-r from-emerald-600 to-teal-600 shadow-emerald-500/25 hover:shadow-emerald-500/40"
-              : "bg-gradient-to-r from-accent to-accent-dark shadow-accent/25 hover:shadow-accent/40",
-            isPlacingOrder && "opacity-60 cursor-not-allowed shadow-none"
+              : "bg-gradient-to-r from-primary to-primary-dark shadow-primary/25 hover:shadow-primary/40",
+            (isPlacingOrder || isSavingAddress) && "opacity-60 cursor-not-allowed shadow-none"
           )}
         >
-          {isPlacingOrder ? (
+          {isPlacingOrder || isSavingAddress ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin text-white relative z-10" />
-              <span className="relative z-10">Processing...</span>
+              <span className="relative z-10">{isSavingAddress ? 'Saving Address...' : 'Processing...'}</span>
             </>
           ) : (
             <>
-              <span className="relative z-10">Proceed to Pay</span>
+              <span className="relative z-10">Place Order (₹{grandTotal.toFixed(0)})</span>
               <ChevronsRight className="h-4 w-4 text-white relative z-10 transition-transform duration-300 ease-out group-hover:translate-x-1.5" />
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
             </>
@@ -2094,12 +2303,20 @@ export default function CheckoutPage() {
         onSelectCod={() => {
           setIsPaymentModalOpen(false)
           setPaymentMethod('COD')
-          handlePlaceOrder('COD')
+          handlePlaceOrder(
+            'COD',
+            activeCheckoutAddressRef.current?.id || selectedAddressId,
+            activeCheckoutAddressRef.current?.addresses || addresses
+          )
         }}
         onSelectOnline={() => {
           setIsPaymentModalOpen(false)
           setPaymentMethod('UPI')
-          handleCashfreeCheckout('UPI')
+          handleCashfreeCheckout(
+            'UPI',
+            activeCheckoutAddressRef.current?.id || selectedAddressId,
+            activeCheckoutAddressRef.current?.addresses || addresses
+          )
         }}
       />
     </div>

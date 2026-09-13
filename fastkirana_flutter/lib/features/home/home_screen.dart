@@ -1785,83 +1785,86 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return const Color(0xFFE2E8F0);
   }
 
-  // 3. Top 8 Categories Grid (2 rows x 4 columns - Luxury Squircle Style)
+  // 3. Explore Categories (2 rows - Horizontally Scrollable Slider showing all categories)
   Widget _buildTopCategoriesGrid() {
     final categoriesAsync = ref.watch(categoriesProvider);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+      padding: const EdgeInsets.only(top: 14, bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Explore Categories',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: Responsive.scaledFontSize(context, 16.5),
-                      fontWeight: FontWeight.w900,
-                      color: AppDesignSystem.textPrimary,
-                      letterSpacing: -0.3,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Explore Categories',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: Responsive.scaledFontSize(context, 16.5),
+                        fontWeight: FontWeight.w900,
+                        color: AppDesignSystem.textPrimary,
+                        letterSpacing: -0.3,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.bolt_rounded, size: 10, color: AppDesignSystem.primary),
+                          Text(
+                            'FAST',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 8.5,
+                              fontWeight: FontWeight.w800,
+                              color: AppDesignSystem.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    ref.read(selectedTabProvider.notifier).state = 2; // Categories tab
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFEF2F2),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.bolt_rounded, size: 10, color: AppDesignSystem.primary),
                         Text(
-                          'FAST',
+                          'See All',
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 8.5,
+                            fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: FontWeight.w800,
                             color: AppDesignSystem.primary,
                           ),
                         ),
+                        const SizedBox(width: 2),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 9, color: AppDesignSystem.primary),
                       ],
                     ),
                   ),
-                ],
-              ),
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  ref.read(selectedTabProvider.notifier).state = 2; // Categories tab
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'See All',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: Responsive.scaledFontSize(context, 11),
-                          fontWeight: FontWeight.w800,
-                          color: AppDesignSystem.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 2),
-                      const Icon(Icons.arrow_forward_ios_rounded, size: 9, color: AppDesignSystem.primary),
-                    ],
-                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           categoriesAsync.when(
@@ -1885,111 +1888,125 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   return false;
                 }
                 return true;
-              }).take(8).toList();
+              }).toList();
 
               if (groceryCategories.isEmpty) return const SizedBox.shrink();
 
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: groceryCategories.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: 0.74,
-                ),
-                itemBuilder: (context, index) {
-                  final cat = groceryCategories[index];
-                  final bgTint = _getCategorySoftColor(cat.slug, cat.name);
-                  final borderTint = _getCategoryBorderColor(cat.slug, cat.name);
+              return SizedBox(
+                height: 236,
+                child: GridView.builder(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: groceryCategories.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 1.34,
+                  ),
+                  itemBuilder: (context, index) {
+                    final cat = groceryCategories[index];
+                    final bgTint = _getCategorySoftColor(cat.slug, cat.name);
+                    final borderTint = _getCategoryBorderColor(cat.slug, cat.name);
 
-                  return Bounceable(
-                    scaleFactor: 0.93,
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      Navigator.push(
-                        context,
-                        FadeSlideRoute(page: CategoryProductsScreen(category: cat)),
-                      );
-                    },
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: bgTint,
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: borderTint, width: 1.1),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: borderTint.withValues(alpha: 0.35),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
+                    return Bounceable(
+                      scaleFactor: 0.93,
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        Navigator.push(
+                          context,
+                          FadeSlideRoute(page: CategoryProductsScreen(category: cat)),
+                        );
+                      },
+                      child: SizedBox(
+                        width: 78,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 74,
+                              height: 74,
+                              decoration: BoxDecoration(
+                                color: bgTint,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: borderTint, width: 1.1),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: borderTint.withValues(alpha: 0.35),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                  BoxShadow(
+                                    color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                              padding: const EdgeInsets.all(7),
+                              child: Center(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: _buildCategoryAvatarImage(cat),
                                 ),
-                                BoxShadow(
-                                  color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 1),
-                                ),
-                              ],
-                            ),
-                            padding: const EdgeInsets.all(7),
-                            child: Center(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(14),
-                                child: _buildCategoryAvatarImage(cat),
                               ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          cat.name,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: Responsive.scaledFontSize(context, 10.5),
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF0F172A),
-                            height: 1.15,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              );
-            },
-            loading: () => GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 8,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: 0.76,
-              ),
-              itemBuilder: (_, __) => Shimmer.fromColors(
-                baseColor: AppDesignSystem.border,
-                highlightColor: AppDesignSystem.gray50,
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
+                            const SizedBox(height: 4),
+                            SizedBox(
+                              width: 78,
+                              child: Text(
+                                cat.name,
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: Responsive.scaledFontSize(context, 10.5),
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF0F172A),
+                                  height: 1.15,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 5),
-                    Container(height: 10, width: 50, color: Colors.white),
-                  ],
+                    );
+                  },
+                ),
+              );
+            },
+            loading: () => SizedBox(
+              height: 236,
+              child: GridView.builder(
+                scrollDirection: Axis.horizontal,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: 8,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 10,
+                  childAspectRatio: 1.34,
+                ),
+                itemBuilder: (_, __) => Shimmer.fromColors(
+                  baseColor: AppDesignSystem.border,
+                  highlightColor: AppDesignSystem.gray50,
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 74,
+                        height: 74,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(height: 10, width: 50, color: Colors.white),
+                    ],
+                  ),
                 ),
               ),
             ),

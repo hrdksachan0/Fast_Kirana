@@ -6,8 +6,8 @@ import '../../core/theme/design_system.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/network/api_client.dart';
@@ -63,6 +63,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
       debugPrint('[PickerDashboard] disk save error: $e');
     }
   }
+
   final Map<String, Set<String>> _pickedItemIds = {}; // orderId -> Set of picked itemIds
   String? _updatingOrderId;
   Timer? _autoRefreshTimer;
@@ -212,6 +213,55 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
     );
   }
 
+  void _showLogoutDialog() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.logout_rounded, color: Color(0xFFDC2626), size: 20),
+            ),
+            const SizedBox(width: 12),
+            Text('Log Out', style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 18)),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to log out from the Picker Console?',
+          style: GoogleFonts.inter(fontSize: 14, color: slateMuted),
+        ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: slateMuted)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Log Out', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true && mounted) {
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      unawaited(ref.read(authProvider.notifier).logout());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final pendingCount = _orders.where((o) => o['status'] == 'PENDING' || o['status'] == 'CONFIRMED').length;
@@ -220,9 +270,9 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
       backgroundColor: bgMain,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 0.5,
-        surfaceTintColor: Colors.transparent,
-        titleSpacing: 16,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        titleSpacing: 0,
         leading: Navigator.canPop(context)
             ? IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: slateDark),
@@ -231,29 +281,80 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
             : null,
         title: Row(
           children: [
+            if (!Navigator.canPop(context)) const SizedBox(width: 12),
             Container(
               padding: const EdgeInsets.all(7),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF7ED),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFF7ED), Color(0xFFFFEDD5)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFFED7AA)),
+                border: Border.all(color: const Color(0xFFFED7AA), width: 1.1),
               ),
-              child: Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18))),
+              child: const Icon(Icons.inventory_2_rounded, size: 18, color: brandOrange),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    'Picker Dashboard',
-                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: slateDark),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Picker',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 15),
+                          fontWeight: FontWeight.w900,
+                          color: slateDark,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFA7F3D0)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 5,
+                              height: 5,
+                              decoration: const BoxDecoration(
+                                color: brandGreen,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              'LIVE',
+                              style: GoogleFonts.inter(
+                                fontSize: 8,
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF047857),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   Text(
-                    'Warehouse Item Packing',
-                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w600, color: slateMuted),
+                    'Packing Station',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 10.5),
+                      fontWeight: FontWeight.w500,
+                      color: slateMuted,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -261,26 +362,37 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
           ],
         ),
         actions: [
+          // Refresh & Sync Action Pill
           Bounceable(
-            onTap: _openAddGroceryModal,
+            onTap: () {
+              HapticFeedback.lightImpact();
+              _fetchPickerOrders();
+            },
             child: Container(
-              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: brandOrange,
-                borderRadius: BorderRadius.circular(10),
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.add_rounded, size: 16, color: Colors.white),
-                  const SizedBox(width: 4),
+                  _isRefreshing
+                      ? const SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(strokeWidth: 1.8, color: brandOrange),
+                        )
+                      : const Icon(Icons.sync_rounded, size: 13, color: slateMuted),
+                  const SizedBox(width: 3),
                   Text(
-                    'Add Item',
+                    _isRefreshing ? '...' : '${_refreshCountdown}s',
                     style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 11.5),
+                      fontSize: 10.5,
                       fontWeight: FontWeight.w800,
-                      color: Colors.white,
+                      color: slateDark,
                     ),
                   ),
                 ],
@@ -288,83 +400,33 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
             ),
           ),
           IconButton(
-            icon: _isRefreshing
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: brandOrange))
-                : Text('$_refreshCountdown' 's', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w800, color: slateMuted)),
-            onPressed: () => _fetchPickerOrders(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, size: 20, color: slateMuted),
+            icon: const Icon(Icons.logout_rounded, size: 19, color: slateMuted),
             tooltip: 'Logout',
-            onPressed: () async {
-              final confirm = await showDialog<bool>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Logout'),
-                  content: const Text('Are you sure you want to log out from Picker Console?'),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
-                      onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Logout', style: TextStyle(color: Colors.white)),
-                    ),
-                  ],
-                ),
-              );
-              if (confirm == true && mounted) {
-                await ref.read(authProvider.notifier).logout();
-                if (mounted) {
-                  Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-                }
-              }
-            },
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            onPressed: _showLogoutDialog,
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
         ],
       ),
       body: Column(
         children: [
           // Sub-Header Metric Strip
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-            color: Colors.white,
-            child: Row(
-              children: [
-                _buildMetric('Orders to Pack', '$pendingCount', pendingCount > 0 ? brandOrange : slateDark, isAlert: pendingCount > 0),
-                const SizedBox(width: 10),
-                _buildLiveClockMetric(),
-              ],
-            ),
-          ),
+          _buildMetricStrip(pendingCount),
+
           const Divider(height: 1, color: slateBorder),
 
-          // Orders List
+          // Orders List or Empty State
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator(color: brandOrange))
                 : _orders.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: const BoxDecoration(color: Color(0xFFF1F5F9), shape: BoxShape.circle),
-                              child: const Icon(Icons.check_circle_outline, size: 48, color: slateMuted),
-                            ),
-                            const SizedBox(height: 16),
-                            Text('All Orders Packed! 🎉', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: slateDark)),
-                            const SizedBox(height: 4),
-                            Text('New orders to pick will appear here automatically', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
-                          ],
-                        ),
-                      )
+                    ? _buildEmptyState()
                     : RefreshIndicator(
                         onRefresh: () => _fetchPickerOrders(),
                         color: brandOrange,
                         child: ListView.builder(
-                          padding: const EdgeInsets.all(14),
+                          padding: const EdgeInsets.fromLTRB(14, 14, 14, 90),
                           itemCount: _orders.length,
                           itemBuilder: (context, idx) {
                             final order = _orders[idx];
@@ -375,60 +437,446 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: brandOrange,
-        elevation: 4,
-        onPressed: _openAddGroceryModal,
-        icon: const Icon(Icons.add_shopping_cart_rounded, color: Colors.white, size: 20),
-        label: Text(
-          'Add Grocery Item',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: Colors.white),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLiveClockMetric() {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: slateBorder),
-        ),
-        child: Column(
-          children: [
-            LiveDigitalClockBadge(
-              backgroundColor: Colors.transparent,
-              borderColor: Colors.transparent,
-              textColor: slateDark,
-              iconColor: slateMuted,
-              fontSize: Responsive.scaledFontSize(context, 13),
-              showSeconds: false,
+      floatingActionButton: Bounceable(
+        onTap: _openAddGroceryModal,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            Text('Live Clock', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w700, color: slateMuted)),
-          ],
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: brandOrange.withValues(alpha: 0.35),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.add_shopping_cart_rounded, color: Colors.white, size: 19),
+              const SizedBox(width: 8),
+              Text(
+                'Add Grocery Item',
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 13.5),
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildMetric(String label, String value, Color col, {bool isAlert = false}) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-        decoration: BoxDecoration(
-          color: isAlert ? const Color(0xFFFFF7ED) : const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: isAlert ? const Color(0xFFFED7AA) : slateBorder),
-        ),
-        child: Column(
-          children: [
-            Text(value, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: col), maxLines: 1),
-            Text(label, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w700, color: slateMuted)),
-          ],
-        ),
+  Widget _buildMetricStrip(int pendingCount) {
+    final bool hasPending = pendingCount > 0;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      color: Colors.white,
+      child: Column(
+        children: [
+          Row(
+            children: [
+              // Orders to Pack Card
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: hasPending
+                          ? [const Color(0xFFFFF7ED), const Color(0xFFFFEDD5)]
+                          : [const Color(0xFFF8FAFC), const Color(0xFFF1F5F9)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: hasPending ? const Color(0xFFFED7AA) : const Color(0xFFE2E8F0),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.02),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: hasPending
+                              ? brandOrange.withValues(alpha: 0.12)
+                              : const Color(0xFFE2E8F0),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          hasPending ? Icons.pending_actions_rounded : Icons.check_circle_rounded,
+                          size: 18,
+                          color: hasPending ? brandOrange : const Color(0xFF10B981),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '$pendingCount',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 18),
+                                fontWeight: FontWeight.w900,
+                                color: hasPending ? brandOrange : slateDark,
+                                height: 1.1,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              hasPending ? 'Orders to Pack' : 'Queue Clear',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 10.5),
+                                fontWeight: FontWeight.w700,
+                                color: slateMuted,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Live Clock Card
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.02),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFEEF2F6),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.access_time_filled_rounded,
+                          size: 18,
+                          color: Color(0xFF475569),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            LiveDigitalClockBadge(
+                              backgroundColor: Colors.transparent,
+                              borderColor: Colors.transparent,
+                              textColor: slateDark,
+                              iconColor: Colors.transparent,
+                              fontSize: Responsive.scaledFontSize(context, 14),
+                              showSeconds: false,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Shift Clock',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 10.5),
+                                fontWeight: FontWeight.w700,
+                                color: slateMuted,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(24, 40, 24, 100),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Celebratory Glowing Badge
+          Container(
+            width: 110,
+            height: 110,
+            decoration: BoxDecoration(
+              gradient: const RadialGradient(
+                colors: [Color(0xFFD1FAE5), Color(0xFFECFDF5), Colors.white],
+                stops: [0.3, 0.7, 1.0],
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: brandGreen.withValues(alpha: 0.15),
+                  blurRadius: 28,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF10B981), Color(0xFF059669)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: brandGreen.withValues(alpha: 0.35),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.task_alt_rounded,
+                  size: 38,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ).animate().scale(duration: 400.ms, curve: Curves.easeOutBack),
+
+          const SizedBox(height: 24),
+
+          // Heading
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'All Orders Packed!',
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 20),
+                  fontWeight: FontWeight.w900,
+                  color: slateDark,
+                  letterSpacing: -0.4,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text('🎉', style: TextStyle(fontSize: 20)),
+            ],
+          ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.2, end: 0),
+
+          const SizedBox(height: 8),
+
+          // Subtitle
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'Your packing station is 100% caught up. Incoming orders will stream in automatically in real time.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: Responsive.scaledFontSize(context, 13),
+                color: slateMuted,
+                height: 1.45,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ).animate().fadeIn(delay: 200.ms),
+
+          const SizedBox(height: 20),
+
+          // Realtime Listening Status Pill
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: brandGreen,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Listening for live incoming orders',
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 11.5),
+                    fontWeight: FontWeight.w700,
+                    color: slateDark,
+                  ),
+                ),
+              ],
+            ),
+          ).animate().fadeIn(delay: 300.ms),
+
+          const SizedBox(height: 28),
+
+          // Quick Action Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Bounceable(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  _fetchPickerOrders();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.02),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.refresh_rounded, size: 16, color: slateDark),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Check Now',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 12),
+                          fontWeight: FontWeight.w700,
+                          color: slateDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Bounceable(
+                onTap: _openAddGroceryModal,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF7ED),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFED7AA)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.add_rounded, size: 16, color: brandOrange),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Add Item',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 12),
+                          fontWeight: FontWeight.w800,
+                          color: brandOrange,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ).animate().fadeIn(delay: 350.ms),
+
+          const SizedBox(height: 36),
+
+          // Warehouse fulfillment tip card
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('💡', style: TextStyle(fontSize: 18)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Fulfillment Pro-Tip',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 12),
+                          fontWeight: FontWeight.w800,
+                          color: slateDark,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Marking orders as "Packed" instantly notifies delivery riders for swift pickup and keeps dispatch under 10 minutes.',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 11),
+                          color: slateMuted,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ).animate().fadeIn(delay: 400.ms),
+        ],
       ),
     );
   }
@@ -454,19 +902,29 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
     final pickedSet = _pickedItemIds[orderId] ?? {};
     final bool allItemsPicked = items.isNotEmpty && pickedSet.length >= items.length;
     final bool isUpdating = _updatingOrderId == orderId;
+    final double progressFraction = items.isEmpty ? 0.0 : (pickedSet.length / items.length).clamp(0.0, 1.0);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: allItemsPicked ? brandGreen : slateBorder, width: allItemsPicked ? 1.5 : 1),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: allItemsPicked ? brandGreen : const Color(0xFFE2E8F0),
+          width: allItemsPicked ? 1.6 : 1,
+        ),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 3)),
+          BoxShadow(
+            color: allItemsPicked
+                ? brandGreen.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -476,32 +934,89 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      '#$readableId',
-                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: slateDark),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '#$readableId',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 14),
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: (allItemsPicked ? brandGreen : brandOrange).withValues(alpha: 0.1),
+                        color: (allItemsPicked ? brandGreen : brandOrange).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: (allItemsPicked ? brandGreen : brandOrange).withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Text(
                         allItemsPicked ? 'ALL ITEMS READY' : '${pickedSet.length}/${items.length} PICKED',
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w900, color: allItemsPicked ? brandGreen : brandOrange),
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 9.5),
+                          fontWeight: FontWeight.w900,
+                          color: allItemsPicked ? brandGreen : brandOrange,
+                          letterSpacing: 0.3,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                Text('₹${total.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w900, color: slateDark)),
+                Text(
+                  '₹${total.toInt()}',
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 16),
+                    fontWeight: FontWeight.w900,
+                    color: slateDark,
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 4),
+
+            const SizedBox(height: 10),
+
+            // Picking Progress Bar
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progressFraction,
+                backgroundColor: const Color(0xFFF1F5F9),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  allItemsPicked ? brandGreen : brandOrange,
+                ),
+                minHeight: 5,
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // Customer Info & Out of stock edit button
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('👤 Customer: $customerName', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: slateMuted)),
+                Row(
+                  children: [
+                    const Icon(Icons.person_outline_rounded, size: 14, color: slateMuted),
+                    const SizedBox(width: 4),
+                    Text(
+                      customerName,
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 12),
+                        fontWeight: FontWeight.w600,
+                        color: slateMuted,
+                      ),
+                    ),
+                  ],
+                ),
                 Bounceable(
                   onTap: () {
                     showModalBottomSheet(
@@ -541,7 +1056,8 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                 ),
               ],
             ),
-            const Divider(height: 16, color: slateBorder),
+
+            const Divider(height: 18, color: slateBorder),
 
             // Picking Items Checklist
             ...items.map((item) {
@@ -550,6 +1066,12 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
               final int qty = (item['quantity'] is num)
                   ? (item['quantity'] as num).toInt()
                   : (int.tryParse(item['quantity']?.toString() ?? '1') ?? 1);
+              final num unitPrice = (item['price'] is num)
+                  ? (item['price'] as num)
+                  : (num.tryParse(item['price']?.toString() ?? '0') ?? 0);
+              final num lineTotal = (item['total'] is num)
+                  ? (item['total'] as num)
+                  : (unitPrice * qty);
               final bool isPicked = pickedSet.contains(itemId);
 
               return Bounceable(
@@ -572,50 +1094,112 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                       const SizedBox(width: 10),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(5), border: Border.all(color: slateBorder)),
-                        child: Text('${qty}x', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w900, color: brandOrange)),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(color: slateBorder),
+                        ),
                         child: Text(
-                          name,
+                          '${qty}x',
                           style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 13),
-                            fontWeight: FontWeight.w700,
-                            color: isPicked ? slateMuted : slateDark,
-                            decoration: isPicked ? TextDecoration.lineThrough : null,
+                            fontSize: Responsive.scaledFontSize(context, 11),
+                            fontWeight: FontWeight.w900,
+                            color: brandOrange,
                           ),
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              name,
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 13),
+                                fontWeight: FontWeight.w700,
+                                color: isPicked ? slateMuted : slateDark,
+                                decoration: isPicked ? TextDecoration.lineThrough : null,
+                              ),
+                            ),
+                            if (unitPrice > 0 && qty > 1) ...[
+                              const SizedBox(height: 1),
+                              Text(
+                                '₹${unitPrice.toInt()} each',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 10.5),
+                                  fontWeight: FontWeight.w600,
+                                  color: slateMuted,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      if (lineTotal > 0 || unitPrice > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Text(
+                            '₹${lineTotal.toInt()}',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 12),
+                              fontWeight: FontWeight.w800,
+                              color: isPicked ? slateMuted : const Color(0xFF0F172A),
+                              decoration: isPicked ? TextDecoration.lineThrough : null,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
               );
             }),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
 
             // Action Button
             SizedBox(
               width: double.infinity,
-              height: 44,
+              height: 46,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: allItemsPicked ? brandGreen : brandOrange,
+                  foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: isUpdating ? null : () => _markOrderAsPacked(orderId),
                 child: isUpdating
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.inventory_2_rounded, size: 16, color: Colors.white),
-                          const SizedBox(width: 6),
+                          Icon(
+                            allItemsPicked ? Icons.check_circle_rounded : Icons.inventory_2_rounded,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 8),
                           Text(
-                            'Mark as Packed & Notify Rider 🛵',
-                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: Colors.white),
+                            allItemsPicked
+                                ? 'Complete & Notify Rider 🛵'
+                                : 'Mark as Packed & Notify Rider 🛵',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 13),
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
                           ),
                         ],
                       ),

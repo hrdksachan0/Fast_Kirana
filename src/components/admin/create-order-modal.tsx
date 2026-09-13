@@ -514,6 +514,12 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
         noGst,
         couponCode: appliedCoupon ? appliedCoupon.code : null,
         items: selectedItems.map((item) => ({
+          productId: item.product.id,
+          name: item.product.name,
+          price: item.product.price,
+          quantity: item.quantity,
+          selectedVariant: item.variantName || null,
+          notes: item.notes || null,
           product: {
             id: item.product.id,
             slug: item.product.slug,
@@ -525,8 +531,6 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
             stock: item.product.stock,
             isAvailable: true,
           },
-          quantity: item.quantity,
-          notes: item.notes || null,
         })),
       }
 

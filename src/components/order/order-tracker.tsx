@@ -1273,6 +1273,24 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
         </div>
       )}
 
+      {/* Recipient Details Badge if ordered for someone else */}
+      {order.notes?.includes('Order for:') && (
+        <div className="p-3.5 sm:p-4 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 border border-amber-500/30 rounded-2xl flex items-center gap-3 shadow-sm">
+          <span className="text-2xl shrink-0">🎁</span>
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] font-black uppercase text-amber-700 dark:text-amber-400 tracking-wider">
+              Ordering For Someone Else (किसी और के लिए)
+            </div>
+            <div className="text-xs sm:text-sm font-black text-text-primary mt-0.5 truncate">
+              {order.notes.split('|')[0].replace('🎁 Order for:', '').trim()}
+            </div>
+            <div className="text-[11px] text-text-secondary font-medium mt-0.5">
+              डिलीवरी राइडर सीधे प्राप्तकर्ता से संपर्क करेगा।
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delivery Destination Card */}
       <div className="bg-card border border-border p-4 min-[375px]:p-5 rounded-2xl shadow-sm space-y-3">
         <h3 className="text-sm font-bold text-text-primary border-b border-border/40 pb-2 flex items-center gap-2">

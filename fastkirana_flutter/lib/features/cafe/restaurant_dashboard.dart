@@ -131,6 +131,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initAudioPlayer();
+    _resolveOutletDetailsSync();
     _loadLocalCachedData();
     _initConnectivityAndOfflineQueue();
     _initOutletDetails();
@@ -195,13 +196,100 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
     });
   }
 
+  /// Synchronously and immediately bind the outlet on init before any async or network calls
+  void _resolveOutletDetailsSync() {
+    // 1. Initial args if passed explicitly
+    if (widget.initialRestaurantId != null && widget.initialRestaurantId!.isNotEmpty) {
+      _assignedRestaurantId = widget.initialRestaurantId;
+      if (widget.initialRestaurantName != null && widget.initialRestaurantName!.isNotEmpty) {
+        _restaurantName = widget.initialRestaurantName!;
+      }
+    }
+
+    // 2. User profile from authProvider state
+    final user = ref.read(authProvider).valueOrNull;
+    final userPhone = (user?.phone ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+    final last10 = userPhone.length >= 10 ? userPhone.substring(userPhone.length - 10) : userPhone;
+
+    if (_assignedRestaurantId == null || _assignedRestaurantId!.isEmpty) {
+      if (user?.assignedRestaurantId != null && user!.assignedRestaurantId!.isNotEmpty) {
+        _assignedRestaurantId = user.assignedRestaurantId;
+      } else if (last10 == '8112849854') {
+        _assignedRestaurantId = outletAsRestaurantId;
+        _restaurantName = 'A.S. Restaurant';
+      } else if (last10 == '9250138656') {
+        _assignedRestaurantId = outletWedsonId;
+        _restaurantName = 'Wedson Restaurant';
+      } else if (last10 == '7991488783') {
+        _assignedRestaurantId = outletBalUdyanId;
+        _restaurantName = 'Bal Udyan Restaurant';
+      } else if (last10 == '9900112233') {
+        _assignedRestaurantId = outletPariMilkId;
+        _restaurantName = 'Pari Milk Dairy & Sweets';
+      }
+    }
+
+    if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty) {
+      final match = _availableOutlets.firstWhere(
+        (o) => o['id'] == _assignedRestaurantId,
+        orElse: () => {'id': _assignedRestaurantId!, 'name': _restaurantName},
+      );
+      _restaurantName = match['name'] ?? _restaurantName;
+    }
+
+    _commissionRate = _getCommissionRateForOutlet(_assignedRestaurantId, _restaurantName);
+  }
+
   Future<void> _loadLocalCachedData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final rawOrders = prefs.getString('local_restaurant_orders');
+
+      // Check user_data if not yet resolved synchronously
+      if (_assignedRestaurantId == null || _assignedRestaurantId!.isEmpty) {
+        final phone = (prefs.getString('user_phone') ?? prefs.getString('auth_phone') ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+        final last10 = phone.length >= 10 ? phone.substring(phone.length - 10) : phone;
+        if (last10 == '8112849854') {
+          _assignedRestaurantId = outletAsRestaurantId;
+          _restaurantName = 'A.S. Restaurant';
+        } else if (last10 == '9250138656') {
+          _assignedRestaurantId = outletWedsonId;
+          _restaurantName = 'Wedson Restaurant';
+        } else if (last10 == '7991488783') {
+          _assignedRestaurantId = outletBalUdyanId;
+          _restaurantName = 'Bal Udyan Restaurant';
+        } else if (last10 == '9900112233') {
+          _assignedRestaurantId = outletPariMilkId;
+          _restaurantName = 'Pari Milk Dairy & Sweets';
+        } else {
+          final rawUserData = prefs.getString('user_data');
+          if (rawUserData != null && rawUserData.isNotEmpty) {
+            try {
+              final json = jsonDecode(rawUserData) as Map<String, dynamic>;
+              final rId = json['assignedRestaurantId']?.toString();
+              if (rId != null && rId.isNotEmpty) {
+                _assignedRestaurantId = rId;
+              }
+            } catch (_) {}
+          }
+        }
+      }
+
+      final cacheKey = 'local_restaurant_orders_${_assignedRestaurantId ?? "default"}';
+      String? rawOrders = prefs.getString(cacheKey);
+      if (rawOrders == null || rawOrders.isEmpty) {
+        rawOrders = prefs.getString('local_restaurant_orders');
+      }
+
       if (rawOrders != null && rawOrders.isNotEmpty && mounted) {
         final List list = jsonDecode(rawOrders);
-        final loadedOrders = list.map((e) => Map<String, dynamic>.from(e)).toList();
+        var loadedOrders = list.map((e) => Map<String, dynamic>.from(e)).toList();
+        if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty) {
+          loadedOrders = loadedOrders.where((o) {
+            final rId = o['restaurantId'] ?? o['restaurant']?['id'];
+            final rName = o['restaurantName'] ?? o['shopName'];
+            return _isOrderForThisOutlet(rId, rName);
+          }).toList();
+        }
         setState(() {
           _orders = loadedOrders;
           _isLoading = false;
@@ -231,6 +319,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
   Future<void> _saveLocalCachedOrders(List<Map<String, dynamic>> orders) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('local_restaurant_orders_${_assignedRestaurantId ?? "default"}', jsonEncode(orders));
       await prefs.setString('local_restaurant_orders', jsonEncode(orders));
     } catch (e, _) { LoggerService.error('RestaurantDashboard: silent catch', e); }
   }
@@ -306,9 +395,12 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
   }
 
   Future<void> _initOutletDetails() async {
+    // 0. Synchronous check immediately runs first so zero wait time
+    _resolveOutletDetailsSync();
+
     final dio = ref.read(dioProvider);
 
-    // 1. First fetch dynamic active restaurants from backend to support ANY new outlet with ZERO code
+    // 1. Fetch dynamic active restaurants from backend to support ANY new outlet
     try {
       final res = await dio.get('/api/restaurants');
       if (res.statusCode == 200 && res.data is List) {
@@ -336,73 +428,27 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       }
     } catch (_) {}
 
-    // 2. Initial args if passed explicitly
-    if (widget.initialRestaurantId != null && widget.initialRestaurantId!.isNotEmpty) {
-      _assignedRestaurantId = widget.initialRestaurantId;
-      if (widget.initialRestaurantName != null && widget.initialRestaurantName!.isNotEmpty) {
-        _restaurantName = widget.initialRestaurantName!;
-      }
-    }
-
-    // 3. Logged in user profile & assigned restaurant
+    // 2. Refresh phone and ID with fresh dynamic outlet data if needed
     final user = ref.read(authProvider).valueOrNull;
+    final userPhone = (user?.phone ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+    final last10 = userPhone.length >= 10 ? userPhone.substring(userPhone.length - 10) : userPhone;
 
-    if (_assignedRestaurantId == null || _assignedRestaurantId!.isEmpty) {
-      final userPhone = (user?.phone ?? '').replaceAll(RegExp(r'[^0-9]'), '');
-      final last10 = userPhone.length >= 10 ? userPhone.substring(userPhone.length - 10) : userPhone;
-
-      // a) Check explicit assignedRestaurantId from user profile
-      if (user?.assignedRestaurantId != null && user!.assignedRestaurantId!.isNotEmpty) {
-        _assignedRestaurantId = user.assignedRestaurantId;
-      }
-
-      // b) Check if phone matches any restaurant ownerPhone dynamically from backend
-      if ((_assignedRestaurantId == null || _assignedRestaurantId!.isEmpty) && last10.isNotEmpty) {
-        final matchedByPhone = _availableOutlets.firstWhere(
-          (o) {
-            final oPhone = (o['ownerPhone'] ?? '').replaceAll(RegExp(r'[^0-9]'), '');
-            final oLast10 = oPhone.length >= 10 ? oPhone.substring(oPhone.length - 10) : oPhone;
-            return oLast10.isNotEmpty && oLast10 == last10;
-          },
-          orElse: () => {},
-        );
-        if (matchedByPhone.isNotEmpty) {
-          _assignedRestaurantId = matchedByPhone['id'];
-          _restaurantName = matchedByPhone['name'] ?? _restaurantName;
-        }
-      }
-
-      // c) Legacy fallback for existing 4 outlets (Wedson, AS, Bal Udyan, Pari Milk)
-      if (_assignedRestaurantId == null || _assignedRestaurantId!.isEmpty) {
-        if (last10 == '8112849854') {
-          _assignedRestaurantId = outletAsRestaurantId;
-          _restaurantName = 'A.S. Restaurant';
-        } else if (last10 == '9250138656') {
-          _assignedRestaurantId = outletWedsonId;
-          _restaurantName = 'Wedson Restaurant';
-        } else if (last10 == '7991488783') {
-          _assignedRestaurantId = outletBalUdyanId;
-          _restaurantName = 'Bal Udyan Restaurant';
-        } else if (last10 == '9900112233') {
-          _assignedRestaurantId = outletPariMilkId;
-          _restaurantName = 'Pari Milk Dairy & Sweets';
-        } else {
-          final prefs = await SharedPreferences.getInstance();
-          final rawUserData = prefs.getString('user_data');
-          if (rawUserData != null && rawUserData.isNotEmpty) {
-            try {
-              final json = jsonDecode(rawUserData) as Map<String, dynamic>;
-              final rId = json['assignedRestaurantId']?.toString();
-              if (rId != null && rId.isNotEmpty) {
-                _assignedRestaurantId = rId;
-              }
-            } catch (_) {}
-          }
-        }
+    if ((_assignedRestaurantId == null || _assignedRestaurantId!.isEmpty) && last10.isNotEmpty) {
+      final matchedByPhone = _availableOutlets.firstWhere(
+        (o) {
+          final oPhone = (o['ownerPhone'] ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+          final oLast10 = oPhone.length >= 10 ? oPhone.substring(oPhone.length - 10) : oPhone;
+          return oLast10.isNotEmpty && oLast10 == last10;
+        },
+        orElse: () => {},
+      );
+      if (matchedByPhone.isNotEmpty) {
+        _assignedRestaurantId = matchedByPhone['id'];
+        _restaurantName = matchedByPhone['name'] ?? _restaurantName;
       }
     }
 
-    // 4. Fallback default & resolve name
+    // 3. Fallback default & resolve name
     if (_assignedRestaurantId == null || _assignedRestaurantId!.isEmpty) {
       _assignedRestaurantId = outletWedsonId;
       _restaurantName = 'Wedson Restaurant';
@@ -1888,10 +1934,11 @@ $formattedItems
                   ),
                 );
                 if (confirm == true && mounted) {
-                  await ref.read(authProvider.notifier).logout();
-                  if (mounted) {
-                    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-                  }
+                  _stopPendingAlarm();
+                  _autoRefreshTimer?.cancel();
+                  _audioPlayer.stop();
+                  Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                  unawaited(ref.read(authProvider.notifier).logout());
                 }
               },
               child: Container(

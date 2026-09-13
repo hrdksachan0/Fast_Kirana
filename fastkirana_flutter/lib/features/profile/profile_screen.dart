@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/services/logger_service.dart';
 import 'package:flutter/services.dart';
@@ -447,13 +448,13 @@ class ProfileScreen extends ConsumerWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               elevation: 0,
             ),
-            onPressed: () async {
+            onPressed: () {
               Navigator.pop(ctx);
-              await ref.read(authProvider.notifier).clear();
               HapticFeedback.heavyImpact();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Logged out successfully')),
               );
+              unawaited(ref.read(authProvider.notifier).clear());
             },
             child: Text('Log Out', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: Colors.white)),
           ),

@@ -154,7 +154,9 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
       return const DeliveryDashboard();
     }
     if (isChefOrOwnerOnly) {
-      return const RestaurantDashboard();
+      return RestaurantDashboard(
+        initialRestaurantId: user?.assignedRestaurantId,
+      );
     }
     if (isPickerOnly) {
       return const PickerDashboard();

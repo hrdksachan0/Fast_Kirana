@@ -67,51 +67,54 @@ export function PaymentSelectionModal({
             className="group relative overflow-hidden w-full p-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-left transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-emerald-600/25 flex items-center justify-between border border-emerald-400/30 cursor-pointer"
           >
             <div className="flex items-center gap-3.5 relative z-10">
-              <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-xl shrink-0">
+              <div className="h-11 w-11 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-2xl shrink-0">
                 💵
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs sm:text-sm font-black tracking-wide uppercase">
-                    {deliveryMethod === 'PICKUP' ? 'Cash on Pickup (COP)' : 'Cash on Delivery (COD)'}
+                  <span className="text-sm sm:text-base font-black tracking-wide">
+                    {deliveryMethod === 'PICKUP' ? 'Cash on Pickup (काउंटर पर नकद)' : 'Cash on Delivery (कैश ऑन डिलीवरी)'}
                   </span>
-                  <span className="bg-white/25 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm">
-                    DEFAULT ⚡
+                  <span className="bg-white/25 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm">
+                    POPULAR ⚡
                   </span>
                 </div>
-                <p className="text-[10px] text-emerald-100 font-medium mt-0.5">
+                <p className="text-xs text-emerald-100 font-medium mt-0.5">
                   {deliveryMethod === 'PICKUP'
-                    ? 'Pay cash or UPI at store counter'
-                    : 'Pay cash or UPI to delivery rider at doorstep'}
+                    ? 'दुकान काउंटर पर कैश या UPI से भुगतान करें'
+                    : 'सामान मिलने पर डिलीवरी बॉय को कैश या UPI दें'}
                 </p>
               </div>
             </div>
-            <ChevronsRight className="h-5 w-5 text-white/90 relative z-10 transition-transform group-hover:translate-x-1" />
+            <ChevronsRight className="h-5 w-5 text-white/90 relative z-10 transition-transform group-hover:translate-x-1 shrink-0" />
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
           </button>
 
-          {/* Option 2: Pay Online (Razorpay) */}
+          {/* Option 2: Pay Online (Razorpay/UPI) */}
           {!onlyCod && (
             <button
               type="button"
               disabled={isPlacingOrder}
               onClick={onSelectOnline}
-              className="group relative w-full p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700/80 text-text-primary font-black text-left transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] flex items-center justify-between cursor-pointer"
+              className="group relative w-full p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/80 hover:bg-zinc-100 dark:hover:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 text-text-primary font-black text-left transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] flex items-center justify-between cursor-pointer"
             >
               <div className="flex items-center gap-3.5">
-                <div className="h-10 w-10 rounded-xl bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xl shrink-0">
-                  ⚡
+                <div className="h-11 w-11 rounded-xl bg-zinc-200/80 dark:bg-zinc-700 flex items-center justify-center text-2xl shrink-0">
+                  📱
                 </div>
                 <div>
-                  <span className="text-xs sm:text-sm font-black tracking-wide uppercase">
-                    Pay Online (₹{grandTotal.toFixed(0)})
-                  </span>
-                  <p className="text-[10px] text-text-secondary font-medium mt-0.5">
-                    Instant UPI (GPay / PhonePe / Paytm), Cards &amp; NetBanking
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm sm:text-base font-black tracking-wide">
+                      Online Payment (ऑनलाइन पेमेंट)
+                    </span>
+                    <span className="text-xs font-black text-primary">₹{grandTotal.toFixed(0)}</span>
+                  </div>
+                  <p className="text-xs text-text-secondary font-medium mt-0.5">
+                    GPay, PhonePe, Paytm UPI, कार्ड या नेट बैंकिंग
                   </p>
                 </div>
               </div>
-              <ChevronsRight className="h-5 w-5 text-text-secondary transition-transform group-hover:translate-x-1" />
+              <ChevronsRight className="h-5 w-5 text-text-secondary transition-transform group-hover:translate-x-1 shrink-0" />
             </button>
           )}
         </div>

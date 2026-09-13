@@ -113,7 +113,8 @@ export async function POST(request: Request) {
         name: p.name || i.name || 'Item',
         price: typeof p.price === 'number' ? p.price : (parseFloat(p.price || i.price || '0') || 0),
         quantity: typeof i.quantity === 'number' ? i.quantity : (parseInt(i.quantity || '1', 10) || 1),
-        imageUrl: p.imageUrl || i.imageUrl || '/images/placeholder.png'
+        imageUrl: p.imageUrl || i.imageUrl || '/images/placeholder.png',
+        notes: i.notes || null,
       }
     })
 
@@ -153,9 +154,9 @@ export async function POST(request: Request) {
         name: item.name || dbProd?.name || 'Item',
         price: unitPrice,
         quantity: item.quantity,
-        total: itemTotal,
         selectedVariant: item.selectedVariant || null,
-        imageUrl: item.imageUrl || dbProd?.imageUrl || null
+        imageUrl: item.imageUrl || dbProd?.imageUrl || null,
+        notes: item.notes || null,
       })
     }
 
@@ -217,9 +218,9 @@ export async function POST(request: Request) {
               name: item.name,
               price: item.price,
               quantity: item.quantity,
-              total: item.total,
               selectedVariant: item.selectedVariant,
-              imageUrl: item.imageUrl
+              imageUrl: item.imageUrl,
+              notes: item.notes,
             }))
           }
         },

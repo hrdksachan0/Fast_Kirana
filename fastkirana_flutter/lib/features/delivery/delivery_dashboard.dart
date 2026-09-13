@@ -1082,10 +1082,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                       ),
                     );
                     if (confirm == true && mounted) {
-                      await ref.read(authProvider.notifier).logout();
-                      if (mounted) {
-                        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-                      }
+                      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                      unawaited(ref.read(authProvider.notifier).logout());
                     }
                   },
                   onTabChanged: (index) => setState(() => _activeTab = index),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -84,19 +85,31 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   }
 
   Future<void> clear() async {
+    // Immediately set state to null and invalidate memory cache so UI switches instantaneously (0ms freeze)
+    state = const AsyncValue.data(null);
+    SecureStorage.invalidateCache();
+
+    // 1. Fire-and-forget unsubscribe from FCM topics and clear tray in background
+    // (Never block UI thread or user logout if network is slow/offline)
+    unawaited(
+      Future.wait([
+        NotificationService().unsubscribeAllTopics().timeout(const Duration(seconds: 2), onTimeout: () {}),
+        NotificationService().clearAllNotifications().timeout(const Duration(seconds: 1), onTimeout: () {}),
+      ]).catchError((e) {
+        LoggerService.error('AuthProvider: background notification cleanup error', e);
+        return <void>[];
+      }),
+    );
+
+    // 2. Clear all cached addresses and orders from disk
+    try {
+      await Future.wait([
+        AddressRepository.clearCache(),
+        OrderRepository.clearCache(),
+      ]);
+    } catch (_) {}
+
     final prefs = await SharedPreferences.getInstance();
-    final phone = prefs.getString('user_phone') ?? prefs.getString('auth_phone') ?? '';
-    final userId = prefs.getString('user_id') ?? '';
-
-    // 1. Unsubscribe from ALL FCM topics on logout (admin, staff, restaurant, kitchen, user, phone)
-    await NotificationService().unsubscribeAllTopics();
-
-    // 2. Clear all active push notifications from Android notification tray
-    await NotificationService().clearAllNotifications();
-
-    // 3. Clear all cached addresses and orders from disk
-    await AddressRepository.clearCache();
-    await OrderRepository.clearCache();
 
     // 4. Wipe all user-scoped and session keys from SharedPreferences
     final allKeys = prefs.getKeys().toList();
@@ -116,7 +129,6 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
 
     // 5. Delete all secure credentials
     await SecureStorage.deleteAll();
-    SecureStorage.invalidateCache();
 
     // 6. Reset in-memory Riverpod providers so old data does not leak into other accounts
     try {
@@ -128,8 +140,6 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     } catch (e) {
       LoggerService.error('AuthProvider: error clearing state on logout', e);
     }
-
-    state = const AsyncValue.data(null);
   }
 
   /// Alias for clear() to maintain standard naming across dashboards

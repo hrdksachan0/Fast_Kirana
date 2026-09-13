@@ -17,6 +17,7 @@ import '../providers/restaurant_provider.dart';
 import '../features/categories/category_products_screen.dart';
 import '../features/cafe/cafe_menu_screen.dart';
 import '../features/search/search_screen.dart';
+import '../core/config/app_config.dart';
 
 class DynamicHeroBannerCarousel extends ConsumerStatefulWidget {
   final String? type; // 'grocery', 'cafe', etc.
@@ -73,8 +74,8 @@ class _DynamicHeroBannerCarouselState extends ConsumerState<DynamicHeroBannerCar
     final nextPage = (_currentPage + 1) % banners.length;
     _pageController.animateToPage(
       nextPage,
-      duration: const Duration(milliseconds: 650),
-      curve: const Cubic(0.16, 1.0, 0.3, 1.0),
+      duration: const Duration(milliseconds: 720),
+      curve: const Cubic(0.22, 1.0, 0.36, 1.0),
     );
   }
 
@@ -87,8 +88,8 @@ class _DynamicHeroBannerCarouselState extends ConsumerState<DynamicHeroBannerCar
     final prevPage = (_currentPage - 1 + banners.length) % banners.length;
     _pageController.animateToPage(
       prevPage,
-      duration: const Duration(milliseconds: 650),
-      curve: const Cubic(0.16, 1.0, 0.3, 1.0),
+      duration: const Duration(milliseconds: 720),
+      curve: const Cubic(0.22, 1.0, 0.36, 1.0),
     );
   }
 
@@ -179,26 +180,42 @@ class _DynamicHeroBannerCarouselState extends ConsumerState<DynamicHeroBannerCar
         final bannerCount = banners.length;
         final isMulti = bannerCount > 1;
 
+        final screenWidth = MediaQuery.of(context).size.width;
+        final cardWidth = screenWidth - 32;
+        // Exact 1200:520 aspect ratio matching photographic banners (~2.308)
+        final bannerHeight = (cardWidth * (520.0 / 1200.0)).clamp(144.0, 188.0);
+
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           child: Container(
-            height: context.isCompact ? 138 : 158,
+            height: bannerHeight,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.16),
+                width: 1.0,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 14,
-                  offset: const Offset(0, 4),
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                  spreadRadius: -2,
+                ),
+                BoxShadow(
+                  color: const Color(0xFFE20A22).withValues(alpha: 0.08),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10),
+                  spreadRadius: -4,
                 ),
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(22),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // PageView Carousel
+                  // PageView Carousel with 3D perspective rotation
                   Listener(
                     onPointerDown: (_) {
                       _isInteracting = true;
@@ -210,6 +227,7 @@ class _DynamicHeroBannerCarouselState extends ConsumerState<DynamicHeroBannerCar
                     },
                     child: PageView.builder(
                       controller: _pageController,
+                      physics: const BouncingScrollPhysics(),
                       itemCount: bannerCount,
                       onPageChanged: (index) {
                         setState(() {
@@ -221,15 +239,43 @@ class _DynamicHeroBannerCarouselState extends ConsumerState<DynamicHeroBannerCar
                       },
                       itemBuilder: (context, index) {
                         final banner = banners[index];
-                        return GestureDetector(
-                          onTap: () => _handleBannerTap(banner),
-                          child: _buildBannerCard(banner),
+                        return AnimatedBuilder(
+                          animation: _pageController,
+                          builder: (context, child) {
+                            double pageOffset = 0.0;
+                            if (_pageController.position.haveDimensions) {
+                              pageOffset = (_pageController.page ?? _currentPage.toDouble()) - index;
+                            } else {
+                              pageOffset = (_currentPage - index).toDouble();
+                            }
+
+                            // 3D Cubic physics transform (iOS cubic cube transition)
+                            final clampedOffset = pageOffset.clamp(-1.0, 1.0);
+                            final rotationY = -clampedOffset * 0.40;
+                            final scale = 1.0 - (clampedOffset.abs() * 0.07);
+                            final opacity = (1.0 - (clampedOffset.abs() * 0.35)).clamp(0.0, 1.0);
+
+                            return GestureDetector(
+                              onTap: () => _handleBannerTap(banner),
+                              child: Transform(
+                                alignment: clampedOffset > 0 ? Alignment.centerRight : Alignment.centerLeft,
+                                transform: Matrix4.identity()
+                                  ..setEntry(3, 2, 0.0014)
+                                  ..rotateY(rotationY)
+                                  ..scale(scale),
+                                child: Opacity(
+                                  opacity: opacity,
+                                  child: _buildBannerCard(banner, clampedOffset),
+                                ),
+                              ),
+                            );
+                          },
                         );
                       },
                     ),
                   ),
 
-                  // Instamart Signature Floating Counter Pill with Animated Progress Line
+                  // Sleek, Minimalist & Modern Banner Indicator (Instamart / Zepto Style)
                   if (isMulti)
                     Positioned(
                       bottom: 8,
@@ -237,91 +283,52 @@ class _DynamicHeroBannerCarouselState extends ConsumerState<DynamicHeroBannerCar
                       right: 0,
                       child: Center(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.72),
-                            borderRadius: BorderRadius.circular(20),
+                            color: Colors.black.withValues(alpha: 0.32),
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: Colors.white.withValues(alpha: 0.18),
-                              width: 0.8,
+                              width: 0.6,
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
                           ),
-                          child: Column(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  GestureDetector(
-                                    onTap: _goToPrevious,
-                                    child: Container(
-                                      width: 6,
-                                      height: 6,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withValues(alpha: 0.6),
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
+                            children: List.generate(bannerCount, (i) {
+                              final isCurrent = i == _currentPage;
+                              return GestureDetector(
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  _pageController.animateToPage(
+                                    i,
+                                    duration: const Duration(milliseconds: 500),
+                                    curve: Curves.easeOutCubic,
+                                  );
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeOutCubic,
+                                  margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                                  width: isCurrent ? 18 : 5,
+                                  height: 5,
+                                  decoration: BoxDecoration(
+                                    color: isCurrent
+                                        ? Colors.white
+                                        : Colors.white.withValues(alpha: 0.42),
+                                    borderRadius: BorderRadius.circular(3),
+                                    boxShadow: isCurrent
+                                        ? [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(alpha: 0.25),
+                                              blurRadius: 3,
+                                              offset: const Offset(0, 1),
+                                            ),
+                                          ]
+                                        : null,
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '${_currentPage + 1}/$bannerCount',
-                                    style: GoogleFonts.jetBrainsMono(
-                                      fontSize: Responsive.scaledFontSize(context, 10.5),
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.white,
-                                      letterSpacing: 1.2,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  GestureDetector(
-                                    onTap: _goToNext,
-                                    child: Container(
-                                      width: 6,
-                                      height: 6,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withValues(alpha: 0.6),
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 3),
-                              // Animated timer progress line
-                              Container(
-                                width: 42,
-                                height: 2,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(2),
                                 ),
-                                alignment: Alignment.centerLeft,
-                                child: AnimatedBuilder(
-                                  animation: _progressController,
-                                  builder: (context, _) {
-                                    return FractionallySizedBox(
-                                      widthFactor: _progressController.value,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          gradient: const LinearGradient(
-                                            colors: [Color(0xFFFBBF24), Color(0xFFFB7185)],
-                                          ),
-                                          borderRadius: BorderRadius.circular(2),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
+                              );
+                            }),
                           ),
                         ),
                       ),
@@ -337,49 +344,115 @@ class _DynamicHeroBannerCarouselState extends ConsumerState<DynamicHeroBannerCar
     );
   }
 
-  Widget _buildBannerCard(model.Banner banner) {
+  Widget _buildBannerCard(model.Banner banner, [double pageOffset = 0.0]) {
     final rawImageUrl = banner.imageUrl ?? '';
 
-    // 1. Real Image Banner: Ambient blurred backdrop + sharp centered image
+    // 1. Real Image Banner: Ambient blurred backdrop + sharp centered image with Parallax & Specular Sheen
     if (rawImageUrl.isNotEmpty) {
+      final isLocalAsset = rawImageUrl.startsWith('assets/');
+      final localFallbackAsset = rawImageUrl.startsWith('/banners/')
+          ? 'assets$rawImageUrl'
+          : (rawImageUrl.contains('ghatampur-express')
+              ? 'assets/banners/ghatampur-express-real.png'
+              : (rawImageUrl.contains('as-restaurant')
+                  ? 'assets/banners/as-restaurant-real.png'
+                  : (rawImageUrl.contains('wedson-restaurant')
+                      ? 'assets/banners/wedson-restaurant-real.png'
+                      : (rawImageUrl.contains('bal-udyan')
+                          ? 'assets/banners/bal-udyan-real.png'
+                          : null))));
+
       final resolvedUrl = rawImageUrl.startsWith('http')
           ? rawImageUrl
-          : (rawImageUrl.startsWith('/') ? 'https://www.fastkirana.in$rawImageUrl' : null);
+          : (rawImageUrl.startsWith('/') ? '${AppConfig.apiBaseUrl}$rawImageUrl' : null);
 
-      if (resolvedUrl != null) {
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            // Ambient blurred backdrop
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+            // Ambient blurred backdrop with subtle breathing scale
             Positioned.fill(
               child: ImageFiltered(
-                imageFilter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                imageFilter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                 child: Transform.scale(
-                  scale: 1.15,
-                  child: CachedNetworkImage(
-                    imageUrl: resolvedUrl,
-                    fit: BoxFit.cover,
-                    memCacheWidth: 200,
-                    memCacheHeight: 120,
-                  ),
+                  scale: 1.15 + (pageOffset.abs() * 0.04),
+                  child: isLocalAsset
+                      ? Image.asset(rawImageUrl, fit: BoxFit.cover)
+                      : (resolvedUrl != null
+                          ? CachedNetworkImage(
+                              imageUrl: resolvedUrl,
+                              fit: BoxFit.cover,
+                              memCacheWidth: 200,
+                              memCacheHeight: 120,
+                              placeholder: (_, __) => localFallbackAsset != null
+                                  ? Image.asset(localFallbackAsset, fit: BoxFit.cover)
+                                  : const SizedBox.shrink(),
+                              errorWidget: (_, __, ___) => localFallbackAsset != null
+                                  ? Image.asset(localFallbackAsset, fit: BoxFit.cover)
+                                  : const SizedBox.shrink(),
+                            )
+                          : (localFallbackAsset != null
+                              ? Image.asset(localFallbackAsset, fit: BoxFit.cover)
+                              : const SizedBox.shrink())),
                 ),
               ),
             ),
-            // Semi-dark ambient overlay
-            Container(color: Colors.black.withValues(alpha: 0.12)),
-            // Sharp centered main image
+
+            // Semi-dark ambient depth overlay
+            Container(color: Colors.black.withValues(alpha: 0.10)),
+
+            // Sharp centered main photographic banner with Stereoscopic Parallax
             Center(
-              child: CachedNetworkImage(
-                imageUrl: resolvedUrl,
-                fit: BoxFit.contain,
-                memCacheWidth: 800,
-                memCacheHeight: 400,
+              child: Transform.translate(
+                offset: Offset(pageOffset * -24.0, 0),
+                child: isLocalAsset
+                    ? Image.asset(rawImageUrl, fit: BoxFit.contain)
+                    : (resolvedUrl != null
+                        ? CachedNetworkImage(
+                            imageUrl: resolvedUrl,
+                            fit: BoxFit.contain,
+                            memCacheWidth: 1200,
+                            memCacheHeight: 520,
+                            placeholder: (_, __) => localFallbackAsset != null
+                                ? Image.asset(localFallbackAsset, fit: BoxFit.contain)
+                                : const Center(
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFE20A22)),
+                                  ),
+                            errorWidget: (_, __, ___) => localFallbackAsset != null
+                                ? Image.asset(localFallbackAsset, fit: BoxFit.contain)
+                                : const Icon(Icons.broken_image, color: Colors.white54),
+                          )
+                        : (localFallbackAsset != null
+                            ? Image.asset(localFallbackAsset, fit: BoxFit.contain)
+                            : const SizedBox.shrink())),
+              ),
+            ),
+
+            // Specular ambient light sheen on 3D tilt
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment(-1.0 + (pageOffset * 0.5), -1.0),
+                      end: Alignment(1.0 + (pageOffset * 0.5), 1.0),
+                      colors: [
+                        Colors.white.withValues(
+                          alpha: (0.08 - pageOffset.abs() * 0.05).clamp(0.0, 0.12),
+                        ),
+                        Colors.transparent,
+                        Colors.black.withValues(
+                          alpha: (pageOffset.abs() * 0.22).clamp(0.0, 0.32),
+                        ),
+                      ],
+                      stops: const [0.0, 0.55, 1.0],
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
         );
       }
-    }
 
     // 2. Express Delivery Banner Template ("Fast Delivery in Ghatampur")
     if (banner.type == 'express-delivery') {

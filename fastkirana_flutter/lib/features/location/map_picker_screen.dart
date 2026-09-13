@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:fastkirana_flutter/core/theme/design_system.dart';
 import '../../core/theme/responsive.dart';
 import 'dart:math' as math;
@@ -154,6 +156,23 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
     if (mounted) {
       setState(() => _isLocating = false);
     }
+  }
+
+  void _openAreaSearchSheet() {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _AreaSearchModal(
+        currentArea: _areaName,
+        onLocationSelected: (lat, lng, name, address) {
+          final target = LatLng(lat, lng);
+          _mapController.move(target, 16.8);
+          _updateLocationDetails(lat, lng);
+        },
+      ),
+    );
   }
 
   @override
@@ -324,39 +343,54 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                   ),
                   const SizedBox(width: 10),
 
-                  // Search Pill
+                  // Search Pill (Interactive Area Search)
                   Expanded(
-                    child: Container(
-                      height: 46,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 12,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.search_rounded, size: 20, color: AppDesignSystem.orange600),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              _areaName.isNotEmpty ? _areaName : 'Search area or address...',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 13.5),
-                                fontWeight: FontWeight.w700,
-                                color: slateDark,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                    child: Bounceable(
+                      onTap: _openAreaSearchSheet,
+                      child: Container(
+                        height: 46,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 12,
+                              offset: const Offset(0, 3),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.search_rounded, size: 20, color: AppDesignSystem.orange600),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                _areaName.isNotEmpty ? _areaName : 'Search area, colony or landmark...',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 13.5),
+                                  fontWeight: FontWeight.w700,
+                                  color: slateDark,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFFFF7ED),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.tune_rounded,
+                                size: 14,
+                                color: AppDesignSystem.orange600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -578,3 +612,640 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
   }
 }
 
+// ---------------------------------------------------------------------------
+// Realtime Interactive Area Search Modal (Nominatim Geocoding + Quick Area Chips)
+// ---------------------------------------------------------------------------
+class _AreaSearchModal extends StatefulWidget {
+  final String currentArea;
+  final void Function(double lat, double lng, String name, String address) onLocationSelected;
+
+  const _AreaSearchModal({
+    required this.currentArea,
+    required this.onLocationSelected,
+  });
+
+  @override
+  State<_AreaSearchModal> createState() => _AreaSearchModalState();
+}
+
+class _AreaSearchModalState extends State<_AreaSearchModal> {
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  Timer? _debounceTimer;
+  bool _isLoading = false;
+  List<Map<String, dynamic>> _searchResults = [];
+
+  // Popular local shops, markets, medical stores, & landmarks in Ghatampur / Sihari
+  static const List<Map<String, dynamic>> popularAreas = [
+    // Local Shops & Markets
+    {
+      'title': 'Ghatampur Sabzi Mandi',
+      'subtitle': 'Daily Fresh Vegetable & Fruit Market, Ghatampur, 209206',
+      'lat': 26.1528,
+      'lng': 80.1702,
+      'tag': 'Market',
+    },
+    {
+      'title': 'Purana Bazaar / Cloth Market',
+      'subtitle': 'Main Market Road, Near Chowk, Ghatampur, 209206',
+      'lat': 26.1542,
+      'lng': 80.1720,
+      'tag': 'Market',
+    },
+    {
+      'title': 'Mishra Mishthan Bhandar',
+      'subtitle': 'Famous Sweet Shop, Chowk, Ghatampur, 209206',
+      'lat': 26.1538,
+      'lng': 80.1718,
+      'tag': 'Shop',
+    },
+    {
+      'title': 'Gupta Kirana Store',
+      'subtitle': 'Grocery Store, Sihari Road, Ghatampur, 209206',
+      'lat': 26.1575,
+      'lng': 80.1670,
+      'tag': 'Shop',
+    },
+    {
+      'title': 'Verma Medical Store',
+      'subtitle': 'Chemist & Druggist, Hospital Road, Ghatampur, 209206',
+      'lat': 26.1548,
+      'lng': 80.1735,
+      'tag': 'Medical',
+    },
+    {
+      'title': 'Community Health Centre (CHC) Hospital',
+      'subtitle': 'Government Hospital Road, Ghatampur, 209206',
+      'lat': 26.1550,
+      'lng': 80.1742,
+      'tag': 'Hospital',
+    },
+    {
+      'title': 'State Bank of India (SBI) Branch',
+      'subtitle': 'Bank Road, Near Tehsil, Ghatampur, 209206',
+      'lat': 26.1560,
+      'lng': 80.1705,
+      'tag': 'Bank',
+    },
+    {
+      'title': 'Ghatampur Bus Stand',
+      'subtitle': 'UPSRTC Bus Stand, NH34, Ghatampur, 209206',
+      'lat': 26.1525,
+      'lng': 80.1725,
+      'tag': 'Transit',
+    },
+    {
+      'title': 'Railway Station Ghatampur',
+      'subtitle': 'North Central Railway, Station Road, 209206',
+      'lat': 26.1480,
+      'lng': 80.1760,
+      'tag': 'Transit',
+    },
+    {
+      'title': 'Kushmanda Devi Mandir',
+      'subtitle': 'Ancient Pilgrimage Temple, Ghatampur, 209206',
+      'lat': 26.1585,
+      'lng': 80.1785,
+      'tag': 'Landmark',
+    },
+    {
+      'title': 'Sihari Village / Gram',
+      'subtitle': 'Sihari, Ghatampur Delivery Zone, 209206',
+      'lat': 26.1601,
+      'lng': 80.1650,
+      'tag': 'Area',
+    },
+    {
+      'title': 'Jahanabad Road Bypass',
+      'subtitle': 'NH34 / Jahanabad Crossing, Ghatampur, 209206',
+      'lat': 26.1450,
+      'lng': 80.1620,
+      'tag': 'Zone',
+    },
+    {
+      'title': 'Tehsil Campus / SDM Office',
+      'subtitle': 'Administrative Complex, Ghatampur, 209206',
+      'lat': 26.1555,
+      'lng': 80.1690,
+      'tag': 'Civil',
+    },
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _searchController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    _debounceTimer?.cancel();
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _isLoading = false;
+      });
+      return;
+    }
+
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      _performSearch(trimmed);
+    });
+  }
+
+  Future<void> _performSearch(String query) async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final dio = Dio();
+      final List<Map<String, dynamic>> results = [];
+      final lower = query.toLowerCase();
+
+      // 1. Immediate Match with Local Shops & Landmarks (Instant response for local businesses)
+      final localMatches = popularAreas.where((p) {
+        final t = (p['title'] as String).toLowerCase();
+        final s = (p['subtitle'] as String).toLowerCase();
+        final tag = (p['tag'] as String).toLowerCase();
+        return t.contains(lower) || s.contains(lower) || tag.contains(lower);
+      }).toList();
+      results.addAll(localMatches);
+
+      // 2. OpenStreetMap / Nominatim with Bounding Box around Ghatampur
+      // viewbox: minLon, maxLat, maxLon, minLat (covers Ghatampur, Sihari, surrounding areas)
+      try {
+        final response = await dio.get(
+          'https://nominatim.openstreetmap.org/search',
+          queryParameters: {
+            'q': query.contains('ghatampur') ? query : '$query, Ghatampur',
+            'format': 'json',
+            'addressdetails': 1,
+            'limit': 8,
+            'countrycodes': 'in',
+            'viewbox': '80.05,26.25,80.30,26.05',
+            'bounded': 0, // Prefer nearby within 15km
+          },
+          options: Options(
+            headers: {'User-Agent': 'FastKirana-Mobile/1.0 (support@fastkirana.in)'},
+            sendTimeout: const Duration(seconds: 4),
+            receiveTimeout: const Duration(seconds: 4),
+          ),
+        );
+
+        if (response.statusCode == 200 && response.data is List) {
+          for (final item in (response.data as List)) {
+            final lat = double.tryParse(item['lat']?.toString() ?? '') ?? 0.0;
+            final lon = double.tryParse(item['lon']?.toString() ?? '') ?? 0.0;
+            final displayName = (item['display_name'] ?? '').toString();
+            final addr = item['address'] as Map<String, dynamic>?;
+            final title = addr?['shop'] ??
+                addr?['amenity'] ??
+                addr?['suburb'] ??
+                addr?['village'] ??
+                addr?['neighbourhood'] ??
+                addr?['road'] ??
+                displayName.split(',').first;
+
+            if (lat != 0.0 && lon != 0.0) {
+              final alreadyAdded = results.any((r) =>
+                  ((r['lat'] as num) - lat).abs() < 0.001 &&
+                  ((r['lng'] as num) - lon).abs() < 0.001);
+
+              if (!alreadyAdded) {
+                results.add({
+                  'title': title.toString().trim(),
+                  'subtitle': displayName,
+                  'lat': lat,
+                  'lng': lon,
+                });
+              }
+            }
+          }
+        }
+      } catch (_) {}
+
+      // 3. If still empty, try broader query on Nominatim
+      if (results.isEmpty) {
+        try {
+          final broadResp = await dio.get(
+            'https://nominatim.openstreetmap.org/search',
+            queryParameters: {
+              'q': query,
+              'format': 'json',
+              'addressdetails': 1,
+              'limit': 5,
+              'countrycodes': 'in',
+            },
+            options: Options(
+              headers: {'User-Agent': 'FastKirana-Mobile/1.0 (support@fastkirana.in)'},
+              sendTimeout: const Duration(seconds: 3),
+              receiveTimeout: const Duration(seconds: 3),
+            ),
+          );
+
+          if (broadResp.statusCode == 200 && broadResp.data is List) {
+            for (final item in (broadResp.data as List)) {
+              final lat = double.tryParse(item['lat']?.toString() ?? '') ?? 0.0;
+              final lon = double.tryParse(item['lon']?.toString() ?? '') ?? 0.0;
+              final displayName = (item['display_name'] ?? '').toString();
+              final title = displayName.split(',').first;
+
+              if (lat != 0.0 && lon != 0.0) {
+                results.add({
+                  'title': title.trim(),
+                  'subtitle': displayName,
+                  'lat': lat,
+                  'lng': lon,
+                });
+              }
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 4. Fallback to native geocoding if still empty
+      if (results.isEmpty && !kIsWeb) {
+        try {
+          final locations = await locationFromAddress('$query, UP');
+          for (final loc in locations.take(3)) {
+            results.add({
+              'title': query,
+              'subtitle': '$query, Uttar Pradesh, India',
+              'lat': loc.latitude,
+              'lng': loc.longitude,
+            });
+          }
+        } catch (_) {}
+      }
+
+      if (mounted) {
+        setState(() {
+          _searchResults = results;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        final lower = query.toLowerCase();
+        final fallback = popularAreas.where((p) {
+          final t = (p['title'] as String).toLowerCase();
+          return t.contains(lower);
+        }).toList();
+
+        setState(() {
+          _searchResults = fallback;
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _selectLocation(double lat, double lng, String title, String subtitle) {
+    HapticFeedback.selectionClick();
+    Navigator.pop(context);
+    widget.onLocationSelected(lat, lng, title, subtitle);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
+      padding: EdgeInsets.only(bottom: bottomInset),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Drag handle
+          Container(
+            margin: const EdgeInsets.only(top: 10, bottom: 8),
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE2E8F0),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 12, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Search Delivery Area',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 17),
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF0F172A),
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Type colony, road, landmark or pincode',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 11.5),
+                        color: const Color(0xFF64748B),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF1F5F9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF475569)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Search Input Field
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+              ),
+              child: TextField(
+                controller: _searchController,
+                focusNode: _focusNode,
+                onChanged: _onSearchChanged,
+                textInputAction: TextInputAction.search,
+                onSubmitted: _performSearch,
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 14),
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF0F172A),
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Try "Sihari", "Bypass", "Station Road"...',
+                  hintStyle: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 13),
+                    color: const Color(0xFF94A3B8),
+                    fontWeight: FontWeight.w500,
+                  ),
+                  prefixIcon: const Icon(Icons.search_rounded, color: AppDesignSystem.orange600, size: 22),
+                  suffixIcon: _isLoading
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppDesignSystem.orange600),
+                          ),
+                        )
+                      : _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded, size: 18, color: Color(0xFF94A3B8)),
+                              onPressed: () {
+                                _searchController.clear();
+                                _onSearchChanged('');
+                              },
+                            )
+                          : null,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          // Popular Area Chips
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                _searchResults.isEmpty ? 'QUICK AREAS' : 'RESULTS',
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 10.5),
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF94A3B8),
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // List View of Search Results or Quick Areas
+          Flexible(
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              children: [
+                if (_searchResults.isEmpty && _searchController.text.isEmpty) ...[
+                  // Show Popular Localities
+                  ...popularAreas.map((area) {
+                    final lat = (area['lat'] as num).toDouble();
+                    final lng = (area['lng'] as num).toDouble();
+                    final title = area['title'] as String;
+                    final subtitle = area['subtitle'] as String;
+                    final tag = area['tag'] as String;
+
+                    return Bounceable(
+                      onTap: () => _selectLocation(lat, lng, title, subtitle),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF7ED),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.location_on_rounded, size: 18, color: AppDesignSystem.orange600),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        title,
+                                        style: GoogleFonts.inter(
+                                          fontSize: Responsive.scaledFontSize(context, 13.5),
+                                          fontWeight: FontWeight.w800,
+                                          color: const Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFEF3C7),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          tag,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w800,
+                                            color: const Color(0xFFB45309),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    subtitle,
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 11.5),
+                                      color: const Color(0xFF64748B),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF94A3B8)),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ] else if (_searchResults.isNotEmpty) ...[
+                  ..._searchResults.map((item) {
+                    final lat = (item['lat'] as num).toDouble();
+                    final lng = (item['lng'] as num).toDouble();
+                    final title = (item['title'] ?? '').toString();
+                    final subtitle = (item['subtitle'] ?? '').toString();
+
+                    return Bounceable(
+                      onTap: () => _selectLocation(lat, lng, title, subtitle),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFFED7AA)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppDesignSystem.orange600.withValues(alpha: 0.04),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF7ED),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.place_rounded, size: 18, color: AppDesignSystem.orange600),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    title,
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 13.5),
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    subtitle,
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 11.5),
+                                      color: const Color(0xFF64748B),
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.check_circle_outline_rounded, size: 16, color: AppDesignSystem.orange600),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ] else if (!_isLoading && _searchController.text.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.location_off_rounded, size: 36, color: Color(0xFF94A3B8)),
+                        const SizedBox(height: 8),
+                        Text(
+                          'No matching areas found',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 13.5),
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'You can also drag the map pin directly to your doorstep',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 11.5),
+                            color: const Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
