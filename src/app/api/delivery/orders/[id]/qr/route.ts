@@ -137,24 +137,31 @@ export async function GET(
 
         if (cfOrder?.payment_session_id) {
           paymentSessionId = cfOrder.payment_session_id
-          // Official Cashfree Checkout URL for FastKirana
           paymentLinkUrl = `https://payments.cashfree.com/order/#${cfOrder.payment_session_id}`
-          // High-res QR code that opens FastKirana's Cashfree page directly
-          cashfreeQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=8&data=${encodeURIComponent(paymentLinkUrl)}`
+          try {
+            const cfQrRes = await createCashfreeUpiQrSession(cfOrder.payment_session_id)
+            if (cfQrRes?.qrImageUrl) {
+              cashfreeQrUrl = cfQrRes.qrImageUrl
+            } else if (cfQrRes?.upiUri) {
+              cashfreeQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=8&data=${encodeURIComponent(cfQrRes.upiUri)}`
+            }
+          } catch (qrSessionErr) {
+            console.warn('Cashfree dynamic UPI QR session fallback to store VPA:', qrSessionErr)
+          }
         }
       } catch (cfErr) {
         console.error('Cashfree order generation error:', cfErr)
       }
     }
 
-    // Cashfree Hosted Doorstep Payment Page URL
-    // Customer scans QR → opens this page → Cashfree JS SDK checkout → auto-detect payment
+    // Doorstep Web Pay Link for WhatsApp sharing fallback
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
     const doorstepPayUrl = `${appUrl}/doorstep-pay/${order.id}`
-    const doorstepPayQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=8&data=${encodeURIComponent(doorstepPayUrl)}`
 
-    // Use Cashfree hosted page QR as primary (auto-detect), direct UPI as fallback
-    const activeQrImageUrl = isCashfreeConfigured() ? doorstepPayQrUrl : directUpiQrImageUrl
+    // CRITICAL FIX: The QR code scanned by Google Pay / PhonePe / Paytm at doorstep
+    // MUST contain a native 'upi://pay' Intent URI, NOT a web URL ('https://...')!
+    // If a web URL is encoded, Google Pay treats it as an external browser website and refuses to pay!
+    const activeQrImageUrl = cashfreeQrUrl || directUpiQrImageUrl
     const cleanCustomerPhone = (order.address?.phone || order.user?.phone || '').replace(/\D/g, '').slice(-10)
 
     return NextResponse.json({
@@ -165,7 +172,7 @@ export async function GET(
       upiVpa,
       upiUri: directUpiUri,
       directUpiQrUrl: directUpiQrImageUrl,
-      cashfreeQrUrl: doorstepPayQrUrl,
+      cashfreeQrUrl: activeQrImageUrl,
       doorstepPayUrl,
       paymentSessionId,
       paymentLinkUrl,

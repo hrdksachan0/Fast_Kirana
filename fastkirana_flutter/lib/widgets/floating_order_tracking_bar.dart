@@ -55,7 +55,7 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
           final liveOrder = await repo.getOrder(cleanId);
           if (liveOrder == null) return;
           if (liveOrder.status == OrderStatus.cancelled || liveOrder.status == OrderStatus.delivered) {
-            await repo.updateOrderStatus(cleanId, liveOrder.status);
+            await repo.savePlacedOrderLocally(liveOrder);
             if (mounted) ref.invalidate(ordersProvider(''));
           }
         } catch (e, _) { LoggerService.error('FloatingOrderTrackingBar: silent catch', e); }

@@ -90,7 +90,7 @@ export default function UpiQrModal({
   const isAlreadyPaid = order.paymentStatus === 'PAID' || qrData?.paymentStatus === 'PAID' || livePaid
 
   const displayId = String(order.readableId || order.id.slice(0, 8))
-  const qrSrc = qrData?.qrImageUrl || qrData?.directUpiQrUrl || ''
+  const qrSrc = qrData?.cashfreeQrUrl || qrData?.qrImageUrl || qrData?.directUpiQrUrl || ''
   const paymentLinkUrl = qrData?.paymentLinkUrl || ''
   const customerPhone = qrData?.customerPhone || (order.address?.phone || order.user?.phone || '').replace(/\D/g, '').slice(-10)
 

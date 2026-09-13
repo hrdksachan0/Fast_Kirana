@@ -59,12 +59,6 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
     try {
       final details = await LocationService.fetchCurrentLocationDetails();
       if (details != null && mounted) {
-        if (!details.isServiceable) {
-          setState(() => _isFetchingGps = false);
-          UnserviceableLocationBanner.showUnserviceableModal(context, ref, details.distanceKm);
-          return;
-        }
-
         final address = Address(
           id: 'gps_${DateTime.now().millisecondsSinceEpoch}',
           userId: 'current',
@@ -86,19 +80,29 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
 
         if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFF16A34A),
-            content: Text('📍 Location set to ${details.area} (${details.distanceKm.toStringAsFixed(1)} km)'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        setState(() => _isFetchingGps = false);
 
-        Navigator.pushAndRemoveUntil(
-          context,
-          FadeSlideRoute(page: const MainShell()),
-          (route) => false,
-        );
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        } else {
+          Navigator.pushAndRemoveUntil(
+            context,
+            FadeSlideRoute(page: const MainShell()),
+            (route) => false,
+          );
+        }
+
+        if (!details.isServiceable) {
+          UnserviceableLocationBanner.showUnserviceableModal(context, ref, details.distanceKm);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFF16A34A),
+              content: Text('📍 Location set to ${details.area} (${details.distanceKm.toStringAsFixed(1)} km)'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
         return;
       }
     } catch (e) { LoggerService.error("Bare catch", e); }

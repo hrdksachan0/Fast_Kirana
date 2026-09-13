@@ -4022,7 +4022,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<_DoorstepCashfreeQrShe
 
   @override
   Widget build(BuildContext context) {
-    final activeQr = (_qrMode == 'cashfree' && _cashfreeQrUrl.isNotEmpty)
+    final activeQr = _cashfreeQrUrl.isNotEmpty
         ? _cashfreeQrUrl
         : (_qrImageUrl.isNotEmpty ? _qrImageUrl : _directUpiQrUrl);
 
@@ -4223,13 +4223,21 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<_DoorstepCashfreeQrShe
                   ] else ...[
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: CachedNetworkImage(
-                        imageUrl: activeQr,
-                        width: 220,
-                        height: 220,
-                        placeholder: (c, u) => const Center(child: CircularProgressIndicator(color: AppDesignSystem.success)),
-                        errorWidget: (c, u, e) => const Icon(Icons.qr_code_2_rounded, size: 100, color: AppDesignSystem.slate500),
-                      ),
+                      child: activeQr.startsWith('data:image')
+                          ? Image.memory(
+                              base64Decode(activeQr.split(',').last),
+                              width: 220,
+                              height: 220,
+                              fit: BoxFit.contain,
+                              errorBuilder: (c, e, s) => const Icon(Icons.qr_code_2_rounded, size: 100, color: AppDesignSystem.slate500),
+                            )
+                          : CachedNetworkImage(
+                              imageUrl: activeQr,
+                              width: 220,
+                              height: 220,
+                              placeholder: (c, u) => const Center(child: CircularProgressIndicator(color: AppDesignSystem.success)),
+                              errorWidget: (c, u, e) => const Icon(Icons.qr_code_2_rounded, size: 100, color: AppDesignSystem.slate500),
+                            ),
                     ),
                   ],
                   const SizedBox(height: 10),

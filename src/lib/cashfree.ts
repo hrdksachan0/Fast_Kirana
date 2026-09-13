@@ -203,14 +203,15 @@ export async function createCashfreeUpiQrSession(paymentSessionId: string): Prom
     throw new Error(`Cashfree UPI QR session failed (${response.status}): ${msg}`)
   }
 
-  const upiUri = data?.data?.url || data?.data?.payload?.qrcode_url || ''
-  const base64Qr = data?.data?.payload?.qrcode || ''
+  const payload = data?.data?.payload || data?.payload || data?.data || data
+  const upiUri = payload?.qrcode_url || payload?.url || payload?.default || data?.data?.url || ''
+  const base64Qr = payload?.qrcode || ''
   let qrImageUrl = ''
 
-  if (base64Qr) {
+  if (upiUri) {
+    qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=8&data=${encodeURIComponent(upiUri)}`
+  } else if (base64Qr) {
     qrImageUrl = base64Qr.startsWith('data:') ? base64Qr : `data:image/png;base64,${base64Qr}`
-  } else if (upiUri) {
-    qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(upiUri)}`
   }
 
   return {
