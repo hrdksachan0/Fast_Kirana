@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../network/api_client.dart';
 import '../services/secure_storage_service.dart';
 
@@ -77,16 +78,57 @@ class AdminAuthorization {
   ///
   /// Returns null when no user is logged in.
   static Map<String, String>? currentStaffHeaders() {
-    final userId = SecureStorage.cachedUserId;
+    var userId = SecureStorage.cachedUserId;
+    var userRole = SecureStorage.cachedUserRole;
+    var userPhone = SecureStorage.cachedUserPhone;
+    var userEmail = SecureStorage.cachedUserEmail;
+    var userName = SecureStorage.cachedUserName;
+
+    if (userId == null || userId.isEmpty) {
+      final data = SecureStorage.cachedUserData;
+      if (data != null) {
+        userId = data['id'];
+        userRole = data['role'];
+        userPhone = data['phone'];
+        userEmail = data['email'];
+        userName = data['name'];
+      }
+    }
+
     if (userId == null || userId.isEmpty) return null;
 
     return buildStaffHeaders(
       userId: userId,
-      userRole: SecureStorage.cachedUserRole,
-      userPhone: SecureStorage.cachedUserPhone,
-      userEmail: SecureStorage.cachedUserEmail,
-      userName: SecureStorage.cachedUserName,
+      userRole: userRole,
+      userPhone: userPhone,
+      userEmail: userEmail,
+      userName: userName,
     );
+  }
+
+  /// Async version ensuring cache is fully loaded on cold boot
+  static Future<Options> optionsAsync({Map<String, dynamic>? extra}) async {
+    if (!SecureStorage.isCacheLoaded || SecureStorage.cachedUserId == null) {
+      await SecureStorage.loadCache();
+    }
+    var headers = currentStaffHeaders();
+    if (headers == null || headers.isEmpty) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final uid = prefs.getString('user_id');
+        final role = prefs.getString('user_role');
+        if (uid != null && uid.isNotEmpty) {
+          headers = buildStaffHeaders(
+            userId: uid,
+            userRole: role ?? 'ADMIN',
+            userPhone: prefs.getString('user_phone'),
+            userEmail: prefs.getString('user_email'),
+            userName: prefs.getString('user_name'),
+          );
+        }
+      } catch (_) {}
+    }
+    return Options(headers: headers ?? const <String, String>{}, extra: extra);
   }
 
   /// Wraps a Dio request options with staff headers from the current

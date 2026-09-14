@@ -385,31 +385,24 @@ export async function POST(
       let dynamicShopName = order.shopName
       let dynamicShopPhone = order.shopPhone
 
-      if (order.orderType === 'RESTAURANT') {
+      if (hasRestaurantItems) {
+        const firstKey = normalizeRestaurantId(restaurantKeys[0]) || restaurantKeys[0]
+        const firstGroup = restaurantGroups[restaurantKeys[0]] || restaurantGroups[firstKey] || Object.values(restaurantGroups)[0]
         dynamicOrderType = 'RESTAURANT'
-        dynamicRestaurantId = normalizeRestaurantId(order.restaurantId) || (restaurantKeys[0] ? normalizeRestaurantId(restaurantKeys[0]) : 'REST-101')
-        const firstGroup = dynamicRestaurantId ? restaurantGroups[dynamicRestaurantId] : Object.values(restaurantGroups)[0]
-        dynamicShopName = firstGroup?.shopName || order.shopName || 'Restaurant'
-        dynamicShopPhone = firstGroup?.shopPhone || order.shopPhone || null
-      } else if (order.orderType === 'GROCERY') {
+        dynamicRestaurantId = firstKey
+        
+        // Fetch fresh restaurant details from DB to guarantee correct shop name and phone
+        const dbRest = await prisma.restaurant.findUnique({
+          where: { id: firstKey },
+          select: { name: true, ownerPhone: true }
+        })
+        dynamicShopName = dbRest?.name || firstGroup?.shopName || 'Restaurant'
+        dynamicShopPhone = dbRest?.ownerPhone || firstGroup?.shopPhone || null
+      } else if (hasGroceryItems) {
         dynamicOrderType = 'GROCERY'
         dynamicRestaurantId = null
         dynamicShopName = 'FastKirana Grocery'
         dynamicShopPhone = null
-      } else {
-        if (!hasRestaurantItems) {
-          dynamicOrderType = 'GROCERY'
-          dynamicRestaurantId = null
-          dynamicShopName = 'FastKirana Grocery'
-          dynamicShopPhone = null
-        } else {
-          const firstKey = restaurantKeys[0]
-          const firstGroup = restaurantGroups[firstKey]
-          dynamicOrderType = 'RESTAURANT'
-          dynamicRestaurantId = normalizeRestaurantId(firstKey)
-          dynamicShopName = firstGroup?.shopName || order.shopName || 'Restaurant'
-          if (firstGroup?.shopPhone) dynamicShopPhone = firstGroup.shopPhone
-        }
       }
 
       // Find companion order ids (exclude self)
@@ -439,7 +432,8 @@ export async function POST(
           restaurantId: dynamicRestaurantId,
           shopName: dynamicShopName,
           shopPhone: dynamicShopPhone,
-          ...(dynamicOrderType === 'GROCERY' ? { assignedChefId: null } : { assignedPickerId: null })
+          ...(dynamicOrderType === 'GROCERY' || (order.restaurantId && dynamicRestaurantId && order.restaurantId !== dynamicRestaurantId) ? { assignedChefId: null } : {}),
+          ...(dynamicOrderType === 'RESTAURANT' ? { assignedPickerId: null } : {})
         }
       })
 
@@ -585,6 +579,16 @@ export async function POST(
       })
     }
 
+    // Ensure the original order (order.id) is always claimed by one of the sub-orders so it is never orphaned
+    const orderClaimed = subOrders.some(s => s.orderId === order.id)
+    if (!orderClaimed && subOrders.length > 0) {
+      const candidate = subOrders.find(s => s.type === order.orderType && s.orderId === null) ||
+                        subOrders.find(s => s.orderId === null) ||
+                        subOrders[0]
+      candidate.orderId = order.id
+      candidate.isNew = false
+    }
+
     // Process each sub-order: delete old items, insert new items, compute subtotals
     interface PreparedSubOrder {
       targetOrderId: string
@@ -713,8 +717,8 @@ export async function POST(
           orderType: p.spec.type,
           restaurantId: p.spec.restaurantId,
           shopName: p.spec.shopName,
-          shopPhone: p.spec.shopPhone,
-          ...(p.spec.type === 'GROCERY' ? { assignedChefId: null } : { assignedPickerId: null })
+          ...(p.spec.type === 'GROCERY' || (order.restaurantId && p.spec.restaurantId && order.restaurantId !== p.spec.restaurantId) ? { assignedChefId: null } : {}),
+          ...(p.spec.type === 'RESTAURANT' ? { assignedPickerId: null } : {})
         }
       })
 

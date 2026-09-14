@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import '../services/secure_storage_service.dart';
 
@@ -35,8 +36,15 @@ final dioProvider = Provider<Dio>((ref) {
           options.baseUrl = options.extra['override_base_url'] as String;
         }
 
-        // ─── In-memory auth headers (instant, zero I/O) ─────────────────
-        final token = SecureStorage.cachedToken;
+        // ─── In-memory auth headers (instant, zero I/O) with boot fallback ──
+        var token = SecureStorage.cachedToken;
+        if (token == null || token.isEmpty) {
+          final prefs = await SharedPreferences.getInstance();
+          token = prefs.getString('auth_token');
+          if (token != null && token.isNotEmpty) {
+            await SecureStorage.loadCache();
+          }
+        }
 
         final isOtpRoute = options.path.contains('/api/auth/otp');
         if (token != null && token.isNotEmpty && !isOtpRoute) {
@@ -58,6 +66,16 @@ final dioProvider = Provider<Dio>((ref) {
           String? userName = SecureStorage.cachedUserName;
           String? userRole = SecureStorage.cachedUserRole;
           String? userPhone = directPhone;
+
+          if (userId == null || userRole == null) {
+            final prefs = await SharedPreferences.getInstance();
+            userId ??= prefs.getString('user_id');
+            userRole ??= prefs.getString('user_role');
+            directPhone ??= prefs.getString('user_phone');
+            userEmail ??= prefs.getString('user_email');
+            userName ??= prefs.getString('user_name');
+            userPhone ??= directPhone;
+          }
 
           if (rawUserData != null && rawUserData.isNotEmpty) {
             parse(String k) => rawUserData[k];

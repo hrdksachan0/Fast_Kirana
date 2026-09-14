@@ -219,13 +219,21 @@ export function OrdersTab({
               total: combinedTotal,
               status: consStatus,
               items: allItems,
-              shopName: `${grocSub?.shopName || 'Dark Store'} + ${restSub?.shopName || 'Restaurant'}`,
-              subOrders: group.map(s => ({
-                ...s,
-                type: s.restaurantId ? 'RESTAURANT' : 'GROCERY',
-              })),
+              shopName: restSub
+                ? `Dark Store + ${restSub.restaurantName || restSub.shopName || 'Restaurant'}`
+                : (primary.shopName || 'FastKirana Dark Store'),
+              subOrders: group.map(s => {
+                const isRestaurant = s.orderType === 'RESTAURANT' || !!s.restaurantId || (s.readableId && s.readableId.endsWith('-R'))
+                return {
+                  ...s,
+                  type: isRestaurant ? 'RESTAURANT' : 'GROCERY',
+                  shopName: isRestaurant
+                    ? (s.restaurantName || s.shopName || 'Restaurant')
+                    : 'FastKirana Dark Store',
+                }
+              }),
               restaurantId: restSub?.restaurantId || null,
-              restaurantName: restSub?.shopName || restSub?.restaurantName || null,
+              restaurantName: restSub?.restaurantName || restSub?.shopName || null,
             }
             consolidated.push(masterOrder)
           } else {

@@ -149,19 +149,21 @@ class NotificationService {
       _prefs['offers_promos'] = prefs.getBool('notif_offers_promos') ?? true;
       _prefs['delivery_alerts'] = prefs.getBool('notif_delivery_alerts') ?? true;
 
-      // 2. Request runtime notification permissions explicitly
-      try {
-        await _fcm?.requestPermission(
-          alert: true,
-          badge: true,
-          sound: true,
-          criticalAlert: true,
-          provisional: false,
-        );
-        await _localNotifications
-            ?.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-            ?.requestNotificationsPermission();
-      } catch (e, _) { LoggerService.error('NotificationService: error', e); }
+      // 2. Request runtime notification permissions asynchronously (non-blocking for startup)
+      unawaited(() async {
+        try {
+          await _fcm?.requestPermission(
+            alert: true,
+            badge: true,
+            sound: true,
+            criticalAlert: true,
+            provisional: false,
+          );
+          await _localNotifications
+              ?.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+              ?.requestNotificationsPermission();
+        } catch (e, _) { LoggerService.error('NotificationService: error', e); }
+      }());
 
       // 3. Setup local notification channel for Android with MAX priority
       const AndroidNotificationChannel channel = AndroidNotificationChannel(

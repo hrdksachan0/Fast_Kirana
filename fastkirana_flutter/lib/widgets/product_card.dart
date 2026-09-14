@@ -410,10 +410,10 @@ class PriceRow extends StatelessWidget {
         Text(
           priceText,
           style: GoogleFonts.plusJakartaSans(
-            fontSize: s * 14,
+            fontSize: s * 15.5,
             fontWeight: FontWeight.w800,
             color: const Color(0xFF0F172A),
-            letterSpacing: -0.3,
+            letterSpacing: -0.4,
             height: 1.1,
           ),
           maxLines: 1,
@@ -868,7 +868,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(s(18)),
               border: Border.all(color: isFood ? const Color(0xFFFED7AA).withValues(alpha: 0.5) : const Color(0xFFF1F5F9), width: s(1.2)),
-              boxShadow: [BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.04), blurRadius: s(10), offset: Offset(0, s(3)))],
+              boxShadow: [BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.04), blurRadius: s(8), offset: Offset(0, s(2)))],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

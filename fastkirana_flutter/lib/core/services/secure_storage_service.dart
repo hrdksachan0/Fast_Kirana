@@ -33,19 +33,19 @@ class SecureStorage {
   static bool get isCacheLoaded => _isCacheLoaded;
 
   /// Load all auth fields into the in-memory cache once.
-  /// Call this on app startup and after any auth mutation (login/logout).
+  /// Uses instant SharedPreferences first (<1ms) and syncs with encrypted storage.
   static Future<void> loadCache() async {
-    if (_isCacheLoaded) return;
     try {
-      _cachedToken = await read('auth_token');
-      _cachedRefreshToken = await read('refresh_token');
-      _cachedUserId = await read('user_id');
-      _cachedUserPhone = await read('user_phone');
-      _cachedUserEmail = await read('user_email');
-      _cachedUserName = await read('user_name');
-      _cachedUserRole = await read('user_role');
+      final prefs = await SharedPreferences.getInstance();
+      _cachedToken = prefs.getString('auth_token') ?? await read('auth_token');
+      _cachedRefreshToken = prefs.getString('refresh_token') ?? await read('refresh_token');
+      _cachedUserId = prefs.getString('user_id') ?? await read('user_id');
+      _cachedUserPhone = prefs.getString('user_phone') ?? await read('user_phone');
+      _cachedUserEmail = prefs.getString('user_email') ?? await read('user_email');
+      _cachedUserName = prefs.getString('user_name') ?? await read('user_name');
+      _cachedUserRole = prefs.getString('user_role') ?? await read('user_role');
 
-      final raw = await read('user_data');
+      final raw = prefs.getString('user_data') ?? await read('user_data');
       if (raw != null && raw.isNotEmpty) {
         try {
           _cachedUserData = Map<String, String>.from(
@@ -53,12 +53,19 @@ class SecureStorage {
               (k, v) => MapEntry(k, v.toString()),
             ),
           );
+          _cachedUserId ??= _cachedUserData?['id'];
+          _cachedUserRole ??= _cachedUserData?['role'];
+          _cachedUserPhone ??= _cachedUserData?['phone'];
+          _cachedUserEmail ??= _cachedUserData?['email'];
+          _cachedUserName ??= _cachedUserData?['name'];
         } catch (e) { LoggerService.error('SecureStorageService: loadCache parse user_data', e);
           _cachedUserData = null;
         }
       }
 
-      _isCacheLoaded = true;
+      if (_cachedToken != null || _cachedUserId != null) {
+        _isCacheLoaded = true;
+      }
     } catch (e, _) { LoggerService.error('SecureStorageService: loadCache', e); }
   }
 
@@ -140,13 +147,12 @@ class SecureStorage {
 
   static Future<void> write(String key, String value) async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(key, value);
+    } catch (_) {}
+    try {
       await _storage.write(key: key, value: value);
-    } catch (e) { LoggerService.error('SecureStorageService: write', e);
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(key, value);
-      } catch (e, _) { LoggerService.error('SecureStorageService: write fallback', e); }
-    }
+    } catch (e) { LoggerService.error('SecureStorageService: write', e); }
   }
 
   static Future<void> delete(String key) async {

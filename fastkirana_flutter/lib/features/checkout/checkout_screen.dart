@@ -220,8 +220,25 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  void _handleCashfreeError(CFErrorResponse errorResponse, String cfOrderId) {
+  Future<void> _handleCashfreeError(CFErrorResponse errorResponse, String cfOrderId) async {
     HapticFeedback.lightImpact();
+
+    // 1. Verify with backend first — in case user paid in UPI app (PhonePe/GPay) and WebCheckout dismissed
+    try {
+      final dio = ref.read(dioProvider);
+      final verifyRes = await dio.post(
+        '/api/payment/cashfree/verify',
+        data: {'orderId': cfOrderId, 'cfOrderId': cfOrderId},
+        options: Options(sendTimeout: const Duration(seconds: 4), receiveTimeout: const Duration(seconds: 4)),
+      );
+      if (verifyRes.data != null && (verifyRes.data['isPaid'] == true || verifyRes.data['paymentStatus'] == 'PAID')) {
+        debugPrint('✅ Payment verified as PAID on server despite error callback! Routing to success...');
+        await _handleCashfreeSuccess(cfOrderId);
+        return;
+      }
+    } catch (vErr) {
+      debugPrint('Cashfree error verify check note: $vErr');
+    }
 
     final errorMsg = (errorResponse.getMessage() ?? '').toLowerCase();
     final isSideloadOrWhitelistingError = errorMsg.contains('packageinstaller') ||
@@ -596,11 +613,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             '/api/payment/cashfree/create-order',
             data: {
               'amount': grandTotal,
+              if (_pendingCashfreeOrderId != null) 'orderId': _pendingCashfreeOrderId,
               'customerPhone': cleanPhone.isNotEmpty ? cleanPhone : '9999999999',
               'customerEmail': email,
               'customerName': customerName,
             },
-            options: Options(sendTimeout: const Duration(seconds: 4), receiveTimeout: const Duration(seconds: 4)),
+            options: Options(sendTimeout: const Duration(seconds: 12), receiveTimeout: const Duration(seconds: 12)),
           );
 
           if (cfRes.data != null && cfRes.data['paymentSessionId'] != null) {
@@ -903,7 +921,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         'longitude': selectedAddress?.longitude,
         'lat': selectedAddress?.latitude,
         'lng': selectedAddress?.longitude,
-        'shopName': shopName,
+        'shopName': (hasGrocery && hasRestaurant) ? 'FastKirana Dark Store' : shopName,
         'packagingOption': _selectedPackaging,
         'packagingFee': packagingFee,
         'items': cart.items.map((i) => {

@@ -50,7 +50,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     );
 
     _mainController.forward();
-    _requestAppPermissions();
 
     // Fast, responsive splash: 450ms minimum brand presentation while resolving auth in parallel
     final prefFuture = SharedPreferences.getInstance();
@@ -62,6 +61,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       _safeNavigate(prefs: prefs);
     }).catchError((_) {
       _safeNavigate();
+    });
+
+    // Guaranteed watchdog timeout: App will NEVER stay stuck on splash screen for more than 1.5s
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (!_hasNavigated && mounted) {
+        _safeNavigate();
+      }
     });
   }
 

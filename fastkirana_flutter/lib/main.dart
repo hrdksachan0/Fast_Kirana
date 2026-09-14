@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
@@ -18,28 +19,17 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ─── CRITICAL PERFORMANCE FIX ──────────────────────────────────
-  // Allow runtime fetching on all platforms so GoogleFonts don't crash when individual variant files are missing.
-  GoogleFonts.config.allowRuntimeFetching = true;
+  // Low-memory safe bounds: Max 50 images, 35MB RAM (prevents OOM on 2GB/3GB Android devices)
+  PaintingBinding.instance.imageCache.maximumSize = 50;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 35 * 1024 * 1024;
 
-
-  // Image Cache Memory Bounds (Max 100 images or 60MB RAM)
-  PaintingBinding.instance.imageCache.maximumSize = 100;
-  PaintingBinding.instance.imageCache.maximumSizeBytes = 60 * 1024 * 1024;
-
-  // ─── Global Flutter Error Handling ───────────────────────────────
-  // When Crashlytics is enabled (Firebase initialized below) we forward
-  // uncaught Flutter framework errors to it. Silent errors (like image 404s
-  // or asset errors handled by errorBuilder) are recorded as non-fatal
-  // or silenced to prevent false fatal crash spikes in Crashlytics.
+  // Global Flutter Error Handling
   if (!kIsWeb && !kDebugMode) {
     FlutterError.onError = (FlutterErrorDetails details) {
       FlutterError.presentError(details);
       if (details.silent) {
-        // Handled gracefully in UI (e.g. by errorBuilder / CachedNetworkImage.errorWidget)
         FirebaseCrashlytics.instance.recordFlutterError(details);
       } else {
-        // Real uncaught fatal framework error
         FirebaseCrashlytics.instance.recordFlutterFatalError(details);
       }
     };
@@ -104,7 +94,7 @@ void main() async {
     );
   };
 
-  // ─── System UI Configuration ────────────────────────────────────
+  // System UI Configuration
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -119,56 +109,59 @@ void main() async {
     ),
   );
 
-  // ─── High-Performance Concurrent Startup Pipeline (<1s cold start) ───
-  // Run critical initializations in parallel instead of sequential blocking awaits
-  await Future.wait([
-    // 1. Firebase & Background Messaging (non-web)
-    if (!kIsWeb)
-      (() async {
-        try {
-          await Firebase.initializeApp(
-            options: DefaultFirebaseOptions.currentPlatform,
-          );
-          FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-          final notificationService = NotificationService();
-          await notificationService.init();
-          // Note: requestPermissions is moved to non-blocking post-splash to avoid freeze
-        } catch (e) {
-          debugPrint("Firebase initialization failed: $e");
-        }
-      })(),
+  // Fast warm-up for auth cache (with 150ms timeout so it never blocks UI)
+  try {
+    await SecureStorage.loadCache().timeout(const Duration(milliseconds: 150));
+  } catch (_) {}
 
-    // 2. Supabase Realtime Initialization
-    (() async {
-      try {
-        await SupabaseService.initialize();
-      } catch (e) {
-        debugPrint("Supabase initialization error: $e");
-      }
-    })(),
-
-    // 3. Auth Cache Warm-up (zero I/O on subsequent API calls)
-    (() async {
-      try {
-        await SecureStorage.loadCache();
-      } catch (e) {
-        debugPrint("Auth cache load error: $e");
-      }
-    })(),
-
-    // 4. Deep Linking Initialization (Universal Links & Custom Scheme)
-    if (!kIsWeb)
-      (() async {
-        try {
-          await DeepLinkService.instance.init();
-        } catch (e) {
-          debugPrint("DeepLink initialization error: $e");
-        }
-      })(),
-  ]);
-
-  // ─── Launch App Instantly ───────────────────────────────────────
+  // ─── Instant UI Render (<100ms) ─────────────────────────────────
+  // Launch the widget tree immediately to draw the first frame on Android.
+  // This completely eliminates OS ANR (Application Not Responding) watchdog kills on small phones!
   runApp(const ProviderScope(child: FastKiranaApp()));
+
+  // ─── Non-Blocking Background Services Pipeline ──────────────────
+  // Heavy services (Firebase, Supabase, Notifications, Deep Links)
+  // initialize asynchronously in background without freezing the UI thread.
+  unawaited(_initializeBackgroundServices());
+}
+
+Future<void> _initializeBackgroundServices() async {
+  try {
+    await Future.wait([
+      if (!kIsWeb)
+        (() async {
+          try {
+            await Firebase.initializeApp(
+              options: DefaultFirebaseOptions.currentPlatform,
+            );
+            FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+            final notificationService = NotificationService();
+            await notificationService.init();
+          } catch (e) {
+            debugPrint("Firebase background initialization notice: $e");
+          }
+        })(),
+
+      (() async {
+        try {
+          await SupabaseService.initialize();
+        } catch (e) {
+          debugPrint("Supabase background initialization notice: $e");
+        }
+      })(),
+
+      if (!kIsWeb)
+        (() async {
+          try {
+            await DeepLinkService.instance.init();
+          } catch (e) {
+            debugPrint("DeepLink background initialization notice: $e");
+          }
+        })(),
+    ]);
+  } catch (e) {
+    debugPrint("Background services batch notice: $e");
+  }
 }
 
 class FastKiranaApp extends StatelessWidget {

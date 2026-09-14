@@ -87,25 +87,25 @@ class AppDesignSystem {
   // Shadows
   static List<BoxShadow> shadowSm = [
     BoxShadow(
-      color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-      blurRadius: 4,
+      color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+      blurRadius: 6,
       offset: const Offset(0, 1),
     ),
   ];
 
   static List<BoxShadow> shadowMd = [
     BoxShadow(
-      color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+      color: const Color(0xFF0F172A).withValues(alpha: 0.04),
       blurRadius: 8,
-      offset: const Offset(0, 3),
+      offset: const Offset(0, 2),
     ),
   ];
 
   static List<BoxShadow> shadowCard = [
     BoxShadow(
       color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-      blurRadius: 10,
-      offset: const Offset(0, 3),
+      blurRadius: 8,
+      offset: const Offset(0, 2),
     ),
   ];
 

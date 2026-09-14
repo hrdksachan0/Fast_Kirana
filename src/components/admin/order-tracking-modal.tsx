@@ -264,11 +264,15 @@ export default function OrderTrackingModal({
 
           {/* Meta Row: Tags + Time */}
           <div className="flex flex-wrap items-center gap-1.5">
-            {order.shopName && (
-              <span className="text-[10px] font-bold px-2 py-[3px] rounded-md bg-rose-500/8 text-rose-600 dark:text-rose-400">
-                🍽️ {order.shopName}
+            {order.isCombined ? (
+              <span className="text-[10px] font-bold px-2 py-[3px] rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                🛒 Dark Store + 🍽️ {order.restaurantName || 'Restaurant'}
               </span>
-            )}
+            ) : order.shopName ? (
+              <span className="text-[10px] font-bold px-2 py-[3px] rounded-md bg-rose-500/8 text-rose-600 dark:text-rose-400">
+                {order.restaurantId ? `🍽️ ${order.shopName}` : `🛒 ${order.shopName}`}
+              </span>
+            ) : null}
             <span className={`text-[10px] font-bold px-2 py-[3px] rounded-md ${
               isPickup 
                 ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400' 
@@ -426,7 +430,7 @@ export default function OrderTrackingModal({
                 <div className="divide-y divide-border/40">
                   {order.isCombined && order.subOrders && order.subOrders.length > 1 ? (
                     order.subOrders.map((sub: any, subIdx: number) => {
-                      const isRest = sub.type === 'RESTAURANT' || !!sub.restaurantId
+                      const isRest = sub.type === 'RESTAURANT' || !!sub.restaurantId || (sub.readableId && sub.readableId.endsWith('-R'))
                       // Strictly match items belonging to this specific sub-order
                       let subItems: OrderItem[] = []
                       if (sub.items && Array.isArray(sub.items) && sub.items.length > 0) {
@@ -442,7 +446,11 @@ export default function OrderTrackingModal({
                       return (
                         <div key={sub.id || subIdx} className="space-y-0">
                           <div className="bg-muted/60 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider flex items-center justify-between text-text-secondary border-b border-border/40">
-                            <span>{isRest ? `🍽️ ${sub.shopName || 'Restaurant'}` : `🥘 ${sub.shopName || 'FastKirana Dark Store'}`}</span>
+                            <span>
+                              {isRest 
+                                ? `🍽️ ${(sub.shopName && !sub.shopName.toLowerCase().includes('dark store')) ? sub.shopName : (order.restaurantName || 'Restaurant')}` 
+                                : `🛒 FastKirana Dark Store`}
+                            </span>
                             <span className="font-mono text-text-muted">#{sub.readableId || sub.id?.slice(0, 8)}</span>
                           </div>
                           <div className="divide-y divide-border/30">

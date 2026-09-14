@@ -209,8 +209,21 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
   }
 
-  void _handleCashfreeError(CFErrorResponse errorResponse, String cfOrderId) {
+  Future<void> _handleCashfreeError(CFErrorResponse errorResponse, String cfOrderId) async {
     HapticFeedback.lightImpact();
+    // Check if backend already confirmed payment (e.g. via webhook or external UPI app return)
+    try {
+      final dio = ref.read(dioProvider);
+      final verifyRes = await dio.post('/api/payment/cashfree/verify', data: {
+        'orderId': widget.orderId,
+        'cfOrderId': cfOrderId,
+      });
+      if (verifyRes.data != null && (verifyRes.data['isPaid'] == true || verifyRes.data['paymentStatus'] == 'PAID')) {
+        await _handleCashfreeSuccess(cfOrderId);
+        return;
+      }
+    } catch (_) {}
+
     if (mounted) {
       setState(() => _isProcessingPayment = false);
       ScaffoldMessenger.of(context).showSnackBar(

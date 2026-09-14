@@ -187,6 +187,24 @@ export async function POST(req: NextRequest) {
           }
         }
       }
+    } else if (
+      eventType === 'PAYMENT_FAILED_WEBHOOK' ||
+      eventType === 'PAYMENT_USER_DROPPED_WEBHOOK' ||
+      paymentData?.payment_status === 'FAILED' ||
+      paymentData?.payment_status === 'USER_DROPPED'
+    ) {
+      const orderId = orderData?.order_id
+      if (orderId) {
+        const cleanId = String(orderId).trim()
+        console.warn(`⚠️ Cashfree webhook: Payment failed/dropped for order ${cleanId}: ${paymentData?.payment_message || eventType}`)
+        await prisma.$executeRaw`
+          UPDATE orders
+          SET "paymentStatus" = 'FAILED'::"PaymentStatus",
+              "updatedAt" = NOW()
+          WHERE (id = ${cleanId} OR "readableId" = ${cleanId})
+            AND "paymentStatus" != 'PAID'::"PaymentStatus"
+        `.catch((err: any) => console.error('Error updating failed payment status:', err))
+      }
     }
 
     return NextResponse.json({ received: true })

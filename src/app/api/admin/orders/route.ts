@@ -57,6 +57,10 @@ export async function GET(request: Request) {
     // Construct dynamic raw SQL query based on filters to avoid enum deserialization bug
     if (status && status !== 'ALL' && cleanSearch) {
       const searchLike = `%${cleanSearch}%`
+      const onlinePaidFilter = status === 'PENDING'
+        ? Prisma.sql`AND (o."paymentMethod" = 'COD' OR o."paymentStatus" = 'PAID')`
+        : Prisma.empty
+
       if (effectiveStoreId) {
         ordersRaw = await prisma.$queryRaw`
           SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
@@ -66,6 +70,7 @@ export async function GET(request: Request) {
           FROM orders o
           LEFT JOIN users u ON o."userId" = u.id
           WHERE o.status::text = ${status}
+            ${onlinePaidFilter}
             AND o."storeId" = ${effectiveStoreId}
             AND (
               o.id ILIKE ${searchLike}
@@ -86,6 +91,7 @@ export async function GET(request: Request) {
           FROM orders o
           LEFT JOIN users u ON o."userId" = u.id
           WHERE o.status::text = ${status}
+            ${onlinePaidFilter}
             AND (
               o.id ILIKE ${searchLike}
               OR o."readableId"::text ILIKE ${searchLike}
@@ -98,6 +104,10 @@ export async function GET(request: Request) {
         `
       }
     } else if (status && status !== 'ALL') {
+      const onlinePaidFilter = status === 'PENDING'
+        ? Prisma.sql`AND (o."paymentMethod" = 'COD' OR o."paymentStatus" = 'PAID')`
+        : Prisma.empty
+
       if (effectiveStoreId) {
         ordersRaw = await prisma.$queryRaw`
           SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
@@ -106,6 +116,7 @@ export async function GET(request: Request) {
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
           FROM orders o
           WHERE o.status::text = ${status}
+            ${onlinePaidFilter}
             AND o."storeId" = ${effectiveStoreId}
           ORDER BY o."createdAt" DESC
           LIMIT ${limit} OFFSET ${skip}
@@ -118,6 +129,7 @@ export async function GET(request: Request) {
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
           FROM orders o
           WHERE o.status::text = ${status}
+            ${onlinePaidFilter}
           ORDER BY o."createdAt" DESC
           LIMIT ${limit} OFFSET ${skip}
         `
@@ -169,6 +181,7 @@ export async function GET(request: Request) {
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
           FROM orders o
           WHERE o."storeId" = ${effectiveStoreId}
+            AND (o."paymentMethod" = 'COD' OR o."paymentStatus" = 'PAID' OR o.status::text != 'PENDING')
           ORDER BY o."createdAt" DESC
           LIMIT ${limit} OFFSET ${skip}
         `
@@ -179,6 +192,7 @@ export async function GET(request: Request) {
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
           FROM orders o
+          WHERE (o."paymentMethod" = 'COD' OR o."paymentStatus" = 'PAID' OR o.status::text != 'PENDING')
           ORDER BY o."createdAt" DESC
           LIMIT ${limit} OFFSET ${skip}
         `
@@ -230,7 +244,7 @@ export async function GET(request: Request) {
       }>>`
         SELECT 
           COUNT(DISTINCT COALESCE("combinedId", id))::int as total,
-          COUNT(DISTINCT CASE WHEN status::text = 'PENDING' THEN COALESCE("combinedId", id) END)::int as pending,
+          COUNT(DISTINCT CASE WHEN status::text = 'PENDING' AND ("paymentMethod" = 'COD' OR "paymentStatus" = 'PAID') THEN COALESCE("combinedId", id) END)::int as pending,
           COUNT(DISTINCT CASE WHEN status::text = 'CONFIRMED' THEN COALESCE("combinedId", id) END)::int as confirmed,
           COUNT(DISTINCT CASE WHEN status::text = 'PACKED' THEN COALESCE("combinedId", id) END)::int as packed,
           COUNT(DISTINCT CASE WHEN status::text = 'SHIPPED' THEN COALESCE("combinedId", id) END)::int as shipped,
@@ -238,6 +252,7 @@ export async function GET(request: Request) {
           COUNT(DISTINCT CASE WHEN status::text = 'CANCELLED' THEN COALESCE("combinedId", id) END)::int as cancelled
         FROM orders
         WHERE ("deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL)
+          AND ("paymentMethod" = 'COD' OR "paymentStatus" = 'PAID' OR status::text != 'PENDING')
           ${storeSqlWhere}
       `,
       prisma.$queryRaw<Array<{
@@ -256,6 +271,7 @@ export async function GET(request: Request) {
         FROM orders
         WHERE ("deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL)
           AND status::text != 'CANCELLED'
+          AND ("paymentMethod" = 'COD' OR "paymentStatus" = 'PAID')
           AND "createdAt" >= ${startOfToday}
           ${storeSqlWhere}
       `
@@ -371,7 +387,9 @@ export async function GET(request: Request) {
         notes: o.notes,
         isB2B: o.isB2B,
         deliveryMethod: o.deliveryMethod,
-        shopName: o.restaurantId ? (restaurant?.name || o.shopName || 'Restaurant') : (o.shopName || 'FastKirana Dark Store'),
+        shopName: o.restaurantId 
+          ? (restaurant?.name || o.shopName || 'Restaurant') 
+          : ((!o.shopName || o.shopName.toLowerCase().includes('restaurant') || o.orderType === 'GROCERY') ? 'FastKirana Dark Store' : o.shopName),
         restaurantId: o.restaurantId || null,
         restaurantName: o.restaurantId ? (restaurant?.name || o.shopName || 'Restaurant') : null,
         restaurant,

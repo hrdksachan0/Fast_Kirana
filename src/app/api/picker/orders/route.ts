@@ -106,6 +106,7 @@ export async function GET(request: Request) {
                o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId"
         FROM orders o
         WHERE o.status IN ('PENDING', 'CONFIRMED')
+          AND (o."paymentMethod" = 'COD' OR o."paymentStatus" = 'PAID')
           AND o."restaurantId" = ${targetRestId}
           AND ("shopName" IS NULL OR ("shopName" != 'FastKirana Dark Store' AND "shopName" != 'FastKirana Grocery'))
         ORDER BY o."createdAt" ASC
@@ -123,6 +124,7 @@ export async function GET(request: Request) {
                  o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId", o."storeId"
           FROM orders o
           WHERE o.status IN ('PENDING', 'CONFIRMED')
+            AND (o."paymentMethod" = 'COD' OR o."paymentStatus" = 'PAID')
             AND o."restaurantId" IS NULL
             AND (o."orderType"::text = 'GROCERY' OR o."orderType" IS NULL)
             AND o."storeId" = ${effectiveStoreId}
@@ -140,6 +142,7 @@ export async function GET(request: Request) {
                  o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId", o."storeId"
           FROM orders o
           WHERE o.status IN ('PENDING', 'CONFIRMED')
+            AND (o."paymentMethod" = 'COD' OR o."paymentStatus" = 'PAID')
             AND o."restaurantId" IS NULL
             AND (o."orderType"::text = 'GROCERY' OR o."orderType" IS NULL)
           ORDER BY o."createdAt" ASC
@@ -167,6 +170,7 @@ export async function GET(request: Request) {
         WHERE o."userId" = ANY(${userIds})
           AND o."createdAt" >= ${minTime}
           AND o."createdAt" <= ${maxTime}
+          AND (o."paymentMethod" = 'COD' OR o."paymentStatus" = 'PAID')
       `
       
       const companionIds = companionOrders.map(c => c.id)

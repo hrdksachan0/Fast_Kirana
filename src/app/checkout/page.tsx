@@ -992,66 +992,74 @@ export default function CheckoutPage() {
 
       // Polling loop to auto-confirm if customer pays via external UPI app
       let pollCount = 0
-      const pollTimer = setInterval(async () => {
-        pollCount++
-        if (pollCount > 60 || paymentSuccess) {
-          clearInterval(pollTimer)
-          return
-        }
+      const checkVerification = async () => {
+        if (paymentSuccess) return true
         try {
           const verifyRes = await fetch('/api/payment/cashfree/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderId: orderData.id }),
+            body: JSON.stringify({ orderId: orderData.id, cfOrderId: cfData.orderId }),
           })
           const verifyData = await verifyRes.json()
           if (verifyRes.ok && verifyData.paymentStatus === 'PAID') {
             paymentSuccess = true
             clearInterval(pollTimer)
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
             clearCart()
             triggerHaptic('success')
             toast.success('🎉 Payment Verified Successfully!')
             window.location.href = `/order/${orderData.id}/success`
+            return true
           }
         } catch (_) {}
+        return false
+      }
+
+      const pollTimer = setInterval(async () => {
+        pollCount++
+        if (pollCount > 100 || paymentSuccess) {
+          clearInterval(pollTimer)
+          return
+        }
+        await checkVerification()
       }, 2500)
+
+      // When tab/app regains visibility (e.g. after customer returns from PhonePe/GPay app)
+      const handleVisibilityChange = async () => {
+        if (document.visibilityState === 'visible') {
+          await checkVerification()
+        }
+      }
+      document.addEventListener('visibilitychange', handleVisibilityChange)
 
       // Launch Cashfree In-Page Modal
       try {
-        await cashfree.checkout({
+        const result = await cashfree.checkout({
           paymentSessionId: cfData.paymentSessionId,
           redirectTarget: '_modal',
         })
-      } catch (checkoutErr) {
-        console.warn('Cashfree checkout modal note:', checkoutErr)
-      }
 
-      // Check status once modal closes
-      setTimeout(async () => {
-        if (!paymentSuccess) {
-          try {
-            const verifyRes = await fetch('/api/payment/cashfree/verify', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ orderId: orderData.id }),
-            })
-            const verifyData = await verifyRes.json()
-            if (verifyRes.ok && verifyData.paymentStatus === 'PAID') {
-              paymentSuccess = true
-              clearInterval(pollTimer)
-              clearCart()
-              triggerHaptic('success')
-              toast.success('🎉 Payment Successful!')
-              window.location.href = `/order/${orderData.id}/success`
-              return
-            }
-          } catch (_) {}
-
+        // When the modal closes (user finished or closed)
+        const isVerified = await checkVerification()
+        if (!isVerified && !paymentSuccess) {
+          clearInterval(pollTimer)
+          document.removeEventListener('visibilitychange', handleVisibilityChange)
           setIsPlacingOrder(false)
+          if (result?.error) {
+            console.log('Cashfree modal closed with note:', result.error)
+          }
           triggerHaptic('warning')
-          toast.info('Payment window closed. You can retry or switch payment method.')
+          toast.info('Payment was not completed. You can retry or switch payment method.')
         }
-      }, 1500)
+      } catch (checkoutErr) {
+        console.warn('Cashfree checkout modal error:', checkoutErr)
+        const isVerified = await checkVerification()
+        if (!isVerified && !paymentSuccess) {
+          clearInterval(pollTimer)
+          document.removeEventListener('visibilitychange', handleVisibilityChange)
+          setIsPlacingOrder(false)
+        }
+      }
 
     } catch (err) {
       console.error('Error during Cashfree checkout:', err)

@@ -372,6 +372,11 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
     if (_isFetchingAdmin) return;
     _isFetchingAdmin = true;
 
+    // Guarantee auth credentials are ready on first boot
+    if (!SecureStorage.isCacheLoaded || SecureStorage.cachedUserId == null) {
+      await SecureStorage.loadCache();
+    }
+
     setState(() {
       _isLoading = true;
       _error = null;
@@ -426,7 +431,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
                 'limit': 100,
                 if (storeId != null && storeId.isNotEmpty) 'storeId': storeId,
               },
-              options: AdminAuthorization.options(),
+              options: await AdminAuthorization.optionsAsync(),
             );
             final data = response.data;
             List rawList = [];
@@ -598,6 +603,10 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
     if (_isFetchingAdmin) return;
     _isFetchingAdmin = true;
 
+    if (!SecureStorage.isCacheLoaded || SecureStorage.cachedUserId == null) {
+      await SecureStorage.loadCache();
+    }
+
     try {
       final dio = ref.read(dioProvider);
       final List<Order> loaded = [];
@@ -643,7 +652,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
                 'limit': 100,
                 if (storeId != null && storeId.isNotEmpty) 'storeId': storeId,
               },
-              options: AdminAuthorization.options(),
+              options: await AdminAuthorization.optionsAsync(),
             );
             final data = response.data;
             List rawList = [];

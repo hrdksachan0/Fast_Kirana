@@ -991,8 +991,8 @@ export async function POST(request: NextRequest) {
             where: {
               id: targetExistingId,
               userId: userId,
-              status: OrderStatus.PENDING,
-              paymentStatus: PaymentStatus.PENDING,
+              status: { in: [OrderStatus.PENDING, OrderStatus.CANCELLED] },
+              paymentStatus: { in: [PaymentStatus.PENDING, PaymentStatus.FAILED] },
             },
             include: { items: true, address: true, user: true }
           })
@@ -1001,8 +1001,8 @@ export async function POST(request: NextRequest) {
           existingPendingOrder = await tx.order.findFirst({
             where: {
               userId: userId,
-              status: OrderStatus.PENDING,
-              paymentStatus: PaymentStatus.PENDING,
+              status: { in: [OrderStatus.PENDING, OrderStatus.CANCELLED] },
+              paymentStatus: { in: [PaymentStatus.PENDING, PaymentStatus.FAILED] },
               createdAt: { gte: threeMinutesAgo },
               total: orderInfo.total,
               orderType: (orderInfo.type === 'RESTAURANT' || orderInfo.restaurantId) ? 'RESTAURANT' : 'GROCERY',
@@ -1023,8 +1023,14 @@ export async function POST(request: NextRequest) {
             where: { id: existingPendingOrder.id },
             data: {
               addressId: orderAddressId,
+              status: OrderStatus.PENDING,
               paymentMethod: resolvedPaymentMethod,
               paymentStatus,
+              orderType: (orderInfo.type === 'RESTAURANT' || orderInfo.restaurantId) ? 'RESTAURANT' : 'GROCERY',
+              shopName: orderInfo.type === 'RESTAURANT'
+                ? (orderInfo.restaurant?.name || 'Restaurant')
+                : 'FastKirana Dark Store',
+              restaurantId: orderInfo.type === 'RESTAURANT' ? orderInfo.restaurantId : null,
               notes: body.notes || orderInfo.notes || null,
               deliveryMethod,
               deliveryLat: address.lat,
@@ -1076,10 +1082,10 @@ export async function POST(request: NextRequest) {
               couponCode: couponCode ? couponCode.toUpperCase() : null,
               shopName: orderInfo.type === 'RESTAURANT'
                 ? (orderInfo.restaurant?.name || 'Restaurant')
-                : (shopName || 'FastKirana Dark Store'),
+                : 'FastKirana Dark Store',
               shopPhone: orderInfo.type === 'RESTAURANT'
                 ? (orderInfo.restaurant?.ownerPhone || settingsMap['contact_phone'] || '+91 81128 49854')
-                : shopPhone,
+                : (settingsMap['contact_phone'] || '+91 81128 49854'),
               notes: body.notes || orderInfo.notes || null,
               restaurantId: orderInfo.type === 'RESTAURANT' ? orderInfo.restaurantId : null,
               deliveryLat: address.lat,

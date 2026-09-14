@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
                o."deliveryLat", o."deliveryLng"
         FROM orders o
         WHERE (o."deliveryMethod" = 'DELIVERY' OR o."deliveryMethod" IS NULL)
+          AND (o."paymentMethod" = 'COD' OR o."paymentStatus" = 'PAID')
           AND (
             (o.status::text IN ('CONFIRMED', 'PREPARING', 'PACKED') AND (o."deliveryUserId" IS NULL OR o."deliveryUserId" = ${effectiveUserId}))
             OR
@@ -77,6 +78,7 @@ export async function GET(request: NextRequest) {
                o."deliveryLat", o."deliveryLng"
         FROM orders o
         WHERE (o."deliveryMethod" = 'DELIVERY' OR o."deliveryMethod" IS NULL)
+          AND (o."paymentMethod" = 'COD' OR o."paymentStatus" = 'PAID')
           AND o.status::text IN ('CONFIRMED', 'PREPARING', 'PACKED', 'SHIPPED', 'DELIVERED')
           AND (${riderStoreId}::text IS NULL OR o."storeId" = ${riderStoreId} OR o."storeId" IS NULL)
         ORDER BY o."createdAt" DESC
@@ -97,6 +99,7 @@ export async function GET(request: NextRequest) {
                o."createdAt", o."shopName", o."deliveryUserId"
         FROM orders o
         WHERE o."combinedId" IN (${Prisma.join(combinedIds)})
+          AND (o."paymentMethod" = 'COD' OR o."paymentStatus" = 'PAID')
       `
     }
 
