@@ -355,7 +355,7 @@ export async function GET(request: NextRequest) {
         })
       }
 
-      return NextResponse.json({
+      const trendingResponseData = {
         products: finalProducts.slice(0, 8),
         pagination: {
           total: finalProducts.length,
@@ -363,9 +363,16 @@ export async function GET(request: NextRequest) {
           limit: 8,
           totalPages: 1
         }
-      }, {
+      }
+
+      if (!isWorker && !includeUnavailable) {
+        await setCache(cacheKey, trendingResponseData, 60)
+      }
+
+      return NextResponse.json(trendingResponseData, {
         headers: {
           'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=180',
+          'X-Cache': 'MISS',
         }
       })
     }

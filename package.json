@@ -11,9 +11,13 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "flutter": "cd fastkirana_flutter && D:\\flutter\\bin\\flutter.bat run",
-    "flutter:device": "cd fastkirana_flutter && D:\\flutter\\bin\\flutter.bat run -d ZY22KGQCV3",
+    "flutter:customer": "cd fastkirana_flutter && D:\\flutter\\bin\\flutter.bat run --flavor customer",
+    "flutter:rider": "cd fastkirana_flutter && D:\\flutter\\bin\\flutter.bat run --flavor rider",
+    "flutter:device": "cd fastkirana_flutter && D:\\flutter\\bin\\flutter.bat run -d ZY22KGQCV3 --flavor customer",
     "flutter:chrome": "cd fastkirana_flutter && D:\\flutter\\bin\\flutter.bat run -d chrome --web-port 5000",
-    "flutter:apk": "cd fastkirana_flutter && D:\\flutter\\bin\\flutter.bat build apk --release"
+    "flutter:apk": "cd fastkirana_flutter && D:\\flutter\\bin\\flutter.bat build apk --flavor customer --release",
+    "flutter:apk:customer": "cd fastkirana_flutter && D:\\flutter\\bin\\flutter.bat build apk --flavor customer --release",
+    "flutter:apk:rider": "cd fastkirana_flutter && D:\\flutter\\bin\\flutter.bat build apk --flavor rider --release"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

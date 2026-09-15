@@ -69,34 +69,13 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
   String? _updatingOrderId;
   double _commissionRate = 25.0;
 
-  double _getCommissionRateForOutlet(String? restId, String? restName) {
-    if (restId != null && restId.isNotEmpty) {
-      final matched = _availableOutlets.firstWhere(
-        (o) => o['id'] == restId,
-        orElse: () => {},
-      );
-      if (matched.isNotEmpty && matched['commissionRate'] != null) {
-        final parsed = double.tryParse(matched['commissionRate']!);
-        if (parsed != null && parsed > 0) {
-          return parsed > 1 ? parsed : parsed * 100;
-        }
-      }
+  double _getCommissionRateForOutlet(String? id, String? name) {
+    final rest = RestaurantRegistry.find(id) ?? RestaurantRegistry.find(name);
+    if (rest?.commissionRate != null) {
+      final cr = rest!.commissionRate!;
+      return cr <= 1.0 ? (cr * 100) : cr;
     }
-    final id = (restId ?? '').toLowerCase().trim();
-    final name = (restName ?? '').toLowerCase().trim();
-    if (id == outletWedsonId || id.contains('wedson') || name.contains('wedson')) {
-      return 25.0;
-    }
-    if (id == outletAsRestaurantId || id.contains('as') || name.contains('a.s') || name.contains('as-')) {
-      return 25.0;
-    }
-    if (id == outletBalUdyanId || id.contains('bal') || name.contains('bal') || name.contains('udyan')) {
-      return 20.0;
-    }
-    if (id == outletPariMilkId || id.contains('pari') || name.contains('pari')) {
-      return 15.0;
-    }
-    return 25.0;
+    return 20.0;
   }
 
   final Set<String> _knownPendingOrderIds = {};
@@ -116,12 +95,14 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
   static const Color slateBorder = AppDesignSystem.slate200;
   static const Color bgMain = AppDesignSystem.slate50;
 
-  final List<Map<String, String>> _availableOutlets = [
-    {'id': outletWedsonId, 'name': 'Wedson Restaurant'},
-    {'id': outletAsRestaurantId, 'name': 'A.S. Restaurant'},
-    {'id': outletBalUdyanId, 'name': 'Bal Udyan Restaurant'},
-    {'id': outletPariMilkId, 'name': 'Pari Milk Dairy & Sweets'},
-  ];
+  List<Map<String, String>> get _availableOutlets {
+    final list = RestaurantRegistry.all;
+    final outlets = list.map((r) => {'id': r.id, 'name': r.name}).toList();
+    if (outlets.isEmpty && _assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty) {
+      outlets.add({'id': _assignedRestaurantId!, 'name': _restaurantName});
+    }
+    return outlets;
+  }
 
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   bool _isDeviceOffline = false;
@@ -214,18 +195,12 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
     if (_assignedRestaurantId == null || _assignedRestaurantId!.isEmpty) {
       if (user?.assignedRestaurantId != null && user!.assignedRestaurantId!.isNotEmpty) {
         _assignedRestaurantId = user.assignedRestaurantId;
-      } else if (last10 == '8112849854') {
-        _assignedRestaurantId = outletAsRestaurantId;
-        _restaurantName = 'A.S. Restaurant';
-      } else if (last10 == '9250138656') {
-        _assignedRestaurantId = outletWedsonId;
-        _restaurantName = 'Wedson Restaurant';
-      } else if (last10 == '7991488783') {
-        _assignedRestaurantId = outletBalUdyanId;
-        _restaurantName = 'Bal Udyan Restaurant';
-      } else if (last10 == '9900112233') {
-        _assignedRestaurantId = outletPariMilkId;
-        _restaurantName = 'Pari Milk Dairy & Sweets';
+      } else {
+        final matchedRest = RestaurantRegistry.findByPhone(last10);
+        if (matchedRest != null) {
+          _assignedRestaurantId = matchedRest.id;
+          _restaurantName = matchedRest.name;
+        }
       }
     }
 
@@ -248,18 +223,10 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       if (_assignedRestaurantId == null || _assignedRestaurantId!.isEmpty) {
         final phone = (prefs.getString('user_phone') ?? prefs.getString('auth_phone') ?? '').replaceAll(RegExp(r'[^0-9]'), '');
         final last10 = phone.length >= 10 ? phone.substring(phone.length - 10) : phone;
-        if (last10 == '8112849854') {
-          _assignedRestaurantId = outletAsRestaurantId;
-          _restaurantName = 'A.S. Restaurant';
-        } else if (last10 == '9250138656') {
-          _assignedRestaurantId = outletWedsonId;
-          _restaurantName = 'Wedson Restaurant';
-        } else if (last10 == '7991488783') {
-          _assignedRestaurantId = outletBalUdyanId;
-          _restaurantName = 'Bal Udyan Restaurant';
-        } else if (last10 == '9900112233') {
-          _assignedRestaurantId = outletPariMilkId;
-          _restaurantName = 'Pari Milk Dairy & Sweets';
+        final matchedRest = RestaurantRegistry.findByPhone(last10);
+        if (matchedRest != null) {
+          _assignedRestaurantId = matchedRest.id;
+          _restaurantName = matchedRest.name;
         } else {
           final rawUserData = prefs.getString('user_data');
           if (rawUserData != null && rawUserData.isNotEmpty) {
@@ -450,8 +417,11 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
 
     // 3. Fallback default & resolve name
     if (_assignedRestaurantId == null || _assignedRestaurantId!.isEmpty) {
-      _assignedRestaurantId = outletWedsonId;
-      _restaurantName = 'Wedson Restaurant';
+      if (RestaurantRegistry.all.isNotEmpty) {
+        final first = RestaurantRegistry.all.first;
+        _assignedRestaurantId = first.id;
+        _restaurantName = first.name;
+      }
     } else {
       final match = _availableOutlets.firstWhere(
         (o) => o['id'] == _assignedRestaurantId,
@@ -487,14 +457,10 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       if (outletId != null && outletId.isNotEmpty) {
         await notif.subscribeToTopic('restaurant_$outletId');
         await notif.subscribeToTopic('kitchen_$outletId');
-        String? legacyId;
-        if (outletId == outletAsRestaurantId) legacyId = legacyAsRestaurantId;
-        if (outletId == outletWedsonId) legacyId = legacyWedsonId;
-        if (outletId == outletBalUdyanId) legacyId = legacyBalUdyanId;
-        if (outletId == outletPariMilkId) legacyId = legacyPariMilkId;
-        if (legacyId != null && legacyId.isNotEmpty && legacyId != outletId) {
-          await notif.subscribeToTopic('restaurant_$legacyId');
-          await notif.subscribeToTopic('kitchen_$legacyId');
+        final restObj = RestaurantRegistry.find(outletId);
+        if (restObj != null && restObj.slug.isNotEmpty && restObj.slug != outletId) {
+          await notif.subscribeToTopic('restaurant_${restObj.slug}');
+          await notif.subscribeToTopic('kitchen_${restObj.slug}');
         }
       }
       final prefs = await SharedPreferences.getInstance();
@@ -545,16 +511,11 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       if (rName == myName || rName.contains(myName) || myName.contains(rName)) return true;
     }
 
-    // 3. Legacy CUIDs / aliases for existing outlets
-    if (_assignedRestaurantId == outletWedsonId && (rId == 'wedson' || rId == 'wedson-restaurant' || rId == legacyWedsonId.toLowerCase())) return true;
-    if (_assignedRestaurantId == outletAsRestaurantId && (rId == 'as-restaurant' || rId == 'as-cafe' || rId == legacyAsRestaurantId.toLowerCase())) return true;
-    if (_assignedRestaurantId == outletBalUdyanId && (rId == 'bal-udyan-restaurant' || rId == 'bal-udyan' || rId == legacyBalUdyanId.toLowerCase())) return true;
-    if (_assignedRestaurantId == outletPariMilkId && (rId == 'pari-milk-dairy-sweets' || rId == 'pari-milk' || rId == legacyPariMilkId.toLowerCase())) return true;
-
-    if (_assignedRestaurantId == outletWedsonId && rName.contains('wedson')) return true;
-    if (_assignedRestaurantId == outletAsRestaurantId && (rName.contains('as ') || rName.contains('a.s') || rName.contains('as-'))) return true;
-    if (_assignedRestaurantId == outletBalUdyanId && (rName.contains('bal') || rName.contains('udyan'))) return true;
-    if (_assignedRestaurantId == outletPariMilkId && (rName.contains('pari') || rName.contains('milk'))) return true;
+    // 3. Dynamic lookup via RestaurantRegistry
+    final rest = RestaurantRegistry.find(rId) ?? RestaurantRegistry.find(rName);
+    if (rest != null && (rest.id.toLowerCase() == myId || rest.name.toLowerCase() == myName)) {
+      return true;
+    }
 
     return false;
   }
@@ -657,11 +618,15 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
     // Play immediately
     _playChime();
 
-    // Repeat every 4 seconds continuously until confirmed or rejected
+    // Repeat every 3 seconds continuously until confirmed or accepted
     _pendingAlarmTimer?.cancel();
-    _pendingAlarmTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+    _pendingAlarmTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (!mounted) return;
-      final hasPending = _orders.any((o) => (o['status'] ?? '').toString().toUpperCase() == 'PENDING');
+      final hasPending = _orders.any((o) {
+        final st = (o['status'] ?? '').toString().toUpperCase();
+        final assignedChef = o['assignedChefId'] ?? o['assignedChef'];
+        return st == 'PENDING' || (st == 'CONFIRMED' && (assignedChef == null || assignedChef.toString().isEmpty));
+      });
       if (!hasPending) {
         _stopPendingAlarm();
       } else {
@@ -683,7 +648,11 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
   }
 
   void _syncAlarmStateWithOrders(List<Map<String, dynamic>> orders) {
-    final hasPending = orders.any((o) => (o['status'] ?? '').toString().toUpperCase() == 'PENDING');
+    final hasPending = orders.any((o) {
+      final st = (o['status'] ?? '').toString().toUpperCase();
+      final assignedChef = o['assignedChefId'] ?? o['assignedChef'];
+      return st == 'PENDING' || (st == 'CONFIRMED' && (assignedChef == null || assignedChef.toString().isEmpty));
+    });
     if (hasPending) {
       _startPendingAlarm();
     } else {
@@ -735,12 +704,21 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
           } catch (e, _) { LoggerService.error('RestaurantDashboard: silent catch', e); }
         }
 
-        // Filter out pure grocery orders that do not belong to kitchen
+        // Filter out pure grocery orders & unpaid online orders (Restaurant only prepares COD or PAID orders)
         parsed = parsed.where((o) {
           final oType = (o['orderType'] ?? '').toString().toUpperCase();
           if (oType == 'GROCERY') return false;
+          final status = (o['status'] ?? '').toString().toUpperCase();
+          if (status == 'ADMIN_PENDING') return false;
           final rId = (o['restaurantId'] ?? o['restaurant']?['id'] ?? '').toString().trim();
           if (rId.isEmpty) return false;
+
+          final paymentMethod = (o['paymentMethod'] ?? '').toString().toUpperCase();
+          final paymentStatus = (o['paymentStatus'] ?? '').toString().toUpperCase();
+          final isCod = paymentMethod == 'COD';
+          final isPaid = paymentStatus == 'PAID';
+          if (!isCod && !isPaid) return false;
+
           return true;
         }).toList();
 
@@ -1044,7 +1022,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
     HapticFeedback.selectionClick();
     AddRestaurantProductModal.show(
       context: context,
-      restaurantId: _assignedRestaurantId ?? outletWedsonId,
+      restaurantId: _assignedRestaurantId ?? (RestaurantRegistry.all.isNotEmpty ? RestaurantRegistry.all.first.id : ''),
       restaurantName: _restaurantName,
       onProductAdded: () {
         _fetchMenuItems();
@@ -1734,7 +1712,7 @@ $formattedItems
                                 ),
                                 Switch.adaptive(
                                   value: isAvailable,
-                                  activeColor: brandGreen,
+                                  activeTrackColor: brandGreen,
                                   onChanged: (val) {
                                     setModalState(() {
                                       item['isAvailable'] = val;
@@ -1918,6 +1896,7 @@ $formattedItems
             // Logout Button
             Bounceable(
               onTap: () async {
+                final nav = Navigator.of(context);
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
@@ -1933,11 +1912,12 @@ $formattedItems
                     ],
                   ),
                 );
-                if (confirm == true && mounted) {
+                if (confirm == true) {
+                  if (!mounted) return;
                   _stopPendingAlarm();
                   _autoRefreshTimer?.cancel();
                   _audioPlayer.stop();
-                  Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                  nav.pushNamedAndRemoveUntil('/login', (route) => false);
                   unawaited(ref.read(authProvider.notifier).logout());
                 }
               },
@@ -2713,7 +2693,7 @@ $formattedItems
           title: Text('Store Open Status', style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: slateDark)),
           subtitle: Text(_isStoreOpen ? 'Accepting online orders' : 'Closed for online orders', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
           value: _isStoreOpen,
-          activeColor: brandGreen,
+          activeTrackColor: brandGreen,
           onChanged: (val) async {
             setState(() => _isStoreOpen = val);
             HapticFeedback.lightImpact();
@@ -2736,7 +2716,7 @@ $formattedItems
           title: Text('Kitchen Busy / High Rush Mode', style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: slateDark)),
           subtitle: Text('Displays "Kitchen in High Demand" notice on restaurant menu', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
           value: _isBusyMode,
-          activeColor: brandAmber,
+          activeTrackColor: brandAmber,
           onChanged: (val) async {
             setState(() => _isBusyMode = val);
             HapticFeedback.lightImpact();

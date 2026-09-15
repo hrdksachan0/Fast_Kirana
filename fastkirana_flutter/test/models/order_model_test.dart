@@ -86,5 +86,38 @@ void main() {
       expect(backToJson['readableId'], 'FK-123456');
       expect(backToJson['paymentStatus'], 'PAID');
     });
+
+    test('Order correctly handles ADMIN_PENDING status and approval flow', () {
+      final orderJson = {
+        'id': 'FK-999999',
+        'readableId': 'FK-999999',
+        'userId': 'usr_test_1',
+        'addressId': 'addr_1',
+        'restaurantId': 'REST-101',
+        'shopName': 'AS Restaurant',
+        'status': 'ADMIN_PENDING',
+        'subtotal': 300.0,
+        'discount': 0.0,
+        'deliveryFee': 20.0,
+        'taxes': 0.0,
+        'miscFee': 0.0,
+        'total': 320.0,
+        'paymentMethod': 'COD',
+        'paymentStatus': 'PENDING',
+        'createdAt': DateTime(2026, 9, 15, 10, 0).toIso8601String(),
+        'items': [],
+      };
+
+      final order = Order.fromJson(orderJson);
+      expect(order.status, OrderStatus.adminPending);
+      expect(order.status.displayName, 'Verifying Order');
+      expect(Order.parseStatus('ADMIN_PENDING'), OrderStatus.adminPending);
+      expect(Order.parseStatus('admin_pending'), OrderStatus.adminPending);
+
+      // Approve order -> status pending
+      final approved = order.copyWith(status: OrderStatus.pending);
+      expect(approved.status, OrderStatus.pending);
+      expect(approved.status.displayName, 'Order Placed');
+    });
   });
 }

@@ -53,7 +53,7 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
     if (widget.restaurantId != null && widget.restaurantId!.isNotEmpty) {
       _adminCatalogFilter = widget.restaurantId!;
     } else if (widget.isRestaurant) {
-      _adminCatalogFilter = outletWedsonId; // Default restaurant fallback
+      _adminCatalogFilter = RestaurantRegistry.all.isNotEmpty ? RestaurantRegistry.all.first.id : 'RESTAURANT';
     } else if (!widget.isAdmin) {
       _adminCatalogFilter = 'GROCERY';
     } else {
@@ -128,6 +128,55 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
               ),
             ],
           ),
+
+          // Swapping banner if in swap mode
+          if (widget.isSwapMode) ...[
+            const SizedBox(height: 6),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: Row(
+                children: [
+                  const Text('🔄', style: TextStyle(fontSize: 18)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'SWAPPING / REPLACING ITEM',
+                          style: GoogleFonts.inter(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF92400E),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        Text(
+                          'Replacing "${widget.targetSwapItemName ?? 'Item'}" with selected dish below:',
+                          style: GoogleFonts.inter(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF78350F),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
+          ] else ...[
+            const SizedBox(height: 8),
+          ],
 
           // Tabs Switcher (Catalog Search vs Custom / Off-Menu item for all consoles)
           Container(
@@ -205,14 +254,10 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
                   _buildAdminFilterChip('ALL', 'All Items'),
                   const SizedBox(width: 6),
                   _buildAdminFilterChip('GROCERY', '🛒 Grocery'),
-                  const SizedBox(width: 6),
-                  _buildAdminFilterChip(outletWedsonId, '🍽️ Wedson'),
-                  const SizedBox(width: 6),
-                  _buildAdminFilterChip(outletAsRestaurantId, '☕ A.S. Rest.'),
-                  const SizedBox(width: 6),
-                  _buildAdminFilterChip(outletBalUdyanId, '🌳 Bal Udyan'),
-                  const SizedBox(width: 6),
-                  _buildAdminFilterChip(outletPariMilkId, '🥛 Pari Milk'),
+                  ...RestaurantRegistry.all.map((r) => Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: _buildAdminFilterChip(r.id, '🍽️ ${r.name}'),
+                  )),
                 ],
               ),
             ),
@@ -344,14 +389,12 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
                   // Admin can filter by chip
                   if (_adminCatalogFilter == 'GROCERY') return !isRest;
                   if (_adminCatalogFilter != 'ALL') {
-                    // Match specific restaurant outlet ID
+                    // Match specific restaurant outlet ID dynamically
                     final rId = (p.restaurantId ?? p.restaurant?.id ?? '').toLowerCase();
                     final target = _adminCatalogFilter.toLowerCase();
                     if (rId == target) return true;
-                    if (target == outletAsRestaurantId.toLowerCase() && (rId == legacyAsRestaurantId || rId == 'as-restaurant' || rId == 'as-cafe')) return true;
-                    if (target == outletWedsonId.toLowerCase() && (rId == legacyWedsonId || rId == 'wedson' || rId == 'wedson-restaurant')) return true;
-                    if (target == outletBalUdyanId.toLowerCase() && (rId == legacyBalUdyanId || rId == 'bal-udyan' || rId == 'baludyan')) return true;
-                    if (target == outletPariMilkId.toLowerCase() && (rId == legacyPariMilkId || rId == 'pari-milk' || rId == 'pari')) return true;
+                    final rest = RestaurantRegistry.find(target);
+                    if (rest != null && (rId == rest.id.toLowerCase() || rId == rest.slug.toLowerCase())) return true;
                     return false;
                   }
                   return true; // ALL
@@ -362,10 +405,8 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
                     final rId = (p.restaurantId ?? p.restaurant?.id ?? '').toLowerCase();
                     final target = widget.restaurantId!.toLowerCase();
                     if (rId == target) return true;
-                    if (target == outletAsRestaurantId.toLowerCase() && (rId == legacyAsRestaurantId || rId == 'as-restaurant' || rId == 'as-cafe')) return true;
-                    if (target == outletWedsonId.toLowerCase() && (rId == legacyWedsonId || rId == 'wedson' || rId == 'wedson-restaurant')) return true;
-                    if (target == outletBalUdyanId.toLowerCase() && (rId == legacyBalUdyanId || rId == 'bal-udyan' || rId == 'baludyan')) return true;
-                    if (target == outletPariMilkId.toLowerCase() && (rId == legacyPariMilkId || rId == 'pari-milk' || rId == 'pari')) return true;
+                    final rest = RestaurantRegistry.find(target);
+                    if (rest != null && (rId == rest.id.toLowerCase() || rId == rest.slug.toLowerCase())) return true;
                     return false;
                   }
                   return true;
@@ -412,8 +453,28 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
                   final p = filtered[i];
                   final isRest = isRestaurantProduct(p);
 
+                  void doSelect() {
+                    final rawRestId = (p.restaurantId != null && p.restaurantId!.trim().isNotEmpty)
+                        ? p.restaurantId
+                        : (p.restaurant?.id != null && p.restaurant!.id.trim().isNotEmpty ? p.restaurant!.id : null);
+                    final isRestProduct = rawRestId != null && rawRestId.trim().isNotEmpty;
+                    final outletName = isRestProduct ? (p.restaurant?.name ?? getOutletName(p)) : 'FastKirana Grocery';
+                    widget.onProductSelected({
+                      'productId': p.id,
+                      'name': p.name,
+                      'price': p.price,
+                      'quantity': 1,
+                      'imageUrl': p.imageUrl,
+                      'isCustom': false,
+                      'restaurantId': isRestProduct ? rawRestId : null,
+                      'shopName': outletName,
+                    });
+                    Navigator.pop(context);
+                  }
+
                   return ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    onTap: doSelect,
                     leading: Container(
                       width: 44,
                       height: 44,
@@ -469,26 +530,9 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         elevation: 0,
                       ),
-                      onPressed: () {
-                        final rawRestId = (p.restaurantId != null && p.restaurantId!.trim().isNotEmpty)
-                            ? p.restaurantId
-                            : (p.restaurant?.id != null && p.restaurant!.id.trim().isNotEmpty ? p.restaurant!.id : null);
-                        final isRestProduct = rawRestId != null && rawRestId.trim().isNotEmpty;
-                        final outletName = isRestProduct ? (p.restaurant?.name ?? getOutletName(p)) : 'FastKirana Grocery';
-                        widget.onProductSelected({
-                          'productId': p.id,
-                          'name': p.name,
-                          'price': p.price,
-                          'quantity': 1,
-                          'imageUrl': p.imageUrl,
-                          'isCustom': false,
-                          'restaurantId': isRestProduct ? rawRestId : null,
-                          'shopName': outletName,
-                        });
-                        Navigator.pop(context);
-                      },
+                      onPressed: doSelect,
                       child: Text(
-                        widget.isSwapMode ? 'Swap ⇄' : 'Add +',
+                        widget.isSwapMode ? 'Swap with this ⇄' : 'Add +',
                         style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white),
                       ),
                     ),
@@ -604,7 +648,7 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
             }
 
             final customRestId = widget.isRestaurant
-                ? (widget.restaurantId ?? outletWedsonId)
+                ? (widget.restaurantId ?? (RestaurantRegistry.all.isNotEmpty ? RestaurantRegistry.all.first.id : null))
                 : (_adminCatalogFilter != 'ALL' && _adminCatalogFilter != 'GROCERY'
                     ? _adminCatalogFilter
                     : null);
@@ -617,7 +661,7 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
               'notes': notes.isNotEmpty ? notes : null,
               'isCustom': true,
               'restaurantId': customRestId,
-              'shopName': customRestId != null ? (outletNamesMap[customRestId.toLowerCase()] ?? 'Restaurant') : 'FastKirana Grocery',
+              'shopName': customRestId != null ? (RestaurantRegistry.getName(customRestId) ?? 'Restaurant') : 'FastKirana Grocery',
             });
             Navigator.pop(context);
           },

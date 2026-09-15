@@ -125,12 +125,14 @@ export async function POST(req: NextRequest) {
           data: { orderId: updatedOrder.id }
         }).catch((err: any) => console.error('Error sending push notification to admin:', err))
 
-        sendPushNotificationToRestaurant(order.restaurantId, {
-          title: `👨‍🍳 New Food Order #${displayId}!`,
-          body: `Order #${displayId} for ${outletName} is confirmed and paid. Start preparing dishes!`,
-          tag: `restaurant-order-${updatedOrder.id}`,
-          data: { orderId: updatedOrder.id, restaurantId: order.restaurantId }
-        }).catch((err: any) => console.error('Error sending push notification to restaurant:', err))
+        if (updatedOrder.status !== 'ADMIN_PENDING') {
+          sendPushNotificationToRestaurant(order.restaurantId, {
+            title: `👨‍🍳 New Food Order #${displayId}!`,
+            body: `Order #${displayId} for ${outletName} is confirmed and paid. Start preparing dishes!`,
+            tag: `restaurant-order-${updatedOrder.id}`,
+            data: { orderId: updatedOrder.id, restaurantId: order.restaurantId }
+          }).catch((err: any) => console.error('Error sending push notification to restaurant:', err))
+        }
       } else {
         // Grocery order: only Admin, Picker, Delivery
         sendPushNotificationToRoles([Role.ADMIN, Role.PICKER, Role.DELIVERY], {

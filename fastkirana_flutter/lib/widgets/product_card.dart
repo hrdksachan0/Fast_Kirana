@@ -102,56 +102,53 @@ class OutletTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isFood = isRestaurantProduct(product);
-    if (product.isBestSeller || product.tags.contains('popular')) {
-      return Container(
-        padding: EdgeInsets.symmetric(horizontal: s * 5.5, vertical: s * 2),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFFBEB),
-          borderRadius: BorderRadius.circular(s * 6),
-          border: Border.all(color: const Color(0xFFFDE68A), width: s * 0.8),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
-              blurRadius: s * 4,
-              offset: Offset(0, s),
-            ),
-          ],
-        ),
-        child: Text(
-          '⭐ Bestseller',
-          style: GoogleFonts.inter(fontSize: s * 8, fontWeight: FontWeight.w900, color: const Color(0xFFB45309)),
-        ),
-      );
-    }
-
-    // Only show outlet tag for restaurant/cafe food dishes (e.g. Wedson, Bal Udyan, Pari Milk)
-    // Regular grocery products should NOT have "FastKirana Store" tag
+    // Only show outlet tag for restaurant/cafe food dishes (e.g. Wedson, Bal Udyan, Hot Pizza Lovers)
     if (!isFood) {
       return const SizedBox.shrink();
     }
 
     final outletName = getOutletName(product);
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: s * 6, vertical: s * 2.5),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(s * 6),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: s * 0.6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('👨‍🍳', style: TextStyle(fontSize: s * 9.5)),
-          SizedBox(width: s * 3.5),
-          Flexible(
-            child: Text(
-              outletName,
-              style: GoogleFonts.inter(fontSize: s * 8.5, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.1),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+    if (outletName.isEmpty || outletName == 'FastKirana Store' || outletName == 'Restaurant') {
+      return const SizedBox.shrink();
+    }
+
+    return Align(
+      alignment: Alignment.bottomLeft,
+      child: Container(
+        constraints: BoxConstraints(maxWidth: isLowStock ? s * 80 : s * 130),
+        padding: EdgeInsets.symmetric(horizontal: s * 6, vertical: s * 2.5),
+        decoration: BoxDecoration(
+          color: const Color(0xDE0F172A),
+          borderRadius: BorderRadius.circular(s * 100),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.18), width: s * 0.7),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: s * 4,
+              offset: Offset(0, s * 1.5),
             ),
-          ),
-        ],
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.storefront_rounded, size: s * 9, color: const Color(0xFFFB923C)),
+            SizedBox(width: s * 3.5),
+            Flexible(
+              child: Text(
+                outletName,
+                style: GoogleFonts.inter(
+                  fontSize: s * 8,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  letterSpacing: -0.1,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -886,6 +883,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                   isLowStock: isLowStock,
                   isOutOfStock: isOutOfStock,
                   showAddedCheck: _showAddedCheck,
+                  showOutlet: widget.showOutlet,
                 ),
                 SizedBox(height: s(6)),
 
@@ -965,6 +963,7 @@ class _ImageShowcase extends StatelessWidget {
   final bool isLowStock;
   final bool isOutOfStock;
   final bool showAddedCheck;
+  final bool showOutlet;
 
   const _ImageShowcase({
     required this.product,
@@ -977,6 +976,7 @@ class _ImageShowcase extends StatelessWidget {
     required this.isLowStock,
     required this.isOutOfStock,
     required this.showAddedCheck,
+    this.showOutlet = true,
   });
 
   @override
@@ -1022,7 +1022,8 @@ class _ImageShowcase extends StatelessWidget {
           Positioned(top: s * 5, right: s * 5, child: WishlistButton(product: product, s: s)),
 
           // Outlet / Bestseller Tag
-          Positioned(bottom: s * 5, left: s * 5, right: isLowStock ? s * 60 : s * 5, child: OutletTag(product: product, s: s, isLowStock: isLowStock)),
+          if (showOutlet)
+            Positioned(bottom: s * 5, left: s * 5, right: isLowStock ? s * 60 : s * 5, child: OutletTag(product: product, s: s, isLowStock: isLowStock)),
 
           // Low Stock
           if (isLowStock)

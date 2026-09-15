@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../../core/services/logger_service.dart';
+import '../../core/utils/restaurant_utils.dart';
 import '../models/restaurant.dart';
 import '../models/product.dart';
 
@@ -57,6 +58,7 @@ class RestaurantRepository {
           .toList();
       _cachedRestaurants = parsed;
       _lastRestaurantsFetch = DateTime.now();
+      RestaurantRegistry.registerAll(parsed);
       return parsed;
     }
     return _getStaticFallbackRestaurants();
@@ -111,18 +113,18 @@ class RestaurantRepository {
       ),
       Restaurant(
         id: 'REST-104',
-        name: 'Pari Milk Dairy & Sweets',
-        slug: 'pari-milk-dairy-sweets',
-        description: 'Fresh Milk, Sweets, Paneer & Dairy Specialties',
-        address: 'Kanpur Road, Ghatampur',
+        name: 'Hot Pizza Lovers',
+        slug: 'hot-pizza-lovers',
+        description: 'Fresh Pizzas, Burgers, Sandwiches & Fast Food',
+        address: 'Station Road, Ghatampur',
         isPureVeg: true,
-        rating: 4.7,
-        totalRatings: 45,
-        deliveryTime: '15-20 mins',
-        cuisineTags: ['SWEETS', 'DAIRY', 'MILK', 'PANEER'],
+        rating: 4.8,
+        totalRatings: 52,
+        deliveryTime: '20-25 mins',
+        cuisineTags: ['PIZZA', 'BURGER', 'SANDWICH', 'FAST FOOD'],
         isOpen: true,
-        lat: 26.1534,
-        lng: 80.1714,
+        lat: 26.1530,
+        lng: 80.1710,
         logoUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-104-logo.webp',
         bannerUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-104-banner.webp',
       ),
@@ -149,20 +151,11 @@ class RestaurantRepository {
         String canonicalId = restaurantId.trim();
         String? canonicalSlug;
 
-        final upperId = canonicalId.toUpperCase();
-        // Legacy identifier resolution (for backwards compatibility with old bookmarks/CUIDs)
-        if (canonicalId.contains('bal-udyan') || canonicalId.contains('cmsbhxb6a') || upperId == 'REST-103') {
-          canonicalId = 'REST-103';
-          canonicalSlug = 'bal-udyan-restaurant';
-        } else if (canonicalId.contains('wedson') || canonicalId.contains('cms2p1lyx') || upperId == 'REST-102') {
-          canonicalId = 'REST-102';
-          canonicalSlug = 'wedson-restaurant';
-        } else if (canonicalId.contains('as') || canonicalId.contains('cms2p1lap') || upperId == 'REST-101') {
-          canonicalId = 'REST-101';
-          canonicalSlug = 'as-restaurant';
-        } else if (canonicalId.contains('pari') || canonicalId.contains('cmtn66') || upperId == 'REST-104') {
-          canonicalId = 'REST-104';
-          canonicalSlug = 'pari-milk-dairy-sweets';
+        // Dynamic restaurant lookup from database-backed registry
+        final matched = RestaurantRegistry.find(canonicalId);
+        if (matched != null) {
+          canonicalId = matched.id;
+          canonicalSlug = matched.slug;
         }
 
         final queryParams = <String, dynamic>{
@@ -245,130 +238,6 @@ class RestaurantRepository {
       }
     } catch (e, st) { LoggerService.error('RestaurantRepository: getRestaurantReviews failed', e, st); }
 
-    final upperId = restaurantId.toUpperCase();
-    final isAs = restaurantId.contains('as') || restaurantId.contains('cms2p1lap') || upperId == 'REST-101';
-    final isBalUdyan = restaurantId.contains('bal-udyan') || restaurantId.contains('cmsbhxb6a') || upperId == 'REST-103';
-    final isWedson = restaurantId.contains('wedson') || restaurantId.contains('cms2p1lyx') || upperId == 'REST-102';
-    final isPari = restaurantId.contains('pari') || restaurantId.contains('cmtn66') || upperId == 'REST-104';
-
-    if (isBalUdyan) {
-      return {
-        'reviews': [
-          {
-            'id': 'cmsu4xp2h000204lar39azwxr',
-            'rating': 5,
-            'comment': 'Authentic North Indian food! Dal Makhani and Tandoori Naan were freshly baked and delicious.',
-            'user': {'id': 'u10', 'name': 'Rahul Dwivedi', 'image': null},
-            'createdAt': DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
-          },
-          {
-            'id': 'cmsu4xp2h000204lar39azwx1',
-            'rating': 5,
-            'comment': 'Best restaurant in Ghatampur for family dining & delivery. Super rich gravies!',
-            'user': {'id': 'u11', 'name': 'Mohit Agarwal', 'image': null},
-            'createdAt': DateTime.now().subtract(const Duration(days: 3)).toIso8601String(),
-          },
-          {
-            'id': 'cmsu4xp2h000204lar39azwx2',
-            'rating': 4,
-            'comment': 'Paneer 65 and Cheese Balls were crispy and fresh. Delivered hot!',
-            'user': {'id': 'u12', 'name': 'Swati Tiwari', 'image': null},
-            'createdAt': DateTime.now().subtract(const Duration(days: 6)).toIso8601String(),
-          },
-        ],
-        'totalCount': 3,
-        'averageRating': 4.7,
-      };
-    }
-
-    if (isWedson) {
-      return {
-        'reviews': [
-          {
-            'id': 'cmsw111h000204lar39azwx1',
-            'rating': 5,
-            'comment': 'Prompt delivery and top quality North Indian curries. Butter paneer is must try!',
-            'user': {'id': 'u20', 'name': 'Adarsh Gupta', 'image': null},
-            'createdAt': DateTime.now().subtract(const Duration(days: 2)).toIso8601String(),
-          },
-          {
-            'id': 'cmsw222h000204lar39azwx2',
-            'rating': 5,
-            'comment': 'Great food packaging, hot delivery within 25 mins. Very satisfied!',
-            'user': {'id': 'u21', 'name': 'Pooja Shukla', 'image': null},
-            'createdAt': DateTime.now().subtract(const Duration(days: 5)).toIso8601String(),
-          },
-        ],
-        'totalCount': 2,
-        'averageRating': 5.0,
-      };
-    }
-
-    if (isAs) {
-      return {
-        'reviews': [
-          {
-            'id': 'cmsea2lke000y04jpghzzu00n',
-            'rating': 5,
-            'comment': 'Tasty and fast delivery as well. Burger and Frankie roll were awesome!',
-            'user': {'id': 'u1', 'name': 'Aman Gupta', 'image': null},
-            'createdAt': DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
-          },
-          {
-            'id': 'cmsu63vxa000004l40elkxqac',
-            'rating': 5,
-            'comment': 'Best in town! Pizza toppings and cold coffee are super fresh.',
-            'user': {'id': 'u2', 'name': 'Priya Singh', 'image': null},
-            'createdAt': DateTime.now().subtract(const Duration(days: 2)).toIso8601String(),
-          },
-          {
-            'id': 'cmslgih1j000004iezl5vjtse',
-            'rating': 4,
-            'comment': 'Good taste & clean packaging. Satisfied with the food quality.',
-            'user': {'id': 'u3', 'name': 'Rohan Verma', 'image': null},
-            'createdAt': DateTime.now().subtract(const Duration(days: 3)).toIso8601String(),
-          },
-          {
-            'id': 'cmsomm7y4000004lbc3mvzwm8',
-            'rating': 5,
-            'comment': 'Delicious sandwiches and quick bites! Highly recommended for evening snacks.',
-            'user': {'id': 'u4', 'name': 'Vikas Mishra', 'image': null},
-            'createdAt': DateTime.now().subtract(const Duration(days: 5)).toIso8601String(),
-          },
-          {
-            'id': 'cmspunjb1000304jii4tp8ls5',
-            'rating': 5,
-            'comment': '100% Pure Veg and tastes just like home-made cafe food. Great job!',
-            'user': {'id': 'u5', 'name': 'Neha Sachan', 'image': null},
-            'createdAt': DateTime.now().subtract(const Duration(days: 6)).toIso8601String(),
-          },
-          {
-            'id': 'cmsu791um000204l2rdjcdym0',
-            'rating': 5,
-            'comment': 'Superb garlic bread with cheese. Warm and crispy!',
-            'user': {'id': 'u6', 'name': 'Ankit Kumar', 'image': null},
-            'createdAt': DateTime.now().subtract(const Duration(days: 8)).toIso8601String(),
-          },
-          {
-            'id': 'cmsu888um000204l2rdjcdym1',
-            'rating': 4,
-            'comment': 'Great variety of menu items. Fast delivery to Ghatampur Express Zone.',
-            'user': {'id': 'u7', 'name': 'Suresh Patel', 'image': null},
-            'createdAt': DateTime.now().subtract(const Duration(days: 10)).toIso8601String(),
-          },
-          {
-            'id': 'cmsu999um000204l2rdjcdym2',
-            'rating': 5,
-            'comment': 'Loved the paneer burger and mango shake. Will order again!',
-            'user': {'id': 'u8', 'name': 'Deepak Sharma', 'image': null},
-            'createdAt': DateTime.now().subtract(const Duration(days: 12)).toIso8601String(),
-          },
-        ],
-        'totalCount': 8,
-        'averageRating': 4.5,
-      };
-    }
-
-    return {'reviews': [], 'totalCount': 0, 'averageRating': 0.0};
+    return {'reviews': <Map<String, dynamic>>[], 'totalCount': 0, 'averageRating': 0.0};
   }
 }

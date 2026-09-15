@@ -22,6 +22,8 @@ class Restaurant {
   final double? lat;
   final double? lng;
   final int activeOrdersCount;
+  final String? ownerPhone;
+  final double? commissionRate;
 
   Restaurant({
     required this.id,
@@ -47,6 +49,8 @@ class Restaurant {
     this.lat,
     this.lng,
     this.activeOrdersCount = 0,
+    this.ownerPhone,
+    this.commissionRate,
   });
 
   factory Restaurant.fromJson(Map<String, dynamic> json) {
@@ -64,38 +68,21 @@ class Restaurant {
           .toList();
     }
 
-    final lower = (json['name'] ?? json['slug'] ?? '').toString().toLowerCase();
-
     double? parseLat() {
       if (json['lat'] != null) return double.tryParse(json['lat'].toString());
       if (json['latitude'] != null) return double.tryParse(json['latitude'].toString());
-      if (lower.contains('bal udyan') || lower.contains('birshibpur')) return 26.1468042;
-      if (lower.contains('as') || lower.contains('a.s') || lower.contains('palika')) return 26.1494833;
-      if (lower.contains('wedson') || lower.contains('hamirpur')) return 26.147862;
       return null;
     }
 
     double? parseLng() {
       if (json['lng'] != null) return double.tryParse(json['lng'].toString());
       if (json['longitude'] != null) return double.tryParse(json['longitude'].toString());
-      if (lower.contains('bal udyan') || lower.contains('birshibpur')) return 80.1773979;
-      if (lower.contains('as') || lower.contains('a.s') || lower.contains('palika')) return 80.1672394;
-      if (lower.contains('wedson') || lower.contains('hamirpur')) return 80.172482;
       return null;
     }
 
     String parseAddress() {
       final addr = json['address']?.toString().trim();
       if (addr != null && addr.isNotEmpty && addr != 'null') return addr;
-      if (lower.contains('bal udyan') || lower.contains('birshibpur')) {
-        return 'Near Tehsil / Railway Fatak, Birshibpur, Ghatampur';
-      }
-      if (lower.contains('as') || lower.contains('a.s') || lower.contains('palika')) {
-        return 'Nagar Palika, Ghatampur';
-      }
-      if (lower.contains('wedson') || lower.contains('hamirpur')) {
-        return 'Hamirpur Road, Ghatampur';
-      }
       return 'Ghatampur Market, UP';
     }
 
@@ -107,6 +94,8 @@ class Restaurant {
       address: parseAddress(),
       city: json['city']?.toString() ?? 'Ghatampur',
       phone: json['phone']?.toString(),
+      ownerPhone: (json['ownerPhone'] ?? json['phone'])?.toString(),
+      commissionRate: double.tryParse(json['commissionRate']?.toString() ?? ''),
       logoUrl: json['logoUrl']?.toString(),
       bannerUrl: json['bannerUrl']?.toString(),
       cuisineTags: tags,
@@ -124,9 +113,7 @@ class Restaurant {
       menuSections: json['menuSections'] is List ? json['menuSections'] as List<dynamic> : null,
       lat: parseLat(),
       lng: parseLng(),
-      activeOrdersCount: json['activeOrdersCount'] != null
-          ? int.tryParse(json['activeOrdersCount'].toString()) ?? 0
-          : 0,
+      activeOrdersCount: json['activeOrdersCount'] != null ? int.tryParse(json['activeOrdersCount'].toString()) ?? 0 : 0,
     );
   }
 

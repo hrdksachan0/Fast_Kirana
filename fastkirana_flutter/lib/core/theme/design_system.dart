@@ -1,9 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 export 'responsive.dart';
 
 /// FastKirana Design System — the single source of truth for all colors, spacing, radii, shadows.
 /// AppColors (in core/constants/) is a legacy alias; migrate to AppDesignSystem over time.
 class AppDesignSystem {
+  // Typography
+  static TextStyle get h1 => GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w700, color: slate900);
+  static TextStyle get h2 => GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: slate900);
+  static TextStyle get h3 => GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: slate900);
+  static TextStyle get h4 => GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: slate900);
+  static TextStyle get bodyLarge => GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w400, color: slate900);
+  static TextStyle get bodyMedium => GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w400, color: slate900);
+  static TextStyle get bodySmall => GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w400, color: slate500);
+  static TextStyle get caption => GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w400, color: slate500);
+  static TextStyle get captionBold => GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: slate900);
+
   // FastKirana Brand Colors (Matching Web App globals.css: Red #E20A22)
   static const Color primary = Color(0xFFE20A22);
   static const Color primaryDark = Color(0xFFB30013);

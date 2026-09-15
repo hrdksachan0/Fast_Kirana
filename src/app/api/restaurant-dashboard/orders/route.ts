@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     if (effectiveRestId === 'cms2p1lap0000n0id8alldboy' || effectiveRestId === 'as-restaurant') effectiveRestId = 'REST-101'
     else if (effectiveRestId === 'cms2p1lyx0001n0idod904lfu' || effectiveRestId === 'wedson-restaurant' || effectiveRestId === 'wedson') effectiveRestId = 'REST-102'
     else if (effectiveRestId === 'cmsbhxb6a000304if8kf1cwji' || effectiveRestId === 'bal-udyan-restaurant' || effectiveRestId === 'bal-udyan') effectiveRestId = 'REST-103'
-    else if (effectiveRestId === 'cmtn66nhy000004k0fu84b7ke' || effectiveRestId === 'pari-milk-dairy-sweets' || effectiveRestId === 'pari-milk') effectiveRestId = 'REST-104'
+    else if (effectiveRestId === 'cmtn66nhy000004k0fu84b7ke' || effectiveRestId === 'hot-pizza-lovers' || effectiveRestId === 'pizza-lovers' || effectiveRestId === 'pizza-lover' || effectiveRestId === 'pari-milk-dairy-sweets' || effectiveRestId === 'pari-milk') effectiveRestId = 'REST-104'
 
     // If no restaurant ID resolved, return empty list (no mixup)
     if (!effectiveRestId) {
@@ -65,11 +65,21 @@ export async function GET(request: NextRequest) {
 
     const status = searchParams.get('status')
 
-    const where: any = {}
+    const where: any = {
+      OR: [
+        { paymentMethod: 'COD' },
+        { paymentStatus: 'PAID' }
+      ],
+      NOT: { status: 'ADMIN_PENDING' }
+    }
     if (effectiveRestId) {
-      where.OR = [
-        { restaurantId: effectiveRestId },
-        { storeId: effectiveRestId },
+      where.AND = [
+        {
+          OR: [
+            { restaurantId: effectiveRestId },
+            { storeId: effectiveRestId },
+          ]
+        }
       ]
     }
     const VALID_ORDER_STATUSES = ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED']

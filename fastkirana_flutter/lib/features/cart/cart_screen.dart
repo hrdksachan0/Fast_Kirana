@@ -21,12 +21,12 @@ import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/store_settings_provider.dart';
 import '../../widgets/cart_conflict_dialog.dart';
-import '../../widgets/shimmer_box.dart';
 import '../auth/login_screen.dart';
 import '../checkout/checkout_screen.dart';
 import 'coupons_screen.dart';
 import '../../widgets/unserviceable_location_banner.dart';
 import '../../widgets/offline_banner.dart';
+import '../../widgets/grid_skeletons.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
@@ -247,7 +247,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 17), fontWeight: FontWeight.w900, color: slateDark),
           ),
         ),
-        body: _buildCartLoadingSkeleton(),
+        body: const CartShimmerSkeleton(),
       ),
       error: (err, _) => Scaffold(
         backgroundColor: Colors.white,
@@ -268,54 +268,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     );
   }
 
-  Widget _buildCartLoadingSkeleton() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        for (int i = 0; i < 3; i++)
-          Container(
-            margin: const EdgeInsets.only(bottom: 14),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppDesignSystem.slate200),
-            ),
-            child: Row(
-              children: [
-                ShimmerBox(
-                  width: 64,
-                  height: 64,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                const SizedBox(width: 14),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ShimmerBox(
-                        width: double.infinity,
-                        height: 14,
-                      ),
-                      SizedBox(height: 8),
-                      ShimmerBox(
-                        width: 90,
-                        height: 12,
-                      ),
-                      SizedBox(height: 10),
-                      ShimmerBox(
-                        width: 60,
-                        height: 14,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
+
 
   Widget _buildCartErrorState(BuildContext context, WidgetRef ref) {
     return Center(
@@ -503,102 +456,27 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               _buildFreeDeliveryProgressBar(subtotal, tier),
 
               // 1. Grocery Items Section (if present)
-              if (groceryItems.isNotEmpty) ...[
-                Row(
-                  children: [
-                    Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Grocery & Daily Essentials',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 12.5),
-                              fontWeight: FontWeight.w800,
-                              color: primaryRed,
-                            ),
-                          ),
-                          Text(
-                            'Delivered from FastKirana Darkstore',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 10.5),
-                              fontWeight: FontWeight.w500,
-                              color: slateMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+              if (groceryItems.isNotEmpty)
+                _buildSectionCard(
+                  context: context,
+                  isGrocery: true,
+                  title: 'Grocery & Daily Essentials',
+                  subtitle: 'Delivered from FastKirana Darkstore',
+                  items: groceryItems,
+                  ref: ref,
                 ),
-                const SizedBox(height: 12),
-                ...groceryItems.map((item) => _buildCartItemCard(ref, item)),
-                const SizedBox(height: 14),
-              ],
 
               // 2. Restaurant Items Section (Grouped by Outlet)
               ...restaurantGroups.entries.map((entry) {
                 final outletName = entry.key;
                 final items = entry.value;
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text('🥘', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                outletName,
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 12.5),
-                                  fontWeight: FontWeight.w800,
-                                  color: primaryRed,
-                                ),
-                              ),
-                              Text(
-                                'Freshly prepared at outlet kitchen',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 10.5),
-                                  fontWeight: FontWeight.w500,
-                                  color: slateMuted,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    ...items.map((item) => _buildCartItemCard(ref, item)),
-                    const SizedBox(height: 4),
-                    // Cooking instruction box
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 14),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppDesignSystem.slate50,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppDesignSystem.slate300),
-                      ),
-                      child: TextField(
-                        controller: _cookingInstructionsController,
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: slateDark),
-                        decoration: InputDecoration(
-                          hintText: 'Cooking instruction (e.g. less sugar, extra spicy)...',
-                          hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: AppDesignSystem.slate400, fontWeight: FontWeight.w500),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                        ),
-                      ),
-                    ),
-                  ],
+                return _buildSectionCard(
+                  context: context,
+                  isGrocery: false,
+                  title: outletName,
+                  subtitle: 'Freshly prepared at outlet kitchen',
+                  items: items,
+                  ref: ref,
                 );
               }),
               const SizedBox(height: 14),
@@ -1427,12 +1305,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(
-        color: isUnlocked ? AppDesignSystem.green50 : AppDesignSystem.orange50,
-        borderRadius: BorderRadius.circular(14),
+        color: isUnlocked ? const Color(0xFFF0FDF4) : const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isUnlocked ? AppDesignSystem.emerald200 : AppDesignSystem.orange300,
+          color: isUnlocked ? const Color(0xFFBBF7D0) : const Color(0xFFFED7AA),
           width: 1.1,
         ),
       ),
@@ -1443,7 +1321,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             children: [
               Text(
                 isUnlocked ? '🎉' : '⚡',
-                style: TextStyle(fontSize: Responsive.scaledFontSize(context, 16)),
+                style: TextStyle(fontSize: Responsive.scaledFontSize(context, 17)),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -1457,32 +1335,39 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 12.5),
                         fontWeight: FontWeight.w800,
-                        color: isUnlocked ? AppDesignSystem.green700 : AppDesignSystem.orange700,
+                        color: isUnlocked ? const Color(0xFF15803D) : const Color(0xFFC2410C),
+                        letterSpacing: -0.2,
                       ),
                     ),
+                    const SizedBox(height: 1),
                     Text(
                       '📍 ${tier.tierName}',
                       style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 10),
+                        fontSize: Responsive.scaledFontSize(context, 10.5),
                         fontWeight: FontWeight.w600,
-                        color: isUnlocked ? AppDesignSystem.green600 : AppDesignSystem.orange600,
+                        color: isUnlocked ? const Color(0xFF16A34A) : const Color(0xFFEA580C),
                       ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isUnlocked ? AppDesignSystem.green100 : AppDesignSystem.orange200,
-                  borderRadius: BorderRadius.circular(6),
+                  color: isUnlocked ? const Color(0xFFDCFCE7) : const Color(0xFFFFEDD5),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isUnlocked ? const Color(0xFFBBF7D0) : const Color(0xFFFED7AA),
+                    width: 1,
+                  ),
                 ),
                 child: Text(
                   isUnlocked ? 'SAVED ₹${tier.baseFee.toInt()}' : 'Save ₹${tier.baseFee.toInt()}',
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 10.5),
-                    fontWeight: FontWeight.w900,
-                    color: isUnlocked ? AppDesignSystem.green600 : AppDesignSystem.orange600,
+                    fontWeight: FontWeight.w800,
+                    color: isUnlocked ? const Color(0xFF15803D) : const Color(0xFFC2410C),
                   ),
                 ),
               ),
@@ -1493,10 +1378,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: progress,
-              minHeight: 6,
-              backgroundColor: isUnlocked ? AppDesignSystem.green100 : AppDesignSystem.orange200,
+              minHeight: 5,
+              backgroundColor: isUnlocked ? const Color(0xFFDCFCE7) : const Color(0xFFFFEDD5),
               valueColor: AlwaysStoppedAnimation<Color>(
-                isUnlocked ? AppDesignSystem.green600 : AppDesignSystem.cafeAccent,
+                isUnlocked ? const Color(0xFF16A34A) : const Color(0xFFEA580C),
               ),
             ),
           ),
@@ -1505,40 +1390,332 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     );
   }
 
+  Widget _buildSectionCard({
+    required BuildContext context,
+    required bool isGrocery,
+    required String title,
+    required String subtitle,
+    required List<CartItem> items,
+    required WidgetRef ref,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppDesignSystem.slate200, width: 1.1),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Section Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            decoration: BoxDecoration(
+              color: isGrocery ? const Color(0xFFFBFDFA) : const Color(0xFFFCFBFB),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
+              border: const Border(bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: isGrocery ? const Color(0xFFF0FDF4) : const Color(0xFFFFF1F2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isGrocery ? const Color(0xFFDCFCE7) : const Color(0xFFFFE4E6),
+                      width: 1,
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    isGrocery ? '📦' : '🍕',
+                    style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 13.5),
+                          fontWeight: FontWeight.w800,
+                          color: AppDesignSystem.slate900,
+                          letterSpacing: -0.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        subtitle,
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
+                          fontWeight: FontWeight.w500,
+                          color: AppDesignSystem.slate500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${items.length} ${items.length == 1 ? 'item' : 'items'}',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 10.5),
+                      fontWeight: FontWeight.w700,
+                      color: AppDesignSystem.slate600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
+          // Items inside the section
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Column(
+              children: [
+                for (int i = 0; i < items.length; i++) ...[
+                  _buildCartItemCard(ref, items[i]),
+                  if (i < items.length - 1)
+                    const Divider(height: 12, thickness: 0.8, color: Color(0xFFF1F5F9)),
+                ],
+                if (!isGrocery) ...[
+                  const Divider(height: 16, thickness: 0.8, color: Color(0xFFF1F5F9)),
+                  _buildCookingInstructionsWidget(title),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCookingInstructionsWidget(String outletName) {
+    final suggestions = [
+      '🌶️ Less Spicy',
+      '🥫 Extra Sauce',
+      '🧅 No Onion / Garlic',
+      '🍬 Less Sweet',
+      '🍽️ Add Cutlery',
+      '🔥 Extra Crispy',
+    ];
+
+    return Container(
+      margin: const EdgeInsets.only(top: 4, bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF1F2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text('👨‍🍳', style: TextStyle(fontSize: 13)),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Cooking Instructions',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 12),
+                        fontWeight: FontWeight.w800,
+                        color: AppDesignSystem.slate900,
+                      ),
+                    ),
+                    Text(
+                      'Special requests for $outletName',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 10),
+                        fontWeight: FontWeight.w500,
+                        color: AppDesignSystem.slate500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_cookingInstructionsController.text.isNotEmpty)
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    setState(() {
+                      _cookingInstructionsController.clear();
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.close_rounded, size: 12, color: AppDesignSystem.slate500),
+                        const SizedBox(width: 3),
+                        Text(
+                          'Clear',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 10),
+                            fontWeight: FontWeight.w700,
+                            color: AppDesignSystem.slate500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 9),
+
+          // Suggestion Chips (Tap to Toggle/Add)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: suggestions.map((chip) {
+                final isPresent = _cookingInstructionsController.text.contains(chip);
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() {
+                        String current = _cookingInstructionsController.text.trim();
+                        if (isPresent) {
+                          current = current.replaceAll(chip, '').replaceAll(', ,', ',').trim();
+                          if (current.startsWith(',')) current = current.substring(1).trim();
+                          if (current.endsWith(',')) current = current.substring(0, current.length - 1).trim();
+                          _cookingInstructionsController.text = current;
+                        } else {
+                          if (current.isEmpty) {
+                            _cookingInstructionsController.text = chip;
+                          } else {
+                            _cookingInstructionsController.text = '$current, $chip';
+                          }
+                        }
+                      });
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+                      decoration: BoxDecoration(
+                        color: isPresent ? const Color(0xFFFFF1F2) : Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isPresent ? AppDesignSystem.primary : const Color(0xFFE2E8F0),
+                          width: isPresent ? 1.3 : 1.0,
+                        ),
+                      ),
+                      child: Text(
+                        chip,
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
+                          fontWeight: isPresent ? FontWeight.w800 : FontWeight.w600,
+                          color: isPresent ? AppDesignSystem.primary : AppDesignSystem.slate700,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 9),
+
+          // Interactive Styled Input Box
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+            child: TextField(
+              controller: _cookingInstructionsController,
+              maxLines: 2,
+              minLines: 1,
+              style: GoogleFonts.inter(
+                fontSize: Responsive.scaledFontSize(context, 12),
+                fontWeight: FontWeight.w600,
+                color: AppDesignSystem.slate900,
+              ),
+              decoration: InputDecoration(
+                icon: const Icon(Icons.edit_note_rounded, size: 20, color: AppDesignSystem.slate400),
+                hintText: 'Type instructions (e.g. less spicy, no onion)...',
+                hintStyle: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 11),
+                  color: AppDesignSystem.slate400,
+                  fontWeight: FontWeight.w500,
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+              ),
+              onChanged: (_) {
+                if (mounted) setState(() {});
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildCartItemCard(WidgetRef ref, CartItem item) {
     final prod = item.product;
     final qty = item.quantity;
     final mrp = prod.mrp > prod.price ? prod.mrp : prod.price;
     final saveAmount = (mrp - prod.price) * qty;
+    final isFood = isRestaurantProduct(prod);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppDesignSystem.slate300, width: 1.1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Product Image Container
           Container(
-            width: 48,
-            height: 48,
+            width: 52,
+            height: 52,
             decoration: BoxDecoration(
               color: AppDesignSystem.slate50,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppDesignSystem.slate300),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
@@ -1565,9 +1742,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
 
-          // Name, Unit & Price Details
+          // Name, Unit & Price Details (Truncation Free with maxLines: 2 & softWrap)
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1580,11 +1757,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     fontWeight: FontWeight.w800,
                     color: slateDark,
                     letterSpacing: -0.2,
+                    height: 1.25,
                   ),
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
+                  softWrap: true,
                 ),
-                if (prod.unit.isNotEmpty && !isRestaurantProduct(prod)) ...[
+                if (prod.unit.isNotEmpty && !isFood) ...[
                   const SizedBox(height: 2),
                   Text(
                     prod.unit,
@@ -1593,13 +1772,15 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       fontWeight: FontWeight.w500,
                       color: slateMuted,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
                 const SizedBox(height: 4),
                 Wrap(
                   crossAxisAlignment: WrapCrossAlignment.center,
                   spacing: 6,
-                  runSpacing: 3,
+                  runSpacing: 2,
                   children: [
                     Text(
                       '₹${(prod.price * qty).toInt()}',
@@ -1644,11 +1825,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
           // High-End Modern Stepper Button (- 1 +)
           Container(
-            height: 34,
+            height: 32,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppDesignSystem.slate300, width: 1.2),
+              border: Border.all(color: const Color(0xFFCBD5E1), width: 1.1),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.03),
@@ -1669,8 +1850,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       ref.read(cartProvider.notifier).decrement(prod.id);
                     },
                     child: Container(
-                      width: 32,
-                      height: 34,
+                      width: 30,
+                      height: 32,
                       alignment: Alignment.center,
                       child: const Icon(
                         Icons.remove_rounded,
@@ -1681,7 +1862,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   ),
                 ),
                 Container(
-                  constraints: const BoxConstraints(minWidth: 26),
+                  constraints: const BoxConstraints(minWidth: 24),
                   alignment: Alignment.center,
                   child: Text(
                     '$qty',
@@ -1726,8 +1907,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       ref.read(cartProvider.notifier).increment(prod);
                     },
                     child: Container(
-                      width: 32,
-                      height: 34,
+                      width: 30,
+                      height: 32,
                       alignment: Alignment.center,
                       child: const Icon(
                         Icons.add_rounded,

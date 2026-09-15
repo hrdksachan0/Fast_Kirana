@@ -93,6 +93,60 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
 
   static const Color primaryRed = AppDesignSystem.primary;
 
+  bool _isAutoApprove = false;
+
+  Future<void> _loadAutoApproveSetting() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final local = prefs.getBool('admin_auto_approve_orders') ?? false;
+      if (mounted) setState(() => _isAutoApprove = local);
+
+      final dio = ref.read(dioProvider);
+      final res = await dio.get('/api/settings');
+      if (res.data != null && res.data is Map) {
+        final serverVal = res.data['admin_auto_approve_orders'] == 'true' || res.data['admin_auto_approve_orders'] == true;
+        if (mounted) {
+          setState(() => _isAutoApprove = serverVal);
+          await prefs.setBool('admin_auto_approve_orders', serverVal);
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _toggleAutoApprove(bool val) async {
+    HapticFeedback.mediumImpact();
+    setState(() => _isAutoApprove = val);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('admin_auto_approve_orders', val);
+
+      final dio = ref.read(dioProvider);
+      await dio.patch(
+        '/api/admin/settings',
+        data: {'admin_auto_approve_orders': val ? 'true' : 'false'},
+        options: AdminAuthorization.options(),
+      );
+
+      final sb = SupabaseService.client;
+      if (sb != null) {
+        await sb.from('store_settings').upsert({
+          'key': 'admin_auto_approve_orders',
+          'value': val ? 'true' : 'false',
+        });
+      }
+
+      if (mounted) {
+        AppToast.showSuccess(
+          context,
+          val ? '⚡ Auto-Approve Activated' : '🔒 Manual Verification Required',
+          subtitle: val ? 'New orders will reach kitchen directly' : 'Orders will wait for Admin call confirmation',
+        );
+      }
+    } catch (e) {
+      debugPrint('[AutoApprove toggle error]: $e');
+    }
+  }
+
   final Set<String> _printedKOTOrders = {};
   final Set<String> _sendingKOTOrderIds = {};
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -101,6 +155,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
 
   final List<String> _liveStatusFilters = [
     'ALL',
+    'ADMIN_PENDING',
     'PENDING',
     'CONFIRMED',
     'PACKED',
@@ -174,6 +229,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
     _fetchAdminProfile();
     _fetchDeliveryRiders();
     _initAudioPlayer();
+    _loadAutoApproveSetting();
     _initNotificationSubscriptions();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -346,7 +402,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
   }
 
   void _syncAlarmStateWithOrders(List<Order> orders) {
-    final pendingOrders = orders.where((o) => o.status == OrderStatus.pending).toList();
+    final pendingOrders = orders.where((o) => o.status == OrderStatus.pending || o.status == OrderStatus.adminPending).toList();
     if (pendingOrders.isNotEmpty) {
       final latestPending = pendingOrders.first;
       if (!OrderAlarmService.instance.isPlaying) {
@@ -1787,6 +1843,8 @@ $formattedItems
   Color _getStatusColor(OrderStatus? status) {
     if (status == null) return AppDesignSystem.slate500;
     switch (status) {
+      case OrderStatus.adminPending:
+        return AppDesignSystem.orange600;
       case OrderStatus.pending:
         return AppDesignSystem.warning;
       case OrderStatus.confirmed:
@@ -1803,7 +1861,8 @@ $formattedItems
   }
 
   bool _isLiveOrder(Order order) {
-    return order.status == OrderStatus.pending ||
+    return order.status == OrderStatus.adminPending ||
+        order.status == OrderStatus.pending ||
         order.status == OrderStatus.confirmed ||
         order.status == OrderStatus.packed ||
         order.status == OrderStatus.shipped;
@@ -2133,6 +2192,92 @@ $formattedItems
                         child: const Icon(Icons.close_rounded, size: 14, color: AppDesignSystem.slate600),
                       ),
                     ),
+                ],
+              ),
+            ),
+          ),
+
+          // 3.5 Auto-Approve Fast Switch Banner
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: _isAutoApprove ? const Color(0xFFF0FDF4) : const Color(0xFFFFF7ED),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _isAutoApprove ? const Color(0xFFBBF7D0) : const Color(0xFFFED7AA),
+                  width: 1.2,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _isAutoApprove ? Icons.bolt_rounded : Icons.admin_panel_settings_rounded,
+                    size: 20,
+                    color: _isAutoApprove ? AppDesignSystem.green600 : const Color(0xFFEA580C),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              _isAutoApprove ? 'AUTO-APPROVE: ON' : 'MANUAL APPROVAL: ON',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 11),
+                                fontWeight: FontWeight.w900,
+                                color: _isAutoApprove ? const Color(0xFF15803D) : const Color(0xFFC2410C),
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: _isAutoApprove ? const Color(0xFFDCFCE7) : const Color(0xFFFFEDD5),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                _isAutoApprove ? 'Direct to Kitchen' : 'Admin Call Gate',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 9),
+                                  fontWeight: FontWeight.w800,
+                                  color: _isAutoApprove ? const Color(0xFF166534) : const Color(0xFF9A3412),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          _isAutoApprove
+                              ? 'Incoming orders reach restaurant console immediately'
+                              : 'Orders pause for call verification before restaurant sees them',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 10),
+                            fontWeight: FontWeight.w500,
+                            color: _isAutoApprove ? const Color(0xFF166534) : const Color(0xFF9A3412),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(
+                    height: 28,
+                    child: FittedBox(
+                      child: Switch(
+                        value: _isAutoApprove,
+                        activeColor: AppDesignSystem.green600,
+                        activeTrackColor: const Color(0xFFBBF7D0),
+                        inactiveThumbColor: const Color(0xFFEA580C),
+                        inactiveTrackColor: const Color(0xFFFED7AA),
+                        onChanged: _toggleAutoApprove,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -3134,6 +3279,83 @@ $formattedItems
               ),
             ),
 
+          // ───── ADMIN APPROVAL GATE (only for ADMIN_PENDING orders) ─────
+          if (order.status == OrderStatus.adminPending) ...[
+            Container(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7ED),
+                border: Border(
+                  top: BorderSide(color: AppDesignSystem.orange600.withValues(alpha: 0.3), width: 1),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.admin_panel_settings_rounded, size: 16, color: Color(0xFFEA580C)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'ADMIN APPROVAL REQUIRED — Call customer to verify before approving',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 10.5),
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFFC2410C),
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      // ✅ APPROVE → moves to PENDING (restaurant can now see it)
+                      Expanded(
+                        flex: 3,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _updateOrderStatus(order, OrderStatus.pending),
+                          icon: const Icon(Icons.check_circle_rounded, size: 18, color: Colors.white),
+                          label: Text(
+                            'APPROVE ORDER',
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w900, color: Colors.white),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppDesignSystem.green600,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      // ❌ REJECT → cancel order
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _updateOrderStatus(order, OrderStatus.cancelled),
+                          icon: const Icon(Icons.cancel_rounded, size: 18, color: Colors.white),
+                          label: Text(
+                            'REJECT',
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w900, color: Colors.white),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppDesignSystem.red600,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                ],
+              ),
+            ),
+          ],
+
           // 3.5 Order Status Dropdown Selector
           Container(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
@@ -3174,6 +3396,14 @@ $formattedItems
                         borderRadius: BorderRadius.circular(14),
                         dropdownColor: Colors.white,
                         items: const [
+                          DropdownMenuItem(
+                            value: OrderStatus.adminPending,
+                            child: _StatusDropdownItem(
+                              icon: Icons.admin_panel_settings_rounded,
+                              label: '🔒 Needs Admin Approval',
+                              color: AppDesignSystem.orange600,
+                            ),
+                          ),
                           DropdownMenuItem(
                             value: OrderStatus.pending,
                             child: _StatusDropdownItem(

@@ -33,9 +33,10 @@ async function findRestaurantBySlug(rawSlug: string) {
     decodedSlug.includes('bal') ||
     decodedSlug.includes('udyan')
 
-  const isPariDairy =
-    decodedSlug.includes('pari') ||
-    decodedSlug.includes('dairy')
+  const isPizzaLovers =
+    decodedSlug.includes('pizza') ||
+    decodedSlug.includes('hot-pizza') ||
+    decodedSlug.includes('pari')
 
   // 1. Primary search: exact slug, ID, or known alias ID
   const restaurant = await prisma.restaurant.findFirst({
@@ -65,10 +66,11 @@ async function findRestaurantBySlug(rawSlug: string) {
               { name: { contains: 'Bal Udyan', mode: 'insensitive' as const } },
             ]
           : []),
-        ...(isPariDairy
+        ...(isPizzaLovers
           ? [
               { id: OUTLET_PARI_MILK_ID },
-              { slug: { in: ['pari-milk-dairy-sweets', 'pari-dairy', 'pari-milk-dairy', 'pari'] } },
+              { slug: { in: ['hot-pizza-lovers', 'pizza-lovers', 'pizza-lover', 'pari-milk-dairy-sweets', 'pari-dairy', 'pari-milk-dairy', 'pari'] } },
+              { name: { contains: 'Pizza', mode: 'insensitive' as const } },
               { name: { contains: 'Pari', mode: 'insensitive' as const } },
             ]
           : []),

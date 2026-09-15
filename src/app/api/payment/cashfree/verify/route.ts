@@ -183,12 +183,14 @@ export async function POST(req: NextRequest) {
           data: { orderId: updatedOrder.id }
         }).catch((err: any) => console.error('Push admin error:', err))
 
-        sendPushNotificationToRestaurant(order.restaurantId, {
-          title: `👨‍🍳 New Food Order #${displayId}!`,
-          body: `Order #${displayId} for ${outletName} is confirmed and paid. Start preparing dishes!`,
-          tag: `restaurant-order-${updatedOrder.id}`,
-          data: { orderId: updatedOrder.id, restaurantId: order.restaurantId }
-        }).catch((err: any) => console.error('Push restaurant error:', err))
+        if (updatedOrder.status !== 'ADMIN_PENDING') {
+          sendPushNotificationToRestaurant(order.restaurantId, {
+            title: `👨‍🍳 New Food Order #${displayId}!`,
+            body: `Order #${displayId} for ${outletName} is confirmed and paid. Start preparing dishes!`,
+            tag: `restaurant-order-${updatedOrder.id}`,
+            data: { orderId: updatedOrder.id, restaurantId: order.restaurantId }
+          }).catch((err: any) => console.error('Push restaurant error:', err))
+        }
       } else {
         sendPushNotificationToRoles([Role.ADMIN, Role.PICKER, Role.DELIVERY], {
           title: '💳 Online Payment Order Confirmed!',
@@ -196,6 +198,17 @@ export async function POST(req: NextRequest) {
           tag: `order-${updatedOrder.id}`,
           data: { orderId: updatedOrder.id }
         }).catch((err: any) => console.error('Push grocery error:', err))
+      }
+
+      // Late payment reconciliation check: If previously COD, notify Delivery not to collect cash
+      const wasCod = (order.paymentMethod || '').toUpperCase() === 'COD'
+      if (wasCod) {
+        sendPushNotificationToRoles([Role.DELIVERY, Role.ADMIN], {
+          title: '⚠️ CASH MAT LENA! Order Paid Online',
+          body: `Order #${displayId} (₹${notifyTotal}) customer ne online pay kar diya hai. Delivery ke waqt CASH NA LEIN!`,
+          tag: `cod-reconciled-${updatedOrder.id}`,
+          data: { orderId: updatedOrder.id, paidOnline: 'true' }
+        }).catch((err: any) => console.error('Push delivery late payment error:', err))
       }
 
       // WhatsApp Alert

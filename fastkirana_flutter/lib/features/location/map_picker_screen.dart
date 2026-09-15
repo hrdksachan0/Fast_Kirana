@@ -12,6 +12,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import '../../core/services/map_tile_cache_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../../core/routes/page_transitions.dart';
@@ -197,10 +198,11 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                 },
               ),
               children: [
-                // Clean high-resolution CartoDB Voyager map tiles
+                // Clean high-resolution CartoDB / OSM tiles with offline disk caching
                 TileLayer(
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   userAgentPackageName: 'com.fastkirana.app',
+                  tileProvider: CachedMapTileProvider(),
                 ),
 
                 // 5.0 KM Service Zone Circular Boundary

@@ -30,7 +30,6 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
   late bool _isLoading = _cachedPickerOrders.isEmpty;
   bool _isRefreshing = false;
   bool _isFetching = false;
-  int _refreshCountdown = 30;
   List<Map<String, dynamic>> _orders = _cachedPickerOrders;
 
   static const String _diskPickerOrdersKey = 'cached_picker_orders_v2';
@@ -117,6 +116,9 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
   }
 
   Future<void> _fetchPickerOrders({bool silent = false}) async {
+    if (_isFetching) return;
+    _isFetching = true;
+
     if (!silent) {
       setState(() => _isLoading = true);
     } else {
@@ -146,6 +148,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
     } catch (e) {
       debugPrint('[Picker Orders Fetch Error]: $e');
     } finally {
+      _isFetching = false;
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -388,7 +391,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                       : const Icon(Icons.sync_rounded, size: 13, color: slateMuted),
                   const SizedBox(width: 3),
                   Text(
-                    _isRefreshing ? '...' : '${_refreshCountdown}s',
+                    _isRefreshing ? '...' : 'Sync',
                     style: GoogleFonts.inter(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w800,

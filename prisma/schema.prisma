@@ -17,6 +17,7 @@ enum Role {
 }
 
 enum OrderStatus {
+  ADMIN_PENDING
   PENDING
   CONFIRMED
   PACKED

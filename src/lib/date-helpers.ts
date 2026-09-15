@@ -1,4 +1,7 @@
-import { format, formatDistanceToNow, isToday, isTomorrow, addMinutes, parseISO, getHours, getMinutes } from 'date-fns'
+import { format, addMinutes, parseISO, getHours, getMinutes } from 'date-fns'
+
+// Re-export IST timezone helpers from formatters.ts for convenience
+export { getISTHour, getISTMinute, getISTTotalMinutes, formatISODate, isStoreOpen } from './formatters'
 
 // --- Time ---
 export function formatDate(date?: string | Date | null, pattern = 'PP'): string {
@@ -29,32 +32,6 @@ export function formatTime(date?: string | Date | null): string {
     const d = new Date(date)
     if (isNaN(d.getTime())) return ''
     return format(d, 'h:mm a')
-  } catch {
-    return ''
-  }
-}
-
-// --- Time + Date context ---
-export function formatDeliveryETA(date?: string | Date | null): string {
-  if (!date) return ''
-  try {
-    const d = new Date(date)
-    if (isNaN(d.getTime())) return ''
-    if (isToday(d)) return `Today, ${format(d, 'h:mm a')}`
-    if (isTomorrow(d)) return `Tomorrow, ${format(d, 'h:mm a')}`
-    return format(d, 'MMM d, h:mm a')
-  } catch {
-    return ''
-  }
-}
-
-// --- Relative ---
-export function formatRelativeTime(date?: string | Date | null): string {
-  if (!date) return ''
-  try {
-    const d = new Date(date)
-    if (isNaN(d.getTime())) return ''
-    return formatDistanceToNow(d, { addSuffix: true })
   } catch {
     return ''
   }

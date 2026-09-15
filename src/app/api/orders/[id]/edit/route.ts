@@ -209,7 +209,7 @@ export async function POST(
         if (rawRestId) {
           isRestaurant = true
           resolvedRestId = normalizeRestaurantId(rawRestId) || rawRestId
-          resolvedShopName = product.restaurant?.name || itemShopName || (resolvedRestId?.includes('101') ? 'A.S. Restaurant' : resolvedRestId?.includes('102') ? 'Wedson Restaurant' : resolvedRestId?.includes('103') ? 'Bal Udyan Restaurant' : resolvedRestId?.includes('104') ? 'Pari Milk Dairy & Sweets' : 'Restaurant')
+          resolvedShopName = product.restaurant?.name || itemShopName || (resolvedRestId?.includes('101') ? 'A.S. Restaurant' : resolvedRestId?.includes('102') ? 'Wedson Restaurant' : resolvedRestId?.includes('103') ? 'Bal Udyan Restaurant' : resolvedRestId?.includes('104') ? 'Hot Pizza Lovers' : 'Restaurant')
           resolvedShopPhone = product.restaurant?.ownerPhone || (product.restaurant as any)?.phone || null
         } else {
           // No restaurantId -> 100% Dark Store GROCERY item (even if added while editing a restaurant order)
@@ -224,7 +224,7 @@ export async function POST(
         if (explicitRestId) {
           isRestaurant = true
           resolvedRestId = explicitRestId
-          resolvedShopName = itemShopName || (resolvedRestId?.includes('101') ? 'A.S. Restaurant' : resolvedRestId?.includes('102') ? 'Wedson Restaurant' : resolvedRestId?.includes('103') ? 'Bal Udyan Restaurant' : resolvedRestId?.includes('104') ? 'Pari Milk Dairy & Sweets' : 'Restaurant')
+          resolvedShopName = itemShopName || (resolvedRestId?.includes('101') ? 'A.S. Restaurant' : resolvedRestId?.includes('102') ? 'Wedson Restaurant' : resolvedRestId?.includes('103') ? 'Bal Udyan Restaurant' : resolvedRestId?.includes('104') ? 'Hot Pizza Lovers' : 'Restaurant')
           resolvedShopPhone = order.shopPhone || null
         } else if (order.orderType === 'RESTAURANT' && order.restaurantId && (effectiveRole === 'CHEF' || effectiveRole === 'RESTAURANT_OWNER')) {
           // Off-menu item entered by restaurant chef/owner belongs to their restaurant

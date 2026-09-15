@@ -140,6 +140,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
           data: (allOrders) {
             // Separate Active vs Completed/Cancelled orders
             final activeOrders = allOrders.where((o) =>
+                o.status == OrderStatus.adminPending ||
                 o.status == OrderStatus.pending ||
                 o.status == OrderStatus.confirmed ||
                 o.status == OrderStatus.packed ||

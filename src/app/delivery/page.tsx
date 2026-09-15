@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { isToday } from 'date-fns'
 import { toast } from 'sonner'
 import { playNotificationChime, playSuccessChime } from '@/lib/audio'
 import { triggerHaptic } from '@/lib/haptic'
@@ -10,6 +11,13 @@ import { Loader2, Truck, ShoppingBag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/lib/supabase-client'
 
+// Shared Utilities & Hooks
+import { triggerConfetti } from '@/lib/confetti'
+import { optimizeRoute } from '@/lib/delivery-routing'
+import { useDeliveryOfflineSync } from '@/hooks/delivery/use-delivery-offline-sync'
+import { useRiderLocationTracking } from '@/hooks/delivery/use-rider-location-tracking'
+
+// Sub-components
 import DeliveryHeader from './components/delivery-header'
 import CodPaymentModal from './components/cod-payment-modal'
 import UpiQrModal from './components/upi-qr-modal'
@@ -17,143 +25,7 @@ import ActiveDeliveryCard from './components/active-delivery-card'
 import PendingPickupCard from './components/pending-pickup-card'
 import RiderWalletView from './components/rider-wallet-view'
 import DeliveryHistoryView from './components/delivery-history-view'
-
-function triggerConfetti() {
-  if (typeof window === 'undefined') return
-  const canvas = document.createElement('canvas')
-  canvas.style.position = 'fixed'
-  canvas.style.top = '0'
-  canvas.style.left = '0'
-  canvas.style.width = '100%'
-  canvas.style.height = '100%'
-  canvas.style.pointerEvents = 'none'
-  canvas.style.zIndex = '9999'
-  document.body.appendChild(canvas)
-
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return
-
-  const resizeCanvas = () => {
-    canvas.width = window.innerWidth
-    canvas.height = window.innerHeight
-  }
-  window.addEventListener('resize', resizeCanvas)
-  resizeCanvas()
-
-  const colors = ['#f43f5e', '#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6']
-  const particles: any[] = []
-
-  for (let i = 0; i < 120; i++) {
-    particles.push({
-      x: Math.random() * canvas.width,
-      y: Math.random() * -canvas.height - 20,
-      size: Math.random() * 6 + 4,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      speed: Math.random() * 4 + 3,
-      angle: Math.random() * 360,
-      rotationSpeed: Math.random() * 4 - 2
-    })
-  }
-
-  let animationFrameId: number
-  const startTime = Date.now()
-
-  function update() {
-    if (!ctx) return
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    
-    if (Date.now() - startTime > 3000) {
-      if (document.body.contains(canvas)) {
-        document.body.removeChild(canvas)
-      }
-      window.removeEventListener('resize', resizeCanvas)
-      cancelAnimationFrame(animationFrameId)
-      return
-    }
-
-    let active = false
-    particles.forEach(p => {
-      p.y += p.speed
-      p.angle += p.rotationSpeed
-      p.x += Math.sin(p.angle * Math.PI / 180) * 0.8
-
-      if (p.y < canvas.height + 20) {
-        active = true
-      }
-
-      ctx.save()
-      ctx.translate(p.x, p.y)
-      ctx.rotate(p.angle * Math.PI / 180)
-      ctx.fillStyle = p.color
-      ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size)
-      ctx.restore()
-    })
-
-    if (active) {
-      animationFrameId = requestAnimationFrame(update)
-    } else {
-      if (document.body.contains(canvas)) {
-        document.body.removeChild(canvas)
-      }
-      window.removeEventListener('resize', resizeCanvas)
-    }
-  }
-
-  update()
-}
-
-function optimizeRoute(ordersList: any[]) {
-  if (ordersList.length <= 1) return ordersList
-
-  const storeLat = 26.1534185
-  const storeLng = 80.1714024
-
-  const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371
-    const dLat = (lat2 - lat1) * Math.PI / 180
-    const dLon = (lon2 - lon1) * Math.PI / 180
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2)
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
-    return R * c
-  }
-
-  const unvisited = [...ordersList]
-  const optimized: any[] = []
-  let currentLat = storeLat
-  let currentLng = storeLng
-
-  while (unvisited.length > 0) {
-    let bestIndex = 0
-    let minDistance = Infinity
-
-    for (let i = 0; i < unvisited.length; i++) {
-      const addr = unvisited[i].address
-      const addrLat = addr?.lat ?? storeLat
-      const addrLng = addr?.lng ?? storeLng
-      const dist = getDistance(currentLat, currentLng, addrLat, addrLng)
-      
-      let score = dist
-      if (unvisited[i].paymentMethod === 'COD') score -= 0.5
-      const elapsedMins = (new Date().getTime() - new Date(unvisited[i].createdAt).getTime()) / (60 * 1000)
-      score -= elapsedMins * 0.05
-
-      if (score < minDistance) {
-        minDistance = score
-        bestIndex = i
-      }
-    }
-
-    const nextOrder = unvisited.splice(bestIndex, 1)[0]
-    optimized.push(nextOrder)
-    currentLat = nextOrder.address?.lat ?? currentLat
-    currentLng = nextOrder.address?.lng ?? currentLng
-  }
-
-  return optimized
-}
+import { HandoverConfirmModal } from './components/handover-confirm-modal'
 
 export default function DeliveryDashboard() {
   const { data: session, status } = useSession()
@@ -164,7 +36,6 @@ export default function DeliveryDashboard() {
   const [updatingId, setUpdatingId] = useState<string | null>(null)
 
   const [activeTab, setActiveTab] = useState<'deliveries' | 'wallet' | 'history'>('deliveries')
-
   const [paymentChoiceOrderId, setPaymentChoiceOrderId] = useState<string | null>(null)
   const [qrModalOrder, setQrModalOrder] = useState<any | null>(null)
   const [confirmDeliveryOrder, setConfirmDeliveryOrder] = useState<any | null>(null)
@@ -179,6 +50,11 @@ export default function DeliveryDashboard() {
     remainingLimit: number
   } | null>(null)
 
+  const [autoRefreshCountdown, setAutoRefreshCountdown] = useState(30)
+  const ordersRef = useRef<any[]>([])
+
+  const { getCurrentCoords } = useRiderLocationTracking()
+
   const fetchWallet = useCallback(async () => {
     try {
       const res = await fetch('/api/delivery/wallet')
@@ -190,12 +66,6 @@ export default function DeliveryDashboard() {
       console.error('Failed to fetch wallet info:', err)
     }
   }, [])
-
-  const [autoRefreshCountdown, setAutoRefreshCountdown] = useState(30)
-  const [isOffline, setIsOffline] = useState(false)
-  const [offlineQueue, setOfflineQueue] = useState<any[]>([])
-
-  const ordersRef = useRef<any[]>([])
 
   useEffect(() => {
     ordersRef.current = orders
@@ -216,7 +86,7 @@ export default function DeliveryDashboard() {
   const fetchOrders = useCallback(async (silent = false) => {
     if (!silent) setIsLoading(true)
     else setIsRefreshing(true)
-    
+
     if (typeof window !== 'undefined' && !navigator.onLine) {
       try {
         const cached = localStorage.getItem('delivery_orders_cache')
@@ -238,7 +108,7 @@ export default function DeliveryDashboard() {
       if (res.ok) {
         const data = await res.json()
         setOrders(data)
-        
+
         if (typeof window !== 'undefined') {
           const sanitizedCache = data.map((o: any) => ({
             id: o.id,
@@ -266,66 +136,10 @@ export default function DeliveryDashboard() {
     }
   }, [])
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    setIsOffline(!navigator.onLine)
-    
-    const goOnline = () => {
-      setIsOffline(false)
-      toast.success('You are back online! Syncing local delivery updates...')
-    }
-    const goOffline = () => {
-      setIsOffline(true)
-      toast.warning('You are offline. Deliveries will be saved locally.')
-    }
-    
-    window.addEventListener('online', goOnline)
-    window.addEventListener('offline', goOffline)
-    return () => {
-      window.removeEventListener('online', goOnline)
-      window.removeEventListener('offline', goOffline)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (isOffline) return
-
-    const syncOfflineUpdates = async () => {
-      const savedQueue = JSON.parse(localStorage.getItem('offline_delivery_updates') || '[]')
-      if (savedQueue.length === 0) return
-
-      toast.loading(`Syncing ${savedQueue.length} offline updates to server...`, { id: 'offline-sync' })
-      let successCount = 0
-
-      for (const item of savedQueue) {
-        try {
-          const res = await fetch(`/api/orders/${item.orderId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: item.newStatus, ...item.extraData }),
-          })
-          if (res.ok) {
-            successCount++
-          }
-        } catch (err) {
-          console.error('Failed to sync offline order update:', item.orderId, err)
-        }
-      }
-
-      localStorage.setItem('offline_delivery_updates', '[]')
-      setOfflineQueue([])
-      
-      toast.dismiss('offline-sync')
-      if (successCount === savedQueue.length) {
-        toast.success('Successfully synced all offline delivery status updates!')
-      } else if (successCount > 0) {
-        toast.warning(`Synced ${successCount} of ${savedQueue.length} updates. Some failed.`)
-      }
-      fetchOrders(true)
-    }
-
-    syncOfflineUpdates()
-  }, [isOffline, fetchOrders])
+  // Offline Sync Hook
+  const { isOffline, offlineQueue, setOfflineQueue } = useDeliveryOfflineSync(() => {
+    fetchOrders(true)
+  })
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -336,9 +150,9 @@ export default function DeliveryDashboard() {
   // Connect to Supabase Realtime for order notifications
   useEffect(() => {
     if (status !== 'authenticated') return
-    
+
     let updateTimeout: NodeJS.Timeout | null = null
-    
+
     const channel = supabase
       .channel('delivery-orders-live')
       .on(
@@ -350,29 +164,33 @@ export default function DeliveryDashboard() {
         },
         (payload) => {
           if (payload.eventType === 'UPDATE') {
-            const oldOrder = payload.old as any
             const newOrder = payload.new as any
             const orderId = newOrder.id
             const newStatus = newOrder.status
-            
-            const activeShipped = ordersRef.current.filter(o => o.status === 'SHIPPED')
-            const wasActive = activeShipped.find(o => o.id === orderId)
+
+            const activeShipped = ordersRef.current.filter((o) => o.status === 'SHIPPED')
+            const wasActive = activeShipped.find((o) => o.id === orderId)
             if (wasActive && newStatus === 'CANCELLED') {
               playNotificationChime()
               triggerHaptic('warning')
               const orderNum = wasActive.readableId || orderId.slice(0, 8)
-              toast.error(`⚠️ Active delivery #${orderNum} to ${wasActive.user?.name || 'customer'} was CANCELLED by the customer! Please do not deliver.`, {
-                duration: 10000,
-                icon: '🛑'
-              })
+              toast.error(
+                `⚠️ Active delivery #${orderNum} to ${
+                  wasActive.user?.name || 'customer'
+                } was CANCELLED by the customer! Please do not deliver.`,
+                {
+                  duration: 10000,
+                  icon: '🛑',
+                }
+              )
             }
 
-            const activePacked = ordersRef.current.filter(o => o.status === 'PACKED')
-            const wasPending = activePacked.find(o => o.id === orderId)
+            const activePacked = ordersRef.current.filter((o) => o.status === 'PACKED')
+            const wasPending = activePacked.find((o) => o.id === orderId)
             if (wasPending && newStatus === 'CANCELLED') {
               const orderNum = wasPending.readableId || orderId.slice(0, 8)
               toast.info(`📦 Order #${orderNum} in pickup queue has been CANCELLED.`, {
-                icon: 'ℹ️'
+                icon: 'ℹ️',
               })
             }
 
@@ -394,7 +212,7 @@ export default function DeliveryDashboard() {
         }
       )
       .subscribe()
-    
+
     return () => {
       supabase.removeChannel(channel)
       if (updateTimeout) {
@@ -403,6 +221,7 @@ export default function DeliveryDashboard() {
     }
   }, [status, fetchOrders])
 
+  // Auto-refresh countdown
   useEffect(() => {
     if (status !== 'authenticated') return
     let isCancelled = false
@@ -428,7 +247,10 @@ export default function DeliveryDashboard() {
   useEffect(() => {
     if (status !== 'authenticated') return
     const currentPending = orders.filter((o) => o.status === 'PACKED')
-    if (prevPendingCountRef.current !== null && currentPending.length > prevPendingCountRef.current) {
+    if (
+      prevPendingCountRef.current !== null &&
+      currentPending.length > prevPendingCountRef.current
+    ) {
       playNotificationChime()
       triggerHaptic('success')
       toast.info('New order ready for pickup!', {
@@ -492,7 +314,7 @@ export default function DeliveryDashboard() {
     }
 
     try {
-      const targetOrder = orders.find(o => o.id === orderId)
+      const targetOrder = orders.find((o) => o.id === orderId)
       const companionId = targetOrder?.companionOrder?.id
 
       const res = await fetch(`/api/orders/${orderId}`, {
@@ -534,36 +356,10 @@ export default function DeliveryDashboard() {
     }
   }
 
-  const getCurrentCoords = (): Promise<{ lat: number; lng: number } | null> => {
-    return new Promise((resolve) => {
-      if (!navigator.geolocation) {
-        resolve(null)
-        return
-      }
-
-      const safetyTimeout = setTimeout(() => {
-        console.warn('[Geolocation] Safety timeout fired, resolving coordinates to null')
-        resolve(null)
-      }, 3500)
-
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          clearTimeout(safetyTimeout)
-          resolve({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          })
-        },
-        () => {
-          clearTimeout(safetyTimeout)
-          resolve(null)
-        },
-        { enableHighAccuracy: true, timeout: 3000 }
-      )
-    })
-  }
-
-  const rawOutForDelivery = useMemo(() => orders.filter((o) => o.status === 'SHIPPED'), [orders])
+  const rawOutForDelivery = useMemo(
+    () => orders.filter((o) => o.status === 'SHIPPED'),
+    [orders]
+  )
   const outForDeliveryOrders = useMemo(() => {
     const optimized = optimizeRoute(rawOutForDelivery)
     const dedupped: any[] = []
@@ -578,7 +374,9 @@ export default function DeliveryDashboard() {
   }, [rawOutForDelivery])
 
   const pendingOrders = useMemo(() => {
-    const raw = orders.filter((o) => o.status === 'PACKED' || o.status === 'PREPARING' || o.status === 'CONFIRMED')
+    const raw = orders.filter(
+      (o) => o.status === 'PACKED' || o.status === 'PREPARING' || o.status === 'CONFIRMED'
+    )
     const dedupped: any[] = []
     const seen = new Set<string>()
     for (const o of raw) {
@@ -590,19 +388,10 @@ export default function DeliveryDashboard() {
     return dedupped
   }, [orders])
 
-  const isToday = (dateStr: string | null | undefined) => {
-    if (!dateStr) return false
-    const d = new Date(dateStr)
-    const today = new Date()
-    return (
-      d.getDate() === today.getDate() &&
-      d.getMonth() === today.getMonth() &&
-      d.getFullYear() === today.getFullYear()
-    )
-  }
-
   const deliveredOrders = orders.filter(
-    (o) => o.status === 'DELIVERED' && isToday(o.deliveredAt || o.updatedAt || o.createdAt)
+    (o) =>
+      o.status === 'DELIVERED' &&
+      isToday(new Date(o.deliveredAt || o.updatedAt || o.createdAt))
   )
 
   const lastLocationPostRef = useRef<number>(0)
@@ -649,8 +438,8 @@ export default function DeliveryDashboard() {
     .reduce((sum: number, o: any) => sum + (o.total || 0), 0)
 
   const executeDeliveryCompletion = async (
-    orderId: string, 
-    isRiderCash: boolean, 
+    orderId: string,
+    isRiderCash: boolean,
     paymentCollectedBy: string
   ) => {
     setUpdatingId(orderId)
@@ -670,7 +459,7 @@ export default function DeliveryDashboard() {
         const matchingOrder = orders.find((o) => o.id === orderId)
         const displayId = matchingOrder?.readableId || orderId.slice(0, 8)
         toast.success(`🎉 Order #${displayId} Delivered Successfully!`, {
-          description: coords 
+          description: coords
             ? `Delivered & verified at customer location.`
             : `Delivered successfully.`,
           duration: 4000,
@@ -711,10 +500,7 @@ export default function DeliveryDashboard() {
     executeDeliveryCompletionWithCash(orderId, cashAmount)
   }
 
-  const executeDeliveryCompletionWithCash = async (
-    orderId: string,
-    cashAmount: number
-  ) => {
+  const executeDeliveryCompletionWithCash = async (orderId: string, cashAmount: number) => {
     setUpdatingId(orderId)
     try {
       const coords = await getCurrentCoords()
@@ -744,56 +530,121 @@ export default function DeliveryDashboard() {
 
   return (
     <div className="container mx-auto max-w-lg pb-24 bg-background min-h-screen">
-      {/* Rider Delivery Confirmation Dialog (Prevents accidental clicks) */}
-      {confirmDeliveryOrder && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <motion.div 
-            initial={{ scale: 0.92, opacity: 0, y: 10 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            className="bg-card border border-border/80 w-full max-w-sm rounded-3xl p-6 space-y-4 text-center shadow-2xl relative overflow-hidden"
-          >
-            <div className="absolute -top-12 -right-12 h-28 w-28 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 text-white mx-auto flex items-center justify-center text-2xl shadow-lg shadow-emerald-500/25">
-              📦
-            </div>
-            <div>
-              <h3 className="text-base font-black text-text-primary">Confirm Parcel Handover</h3>
-              <p className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-                Order #{confirmDeliveryOrder.readableId || confirmDeliveryOrder.id.slice(0, 8)} • ₹{confirmDeliveryOrder.total}
-              </p>
-              <p className="text-xs font-medium text-text-secondary mt-2.5 bg-secondary/50 p-3 rounded-2xl border border-border/50 leading-relaxed">
-                Kya aapne customer ko parcel safely handover kar diya hai?
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-2.5 pt-1">
-              <button
-                type="button"
-                onClick={() => setConfirmDeliveryOrder(null)}
-                className="w-full py-3.5 px-3 min-h-[44px] rounded-2xl border border-border text-xs font-bold text-text-secondary hover:bg-secondary transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const target = confirmDeliveryOrder
-                  setConfirmDeliveryOrder(null)
-                  if (target.paymentMethod === 'COD') {
-                    setPaymentChoiceOrderId(target.id)
-                  } else {
-                    executeDeliveryCompletion(target.id, false, 'ONLINE')
-                  }
-                }}
-                className="w-full py-3.5 px-3 min-h-[44px] rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-white text-xs font-black shadow-lg shadow-emerald-500/30 hover:from-emerald-600 hover:to-teal-700 transition-all active:scale-95 cursor-pointer"
-              >
-                Yes, Delivered ✅
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
+      {/* Handover Confirmation Modal */}
+      <HandoverConfirmModal
+        confirmDeliveryOrder={confirmDeliveryOrder}
+        onClose={() => setConfirmDeliveryOrder(null)}
+        onConfirm={(target) => {
+          setConfirmDeliveryOrder(null)
+          if (target.paymentMethod === 'COD') {
+            setPaymentChoiceOrderId(target.id)
+          } else {
+            executeDeliveryCompletion(target.id, false, 'ONLINE')
+          }
+        }}
+      />
 
-      {/* COD Payment Choice Modal (Cash vs Online vs Split) */}
+      {/* Header */}
+      <DeliveryHeader
+        userName={session?.user?.name}
+        isOffline={isOffline}
+        isRefreshing={isRefreshing}
+        offlineQueueCount={offlineQueue.length}
+        autoRefreshCountdown={autoRefreshCountdown}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onRefresh={() => fetchOrders(true)}
+      />
+
+      {/* Main Content Area */}
+      <div className="p-4 space-y-4">
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-text-muted space-y-3">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-xs font-medium">Loading delivery orders…</p>
+          </div>
+        ) : (
+          <>
+            {activeTab === 'deliveries' && (
+              <div className="space-y-6">
+                {/* Out for Delivery Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xs font-black uppercase tracking-wider text-text-muted flex items-center gap-1.5">
+                      <Truck className="h-3.5 w-3.5 text-primary" />
+                      <span>Out For Delivery ({outForDeliveryOrders.length})</span>
+                    </h2>
+                    {outForDeliveryOrders.length > 1 && (
+                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                        ⚡ Route Optimized
+                      </span>
+                    )}
+                  </div>
+
+                  {outForDeliveryOrders.length === 0 ? (
+                    <div className="text-center py-8 border-2 border-dashed border-border rounded-2xl p-6 bg-card/30">
+                      <p className="text-xs text-text-muted font-medium">
+                        No active deliveries assigned to you right now.
+                      </p>
+                    </div>
+                  ) : (
+                    outForDeliveryOrders.map((order, idx) => (
+                      <ActiveDeliveryCard
+                        key={order.id}
+                        order={order}
+                        idx={idx}
+                        updatingId={updatingId}
+                        onMarkDelivered={() => handleMarkDelivered(order.id)}
+                        onOpenQr={() => setQrModalOrder(order)}
+                      />
+                    ))
+                  )}
+                </div>
+
+                {/* Pending Pickups Section */}
+                <div className="space-y-3 pt-2">
+                  <h2 className="text-xs font-black uppercase tracking-wider text-text-muted flex items-center gap-1.5">
+                    <ShoppingBag className="h-3.5 w-3.5 text-amber-500" />
+                    <span>Ready for Pickup ({pendingOrders.length})</span>
+                  </h2>
+
+                  {pendingOrders.length === 0 ? (
+                    <div className="text-center py-6 border border-border/60 rounded-2xl p-4 bg-card/20">
+                      <p className="text-xs text-text-muted">No packed orders waiting for pickup.</p>
+                    </div>
+                  ) : (
+                    pendingOrders.map((order) => (
+                      <PendingPickupCard
+                        key={order.id}
+                        order={order}
+                        updatingId={updatingId}
+                        onUpdateStatus={handleUpdateStatus}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'wallet' && (
+              <RiderWalletView
+                walletInfo={walletInfo}
+                todayCodCollected={todayCodCollected}
+                todayDeliveries={todayDeliveries}
+              />
+            )}
+
+            {activeTab === 'history' && (
+              <DeliveryHistoryView
+                todayDeliveries={todayDeliveries}
+                deliveredOrders={deliveredOrders}
+              />
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Payment Option Modal for COD Orders */}
       {paymentChoiceOrderId && (
         <CodPaymentModal
           order={orders.find((o) => o.id === paymentChoiceOrderId)}
@@ -805,143 +656,17 @@ export default function DeliveryDashboard() {
         />
       )}
 
-      {/* Doorstep Razorpay Dynamic UPI QR Modal */}
+      {/* Live Doorstep UPI QR Modal */}
       {qrModalOrder && (
         <UpiQrModal
           order={qrModalOrder}
           onBack={() => setQrModalOrder(null)}
-          onConfirmPaid={(orderId) => {
+          onConfirmPaid={() => {
+            executeDeliveryCompletion(qrModalOrder.id, false, 'ONLINE')
             setQrModalOrder(null)
-            executeDeliveryCompletion(orderId, false, 'ONLINE')
           }}
         />
       )}
-
-      {/* Header */}
-      <DeliveryHeader
-        userName={session?.user?.name}
-        isOffline={isOffline}
-        isRefreshing={isRefreshing}
-        offlineQueueCount={offlineQueue.length}
-        autoRefreshCountdown={autoRefreshCountdown}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        onRefresh={() => {
-          fetchOrders(true)
-          setAutoRefreshCountdown(30)
-        }}
-      />
-
-      <div className="px-4 py-5 space-y-6">
-        {activeTab === 'deliveries' && (
-          <>
-            {/* Out for Delivery Section */}
-            <div className="space-y-3.5">
-              <div className="flex items-center justify-between gap-2.5">
-                <div className="flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md shadow-emerald-500/20">
-                    <Truck className="h-3.5 w-3.5 text-white" />
-                  </div>
-                  <h2 className="text-xs font-black text-text-primary uppercase tracking-wider">
-                    Out for Delivery
-                  </h2>
-                </div>
-                {outForDeliveryOrders.length > 0 && (
-                  <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border border-emerald-500/25 px-2.5 py-0.5 rounded-full shadow-2xs">
-                    {outForDeliveryOrders.length} {outForDeliveryOrders.length === 1 ? 'Order' : 'Orders'}
-                  </span>
-                )}
-              </div>
-
-              <AnimatePresence mode="popLayout">
-                {outForDeliveryOrders.length === 0 ? (
-                  <motion.div
-                    key="empty-active"
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="bg-card/40 border border-dashed border-border/80 p-7 rounded-3xl text-center space-y-1.5"
-                  >
-                    <div className="text-2xl">🛵</div>
-                    <p className="text-xs font-bold text-text-primary">No orders out for delivery</p>
-                    <p className="text-[11px] text-text-muted">Accept new pickup orders from below to start delivering.</p>
-                  </motion.div>
-                ) : (
-                  outForDeliveryOrders.map((order, idx) => (
-                    <ActiveDeliveryCard
-                      key={order.id}
-                      order={order}
-                      idx={idx}
-                      updatingId={updatingId}
-                      onMarkDelivered={handleMarkDelivered}
-                      onOpenQr={(o) => setQrModalOrder(o)}
-                    />
-                  ))
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Pending Pickups Section */}
-            <div className="space-y-3.5 pt-2">
-              <div className="flex items-center justify-between gap-2.5">
-                <div className="flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md shadow-violet-500/20">
-                    <ShoppingBag className="h-3.5 w-3.5 text-white" />
-                  </div>
-                  <h2 className="text-xs font-black text-text-primary uppercase tracking-wider">
-                    Ready for Pickup
-                  </h2>
-                </div>
-                {pendingOrders.length > 0 && (
-                  <span className="text-[10px] font-black text-violet-700 dark:text-violet-300 bg-violet-500/15 border border-violet-500/25 px-2.5 py-0.5 rounded-full shadow-2xs">
-                    {pendingOrders.length} {pendingOrders.length === 1 ? 'Order' : 'Orders'}
-                  </span>
-                )}
-              </div>
-
-              <AnimatePresence mode="popLayout">
-                {pendingOrders.length === 0 ? (
-                  <motion.div
-                    key="empty-pending"
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="bg-card/40 border border-dashed border-border/80 p-7 rounded-3xl text-center space-y-1.5"
-                  >
-                    <div className="text-2xl">✨</div>
-                    <p className="text-xs font-bold text-text-primary">All caught up!</p>
-                    <p className="text-[11px] text-text-muted">No pending pickups right now. New orders will appear automatically.</p>
-                  </motion.div>
-                ) : (
-                  pendingOrders.map((order) => (
-                    <PendingPickupCard
-                      key={order.id}
-                      order={order}
-                      updatingId={updatingId}
-                      onUpdateStatus={handleUpdateStatus}
-                    />
-                  ))
-                )}
-              </AnimatePresence>
-            </div>
-          </>
-        )}
-
-        {activeTab === 'wallet' && (
-          <RiderWalletView
-            walletInfo={walletInfo}
-            todayCodCollected={todayCodCollected}
-            todayDeliveries={todayDeliveries}
-          />
-        )}
-
-        {activeTab === 'history' && (
-          <DeliveryHistoryView
-            todayDeliveries={todayDeliveries}
-            deliveredOrders={deliveredOrders}
-          />
-        )}
-      </div>
     </div>
   )
 }

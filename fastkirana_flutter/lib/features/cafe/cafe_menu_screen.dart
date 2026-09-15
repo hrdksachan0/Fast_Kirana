@@ -490,8 +490,8 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
   };
 
   Widget _buildRestaurantBanner(Restaurant? r) {
-    final name = (r?.name ?? widget.restaurantName).toLowerCase();
-    final banner = r?.bannerUrl;
+    final effectiveRestaurant = r ?? RestaurantRegistry.find(widget.restaurantId);
+    final banner = effectiveRestaurant?.bannerUrl;
 
     if (banner != null && banner.isNotEmpty) {
       if (banner.startsWith('http')) {
@@ -500,7 +500,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
           fit: BoxFit.cover,
           memCacheWidth: 800,
           memCacheHeight: 400,
-          errorWidget: (_, __, ___) => _buildFallbackBanner(name),
+          errorWidget: (_, __, ___) => _buildFallbackBanner(),
         );
       } else if (banner.startsWith('/')) {
         final assetName = banner.substring(1);
@@ -509,7 +509,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
           return Image.asset(
             'assets/categories/$webpName',
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _buildFallbackBanner(name),
+            errorBuilder: (_, __, ___) => _buildFallbackBanner(),
           );
         }
         return CachedNetworkImage(
@@ -517,66 +517,24 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
           fit: BoxFit.cover,
           memCacheWidth: 800,
           memCacheHeight: 400,
-          errorWidget: (_, __, ___) => _buildFallbackBanner(name),
+          errorWidget: (_, __, ___) => _buildFallbackBanner(),
         );
       }
     }
-    return _buildFallbackBanner(name);
+    return _buildFallbackBanner();
   }
 
-  Widget _buildFallbackBanner(String name) {
-    final lower = name.toLowerCase();
-    if (lower.contains('wedson')) {
-      return Image.asset(
-        'assets/categories/wedson_restaurant_banner.webp',
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Image.asset(
-          'assets/categories/wedson_restaurant_bg.webp',
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(color: AppDesignSystem.gray800),
-        ),
-      );
-    } else if (lower.contains('bal') || lower.contains('udyan')) {
-      return CachedNetworkImage(
-        imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-103-banner.webp',
-        fit: BoxFit.cover,
-        memCacheWidth: 800,
-        memCacheHeight: 400,
-        errorWidget: (_, __, ___) => Container(color: AppDesignSystem.gray800),
-      );
-    } else if (lower.contains('pari') || lower.contains('dairy') || lower.contains('sweet')) {
-      return CachedNetworkImage(
-        imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-104-banner.webp',
-        fit: BoxFit.cover,
-        memCacheWidth: 800,
-        memCacheHeight: 400,
-        errorWidget: (_, __, ___) => Container(color: AppDesignSystem.gray800),
-      );
-    } else if (lower.contains('a.s') || lower.contains('as-restaurant') || lower.contains('as restaurant') || lower.contains('as_restaurant')) {
-      return Image.asset(
-        'assets/categories/as_restaurant_banner.webp',
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Image.asset(
-          'assets/categories/cafe_banner.webp',
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(color: AppDesignSystem.gray800),
-        ),
-      );
-    }
+  Widget _buildFallbackBanner() {
     return Image.asset(
       'assets/categories/food_banner_bg.webp',
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => Image.asset(
-        'assets/categories/food_promo_banner_premium.webp',
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Container(color: AppDesignSystem.gray800),
-      ),
+      errorBuilder: (_, __, ___) => Container(color: AppDesignSystem.gray800),
     );
   }
 
   Widget _buildLogoWidget(Restaurant? r) {
-    final name = (r?.name ?? widget.restaurantName).toLowerCase();
-    final logo = r?.logoUrl;
+    final effectiveRestaurant = r ?? RestaurantRegistry.find(widget.restaurantId);
+    final logo = effectiveRestaurant?.logoUrl;
 
     if (logo != null && logo.isNotEmpty) {
       if (logo.startsWith('http')) {
@@ -585,7 +543,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
           fit: BoxFit.cover,
           memCacheWidth: 200,
           memCacheHeight: 200,
-          errorWidget: (_, __, ___) => _buildFallbackLogo(name),
+          errorWidget: (_, __, ___) => _buildFallbackLogo(),
         );
       } else if (logo.startsWith('/')) {
         final assetName = logo.substring(1);
@@ -593,7 +551,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
           return Image.asset(
             'assets/categories/$assetName',
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _buildFallbackLogo(name),
+            errorBuilder: (_, __, ___) => _buildFallbackLogo(),
           );
         }
         return CachedNetworkImage(
@@ -601,48 +559,14 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
           fit: BoxFit.cover,
           memCacheWidth: 200,
           memCacheHeight: 200,
-          errorWidget: (_, __, ___) => _buildFallbackLogo(name),
+          errorWidget: (_, __, ___) => _buildFallbackLogo(),
         );
       }
     }
-    return _buildFallbackLogo(name);
+    return _buildFallbackLogo();
   }
 
-  Widget _buildFallbackLogo(String name) {
-    final lower = name.toLowerCase();
-    if (lower.contains('wedson')) {
-      return Image.asset(
-        'assets/categories/wedson_restaurant_bg.webp',
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Image.asset(
-          'assets/categories/wedson_restaurant_banner.webp',
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Center(child: Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
-        ),
-      );
-    } else if (lower.contains('a.s') || lower.contains('as-')) {
-      return Image.asset(
-        'assets/categories/cafe_all_menu_category.webp',
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Center(child: Text('☕', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
-      );
-    } else if (lower.contains('bal') || lower.contains('udyan')) {
-      return CachedNetworkImage(
-        imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-103-logo.webp',
-        fit: BoxFit.cover,
-        memCacheWidth: 200,
-        memCacheHeight: 200,
-        errorWidget: (_, __, ___) => Center(child: Text('🍲', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
-      );
-    } else if (lower.contains('pari') || lower.contains('dairy') || lower.contains('sweet')) {
-      return CachedNetworkImage(
-        imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-104-logo.webp',
-        fit: BoxFit.cover,
-        memCacheWidth: 200,
-        memCacheHeight: 200,
-        errorWidget: (_, __, ___) => Center(child: Text('🥛', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24)))),
-      );
-    }
+  Widget _buildFallbackLogo() {
     return Image.asset(
       'assets/categories/cafe_category.webp',
       fit: BoxFit.cover,

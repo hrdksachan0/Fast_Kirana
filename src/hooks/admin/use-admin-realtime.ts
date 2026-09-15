@@ -1,0 +1,372 @@
+'use client'
+
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { supabase } from '@/lib/supabase-client'
+import { toast } from 'sonner'
+
+interface UseAdminRealtimeProps {
+  selectedHubId: string
+  initialOrders?: any[]
+  activeTab?: string
+  onNewOrder?: (order: any) => void
+  onOrderUpdated?: (order: any) => void
+}
+
+export function useAdminRealtime({
+  selectedHubId,
+  initialOrders,
+  activeTab,
+  onNewOrder,
+  onOrderUpdated,
+}: UseAdminRealtimeProps) {
+  const [liveOrders, setLiveOrders] = useState<any[]>(initialOrders || [])
+  const [orderRefreshKey, setOrderRefreshKey] = useState(0)
+  const [isChimeMuted, setIsChimeMuted] = useState(false)
+
+  // Live Active Carts States
+  const [activeCarts, setActiveCarts] = useState<any[]>([])
+  const [activeCartsCount, setActiveCartsCount] = useState<number>(0)
+  const [isLoadingCarts, setIsLoadingCarts] = useState(false)
+  const [cartsRefreshKey, setCartsRefreshKey] = useState(0)
+
+  // Web Audio warning chime synthesizer
+  const playWarningChime = useCallback(() => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+      if (!AudioContextClass) return
+      const ctx = new AudioContextClass()
+      const now = ctx.currentTime
+
+      const osc1 = ctx.createOscillator()
+      const gain1 = ctx.createGain()
+      osc1.type = 'sine'
+      osc1.frequency.setValueAtTime(550, now)
+      gain1.gain.setValueAtTime(0, now)
+      gain1.gain.linearRampToValueAtTime(0.08, now + 0.05)
+      gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.35)
+
+      osc1.connect(gain1)
+      gain1.connect(ctx.destination)
+      osc1.start(now)
+      osc1.stop(now + 0.35)
+
+      const osc2 = ctx.createOscillator()
+      const gain2 = ctx.createGain()
+      osc2.type = 'sine'
+      osc2.frequency.setValueAtTime(660, now + 0.15)
+      gain2.gain.setValueAtTime(0, now + 0.15)
+      gain2.gain.linearRampToValueAtTime(0.08, now + 0.2)
+      gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.5)
+
+      osc2.connect(gain2)
+      gain2.connect(ctx.destination)
+      osc2.start(now + 0.15)
+      osc2.stop(now + 0.5)
+    } catch (err) {
+      console.warn('AudioContext failed to play:', err)
+    }
+  }, [])
+
+  // Web Audio new order chime synthesizer
+  const playNewOrderChime = useCallback(() => {
+    if (isChimeMuted) return
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+      if (!AudioContextClass) return
+      const ctx = new AudioContextClass()
+      const now = ctx.currentTime
+
+      const osc1 = ctx.createOscillator()
+      const gain1 = ctx.createGain()
+      osc1.type = 'triangle'
+      osc1.frequency.setValueAtTime(880, now)
+      gain1.gain.setValueAtTime(0, now)
+      gain1.gain.linearRampToValueAtTime(0.15, now + 0.05)
+      gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.4)
+      osc1.connect(gain1)
+      gain1.connect(ctx.destination)
+      osc1.start(now)
+      osc1.stop(now + 0.4)
+
+      const osc2 = ctx.createOscillator()
+      const gain2 = ctx.createGain()
+      osc2.type = 'triangle'
+      osc2.frequency.setValueAtTime(659.25, now + 0.15)
+      gain2.gain.setValueAtTime(0, now)
+      gain2.gain.setValueAtTime(0.15, now + 0.15)
+      gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.6)
+      osc2.connect(gain2)
+      gain2.connect(ctx.destination)
+      osc2.start(now + 0.15)
+      osc2.stop(now + 0.6)
+    } catch (err) {
+      console.warn('AudioContext failed to play new order chime:', err)
+    }
+  }, [isChimeMuted])
+
+  const fetchLiveOrdersList = useCallback(async () => {
+    try {
+      const storeQuery =
+        selectedHubId && selectedHubId !== 'all'
+          ? `&storeId=${encodeURIComponent(selectedHubId)}`
+          : ''
+      const res = await fetch(`/api/orders?all=true${storeQuery}`)
+      if (res.ok) {
+        const data = await res.json()
+        setLiveOrders(data)
+      }
+    } catch (err) {
+      console.error('Failed to poll live orders:', err)
+    }
+  }, [selectedHubId])
+
+  useEffect(() => {
+    fetchLiveOrdersList()
+  }, [fetchLiveOrdersList])
+
+  // Tri-channel listener: Supabase, SSE, Railway WebSocket
+  useEffect(() => {
+    let updateTimeout: NodeJS.Timeout | null = null
+
+    const debouncedRefresh = () => {
+      if (updateTimeout) clearTimeout(updateTimeout)
+      updateTimeout = setTimeout(() => {
+        fetchLiveOrdersList()
+        setOrderRefreshKey((prev) => prev + 1)
+      }, 1000)
+    }
+
+    const channel = supabase
+      .channel('admin-orders-live')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newOrder = payload.new as any
+            toast.success(`🛎️ New Order Received: #${(newOrder.readableId || newOrder.id).slice(0, 8)}`)
+            playNewOrderChime()
+            onNewOrder?.(payload.new)
+            debouncedRefresh()
+          } else if (payload.eventType === 'UPDATE') {
+            onOrderUpdated?.(payload.new)
+            debouncedRefresh()
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'carts' },
+        () => setCartsRefreshKey((prev) => prev + 1)
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'cart_items' },
+        () => setCartsRefreshKey((prev) => prev + 1)
+      )
+      .on('broadcast', { event: 'order-payment-updated' }, (payload) => {
+        toast.success(`💳 Order #${payload.payload?.orderId?.slice(0, 8)} marked PAID!`)
+        debouncedRefresh()
+      })
+      .subscribe()
+
+    let sseSource: EventSource | null = null
+    try {
+      sseSource = new EventSource('/api/sse/orders')
+      sseSource.onerror = () => {
+        try { sseSource?.close() } catch (_) {}
+      }
+      sseSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.type === 'new-order') {
+            toast.success(`🛎️ New Order Received: #${data.readableId || data.orderId?.slice(0, 8)}`)
+            playNewOrderChime()
+            debouncedRefresh()
+          } else if (data.type === 'order-update') {
+            debouncedRefresh()
+          }
+        } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('SSE connection failed:', e)
+    }
+
+    let railwayWs: WebSocket | null = null
+    try {
+      railwayWs = new WebSocket('wss://fastkirana-production-a4b8.up.railway.app/ws')
+      railwayWs.onerror = () => {}
+      railwayWs.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data)
+          if (payload.event === 'NEW_ORDER' || payload.event === 'ORDER_CREATED') {
+            toast.success(`🛎️ New Order Received!`)
+            playNewOrderChime()
+            debouncedRefresh()
+          } else if (payload.event === 'CART_UPDATE' || payload.event === 'CART_ITEM_ADDED') {
+            setCartsRefreshKey((prev) => prev + 1)
+          }
+        } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('Railway WebSocket connection error:', e)
+    }
+
+    return () => {
+      supabase.removeChannel(channel)
+      if (sseSource) sseSource.close()
+      if (railwayWs) railwayWs.close()
+      if (updateTimeout) clearTimeout(updateTimeout)
+    }
+  }, [fetchLiveOrdersList, playNewOrderChime, onNewOrder, onOrderUpdated])
+
+  // Active carts badge count fetch
+  useEffect(() => {
+    let active = true
+    const fetchCartsCount = async () => {
+      try {
+        const storeQuery =
+          selectedHubId && selectedHubId !== 'all'
+            ? `&storeId=${encodeURIComponent(selectedHubId)}`
+            : ''
+        const res = await fetch(`/api/admin/live-carts?t=${Date.now()}${storeQuery}`)
+        if (res.ok && active) {
+          const data = await res.json()
+          setActiveCartsCount(data.count || 0)
+        }
+      } catch (err) {
+        console.error('Failed to fetch carts count:', err)
+      }
+    }
+    fetchCartsCount()
+    return () => { active = false }
+  }, [selectedHubId])
+
+  // Active carts detail polling when activeTab === 'liveops'
+  useEffect(() => {
+    let active = true
+    let intervalId: any = null
+
+    const fetchCartsDetail = async () => {
+      if (activeTab !== 'liveops') return
+      setIsLoadingCarts(true)
+      try {
+        const storeQuery =
+          selectedHubId && selectedHubId !== 'all'
+            ? `&storeId=${encodeURIComponent(selectedHubId)}`
+            : ''
+        const res = await fetch(`/api/admin/live-carts?t=${Date.now()}${storeQuery}`)
+        if (res.ok && active) {
+          const data = await res.json()
+          setActiveCarts(data.carts || [])
+          setActiveCartsCount(data.count || 0)
+        }
+      } catch (err) {
+        console.error('Failed to fetch live carts detail:', err)
+      } finally {
+        if (active) setIsLoadingCarts(false)
+      }
+    }
+
+    if (activeTab === 'liveops') {
+      fetchCartsDetail()
+      intervalId = setInterval(fetchCartsDetail, 3000)
+    }
+
+    return () => {
+      active = false
+      if (intervalId) clearInterval(intervalId)
+    }
+  }, [activeTab, cartsRefreshKey, selectedHubId])
+
+  // Memoized live pending orders
+  const livePendingOrders = useMemo(() => {
+    return liveOrders
+      .filter((o: any) => o.status === 'PENDING')
+      .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+  }, [liveOrders])
+
+  // Filter delayed orders
+  const delayedOrders = useMemo(() => {
+    return liveOrders.filter((order) => {
+      const isRestaurant = !!order.restaurantId || order.orderType === 'RESTAURANT'
+      if (order.status === 'PENDING') {
+        const diffMs = new Date().getTime() - new Date(order.createdAt).getTime()
+        return diffMs > (isRestaurant ? 30 : 10) * 60 * 1000
+      }
+      if (order.status === 'PACKED') {
+        const baseTime = order.updatedAt || order.createdAt
+        const diffMs = new Date().getTime() - new Date(baseTime).getTime()
+        return diffMs > 10 * 60 * 1000
+      }
+      if (order.status === 'CONFIRMED') {
+        const baseTime = order.updatedAt || order.createdAt
+        const diffMs = new Date().getTime() - new Date(baseTime).getTime()
+        if (isRestaurant) {
+          return diffMs > 30 * 60 * 1000
+        } else {
+          return diffMs > 10 * 60 * 1000
+        }
+      }
+      return false
+    })
+  }, [liveOrders])
+
+  // Warning chime manager
+  useEffect(() => {
+    if (isChimeMuted) return
+    if (delayedOrders.length === 0) return
+
+    playWarningChime()
+    const chimeInterval = setInterval(playWarningChime, 20000)
+    return () => clearInterval(chimeInterval)
+  }, [delayedOrders.length, isChimeMuted, playWarningChime])
+
+  const pickerDelays = useMemo(
+    () =>
+      delayedOrders.filter(
+        (o) =>
+          !o.restaurantId &&
+          o.orderType !== 'RESTAURANT' &&
+          (o.status === 'PENDING' || o.status === 'CONFIRMED')
+      ),
+    [delayedOrders]
+  )
+
+  const chefDelays = useMemo(
+    () =>
+      delayedOrders.filter(
+        (o) =>
+          (!!o.restaurantId || o.orderType === 'RESTAURANT') &&
+          (o.status === 'PENDING' || o.status === 'CONFIRMED')
+      ),
+    [delayedOrders]
+  )
+
+  const riderDelays = useMemo(
+    () => delayedOrders.filter((o) => o.status === 'PACKED'),
+    [delayedOrders]
+  )
+
+  return {
+    liveOrders,
+    setLiveOrders,
+    livePendingOrders,
+    delayedOrders,
+    pickerDelays,
+    chefDelays,
+    riderDelays,
+    orderRefreshKey,
+    setOrderRefreshKey,
+    isChimeMuted,
+    setIsChimeMuted,
+    activeCarts,
+    activeCartsCount,
+    isLoadingCarts,
+    cartsRefreshKey,
+    setCartsRefreshKey,
+    playWarningChime,
+    playNewOrderChime,
+    fetchLiveOrdersList,
+  }
+}

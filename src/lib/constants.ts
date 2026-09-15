@@ -13,6 +13,7 @@ export const MIN_CART_VALUE = 0  // No minimum cart value constraint
 export const OUTLET_AS_RESTAURANT_ID = 'REST-101'
 export const OUTLET_WEDSON_ID = 'REST-102'
 export const OUTLET_BAL_UDYAN_ID = 'REST-103'
+export const OUTLET_PIZZA_LOVERS_ID = 'REST-104'
 export const OUTLET_PARI_MILK_ID = 'REST-104'
 
 // Backward compatibility legacy CUIDs
@@ -356,7 +357,7 @@ export const OUTLET_NAMES: Record<string, string> = {
   [OUTLET_AS_RESTAURANT_ID]: 'A.S Restaurant',
   [OUTLET_WEDSON_ID]: 'Wedson Restaurant',
   [OUTLET_BAL_UDYAN_ID]: 'Bal Udyan Restaurant',
-  [OUTLET_PARI_MILK_ID]: 'Pari Milk Dairy & Sweets',
+  [OUTLET_PIZZA_LOVERS_ID]: 'Hot Pizza Lovers',
   [LEGACY_AS_RESTAURANT_ID]: 'A.S Restaurant',
   [LEGACY_WEDSON_ID]: 'Wedson Restaurant',
   [LEGACY_BAL_UDYAN_ID]: 'Bal Udyan Restaurant',
@@ -365,6 +366,9 @@ export const OUTLET_NAMES: Record<string, string> = {
   'bal-udyan-restaurant': 'Bal Udyan Restaurant',
   'bal-udyan': 'Bal Udyan Restaurant',
   baludyan: 'Bal Udyan Restaurant',
+  'hot-pizza-lovers': 'Hot Pizza Lovers',
+  'pizza-lovers': 'Hot Pizza Lovers',
+  'pizza-lover': 'Hot Pizza Lovers',
   cafe: 'Cafe',
   'restaurant-kitchen': 'Wedson Restaurant',
 }
@@ -389,7 +393,21 @@ export function getOutletName(product: ProductData): string {
   const tags = Array.isArray(product.tags) ? product.tags.map((t: string) => t.toLowerCase()) : []
   const pName = (product.name || '').toLowerCase()
 
-  // 1. Explicit Bal Udyan Restaurant checks (High Priority)
+  // 1. Explicit Hot Pizza Lovers checks (Highest Priority for REST-104)
+  if (
+    rId === OUTLET_PIZZA_LOVERS_ID ||
+    rId === 'hot-pizza-lovers' ||
+    rId === 'pizza-lovers' ||
+    rId === 'pizza-lover' ||
+    rSlug.includes('pizza') ||
+    lowerRName.includes('pizza') ||
+    tags.some((t: string) => t.includes('pizza') || t === 'hot-pizza-lovers' || t === 'pizza-lovers') ||
+    pName.includes('pizza lover')
+  ) {
+    return 'Hot Pizza Lovers'
+  }
+
+  // 2. Explicit Bal Udyan Restaurant checks (High Priority)
   if (
     rId === OUTLET_BAL_UDYAN_ID ||
     rId === 'bal-udyan-restaurant' ||
@@ -404,7 +422,7 @@ export function getOutletName(product: ProductData): string {
     return 'Bal Udyan Restaurant'
   }
 
-  // 2. Explicit A.S. Restaurant / Cafe checks (Highest Priority)
+  // 3. Explicit A.S. Restaurant / Cafe checks
   if (
     rId === OUTLET_AS_RESTAURANT_ID ||
     rId === 'as-restaurant' ||
@@ -422,7 +440,7 @@ export function getOutletName(product: ProductData): string {
     return 'A.S. Restaurant'
   }
 
-  // 3. Explicit Wedson Restaurant checks
+  // 4. Explicit Wedson Restaurant checks
   if (
     rId === OUTLET_WEDSON_ID ||
     rId === 'wedson' ||
@@ -434,19 +452,19 @@ export function getOutletName(product: ProductData): string {
     return 'Wedson Restaurant'
   }
 
-  // 4. Known ID mapping from OUTLET_NAMES
+  // 5. Known ID mapping from OUTLET_NAMES
   if (rId && OUTLET_NAMES[rId]) return OUTLET_NAMES[rId]
 
-  // 5. Known tag mapping from OUTLET_NAMES
+  // 6. Known tag mapping from OUTLET_NAMES
   for (const tag of tags) {
     if (OUTLET_NAMES[tag]) return OUTLET_NAMES[tag]
   }
 
-  // 6. If product has a custom restaurant name, return normalized name
+  // 7. If product has a custom restaurant name, return normalized name
   if (product.restaurant?.name) return product.restaurant.name
   if (product.restaurantName) return product.restaurantName
 
-  // 7. If the product has an explicit restaurantId, fallback to A.S. Restaurant
+  // 8. If the product has an explicit restaurantId, fallback to A.S. Restaurant
   if (rId) {
     return 'A.S. Restaurant'
   }

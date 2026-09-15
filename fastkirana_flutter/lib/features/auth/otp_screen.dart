@@ -652,7 +652,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Enter the 6-digit code sent via SMS to',
+                        'Enter the 6-digit code sent to your WhatsApp',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 13.5),
                           fontWeight: FontWeight.w500,

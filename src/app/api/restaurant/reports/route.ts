@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     if (norm === 'cms2p1lap0000n0id8alldboy' || norm === 'as-restaurant' || norm === 'as-cafe' || norm === 'rest-101') effectiveRestId = 'REST-101'
     else if (norm === 'cms2p1lyx0001n0idod904lfu' || norm === 'wedson-restaurant' || norm === 'wedson' || norm === 'rest-102') effectiveRestId = 'REST-102'
     else if (norm === 'cmsbhxb6a000304if8kf1cwji' || norm === 'bal-udyan-restaurant' || norm === 'bal-udyan' || norm === 'bal udyan' || norm === 'rest-103') effectiveRestId = 'REST-103'
-    else if (norm === 'cmtn66nhy000004k0fu84b7ke' || norm === 'pari-milk-dairy-sweets' || norm === 'pari-milk' || norm === 'pari' || norm === 'rest-104') effectiveRestId = 'REST-104'
+    else if (norm === 'cmtn66nhy000004k0fu84b7ke' || norm === 'hot-pizza-lovers' || norm === 'pizza-lovers' || norm === 'pizza-lover' || norm === 'pizza' || norm === 'pari-milk-dairy-sweets' || norm === 'pari-milk' || norm === 'pari' || norm === 'rest-104') effectiveRestId = 'REST-104'
 
     const now = new Date()
     let start: Date

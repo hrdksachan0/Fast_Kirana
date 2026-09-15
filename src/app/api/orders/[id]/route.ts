@@ -424,9 +424,11 @@ export async function PATCH(
     // unless the caller explicitly passes scope: 'ALL' or updateCombined: true.
     // If a picker cancels or edits a grocery sub-order (-G), the restaurant companion order (-R) MUST NEVER be cancelled!
     const isExplicitAll = body.scope === 'ALL' || body.updateCombined === true
+    const isCustomerCancel = isOwner && status === 'CANCELLED'
     const shouldUpdateAllCombined = Boolean(
       existingOrder.combinedId && (
         isExplicitAll ||
+        isCustomerCancel ||
         status === 'SHIPPED' || 
         status === 'DELIVERED'
       )
@@ -688,8 +690,14 @@ export async function PATCH(
     } else {
       if (status === 'CANCELLED' && existingOrder.status !== 'CANCELLED') {
         try {
+          const orderIdsToRestore = (shouldUpdateAllCombined && existingOrder.combinedId)
+            ? (await prisma.order.findMany({
+                where: { combinedId: existingOrder.combinedId },
+                select: { id: true }
+              })).map(o => o.id)
+            : [existingOrder.id]
           const orderItems = await prisma.orderItem.findMany({
-            where: { orderId: existingOrder.id },
+            where: { orderId: { in: orderIdsToRestore } },
           })
           
           for (const item of orderItems) {

@@ -832,6 +832,7 @@ export async function POST(request: NextRequest) {
       resolvedPaymentMethod = PaymentMethod.WALLET
     }
 
+    const initialOrderStatus = OrderStatus.PENDING
 
     // 6. Create orders inside a Prisma Transaction
     const createdOrders = await prisma.$transaction(async (tx) => {
@@ -1023,7 +1024,7 @@ export async function POST(request: NextRequest) {
             where: { id: existingPendingOrder.id },
             data: {
               addressId: orderAddressId,
-              status: OrderStatus.PENDING,
+              status: initialOrderStatus,
               paymentMethod: resolvedPaymentMethod,
               paymentStatus,
               orderType: (orderInfo.type === 'RESTAURANT' || orderInfo.restaurantId) ? 'RESTAURANT' : 'GROCERY',
@@ -1065,7 +1066,7 @@ export async function POST(request: NextRequest) {
               addressId: orderAddressId,
               combinedId: combinedId,
               orderType: (orderInfo.type === 'RESTAURANT' || orderInfo.restaurantId) ? 'RESTAURANT' : 'GROCERY',
-              status: OrderStatus.PENDING,
+              status: initialOrderStatus,
 
               subtotal: orderInfo.subtotal,
               discount: orderInfo.discount,
@@ -1306,13 +1307,15 @@ export async function POST(request: NextRequest) {
               }).catch((err: any) => console.error('Error sending push notification to admins:', err))
             }
 
-            // 2. Notify ONLY the specific Restaurant Owner / Chef WITHOUT ANY AMOUNT
-            sendPushNotificationToRestaurant(order.restaurantId, {
-              title: `👨‍🍳 New Food Order #${displayId}!`,
-              body: `New order #${displayId} received for ${order.shopName || 'Kitchen'}. Tap to prepare dishes.`,
-              tag: `restaurant-order-${order.id}`,
-              data: { orderId: order.id, restaurantId: order.restaurantId }
-            }).catch((err: any) => console.error('Error sending push notification to restaurant:', err))
+            // 2. Notify ONLY the specific Restaurant Owner / Chef WITHOUT ANY AMOUNT (only if approved)
+            if (order.status !== OrderStatus.CANCELLED) {
+              sendPushNotificationToRestaurant(order.restaurantId, {
+                title: `👨‍🍳 New Food Order #${displayId}!`,
+                body: `New order #${displayId} received for ${order.shopName || 'Kitchen'}. Tap to prepare dishes.`,
+                tag: `restaurant-order-${order.id}`,
+                data: { orderId: order.id, restaurantId: order.restaurantId }
+              }).catch((err: any) => console.error('Error sending push notification to restaurant:', err))
+            }
           } else {
             // Pure Grocery order — ONLY notify Admin, Picker, Delivery. (CHEF/RESTAURANT NEVER NOTIFIED)
             const rolesToNotify = [Role.ADMIN, Role.PICKER, Role.DELIVERY].filter(r => !notifiedWebRoles.has(r))
@@ -1364,7 +1367,7 @@ export async function POST(request: NextRequest) {
               sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders_all', ...staffPayload }).catch(() => {})
 
               // 3. Direct device token push STRICTLY to the specific restaurant owner ONLY (WITHOUT AMOUNT)
-              if (isRestaurant && order.restaurantId) {
+              if (isRestaurant && order.restaurantId && order.status !== OrderStatus.CANCELLED) {
                 const restInfo = await prisma.restaurant.findUnique({
                   where: { id: order.restaurantId },
                   select: { ownerPhone: true }
@@ -1663,6 +1666,7 @@ export async function GET(request: NextRequest) {
     function getCombinedStatus(statuses: string[]): string {
       const active = statuses.filter(s => s !== 'CANCELLED')
       if (active.length === 0) return 'CANCELLED'
+      if (active.includes('ADMIN_PENDING')) return 'ADMIN_PENDING'
       if (active.includes('PENDING')) return 'PENDING'
       if (active.includes('CONFIRMED')) return 'CONFIRMED'
       if (active.includes('PACKED')) return 'PACKED'

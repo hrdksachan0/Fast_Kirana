@@ -9,7 +9,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/network/api_client.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../core/theme/design_system.dart';
-import '../../core/theme/responsive.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../widgets/brand_logo.dart';
 import 'otp_screen.dart';
@@ -29,10 +28,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isFocused = false;
 
   static const Color primaryRed = AppDesignSystem.primary;
-  static const Color primaryRedLight = AppDesignSystem.primaryLight;
-  static const Color slateDark = AppDesignSystem.slate900;
-  static const Color slateMuted = AppDesignSystem.slate500;
-  static const Color slateBorder = AppDesignSystem.slate300;
 
   @override
   void initState() {
@@ -183,14 +178,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 36),
+                  const SizedBox(height: 24),
 
                   // Center Hero: FastKirana Brand Logo (Clean & Crisp, No Red Halo)
                   const Center(
                     child: BrandLogo(size: 76),
                   ),
 
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 16),
 
                   // Brand Title
                   Center(
@@ -205,16 +200,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
 
                   // Subtitle Pill Badge
                   Center(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5.5),
                       decoration: BoxDecoration(
-                        color: AppDesignSystem.rose50,
+                        color: const Color(0xFFFFF1F2),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppDesignSystem.rose100alt),
+                        border: Border.all(color: const Color(0xFFFFE4E6)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -226,7 +221,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 11.5),
                               fontWeight: FontWeight.w700,
-                              color: AppDesignSystem.statusCancelledText,
+                              color: const Color(0xFFBE123C),
                             ),
                           ),
                         ],
@@ -234,7 +229,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 44),
+                  const SizedBox(height: 32),
 
                   // White Card Container with Input & Button
                   Container(
@@ -245,53 +240,74 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       border: Border.all(color: AppDesignSystem.slate200, width: 1.2),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 18,
-                          offset: const Offset(0, 4),
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                          blurRadius: 20,
+                          offset: const Offset(0, 6),
                         ),
                       ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Card Header Row: Enter Mobile Number & OTP Verification status
+                        // Card Header: Title & WhatsApp badge (Zero overflow, systematic layout)
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Text(
-                              'Enter Mobile Number',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 13.5),
-                                fontWeight: FontWeight.w800,
-                                color: AppDesignSystem.slate900,
-                              ),
-                            ),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: AppDesignSystem.green600,
+                                Text(
+                                  'Login or Sign Up',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 17.5),
+                                    fontWeight: FontWeight.w800,
+                                    color: AppDesignSystem.slate900,
+                                    letterSpacing: -0.3,
                                   ),
                                 ),
-                                const SizedBox(width: 5),
+                                const SizedBox(height: 2),
                                 Text(
-                                  'OTP Verification',
+                                  'Enter mobile number to continue',
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 11.5),
-                                    fontWeight: FontWeight.w700,
-                                    color: AppDesignSystem.green600,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppDesignSystem.slate500,
                                   ),
                                 ),
                               ],
                             ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE7FCE9),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFBBF7D0)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.chat_bubble_rounded,
+                                    size: 11,
+                                    color: Color(0xFF16A34A),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'WhatsApp',
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 10.5),
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF15803D),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
 
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 16),
 
                         // Single Clean Input Card
                         Container(
@@ -303,7 +319,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               color: _isFocused
                                   ? primaryRed
                                   : AppDesignSystem.slate300,
-                              width: _isFocused ? 1.5 : 1.2,
+                              width: _isFocused ? 1.5 : 1.1,
                             ),
                             boxShadow: [
                               if (_isFocused)
@@ -404,14 +420,62 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         ),
 
+                        const SizedBox(height: 10),
+
+                        // WhatsApp Reassurance Pill Banner (Structured & Systematic)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0FDF4),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFDCFCE7)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.chat_bubble_outline_rounded,
+                                size: 13,
+                                color: Color(0xFF16A34A),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Instant 6-digit OTP will be sent to your WhatsApp',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 11),
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF15803D),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
                         if (_errorMessage != null) ...[
                           const SizedBox(height: 8),
-                          Text(
-                            _errorMessage!,
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 11.5),
-                              fontWeight: FontWeight.w600,
-                              color: primaryRed,
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF2F2),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFFEE2E2)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline_rounded, size: 14, color: AppDesignSystem.primary),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    _errorMessage!,
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 11.5),
+                                      fontWeight: FontWeight.w600,
+                                      color: AppDesignSystem.primary,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -425,14 +489,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             height: 52,
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
-                                colors: [AppDesignSystem.primary, AppDesignSystem.red600],
+                                colors: [AppDesignSystem.primary, Color(0xFFFF2E4C)],
                               ),
                               borderRadius: BorderRadius.circular(14),
                               boxShadow: [
                                 BoxShadow(
-                                  color: primaryRed.withValues(alpha: 0.35),
+                                  color: AppDesignSystem.primary.withValues(alpha: 0.22),
                                   blurRadius: 14,
-                                  offset: const Offset(0, 5),
+                                  offset: const Offset(0, 4),
                                 ),
                               ],
                             ),
@@ -455,6 +519,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                             fontSize: Responsive.scaledFontSize(context, 15),
                                             fontWeight: FontWeight.w800,
                                             color: Colors.white,
+                                            letterSpacing: 0.2,
                                           ),
                                         ),
                                         const SizedBox(width: 6),
@@ -472,30 +537,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 36),
+                  const SizedBox(height: 32),
 
                   // Clickable Terms & Privacy Policy Footer
                   Center(
                     child: GestureDetector(
                       onTap: () => _showTermsAndPrivacyModal(context),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                         child: RichText(
                           textAlign: TextAlign.center,
                           text: TextSpan(
                             style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 11.5),
+                              fontSize: Responsive.scaledFontSize(context, 11),
                               color: AppDesignSystem.slate400,
+                              fontWeight: FontWeight.w500,
                             ),
                             children: [
                               const TextSpan(text: 'By continuing, you agree to our '),
                               TextSpan(
                                 text: 'Terms & Privacy Policy',
                                 style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.w800,
-                                  color: AppDesignSystem.slate900,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppDesignSystem.slate800,
                                   decoration: TextDecoration.underline,
-                                  decorationColor: AppDesignSystem.slate500,
+                                  decorationColor: AppDesignSystem.slate400,
                                 ),
                               ),
                             ],
@@ -504,7 +570,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),

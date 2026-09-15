@@ -4,7 +4,7 @@
  * - REST-101: A.S. Restaurant
  * - REST-102: Wedson Restaurant
  * - REST-103: Bal Udyan Restaurant
- * - REST-104: Pari Milk Dairy & Sweets
+ * - REST-104: Hot Pizza Lovers
  */
 export function normalizeRestaurantId(id: string | null | undefined): string | null {
   if (!id) return null
@@ -45,6 +45,10 @@ export function normalizeRestaurantId(id: string | null | undefined): string | n
   if (
     clean === 'cmtn66nhy000004k0fu84b7ke' ||
     clean === 'rest-104' ||
+    clean === 'hot-pizza-lovers' ||
+    clean === 'pizza-lovers' ||
+    clean === 'pizza-lover' ||
+    clean.includes('pizza') ||
     clean === 'pari-milk' ||
     clean === 'pari-milk-dairy-sweets' ||
     clean.includes('pari')

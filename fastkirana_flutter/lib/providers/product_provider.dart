@@ -101,7 +101,7 @@ final cartUpsellProductsProvider = FutureProvider.family<List<Product>, List<Str
   List<Product> all = [];
   try {
     if (activeRestaurantId != null || activeOutlet != null) {
-      final rId = activeRestaurantId ?? (activeOutlet?.toLowerCase().contains('wedson') == true ? outletWedsonId : outletAsRestaurantId);
+      final rId = activeRestaurantId ?? RestaurantRegistry.find(activeOutlet)?.id;
       // Fetch restaurant dishes + darkstore chilled drinks & ice-creams
       final results = await Future.wait([
         repo.getProducts(restaurantId: rId, limit: 30),

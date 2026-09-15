@@ -37,6 +37,7 @@ android {
         multiDexEnabled true
     }
 
+
     signingConfigs {
         release {
             if (keystorePropertiesFile.exists() &&

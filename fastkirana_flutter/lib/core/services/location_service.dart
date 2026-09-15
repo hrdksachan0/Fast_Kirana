@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -9,6 +10,7 @@ import '../../data/models/store_hub.dart';
 import '../../providers/address_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/store_hub_provider.dart';
+import '../../widgets/location_drift_sheet.dart';
 
 class LocationDetails {
   final double latitude;
@@ -309,6 +311,70 @@ class LocationService {
       debugPrint('📍 Auto-GPS Bootstrap completed: ${details.area}, ${details.city} (${position.latitude}, ${position.longitude})');
     } catch (e) {
       debugPrint('Auto-GPS Bootstrap notice: $e');
+    }
+  }
+
+  static DateTime? _lastDriftCheckTime;
+
+  /// Zepto / Blinkit Silent Background Location Drift Detection
+  /// Silently pings GPS coordinate on app open/resume (100% free hardware GPS).
+  /// If customer is > 600m away from their selected address, shows a friendly prompt.
+  static Future<void> checkLocationDriftAndPrompt(BuildContext context, WidgetRef ref) async {
+    try {
+      // 1. Cooldown throttle (at most once every 10 minutes to avoid spamming)
+      final now = DateTime.now();
+      if (_lastDriftCheckTime != null && now.difference(_lastDriftCheckTime!).inMinutes < 10) {
+        return;
+      }
+      _lastDriftCheckTime = now;
+
+      // 2. Check location services availability
+      final isServiceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!isServiceEnabled) return;
+
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        return;
+      }
+
+      // 3. Fast silent GPS fetch (3.5s timeout)
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 4),
+      );
+
+      final selectedAddress = ref.read(selectedAddressProvider);
+      if (selectedAddress?.latitude == null || selectedAddress?.longitude == null) {
+        return;
+      }
+
+      // 4. Calculate drift distance in km
+      final driftMeters = Geolocator.distanceBetween(
+        selectedAddress!.latitude!,
+        selectedAddress.longitude!,
+        position.latitude,
+        position.longitude,
+      );
+      final driftKm = driftMeters / 1000.0;
+
+      // 5. If user is within 600m of saved address, they are in the same area -> DO NOTHING
+      if (driftKm < 0.6) {
+        return;
+      }
+
+      // 6. User drifted > 600m -> reverse geocode and show subtle bottom sheet
+      final newDetails = await getAddressFromCoordinates(position.latitude, position.longitude);
+
+      if (context.mounted) {
+        await LocationDriftSheet.show(
+          context,
+          newGpsDetails: newDetails,
+          previousAddress: selectedAddress,
+          driftDistanceKm: driftKm,
+        );
+      }
+    } catch (e) {
+      debugPrint('Silent Location Drift check notice: $e');
     }
   }
 }

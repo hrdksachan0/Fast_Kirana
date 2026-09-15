@@ -585,6 +585,8 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
                 ? "text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border-emerald-500/30"
                 : getOutletName(product).includes('Bal Udyan')
                 ? "text-purple-700 dark:text-purple-300 bg-purple-500/10 border-purple-500/30"
+                : getOutletName(product).includes('Pizza')
+                ? "text-rose-700 dark:text-rose-300 bg-rose-500/10 border-rose-500/30"
                 : "text-amber-800 dark:text-amber-300 bg-amber-500/15 border-amber-500/30"
             )}>
               <Store className="h-2.5 w-2.5 shrink-0 opacity-80" />

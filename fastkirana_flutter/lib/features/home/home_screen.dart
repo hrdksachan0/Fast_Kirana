@@ -38,6 +38,10 @@ import '../../core/services/location_service.dart';
 import '../../widgets/app_update_dialog.dart';
 import '../../widgets/dynamic_hero_banner_carousel.dart';
 import '../../providers/banner_provider.dart';
+import '../../widgets/grid_skeletons.dart';
+import 'widgets/delivery_mode_header.dart';
+import 'widgets/category_bento_grid.dart';
+import 'widgets/flash_deals_carousel.dart';
 import 'main_shell.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -244,10 +248,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // Infinite scroll listener for seamless product pagination (Blinkit / Zepto)
     _homeScrollController.addListener(_onHomeScroll);
 
-    // Check for app version updates from Admin Settings
+    // Check for app version updates and silent background location drift (Zepto / Blinkit style)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         AppUpdateDialog.checkAndShow(context, ref);
+        // Silent background check for location drift after smooth initial render
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (mounted) {
+            LocationService.checkLocationDriftAndPrompt(context, ref);
+          }
+        });
       }
     });
   }

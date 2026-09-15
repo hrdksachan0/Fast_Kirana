@@ -30,7 +30,8 @@ import {
   Trash2,
   Plus,
   Minus,
-  X
+  X,
+  ArrowLeftRight
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ProductImage } from '@/components/product/product-image'
@@ -190,6 +191,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
   const [editingOrder, setEditingOrder] = useState<Order | null>(null)
   const [editItems, setEditItems] = useState<any[]>([])
   const [outOfStockIds, setOutOfStockIds] = useState<string[]>([])
+  const [swappingItemIdx, setSwappingItemIdx] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [allProducts, setAllProducts] = useState<any[]>([])
@@ -298,19 +300,19 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
     ordersRef.current = orders
   }, [orders])
 
-  // Continuous alarm chime while unaccepted CONFIRMED orders exist (waiting for chef to claim/cook)
+  // Continuous alarm chime while unaccepted PENDING or CONFIRMED orders exist (waiting for chef to claim/cook)
   useEffect(() => {
     if (!soundEnabled) return
 
-    const hasUnclaimedOrders = orders.some(o => o.status === 'CONFIRMED' && !o.assignedChefId)
+    const hasUnclaimedOrders = orders.some(o => (o.status === 'PENDING' || o.status === 'CONFIRMED') && !o.assignedChefId)
     if (!hasUnclaimedOrders) return
 
-    // Immediately play once when unclaimed confirmed order detected
+    // Immediately play once when unclaimed order detected
     playKitchenAlarmChime()
 
     const alarmInterval = setInterval(() => {
       playKitchenAlarmChime()
-    }, 4000)
+    }, 3000)
 
     return () => clearInterval(alarmInterval)
   }, [orders, soundEnabled])
@@ -447,6 +449,11 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
               fetchOrders(true)
             }, 50)
           } else if (payload.eventType === 'INSERT') {
+            const newOrder = payload.new as any
+            // Skip unpaid online orders completely
+            if (newOrder.paymentMethod !== 'COD' && newOrder.paymentStatus !== 'PAID') {
+              return
+            }
             // New order placed - refresh queue quietly without ringing kitchen alarm prematurely
             // Kitchen alarm will ONLY sound when Admin explicitly dispatches KOT via Send KOT
             if (updateTimeout) clearTimeout(updateTimeout)
@@ -808,6 +815,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
       shopName: order.shopName
     })))
     setOutOfStockIds([])
+    setSwappingItemIdx(null)
     setSearchQuery('')
     
     try {
@@ -874,6 +882,33 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
   }
 
   const addCatalogItem = (product: any) => {
+    if (swappingItemIdx !== null && editItems[swappingItemIdx]) {
+      const oldItem = editItems[swappingItemIdx]
+      const oldQty = oldItem.quantity || 1
+      if (oldItem.productId && !outOfStockIds.includes(oldItem.productId)) {
+        setOutOfStockIds(prev => [...prev, oldItem.productId])
+      }
+      setEditItems(prev => prev.map((item, idx) => {
+        if (idx === swappingItemIdx) {
+          return {
+            productId: product.id,
+            name: product.name,
+            price: product.price,
+            quantity: oldQty,
+            selectedVariant: null,
+            notes: null,
+            restaurantId: product.restaurantId || (product.restaurant?.id ? product.restaurant.id : null),
+            shopName: product.restaurant?.name || (product.restaurantId ? (restaurant?.name || 'Restaurant') : 'FastKirana Grocery')
+          }
+        }
+        return item
+      }))
+      toast.success(`Swapped "${oldItem.name}" with "${product.name}" ⇄`)
+      setSwappingItemIdx(null)
+      setSearchQuery('')
+      return
+    }
+
     const exists = editItems.find(item => item.productId === product.id)
     if (exists) {
       updateItemQty(product.id, null, 1)
@@ -1502,12 +1537,31 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
                 </button>
               </div>
 
+              {/* Swapping Active Banner */}
+              {swappingItemIdx !== null && editItems[swappingItemIdx] && (
+                <div className="flex items-center justify-between p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs font-bold text-amber-700">
+                  <div className="flex items-center gap-2">
+                    <ArrowLeftRight className="h-4 w-4 shrink-0 text-amber-600 animate-pulse" />
+                    <span>
+                      Swapping <strong>{editItems[swappingItemIdx].name}</strong>: search & pick replacement below
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSwappingItemIdx(null)}
+                    className="px-2 py-1 text-[10px] font-black bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg cursor-pointer transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+
               {/* Catalog Search Input */}
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-text-muted" />
                 <input
                   type="text"
-                  placeholder="Search catalog to add items..."
+                  placeholder={swappingItemIdx !== null ? `Search replacement for "${editItems[swappingItemIdx]?.name}"...` : "Search catalog to add items..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full h-10 pl-9 pr-4 rounded-xl border border-border bg-muted/20 text-xs font-bold focus:outline-hidden focus:border-red-500 transition-all text-text-primary"
@@ -1523,7 +1577,9 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
                         className="w-full px-4 py-2.5 text-left text-xs font-bold hover:bg-muted/50 flex justify-between items-center transition-all text-text-primary cursor-pointer"
                       >
                         <span>{prod.name}</span>
-                        <span className="text-red-600 font-extrabold">{formatPrice(prod.price)}</span>
+                        <span className="text-red-600 font-extrabold">
+                          {swappingItemIdx !== null ? 'Swap with this ⇄' : formatPrice(prod.price)}
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -1573,7 +1629,22 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
                         })()}
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        {/* Swap Button */}
+                        <button
+                          type="button"
+                          onClick={() => setSwappingItemIdx(swappingItemIdx === idx ? null : idx)}
+                          className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-black tracking-wide transition-all cursor-pointer flex items-center gap-1 shrink-0 ${
+                            swappingItemIdx === idx
+                              ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                              : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 border-amber-500/30'
+                          }`}
+                          title="Swap this dish with another item"
+                        >
+                          <ArrowLeftRight className="h-3 w-3" />
+                          <span>{swappingItemIdx === idx ? 'Swapping' : 'Swap'}</span>
+                        </button>
+
                         <div className="flex items-center border border-border bg-card rounded-xl overflow-hidden shrink-0">
                           <button
                             onClick={() => updateItemQty(item.productId, item.selectedVariant, -1)}

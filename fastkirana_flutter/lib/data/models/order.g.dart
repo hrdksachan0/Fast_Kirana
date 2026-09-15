@@ -107,6 +107,7 @@ Map<String, dynamic> _$OrderToJson(Order instance) => <String, dynamic>{
     };
 
 const _$OrderStatusEnumMap = {
+  OrderStatus.adminPending: 'adminPending',
   OrderStatus.pending: 'pending',
   OrderStatus.confirmed: 'confirmed',
   OrderStatus.packed: 'packed',

@@ -92,53 +92,6 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
   }
 
   Widget _buildLocalOrFallbackImage(Restaurant r) {
-    final lower = '${r.name} ${r.slug} ${r.logoUrl ?? ""} ${r.bannerUrl ?? ""}'.toLowerCase();
-
-    if (lower.contains('wedson')) {
-      return Image.asset(
-        'assets/categories/wedson_restaurant_bg.webp',
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Image.asset(
-          'assets/categories/wedson_restaurant_banner.webp',
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildDefaultFallback(),
-        ),
-      );
-    } else if (lower.contains('bal udyan') || lower.contains('bal-udyan')) {
-      // Bal Udyan exact banner from Supabase Storage
-      return CachedNetworkImage(
-        imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-103-banner.webp',
-        fit: BoxFit.cover,
-        memCacheWidth: 600,
-        memCacheHeight: 400,
-        placeholder: (_, __) => _buildImagePlaceholder(),
-        errorWidget: (_, __, ___) => _buildDefaultFallback(),
-      );
-    } else if (lower.contains('a.s') || lower.contains('as-restaurant') || lower.contains('as_restaurant') || lower.contains('cafe_all_menu')) {
-      return Image.asset(
-        'assets/categories/as_restaurant_banner.webp',
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Image.asset(
-          'assets/categories/cafe_banner.webp',
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildDefaultFallback(),
-        ),
-      );
-    } else if (lower.contains('pari') || lower.contains('dairy') || lower.contains('sweet')) {
-      return CachedNetworkImage(
-        imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-104-banner.webp',
-        fit: BoxFit.cover,
-        memCacheWidth: 600,
-        memCacheHeight: 400,
-        placeholder: (_, __) => _buildImagePlaceholder(),
-        errorWidget: (_, __, ___) => Image.asset(
-          'assets/categories/dairy_breakfast_category.webp',
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildDefaultFallback(),
-        ),
-      );
-    }
-
     return _buildDefaultFallback();
   }
 

@@ -54,7 +54,7 @@ export async function GET(request: Request) {
   if (targetRestId === 'cms2p1lap0000n0id8alldboy' || targetRestId === 'as-restaurant') targetRestId = 'REST-101'
   else if (targetRestId === 'cms2p1lyx0001n0idod904lfu' || targetRestId === 'wedson-restaurant' || targetRestId === 'wedson') targetRestId = 'REST-102'
   else if (targetRestId === 'cmsbhxb6a000304if8kf1cwji' || targetRestId === 'bal-udyan-restaurant' || targetRestId === 'bal-udyan') targetRestId = 'REST-103'
-  else if (targetRestId === 'cmtn66nhy000004k0fu84b7ke' || targetRestId === 'pari-milk-dairy-sweets' || targetRestId === 'pari-milk') targetRestId = 'REST-104'
+  else if (targetRestId === 'cmtn66nhy000004k0fu84b7ke' || targetRestId === 'hot-pizza-lovers' || targetRestId === 'pizza-lovers' || targetRestId === 'pizza-lover' || targetRestId === 'pari-milk-dairy-sweets' || targetRestId === 'pari-milk') targetRestId = 'REST-104'
 
   if (role === 'CHEF' || role === 'RESTAURANT_OWNER') {
     const isRestaurantChef = session?.user?.email?.toLowerCase().startsWith('restaurant') || role === 'RESTAURANT_OWNER' || type === 'restaurant'
@@ -89,6 +89,7 @@ export async function GET(request: Request) {
                o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt", o."restaurantId"
         FROM orders o
         WHERE o.status IN ('PENDING', 'CONFIRMED')
+          AND (o."paymentMethod" = 'COD' OR o."paymentStatus" = 'PAID')
           AND o."restaurantId" = ${targetRestId}
           AND ("shopName" IS NULL OR ("shopName" != 'FastKirana Dark Store' AND "shopName" != 'FastKirana Grocery'))
         ORDER BY o."createdAt" ASC

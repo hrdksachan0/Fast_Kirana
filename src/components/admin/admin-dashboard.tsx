@@ -1,17 +1,18 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
-import { formatPrice, formatAddress, formatDisplayEmail } from '@/lib/utils'
-import { formatOrderTime, formatDate } from '@/lib/date-helpers'
-import { ORDER_STATUS_LABELS, DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS, PRODUCT_TEMPLATES, HUB_CONFIG } from '@/lib/constants'
+import {
+  DEFAULT_CAFE_MENU_SECTIONS,
+  PRODUCT_TEMPLATES,
+  HUB_CONFIG,
+} from '@/lib/constants'
 import { DashboardHubNav } from '@/components/admin/dashboard/hub-nav'
 import { DashboardStatsCards } from '@/components/admin/dashboard/stats-cards'
 import { BottleneckBanner } from '@/components/admin/dashboard/bottleneck-banner'
 import { StoreControlBar } from '@/components/admin/dashboard/store-control-bar'
 import { OrdersTab } from '@/components/admin/dashboard/orders-tab'
-import { LiveCartsPanel } from '@/components/admin/dashboard/live-carts-panel'
 import { CategoriesTab } from '@/components/admin/categories-tab'
 import { UsersTab } from '@/components/admin/users-tab'
 import { CouponsTab } from '@/components/admin/coupons-tab'
@@ -22,7 +23,6 @@ import { ForecastTab } from '@/components/admin/forecast-tab'
 import { AlertsTab } from '@/components/admin/alerts-tab'
 import { InwardTab } from '@/components/admin/inward-tab'
 import { BulkUpdateTab } from '@/components/admin/bulk-update-tab'
-import { supabase } from '@/lib/supabase-client'
 import { ReviewsTab } from '@/components/admin/reviews-tab'
 import { ReportsTab } from '@/components/admin/reports-tab'
 import { RestaurantReportTab } from '@/components/admin/restaurant-report-tab'
@@ -35,70 +35,88 @@ import { CsvImportTab } from '@/components/admin/csv-import-tab'
 import { RestaurantConsoleTab } from '@/components/admin/restaurant-console-tab'
 import { VendorConsoleTab } from '@/components/admin/vendor-console-tab'
 import { WhatsAppAlertModal } from '@/components/admin/dashboard/whatsapp-alert-modal'
-import { printKOTReceipt, printCustomerInvoice } from '@/lib/kot-print'
 import { toast } from 'sonner'
 import { PRESET_KITCHEN_PHOTOS } from '@/lib/preset-photos'
 import { compressImageClient } from '@/lib/image-compression'
-import { 
-  Loader2, 
-  Search, 
-  Plus, 
-  Save, 
-  Trash, 
-  ShoppingBag, 
-  Package, 
-  Layers, 
-  Users, 
-  PlusCircle, 
-  Check, 
-  X,
-  Download,
-  TrendingUp,
-  Zap,
+import {
+  ShoppingBag,
+  Package,
+  Layers,
+  Users,
   AlertCircle,
   Star,
   Ticket,
-  Eye,
-  ToggleLeft,
-  ToggleRight,
-  Pencil,
-  Calendar,
-  Percent,
-  IndianRupee,
-  MessageSquare,
   SlidersHorizontal,
   FileText,
   Building2,
   Image as ImageIcon,
-  Sparkles,
   Settings,
-  Volume2,
-  VolumeX,
-  Clock,
+  TrendingUp,
+  Zap,
   Utensils,
-  Coffee,
   Bell,
   BrainCircuit,
-  RefreshCw,
   Wallet,
-  Store,
   Truck,
+  Download,
 } from 'lucide-react'
-import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 import { StoreHubsManager } from './store-hubs-manager'
+import { getLast10Digits } from '@/lib/phone'
 
-const CreateOrderModal = dynamic(() => import('./create-order-modal').then((m) => m.CreateOrderModal), { ssr: false })
+// Custom Admin Hooks
+import { useAdminRealtime } from '@/hooks/admin/use-admin-realtime'
+import { useAdminOrders } from '@/hooks/admin/use-admin-orders'
+import { useAdminProducts } from '@/hooks/admin/use-admin-products'
+import { useAdminCategories } from '@/hooks/admin/use-admin-categories'
+import { useAdminUsers } from '@/hooks/admin/use-admin-users'
+import { useAdminReviewsCoupons } from '@/hooks/admin/use-admin-reviews-coupons'
+
+const CreateOrderModal = dynamic(
+  () => import('./create-order-modal').then((m) => m.CreateOrderModal),
+  { ssr: false }
+)
 const ProductEditModal = dynamic(() => import('./product-edit-modal'), { ssr: false })
-import type { ProductEditForm } from './product-edit-modal'
-const CategoryEditModal = dynamic(() => import('./category-edit-modal').then((m) => m.CategoryEditModal), { ssr: false })
-const ReviewEditModal = dynamic(() => import('./review-edit-modal').then((m) => m.ReviewEditModal), { ssr: false })
-const BlockCustomerModal = dynamic(() => import('./block-customer-modal').then((m) => m.BlockCustomerModal), { ssr: false })
+const CategoryEditModal = dynamic(
+  () => import('./category-edit-modal').then((m) => m.CategoryEditModal),
+  { ssr: false }
+)
+const ReviewEditModal = dynamic(
+  () => import('./review-edit-modal').then((m) => m.ReviewEditModal),
+  { ssr: false }
+)
+const BlockCustomerModal = dynamic(
+  () => import('./block-customer-modal').then((m) => m.BlockCustomerModal),
+  { ssr: false }
+)
 const OrderTrackingModal = dynamic(() => import('./order-tracking-modal'), { ssr: false })
 const MediaLibraryModal = dynamic(() => import('./media-library-modal'), { ssr: false })
 import { AdminSortManager } from './admin-sort-manager'
-import { getLast10Digits } from '@/lib/phone'
+
+export type TabType =
+  | 'orders'
+  | 'products'
+  | 'categories'
+  | 'users'
+  | 'reviews'
+  | 'coupons'
+  | 'analytics'
+  | 'alerts'
+  | 'bulk-update'
+  | 'reports'
+  | 'restaurant-report'
+  | 'inward'
+  | 'banners'
+  | 'settings'
+  | 'liveops'
+  | 'push-notifications'
+  | 'flash-deals'
+  | 'forecast'
+  | 'rider-cash'
+  | 'restaurant-console'
+  | 'vendors'
+  | 'csv-import'
 
 interface AdminDashboardProps {
   initialStoreId?: string | null
@@ -134,8 +152,6 @@ interface AdminDashboardProps {
   }
 }
 
-type TabType = 'orders' | 'products' | 'categories' | 'users' | 'reviews' | 'coupons' | 'analytics' | 'alerts' | 'bulk-update' | 'reports' | 'restaurant-report' | 'inward' | 'banners' | 'settings' | 'liveops' | 'push-notifications' | 'flash-deals' | 'forecast' | 'rider-cash' | 'restaurant-console' | 'vendors' | 'csv-import'
-
 export function AdminDashboard({
   initialStoreId,
   serverUser,
@@ -147,7 +163,7 @@ export function AdminDashboard({
   initialCoupons,
   allProducts: initialAllProducts,
   initialOrderCounts,
-  stats
+  stats,
 }: AdminDashboardProps) {
   const { data: session } = useSession()
   const activeUser = session?.user || serverUser
@@ -155,22 +171,52 @@ export function AdminDashboard({
   const sessionUserRole = activeUser?.role || ''
   const sessionUserEmail = ((activeUser as any)?.email || '').toLowerCase().trim()
   const sessionUserPhone = (activeUser as any)?.phone || ''
-  const sessionAssignedStoreId = serverUser?.assignedStoreId || (activeUser as any)?.assignedStoreId || null
+  const sessionAssignedStoreId =
+    serverUser?.assignedStoreId || (activeUser as any)?.assignedStoreId || null
   const phoneDigits = sessionUserPhone.replace(/\D/g, '').slice(-10)
 
-  const isSuperAdmin = 
+  const isSuperAdmin =
     phoneDigits === '9170942500' ||
     sessionUserEmail === 'superadmin@fastkirana.com' ||
     sessionUserEmail.startsWith('superadmin')
 
   const searchParams = useSearchParams()
   const urlStoreId = searchParams?.get('storeId') || null
-  const effectiveInitialHub = sessionAssignedStoreId || initialStoreId || (isSuperAdmin ? (urlStoreId || 'hub-209206') : 'hub-209206')
+  const effectiveInitialHub =
+    sessionAssignedStoreId ||
+    initialStoreId ||
+    (isSuperAdmin ? urlStoreId || 'hub-209206' : 'hub-209206')
 
   const [restaurantsList, setRestaurantsList] = useState<any[]>([])
   const [storesList, setStoresList] = useState<any[]>([])
   const [selectedHubId, setSelectedHubId] = useState<string>(() => effectiveInitialHub)
   const [isStoreHubsModalOpen, setIsStoreHubsModalOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<TabType>('orders')
+  const [activeHub, setActiveHub] = useState<
+    'orders_hub' | 'grocery' | 'food' | 'insights' | 'people' | 'marketing'
+  >('orders_hub')
+  const [isUploading, setIsUploading] = useState(false)
+  const [settingsMap, setSettingsMap] = useState<Record<string, string>>({})
+  const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false)
+  const [groceryMartOpen, setGroceryMartOpen] = useState<boolean>(true)
+  const [groceryAutoTiming, setGroceryAutoTiming] = useState<boolean>(false)
+  const [isTogglingStore, setIsTogglingStore] = useState<boolean>(false)
+
+  // Media Library state
+  const [showMediaLibrary, setShowMediaLibrary] = useState(false)
+  const [mediaTarget, setMediaTarget] = useState<
+    'newProduct' | 'editProduct' | 'newCategory' | 'editCategory' | 'category' | null
+  >(null)
+  const [mediaSearchQuery, setMediaSearchQuery] = useState('')
+
+  // WhatsApp Alert Modal state
+  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false)
+  const [whatsappTargetUser, setWhatsappTargetUser] = useState<{
+    name: string
+    phone: string
+  } | null>(null)
+  const [whatsappCustomMessage, setWhatsappCustomMessage] = useState('')
+  const [whatsappSelectedTemplateIdx, setWhatsappSelectedTemplateIdx] = useState(0)
 
   // Keep selectedHubId synchronized with URL or assignedStoreId
   useEffect(() => {
@@ -181,7 +227,7 @@ export function AdminDashboard({
     } else if (initialStoreId && initialStoreId !== selectedHubId && !urlStoreId) {
       setSelectedHubId(initialStoreId)
     }
-  }, [sessionAssignedStoreId, urlStoreId, initialStoreId, isSuperAdmin])
+  }, [sessionAssignedStoreId, urlStoreId, initialStoreId, isSuperAdmin, selectedHubId])
 
   const handleSelectHub = (hubId: string) => {
     setSelectedHubId(hubId)
@@ -192,10 +238,7 @@ export function AdminDashboard({
     }
   }
 
-  const [activeTab, setActiveTab] = useState<TabType>('orders')
-  const [activeHub, setActiveHub] = useState<'orders_hub' | 'grocery' | 'food' | 'insights' | 'people' | 'marketing'>('orders_hub')
-
-  // Auto-synchronize activeHub when activeTab changes (e.g. from deep links, searches, chimes)
+  // Auto-synchronize activeHub when activeTab changes
   useEffect(() => {
     const parentHub = HUB_CONFIG.find((hub) =>
       (hub.tabs as readonly string[]).includes(activeTab)
@@ -205,96 +248,65 @@ export function AdminDashboard({
     }
   }, [activeTab, activeHub])
 
-
-  
-  // States for Orders
-  const [orders, setOrders] = useState(initialOrders || [])
-  const [orderCounts, setOrderCounts] = useState<Record<string, number>>(() => {
-    if (initialOrderCounts) return initialOrderCounts
-    const ordersList = initialOrders || []
-    return {
-      ALL: ordersList.length,
-      PENDING: ordersList.filter((o: any) => o.status === 'PENDING').length,
-      CONFIRMED: ordersList.filter((o: any) => o.status === 'CONFIRMED').length,
-      PACKED: ordersList.filter((o: any) => o.status === 'PACKED').length,
-      SHIPPED: ordersList.filter((o: any) => o.status === 'SHIPPED').length,
-      DELIVERED: ordersList.filter((o: any) => o.status === 'DELIVERED').length,
-      CANCELLED: ordersList.filter((o: any) => o.status === 'CANCELLED').length,
-    }
+  // Tri-channel Realtime & Chimes Hook
+  const {
+    liveOrders,
+    livePendingOrders,
+    delayedOrders,
+    pickerDelays,
+    chefDelays,
+    riderDelays,
+    isChimeMuted,
+    setIsChimeMuted,
+    activeCarts,
+    activeCartsCount,
+    isLoadingCarts,
+    cartsRefreshKey,
+    setCartsRefreshKey,
+    orderRefreshKey,
+    setOrderRefreshKey,
+  } = useAdminRealtime({
+    selectedHubId,
+    initialOrders,
+    activeTab,
   })
-  const [liveOrders, setLiveOrders] = useState<any[]>(initialOrders || [])
-  
-  // Memoized live pending orders sorted by creation time (strict FIFO)
-  const livePendingOrders = useMemo(() => {
-    return liveOrders
-      .filter((o: any) => o.status === 'PENDING')
-      .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-  }, [liveOrders])
 
-  const [orderRefreshKey, setOrderRefreshKey] = useState(0)
-  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
-  const [isChimeMuted, setIsChimeMuted] = useState(false)
-  const [orderStatusFilter, setOrderStatusFilter] = useState('ALL')
-  const [orderSearchQuery, setOrderSearchQuery] = useState('')
-  const [isUploading, setIsUploading] = useState(false)
-  const [settingsMap, setSettingsMap] = useState<Record<string, string>>({})
-  
-  // Live Active Carts States
-  const [activeCarts, setActiveCarts] = useState<any[]>([])
-  const [activeCartsCount, setActiveCartsCount] = useState<number>(0)
-  const [isLoadingCarts, setIsLoadingCarts] = useState(false)
-  const [cartsRefreshKey, setCartsRefreshKey] = useState(0)
-  const [apiTodaySales, setApiTodaySales] = useState<number | null>(() => (typeof stats?.todaySales === 'number' ? stats.todaySales : null))
-  const [apiTodayNetSales, setApiTodayNetSales] = useState<number | null>(() => (typeof stats?.netSales === 'number' ? stats.netSales : null))
-  const [apiTodayOrdersCount, setApiTodayOrdersCount] = useState<number | null>(() => (typeof stats?.todayOrdersCount === 'number' ? stats.todayOrdersCount : null))
-  const [apiTodayDeliveryFee, setApiTodayDeliveryFee] = useState<number | null>(() => (typeof (stats as any)?.todayDeliveryFee === 'number' ? (stats as any).todayDeliveryFee : null))
-  const [apiTodayPackagingFee, setApiTodayPackagingFee] = useState<number | null>(() => (typeof (stats as any)?.todayPackagingFee === 'number' ? (stats as any).todayPackagingFee : null))
+  // Categories Hook
+  const categoryHook = useAdminCategories({
+    initialCategories,
+  })
 
-  // WhatsApp Custom Alert States
-  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false)
-  const [whatsappTargetUser, setWhatsappTargetUser] = useState<{ name: string; phone: string } | null>(null)
-  const [whatsappCustomMessage, setWhatsappCustomMessage] = useState('')
-  const [whatsappSelectedTemplateIdx, setWhatsappSelectedTemplateIdx] = useState(0)
-  const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false)
+  // Products Hook
+  const productHook = useAdminProducts({
+    initialProducts,
+    initialAllProducts,
+    categories: categoryHook.categories,
+    selectedHubId,
+    sessionUserId,
+    sessionUserRole,
+  })
 
-  // Parse cafe menu sections dynamically from database settings
-  const CAFE_MENU_SECTIONS = useMemo(() => {
-    const customSectionsStr = settingsMap['cafe_menu_sections'] || settingsMap['CAFE_MENU_SECTIONS']
-    if (customSectionsStr) {
-      try {
-        const parsed = JSON.parse(customSectionsStr)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed
-        }
-      } catch (e) {
-        console.error('Error parsing CAFE_MENU_SECTIONS from settings:', e)
-      }
-    }
-    return DEFAULT_CAFE_MENU_SECTIONS
-  }, [settingsMap])
+  // Orders Hook
+  const orderHook = useAdminOrders({
+    initialOrders,
+    initialOrderCounts,
+    selectedHubId,
+    orderRefreshKey,
+  })
 
-  // Parse restaurant menu sections dynamically from database settings
-  const RESTAURANT_MENU_SECTIONS = useMemo(() => {
-    const customSectionsStr = settingsMap['restaurant_menu_sections'] || settingsMap['RESTAURANT_MENU_SECTIONS']
-    if (customSectionsStr) {
-      try {
-        const parsed = JSON.parse(customSectionsStr)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((s: any) => ({
-            ...s,
-            title: s.title ? s.title.replace(/Wedson/gi, '').trim() : s.title
-          }))
-        }
-      } catch (e) {
-        console.error('Error parsing RESTAURANT_MENU_SECTIONS from settings:', e)
-      }
-    }
-    return []
-  }, [settingsMap])
+  // Users Hook
+  const userHook = useAdminUsers({
+    initialUsers,
+    initialUserCount: stats?.userCount,
+    selectedHubId,
+  })
 
-  const [groceryMartOpen, setGroceryMartOpen] = useState<boolean>(true)
-  const [groceryAutoTiming, setGroceryAutoTiming] = useState<boolean>(false)
-  const [isTogglingStore, setIsTogglingStore] = useState<boolean>(false)
+  // Reviews & Coupons Hook
+  const reviewCouponHook = useAdminReviewsCoupons({
+    initialReviews,
+    initialCoupons,
+    activeTab,
+  })
 
   // Fetch settings function
   const fetchSettings = useCallback(async () => {
@@ -315,10 +327,49 @@ export function AdminDashboard({
     }
   }, [])
 
-  // Fetch settings on mount to retrieve Cloudinary credentials and store state
   useEffect(() => {
     fetchSettings()
   }, [fetchSettings])
+
+  const fetchStoresAndRestaurants = useCallback(() => {
+    const storeParam =
+      selectedHubId && selectedHubId !== 'all'
+        ? `&storeId=${encodeURIComponent(selectedHubId)}`
+        : ''
+    fetch(`/api/restaurants?all=true${storeParam}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setRestaurantsList(data)
+      })
+      .catch(console.error)
+
+    fetch('/api/admin/stores')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setStoresList(data)
+          if (sessionAssignedStoreId) {
+            setSelectedHubId(sessionAssignedStoreId)
+          } else if (isSuperAdmin && urlStoreId && data.some((s) => s.id === urlStoreId)) {
+            setSelectedHubId(urlStoreId)
+          } else if (initialStoreId && data.some((s) => s.id === initialStoreId)) {
+            setSelectedHubId(initialStoreId)
+          } else if (
+            isSuperAdmin &&
+            data.length > 0 &&
+            !data.some((s) => s.id === selectedHubId) &&
+            selectedHubId !== 'all'
+          ) {
+            setSelectedHubId(data[0].id)
+          }
+        }
+      })
+      .catch(console.error)
+  }, [selectedHubId, sessionAssignedStoreId, urlStoreId, initialStoreId, isSuperAdmin])
+
+  useEffect(() => {
+    fetchStoresAndRestaurants()
+  }, [fetchStoresAndRestaurants])
 
   const handleToggleGroceryMart = async () => {
     const nextState = !groceryMartOpen
@@ -344,9 +395,15 @@ export function AdminDashboard({
               groceryOpen: nextState,
             }),
           }).catch(console.warn)
-          setStoresList(prev => prev.map(s => s.id === selectedHubId ? { ...s, groceryOpen: nextState } : s))
+          setStoresList((prev) =>
+            prev.map((s) => (s.id === selectedHubId ? { ...s, groceryOpen: nextState } : s))
+          )
         }
-        toast.success(nextState ? '🟢 Grocery Mart is now OPEN for orders!' : '🔴 Grocery Mart is now CLOSED.')
+        toast.success(
+          nextState
+            ? '🟢 Grocery Mart is now OPEN for orders!'
+            : '🔴 Grocery Mart is now CLOSED.'
+        )
       } else {
         toast.error('Failed to update store status')
       }
@@ -367,7 +424,9 @@ export function AdminDashboard({
       const res = await fetch('/api/upload', {
         method: 'POST',
         headers: {
-          ...(sessionUserId ? { 'x-user-id': sessionUserId, 'x-user-role': sessionUserRole } : {})
+          ...(sessionUserId
+            ? { 'x-user-id': sessionUserId, 'x-user-role': sessionUserRole }
+            : {}),
         },
         body: formData,
       })
@@ -396,866 +455,132 @@ export function AdminDashboard({
     }
   }
 
-  // Web Audio API warning chime synthesizer
-  const playWarningChime = () => {
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
-      if (!AudioContextClass) return
-      const ctx = new AudioContextClass()
-      const now = ctx.currentTime
-      
-      // Tone 1: 550Hz soft warning beep
-      const osc1 = ctx.createOscillator()
-      const gain1 = ctx.createGain()
-      osc1.type = 'sine'
-      osc1.frequency.setValueAtTime(550, now)
-      gain1.gain.setValueAtTime(0, now)
-      gain1.gain.linearRampToValueAtTime(0.08, now + 0.05)
-      gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.35)
-      
-      osc1.connect(gain1)
-      gain1.connect(ctx.destination)
-      osc1.start(now)
-      osc1.stop(now + 0.35)
-      
-      // Tone 2: 660Hz slightly offset
-      const osc2 = ctx.createOscillator()
-      const gain2 = ctx.createGain()
-      osc2.type = 'sine'
-      osc2.frequency.setValueAtTime(660, now + 0.15)
-      gain2.gain.setValueAtTime(0, now + 0.15)
-      gain2.gain.linearRampToValueAtTime(0.08, now + 0.20)
-      gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.5)
-      
-      osc2.connect(gain2)
-      gain2.connect(ctx.destination)
-      osc2.start(now + 0.15)
-      osc2.stop(now + 0.5)
-    } catch (err) {
-      console.warn('AudioContext failed to play:', err)
-    }
-  }
+  const handleImageFileChange = (
+    form: 'new' | 'edit',
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0]
+    if (!file) return
 
-  // Web Audio API new order chime synthesizer
-  const playNewOrderChime = () => {
-    if (isChimeMuted) return
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
-      if (!AudioContextClass) return
-      const ctx = new AudioContextClass()
-      const now = ctx.currentTime
-
-      // Ding (High note)
-      const osc1 = ctx.createOscillator()
-      const gain1 = ctx.createGain()
-      osc1.type = 'triangle'
-      osc1.frequency.setValueAtTime(880, now) // A5
-      gain1.gain.setValueAtTime(0, now)
-      gain1.gain.linearRampToValueAtTime(0.15, now + 0.05)
-      gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.4)
-      osc1.connect(gain1)
-      gain1.connect(ctx.destination)
-      osc1.start(now)
-      osc1.stop(now + 0.4)
-
-      // Dong (Slightly lower note)
-      const osc2 = ctx.createOscillator()
-      const gain2 = ctx.createGain()
-      osc2.type = 'triangle'
-      osc2.frequency.setValueAtTime(659.25, now + 0.15) // E5
-      gain2.gain.setValueAtTime(0, now)
-      gain2.gain.setValueAtTime(0.15, now + 0.15)
-      gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.6)
-      osc2.connect(gain2)
-      gain2.connect(ctx.destination)
-      osc2.start(now + 0.15)
-      osc2.stop(now + 0.6)
-    } catch (err) {
-      console.warn('AudioContext failed to play new order chime:', err)
-    }
-  }
-
-  // Real-time EventSource listener for new orders and live updates
-  useEffect(() => {
-    const fetchLiveOrdersList = async () => {
-      try {
-        const storeQuery = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
-        const res = await fetch(`/api/orders?all=true${storeQuery}`)
-        if (res.ok) {
-          const data = await res.json()
-          setLiveOrders(data)
-        }
-      } catch (err) {
-        console.error('Failed to poll live orders:', err)
-      }
-    }
-
-    let updateTimeout: NodeJS.Timeout | null = null
-
-    const debouncedRefresh = () => {
-      if (updateTimeout) clearTimeout(updateTimeout)
-      updateTimeout = setTimeout(() => {
-        fetchLiveOrdersList()
-        setOrderRefreshKey(prev => prev + 1)
-      }, 1000)
-    }
-
-    // Subscribe to Supabase Realtime changes for the orders table
-    const channel = supabase
-      .channel('admin-orders-live')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to INSERT, UPDATE, DELETE
-          schema: 'public',
-          table: 'orders',
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const newOrder = payload.new as any
-            toast.success(`🛎️ New Order Received: #${(newOrder.readableId || newOrder.id).slice(0, 8)}`)
-            playNewOrderChime()
-            debouncedRefresh()
-          } else if (payload.eventType === 'UPDATE') {
-            debouncedRefresh()
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'carts' },
-        () => setCartsRefreshKey(prev => prev + 1)
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'cart_items' },
-        () => setCartsRefreshKey(prev => prev + 1)
-      )
-      .on('broadcast', { event: 'order-payment-updated' }, (payload) => {
-        toast.success(`💳 Order #${payload.payload?.orderId?.slice(0, 8)} marked PAID!`)
-        debouncedRefresh()
-      })
-      .subscribe((status) => {
-        if (typeof window !== 'undefined') {
-          console.log('📡 Supabase Realtime WebSocket Status:', status)
-        }
-      })
-
-    // Dual-channel real-time fallback: SSE EventSource listener
-    let sseSource: EventSource | null = null
-    try {
-      sseSource = new EventSource('/api/sse/orders')
-      sseSource.onerror = () => {
-        // Gracefully ignore SSE disconnects
-        try { sseSource?.close() } catch (_) {}
-      }
-      sseSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
-          if (data.type === 'new-order') {
-            toast.success(`🛎️ New Order Received: #${data.readableId || data.orderId?.slice(0, 8)}`)
-            playNewOrderChime()
-            debouncedRefresh()
-          } else if (data.type === 'order-update') {
-            debouncedRefresh()
-          }
-        } catch (e) {}
-      }
-    } catch (e) {
-      console.warn('SSE connection failed:', e)
-    }
-
-    // Railway FastAPI Native WebSocket Connection
-    let railwayWs: WebSocket | null = null
-    try {
-      railwayWs = new WebSocket('wss://fastkirana-production-a4b8.up.railway.app/ws')
-      railwayWs.onerror = () => {
-        // Gracefully ignore WebSocket drops without tripping error boundaries
-      }
-      railwayWs.onmessage = (event) => {
-        try {
-          const payload = JSON.parse(event.data)
-          if (payload.event === 'NEW_ORDER' || payload.event === 'ORDER_CREATED') {
-            toast.success(`🛎️ New Order Received!`)
-            playNewOrderChime()
-            debouncedRefresh()
-          } else if (payload.event === 'CART_UPDATE' || payload.event === 'CART_ITEM_ADDED') {
-            setCartsRefreshKey(prev => prev + 1)
-          }
-        } catch (e) {}
-      }
-    } catch (e) {
-      console.warn('Railway WebSocket connection error:', e)
-    }
-
-    // Initial load of live orders list
-    fetchLiveOrdersList()
-
-    return () => {
-      supabase.removeChannel(channel)
-      if (sseSource) sseSource.close()
-      if (railwayWs) railwayWs.close()
-      if (updateTimeout) clearTimeout(updateTimeout)
-    }
-  }, [isChimeMuted, selectedHubId])
-
-  // Warning chime manager
-  useEffect(() => {
-    if (isChimeMuted) return
-
-    const delayedOrdersCount = liveOrders.filter((order) => {
-      const isRestaurant = !!order.restaurantId || order.orderType === 'RESTAURANT'
-      if (order.status === 'PENDING') {
-        const diffMs = new Date().getTime() - new Date(order.createdAt).getTime()
-        return diffMs > (isRestaurant ? 30 : 10) * 60 * 1000
-      }
-      if (order.status === 'PACKED') {
-        const baseTime = order.updatedAt || order.createdAt
-        const diffMs = new Date().getTime() - new Date(baseTime).getTime()
-        return diffMs > 10 * 60 * 1000
-      }
-      if (order.status === 'CONFIRMED') {
-        const baseTime = order.updatedAt || order.createdAt
-        const diffMs = new Date().getTime() - new Date(baseTime).getTime()
-        if (isRestaurant) {
-          return diffMs > 30 * 60 * 1000 // Kitchen Chef delay (30 mins after accept)
-        } else {
-          return diffMs > 10 * 60 * 1000 // Grocery Picker delay (10 mins after accept)
-        }
-      }
-      return false
-    }).length
-
-    if (delayedOrdersCount === 0) return
-
-    // Play right away
-    playWarningChime()
-
-    // Play periodically every 20 seconds
-    const chimeInterval = setInterval(playWarningChime, 20000)
-    return () => clearInterval(chimeInterval)
-  }, [liveOrders, isChimeMuted])
-
-  // Filter delayed orders
-  const delayedOrders = liveOrders.filter((order) => {
-    const isRestaurant = !!order.restaurantId || order.orderType === 'RESTAURANT'
-    if (order.status === 'PENDING') {
-      const diffMs = new Date().getTime() - new Date(order.createdAt).getTime()
-      return diffMs > (isRestaurant ? 30 : 10) * 60 * 1000
-    }
-    if (order.status === 'PACKED') {
-      const baseTime = order.updatedAt || order.createdAt
-      const diffMs = new Date().getTime() - new Date(baseTime).getTime()
-      return diffMs > 10 * 60 * 1000
-    }
-    if (order.status === 'CONFIRMED') {
-      const baseTime = order.updatedAt || order.createdAt
-      const diffMs = new Date().getTime() - new Date(baseTime).getTime()
-      if (isRestaurant) {
-        return diffMs > 30 * 60 * 1000
+    handleCloudinaryUpload(file, (url) => {
+      if (form === 'new') {
+        categoryHook.setNewCategory({ ...categoryHook.newCategory, imageUrl: url })
       } else {
-        return diffMs > 10 * 60 * 1000
+        categoryHook.setCategoryEditForm({ ...categoryHook.categoryEditForm, imageUrl: url })
       }
-    }
-    return false
-  })
+    })
+  }
 
-  // Count types of delays
-  const pickerDelays = delayedOrders.filter(o => 
-    !o.restaurantId && o.orderType !== 'RESTAURANT' && (o.status === 'PENDING' || o.status === 'CONFIRMED')
-  )
-  const chefDelays = delayedOrders.filter(o => 
-    (!!o.restaurantId || o.orderType === 'RESTAURANT') && (o.status === 'PENDING' || o.status === 'CONFIRMED')
-  )
-  const riderDelays = delayedOrders.filter(o => o.status === 'PACKED')
-
-  // States for Products
-  const [products, setProducts] = useState(initialProducts || [])
-  const [allProducts, setAllProducts] = useState(initialAllProducts || [])
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('')
-  const [selectedOrderForTracking, setSelectedOrderForTracking] = useState<any | null>(null)
-  const [isLoadingOrderItems, setIsLoadingOrderItems] = useState<boolean>(false)
-  const [ordersSubTab, setOrdersSubTab] = useState<'active' | 'history'>('active')
-  const [orderShopFilter, setOrderShopFilter] = useState<'ALL' | 'GROCERY' | 'CAFE' | 'RESTAURANT'>('ALL')
-  const [orderMethodFilter, setOrderMethodFilter] = useState<'ALL' | 'DELIVERY' | 'SELF_PICKUP'>('ALL')
-
-  const handleOpenOrderModal = useCallback(async (order: any) => {
-    if (!order) return
-    setSelectedOrderForTracking(order)
-    setIsLoadingOrderItems(true)
+  const handleOrderStatusChange = async (orderId: string, newStatus: string) => {
+    orderHook.setUpdatingOrderId(orderId)
     try {
-      const res = await fetch(`/api/orders/${order.id}`)
-      if (res.ok) {
-        const fullData = await res.json()
-        setSelectedOrderForTracking((prev: any) => ({ ...prev, ...fullData }))
-      }
-    } catch (err) {
-      console.error('Failed to fetch full order details:', err)
-    } finally {
-      setIsLoadingOrderItems(false)
-    }
-  }, [])
-  const [editingProduct, setEditingProduct] = useState<any | null>(null)
-  const [savingProductId, setSavingProductId] = useState<string | null>(null)
-
-  const fetchStoresAndRestaurants = useCallback(() => {
-    const storeParam = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
-    fetch(`/api/restaurants?all=true${storeParam}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) setRestaurantsList(data)
-      })
-      .catch(console.error)
-
-    fetch('/api/admin/stores')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setStoresList(data)
-          if (sessionAssignedStoreId) {
-            setSelectedHubId(sessionAssignedStoreId)
-          } else if (isSuperAdmin && urlStoreId && data.some(s => s.id === urlStoreId)) {
-            setSelectedHubId(urlStoreId)
-          } else if (initialStoreId && data.some(s => s.id === initialStoreId)) {
-            setSelectedHubId(initialStoreId)
-          } else if (isSuperAdmin && data.length > 0 && !data.some(s => s.id === selectedHubId) && selectedHubId !== 'all') {
-            setSelectedHubId(data[0].id)
-          }
-        }
-      })
-      .catch(console.error)
-  }, [selectedHubId, sessionAssignedStoreId, urlStoreId, initialStoreId, isSuperAdmin])
-
-  useEffect(() => {
-    fetchStoresAndRestaurants()
-  }, [fetchStoresAndRestaurants])
-
-  const [productEditForm, setProductEditForm] = useState<ProductEditForm>({
-    name: '',
-    description: '',
-    imageUrl: '',
-    categoryId: '',
-    restaurantId: '',
-    mrp: '',
-    price: '',
-    unit: '',
-    stock: '',
-    isAvailable: true,
-    tags: '',
-    minStock: '10',
-    expiryDate: '',
-    costPrice: '0',
-    location: '',
-    isFlashDeal: false,
-    isTopPick: false,
-    isBestSeller: false,
-    sortOrder: '0',
-    barcode: '',
-    vendor: '',
-    vendorId: '',
-  })
-  
-  // State for Add Product Form
-  const [showAddProduct, setShowAddProduct] = useState(false)
-  const [showSortManager, setShowSortManager] = useState(false)
-  const [showCsvImport, setShowCsvImport] = useState(false)
-  const [showExportModal, setShowExportModal] = useState(false)
-  const [isExporting, setIsExporting] = useState(false)
-  const [isCreatingProduct, setIsCreatingProduct] = useState(false)
-  const [newProduct, setNewProduct] = useState({
-    name: '',
-    description: '',
-    imageUrl: '',
-    categoryId: initialCategories?.[0]?.id || '',
-    restaurantId: '',
-    mrp: '',
-    price: '',
-    unit: '',
-    stock: '',
-    isAvailable: true,
-    tags: '',
-    minStock: '10',
-    expiryDate: '',
-    costPrice: '0',
-    location: '',
-    isFlashDeal: false,
-    isTopPick: false,
-    isBestSeller: false,
-    sortOrder: '0',
-    barcode: '',
-    vendor: '',
-    vendorId: '',
-  })
-  // Product type toggles: 'grocery' | 'cafe'
-  const [newProductType, setNewProductType] = useState<'grocery' | 'cafe' | 'restaurant'>('grocery')
-  const [editProductType, setEditProductType] = useState<'grocery' | 'cafe' | 'restaurant'>('grocery')
-  const [newCustomTag, setNewCustomTag] = useState('')
-  const [editCustomTag, setEditCustomTag] = useState('')
-  const [newProductVariants, setNewProductVariants] = useState<any[]>([])
-  const [editProductVariants, setEditProductVariants] = useState<any[]>([])
-  const [hasVariantsNew, setHasVariantsNew] = useState(false)
-  const [hasVariantsEdit, setHasVariantsEdit] = useState(false)
-
-  const isNewProductCafe = newProductType === 'cafe'
-  const isEditProductCafe = editProductType === 'cafe'
-  const isNewProductRestaurant = newProductType === 'restaurant'
-  const isEditProductRestaurant = editProductType === 'restaurant'
-
-  const handleNewProductTypeChange = (type: 'grocery' | 'cafe' | 'restaurant') => {
-    setNewProductType(type)
-    
-    if (type === 'restaurant' || type === 'cafe') {
-      // Restaurant/Cafe products — keep current categoryId, it doesn't matter for restaurant scoping
-      setNewProduct(prev => ({
-        ...prev,
-        expiryDate: '',
-      }))
-    } else {
-      // Grocery — use first available category
-      const firstCatId = categories[0]?.id || ''
-      setNewProduct(prev => ({
-        ...prev,
-        categoryId: firstCatId,
-      }))
-    }
-  }
-
-  const handleEditProductTypeChange = (type: 'grocery' | 'cafe' | 'restaurant') => {
-    setEditProductType(type)
-    
-    if (type === 'restaurant' || type === 'cafe') {
-      // Restaurant/Cafe products — keep current categoryId
-      setProductEditForm(prev => ({
-        ...prev,
-        expiryDate: '',
-      }))
-    } else {
-      // Grocery — use first available category
-      const firstCatId = categories[0]?.id || ''
-      setProductEditForm(prev => ({
-        ...prev,
-        categoryId: firstCatId,
-      }))
-    }
-  }
-
-  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all')
-
-  // States for Categories
-  const [categories, setCategories] = useState(initialCategories || [])
-  const [categorySubView, setCategorySubView] = useState<'grocery' | 'cafe' | 'restaurant'>('grocery')
-  const [showAddCategory, setShowAddCategory] = useState(false)
-  const [isCreatingCategory, setIsCreatingCategory] = useState(false)
-  const [newCategory, setNewCategory] = useState({
-    name: '',
-    imageUrl: '',
-    sortOrder: '0',
-    parentId: '',
-  })
-
-  // Apply template pre-fill values to add product form
-  const applyProductTemplate = (templateId: string) => {
-    const template = PRODUCT_TEMPLATES.find((t) => t.id === templateId)
-    if (!template) return
-
-    let categoryId = ''
-    if (template.categoryName === 'FastKirana Cafe') {
-      const cafeCat = categories.find((c) => c.slug === 'cafe')
-      categoryId = cafeCat?.id || ''
-      handleNewProductTypeChange('cafe')
-    } else {
-      const matchedCat = categories.find(
-        (c) => c.name.toLowerCase().trim() === template.categoryName.toLowerCase().trim()
-      )
-      categoryId = matchedCat?.id || categories.find((c) => c.slug !== 'cafe')?.id || ''
-      handleNewProductTypeChange('grocery')
-    }
-
-    setNewProduct((prev) => ({
-      ...prev,
-      categoryId,
-      unit: template.unit,
-      minStock: template.minStock.toString(),
-      tags: template.tags,
-    }))
-    toast.success(`Applied ${template.label} template!`)
-  }
-  
-  // Modal Edit states for Categories
-  const [editingCategory, setEditingCategory] = useState<any | null>(null)
-  const [savingCategoryId, setSavingCategoryId] = useState<string | null>(null)
-  const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null)
-  const [categoryEditForm, setCategoryEditForm] = useState({
-    name: '',
-    imageUrl: '',
-    sortOrder: '0',
-    parentId: '',
-  })
-
-  // States for Users
-  const [users, setUsers] = useState(initialUsers || [])
-  const [updatingUserRoleId, setUpdatingUserRoleId] = useState<string | null>(null)
-  const [settingPasswordUserId, setSettingPasswordUserId] = useState<string | null>(null)
-  const [passwordInput, setPasswordInput] = useState('')
-  const [savingPasswordId, setSavingPasswordId] = useState<string | null>(null)
-  const [editingPhoneUserId, setEditingPhoneUserId] = useState<string | null>(null)
-  const [phoneInput, setPhoneInput] = useState('')
-  const [savingPhoneId, setSavingPhoneId] = useState<string | null>(null)
-
-  // States for Pagination
-  const [orderPage, setOrderPage] = useState(1)
-  const [orderTotal, setOrderTotal] = useState(stats.orderCount || (initialOrders || []).length)
-  const [isLoadingOrders, setIsLoadingOrders] = useState(false)
-
-  const [productPage, setProductPage] = useState(1)
-  const [productTotal, setProductTotal] = useState((initialProducts || []).length)
-  const [isLoadingProducts, setIsLoadingProducts] = useState(false)
-
-  const [userPage, setUserPage] = useState(1)
-
-  // Media Library Modal states
-  const [showMediaLibrary, setShowMediaLibrary] = useState(false)
-  const [mediaTarget, setMediaTarget] = useState<'newProduct' | 'editProduct' | 'newCategory' | 'editCategory' | 'category' | null>(null)
-  const [mediaSearchQuery, setMediaSearchQuery] = useState('')
-
-  const mediaLibraryImages = useMemo(() => {
-    const setOfImages = new Map<string, { url: string; name: string; tags?: string[] }>()
-
-    PRESET_KITCHEN_PHOTOS.forEach((preset) => {
-      setOfImages.set(preset.url, { url: preset.url, name: preset.name, tags: preset.tags })
-    })
-
-    allProducts.forEach((p) => {
-      if (p.imageUrl && p.imageUrl.startsWith('http')) {
-        if (!setOfImages.has(p.imageUrl)) {
-          setOfImages.set(p.imageUrl, { url: p.imageUrl, name: p.name || 'Product Image', tags: p.tags || [] })
-        }
-      }
-    })
-
-    categories.forEach((c) => {
-      if (c.imageUrl && c.imageUrl.startsWith('http')) {
-        if (!setOfImages.has(c.imageUrl)) {
-          setOfImages.set(c.imageUrl, { url: c.imageUrl, name: c.name || 'Category Image' })
-        }
-      }
-    })
-
-    return Array.from(setOfImages.values())
-  }, [allProducts, categories])
-
-  const filteredMediaImages = useMemo(() => {
-    if (!mediaSearchQuery.trim()) return mediaLibraryImages
-    const q = mediaSearchQuery.toLowerCase().trim()
-    return mediaLibraryImages.filter(img => 
-      img.name.toLowerCase().includes(q) || 
-      img.url.toLowerCase().includes(q) ||
-      (img.tags && img.tags.some(t => t.toLowerCase().includes(q)))
-    )
-  }, [mediaLibraryImages, mediaSearchQuery])
-  const [userTotal, setUserTotal] = useState(stats.userCount || (initialUsers || []).length)
-  const [isLoadingUsers, setIsLoadingUsers] = useState(false)
-  const [userSearch, setUserSearch] = useState('')
-  const [userRoleFilter, setUserRoleFilter] = useState('ALL')
-  const [userStatusFilter, setUserStatusFilter] = useState('ALL')
-  const [blockingUser, setBlockingUser] = useState<any | null>(null)
-  const [blockReasonInput, setBlockReasonInput] = useState('')
-  const [isUpdatingBlockStatus, setIsUpdatingBlockStatus] = useState(false)
-
-  const todaySales = useMemo(() => {
-    const todayStr = new Date().toDateString()
-    return (orders || [])
-      .filter((o: any) => o.status !== 'CANCELLED' && new Date(o.createdAt).toDateString() === todayStr)
-      .reduce((sum: number, o: any) => sum + (o.total || 0), 0)
-  }, [orders])
-
-  const todayOrdersCount = useMemo(() => {
-    const todayStr = new Date().toDateString()
-    return (orders || []).filter((o: any) => o.status !== 'CANCELLED' && new Date(o.createdAt).toDateString() === todayStr).length
-  }, [orders])
-
-  const netSales = useMemo(() => {
-    return (orders || [])
-      .filter((o: any) => o.status === 'DELIVERED')
-      .reduce((sum: number, o: any) => sum + Math.max(0, (o.total || 0) - (o.refundAmount || 0)), 0)
-  }, [orders])
-
-  const currentActiveOrdersCount = useMemo(() => {
-    if (orderCounts) {
-      const pending = orderCounts.PENDING || 0
-      const confirmed = orderCounts.CONFIRMED || 0
-      const packed = orderCounts.PACKED || 0
-      const shipped = orderCounts.SHIPPED || 0
-      return pending + confirmed + packed + shipped
-    }
-    if (Array.isArray(orders) && orders.length > 0) {
-      const uniqueActive = new Set<string>()
-      orders.forEach((o: any) => {
-        const st = (o.status || '').toUpperCase().trim()
-        if (st !== 'DELIVERED' && st !== 'CANCELLED') {
-          uniqueActive.add(o.combinedId || o.id)
-        }
-      })
-      return uniqueActive.size
-    }
-    return stats.activeOrderCount || 0
-  }, [orderCounts, orders, stats.activeOrderCount])
-
-  // Pagination page resets
-  useEffect(() => {
-    setOrderPage(1)
-  }, [orderStatusFilter, orderSearchQuery, selectedHubId])
-
-  useEffect(() => {
-    setProductPage(1)
-  }, [selectedCategoryFilter, searchQuery, selectedTypeFilter, selectedHubId])
-
-  useEffect(() => {
-    setUserPage(1)
-  }, [userSearch, userRoleFilter, userStatusFilter, selectedHubId])
-
-  // Fetch paginated/filtered orders with 5-second live auto-refresh
-  useEffect(() => {
-    let active = true
-    const fetchOrders = async () => {
-      try {
-        const storeQueryParam = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
-        const res = await fetch(`/api/admin/orders?page=${orderPage}&limit=10&status=${orderStatusFilter}&search=${encodeURIComponent(orderSearchQuery)}${storeQueryParam}&t=${Date.now()}`)
-        if (res.ok && active) {
-          const data = await res.json()
-          setOrders(data.orders)
-          setOrderTotal(data.total)
-          if (typeof data.todaySales === 'number') setApiTodaySales(data.todaySales)
-          if (typeof data.todayNetSales === 'number') setApiTodayNetSales(data.todayNetSales)
-          if (typeof data.todayOrdersCount === 'number') setApiTodayOrdersCount(data.todayOrdersCount)
-          if (typeof data.todayDeliveryFee === 'number') setApiTodayDeliveryFee(data.todayDeliveryFee)
-          if (typeof data.todayPackagingFee === 'number') setApiTodayPackagingFee(data.todayPackagingFee)
-          if (data.counts) {
-            setOrderCounts(data.counts)
-          }
-        }
-      } catch (err) {
-        console.error('Failed to fetch orders:', err)
-      } finally {
-        if (active) setIsLoadingOrders(false)
-      }
-    }
-    fetchOrders()
-    const interval = setInterval(fetchOrders, 10000) // 10s fallback polling
-    return () => {
-      active = false
-      clearInterval(interval)
-    }
-  }, [orderPage, orderStatusFilter, orderSearchQuery, orderRefreshKey, selectedHubId])
-
-  // Supabase Realtime Listener (Zero Polling Delay for DB Order Changes)
-  useEffect(() => {
-    const channel = supabase
-      .channel('admin-dashboard-orders-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
-        () => {
-          setOrderRefreshKey((prev) => prev + 1)
-        }
-      )
-      .on(
-        'broadcast',
-        { event: 'order-update' },
-        () => {
-          setOrderRefreshKey((prev) => prev + 1)
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [])
-
-  // Fetch active carts count on mount or store change for the badge count
-  useEffect(() => {
-    let active = true
-    const fetchCartsCount = async () => {
-      try {
-        const storeQuery = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
-        const res = await fetch(`/api/admin/live-carts?t=${Date.now()}${storeQuery}`)
-        if (res.ok && active) {
-          const data = await res.json()
-          setActiveCartsCount(data.count || 0)
-        }
-      } catch (err) {
-        console.error('Failed to fetch carts count:', err)
-      }
-    }
-    fetchCartsCount()
-    return () => { active = false }
-  }, [selectedHubId])
-
-  // Poll active carts detail every 3 seconds only if activeTab is 'liveops'
-  useEffect(() => {
-    let active = true
-    let intervalId: any = null
-
-    const fetchCartsDetail = async () => {
-      if (activeTab !== 'liveops') return
-      setIsLoadingCarts(true)
-      try {
-        const storeQuery = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
-        const res = await fetch(`/api/admin/live-carts?t=${Date.now()}${storeQuery}`)
-        if (res.ok && active) {
-          const data = await res.json()
-          setActiveCarts(data.carts || [])
-          setActiveCartsCount(data.count || 0)
-        }
-      } catch (err) {
-        console.error('Failed to fetch live carts detail:', err)
-      } finally {
-        if (active) setIsLoadingCarts(false)
-      }
-    }
-
-    if (activeTab === 'liveops') {
-      fetchCartsDetail()
-      intervalId = setInterval(fetchCartsDetail, 3000) // Fast 3-second live refresh when viewing Live Ops Tracker
-    }
-
-    return () => {
-      active = false
-      if (intervalId) clearInterval(intervalId)
-    }
-  }, [activeTab, cartsRefreshKey, selectedHubId])
-
-  // Fetch paginated/filtered products
-  useEffect(() => {
-    let active = true
-    const fetchProducts = async () => {
-      setIsLoadingProducts(true)
-      try {
-        const storeQuery = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
-        const res = await fetch(`/api/admin/products?page=${productPage}&limit=10&categoryId=${selectedCategoryFilter}&search=${encodeURIComponent(searchQuery)}&type=${selectedTypeFilter}${storeQuery}&t=${Date.now()}`)
-        if (res.ok && active) {
-          const data = await res.json()
-          setProducts(data.products)
-          setProductTotal(data.total)
-        }
-      } catch (err) {
-        console.error('Failed to fetch products:', err)
-      } finally {
-        if (active) setIsLoadingProducts(false)
-      }
-    }
-    fetchProducts()
-    return () => { active = false }
-  }, [productPage, selectedCategoryFilter, searchQuery, selectedTypeFilter, selectedHubId])
-
-  // Fetch paginated/filtered users
-  useEffect(() => {
-    let active = true
-    const fetchUsers = async () => {
-      setIsLoadingUsers(true)
-      try {
-        const storeQuery = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
-        const res = await fetch(`/api/admin/users?page=${userPage}&limit=10&search=${encodeURIComponent(userSearch)}&role=${userRoleFilter}&status=${userStatusFilter}${storeQuery}&t=${Date.now()}`)
-        if (res.ok && active) {
-          const data = await res.json()
-          setUsers(data.users)
-          setUserTotal(data.total)
-        }
-      } catch (err) {
-        console.error('Failed to fetch users:', err)
-      } finally {
-        if (active) setIsLoadingUsers(false)
-      }
-    }
-    fetchUsers()
-    return () => { active = false }
-  }, [userPage, userSearch, userRoleFilter, userStatusFilter, selectedHubId])
-
-  const handleToggleBlock = async (userToBlock: any, isBlocked: boolean, reason?: string) => {
-    setIsUpdatingBlockStatus(true)
-    try {
-      const res = await fetch('/api/admin/users/block', {
+      const res = await fetch(`/api/orders/${orderId}`, {
         method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(sessionUserId
+            ? { 'x-user-id': sessionUserId, 'x-user-role': sessionUserRole }
+            : {}),
+        },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (res.ok) {
+        const updated = await res.json()
+        orderHook.setOrders(
+          orderHook.orders.map((o) => (o.id === orderId ? { ...o, status: updated.status } : o))
+        )
+        setOrderRefreshKey((k) => k + 1)
+        toast.success(`Order status updated to ${newStatus}`)
+      } else {
+        const errData = await res.json().catch(() => ({}))
+        toast.error(errData.detail || errData.error || 'Failed to update order status')
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update status')
+    } finally {
+      orderHook.setUpdatingOrderId(null)
+    }
+  }
+
+  const sendCartNotification = async (userId: string, userName: string) => {
+    const defaultMsg = `Hey ${userName}! Your items are waiting. Checkout now for instant delivery!`
+    const message = window.prompt(`Customize push notification for ${userName}:`, defaultMsg)
+    if (message === null) return
+
+    try {
+      const res = await fetch('/api/admin/live-carts/notify', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: userToBlock.id,
-          isBlocked,
-          blockReason: reason
-        })
+          userId,
+          title: 'Cart Waiting 🛒',
+          body: message || defaultMsg,
+        }),
       })
+
       const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to update user block status')
+      if (res.ok) {
+        toast.success('Push notification sent successfully!')
+      } else {
+        toast.error(data.error || 'Failed to send push notification')
       }
-      toast.success(data.message)
-      setBlockingUser(null)
-      setBlockReasonInput('')
-      setUsers(prev => prev.map(u => u.id === userToBlock.id ? { 
-        ...u, 
-        isBlocked, 
-        blockReason: isBlocked ? (reason?.trim() || 'Blocked by administrator') : null, 
-        blockedAt: isBlocked ? new Date().toISOString() : null 
-      } : u))
-    } catch (err: any) {
-      toast.error(err.message || 'Error updating block status')
-    } finally {
-      setIsUpdatingBlockStatus(false)
-    }
-  }
-
-  const [isExportingUsers, setIsExportingUsers] = useState(false)
-
-  const handleExportCustomersCsv = async () => {
-    setIsExportingUsers(true)
-    try {
-      const res = await fetch(`/api/admin/users?limit=10000&role=USER&t=${Date.now()}`)
-      if (!res.ok) throw new Error('Failed to fetch customers')
-      const data = await res.json()
-      const customers = data.users || []
-
-      if (customers.length === 0) {
-        toast.error('No customers found to export.')
-        return
-      }
-
-      // Format CSV
-      const headers = ['Name', 'Email', 'Phone', 'Role', 'Status', 'Block Reason', 'Orders Count', 'Joined Date']
-      const rows = customers.map((c: any) => [
-        `"${(c.name || '').replace(/"/g, '""')}"`,
-        `"${(c.email || '').replace(/"/g, '""')}"`,
-        `"${(c.phone || '').replace(/"/g, '""')}"`,
-        `"${(c.role || 'USER')}"`,
-        `"${c.isBlocked ? 'BLOCKED' : 'ACTIVE'}"`,
-        `"${(c.blockReason || '').replace(/"/g, '""')}"`,
-        c._count?.orders ?? 0,
-        formatDate(c.createdAt, 'dd/MM/yyyy')
-      ])
-
-      const csvContent = [headers.join(','), ...rows.map((r: any) => r.join(','))].join('\n')
-      
-      // Trigger download
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.setAttribute('href', url)
-      link.setAttribute('download', `customers_export_${new Date().toISOString().split('T')[0]}.csv`)
-      link.style.visibility = 'hidden'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      toast.success('Customers data exported successfully!')
     } catch (err) {
-      console.error(err)
-      toast.error('Could not export customer records.')
-    } finally {
-      setIsExportingUsers(false)
+      toast.error('Failed to send push notification')
     }
   }
 
-  // Render pagination controls helper
-  const renderPagination = (currentPage: number, totalItems: number, itemsPerPage: number, onPageChange: (p: number) => void) => {
+  const openWhatsAppModal = (userName: string, phone: string) => {
+    if (!phone || phone === 'N/A') {
+      toast.error('Customer phone number not available')
+      return
+    }
+    const origin =
+      typeof window !== 'undefined' ? window.location.origin : 'https://fastkirana.vercel.app'
+    const templates = [
+      `Hey ${userName}! 🛒 Your items are waiting in your cart. Checkout now for instant delivery: ${origin}/cart`,
+      `Hey ${userName}! 🎁 We saved the items in your cart. Complete your order now and get an extra discount! Use code SAVE10 at checkout: ${origin}/cart`,
+      `Hey ${userName}! 👋 We noticed you left some items in your cart. Order now before they sell out! ${origin}/cart`,
+    ]
+    setWhatsappTargetUser({ name: userName, phone })
+    setWhatsappSelectedTemplateIdx(0)
+    setWhatsappCustomMessage(templates[0])
+    setWhatsappModalOpen(true)
+  }
+
+  const handleTemplateSelect = (idx: number) => {
+    if (!whatsappTargetUser) return
+    const origin =
+      typeof window !== 'undefined' ? window.location.origin : 'https://fastkirana.vercel.app'
+    const templates = [
+      `Hey ${whatsappTargetUser.name}! 🛒 Your items are waiting in your cart. Checkout now for instant delivery: ${origin}/cart`,
+      `Hey ${whatsappTargetUser.name}! 🎁 We saved the items in your cart. Complete your order now and get an extra discount! Use code SAVE10 at checkout: ${origin}/cart`,
+      `Hey ${whatsappTargetUser.name}! 👋 We noticed you left some items in your cart. Order now before they sell out! ${origin}/cart`,
+    ]
+    setWhatsappSelectedTemplateIdx(idx)
+    setWhatsappCustomMessage(templates[idx])
+  }
+
+  const sendWhatsAppMessage = () => {
+    if (!whatsappTargetUser) return
+    let cleanPhone = getLast10Digits(whatsappTargetUser.phone)
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone
+    }
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
+      whatsappCustomMessage
+    )}`
+    window.open(whatsappUrl, '_blank')
+    setWhatsappModalOpen(false)
+    setWhatsappTargetUser(null)
+  }
+
+  const renderPagination = (
+    currentPage: number,
+    totalItems: number,
+    itemsPerPage: number,
+    onPageChange: (p: number) => void
+  ) => {
     const totalPages = Math.ceil(totalItems / itemsPerPage)
     if (totalPages <= 1) return null
 
@@ -1286,1333 +611,186 @@ export function AdminDashboard({
     )
   }
 
-  // States for Reviews
-  const [reviews, setReviews] = useState(initialReviews || [])
-  const [isLoadingReviews, setIsLoadingReviews] = useState(false)
-  const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null)
-  const [reviewSearch, setReviewSearch] = useState('')
-  
-  // Modal Edit states for Reviews
-  const [editingReview, setEditingReview] = useState<any | null>(null)
-  const [savingReviewId, setSavingReviewId] = useState<string | null>(null)
-  const [reviewEditForm, setReviewEditForm] = useState({
-    rating: 5,
-    comment: '',
-  })
-
-  // States for Coupons
-  const [coupons, setCoupons] = useState(initialCoupons || [])
-  const [isLoadingCoupons, setIsLoadingCoupons] = useState(false)
-  const [showAddCoupon, setShowAddCoupon] = useState(false)
-  const [isCreatingCoupon, setIsCreatingCoupon] = useState(false)
-  const [deletingCouponId, setDeletingCouponId] = useState<string | null>(null)
-  const [newCoupon, setNewCoupon] = useState({
-    code: '',
-    discountType: 'PERCENT',
-    value: '',
-    minOrder: '',
-    maxDiscount: '',
-    maxUses: '',
-    isActive: true,
-    expiresAt: '',
-    categoryId: '',
-    oncePerCustomer: false,
-  })
-  
-  // Modal Edit states for Coupons
-  const [editingCoupon, setEditingCoupon] = useState<any | null>(null)
-  const [savingCouponId, setSavingCouponId] = useState<string | null>(null)
-  const [couponEditForm, setCouponEditForm] = useState({
-    code: '',
-    discountType: 'PERCENT',
-    value: '',
-    minOrder: '',
-    maxDiscount: '',
-    maxUses: '',
-    isActive: true,
-    expiresAt: '',
-    categoryId: '',
-    oncePerCustomer: false,
-  })
-
-  // 1. Lazy loader for reviews
-  useEffect(() => {
-    if (activeTab === 'reviews' && reviews.length === 0) {
-      const loadReviews = async () => {
-        setIsLoadingReviews(true)
-        try {
-          const res = await fetch(`/api/admin/reviews?t=${Date.now()}`)
-          if (res.ok) {
-            const data = await res.json()
-            setReviews(data)
-          }
-        } catch (err) {
-          console.error('Failed to load reviews:', err)
-        } finally {
-          setIsLoadingReviews(false)
-        }
-      }
-      loadReviews()
-    }
-  }, [activeTab, reviews.length])
-
-  // 2. Lazy loader for coupons
-  useEffect(() => {
-    if (activeTab === 'coupons' && coupons.length === 0) {
-      const loadCoupons = async () => {
-        setIsLoadingCoupons(true)
-        try {
-          const res = await fetch(`/api/admin/coupons?t=${Date.now()}`)
-          if (res.ok) {
-            const data = await res.json()
-            setCoupons(data)
-          }
-        } catch (err) {
-          console.error('Failed to load coupons:', err)
-        } finally {
-          setIsLoadingCoupons(false)
-        }
-      }
-      loadCoupons()
-    }
-  }, [activeTab, coupons.length])
-
-  // 3. Background loader for all products (used in dropdown selectors, banners, BI Analytics, etc.)
-  useEffect(() => {
-    let active = true
-    const loadAllProducts = async () => {
+  // Parse cafe menu sections dynamically
+  const CAFE_MENU_SECTIONS = useMemo(() => {
+    const customSectionsStr =
+      settingsMap['cafe_menu_sections'] || settingsMap['CAFE_MENU_SECTIONS']
+    if (customSectionsStr) {
       try {
-        const storeQuery = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
-        const res = await fetch(`/api/products?limit=1000${storeQuery}&t=${Date.now()}`)
-        if (res.ok && active) {
-          const data = await res.json()
-          if (data.products) {
-            setAllProducts(data.products)
-          }
+        const parsed = JSON.parse(customSectionsStr)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      } catch (e) {
+        console.error('Error parsing CAFE_MENU_SECTIONS:', e)
+      }
+    }
+    return DEFAULT_CAFE_MENU_SECTIONS
+  }, [settingsMap])
+
+  // Parse restaurant menu sections dynamically
+  const RESTAURANT_MENU_SECTIONS = useMemo(() => {
+    const customSectionsStr =
+      settingsMap['restaurant_menu_sections'] || settingsMap['RESTAURANT_MENU_SECTIONS']
+    if (customSectionsStr) {
+      try {
+        const parsed = JSON.parse(customSectionsStr)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((s: any) => ({
+            ...s,
+            title: s.title ? s.title.replace(/Wedson/gi, '').trim() : s.title,
+          }))
         }
-      } catch (err) {
-        console.error('Failed to load full products list:', err)
+      } catch (e) {
+        console.error('Error parsing RESTAURANT_MENU_SECTIONS:', e)
       }
     }
-    loadAllProducts()
-    return () => { active = false }
-  }, [selectedHubId])
+    return []
+  }, [settingsMap])
 
-  const toggleTag = (form: 'new' | 'edit', tag: string, checked: boolean) => {
-    const currentForm = form === 'new' ? newProduct : productEditForm
-    const setForm: any = form === 'new' ? setNewProduct : setProductEditForm
-    
-    let tagsList = currentForm.tags
-      .split(',')
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0 && t.toLowerCase() !== tag.toLowerCase())
-      
-    if (checked) {
-      tagsList.push(tag)
-    }
-    
-    setForm((prev: any) => ({
-      ...prev,
-      tags: tagsList.join(', ')
-    }))
-  }
-
-  const handleCreateCustomTag = (form: 'new' | 'edit', tagText: string) => {
-    const cleanTag = tagText.trim().toLowerCase().replace(/\s+/g, '-');
-    if (!cleanTag) return;
-    
-    const currentForm = form === 'new' ? newProduct : productEditForm
-    const setForm: any = form === 'new' ? setNewProduct : setProductEditForm
-    
-    let tagsList = currentForm.tags
-      .split(',')
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0)
-      
-    if (!tagsList.map(t => t.toLowerCase()).includes(cleanTag)) {
-      tagsList.push(cleanTag)
-    }
-    
-    setForm((prev: any) => ({
-      ...prev,
-      tags: tagsList.join(', ')
-    }))
-    
-    if (form === 'new') {
-      setNewCustomTag('')
-    } else {
-      setEditCustomTag('')
-    }
-  }
-
-  const handleImageFileChange = (form: 'new' | 'edit', e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    handleCloudinaryUpload(file, (url) => {
-      if (form === 'new') {
-        setNewCategory({ ...newCategory, imageUrl: url })
-      } else {
-        setCategoryEditForm({ ...categoryEditForm, imageUrl: url })
-      }
+  // Media Library images
+  const mediaLibraryImages = useMemo(() => {
+    const setOfImages = new Map<string, { url: string; name: string; tags?: string[] }>()
+    PRESET_KITCHEN_PHOTOS.forEach((preset) => {
+      setOfImages.set(preset.url, { url: preset.url, name: preset.name, tags: preset.tags })
     })
-  }
-
-  // ----------------------------------------------------
-  // Handlers for Orders
-  // ----------------------------------------------------
-  const handleOrderStatusChange = async (orderId: string, newStatus: string) => {
-    setUpdatingOrderId(orderId)
-    try {
-      const res = await fetch(`/api/orders/${orderId}`, {
-        method: 'PATCH',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(sessionUserId ? { 'x-user-id': sessionUserId, 'x-user-role': sessionUserRole } : {})
-        },
-        body: JSON.stringify({ status: newStatus }),
-      })
-
-      if (res.ok) {
-        const updated = await res.json()
-        setOrders(orders.map((o) => (o.id === orderId ? { ...o, status: updated.status } : o)))
-        setOrderRefreshKey((k) => k + 1)
-        toast.success(`Order status updated to ${ORDER_STATUS_LABELS[newStatus] || newStatus}`)
-      } else {
-        const errData = await res.json().catch(() => ({}))
-        toast.error(errData.detail || errData.error || 'Failed to update order status')
-      }
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to update status')
-    } finally {
-      setUpdatingOrderId(null)
-    }
-  }
-
-  const sendCartNotification = async (userId: string, userName: string) => {
-    const defaultMsg = `Hey ${userName}! Your items are waiting. Checkout now for instant delivery!`
-    const message = window.prompt(`Customize push notification for ${userName}:`, defaultMsg)
-    if (message === null) return // Canceled
-
-    setIsLoadingCarts(true)
-    try {
-      const res = await fetch('/api/admin/live-carts/notify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          title: 'Cart Waiting 🛒',
-          body: message || defaultMsg
+    productHook.allProducts.forEach((p) => {
+      if (p.imageUrl && p.imageUrl.startsWith('http') && !setOfImages.has(p.imageUrl)) {
+        setOfImages.set(p.imageUrl, {
+          url: p.imageUrl,
+          name: p.name || 'Product Image',
+          tags: p.tags || [],
         })
-      })
-
-      const data = await res.json()
-      if (res.ok) {
-        toast.success('Push notification sent successfully!')
-      } else {
-        toast.error(data.error || 'Failed to send push notification')
       }
-    } catch (err) {
-      toast.error('Failed to send push notification')
-    } finally {
-      setIsLoadingCarts(false)
-    }
-  }
-
-  const openWhatsAppModal = (userName: string, phone: string) => {
-    if (!phone || phone === 'N/A') {
-      toast.error('Customer phone number not available')
-      return
-    }
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://fastkirana.vercel.app'
-    const templates = [
-      `Hey ${userName}! 🛒 Your items are waiting in your cart. Checkout now for instant delivery: ${origin}/cart`,
-      `Hey ${userName}! 🎁 We saved the items in your cart. Complete your order now and get an extra discount! Use code SAVE10 at checkout: ${origin}/cart`,
-      `Hey ${userName}! 👋 We noticed you left some items in your cart. Order now before they sell out! ${origin}/cart`
-    ]
-    setWhatsappTargetUser({ name: userName, phone })
-    setWhatsappSelectedTemplateIdx(0)
-    setWhatsappCustomMessage(templates[0])
-    setWhatsappModalOpen(true)
-  }
-
-  const handleTemplateSelect = (idx: number) => {
-    if (!whatsappTargetUser) return
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://fastkirana.vercel.app'
-    const templates = [
-      `Hey ${whatsappTargetUser.name}! 🛒 Your items are waiting in your cart. Checkout now for instant delivery: ${origin}/cart`,
-      `Hey ${whatsappTargetUser.name}! 🎁 We saved the items in your cart. Complete your order now and get an extra discount! Use code SAVE10 at checkout: ${origin}/cart`,
-      `Hey ${whatsappTargetUser.name}! 👋 We noticed you left some items in your cart. Order now before they sell out! ${origin}/cart`
-    ]
-    setWhatsappSelectedTemplateIdx(idx)
-    setWhatsappCustomMessage(templates[idx])
-  }
-
-  const sendWhatsAppMessage = () => {
-    if (!whatsappTargetUser) return
-    let cleanPhone = getLast10Digits(whatsappTargetUser.phone)
-    if (cleanPhone.length === 10) {
-      cleanPhone = '91' + cleanPhone
-    }
-    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappCustomMessage)}`
-    window.open(whatsappUrl, '_blank')
-    setWhatsappModalOpen(false)
-    setWhatsappTargetUser(null)
-  }
-
-  const handleUserRoleChange = async (userId: string, newRole: string) => {
-    setUpdatingUserRoleId(userId)
-    try {
-      const res = await fetch('/api/admin/users', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, role: newRole }),
-      })
-
-      if (res.ok) {
-        setUsers(users.map((u) => (u.id === userId ? { ...u, role: newRole } : u)))
-        toast.success('User role updated successfully!')
-      } else {
-        toast.error('Failed to update user role')
-      }
-    } catch (err) {
-      toast.error('Error updating user role')
-    } finally {
-      setUpdatingUserRoleId(null)
-    }
-  }
-
-  const handleUserStoreChange = async (userId: string, newStoreId: string) => {
-    try {
-      const res = await fetch('/api/admin/users', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, assignedStoreId: newStoreId }),
-      })
-
-      if (res.ok) {
-        setUsers(users.map((u) => (u.id === userId ? { ...u, assignedStoreId: newStoreId || null } : u)))
-        toast.success('Staff/Rider Store Hub updated successfully!')
-      } else {
-        toast.error('Failed to update store hub')
-      }
-    } catch (err) {
-      toast.error('Error updating store hub')
-    }
-  }
-
-  const handleSetPassword = async (userId: string) => {
-    if (!passwordInput || passwordInput.length < 6) {
-      toast.error('Password must be at least 6 characters')
-      return
-    }
-    setSavingPasswordId(userId)
-    try {
-      const res = await fetch('/api/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, password: passwordInput }),
-      })
-      if (res.ok) {
-        toast.success('Password set successfully! Worker can now login.')
-        setSettingPasswordUserId(null)
-        setPasswordInput('')
-      } else {
-        const data = await res.json()
-        toast.error(data.error || 'Failed to set password')
-      }
-    } catch (err) {
-      toast.error('Error setting password')
-    } finally {
-      setSavingPasswordId(null)
-    }
-  }
-
-  const handleUserPhoneSave = async (userId: string) => {
-    if (!phoneInput.trim()) {
-      toast.error('Phone number cannot be empty')
-      return
-    }
-
-    setSavingPhoneId(userId)
-    try {
-      const res = await fetch('/api/admin/users', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, phone: phoneInput.trim() }),
-      })
-
-      if (!res.ok) throw new Error('Failed to update phone number')
-
-      setUsers(users.map((u) => (u.id === userId ? { ...u, phone: phoneInput.trim() } : u)))
-      toast.success('Phone number updated successfully!')
-      setEditingPhoneUserId(null)
-      setPhoneInput('')
-    } catch (err: any) {
-      toast.error(err.message || 'Error updating phone number')
-    } finally {
-      setSavingPhoneId(null)
-    }
-  }
-
-  // ----------------------------------------------------
-  // Handlers for Product Management (Modal Edit & Create)
-  // ----------------------------------------------------
-  const handleDuplicateProduct = (p: any) => {
-    const isCafe = (p.tags || []).map((t: string) => t.trim().toLowerCase()).includes('cafe') ||
-                   categories.find(c => c.id === p.categoryId)?.slug === 'cafe';
-    setNewProductType(isCafe ? 'cafe' : 'grocery')
-    
-    const hasVariants = p.variants && Array.isArray(p.variants) && p.variants.length > 0
-    setHasVariantsNew(hasVariants)
-    setNewProductVariants(hasVariants ? (p.variants as any[]).map(v => ({
-      name: v.name,
-      price: String(v.price),
-      mrp: String(v.mrp),
-      costPrice: String(v.costPrice ?? 0),
-      stock: String(v.stock),
-    })) : [])
-
-    setNewProduct({
-      name: `${p.name} (Copy)`,
-      description: p.description || '',
-      imageUrl: p.imageUrl || '',
-      categoryId: p.categoryId || '',
-      restaurantId: p.restaurantId || '',
-      mrp: String(p.mrp || ''),
-      price: String(p.price || ''),
-      unit: p.unit || '',
-      stock: String(p.stock || ''),
-      isAvailable: p.isAvailable !== false,
-      tags: p.tags ? p.tags.join(', ') : '',
-      minStock: String(p.minStock ?? 10),
-      expiryDate: p.expiryDate ? String(p.expiryDate) : '',
-      costPrice: String(p.costPrice ?? 0),
-      location: p.location || '',
-      isFlashDeal: p.isFlashDeal || false,
-      isTopPick: p.isTopPick || false,
-      isBestSeller: p.isBestSeller || false,
-      sortOrder: String(p.sortOrder ?? 0),
-      barcode: p.barcode || '',
-      vendor: p.vendor || '',
-      vendorId: (p as any).vendorId || '',
     })
-
-    setShowAddProduct(true)
-    setShowCsvImport(false)
-    
-    // Smooth scroll to the top of the Add Product form container
-    setTimeout(() => {
-      const formElement = document.getElementById('add-product-form-container')
-      if (formElement) {
-        formElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    categoryHook.categories.forEach((c) => {
+      if (c.imageUrl && c.imageUrl.startsWith('http') && !setOfImages.has(c.imageUrl)) {
+        setOfImages.set(c.imageUrl, { url: c.imageUrl, name: c.name || 'Category Image' })
       }
-    }, 50)
-  }
-
-  const handleExportCsv = async (type: 'all' | 'grocery' | 'cafe') => {
-    setIsExporting(true)
-    try {
-      const url = `/api/admin/products?limit=5000${type !== 'all' ? `&type=${type}` : ''}`
-      const res = await fetch(url)
-      const data = await res.json()
-      
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to fetch products for export')
-      }
-      
-      const exportProducts = data.products || []
-      
-      if (exportProducts.length === 0) {
-        toast.warning('No products found to export.')
-        setIsExporting(false)
-        return
-      }
-
-      // Convert products array to CSV string matching the import headers
-      // Headers: ID,Name,Category,Unit,MRP,Price,Stock,Tags,Description,Image URL,Cost Price,Min Stock,Location,Barcode,Variants
-      const headers = [
-        'ID', 'Name', 'Category', 'Vendor', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock', 'Location', 'Barcode', 'Display Order', 'Variants'
-      ]
-      
-      const csvRows = [headers.join(',')]
-      
-      exportProducts.forEach((p: any) => {
-        const row = [
-          p.id || '',
-          p.name || '',
-          p.category?.name || '',
-          p.vendor || '',
-          p.unit || '',
-          p.mrp?.toString() || '0',
-          p.price?.toString() || '0',
-          p.stock?.toString() || '0',
-          Array.isArray(p.tags) ? p.tags.join(', ') : p.tags || '',
-          p.description || '',
-          p.imageUrl || '',
-          p.costPrice?.toString() || '0',
-          p.minStock?.toString() || '10',
-          p.location || '',
-          p.barcode || '',
-          p.sortOrder?.toString() || '0',
-          p.variants ? (Array.isArray(p.variants) ? (p.variants as any[]).map((v) => {
-            const parts = [
-              v.name || '',
-              v.price?.toString() || '0',
-              v.mrp?.toString() || '0',
-              v.stock?.toString() || '0'
-            ]
-            if (v.costPrice !== undefined) {
-              parts.push(v.costPrice.toString())
-            }
-            return parts.join(':')
-          }).join(' | ') : typeof p.variants === 'string' ? p.variants : '') : '',
-        ]
-
-        
-        // Escape quotes and commas in CSV cells
-        const escapedRow = row.map(cell => {
-          const cleanCell = cell.replace(/"/g, '""') // Escape quotes
-          if (cleanCell.includes(',') || cleanCell.includes('\n') || cleanCell.includes('"')) {
-            return `"${cleanCell}"`
-          }
-          return cleanCell
-        })
-        
-        csvRows.push(escapedRow.join(','))
-      })
-      
-      const csvContent = csvRows.join('\n')
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-      const urlBlob = URL.createObjectURL(blob)
-      
-      const link = document.createElement('a')
-      link.href = urlBlob
-      
-      const filename = `fastkirana_products_${type}_${new Date().toISOString().split('T')[0]}.csv`
-      link.setAttribute('download', filename)
-      link.click()
-      URL.revokeObjectURL(urlBlob)
-      
-      toast.success(`Successfully exported ${exportProducts.length} items!`)
-      setShowExportModal(false)
-    } catch (err: any) {
-      console.error(err)
-      toast.error(err.message || 'Failed to export products')
-    } finally {
-      setIsExporting(false)
-    }
-  }
-
-  const handleReplenishCsv = async () => {
-    setIsExporting(true)
-    try {
-      const url = '/api/admin/products?limit=5000'
-      const res = await fetch(url)
-      const data = await res.json()
-      
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to fetch products for replenish PO')
-      }
-      
-      const replenishProducts = (data.products || []).filter((p: any) => p.stock <= (p.minStock ?? 10))
-      
-      if (replenishProducts.length === 0) {
-        toast.success('Excellent! No products are currently below min stock levels.')
-        setIsExporting(false)
-        return
-      }
-
-      const headers = [
-        'Name', 'Category', 'Unit', 'MRP', 'Price', 'Stock', 'Tags', 'Description', 'Image URL', 'Cost Price', 'Min Stock', 'Location'
-      ]
-      
-      const csvRows = [headers.join(',')]
-      
-      replenishProducts.forEach((p: any) => {
-        const row = [
-          p.name || '',
-          p.category?.name || '',
-          p.unit || '',
-          p.mrp?.toString() || '0',
-          p.price?.toString() || '0',
-          p.stock?.toString() || '0',
-          Array.isArray(p.tags) ? p.tags.join(', ') : p.tags || '',
-          p.description || '',
-          p.imageUrl || '',
-          p.costPrice?.toString() || '0',
-          p.minStock?.toString() || '10',
-          p.location || '',
-        ]
-        
-        const escapedRow = row.map(cell => {
-          const cleanCell = cell.replace(/"/g, '""')
-          if (cleanCell.includes(',') || cleanCell.includes('\n') || cleanCell.includes('"')) {
-            return `"${cleanCell}"`
-          }
-          return cleanCell
-        })
-        
-        csvRows.push(escapedRow.join(','))
-      })
-      
-      const csvContent = csvRows.join('\n')
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-      const urlBlob = URL.createObjectURL(blob)
-      
-      const link = document.createElement('a')
-      link.href = urlBlob
-      
-      const filename = `fastkirana_replenish_po_${new Date().toISOString().split('T')[0]}.csv`
-      link.setAttribute('download', filename)
-      link.click()
-      URL.revokeObjectURL(urlBlob)
-      
-      toast.success(`Generated replenishment PO with ${replenishProducts.length} items!`)
-    } catch (err: any) {
-      toast.error(err.message || 'Error generating replenishment PO')
-    } finally {
-      setIsExporting(false)
-    }
-  }
-
-  const startEditingProduct = (p: any) => {
-    setEditingProduct(p)
-    const isCafe = (p.tags || []).map((t: string) => t.trim().toLowerCase()).includes('cafe') ||
-                   categories.find(c => c.id === p.categoryId)?.slug === 'cafe';
-    const isRestaurant = (p.tags || []).map((t: string) => t.trim().toLowerCase()).includes('restaurant') ||
-                          categories.find(c => c.id === p.categoryId)?.slug === 'restaurant';
-    setEditProductType(isRestaurant ? 'restaurant' : isCafe ? 'cafe' : 'grocery')
-    
-    const hasVariants = p.variants && Array.isArray(p.variants) && p.variants.length > 0
-    setHasVariantsEdit(hasVariants)
-    setEditProductVariants(hasVariants ? (p.variants as any[]).map(v => ({
-      name: v.name,
-      price: String(v.price),
-      mrp: String(v.mrp),
-      costPrice: String(v.costPrice ?? 0),
-      stock: String(v.stock),
-    })) : [])
-
-    setProductEditForm({
-      name: p.name || '',
-      description: p.description || '',
-      imageUrl: p.imageUrl || '',
-      categoryId: p.categoryId || '',
-      restaurantId: p.restaurantId || '',
-      mrp: String(p.mrp || ''),
-      price: String(p.price || ''),
-      unit: p.unit || '',
-      stock: String(p.stock || ''),
-      isAvailable: p.isAvailable !== false,
-      tags: p.tags ? p.tags.join(', ') : '',
-      minStock: String(p.minStock ?? 10),
-      expiryDate: p.expiryDate ? String(p.expiryDate) : '',
-      costPrice: String(p.costPrice ?? 0),
-      location: p.location || '',
-      isFlashDeal: p.isFlashDeal || false,
-      isTopPick: p.isTopPick || false,
-      isBestSeller: p.isBestSeller || false,
-      sortOrder: String(p.sortOrder ?? 0),
-      barcode: p.barcode || '',
-      vendor: p.vendor || '',
-      vendorId: (p as any).vendorId || '',
     })
-  }
+    return Array.from(setOfImages.values())
+  }, [productHook.allProducts, categoryHook.categories])
 
-  const saveProductChanges = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const requiresBasePrice = !hasVariantsEdit
-    const isRestaurant = isEditProductRestaurant || !!productEditForm.restaurantId
-    const isSpecialProduct = isEditProductCafe || isRestaurant
-    const hasCategory = productEditForm.categoryId || isSpecialProduct
-
-    if (isRestaurant && !productEditForm.restaurantId) {
-      toast.error('Please select a Restaurant Outlet for this dish *')
-      return
-    }
-
-    if (!productEditForm.name || !hasCategory || (requiresBasePrice && (!productEditForm.price || !productEditForm.mrp))) {
-      toast.error('Please fill in all required fields')
-      return
-    }
-    if (hasVariantsEdit && editProductVariants.length === 0) {
-      toast.error('Please add at least one variant option')
-      return
-    }
-
-    setSavingProductId(editingProduct.id)
-    try {
-      const tagsArray = productEditForm.tags
-        ? productEditForm.tags.split(',').map((t) => t.trim()).filter((t) => t.length > 0)
-        : []
-
-      let parsedExpiryISO: string | null = null
-      if (productEditForm.expiryDate) {
-        const d = new Date(productEditForm.expiryDate)
-        if (!isNaN(d.getTime())) {
-          parsedExpiryISO = d.toISOString()
-        }
-      }
-
-      const sortedEditVariants = hasVariantsEdit && editProductVariants.length > 0
-        ? [...editProductVariants].sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0))
-        : []
-      const lowestEditVariant = sortedEditVariants[0]
-      const lowestEditPrice = lowestEditVariant ? parseFloat(lowestEditVariant.price) || 0 : parseFloat(productEditForm.price)
-      const lowestEditMrp = lowestEditVariant ? parseFloat(lowestEditVariant.mrp) || lowestEditPrice : parseFloat(productEditForm.mrp)
-      const resolvedEditUnit = lowestEditVariant && (!productEditForm.unit || productEditForm.unit === '1 pc' || productEditForm.unit === '1 unit')
-        ? lowestEditVariant.name
-        : productEditForm.unit
-
-      const res = await fetch(`/api/products/${editingProduct.id}`, {
-        method: 'PATCH',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(sessionUserId ? { 'x-user-id': sessionUserId, 'x-user-role': sessionUserRole } : {})
-        },
-        body: JSON.stringify({
-          name: productEditForm.name,
-          description: productEditForm.description,
-          imageUrl: productEditForm.imageUrl,
-          categoryId: productEditForm.categoryId,
-          restaurantId: productEditForm.restaurantId || null,
-          mrp: lowestEditMrp,
-          price: lowestEditPrice,
-          unit: resolvedEditUnit,
-          stock: (isEditProductCafe || isEditProductRestaurant || productEditForm.restaurantId) ? 99999 : (sortedEditVariants.length > 0 ? sortedEditVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0) : (parseInt(productEditForm.stock) || 0)),
-          minStock: (isEditProductCafe || isEditProductRestaurant || productEditForm.restaurantId) ? 0 : (parseInt(productEditForm.minStock) || 10),
-          isAvailable: productEditForm.isAvailable,
-          tags: tagsArray,
-          expiryDate: parsedExpiryISO,
-          costPrice: parseFloat(productEditForm.costPrice) || 0,
-          location: productEditForm.location || null,
-          isFlashDeal: productEditForm.isFlashDeal,
-          isTopPick: productEditForm.isTopPick,
-          isBestSeller: productEditForm.isBestSeller,
-          sortOrder: parseInt(productEditForm.sortOrder) || 0,
-          barcode: productEditForm.barcode || null,
-          vendor: productEditForm.vendor?.trim() || null,
-          vendorId: productEditForm.vendorId || null,
-          storeId: selectedHubId && selectedHubId !== 'all' ? selectedHubId : undefined,
-          variants: sortedEditVariants.length > 0 ? sortedEditVariants.map(v => ({
-            name: v.name,
-            price: parseFloat(v.price) || 0,
-            mrp: parseFloat(v.mrp) || 0,
-            costPrice: parseFloat(v.costPrice) || 0,
-            stock: parseInt(v.stock) || 0,
-          })) : null,
-        }),
-      })
-
-      if (res.ok) {
-        const updated = await res.json()
-        setProducts(products.map((p) => (p.id === editingProduct.id ? updated : p)))
-        setAllProducts(allProducts.map((p) => (p.id === editingProduct.id ? { ...p, ...updated } : p)))
-        toast.success('Product updated successfully!')
-        setEditingProduct(null)
-      } else {
-        const errorData = await res.json().catch(() => ({}))
-        toast.error(errorData.error || 'Failed to update product details')
-      }
-    } catch (err: any) {
-      console.error('Error saving product changes:', err)
-      toast.error(err?.message || 'Error saving product changes')
-    } finally {
-      setSavingProductId(null)
-    }
-  }
-
-  const handleToggleProductAvailability = async (productId: string, currentAvailable: boolean) => {
-    try {
-      const res = await fetch(`/api/products/${productId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          isAvailable: !currentAvailable,
-        }),
-      })
-
-      if (res.ok) {
-        const updated = await res.json()
-        setProducts(products.map((p) => (p.id === productId ? updated : p)))
-        setAllProducts(allProducts.map((p) => (p.id === productId ? { ...p, ...updated } : p)))
-        toast.success(`Product "${updated.name}" ${!currentAvailable ? 'enabled' : 'disabled'} successfully!`)
-      } else {
-        toast.error('Failed to update product availability')
-      }
-    } catch (err) {
-      toast.error('Error updating product status')
-    }
-  }
-
-  const handleCreateProduct = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const requiresBasePrice = !hasVariantsNew
-    const isRestaurant = isNewProductRestaurant || !!newProduct.restaurantId
-    const isSpecialProduct = isNewProductCafe || isRestaurant
-    const hasCategory = newProduct.categoryId || isSpecialProduct
-
-    if (isRestaurant && !newProduct.restaurantId) {
-      toast.error('Please select a Restaurant Outlet for this dish *')
-      return
-    }
-
-    if (!newProduct.name || !hasCategory || (requiresBasePrice && (!newProduct.price || !newProduct.mrp))) {
-      toast.error('Please fill in all required fields')
-      return
-    }
-    if (hasVariantsNew && newProductVariants.length === 0) {
-      toast.error('Please add at least one variant option')
-      return
-    }
-
-    setIsCreatingProduct(true)
-    try {
-      const tagsArray = newProduct.tags
-        ? newProduct.tags.split(',').map((t) => t.trim()).filter((t) => t.length > 0)
-        : []
-
-      let resolvedCategoryId = newProduct.categoryId
-      if (newProduct.restaurantId) {
-        resolvedCategoryId = newProduct.categoryId || categories[0]?.id || ''
-      }
-
-      const sortedNewVariants = hasVariantsNew && newProductVariants.length > 0
-        ? [...newProductVariants].sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0))
-        : []
-      const lowestNewVariant = sortedNewVariants[0]
-      const lowestNewPrice = lowestNewVariant ? parseFloat(lowestNewVariant.price) || 0 : parseFloat(newProduct.price)
-      const lowestNewMrp = lowestNewVariant ? parseFloat(lowestNewVariant.mrp) || lowestNewPrice : parseFloat(newProduct.mrp)
-      const resolvedNewUnit = lowestNewVariant && (!newProduct.unit || newProduct.unit === '1 pc' || newProduct.unit === '1 unit')
-        ? lowestNewVariant.name
-        : newProduct.unit
-
-      const res = await fetch('/api/products', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(sessionUserId ? { 'x-user-id': sessionUserId, 'x-user-role': sessionUserRole } : {})
-        },
-        body: JSON.stringify({
-          ...newProduct,
-          vendor: newProduct.vendor?.trim() || null,
-          vendorId: newProduct.vendorId || null,
-          restaurantId: newProduct.restaurantId || null,
-          barcode: newProduct.barcode || null,
-          location: newProduct.location || null,
-          storeId: selectedHubId && selectedHubId !== 'all' ? selectedHubId : undefined,
-          categoryId: resolvedCategoryId || newProduct.categoryId,
-          mrp: lowestNewMrp,
-          price: lowestNewPrice,
-          unit: resolvedNewUnit,
-          stock: (isNewProductCafe || isNewProductRestaurant || newProduct.restaurantId) ? 99999 : (sortedNewVariants.length > 0 ? sortedNewVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0) : (parseInt(newProduct.stock) || 0)),
-          minStock: (isNewProductCafe || isNewProductRestaurant || newProduct.restaurantId) ? 0 : (parseInt(newProduct.minStock) || 10),
-          expiryDate: newProduct.expiryDate ? new Date(newProduct.expiryDate).toISOString() : null,
-          costPrice: parseFloat(newProduct.costPrice) || 0,
-          tags: tagsArray,
-          variants: sortedNewVariants.length > 0 ? sortedNewVariants.map(v => ({
-            name: v.name,
-            price: parseFloat(v.price) || 0,
-            mrp: parseFloat(v.mrp) || 0,
-            costPrice: parseFloat(v.costPrice) || 0,
-            stock: parseInt(v.stock) || 0,
-          })) : null,
-        }),
-      })
-
-      if (res.ok) {
-        const created = await res.json()
-        setProducts([created, ...products])
-        setAllProducts([created, ...allProducts])
-        toast.success(`Product "${created.name}" created successfully!`)
-        setShowAddProduct(false)
-        setNewProductVariants([])
-        setHasVariantsNew(false)
-        setNewProduct({
-          name: '',
-          description: '',
-          imageUrl: '',
-          categoryId: initialCategories?.[0]?.id || '',
-          restaurantId: '',
-          mrp: '',
-          price: '',
-          unit: '',
-          stock: '',
-          isAvailable: true,
-          tags: '',
-          minStock: '10',
-          expiryDate: '',
-          costPrice: '0',
-          location: '',
-          isFlashDeal: false,
-          isTopPick: false,
-          isBestSeller: false,
-          sortOrder: '0',
-          barcode: '',
-          vendor: '',
-          vendorId: '',
-        })
-
-      } else {
-        const errData = await res.json().catch(() => ({}))
-        toast.error(errData.error || 'Failed to create product')
-      }
-    } catch (err: any) {
-      console.error('Error creating product:', err)
-      toast.error(err?.message || 'Error creating product')
-    } finally {
-      setIsCreatingProduct(false)
-    }
-  }
-
-  const handleDeleteProduct = async (productId: string) => {
-    if (!confirm('⚠️ Are you sure you want to PERMANENTLY delete this product? This action cannot be undone.')) {
-      return
-    }
-
-    try {
-      const res = await fetch(`/api/products/${productId}`, {
-        method: 'DELETE',
-      })
-
-      if (res.ok) {
-        setProducts(products.filter((p) => p.id !== productId))
-        setAllProducts(allProducts.filter((p) => p.id !== productId))
-        toast.success('Product permanently deleted.')
-      } else {
-        const data = await res.json()
-        toast.error(data.error || 'Failed to delete product')
-      }
-    } catch (err) {
-      toast.error('Error deleting product')
-    }
-  }
-
-  // ----------------------------------------------------
-  // Handlers for Category Management
-  // ----------------------------------------------------
-  const handleCreateCategory = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newCategory.name) {
-      toast.error('Please enter a category name')
-      return
-    }
-
-    setIsCreatingCategory(true)
-    try {
-      const res = await fetch('/api/categories', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newCategory.name,
-          imageUrl: newCategory.imageUrl,
-          sortOrder: newCategory.sortOrder,
-          parentId: newCategory.parentId || null,
-        }),
-      })
-
-      if (res.ok) {
-        const created = await res.json()
-        // Map to format containing _count
-        const formattedCreated = {
-          ...created,
-          _count: { products: 0 }
-        }
-        setCategories([...categories, formattedCreated])
-        toast.success(`Category "${created.name}" created successfully!`)
-        setShowAddCategory(false)
-        setNewCategory({ name: '', imageUrl: '', sortOrder: '0', parentId: '' })
-      } else {
-        toast.error('Failed to create category')
-      }
-    } catch (err) {
-      toast.error('Error creating category')
-    } finally {
-      setIsCreatingCategory(false)
-    }
-  }
-
-  const startEditingCategory = (c: any) => {
-    setEditingCategory(c)
-    setCategoryEditForm({
-      name: c.name || '',
-      imageUrl: c.imageUrl || '',
-      sortOrder: String(c.sortOrder || '0'),
-      parentId: c.parentId || '',
-    })
-  }
-
-  const saveCategoryChanges = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingCategory) return
-
-    setSavingCategoryId(editingCategory.id)
-    try {
-      const res = await fetch(`/api/categories/${editingCategory.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: categoryEditForm.name,
-          imageUrl: categoryEditForm.imageUrl,
-          sortOrder: parseInt(categoryEditForm.sortOrder) || 0,
-          parentId: categoryEditForm.parentId || null,
-        }),
-      })
-
-      if (res.ok) {
-        const updated = await res.json()
-        setCategories(categories.map((c) => (c.id === editingCategory.id ? { ...c, ...updated } : c)))
-        toast.success('Category updated successfully!')
-        setEditingCategory(null)
-      } else {
-        const err = await res.json()
-        toast.error(err.error || 'Failed to update category')
-      }
-    } catch (err) {
-      toast.error('Error updating category')
-    } finally {
-      setSavingCategoryId(null)
-    }
-  }
-
-  const handleDeleteCategory = async (categoryId: string) => {
-    if (!confirm('Are you sure you want to delete this category? This action cannot be undone.')) {
-      return
-    }
-    setDeletingCategoryId(categoryId)
-    try {
-      const res = await fetch(`/api/categories/${categoryId}`, {
-        method: 'DELETE',
-      })
-
-      if (res.ok) {
-        setCategories(categories.filter((c) => c.id !== categoryId))
-        toast.success('Category deleted successfully!')
-      } else {
-        const err = await res.json()
-        toast.error(err.error || 'Failed to delete category')
-      }
-    } catch (err) {
-      toast.error('Error deleting category')
-    } finally {
-      setDeletingCategoryId(null)
-    }
-  }
-
-  // ----------------------------------------------------
-  // Handlers for Reviews Management
-  // ----------------------------------------------------
-  const startEditingReview = (r: any) => {
-    setEditingReview(r)
-    setReviewEditForm({
-      rating: r.rating || 5,
-      comment: r.comment || '',
-    })
-  }
-
-  const saveReviewChanges = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingReview) return
-
-    setSavingReviewId(editingReview.id)
-    try {
-      const res = await fetch('/api/admin/reviews', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reviewId: editingReview.id,
-          rating: reviewEditForm.rating,
-          comment: reviewEditForm.comment,
-          type: editingReview.type,
-        }),
-      })
-
-      if (res.ok) {
-        const updated = await res.json()
-        setReviews(reviews.map((r: any) => (r.id === editingReview.id ? { ...r, rating: updated.rating, comment: updated.comment } : r)))
-        toast.success('Review updated successfully!')
-        setEditingReview(null)
-      } else {
-        toast.error('Failed to update review')
-      }
-    } catch (err) {
-      toast.error('Error saving review changes')
-    } finally {
-      setSavingReviewId(null)
-    }
-  }
-
-  const handleDeleteReview = async (reviewId: string) => {
-    if (!confirm('Delete this customer review? This action cannot be undone.')) return
-    const reviewType = (reviews as any[]).find(r => r.id === reviewId)?.type
-    setDeletingReviewId(reviewId)
-    try {
-      const res = await fetch('/api/admin/reviews', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reviewId, type: reviewType }),
-      })
-      if (res.ok) {
-        setReviews(reviews.filter((r: any) => r.id !== reviewId))
-        toast.success('Review deleted successfully')
-      } else {
-        toast.error('Failed to delete review')
-      }
-    } catch (err) {
-      toast.error('Error deleting review')
-    } finally {
-      setDeletingReviewId(null)
-    }
-  }
-
-  // Filtered reviews
-  const filteredReviews = reviews.filter((r: any) => {
-    if (!reviewSearch) return true
-    const q = reviewSearch.toLowerCase()
-    return (
-      r.user.name?.toLowerCase().includes(q) ||
-      r.user.email?.toLowerCase().includes(q) ||
-      r.product.name?.toLowerCase().includes(q) ||
-      r.comment?.toLowerCase().includes(q)
+  const filteredMediaImages = useMemo(() => {
+    if (!mediaSearchQuery.trim()) return mediaLibraryImages
+    const q = mediaSearchQuery.toLowerCase().trim()
+    return mediaLibraryImages.filter(
+      (img) =>
+        img.name.toLowerCase().includes(q) ||
+        img.url.toLowerCase().includes(q) ||
+        (img.tags && img.tags.some((t) => t.toLowerCase().includes(q)))
     )
-  })
-
-  // Star render helper
-  const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <Star
-        key={i}
-        className={`h-3.5 w-3.5 ${
-          i < rating
-            ? 'text-yellow-500 fill-yellow-500'
-            : 'text-border'
-        }`}
-      />
-    ))
-  }
-
-  // Average rating
-  const avgRating = reviews.length > 0
-    ? (reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length).toFixed(1)
-    : '0.0'
-
-  // ----------------------------------------------------
-  // Handlers for Coupons / Offers Management
-  // ----------------------------------------------------
-  const handleCreateCoupon = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newCoupon.code || !newCoupon.value) {
-      toast.error('Coupon code and discount value are required')
-      return
-    }
-
-    setIsCreatingCoupon(true)
-    try {
-      const res = await fetch('/api/admin/coupons', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newCoupon),
-      })
-
-      if (res.ok) {
-        const created = await res.json()
-        setCoupons([created, ...coupons])
-        toast.success(`Coupon "${created.code}" created!`)
-        setShowAddCoupon(false)
-        setNewCoupon({
-          code: '',
-          discountType: 'PERCENT',
-          value: '',
-          minOrder: '',
-          maxDiscount: '',
-          maxUses: '',
-          isActive: true,
-          expiresAt: '',
-          categoryId: '',
-          oncePerCustomer: false,
-        })
-      } else {
-        const errData = await res.json()
-        toast.error(errData.error || 'Failed to create coupon')
-      }
-    } catch (err) {
-      toast.error('Error creating coupon')
-    } finally {
-      setIsCreatingCoupon(false)
-    }
-  }
-
-  const startEditingCoupon = (c: any) => {
-    setEditingCoupon(c)
-    setCouponEditForm({
-      code: c.code || '',
-      discountType: c.discountType || 'PERCENT',
-      value: String(c.value || ''),
-      minOrder: String(c.minOrder || ''),
-      maxDiscount: c.maxDiscount ? String(c.maxDiscount) : '',
-      maxUses: c.maxUses ? String(c.maxUses) : '',
-      expiresAt: c.expiresAt ? c.expiresAt.slice(0, 10) : '',
-      isActive: c.isActive !== false,
-      categoryId: c.categoryId || '',
-      oncePerCustomer: c.oncePerCustomer === true,
-    })
-  }
-
-  const saveCouponChanges = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingCoupon) return
-
-    setSavingCouponId(editingCoupon.id)
-    try {
-      const res = await fetch('/api/admin/coupons', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          couponId: editingCoupon.id,
-          code: couponEditForm.code,
-          discountType: couponEditForm.discountType,
-          value: parseFloat(couponEditForm.value) || 0,
-          minOrder: parseFloat(couponEditForm.minOrder) || 0,
-          maxDiscount: couponEditForm.maxDiscount ? parseFloat(couponEditForm.maxDiscount) : null,
-          maxUses: couponEditForm.maxUses ? parseInt(couponEditForm.maxUses) : null,
-          expiresAt: couponEditForm.expiresAt || null,
-          isActive: couponEditForm.isActive,
-          categoryId: couponEditForm.categoryId || null,
-          oncePerCustomer: couponEditForm.oncePerCustomer,
-        }),
-      })
-
-      if (res.ok) {
-        const updated = await res.json()
-        setCoupons(coupons.map((c: any) => (c.id === editingCoupon.id ? { ...c, ...updated } : c)))
-        toast.success('Coupon updated successfully!')
-        setEditingCoupon(null)
-      } else {
-        const err = await res.json()
-        toast.error(err.error || 'Failed to update coupon')
-      }
-    } catch (err) {
-      toast.error('Error saving coupon changes')
-    } finally {
-      setSavingCouponId(null)
-    }
-  }
-
-  const handleToggleCoupon = async (couponId: string, currentActive: boolean) => {
-    setSavingCouponId(couponId)
-    try {
-      const res = await fetch('/api/admin/coupons', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ couponId, isActive: !currentActive }),
-      })
-
-      if (res.ok) {
-        const updated = await res.json()
-        setCoupons(coupons.map((c: any) => (c.id === couponId ? { ...c, ...updated } : c)))
-        toast.success(`Coupon ${!currentActive ? 'activated' : 'deactivated'}`)
-      } else {
-        toast.error('Failed to toggle coupon')
-      }
-    } catch (err) {
-      toast.error('Error toggling coupon')
-    } finally {
-      setSavingCouponId(null)
-    }
-  }
-
-  const handleDeleteCoupon = async (couponId: string) => {
-    if (!confirm('Delete this coupon permanently?')) return
-    setDeletingCouponId(couponId)
-    try {
-      const res = await fetch('/api/admin/coupons', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ couponId }),
-      })
-      if (res.ok) {
-        setCoupons(coupons.filter((c: any) => c.id !== couponId))
-        toast.success('Coupon deleted')
-      } else {
-        toast.error('Failed to delete coupon')
-      }
-    } catch (err) {
-      toast.error('Error deleting coupon')
-    } finally {
-      setDeletingCouponId(null)
-    }
-  }
+  }, [mediaLibraryImages, mediaSearchQuery])
 
   // Filtered Products
-  const filteredProducts = products.filter((p) => {
-    const matchesSearch = 
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()))
-    
-    const matchesCategory = 
-      !selectedCategoryFilter || p.categoryId === selectedCategoryFilter
-      
-    const isCafeItem = p.tags?.some((t: string) => t.toLowerCase() === 'cafe')
-    const isRestaurantItem = !!p.restaurantId || p.tags?.some((t: string) => t.toLowerCase() === 'restaurant')
-    
-    let matchesType = true
-    if (selectedTypeFilter === 'all') {
-      matchesType = true
-    } else if (selectedTypeFilter === 'grocery') {
-      matchesType = !isCafeItem && !isRestaurantItem
-    } else if (selectedTypeFilter === 'cafe') {
-      matchesType = isCafeItem
-    } else if (selectedTypeFilter === 'restaurant') {
-      matchesType = isRestaurantItem
-    } else {
-      // Direct restaurant ID or slug matching
-      matchesType = p.restaurantId === selectedTypeFilter || 
-                    (p as any).restaurant?.id === selectedTypeFilter || 
-                    (p as any).restaurant?.slug === selectedTypeFilter ||
-                    (selectedTypeFilter.toLowerCase().includes('bal') && ((p.restaurantId && p.restaurantId.toLowerCase().includes('bal')) || p.name?.toLowerCase().includes('bal udyan')))
+  const filteredProducts = useMemo(() => {
+    return productHook.products.filter((p) => {
+      const matchesSearch =
+        p.name.toLowerCase().includes(productHook.searchQuery.toLowerCase()) ||
+        (p.description &&
+          p.description.toLowerCase().includes(productHook.searchQuery.toLowerCase()))
+
+      const matchesCategory =
+        !productHook.selectedCategoryFilter ||
+        p.categoryId === productHook.selectedCategoryFilter
+
+      const isCafeItem = p.tags?.some((t: string) => t.toLowerCase() === 'cafe')
+      const isRestaurantItem =
+        !!p.restaurantId || p.tags?.some((t: string) => t.toLowerCase() === 'restaurant')
+
+      let matchesType = true
+      if (productHook.selectedTypeFilter === 'all') {
+        matchesType = true
+      } else if (productHook.selectedTypeFilter === 'grocery') {
+        matchesType = !isCafeItem && !isRestaurantItem
+      } else if (productHook.selectedTypeFilter === 'cafe') {
+        matchesType = isCafeItem
+      } else if (productHook.selectedTypeFilter === 'restaurant') {
+        matchesType = isRestaurantItem
+      } else {
+        matchesType =
+          p.restaurantId === productHook.selectedTypeFilter ||
+          (p as any).restaurant?.id === productHook.selectedTypeFilter ||
+          (p as any).restaurant?.slug === productHook.selectedTypeFilter ||
+          (productHook.selectedTypeFilter.toLowerCase().includes('bal') &&
+            ((p.restaurantId && p.restaurantId.toLowerCase().includes('bal')) ||
+              p.name?.toLowerCase().includes('bal udyan')))
+      }
+
+      return matchesSearch && matchesCategory && matchesType
+    })
+  }, [
+    productHook.products,
+    productHook.searchQuery,
+    productHook.selectedCategoryFilter,
+    productHook.selectedTypeFilter,
+  ])
+
+  // Current active orders count
+  const currentActiveOrdersCount = useMemo(() => {
+    if (orderHook.orderCounts) {
+      const pending = orderHook.orderCounts.PENDING || 0
+      const confirmed = orderHook.orderCounts.CONFIRMED || 0
+      const packed = orderHook.orderCounts.PACKED || 0
+      const shipped = orderHook.orderCounts.SHIPPED || 0
+      return pending + confirmed + packed + shipped
     }
+    return stats.activeOrderCount || 0
+  }, [orderHook.orderCounts, stats.activeOrderCount])
 
-    return matchesSearch && matchesCategory && matchesType
-  })
-
-  const tabConfig: { key: TabType; label: string; icon: any; count?: number }[] = useMemo(() => {
+  const tabConfig = useMemo(() => {
     return [
-      { key: 'orders', label: 'Orders', icon: ShoppingBag, count: orderTotal },
-      { key: 'liveops', label: 'Live Ops Tracker', icon: Zap, count: activeCartsCount },
-      { key: 'products', label: 'Products', icon: Package, count: productTotal },
-      { key: 'categories', label: 'Categories', icon: Layers, count: categories.length },
-      { key: 'alerts', label: 'Stock Alerts', icon: AlertCircle, count: stats.lowStockCount },
-      { key: 'inward', label: 'Inward Items (GRN)', icon: Building2 },
-      { key: 'vendors', label: 'Vendor Console', icon: Truck },
-      { key: 'bulk-update', label: 'Bulk Update', icon: SlidersHorizontal },
-      { key: 'csv-import', label: 'CSV Import', icon: Download },
-      { key: 'restaurant-report', label: 'Restaurant Payout', icon: Utensils },
-      { key: 'reports', label: 'Ledger Report', icon: FileText },
-      { key: 'users', label: 'Staff & Customers', icon: Users, count: userTotal },
-      { key: 'rider-cash', label: 'Rider Cash & Settlement', icon: Wallet },
-      { key: 'reviews', label: 'Reviews', icon: Star, count: reviews.length },
-      { key: 'coupons', label: 'Offers', icon: Ticket, count: coupons.length },
-      { key: 'banners', label: 'Promo Banners', icon: ImageIcon },
-      { key: 'flash-deals', label: 'Store Highlights', icon: Zap },
-      { key: 'push-notifications', label: 'Push Notifications', icon: Bell },
-      { key: 'settings', label: 'Store Settings', icon: Settings },
-      { key: 'analytics', label: 'Analytics', icon: TrendingUp },
-      { key: 'forecast', label: 'AI Forecasting', icon: BrainCircuit },
+      { key: 'orders' as TabType, label: 'Orders', icon: ShoppingBag, count: orderHook.orderTotal },
+      { key: 'liveops' as TabType, label: 'Live Ops Tracker', icon: Zap, count: activeCartsCount },
+      { key: 'products' as TabType, label: 'Products', icon: Package, count: productHook.productTotal },
+      { key: 'categories' as TabType, label: 'Categories', icon: Layers, count: categoryHook.categories.length },
+      { key: 'alerts' as TabType, label: 'Stock Alerts', icon: AlertCircle, count: stats.lowStockCount },
+      { key: 'inward' as TabType, label: 'Inward Items (GRN)', icon: Building2 },
+      { key: 'vendors' as TabType, label: 'Vendor Console', icon: Truck },
+      { key: 'bulk-update' as TabType, label: 'Bulk Update', icon: SlidersHorizontal },
+      { key: 'csv-import' as TabType, label: 'CSV Import', icon: Download },
+      { key: 'restaurant-report' as TabType, label: 'Restaurant Payout', icon: Utensils },
+      { key: 'reports' as TabType, label: 'Ledger Report', icon: FileText },
+      { key: 'users' as TabType, label: 'Staff & Customers', icon: Users, count: userHook.userTotal },
+      { key: 'rider-cash' as TabType, label: 'Rider Cash & Settlement', icon: Wallet },
+      { key: 'reviews' as TabType, label: 'Reviews', icon: Star, count: reviewCouponHook.reviews.length },
+      { key: 'coupons' as TabType, label: 'Offers', icon: Ticket, count: reviewCouponHook.coupons.length },
+      { key: 'banners' as TabType, label: 'Promo Banners', icon: ImageIcon },
+      { key: 'flash-deals' as TabType, label: 'Store Highlights', icon: Zap },
+      { key: 'push-notifications' as TabType, label: 'Push Notifications', icon: Bell },
+      { key: 'settings' as TabType, label: 'Store Settings', icon: Settings },
+      { key: 'analytics' as TabType, label: 'Analytics', icon: TrendingUp },
+      { key: 'forecast' as TabType, label: 'AI Forecasting', icon: BrainCircuit },
     ]
-  }, [orderTotal, activeCartsCount, productTotal, categories.length, stats.lowStockCount, userTotal, reviews.length, coupons.length])
+  }, [
+    orderHook.orderTotal,
+    activeCartsCount,
+    productHook.productTotal,
+    categoryHook.categories.length,
+    stats.lowStockCount,
+    userHook.userTotal,
+    reviewCouponHook.reviews.length,
+    reviewCouponHook.coupons.length,
+  ])
 
-  const activeStoreHub = storesList.find(s => s.id === selectedHubId) || (selectedHubId === 'hub-224122' ? { id: 'hub-224122', name: 'Akbarpur' } : (selectedHubId === 'hub-209206' ? storesList.find(s => s.id === 'hub-209206') || storesList[0] : storesList[0]))
-  const rawHubName = activeStoreHub?.name || (selectedHubId === 'hub-224122' ? 'Akbarpur' : (storesList[0]?.name || 'Central Hub'))
-  const hubCity = rawHubName ? rawHubName.replace(/\s*(central\s*hub|dark\s*store|hub|store)\s*/gi, '').trim().toLowerCase() : ''
-  const hubRestaurants = restaurantsList.filter(r => {
+  const activeStoreHub =
+    storesList.find((s) => s.id === selectedHubId) ||
+    (selectedHubId === 'hub-224122'
+      ? { id: 'hub-224122', name: 'Akbarpur' }
+      : selectedHubId === 'hub-209206'
+      ? storesList.find((s) => s.id === 'hub-209206') || storesList[0]
+      : storesList[0])
+  const rawHubName =
+    activeStoreHub?.name ||
+    (selectedHubId === 'hub-224122' ? 'Akbarpur' : storesList[0]?.name || 'Central Hub')
+  const hubCity = rawHubName
+    ? rawHubName.replace(/\s*(central\s*hub|dark\s*store|hub|store)\s*/gi, '').trim().toLowerCase()
+    : ''
+  const hubRestaurants = restaurantsList.filter((r) => {
     if (!hubCity) return false
     return r.city && r.city.toLowerCase().trim().includes(hubCity)
   })
 
   return (
     <div className="space-y-6">
-      
       <BottleneckBanner
         delayedOrders={delayedOrders}
         pickerDelays={pickerDelays}
@@ -2623,8 +801,8 @@ export function AdminDashboard({
         onToggleChime={() => setIsChimeMuted(!isChimeMuted)}
         onInspectOrder={(orderId) => {
           setActiveTab('orders')
-          setOrderStatusFilter('ALL')
-          setOrderSearchQuery(orderId)
+          orderHook.setOrderStatusFilter('ALL')
+          orderHook.setOrderSearchQuery(orderId)
         }}
       />
 
@@ -2636,7 +814,13 @@ export function AdminDashboard({
         onSelectHub={handleSelectHub}
         onOpenHubManager={() => setIsStoreHubsModalOpen(true)}
         isSuperAdmin={isSuperAdmin}
-        groceryMartOpen={groceryAutoTiming ? groceryMartOpen : ((activeStoreHub as any)?.groceryOpen !== undefined ? (activeStoreHub as any).groceryOpen : groceryMartOpen)}
+        groceryMartOpen={
+          groceryAutoTiming
+            ? groceryMartOpen
+            : (activeStoreHub as any)?.groceryOpen !== undefined
+            ? (activeStoreHub as any).groceryOpen
+            : groceryMartOpen
+        }
         groceryAutoTiming={groceryAutoTiming}
         isTogglingStore={isTogglingStore}
         onToggleGroceryMart={handleToggleGroceryMart}
@@ -2645,14 +829,16 @@ export function AdminDashboard({
 
       <DashboardStatsCards
         stats={{
-          todaySales: apiTodaySales ?? stats?.todaySales ?? 0,
-          todayOrdersCount: apiTodayOrdersCount ?? stats?.todayOrdersCount ?? 0,
-          netSales: apiTodayNetSales ?? stats?.netSales ?? 0,
-          todayDeliveryFee: apiTodayDeliveryFee ?? (stats as any)?.todayDeliveryFee ?? 0,
-          todayPackagingFee: apiTodayPackagingFee ?? (stats as any)?.todayPackagingFee ?? 0,
+          todaySales: orderHook.apiTodaySales ?? stats?.todaySales ?? 0,
+          todayOrdersCount: orderHook.apiTodayOrdersCount ?? stats?.todayOrdersCount ?? 0,
+          netSales: orderHook.apiTodayNetSales ?? stats?.netSales ?? 0,
+          todayDeliveryFee:
+            orderHook.apiTodayDeliveryFee ?? (stats as any)?.todayDeliveryFee ?? 0,
+          todayPackagingFee:
+            orderHook.apiTodayPackagingFee ?? (stats as any)?.todayPackagingFee ?? 0,
           groceryRevenue: stats?.groceryRevenue ?? 0,
           restaurantRevenue: stats?.restaurantRevenue ?? 0,
-          orderCount: stats?.orderCount || orderTotal || 0,
+          orderCount: stats?.orderCount || orderHook.orderTotal || 0,
           activeOrderCount: currentActiveOrdersCount,
         }}
       />
@@ -2677,442 +863,432 @@ export function AdminDashboard({
         >
           {activeTab === 'orders' && (
             <OrdersTab
-              orders={orders}
-              orderCounts={orderCounts}
-              orderStatusFilter={orderStatusFilter}
-              setOrderStatusFilter={setOrderStatusFilter}
-              orderSearchQuery={orderSearchQuery}
-              setOrderSearchQuery={setOrderSearchQuery}
-              orderShopFilter={orderShopFilter}
-              setOrderShopFilter={setOrderShopFilter}
-              orderMethodFilter={orderMethodFilter}
-              setOrderMethodFilter={setOrderMethodFilter}
-              ordersSubTab={ordersSubTab}
-              setOrdersSubTab={setOrdersSubTab}
-              updatingOrderId={updatingOrderId}
+              orders={orderHook.orders}
+              orderCounts={orderHook.orderCounts}
+              orderStatusFilter={orderHook.orderStatusFilter}
+              setOrderStatusFilter={orderHook.setOrderStatusFilter}
+              orderSearchQuery={orderHook.orderSearchQuery}
+              setOrderSearchQuery={orderHook.setOrderSearchQuery}
+              orderShopFilter={orderHook.orderShopFilter}
+              setOrderShopFilter={orderHook.setOrderShopFilter}
+              orderMethodFilter={orderHook.orderMethodFilter}
+              setOrderMethodFilter={orderHook.setOrderMethodFilter}
+              ordersSubTab={orderHook.ordersSubTab}
+              setOrdersSubTab={orderHook.setOrdersSubTab}
+              updatingOrderId={orderHook.updatingOrderId}
               onUpdateOrderStatus={handleOrderStatusChange}
-              onOpenOrderModal={handleOpenOrderModal}
+              onOpenOrderModal={orderHook.handleOpenOrderModal}
               onOpenCreateOrderModal={() => setIsCreateOrderOpen(true)}
               onNavigateToUsersTab={() => setActiveTab('users')}
               livePendingOrders={livePendingOrders}
             />
           )}
 
-      {/* ---------------------------------------------------- */}
-      {/* PRODUCTS & INVENTORY TAB */}
-      {/* ---------------------------------------------------- */}
-      {activeTab === 'products' && (
-        <ProductsTab
-          products={products}
-          categories={categories}
-          restaurantsList={hubRestaurants}
-          settingsMap={settingsMap}
-          filteredProducts={filteredProducts}
-          searchQuery={searchQuery}
-          selectedTypeFilter={selectedTypeFilter}
-          selectedCategoryFilter={selectedCategoryFilter}
-          showAddProduct={showAddProduct}
-          showSortManager={showSortManager}
-          showCsvImport={showCsvImport}
-          showExportModal={showExportModal}
-          isExporting={isExporting}
-          isCreatingProduct={isCreatingProduct}
-          newProduct={newProduct}
-          newProductType={newProductType}
-          editProductType={editProductType}
-          newProductVariants={newProductVariants}
-          editProductVariants={editProductVariants}
-          hasVariantsNew={hasVariantsNew}
-          hasVariantsEdit={hasVariantsEdit}
-          newCustomTag={newCustomTag}
-          editCustomTag={editCustomTag}
-          isUploading={isUploading}
-          productPage={productPage}
-          productTotal={productTotal}
-          editingProduct={editingProduct}
-          savingProductId={savingProductId}
-          setShowAddProduct={setShowAddProduct}
-          setShowSortManager={setShowSortManager}
-          setShowCsvImport={setShowCsvImport}
-          setShowExportModal={setShowExportModal}
-          setNewProduct={setNewProduct}
-          setNewProductType={setNewProductType}
-          setEditProductType={setEditProductType}
-          setNewProductVariants={setNewProductVariants}
-          setEditProductVariants={setEditProductVariants}
-          setHasVariantsNew={setHasVariantsNew}
-          setHasVariantsEdit={setHasVariantsEdit}
-          setNewCustomTag={setNewCustomTag}
-          setEditingProduct={setEditingProduct}
-          setProductPage={setProductPage}
-          setMediaTarget={setMediaTarget}
-          setShowMediaLibrary={setShowMediaLibrary}
-          setSearchQuery={setSearchQuery}
-          setSelectedTypeFilter={setSelectedTypeFilter}
-          setSelectedCategoryFilter={setSelectedCategoryFilter}
-          setProducts={setProducts}
-          setAllProducts={setAllProducts}
-          handleNewProductTypeChange={handleNewProductTypeChange}
-          handleEditProductTypeChange={handleEditProductTypeChange}
-          applyProductTemplate={applyProductTemplate}
-          toggleTag={toggleTag}
-          handleCreateCustomTag={handleCreateCustomTag}
-          handleCreateProduct={handleCreateProduct}
-          handleToggleProductAvailability={handleToggleProductAvailability}
-          handleDeleteProduct={handleDeleteProduct}
-          startEditingProduct={startEditingProduct}
-          handleDuplicateProduct={handleDuplicateProduct}
-          handleCloudinaryUpload={handleCloudinaryUpload}
-          handleExportCsv={handleExportCsv}
-          handleReplenishCsv={handleReplenishCsv}
-          renderPagination={renderPagination}
-        />
-      )}
+          {activeTab === 'products' && (
+            <ProductsTab
+              products={productHook.products}
+              categories={categoryHook.categories}
+              restaurantsList={hubRestaurants}
+              settingsMap={settingsMap}
+              filteredProducts={filteredProducts}
+              searchQuery={productHook.searchQuery}
+              selectedTypeFilter={productHook.selectedTypeFilter}
+              selectedCategoryFilter={productHook.selectedCategoryFilter}
+              showAddProduct={productHook.showAddProduct}
+              showSortManager={productHook.showSortManager}
+              showCsvImport={productHook.showCsvImport}
+              showExportModal={productHook.showExportModal}
+              isExporting={productHook.isExporting}
+              isCreatingProduct={productHook.isCreatingProduct}
+              newProduct={productHook.newProduct}
+              newProductType={productHook.newProductType}
+              editProductType={productHook.editProductType}
+              newProductVariants={productHook.newProductVariants}
+              editProductVariants={productHook.editProductVariants}
+              hasVariantsNew={productHook.hasVariantsNew}
+              hasVariantsEdit={productHook.hasVariantsEdit}
+              newCustomTag={productHook.newCustomTag}
+              editCustomTag={productHook.editCustomTag}
+              isUploading={isUploading}
+              productPage={productHook.productPage}
+              productTotal={productHook.productTotal}
+              editingProduct={productHook.editingProduct}
+              savingProductId={productHook.savingProductId}
+              setShowAddProduct={productHook.setShowAddProduct}
+              setShowSortManager={productHook.setShowSortManager}
+              setShowCsvImport={productHook.setShowCsvImport}
+              setShowExportModal={productHook.setShowExportModal}
+              setNewProduct={productHook.setNewProduct}
+              setNewProductType={productHook.setNewProductType}
+              setEditProductType={productHook.setEditProductType}
+              setNewProductVariants={productHook.setNewProductVariants}
+              setEditProductVariants={productHook.setEditProductVariants}
+              setHasVariantsNew={productHook.setHasVariantsNew}
+              setHasVariantsEdit={productHook.setHasVariantsEdit}
+              setNewCustomTag={productHook.setNewCustomTag}
+              setEditingProduct={productHook.setEditingProduct}
+              setProductPage={productHook.setProductPage}
+              setMediaTarget={setMediaTarget}
+              setShowMediaLibrary={setShowMediaLibrary}
+              setSearchQuery={productHook.setSearchQuery}
+              setSelectedTypeFilter={productHook.setSelectedTypeFilter}
+              setSelectedCategoryFilter={productHook.setSelectedCategoryFilter}
+              setProducts={productHook.setProducts}
+              setAllProducts={productHook.setAllProducts}
+              handleNewProductTypeChange={productHook.handleNewProductTypeChange}
+              handleEditProductTypeChange={productHook.handleEditProductTypeChange}
+              applyProductTemplate={productHook.applyProductTemplate}
+              toggleTag={productHook.toggleTag}
+              handleCreateCustomTag={productHook.handleCreateCustomTag}
+              handleCreateProduct={productHook.handleCreateProduct}
+              handleToggleProductAvailability={productHook.handleToggleProductAvailability}
+              handleDeleteProduct={productHook.handleDeleteProduct}
+              startEditingProduct={productHook.startEditingProduct}
+              handleDuplicateProduct={productHook.handleDuplicateProduct}
+              handleCloudinaryUpload={handleCloudinaryUpload}
+              handleExportCsv={productHook.handleExportCsv}
+              handleReplenishCsv={productHook.handleReplenishCsv}
+              renderPagination={renderPagination}
+            />
+          )}
 
-      {/* ---------------------------------------------------- */}
-      {/* CATEGORIES TAB */}
-      {/* ---------------------------------------------------- */}
-      {activeTab === 'categories' && (
-        <CategoriesTab
-          categories={categories}
-          newCategory={newCategory}
-          showAddCategory={showAddCategory}
-          editingCategory={editingCategory}
-          savingCategoryId={savingCategoryId}
-          deletingCategoryId={deletingCategoryId}
-          categoryEditForm={categoryEditForm}
-          isCreatingCategory={isCreatingCategory}
-          showMediaLibrary={showMediaLibrary}
-          mediaTarget={mediaTarget}
-          mediaSearchQuery={mediaSearchQuery}
-          setNewCategory={setNewCategory}
-          setShowAddCategory={setShowAddCategory}
-          setEditingCategory={setEditingCategory}
-          setCategoryEditForm={setCategoryEditForm}
-          setSavingCategoryId={setSavingCategoryId}
-          setDeletingCategoryId={setDeletingCategoryId}
-          setMediaTarget={setMediaTarget}
-          setShowMediaLibrary={setShowMediaLibrary}
-          handleCreateCategory={handleCreateCategory}
-          handleDeleteCategory={handleDeleteCategory}
-          saveCategoryChanges={saveCategoryChanges}
-          startEditingCategory={startEditingCategory}
-          handleImageFileChange={handleImageFileChange}
-        />
-      )}
+          {activeTab === 'categories' && (
+            <CategoriesTab
+              categories={categoryHook.categories}
+              newCategory={categoryHook.newCategory}
+              showAddCategory={categoryHook.showAddCategory}
+              editingCategory={categoryHook.editingCategory}
+              savingCategoryId={categoryHook.savingCategoryId}
+              deletingCategoryId={categoryHook.deletingCategoryId}
+              categoryEditForm={categoryHook.categoryEditForm}
+              isCreatingCategory={categoryHook.isCreatingCategory}
+              showMediaLibrary={showMediaLibrary}
+              mediaTarget={mediaTarget}
+              mediaSearchQuery={mediaSearchQuery}
+              setNewCategory={categoryHook.setNewCategory}
+              setShowAddCategory={categoryHook.setShowAddCategory}
+              setEditingCategory={categoryHook.setEditingCategory}
+              setCategoryEditForm={categoryHook.setCategoryEditForm}
+              setSavingCategoryId={categoryHook.setSavingCategoryId}
+              setDeletingCategoryId={categoryHook.setDeletingCategoryId}
+              setMediaTarget={setMediaTarget}
+              setShowMediaLibrary={setShowMediaLibrary}
+              handleCreateCategory={categoryHook.handleCreateCategory}
+              handleDeleteCategory={categoryHook.handleDeleteCategory}
+              saveCategoryChanges={categoryHook.saveCategoryChanges}
+              startEditingCategory={categoryHook.startEditingCategory}
+              handleImageFileChange={handleImageFileChange}
+            />
+          )}
 
-      {/* ---------------------------------------------------- */}
-      {/* CUSTOMERS / USERS TAB */}
-      {/* ---------------------------------------------------- */}
-      {activeTab === 'users' && (
-        <UsersTab
-          users={users}
-          userPage={userPage}
-          userTotal={userTotal}
-          userSearch={userSearch}
-          userRoleFilter={userRoleFilter}
-          userStatusFilter={userStatusFilter}
-          isExportingUsers={isExportingUsers}
-          editingPhoneUserId={editingPhoneUserId}
-          phoneInput={phoneInput}
-          savingPhoneId={savingPhoneId}
-          settingPasswordUserId={settingPasswordUserId}
-          passwordInput={passwordInput}
-          savingPasswordId={savingPasswordId}
-          isUpdatingBlockStatus={isUpdatingBlockStatus}
-          setUserPage={setUserPage}
-          setUserSearch={setUserSearch}
-          setUserRoleFilter={setUserRoleFilter}
-          setUserStatusFilter={setUserStatusFilter}
-          setEditingPhoneUserId={setEditingPhoneUserId}
-          setPhoneInput={setPhoneInput}
-          setSettingPasswordUserId={setSettingPasswordUserId}
-          setPasswordInput={setPasswordInput}
-          handleExportCustomersCsv={handleExportCustomersCsv}
-          handleUserPhoneSave={handleUserPhoneSave}
-          handleUserRoleChange={handleUserRoleChange}
-          handleUserStoreChange={handleUserStoreChange}
-          handleSetPassword={handleSetPassword}
-          handleToggleBlock={handleToggleBlock}
-          onRequestBlock={setBlockingUser}
-          renderPagination={renderPagination}
-          stores={storesList}
-        />
-      )}
+          {activeTab === 'users' && (
+            <UsersTab
+              users={userHook.users}
+              userPage={userHook.userPage}
+              userTotal={userHook.userTotal}
+              userSearch={userHook.userSearch}
+              userRoleFilter={userHook.userRoleFilter}
+              userStatusFilter={userHook.userStatusFilter}
+              isExportingUsers={userHook.isExportingUsers}
+              editingPhoneUserId={userHook.editingPhoneUserId}
+              phoneInput={userHook.phoneInput}
+              savingPhoneId={userHook.savingPhoneId}
+              settingPasswordUserId={userHook.settingPasswordUserId}
+              passwordInput={userHook.passwordInput}
+              savingPasswordId={userHook.savingPasswordId}
+              isUpdatingBlockStatus={userHook.isUpdatingBlockStatus}
+              setUserPage={userHook.setUserPage}
+              setUserSearch={userHook.setUserSearch}
+              setUserRoleFilter={userHook.setUserRoleFilter}
+              setUserStatusFilter={userHook.setUserStatusFilter}
+              setEditingPhoneUserId={userHook.setEditingPhoneUserId}
+              setPhoneInput={userHook.setPhoneInput}
+              setSettingPasswordUserId={userHook.setSettingPasswordUserId}
+              setPasswordInput={userHook.setPasswordInput}
+              handleExportCustomersCsv={userHook.handleExportCustomersCsv}
+              handleUserPhoneSave={userHook.handleUserPhoneSave}
+              handleUserRoleChange={userHook.handleUserRoleChange}
+              handleUserStoreChange={userHook.handleUserStoreChange}
+              handleSetPassword={userHook.handleSetPassword}
+              handleToggleBlock={userHook.handleToggleBlock}
+              onRequestBlock={userHook.setBlockingUser}
+              renderPagination={renderPagination}
+              stores={storesList}
+            />
+          )}
 
-      {/* ---------------------------------------------------- */}
-      {/* REVIEWS TAB */}
-      {/* ---------------------------------------------------- */}
-      {activeTab === 'reviews' && (
-        <ReviewsTab
-          reviews={reviews}
-          reviewSearch={reviewSearch}
-          setReviewSearch={setReviewSearch}
-          isLoadingReviews={isLoadingReviews}
-          deletingReviewId={deletingReviewId}
-          startEditingReview={startEditingReview}
-          handleDeleteReview={handleDeleteReview}
-        />
-      )}
+          {activeTab === 'reviews' && (
+            <ReviewsTab
+              reviews={reviewCouponHook.reviews}
+              reviewSearch={reviewCouponHook.reviewSearch}
+              setReviewSearch={reviewCouponHook.setReviewSearch}
+              isLoadingReviews={reviewCouponHook.isLoadingReviews}
+              deletingReviewId={reviewCouponHook.deletingReviewId}
+              startEditingReview={reviewCouponHook.startEditingReview}
+              handleDeleteReview={reviewCouponHook.handleDeleteReview}
+            />
+          )}
 
-      {/* ---------------------------------------------------- */}
-      {/* COUPONS / OFFERS TAB */}
-      {/* ---------------------------------------------------- */}
-      {/* COUPONS TAB */}
-      {/* ---------------------------------------------------- */}
-      {activeTab === 'coupons' && (
-        <CouponsTab
-          coupons={coupons}
-          categories={categories}
-          showAddCoupon={showAddCoupon}
-          isCreatingCoupon={isCreatingCoupon}
-          isLoadingCoupons={isLoadingCoupons}
-          savingCouponId={savingCouponId}
-          deletingCouponId={deletingCouponId}
-          newCoupon={newCoupon}
-          editingCoupon={editingCoupon}
-          couponEditForm={couponEditForm}
-          setShowAddCoupon={setShowAddCoupon}
-          setNewCoupon={setNewCoupon}
-          setEditingCoupon={setEditingCoupon}
-          setCouponEditForm={setCouponEditForm}
-          handleCreateCoupon={handleCreateCoupon}
-          saveCouponChanges={saveCouponChanges}
-          handleToggleCoupon={handleToggleCoupon}
-          handleDeleteCoupon={handleDeleteCoupon}
-          startEditingCoupon={startEditingCoupon}
-        />
-      )}
+          {activeTab === 'coupons' && (
+            <CouponsTab
+              coupons={reviewCouponHook.coupons}
+              categories={categoryHook.categories}
+              showAddCoupon={reviewCouponHook.showAddCoupon}
+              isCreatingCoupon={reviewCouponHook.isCreatingCoupon}
+              isLoadingCoupons={reviewCouponHook.isLoadingCoupons}
+              savingCouponId={reviewCouponHook.savingCouponId}
+              deletingCouponId={reviewCouponHook.deletingCouponId}
+              newCoupon={reviewCouponHook.newCoupon}
+              editingCoupon={reviewCouponHook.editingCoupon}
+              couponEditForm={reviewCouponHook.couponEditForm}
+              setShowAddCoupon={reviewCouponHook.setShowAddCoupon}
+              setNewCoupon={reviewCouponHook.setNewCoupon}
+              setEditingCoupon={reviewCouponHook.setEditingCoupon}
+              setCouponEditForm={reviewCouponHook.setCouponEditForm}
+              handleCreateCoupon={reviewCouponHook.handleCreateCoupon}
+              saveCouponChanges={reviewCouponHook.saveCouponChanges}
+              handleToggleCoupon={reviewCouponHook.handleToggleCoupon}
+              handleDeleteCoupon={reviewCouponHook.handleDeleteCoupon}
+              startEditingCoupon={reviewCouponHook.startEditingCoupon}
+            />
+          )}
 
-      {activeTab === 'liveops' && (
-        <LiveOpsTab
-          liveOrders={liveOrders}
-          livePendingOrders={livePendingOrders}
-          delayedOrders={delayedOrders}
-          activeCarts={activeCarts}
-          isLoadingCarts={isLoadingCarts}
-          cartsRefreshKey={cartsRefreshKey}
-          setCartsRefreshKey={setCartsRefreshKey}
-          sendCartNotification={sendCartNotification}
-          openWhatsAppModal={openWhatsAppModal}
-        />
-      )}
+          {activeTab === 'liveops' && (
+            <LiveOpsTab
+              liveOrders={liveOrders}
+              livePendingOrders={livePendingOrders}
+              delayedOrders={delayedOrders}
+              activeCarts={activeCarts}
+              isLoadingCarts={isLoadingCarts}
+              cartsRefreshKey={cartsRefreshKey}
+              setCartsRefreshKey={setCartsRefreshKey}
+              sendCartNotification={sendCartNotification}
+              openWhatsAppModal={openWhatsAppModal}
+            />
+          )}
 
-      {activeTab === 'analytics' && (
-        <AnalyticsTab
-          storeId={selectedHubId}
-          products={allProducts || []}
-          orders={liveOrders || []}
-          categories={categories || []}
-          stats={{
-            revenue: (typeof apiTodaySales === 'number' ? apiTodaySales : stats?.revenue) ?? stats?.todaySales ?? 0,
-            orderCount: (typeof apiTodayOrdersCount === 'number' ? apiTodayOrdersCount : (orders || []).length) ?? 0,
-            lowStockCount: stats?.lowStockCount ?? 0
-          }}
-        />
-      )}
+          {activeTab === 'analytics' && (
+            <AnalyticsTab
+              storeId={selectedHubId}
+              products={productHook.allProducts || []}
+              orders={liveOrders || []}
+              categories={categoryHook.categories || []}
+              stats={{
+                revenue:
+                  (typeof orderHook.apiTodaySales === 'number'
+                    ? orderHook.apiTodaySales
+                    : stats?.revenue) ??
+                  stats?.todaySales ??
+                  0,
+                orderCount:
+                  (typeof orderHook.apiTodayOrdersCount === 'number'
+                    ? orderHook.apiTodayOrdersCount
+                    : (orderHook.orders || []).length) ?? 0,
+                lowStockCount: stats?.lowStockCount ?? 0,
+              }}
+            />
+          )}
 
-      {activeTab === 'forecast' && (
-        <ForecastTab
-          storeId={selectedHubId}
-          categories={categories}
-          onRestockCompleted={async () => {
-            try {
-              const storeQuery = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
-              const res = await fetch(`/api/products?limit=1000${storeQuery}&t=${Date.now()}`)
-              if (res.ok) {
-                const data = await res.json()
-                if (data.products) {
-                  setProducts(data.products)
-                  setAllProducts(data.products)
+          {activeTab === 'forecast' && (
+            <ForecastTab
+              storeId={selectedHubId}
+              categories={categoryHook.categories}
+              onRestockCompleted={async () => {
+                try {
+                  const storeQuery =
+                    selectedHubId && selectedHubId !== 'all'
+                      ? `&storeId=${encodeURIComponent(selectedHubId)}`
+                      : ''
+                  const res = await fetch(
+                    `/api/products?limit=1000${storeQuery}&t=${Date.now()}`
+                  )
+                  if (res.ok) {
+                    const data = await res.json()
+                    if (data.products) {
+                      productHook.setProducts(data.products)
+                      productHook.setAllProducts(data.products)
+                    }
+                  }
+                } catch (err) {
+                  console.error(err)
                 }
-              }
-            } catch (err) {
-              console.error(err)
-            }
-          }}
-        />
-      )}
+              }}
+            />
+          )}
 
-      {activeTab === 'alerts' && (
-        <AlertsTab
-          storeId={selectedHubId}
-          onProductUpdated={async () => {
-            try {
-              const storeQuery = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
-              const res = await fetch(`/api/products?limit=1000${storeQuery}&t=${Date.now()}`)
-              if (res.ok) {
-                const data = await res.json()
-                if (data.products) {
-                  setProducts(data.products)
-                  setAllProducts(data.products)
+          {activeTab === 'alerts' && (
+            <AlertsTab
+              storeId={selectedHubId}
+              onProductUpdated={async () => {
+                try {
+                  const storeQuery =
+                    selectedHubId && selectedHubId !== 'all'
+                      ? `&storeId=${encodeURIComponent(selectedHubId)}`
+                      : ''
+                  const res = await fetch(
+                    `/api/products?limit=1000${storeQuery}&t=${Date.now()}`
+                  )
+                  if (res.ok) {
+                    const data = await res.json()
+                    if (data.products) {
+                      productHook.setProducts(data.products)
+                      productHook.setAllProducts(data.products)
+                    }
+                  }
+                } catch (err) {
+                  console.error(err)
                 }
-              }
-            } catch (err) {
-              console.error(err)
-            }
-          }}
-        />
-      )}
+              }}
+            />
+          )}
 
-      {activeTab === 'inward' && (
-        <InwardTab
-          storeId={selectedHubId}
-          onInventoryUpdated={async () => {
-            try {
-              const res = await fetch(`/api/products?limit=1000&t=${Date.now()}`)
-              if (res.ok) {
-                const data = await res.json()
-                if (data.products) {
-                  setProducts(data.products)
-                  setAllProducts(data.products)
+          {activeTab === 'inward' && (
+            <InwardTab
+              storeId={selectedHubId}
+              onInventoryUpdated={async () => {
+                try {
+                  const res = await fetch(`/api/products?limit=1000&t=${Date.now()}`)
+                  if (res.ok) {
+                    const data = await res.json()
+                    if (data.products) {
+                      productHook.setProducts(data.products)
+                      productHook.setAllProducts(data.products)
+                    }
+                  }
+                } catch (err) {
+                  console.error(err)
                 }
-              }
-            } catch (err) {
-              console.error(err)
-            }
-          }}
-        />
-      )}
+              }}
+            />
+          )}
 
-      {activeTab === 'bulk-update' && (
-        <BulkUpdateTab
-          categories={categories}
-          onUpdateCompleted={async () => {
-            try {
-              const res = await fetch(`/api/products?limit=1000&t=${Date.now()}`)
-              if (res.ok) {
-                const data = await res.json()
-                if (data.products) {
-                  setProducts(data.products)
-                  setAllProducts(data.products)
+          {activeTab === 'bulk-update' && (
+            <BulkUpdateTab
+              categories={categoryHook.categories}
+              onUpdateCompleted={async () => {
+                try {
+                  const res = await fetch(`/api/products?limit=1000&t=${Date.now()}`)
+                  if (res.ok) {
+                    const data = await res.json()
+                    if (data.products) {
+                      productHook.setProducts(data.products)
+                      productHook.setAllProducts(data.products)
+                    }
+                  }
+                } catch (err) {
+                  console.error(err)
                 }
-              }
-            } catch (err) {
-              console.error(err)
-            }
-          }}
-        />
-      )}
+              }}
+            />
+          )}
 
-      {activeTab === 'reports' && (
-        <ReportsTab storeId={selectedHubId} />
-      )}
+          {activeTab === 'reports' && <ReportsTab storeId={selectedHubId} />}
 
-      {activeTab === 'restaurant-report' && (
-        <RestaurantReportTab storeId={selectedHubId} />
-      )}
+          {activeTab === 'restaurant-report' && (
+            <RestaurantReportTab storeId={selectedHubId} />
+          )}
 
-      {activeTab === 'banners' && (
-        <BannersTab categories={categories} products={allProducts} />
-      )}
+          {activeTab === 'banners' && (
+            <BannersTab
+              categories={categoryHook.categories}
+              products={productHook.allProducts}
+            />
+          )}
 
-      {activeTab === 'settings' && (
-        <SettingsTab onSettingsSaved={fetchSettings} />
-      )}
+          {activeTab === 'settings' && <SettingsTab onSettingsSaved={fetchSettings} />}
 
-      {activeTab === 'push-notifications' && (
-        <PushNotificationsTab />
-      )}
+          {activeTab === 'push-notifications' && <PushNotificationsTab />}
 
-      {activeTab === 'flash-deals' && (
-        <FlashDealsTab />
-      )}
+          {activeTab === 'flash-deals' && <FlashDealsTab />}
 
-      {activeTab === 'rider-cash' && (
-        <RiderCashTab storeId={selectedHubId} />
-      )}
+          {activeTab === 'rider-cash' && <RiderCashTab storeId={selectedHubId} />}
 
-      {activeTab === 'csv-import' && (
-        <CsvImportTab
-          categories={categories}
-          onImportSuccess={async () => {
-            try {
-              const res = await fetch(`/api/products?limit=1000&t=${Date.now()}`)
-              if (res.ok) {
-                const data = await res.json()
-                if (data.products) {
-                  setProducts(data.products)
-                  setAllProducts(data.products)
+          {activeTab === 'csv-import' && (
+            <CsvImportTab
+              categories={categoryHook.categories}
+              onImportSuccess={async () => {
+                try {
+                  const res = await fetch(`/api/products?limit=1000&t=${Date.now()}`)
+                  if (res.ok) {
+                    const data = await res.json()
+                    if (data.products) {
+                      productHook.setProducts(data.products)
+                      productHook.setAllProducts(data.products)
+                    }
+                  }
+                } catch (err) {
+                  console.error(err)
                 }
-              }
-            } catch (err) {
-              console.error(err)
-            }
-          }}
-        />
-      )}
+              }}
+            />
+          )}
 
-      {activeTab === 'restaurant-console' && (
-        <RestaurantConsoleTab storeId={selectedHubId} />
-      )}
+          {activeTab === 'restaurant-console' && (
+            <RestaurantConsoleTab storeId={selectedHubId} />
+          )}
 
-      {activeTab === 'vendors' && (
-        <VendorConsoleTab storeId={selectedHubId} />
-      )}
-
+          {activeTab === 'vendors' && <VendorConsoleTab storeId={selectedHubId} />}
         </motion.div>
       </AnimatePresence>
 
       {/* Product Edit Modal */}
-      {editingProduct && (
+      {productHook.editingProduct && (
         <ProductEditModal
-          editingProduct={editingProduct}
-          productEditForm={productEditForm}
-          saveProductChanges={saveProductChanges}
-          setEditingProduct={setEditingProduct}
-          setProductEditForm={setProductEditForm}
-          setHasVariantsEdit={setHasVariantsEdit}
-          setEditProductVariants={setEditProductVariants}
-          setNewCustomTag={setNewCustomTag}
+          editingProduct={productHook.editingProduct}
+          productEditForm={productHook.productEditForm}
+          saveProductChanges={productHook.saveProductChanges}
+          setEditingProduct={productHook.setEditingProduct}
+          setProductEditForm={productHook.setProductEditForm}
+          setHasVariantsEdit={productHook.setHasVariantsEdit}
+          setEditProductVariants={productHook.setEditProductVariants}
+          setNewCustomTag={productHook.setNewCustomTag}
           setShowMediaLibrary={setShowMediaLibrary}
           setMediaTarget={setMediaTarget}
           handleCloudinaryUpload={handleCloudinaryUpload}
-          handleCreateCustomTag={handleCreateCustomTag}
-          toggleTag={toggleTag}
-          savingProductId={savingProductId}
+          handleCreateCustomTag={productHook.handleCreateCustomTag}
+          toggleTag={productHook.toggleTag}
+          savingProductId={productHook.savingProductId}
           isUploading={isUploading}
-          isEditProductCafe={isEditProductCafe}
-          isEditProductRestaurant={isEditProductRestaurant}
+          isEditProductCafe={productHook.isEditProductCafe}
+          isEditProductRestaurant={productHook.isEditProductRestaurant}
           restaurantsList={hubRestaurants}
-          categories={categories}
+          categories={categoryHook.categories}
           settingsMap={settingsMap}
-          editProductVariants={editProductVariants}
-          hasVariantsEdit={hasVariantsEdit}
-          newCustomTag={newCustomTag}
+          editProductVariants={productHook.editProductVariants}
+          hasVariantsEdit={productHook.hasVariantsEdit}
+          newCustomTag={productHook.newCustomTag}
           RESTAURANT_MENU_SECTIONS={RESTAURANT_MENU_SECTIONS}
           PRESET_KITCHEN_PHOTOS={PRESET_KITCHEN_PHOTOS}
         />
       )}
 
       {/* Category Edit Modal */}
-
-      {editingCategory && (
+      {categoryHook.editingCategory && (
         <CategoryEditModal
-          editingCategory={editingCategory}
-          categoryEditForm={categoryEditForm}
-          categories={categories}
-          savingCategoryId={savingCategoryId}
+          editingCategory={categoryHook.editingCategory}
+          categoryEditForm={categoryHook.categoryEditForm}
+          categories={categoryHook.categories}
+          savingCategoryId={categoryHook.savingCategoryId}
           handleImageFileChange={handleImageFileChange}
-          saveCategoryChanges={saveCategoryChanges}
-          setEditingCategory={setEditingCategory}
-          setCategoryEditForm={setCategoryEditForm}
+          saveCategoryChanges={categoryHook.saveCategoryChanges}
+          setEditingCategory={categoryHook.setEditingCategory}
+          setCategoryEditForm={categoryHook.setCategoryEditForm}
         />
       )}
 
       {/* Review Edit Modal */}
-      {editingReview && (
+      {reviewCouponHook.editingReview && (
         <ReviewEditModal
-          editingReview={editingReview}
-          reviewEditForm={reviewEditForm}
-          savingReviewId={savingReviewId}
-          saveReviewChanges={saveReviewChanges}
-          setEditingReview={setEditingReview}
-          setReviewEditForm={setReviewEditForm}
+          editingReview={reviewCouponHook.editingReview}
+          reviewEditForm={reviewCouponHook.reviewEditForm}
+          savingReviewId={reviewCouponHook.savingReviewId}
+          saveReviewChanges={reviewCouponHook.saveReviewChanges}
+          setEditingReview={reviewCouponHook.setEditingReview}
+          setReviewEditForm={reviewCouponHook.setReviewEditForm}
         />
       )}
 
-      {/* Coupon Edit Modal */}
+      {/* WhatsApp Modal */}
       <WhatsAppAlertModal
         isOpen={whatsappModalOpen}
         targetUser={whatsappTargetUser}
@@ -3127,39 +1303,44 @@ export function AdminDashboard({
         onSendMessage={sendWhatsAppMessage}
       />
 
-      {blockingUser && (
+      {/* Block Customer Modal */}
+      {userHook.blockingUser && (
         <BlockCustomerModal
-          blockingUser={blockingUser}
-          blockReasonInput={blockReasonInput}
-          isUpdatingBlockStatus={isUpdatingBlockStatus}
-          setBlockingUser={setBlockingUser}
-          setBlockReasonInput={setBlockReasonInput}
-          handleToggleBlock={handleToggleBlock}
+          blockingUser={userHook.blockingUser}
+          blockReasonInput={userHook.blockReasonInput}
+          isUpdatingBlockStatus={userHook.isUpdatingBlockStatus}
+          setBlockingUser={userHook.setBlockingUser}
+          setBlockReasonInput={userHook.setBlockReasonInput}
+          handleToggleBlock={userHook.handleToggleBlock}
         />
       )}
 
-      {selectedOrderForTracking && (
+      {/* Order Tracking Modal */}
+      {orderHook.selectedOrderForTracking && (
         <OrderTrackingModal
-          selectedOrderForTracking={selectedOrderForTracking}
-          isLoadingOrderItems={isLoadingOrderItems}
-          setSelectedOrderForTracking={setSelectedOrderForTracking}
+          selectedOrderForTracking={orderHook.selectedOrderForTracking}
+          isLoadingOrderItems={orderHook.isLoadingOrderItems}
+          setSelectedOrderForTracking={orderHook.setSelectedOrderForTracking}
         />
       )}
 
+      {/* Create Order Modal */}
       <CreateOrderModal
         isOpen={isCreateOrderOpen}
         onClose={() => setIsCreateOrderOpen(false)}
         onSuccess={() => {
-          setOrderRefreshKey(prev => prev + 1)
+          setOrderRefreshKey((prev) => prev + 1)
         }}
       />
 
+      {/* Admin Sort Manager */}
       <AdminSortManager
-        isOpen={showSortManager}
-        onClose={() => setShowSortManager(false)}
-        categories={categories}
+        isOpen={productHook.showSortManager}
+        onClose={() => productHook.setShowSortManager(false)}
+        categories={categoryHook.categories}
       />
 
+      {/* Media Library Modal */}
       <MediaLibraryModal
         showMediaLibrary={showMediaLibrary}
         filteredMediaImages={filteredMediaImages}
@@ -3170,17 +1351,18 @@ export function AdminDashboard({
         setMediaTarget={setMediaTarget}
         onSelectImage={(url, target) => {
           if (target === 'newProduct') {
-            setNewProduct((prev) => ({ ...prev, imageUrl: url }))
+            productHook.setNewProduct((prev) => ({ ...prev, imageUrl: url }))
           } else if (target === 'editProduct') {
-            setProductEditForm((prev) => ({ ...prev, imageUrl: url }))
+            productHook.setProductEditForm((prev) => ({ ...prev, imageUrl: url }))
           } else if (target === 'newCategory') {
-            setNewCategory((prev) => ({ ...prev, imageUrl: url }))
+            categoryHook.setNewCategory((prev) => ({ ...prev, imageUrl: url }))
           } else if (target === 'editCategory' || target === 'category') {
-            setCategoryEditForm((prev) => ({ ...prev, imageUrl: url }))
+            categoryHook.setCategoryEditForm((prev) => ({ ...prev, imageUrl: url }))
           }
         }}
       />
 
+      {/* Store Hubs Manager */}
       <StoreHubsManager
         isOpen={isStoreHubsModalOpen}
         onClose={() => setIsStoreHubsModalOpen(false)}

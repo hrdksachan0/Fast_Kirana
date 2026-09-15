@@ -606,7 +606,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         }).toList();
 
         final isRestaurantQuery = matchedRestaurants.isNotEmpty ||
-            ['wedson', 'bal udyan', 'baludyan', 'a.s', 'as restaurant', 'as cafe', 'pari', 'pari milk', 'pari dairy', 'cafe', 'restaurant', 'dhaba'].any((r) => queryClean.contains(r));
+            allRestaurants.any((r) => r.name.toLowerCase().contains(queryClean) || queryClean.contains(r.name.toLowerCase())) ||
+            RestaurantRegistry.all.any((r) => r.name.toLowerCase().contains(queryClean) || queryClean.contains(r.name.toLowerCase())) ||
+            ['cafe', 'restaurant', 'dhaba', 'kitchen', 'food court', 'bhojnalaya', 'sweets', 'bakery'].any((r) => queryClean.contains(r));
 
         // 2. Build expanded query terms using Hinglish synonyms
         final Set<String> expandedTerms = {queryClean, ...queryWords};
@@ -850,6 +852,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   } else if (outletName.contains('Bal Udyan')) {
                     chipColor = AppDesignSystem.violet600;
                     chipBg = AppDesignSystem.violet50;
+                  } else if (outletName.contains('Pizza') || outletName.contains('Hot Pizza')) {
+                    chipColor = AppDesignSystem.rose600;
+                    chipBg = AppDesignSystem.rose50;
                   } else if (outletName.contains('Pari') || outletName.contains('Dairy')) {
                     chipColor = AppDesignSystem.emerald700;
                     chipBg = AppDesignSystem.green50;
@@ -1003,26 +1008,29 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (isFood) ...[
-                    Container(
-                      width: 11,
-                      height: 11,
-                      margin: const EdgeInsets.only(right: 5),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: isVeg ? AppDesignSystem.green700 : AppDesignSystem.red600,
-                          width: 1.2,
-                        ),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                      child: Center(
-                        child: Container(
-                          width: 4.5,
-                          height: 4.5,
-                          decoration: BoxDecoration(
-                            shape: isVeg ? BoxShape.circle : BoxShape.rectangle,
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2.5, right: 5),
+                      child: Container(
+                        width: 11,
+                        height: 11,
+                        decoration: BoxDecoration(
+                          border: Border.all(
                             color: isVeg ? AppDesignSystem.green700 : AppDesignSystem.red600,
+                            width: 1.2,
+                          ),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        child: Center(
+                          child: Container(
+                            width: 4.5,
+                            height: 4.5,
+                            decoration: BoxDecoration(
+                              shape: isVeg ? BoxShape.circle : BoxShape.rectangle,
+                              color: isVeg ? AppDesignSystem.green700 : AppDesignSystem.red600,
+                            ),
                           ),
                         ),
                       ),
@@ -1036,8 +1044,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         fontWeight: FontWeight.w800,
                         color: AppDesignSystem.slate900,
                         letterSpacing: -0.2,
+                        height: 1.25,
                       ),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),

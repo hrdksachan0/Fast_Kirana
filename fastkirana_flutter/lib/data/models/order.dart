@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
+import '../../core/utils/restaurant_utils.dart';
 
 part 'order.g.dart';
 
 enum OrderStatus {
+  adminPending,
   pending,
   confirmed,
   packed,
@@ -13,6 +15,8 @@ enum OrderStatus {
 
   String get displayName {
     switch (this) {
+      case OrderStatus.adminPending:
+        return 'Verifying Order';
       case OrderStatus.pending:
         return 'Order Placed';
       case OrderStatus.confirmed:
@@ -30,6 +34,8 @@ enum OrderStatus {
 
   Color get color {
     switch (this) {
+      case OrderStatus.adminPending:
+        return Colors.deepOrange;
       case OrderStatus.pending:
         return Colors.amber;
       case OrderStatus.confirmed:
@@ -191,6 +197,7 @@ class Order {
   static OrderStatus parseStatus(dynamic val) {
     if (val == null) return OrderStatus.pending;
     final str = val.toString().toLowerCase().trim();
+    if (str == 'admin_pending' || str == 'adminpending' || str.contains('admin_pending')) return OrderStatus.adminPending;
     if (str.contains('confirm')) return OrderStatus.confirmed;
     if (str.contains('pack')) return OrderStatus.packed;
     if (str.contains('ship') || str.contains('way') || str.contains('out')) return OrderStatus.shipped;
@@ -304,23 +311,8 @@ class Order {
       }
       final restId = json['restaurantId']?.toString();
       if (restId != null && restId.isNotEmpty && restId != 'null') {
-        final upperRest = restId.toUpperCase();
-        if (upperRest == 'REST-102' || restId == 'cms2p1lyx0001n0idod904lfu' || restId == 'wedson' || restId == 'wedson-restaurant') {
-          return 'Wedson Restaurant';
-        }
-        if (upperRest == 'REST-101' || restId == 'cms2p1lap0000n0id8alldboy' || restId == 'as-restaurant' || restId == 'as-cafe') {
-          return 'A.S. Restaurant';
-        }
-        if (upperRest == 'REST-103' || restId == 'cmsbhxb6a000304if8kf1cwji' || restId == 'bal-udyan' || restId == 'bal-udyan-restaurant') {
-          return 'Bal Udyan Restaurant';
-        }
-        if (upperRest == 'REST-104' || restId == 'cmtn66nhy000004k0fu84b7ke' || restId == 'pari-milk' || restId == 'pari-milk-dairy-sweets') {
-          return 'Pari Milk Dairy & Sweets';
-        }
-      }
-      final rid = (json['readableId']?.toString() ?? '').toUpperCase();
-      if (rid.endsWith('-R')) {
-        return 'Wedson Restaurant';
+        final regName = RestaurantRegistry.getName(restId);
+        if (regName != null && regName.isNotEmpty) return regName;
       }
       return null;
     }

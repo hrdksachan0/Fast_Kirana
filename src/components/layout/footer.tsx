@@ -149,11 +149,12 @@ export function Footer() {
           <p className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 order-3 md:order-none select-none">
             We accept: UPI • Cards • COD • Wallets
           </p>
-          <div className="flex items-center gap-4.5">
-            <Link href="/faq" className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 hover:text-zinc-300 transition-colors">Delivery FAQs</Link>
-            <Link href="/privacy-policy" className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 hover:text-zinc-300 transition-colors">Privacy Policy</Link>
-            <Link href="#" className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 hover:text-zinc-300 transition-colors">Terms of Service</Link>
-            <Link href="#" className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 hover:text-zinc-300 transition-colors">Refund Policy</Link>
+          <div className="flex flex-wrap items-center justify-center md:justify-end gap-x-4.5 gap-y-2">
+            <Link href="/privacy-policy" className="text-[11px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="text-[11px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors">Terms of Service</Link>
+            <Link href="/refund-policy" className="text-[11px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors">Refund Policy</Link>
+            <Link href="/shipping-policy" className="text-[11px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors">Shipping Policy</Link>
+            <Link href="/contact" className="text-[11px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors">Contact Us</Link>
           </div>
         </div>
       </div>

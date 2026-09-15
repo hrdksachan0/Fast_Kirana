@@ -5,10 +5,14 @@
 # Flutter Engine & Plugins
 # ──────────────────────────────────────────────
 -keep class io.flutter.** { *; }
+-keep class io.flutter.app.** { *; }
 -keep class io.flutter.plugin.** { *; }
 -keep class io.flutter.plugins.** { *; }
 -keep class io.flutter.embedding.** { *; }
 -dontwarn io.flutter.embedding.**
+-dontwarn io.flutter.app.**
+-dontwarn com.google.android.play.core.**
+-dontwarn com.google.android.play.**
 
 # ──────────────────────────────────────────────
 # Firebase & FCM

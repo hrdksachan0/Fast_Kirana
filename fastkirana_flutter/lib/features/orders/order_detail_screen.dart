@@ -37,6 +37,8 @@ class OrderDetailScreen extends StatelessWidget {
 
   int _getStatusStepIndex(OrderStatus status) {
     switch (status) {
+      case OrderStatus.adminPending:
+        return 0;
       case OrderStatus.pending:
         return 0;
       case OrderStatus.confirmed:
@@ -54,6 +56,8 @@ class OrderDetailScreen extends StatelessWidget {
 
   Color _getStatusColor(OrderStatus status) {
     switch (status) {
+      case OrderStatus.adminPending:
+        return AppDesignSystem.orange600;
       case OrderStatus.pending:
         return AppDesignSystem.amber600;
       case OrderStatus.confirmed:

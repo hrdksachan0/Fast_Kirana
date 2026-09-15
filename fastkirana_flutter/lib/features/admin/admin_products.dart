@@ -14,6 +14,7 @@ import 'package:dio/dio.dart';
 import '../../core/services/supabase_service.dart';
 import '../../core/services/admin_authorization.dart';
 import '../../core/utils/restaurant_utils.dart';
+import '../../providers/restaurant_provider.dart';
 
 class AdminProductsScreen extends ConsumerStatefulWidget {
   final bool showAppBar;
@@ -37,13 +38,13 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
 
   static const Color primaryRed = AppDesignSystem.primary;
 
-  final List<Map<String, String>> _restaurantOutlets = [
-    {'id': 'ALL', 'name': 'All Outlets'},
-    {'id': outletWedsonId, 'name': 'Wedson Restaurant'},
-    {'id': outletAsRestaurantId, 'name': 'A.S. Restaurant'},
-    {'id': outletBalUdyanId, 'name': 'Bal Udyan Restaurant'},
-    {'id': outletPariMilkId, 'name': 'Pari Milk Dairy & Sweets'},
-  ];
+  List<Map<String, String>> get _restaurantOutlets {
+    final list = RestaurantRegistry.all;
+    return [
+      {'id': 'ALL', 'name': 'All Outlets'},
+      ...list.map((r) => {'id': r.id, 'name': r.name}),
+    ];
+  }
 
   @override
   void dispose() {
@@ -53,6 +54,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(restaurantsProvider);
     final productsAsync = ref.watch(productsProvider(null));
     final categoriesAsync = ref.watch(categoriesProvider);
 

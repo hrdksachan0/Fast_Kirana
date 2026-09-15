@@ -1,6 +1,7 @@
-const CACHE_NAME = 'fastkirana-v2'
+const CACHE_NAME = 'fastkirana-v3'
 const STATIC_ASSETS = [
   '/',
+  '/offline',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
@@ -80,7 +81,7 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // 3. Page Routes (Network-First, fallback to cached '/' if offline)
+  // 3. Page Routes (Network-First, fallback to cached page or '/offline' if offline)
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -93,8 +94,11 @@ self.addEventListener('fetch', (event) => {
           }
           return response
         })
-        .catch(() => {
-          return caches.match('/')
+        .catch(async () => {
+          const cachedMatch = await caches.match(event.request)
+          if (cachedMatch) return cachedMatch
+          const offlinePage = await caches.match('/offline')
+          return offlinePage || caches.match('/')
         })
     )
   }

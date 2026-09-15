@@ -410,7 +410,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                                 )}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <h4 className="text-xs sm:text-sm font-extrabold text-text-primary truncate leading-snug">
+                                <h4 className="text-xs sm:text-sm font-extrabold text-text-primary line-clamp-2 leading-snug">
                                   {product.name}
                                 </h4>
                                 <span className="text-[10px] text-text-muted font-bold block">
@@ -423,9 +423,11 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                                       ? "text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border-emerald-500/30"
                                       : getOutletName(product).includes('Bal Udyan')
                                       ? "text-purple-700 dark:text-purple-300 bg-purple-500/10 border-purple-500/30"
+                                      : getOutletName(product).includes('Pizza')
+                                      ? "text-rose-700 dark:text-rose-300 bg-rose-500/10 border-rose-500/30"
                                       : "text-amber-800 dark:text-amber-300 bg-amber-500/15 border-amber-500/30"
                                   )}>
-                                    🍳 {getOutletName(product)}
+                                    {getOutletName(product).includes('Pizza') ? '🍕' : '🍳'} {getOutletName(product)}
                                   </span>
                                 ) : (
                                   <span className="inline-flex items-center gap-1 text-[8.5px] font-bold text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded mt-1 border border-zinc-200 dark:border-zinc-700">

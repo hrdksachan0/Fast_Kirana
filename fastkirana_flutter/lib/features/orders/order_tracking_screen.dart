@@ -171,7 +171,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
   }
 
-  void _handleCashfreeSuccess(String cfOrderId) async {
+  Future<void> _handleCashfreeSuccess(String cfOrderId) async {
     HapticFeedback.heavyImpact();
     setState(() => _isProcessingPayment = true);
     try {
@@ -1198,6 +1198,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   int _getStatusStep(OrderStatus? status) {
     if (status == null) return 1;
     switch (status) {
+      case OrderStatus.adminPending:
+        return -2; // Admin verification stage (before pending)
       case OrderStatus.pending:
         return 0; // Order Confirmed
       case OrderStatus.confirmed:
@@ -1216,7 +1218,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   @override
   Widget build(BuildContext context) {
     final statusStep = _getStatusStep(_order?.status);
-    final isCancelled = _order?.status == OrderStatus.cancelled || statusStep < 0;
+    final isCancelled = _order?.status == OrderStatus.cancelled || statusStep == -1;
     final isDelivered = _order?.status == OrderStatus.delivered || statusStep >= 4;
     final isPaid = _order?.paymentStatus == 'PAID';
     final displayNum = _order?.displayId ?? (_order?.readableId ?? widget.orderId);
@@ -2362,21 +2364,54 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: isDelivered ? const Color(0xFFDCFCE7) : const Color(0xFFEFF6FF),
+                  color: isDelivered
+                      ? const Color(0xFFDCFCE7)
+                      : (statusStep == -2 ? const Color(0xFFFFF7ED) : const Color(0xFFEFF6FF)),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  isDelivered ? 'COMPLETED' : 'IN TRANSIT',
+                  isDelivered
+                      ? 'COMPLETED'
+                      : (statusStep == -2 ? 'VERIFYING' : 'IN TRANSIT'),
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 10),
                     fontWeight: FontWeight.w900,
-                    color: isDelivered ? const Color(0xFF15803D) : const Color(0xFF1D4ED8),
+                    color: isDelivered
+                        ? const Color(0xFF15803D)
+                        : (statusStep == -2 ? const Color(0xFFC2410C) : const Color(0xFF1D4ED8)),
                     letterSpacing: 0.5,
                   ),
                 ),
               ),
             ],
           ),
+          if (statusStep == -2) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7ED),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFED7AA)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.verified_user_outlined, size: 16, color: Color(0xFFEA580C)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Admin call confirmation in progress. Once confirmed, your order will proceed to preparation.',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 11),
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF9A3412),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 14),
 
           // Combined Order Multi-Outlet Live Breakdown Strip

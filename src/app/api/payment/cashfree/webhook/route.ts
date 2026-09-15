@@ -47,7 +47,8 @@ export async function POST(req: NextRequest) {
 
         const orders: any[] = await prisma.$queryRaw`
           SELECT o.id, o."combinedId", o."readableId", o.status::text as status,
-                 o.total, o."paymentStatus"::text as "paymentStatus", o."restaurantId", o."shopName",
+                 o.total, o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
+                 o."restaurantId", o."shopName",
                  u.name as "userName", u.phone as "userPhone"
           FROM orders o
           LEFT JOIN users u ON o."userId" = u.id
@@ -56,6 +57,7 @@ export async function POST(req: NextRequest) {
 
         if (orders.length > 0) {
           const order = orders[0]
+          const wasCod = (order.paymentMethod || '').toUpperCase() === 'COD'
 
           if (order.paymentStatus !== 'PAID') {
             if (order.combinedId) {
@@ -78,7 +80,7 @@ export async function POST(req: NextRequest) {
               `
             }
 
-            console.log(`✅ Cashfree webhook: Order #${order.readableId || order.id} marked PAID!`)
+            console.log(`✅ Cashfree webhook: Order #${order.readableId || order.id} marked PAID! (wasCod: ${wasCod})`)
 
             // Fire full notification suite
             try {
@@ -122,12 +124,14 @@ export async function POST(req: NextRequest) {
                   data: { orderId: order.id }
                 }).catch((err: any) => console.error('Push admin error:', err))
 
-                sendPushNotificationToRestaurant(order.restaurantId, {
-                  title: `👨‍🍳 New Food Order #${displayId}!`,
-                  body: `Order #${displayId} for ${outletName} is confirmed and paid. Start preparing dishes!`,
-                  tag: `restaurant-order-${order.id}`,
-                  data: { orderId: order.id, restaurantId: order.restaurantId }
-                }).catch((err: any) => console.error('Push restaurant error:', err))
+                if (order.status !== 'ADMIN_PENDING') {
+                  sendPushNotificationToRestaurant(order.restaurantId, {
+                    title: `👨‍🍳 New Food Order #${displayId}!`,
+                    body: `Order #${displayId} for ${outletName} is confirmed and paid. Start preparing dishes!`,
+                    tag: `restaurant-order-${order.id}`,
+                    data: { orderId: order.id, restaurantId: order.restaurantId }
+                  }).catch((err: any) => console.error('Push restaurant error:', err))
+                }
               } else {
                 sendPushNotificationToRoles([Role.ADMIN, Role.PICKER, Role.DELIVERY], {
                   title: '💳 Online Payment Order Confirmed!',
@@ -135,6 +139,17 @@ export async function POST(req: NextRequest) {
                   tag: `order-${order.id}`,
                   data: { orderId: order.id }
                 }).catch((err: any) => console.error('Push grocery error:', err))
+              }
+
+              // Special Late Payment / Webhook Reconciliation Alert:
+              // If order was previously converted or placed as COD, notify Delivery partner not to collect cash
+              if (wasCod) {
+                sendPushNotificationToRoles([Role.DELIVERY, Role.ADMIN], {
+                  title: '⚠️ CASH MAT LENA! Order Paid Online',
+                  body: `Order #${displayId} (₹${notifyTotal}) customer ne online pay kar diya hai. Delivery ke waqt CASH NA LEIN!`,
+                  tag: `cod-reconciled-${order.id}`,
+                  data: { orderId: order.id, paidOnline: 'true' }
+                }).catch((err: any) => console.error('Push delivery late payment error:', err))
               }
 
               // 3. WhatsApp Alert to Admin
@@ -152,7 +167,9 @@ export async function POST(req: NextRequest) {
 
               const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fastkirana.in'
               const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
-              const adminText = `💳 *PAID Online Order* #${displayId} for [${outletName}] of ₹${notifyTotal} from ${customerName} (${customerPhone}). Payment: Cashfree PAID ✅. Manage: ${cleanAppUrl}/admin`
+              const adminText = wasCod
+                ? `⚠️ *LATE PAYMENT RECONCILED* #${displayId} for [${outletName}] of ₹${notifyTotal} from ${customerName} (${customerPhone}). Previously COD, now PAID online via Cashfree ✅. DO NOT COLLECT CASH! Manage: ${cleanAppUrl}/admin`
+                : `💳 *PAID Online Order* #${displayId} for [${outletName}] of ₹${notifyTotal} from ${customerName} (${customerPhone}). Payment: Cashfree PAID ✅. Manage: ${cleanAppUrl}/admin`
 
               for (const adminPhone of adminPhones) {
                 sendWhatsAppOrderAlert(adminPhone, adminText).catch(() => {})
@@ -171,7 +188,8 @@ export async function POST(req: NextRequest) {
                         orderId: order.id,
                         readableId: displayId,
                         paymentStatus: 'PAID',
-                        status: 'CONFIRMED'
+                        status: 'CONFIRMED',
+                        wasCod: wasCod,
                       }
                     }).finally(() => {
                       supabase.removeChannel(channel)
@@ -203,6 +221,7 @@ export async function POST(req: NextRequest) {
               "updatedAt" = NOW()
           WHERE (id = ${cleanId} OR "readableId" = ${cleanId})
             AND "paymentStatus" != 'PAID'::"PaymentStatus"
+            AND "paymentMethod" != 'COD'::"PaymentMethod"
         `.catch((err: any) => console.error('Error updating failed payment status:', err))
       }
     }

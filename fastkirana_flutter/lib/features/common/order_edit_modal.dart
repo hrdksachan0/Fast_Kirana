@@ -204,11 +204,12 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                   ? (_items[swapIndex]['quantity'] as num).toInt()
                   : 1;
 
+              final oldName = _items[swapIndex]['name']?.toString() ?? 'Item';
               _items[swapIndex] = {
                 ...itemMap,
                 'quantity': oldQty, // Inherit previous quantity
               };
-              AppToast.showSuccess(context, 'Swapped with ${itemMap['name']} ⇄');
+              AppToast.showSuccess(context, 'Replaced "$oldName" with "${itemMap['name']}" ⇄');
             } else {
               // Add Mode: append to items list or increment quantity
               final existingIndex = _items.indexWhere(
@@ -250,10 +251,12 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
         'updatedItems': _items.map((it) {
           final rawPid = it['productId']?.toString();
           final rawId = it['id']?.toString();
-          // Avoid sending OrderItem CUID (cmt...) as productId
-          final cleanPid = (rawPid != null && !rawPid.startsWith('cmt'))
+          // Use legitimate productId; only fallback to id for newly selected items without an existing order item id
+          final cleanPid = (rawPid != null && rawPid.isNotEmpty && !rawPid.startsWith('custom_'))
               ? rawPid
-              : ((rawId != null && !rawId.startsWith('cmt')) ? rawId : null);
+              : ((rawId != null && rawId.isNotEmpty && !rawId.startsWith('custom_') && it['orderId'] == null)
+                  ? rawId
+                  : null);
 
           return {
             'productId': cleanPid,
@@ -594,6 +597,25 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                                         ),
                                       ),
                                     ),
+                                    if ((it['productId'] != null && _outOfStockProductIds.contains(it['productId'].toString())) || it['isAvailable'] == false) ...[
+                                      const SizedBox(width: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFEE2E2),
+                                          borderRadius: BorderRadius.circular(4),
+                                          border: Border.all(color: const Color(0xFFFCA5A5)),
+                                        ),
+                                        child: Text(
+                                          'Out of Stock',
+                                          style: GoogleFonts.inter(
+                                            fontSize: Responsive.scaledFontSize(context, 8),
+                                            fontWeight: FontWeight.w900,
+                                            color: AppDesignSystem.red600,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ],
                                 ),
                                 if (variant != null && variant.isNotEmpty)
@@ -658,23 +680,38 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                                 onTap: () => _openItemPickerSheet(swapIndex: idx),
                                 child: Container(
                                   margin: const EdgeInsets.only(right: 6),
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFF1F5F9),
+                                    color: ((it['productId'] != null && _outOfStockProductIds.contains(it['productId'].toString())) || it['isAvailable'] == false)
+                                        ? const Color(0xFFFEE2E2)
+                                        : const Color(0xFFFEF3C7),
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                                    border: Border.all(
+                                      color: ((it['productId'] != null && _outOfStockProductIds.contains(it['productId'].toString())) || it['isAvailable'] == false)
+                                          ? const Color(0xFFFCA5A5)
+                                          : const Color(0xFFFDE68A),
+                                      width: 1.2,
+                                    ),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.swap_horiz_rounded, size: 14, color: Color(0xFF475569)),
-                                      const SizedBox(width: 2),
+                                      Icon(
+                                        Icons.swap_horiz_rounded,
+                                        size: 15,
+                                        color: ((it['productId'] != null && _outOfStockProductIds.contains(it['productId'].toString())) || it['isAvailable'] == false)
+                                            ? AppDesignSystem.red700
+                                            : const Color(0xFFB45309),
+                                      ),
+                                      const SizedBox(width: 3),
                                       Text(
                                         'Swap',
                                         style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 10.5),
-                                          fontWeight: FontWeight.w800,
-                                          color: const Color(0xFF334155),
+                                          fontSize: Responsive.scaledFontSize(context, 11),
+                                          fontWeight: FontWeight.w900,
+                                          color: ((it['productId'] != null && _outOfStockProductIds.contains(it['productId'].toString())) || it['isAvailable'] == false)
+                                              ? AppDesignSystem.red700
+                                              : const Color(0xFF92400E),
                                         ),
                                       ),
                                     ],
