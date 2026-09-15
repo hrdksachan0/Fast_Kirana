@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
+import { normalizeRestaurantId } from '@/lib/restaurant-ids'
+import { logger } from '@/lib/logger'
+import { OrderStatus, Prisma } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +15,7 @@ export async function GET(request: NextRequest) {
     const cleanPhone = headerPhone ? headerPhone.replace(/[^0-9]/g, '') : ''
 
     const isPlatformAdmin = session?.user?.role === 'ADMIN'
-    const sessionRestId = (session?.user as any)?.assignedRestaurantId
+    const sessionRestId = session?.user?.assignedRestaurantId
 
     // Strict tenant isolation: If not admin, always force their own assigned restaurant ID
     let effectiveRestId = (!isPlatformAdmin && sessionRestId)
@@ -52,11 +55,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Normalize legacy CUIDs to REST-1xx series
-    if (effectiveRestId === 'cms2p1lap0000n0id8alldboy' || effectiveRestId === 'as-restaurant') effectiveRestId = 'REST-101'
-    else if (effectiveRestId === 'cms2p1lyx0001n0idod904lfu' || effectiveRestId === 'wedson-restaurant' || effectiveRestId === 'wedson') effectiveRestId = 'REST-102'
-    else if (effectiveRestId === 'cmsbhxb6a000304if8kf1cwji' || effectiveRestId === 'bal-udyan-restaurant' || effectiveRestId === 'bal-udyan') effectiveRestId = 'REST-103'
-    else if (effectiveRestId === 'cmtn66nhy000004k0fu84b7ke' || effectiveRestId === 'hot-pizza-lovers' || effectiveRestId === 'pizza-lovers' || effectiveRestId === 'pizza-lover' || effectiveRestId === 'pari-milk-dairy-sweets' || effectiveRestId === 'pari-milk') effectiveRestId = 'REST-104'
+    // Universal normalization to canonical ID
+    effectiveRestId = normalizeRestaurantId(effectiveRestId)
 
     // If no restaurant ID resolved, return empty list (no mixup)
     if (!effectiveRestId) {
@@ -65,12 +65,11 @@ export async function GET(request: NextRequest) {
 
     const status = searchParams.get('status')
 
-    const where: any = {
+    const where: Prisma.OrderWhereInput = {
       OR: [
         { paymentMethod: 'COD' },
         { paymentStatus: 'PAID' }
-      ],
-      NOT: { status: 'ADMIN_PENDING' }
+      ]
     }
     if (effectiveRestId) {
       where.AND = [
@@ -82,49 +81,43 @@ export async function GET(request: NextRequest) {
         }
       ]
     }
-    const VALID_ORDER_STATUSES = ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED']
+    const VALID_ORDER_STATUSES: OrderStatus[] = [
+      OrderStatus.PENDING,
+      OrderStatus.CONFIRMED,
+      OrderStatus.PACKED,
+      OrderStatus.SHIPPED,
+      OrderStatus.DELIVERED,
+      OrderStatus.CANCELLED
+    ]
 
     if (status) {
       if (status === 'live' || status === 'active') {
-        where.status = { in: ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED'] }
+        where.status = { in: [OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.PACKED, OrderStatus.SHIPPED] }
       } else if (status.includes(',')) {
         const statuses = status
           .split(',')
           .map(s => s.trim().toUpperCase())
-          .filter(s => VALID_ORDER_STATUSES.includes(s))
+          .filter((s): s is OrderStatus => VALID_ORDER_STATUSES.includes(s as OrderStatus))
         if (statuses.length > 0) {
           where.status = { in: statuses }
         }
       } else {
         const upper = status.trim().toUpperCase()
-        if (VALID_ORDER_STATUSES.includes(upper)) {
-          where.status = upper
+        if (VALID_ORDER_STATUSES.includes(upper as OrderStatus)) {
+          where.status = upper as OrderStatus
         }
       }
     }
 
-    const startDateParam = searchParams.get('startDate')
-    const endDateParam = searchParams.get('endDate')
-    if (startDateParam || endDateParam) {
-      where.createdAt = {}
-      if (startDateParam) {
-        where.createdAt.gte = new Date(`${startDateParam}T00:00:00.000`)
-      }
-      if (endDateParam) {
-        where.createdAt.lte = new Date(`${endDateParam}T23:59:59.999`)
-      }
-    }
-
-    const limitParam = parseInt(searchParams.get('limit') || '200', 10)
-    const limit = Math.min(Math.max(limitParam, 1), 500)
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
 
     const rawOrders = await prisma.order.findMany({
       where,
       include: {
         items: true,
-        user: { select: { id: true, name: true, phone: true } },
         address: true,
-        restaurant: { select: { id: true, name: true, slug: true } },
+        user: { select: { name: true, phone: true } },
+        restaurant: { select: { id: true, name: true, ownerPhone: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: limit,
@@ -154,8 +147,8 @@ export async function GET(request: NextRequest) {
     const commissionPercent = Math.round(commissionRate * 100)
 
     return NextResponse.json({ orders, commissionRate: commissionPercent, commissionDecimal: commissionRate, restaurantName })
-  } catch (error) {
-    console.error('Restaurant dashboard orders GET error:', error)
+  } catch (error: unknown) {
+    logger.error('restaurant-orders', 'Restaurant dashboard orders GET error', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -173,9 +166,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const restaurantId = (session.user as any).assignedRestaurantId
-    const body = await request.json()
-    const { orderId, action } = body
+    const { orderId, action, restaurantId } = await request.json()
 
     if (!orderId || !action) {
       return NextResponse.json({ error: 'Missing orderId or action' }, { status: 400 })
@@ -185,11 +176,12 @@ export async function PATCH(request: NextRequest) {
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
-    if (role !== 'ADMIN' && order.restaurantId !== restaurantId) {
+    const targetRestId = restaurantId || session.user.assignedRestaurantId
+    if (role !== 'ADMIN' && order.restaurantId !== targetRestId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    let updateData: any = {}
+    let updateData: Prisma.OrderUpdateInput = {}
 
     switch (action) {
       case 'accept':
@@ -224,8 +216,8 @@ export async function PATCH(request: NextRequest) {
     })
 
     return NextResponse.json({ order: updated })
-  } catch (error) {
-    console.error('Restaurant dashboard orders PATCH error:', error)
+  } catch (error: unknown) {
+    logger.error('restaurant-orders', 'Restaurant dashboard orders PATCH error', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

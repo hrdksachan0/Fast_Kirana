@@ -1,60 +1,59 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
+import { normalizeRestaurantId } from '@/lib/restaurant-ids'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: Request) {
   const session = await auth()
   const headerRole = request.headers.get('x-user-role')?.toUpperCase()
-  const headerPhone = request.headers.get('x-user-phone') || ''
-  const role = session?.user?.role || headerRole
+    const headerPhone = request.headers.get('x-user-phone') || ''
+    const role = session?.user?.role || headerRole
 
-  if (!role || (role !== 'PICKER' && role !== 'ADMIN' && role !== 'CHEF' && role !== 'RESTAURANT_OWNER')) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const { searchParams } = new URL(request.url)
-  const type = searchParams.get('type') // 'cafe', 'restaurant' or 'grocery'
-  const paramRestId = searchParams.get('restaurantId')
-  const isPlatformAdmin = role === 'ADMIN'
-  
-  const paramStoreId = searchParams.get('storeId')
-  const userAssignedStoreId = (session?.user as any)?.assignedStoreId
-  const effectiveStoreId = userAssignedStoreId || (paramStoreId && paramStoreId !== 'all' ? paramStoreId : null)
-
-  let assignedRestaurantId = (session?.user as any)?.assignedRestaurantId
-
-  // If not admin, lock strictly to assignedRestaurantId
-  let targetRestId = (!isPlatformAdmin && assignedRestaurantId)
-    ? assignedRestaurantId
-    : (paramRestId || assignedRestaurantId || null)
-
-  if (!targetRestId && headerPhone) {
-    const clean = headerPhone.replace(/[^0-9]/g, '').slice(-10)
-    const restUser = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { phone: { endsWith: clean } },
-          { phone: `+91${clean}` }
-        ],
-        assignedRestaurantId: { not: null }
-      },
-      select: { assignedRestaurantId: true }
-    })
-    if (restUser?.assignedRestaurantId) {
-      targetRestId = restUser.assignedRestaurantId
-    } else {
-      const rest = await prisma.restaurant.findFirst({
-        where: { ownerPhone: { contains: clean } },
-        select: { id: true }
-      })
-      if (rest) targetRestId = rest.id
+    if (!role || (role !== 'PICKER' && role !== 'ADMIN' && role !== 'CHEF' && role !== 'RESTAURANT_OWNER')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-  }
 
-  if (targetRestId === 'cms2p1lap0000n0id8alldboy' || targetRestId === 'as-restaurant') targetRestId = 'REST-101'
-  else if (targetRestId === 'cms2p1lyx0001n0idod904lfu' || targetRestId === 'wedson-restaurant' || targetRestId === 'wedson') targetRestId = 'REST-102'
-  else if (targetRestId === 'cmsbhxb6a000304if8kf1cwji' || targetRestId === 'bal-udyan-restaurant' || targetRestId === 'bal-udyan') targetRestId = 'REST-103'
-  else if (targetRestId === 'cmtn66nhy000004k0fu84b7ke' || targetRestId === 'hot-pizza-lovers' || targetRestId === 'pizza-lovers' || targetRestId === 'pizza-lover' || targetRestId === 'pari-milk-dairy-sweets' || targetRestId === 'pari-milk') targetRestId = 'REST-104'
+    const { searchParams } = new URL(request.url)
+    const type = searchParams.get('type') // 'cafe', 'restaurant' or 'grocery'
+    const paramRestId = searchParams.get('restaurantId')
+    const isPlatformAdmin = role === 'ADMIN'
+    
+    const paramStoreId = searchParams.get('storeId')
+    const userAssignedStoreId = session?.user?.assignedStoreId
+    const effectiveStoreId = userAssignedStoreId || (paramStoreId && paramStoreId !== 'all' ? paramStoreId : null)
+
+    let assignedRestaurantId = session?.user?.assignedRestaurantId
+
+    // If not admin, lock strictly to assignedRestaurantId
+    let targetRestId = (!isPlatformAdmin && assignedRestaurantId)
+      ? assignedRestaurantId
+      : (paramRestId || assignedRestaurantId || null)
+
+    if (!targetRestId && headerPhone) {
+      const clean = headerPhone.replace(/[^0-9]/g, '').slice(-10)
+      const restUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { phone: { endsWith: clean } },
+            { phone: `+91${clean}` }
+          ],
+          assignedRestaurantId: { not: null }
+        },
+        select: { assignedRestaurantId: true }
+      })
+      if (restUser?.assignedRestaurantId) {
+        targetRestId = restUser.assignedRestaurantId
+      } else {
+        const rest = await prisma.restaurant.findFirst({
+          where: { ownerPhone: { contains: clean } },
+          select: { id: true }
+        })
+        if (rest) targetRestId = rest.id
+      }
+    }
+
+    targetRestId = normalizeRestaurantId(targetRestId)
 
   if (role === 'CHEF' || role === 'RESTAURANT_OWNER') {
     const isRestaurantChef = session?.user?.email?.toLowerCase().startsWith('restaurant') || role === 'RESTAURANT_OWNER' || type === 'restaurant'
@@ -257,8 +256,8 @@ export async function GET(request: Request) {
     })
 
     return NextResponse.json(result)
-  } catch (error: any) {
-    console.error('Picker orders API error:', error)
+  } catch (error: unknown) {
+    logger.error('picker-orders', 'Picker orders API error', error)
     return NextResponse.json({ error: 'Failed to fetch picker orders' }, { status: 500 })
   }
 }

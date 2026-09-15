@@ -35,7 +35,6 @@ import '../checkout/order_success_screen.dart';
 import '../../core/services/location_service.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../../widgets/empty_state.dart';
-import '../../widgets/address_selector_sheet.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/store_hub_provider.dart';
 import 'widgets/checkout_trust_badges.dart';
@@ -896,7 +895,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     }
 
     final items = cart?.items ?? [];
-    final settings = ref.watch(storeSettingsProvider).valueOrNull ?? const StoreSettings();
     final subtotal = cart?.subtotal ?? 0.0;
     final addresses = ref.watch(addressesProvider).valueOrNull ?? [];
     final selectedAddress = ref.watch(selectedAddressProvider) ??
@@ -1175,11 +1173,22 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   const SizedBox(height: 14),
 
                   // 5. 🍱 Packaging Preference
-                  _buildPackagingOptionsCard(settings),
+                  CheckoutPackagingSelector(
+                    selectedPackaging: _selectedPackaging,
+                    onPackagingChanged: (val) => setState(() => _selectedPackaging = val),
+                  ),
                   const SizedBox(height: 14),
 
                   // 6. 🧾 Detailed Bill Summary
-                  _buildBillSummary(subtotal, deliveryFee, packagingFee, packagingLabel, grandTotal, tier: tier),
+                  CheckoutBillBreakdown(
+                    subtotal: subtotal,
+                    deliveryFee: deliveryFee,
+                    packagingFee: packagingFee,
+                    packagingLabel: packagingLabel,
+                    discountAmount: widget.discountAmount,
+                    grandTotal: grandTotal,
+                    tier: tier,
+                  ),
                   const SizedBox(height: 14),
 
                   // 7. 🛡️ FastKirana Buyer Protection & Trust Badges
@@ -1694,307 +1703,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               fontSize: Responsive.scaledFontSize(context, 12),
               fontWeight: FontWeight.w800,
               color: slateDark,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBillSummary(
-    double subtotal,
-    double deliveryFee,
-    double packagingFee,
-    String packagingLabel,
-    double grandTotal, {
-    DeliveryTierInfo? tier,
-  }) {
-    final deliveryFeeLabel = (tier != null && tier.distanceKm > 3.0)
-        ? 'Delivery Fee (3-5 km Zone)'
-        : (tier != null && tier.distanceKm > 2.0)
-            ? 'Delivery Fee (2-3 km Zone)'
-            : 'Delivery Fee';
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: slateBorder, width: 1.2),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 3)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text('🧾', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
-              const SizedBox(width: 6),
-              Text(
-                'Bill Summary',
-                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: slateDark),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _buildBillRow('Item Total', '₹${subtotal.toInt()}'),
-          const SizedBox(height: 7),
-          _buildBillRow(
-            deliveryFeeLabel,
-            deliveryFee == 0.0 ? 'FREE' : '₹${deliveryFee.toInt()}',
-            isFree: deliveryFee == 0.0,
-          ),
-          const SizedBox(height: 7),
-          _buildBillRow(
-            packagingLabel,
-            packagingFee == 0.0 ? 'FREE (₹0)' : '+₹${packagingFee.toInt()}',
-            isFree: packagingFee == 0.0,
-          ),
-          if (widget.discountAmount > 0) ...[
-            const SizedBox(height: 7),
-            _buildBillRow('Discount', '-₹${widget.discountAmount.toInt()}', isDiscount: true),
-          ],
-          const SizedBox(height: 7),
-          _buildBillRow('Handling & Taxes', '₹0', isFree: true),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 10),
-            child: Divider(height: 1, color: AppDesignSystem.slate200),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'To Pay',
-                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w900, color: slateDark),
-              ),
-              Text(
-                '₹${grandTotal.toInt()}',
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 18),
-                  fontWeight: FontWeight.w900,
-                  color: primaryRed,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBillRow(String label, String value, {bool isFree = false, bool isDiscount = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w500, color: AppDesignSystem.slate600),
-        ),
-        Text(
-          value,
-          style: GoogleFonts.inter(
-            fontSize: Responsive.scaledFontSize(context, 12.5),
-            fontWeight: (isFree || isDiscount) ? FontWeight.w900 : FontWeight.w700,
-            color: isFree
-                ? AppDesignSystem.green600
-                : (isDiscount ? primaryRed : slateDark),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPackagingOptionsCard(StoreSettings settings) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppDesignSystem.slate200, width: 1.2),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: AppDesignSystem.statusDelivered,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Packaging Preference',
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 13.5),
-                  fontWeight: FontWeight.w900,
-                  color: slateDark,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          // Option 1: Normal Packaging (FREE ₹0) - Default
-          GestureDetector(
-            onTap: () {
-              HapticFeedback.selectionClick();
-              setState(() => _selectedPackaging = 'NORMAL');
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-              decoration: BoxDecoration(
-                color: _selectedPackaging == 'NORMAL' ? AppDesignSystem.green50 : AppDesignSystem.slate50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _selectedPackaging == 'NORMAL' ? AppDesignSystem.green700 : AppDesignSystem.slate300,
-                  width: _selectedPackaging == 'NORMAL' ? 1.4 : 1.0,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 18,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _selectedPackaging == 'NORMAL' ? AppDesignSystem.green700 : Colors.white,
-                      border: Border.all(
-                        color: _selectedPackaging == 'NORMAL' ? AppDesignSystem.green700 : AppDesignSystem.slate500,
-                        width: 1.5,
-                      ),
-                    ),
-                    child: _selectedPackaging == 'NORMAL'
-                        ? const Icon(Icons.check, size: 12, color: Colors.white)
-                        : null,
-                  ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Standard Packaging',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 12.5),
-                            fontWeight: FontWeight.w800,
-                            color: slateDark,
-                          ),
-                        ),
-                        Text(
-                          'Eco-friendly containers & tamper-proof bag',
-                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), color: slateMuted, fontWeight: FontWeight.w500),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppDesignSystem.statusDelivered,
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    child: Text(
-                      '₹5',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 11),
-                        fontWeight: FontWeight.w900,
-                        color: AppDesignSystem.emerald600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // Option 2: Premium Thermal Packaging (+₹15)
-          GestureDetector(
-            onTap: () {
-              HapticFeedback.selectionClick();
-              setState(() => _selectedPackaging = 'PREMIUM');
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-              decoration: BoxDecoration(
-                color: _selectedPackaging == 'PREMIUM' ? AppDesignSystem.amber50 : AppDesignSystem.slate50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _selectedPackaging == 'PREMIUM' ? AppDesignSystem.warning : AppDesignSystem.slate300,
-                  width: _selectedPackaging == 'PREMIUM' ? 1.4 : 1.0,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 18,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _selectedPackaging == 'PREMIUM' ? AppDesignSystem.warning : Colors.white,
-                      border: Border.all(
-                        color: _selectedPackaging == 'PREMIUM' ? AppDesignSystem.warning : AppDesignSystem.slate500,
-                        width: 1.5,
-                      ),
-                    ),
-                    child: _selectedPackaging == 'PREMIUM'
-                        ? const Icon(Icons.check, size: 12, color: Colors.white)
-                        : null,
-                  ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              'Premium Thermal Packaging',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 12.5),
-                                fontWeight: FontWeight.w800,
-                                color: slateDark,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text('✨', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 11))),
-                          ],
-                        ),
-                        Text(
-                          'Insulated thermal pouch + spill-proof packaging',
-                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), color: slateMuted, fontWeight: FontWeight.w500),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppDesignSystem.statusPending,
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    child: Text(
-                      '₹15',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 11),
-                        fontWeight: FontWeight.w900,
-                        color: AppDesignSystem.amber600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ),
           ),
         ],

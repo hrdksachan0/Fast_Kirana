@@ -3,7 +3,9 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { invalidateProductCache } from '@/lib/search-cache'
-import { normalizeRestaurantId } from '@/lib/restaurant-ids'
+import { getSessionRestaurantId, normalizeRestaurantId } from '@/lib/restaurant-ids'
+import { logger } from '@/lib/logger'
+import { Prisma } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,17 +13,14 @@ export async function GET(request: NextRequest) {
     let session = null
     try {
       session = await auth()
-    } catch (e) {}
+    } catch (e) {
+      logger.warn('auth', 'Auth check failed in restaurant products GET', e)
+    }
 
     const paramRestId = searchParams.get('restaurantId')
-    const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId || request.headers.get('x-restaurant-id')
-    let effectiveRestId = normalizeRestaurantId(paramRestId || assignedRestaurantId)
-    if (effectiveRestId === 'cms2p1lap0000n0id8alldboy' || effectiveRestId === 'as-restaurant') effectiveRestId = 'REST-101'
-    else if (effectiveRestId === 'cms2p1lyx0001n0idod904lfu' || effectiveRestId === 'wedson-restaurant' || effectiveRestId === 'wedson') effectiveRestId = 'REST-102'
-    else if (effectiveRestId === 'cmsbhxb6a000304if8kf1cwji' || effectiveRestId === 'bal-udyan-restaurant' || effectiveRestId === 'bal-udyan') effectiveRestId = 'REST-103'
-    else if (effectiveRestId === 'cmtn66nhy000004k0fu84b7ke' || effectiveRestId === 'hot-pizza-lovers' || effectiveRestId === 'pizza-lovers' || effectiveRestId === 'pizza-lover' || effectiveRestId === 'pari-milk-dairy-sweets' || effectiveRestId === 'pari-milk') effectiveRestId = 'REST-104'
+    const effectiveRestId = getSessionRestaurantId(session, request, paramRestId)
 
-    const where: any = {}
+    const where: Prisma.ProductWhereInput = {}
     if (effectiveRestId === 'ALL') {
       where.restaurantId = { not: null }
     } else if (effectiveRestId) {
@@ -45,9 +44,10 @@ export async function GET(request: NextRequest) {
     ])
 
     return NextResponse.json({ products, restaurant })
-  } catch (error: any) {
-    console.error('Restaurant dashboard products GET error:', error)
-    return NextResponse.json({ error: error?.message || 'Internal server error' }, { status: 500 })
+  } catch (error: unknown) {
+    logger.error('restaurant-products', 'Restaurant dashboard products GET error', error)
+    const message = error instanceof Error ? error.message : 'Internal server error'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 
@@ -56,7 +56,9 @@ export async function POST(request: NextRequest) {
     let session = null
     try {
       session = await auth()
-    } catch (e) {}
+    } catch (e) {
+      logger.warn('auth', 'Auth check failed in restaurant products POST', e)
+    }
 
     const body = await request.json()
     const {
@@ -78,12 +80,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields: name, price' }, { status: 400 })
     }
 
-    const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId || request.headers.get('x-restaurant-id')
-
-    // Determine target restaurant ID
-    let finalRestaurantId = normalizeRestaurantId(body.restaurantId || assignedRestaurantId)
-    if (!finalRestaurantId) {
-      return NextResponse.json({ error: 'Target restaurant ID is required to create a dish' }, { status: 400 })
+    // Determine target restaurant ID cleanly
+    const finalRestaurantId = getSessionRestaurantId(session, request, body.restaurantId)
+    if (!finalRestaurantId || finalRestaurantId === 'ALL') {
+      return NextResponse.json({ error: 'Valid target restaurant ID is required to create a dish' }, { status: 400 })
     }
 
     const targetCategoryId = (categoryId && typeof categoryId === 'string' && categoryId.trim()) ? categoryId.trim() : null
@@ -164,11 +164,14 @@ export async function POST(request: NextRequest) {
     try {
       revalidateStorefront(product.category?.slug)
       await invalidateProductCache()
-    } catch (e) {}
+    } catch (e) {
+      logger.warn('cache', 'Cache revalidation failed after dish creation', e)
+    }
 
     return NextResponse.json({ product, success: true }, { status: 201 })
-  } catch (error: any) {
-    console.error('Restaurant dashboard products POST error:', error)
-    return NextResponse.json({ error: error?.message || 'Failed to create menu item' }, { status: 500 })
+  } catch (error: unknown) {
+    logger.error('restaurant-products', 'Restaurant dashboard products POST error', error)
+    const message = error instanceof Error ? error.message : 'Failed to create menu item'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { Product } from '@/types'
+import type { CartProduct } from '@/stores/cart-store'
 
 interface UserCoords {
   lat: number
@@ -13,7 +14,7 @@ interface UIState {
   isLocationPickerOpen: boolean
   isTabBarVisible: boolean
   activeVariantProduct: Product | null
-  pendingConflictProduct: any | null
+  pendingConflictProduct: Product | CartProduct | null
   selectedLocation: string
   userCoords: UserCoords | null
   shopName: string
@@ -33,7 +34,7 @@ interface UIState {
   setLocationPickerOpen: (open: boolean) => void
   setTabBarVisible: (visible: boolean) => void
   setActiveVariantProduct: (product: Product | null) => void
-  setPendingConflictProduct: (product: any | null) => void
+  setPendingConflictProduct: (product: Product | CartProduct | null) => void
   setSelectedLocation: (location: string) => void
   setUserCoords: (coords: UserCoords | null) => void
   setIsLocationServiceable: (serviceable: boolean, distanceKm?: number | null) => void

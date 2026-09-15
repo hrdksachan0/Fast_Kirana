@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { formatDate } from '@/lib/date-helpers'
-
 import { getLast10Digits } from '@/lib/phone'
+import { normalizeRestaurantId } from '@/lib/restaurant-ids'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,9 +15,9 @@ export async function GET(request: NextRequest) {
 
     const role = session.user.role
     const email = session.user.email || ''
-    const phone = (session.user as any).phone || ''
+    const phone = session.user.phone || ''
     const cleanPhone = phone ? getLast10Digits(phone) : ''
-    let assignedRestId = (session.user as any).assignedRestaurantId
+    let assignedRestId = session.user.assignedRestaurantId
 
     if (!assignedRestId && cleanPhone) {
       const dbUser = await prisma.user.findFirst({
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
     const isAllowed = role === 'ADMIN' || role === 'RESTAURANT_OWNER' || role === 'CHEF'
     
     if (!isAllowed) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const { searchParams } = new URL(request.url)
@@ -60,11 +61,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No restaurant specified' }, { status: 400 })
     }
     
-    const norm = (effectiveRestId || '').toLowerCase().trim()
-    if (norm === 'cms2p1lap0000n0id8alldboy' || norm === 'as-restaurant' || norm === 'as-cafe' || norm === 'rest-101') effectiveRestId = 'REST-101'
-    else if (norm === 'cms2p1lyx0001n0idod904lfu' || norm === 'wedson-restaurant' || norm === 'wedson' || norm === 'rest-102') effectiveRestId = 'REST-102'
-    else if (norm === 'cmsbhxb6a000304if8kf1cwji' || norm === 'bal-udyan-restaurant' || norm === 'bal-udyan' || norm === 'bal udyan' || norm === 'rest-103') effectiveRestId = 'REST-103'
-    else if (norm === 'cmtn66nhy000004k0fu84b7ke' || norm === 'hot-pizza-lovers' || norm === 'pizza-lovers' || norm === 'pizza-lover' || norm === 'pizza' || norm === 'pari-milk-dairy-sweets' || norm === 'pari-milk' || norm === 'pari' || norm === 'rest-104') effectiveRestId = 'REST-104'
+    effectiveRestId = normalizeRestaurantId(effectiveRestId)
 
     const now = new Date()
     let start: Date
@@ -415,8 +412,9 @@ export async function GET(request: NextRequest) {
       dailySales,
       topProducts,
     })
-  } catch (error: any) {
-    console.error('Restaurant reports API error:', error)
-    return NextResponse.json({ error: error.message || 'Failed to fetch restaurant reports' }, { status: 500 })
+  } catch (error: unknown) {
+    logger.error('restaurant-reports', 'Restaurant reports API error', error)
+    const message = error instanceof Error ? error.message : 'Failed to fetch restaurant reports'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

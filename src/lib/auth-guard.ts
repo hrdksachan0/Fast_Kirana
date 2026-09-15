@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { isSuperadminPhone, isRootAdminAccount } from '@/lib/superadmin-config'
+import { logger } from '@/lib/logger'
 
 /**
  * Requires an authenticated user with one of the given roles.
@@ -20,7 +21,7 @@ export async function requireRole(allowedRoles: string[], request?: Request) {
   try {
     session = await auth()
   } catch (e) {
-    // ignore request-scope auth errors
+    logger.warn('auth', 'Auth check failed in requireRole', e)
   }
 
   // 1. First priority: Check cryptographic JWT Authorization Bearer Token
@@ -40,13 +41,13 @@ export async function requireRole(allowedRoles: string[], request?: Request) {
           session: {
             user: {
               id: jwtPayload.userId,
-              role: userRole,
+              role: userRole as any,
               phone: jwtPayload.phone,
               email: jwtPayload.email,
               assignedStoreId: jwtPayload.assignedStoreId,
               assignedRestaurantId: jwtPayload.assignedRestaurantId,
             }
-          } as any
+          }
         }
       }
       return { error: NextResponse.json({ error: 'Forbidden: Insufficient permissions' }, { status: 403 }), session: null }
@@ -56,9 +57,9 @@ export async function requireRole(allowedRoles: string[], request?: Request) {
   // 2. Second priority: Standard verified NextAuth Session
   const sessionRole = session?.user?.role?.toUpperCase()
   const userEmail = (session?.user?.email || '').toLowerCase()
-  const userPhone = ((session?.user as any)?.phone || '')
+  const userPhone = (session?.user?.phone || '')
   const phoneDigits = userPhone.replace(/\D/g, '').slice(-10)
-  const assignedStoreId = (session?.user as any)?.assignedStoreId
+  const assignedStoreId = session?.user?.assignedStoreId
 
   const isSuper = isRootAdminAccount({
     email: userEmail,
@@ -122,7 +123,7 @@ export async function requireOrderAccess(orderUserId: string, extraRoles: string
                 assignedStoreId: dbUser.assignedStoreId,
                 assignedRestaurantId: dbUser.assignedRestaurantId,
               }
-            } as any
+            }
           }
         }
         return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }), session: null }
@@ -134,7 +135,9 @@ export async function requireOrderAccess(orderUserId: string, extraRoles: string
   let session = null
   try {
     session = await auth()
-  } catch (e) {}
+  } catch (e) {
+    logger.warn('auth', 'Auth check failed in requireOrderAccess', e)
+  }
 
   if (!session?.user) {
     return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }), session: null }

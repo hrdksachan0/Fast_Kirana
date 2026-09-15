@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '@/lib/supabase-client'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 interface UseAdminRealtimeProps {
   selectedHubId: string
@@ -186,10 +187,12 @@ export function useAdminRealtime({
           } else if (data.type === 'order-update') {
             debouncedRefresh()
           }
-        } catch (e) {}
+        } catch (e) {
+          logger.warn('realtime', 'Failed to parse SSE event data', e)
+        }
       }
     } catch (e) {
-      console.warn('SSE connection failed:', e)
+      logger.warn('realtime', 'SSE connection failed', e)
     }
 
     let railwayWs: WebSocket | null = null
@@ -206,10 +209,12 @@ export function useAdminRealtime({
           } else if (payload.event === 'CART_UPDATE' || payload.event === 'CART_ITEM_ADDED') {
             setCartsRefreshKey((prev) => prev + 1)
           }
-        } catch (e) {}
+        } catch (e) {
+          logger.warn('realtime', 'Failed to parse WebSocket payload', e)
+        }
       }
     } catch (e) {
-      console.warn('Railway WebSocket connection error:', e)
+      logger.warn('realtime', 'Railway WebSocket connection error', e)
     }
 
     return () => {

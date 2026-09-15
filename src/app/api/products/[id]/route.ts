@@ -5,6 +5,8 @@ import { requireAdmin } from '@/lib/auth-guard'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { invalidateProductCache } from '@/lib/search-cache'
 import { normalizeRestaurantId } from '@/lib/restaurant-ids'
+import { logger } from '@/lib/logger'
+import { Prisma } from '@prisma/client'
 
 export async function GET(
   request: Request,
@@ -44,8 +46,8 @@ export async function GET(
     }
 
     return NextResponse.json(product)
-  } catch (error: any) {
-    console.error('Product API Error:', error)
+  } catch (error: unknown) {
+    logger.error('product', 'Product API Error in GET', error)
     return NextResponse.json({ error: 'Failed to fetch product' }, { status: 500 })
   }
 }
@@ -58,17 +60,17 @@ export async function PATCH(
   try {
     session = await auth()
   } catch (e) {
-    // Safely ignore request-scope edge cases
+    logger.warn('auth', 'Session check failed in products/[id] PATCH', e)
   }
   let role = session?.user?.role || request.headers.get('x-user-role') || 'USER'
-  let assignedRestaurantId = (session?.user as any)?.assignedRestaurantId || request.headers.get('x-restaurant-id') || null
+  let assignedRestaurantId = session?.user?.assignedRestaurantId || request.headers.get('x-restaurant-id') || null
   const userEmail = (session?.user?.email || request.headers.get('x-user-email') || '').toLowerCase().trim()
-  const userPhone = ((session?.user as any)?.phone || request.headers.get('x-user-phone') || '').trim()
+  const userPhone = (session?.user?.phone || request.headers.get('x-user-phone') || '').trim()
   const userId = session?.user?.id || request.headers.get('x-user-id') || null
 
   // Fresh role lookup from DB if needed
   try {
-    const conditions: any[] = []
+    const conditions: Prisma.UserWhereInput[] = []
     if (userId) conditions.push({ id: userId })
     if (userEmail) conditions.push({ email: userEmail })
     if (userPhone) conditions.push({ phone: userPhone })
@@ -85,7 +87,7 @@ export async function PATCH(
       }
     }
   } catch (e) {
-    console.error('Error querying dbUser in product PATCH:', e)
+    logger.error('product', 'Error querying dbUser in product PATCH', e)
   }
 
   const isStaff = role === 'ADMIN' || 
@@ -359,8 +361,8 @@ export async function DELETE(
     await invalidateProductCache()
 
     return NextResponse.json({ message: 'Product permanently deleted' })
-  } catch (error: any) {
-    console.error('Failed to delete product:', error)
+  } catch (error: unknown) {
+    logger.error('product', 'Failed to delete product', error)
     return NextResponse.json({ error: 'Failed to delete product' }, { status: 500 })
   }
 }

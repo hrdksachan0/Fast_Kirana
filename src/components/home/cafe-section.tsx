@@ -12,6 +12,7 @@ import { ProductCard } from '@/components/product/product-card'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { triggerHaptic } from '@/lib/haptic'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 const getCafeSectionImage = (tag: string) => {
   const mapping: Record<string, string> = {
@@ -164,7 +165,9 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
             if (Array.isArray(parsed) && parsed.length > 0) {
               parsedSections = parsed
             }
-          } catch (e) {}
+          } catch (e) {
+            logger.warn('cafe-section', 'Failed to parse customSectionsStr', e)
+          }
         }
 
         const rawCategories = parsedSections || []

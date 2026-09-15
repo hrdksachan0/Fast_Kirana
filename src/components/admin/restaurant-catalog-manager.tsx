@@ -499,8 +499,8 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
       ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
       ...(session?.user?.role ? { 'x-user-role': session.user.role } : {}),
       ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
-      ...((session?.user as any)?.phone ? { 'x-user-phone': (session?.user as any).phone } : {}),
-      ...((session?.user as any)?.assignedRestaurantId ? { 'x-restaurant-id': (session?.user as any).assignedRestaurantId } : {})
+      ...(session?.user?.phone ? { 'x-user-phone': session.user.phone } : {}),
+      ...(session?.user?.assignedRestaurantId ? { 'x-restaurant-id': session.user.assignedRestaurantId } : {})
     }
 
     try {
@@ -553,8 +553,8 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
           ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
           ...(session?.user?.role ? { 'x-user-role': session.user.role } : {}),
           ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
-          ...((session?.user as any)?.phone ? { 'x-user-phone': (session?.user as any).phone } : {}),
-          ...((session?.user as any)?.assignedRestaurantId ? { 'x-restaurant-id': (session?.user as any).assignedRestaurantId } : {})
+          ...(session?.user?.phone ? { 'x-user-phone': session.user.phone } : {}),
+          ...(session?.user?.assignedRestaurantId ? { 'x-restaurant-id': session.user.assignedRestaurantId } : {})
         }
       })
 
@@ -565,9 +565,9 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
         const errData = await res.json().catch(() => ({}))
         toast.error(errData.error || 'Failed to remove product')
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
-      toast.error(err?.message || 'Failed to remove product')
+      toast.error('Failed to remove product')
     }
   }
 
@@ -583,8 +583,8 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
           ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
           ...(session?.user?.role ? { 'x-user-role': session.user.role } : {}),
           ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
-          ...((session?.user as any)?.phone ? { 'x-user-phone': (session?.user as any).phone } : {}),
-          ...((session?.user as any)?.assignedRestaurantId ? { 'x-restaurant-id': (session?.user as any).assignedRestaurantId } : {})
+          ...(session?.user?.phone ? { 'x-user-phone': session.user.phone } : {}),
+          ...(session?.user?.assignedRestaurantId ? { 'x-restaurant-id': session.user.assignedRestaurantId } : {})
         },
         body: JSON.stringify({ stock: newStock })
       })
@@ -596,9 +596,9 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
         const errorData = await res.json().catch(() => ({}))
         toast.error(errorData.error || errorData.message || 'Failed to update kitchen stock')
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
-      toast.error(err?.message || 'Failed to update kitchen stock')
+      toast.error('Failed to update kitchen stock')
     }
   }
 
@@ -613,8 +613,8 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
           ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
           ...(session?.user?.role ? { 'x-user-role': session.user.role } : {}),
           ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
-          ...((session?.user as any)?.phone ? { 'x-user-phone': (session?.user as any).phone } : {}),
-          ...((session?.user as any)?.assignedRestaurantId ? { 'x-restaurant-id': (session?.user as any).assignedRestaurantId } : {})
+          ...(session?.user?.phone ? { 'x-user-phone': session.user.phone } : {}),
+          ...(session?.user?.assignedRestaurantId ? { 'x-restaurant-id': session.user.assignedRestaurantId } : {})
         },
         body: JSON.stringify({ isAvailable: newStatus })
       })

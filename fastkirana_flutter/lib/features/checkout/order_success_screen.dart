@@ -1,5 +1,4 @@
 import 'package:fastkirana_flutter/core/theme/design_system.dart';
-import '../../core/theme/responsive.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/services/logger_service.dart';
@@ -171,6 +170,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
   int _getStageIndex(OrderStatus? status) {
     if (status == null) return 1; // Default to Confirmed if freshly placed
     switch (status) {
+      case OrderStatus.adminPending:
       case OrderStatus.pending:
         return 0; // Placed
       case OrderStatus.confirmed:

@@ -24,10 +24,19 @@ export interface Restaurant {
   ownerPhone: string | null
   ownerEmail: string | null
   isActive: boolean
-  menuSections: any | null
+  menuSections: unknown | null
   createdAt: string
   updatedAt: string
   _count?: { products: number; orders: number }
+}
+
+export interface ProductVariant {
+  name: string
+  price: number
+  mrp?: number
+  unit?: string
+  stock?: number
+  [key: string]: unknown
 }
 
 export interface Product {
@@ -45,7 +54,7 @@ export interface Product {
   stock: number
   isAvailable: boolean
   tags: string[]
-  variants?: any[] | null
+  variants?: ProductVariant[] | null
   minStock?: number
   category?: Category | null
   restaurant?: Restaurant | null
@@ -120,7 +129,7 @@ export interface Order {
   address?: Address
   combinedId?: string | null
   isCombined?: boolean
-  subOrders?: any[]
+  subOrders?: Order[]
 }
 
 export interface OrderItem {

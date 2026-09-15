@@ -3,9 +3,18 @@
  * Maps legacy CUIDs, slugs, and variations to canonical database IDs:
  * - REST-101: A.S. Restaurant
  * - REST-102: Wedson Restaurant
- * - REST-103: Bal Udyan Restaurant
  * - REST-104: Hot Pizza Lovers
  */
+export interface SessionLike {
+  user?: {
+    id?: string
+    role?: string
+    phone?: string | null
+    assignedRestaurantId?: string | null
+    assignedStoreId?: string | null
+  } | null
+}
+
 export function normalizeRestaurantId(id: string | null | undefined): string | null {
   if (!id) return null
   const clean = String(id).trim().toLowerCase()
@@ -58,3 +67,25 @@ export function normalizeRestaurantId(id: string | null | undefined): string | n
 
   return id
 }
+
+/**
+ * Universal helper to resolve restaurant ID cleanly across sessions and requests.
+ * Eliminates redundant `(session?.user as any)?.assignedRestaurantId` and copy-pasted if/else blocks.
+ */
+export function getSessionRestaurantId(
+  session?: SessionLike | null,
+  request?: Request | null,
+  paramRestId?: string | null
+): string | null {
+  const isPlatformAdmin = session?.user?.role === 'ADMIN'
+  const sessionRestId = session?.user?.assignedRestaurantId
+
+  // Strict tenant isolation: If not admin, always force their own assigned restaurant ID
+  let targetId = (!isPlatformAdmin && sessionRestId)
+    ? sessionRestId
+    : (paramRestId || sessionRestId || (request ? request.headers.get('x-restaurant-id') : null))
+
+  if (targetId === 'ALL') return 'ALL'
+  return normalizeRestaurantId(targetId)
+}
+
