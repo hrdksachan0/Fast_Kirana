@@ -4,6 +4,7 @@ import { auth } from '@/auth'
 import { normalizeRestaurantId } from '@/lib/restaurant-ids'
 import { logger } from '@/lib/logger'
 import { OrderStatus, Prisma } from '@prisma/client'
+import { updateOrderActionSchema } from '@/lib/validations/restaurant-schemas'
 
 export async function GET(request: NextRequest) {
   try {
@@ -165,12 +166,16 @@ export async function PATCH(request: NextRequest) {
     if (!isOwner) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
-
-    const { orderId, action, restaurantId } = await request.json()
-
-    if (!orderId || !action) {
-      return NextResponse.json({ error: 'Missing orderId or action' }, { status: 400 })
+    const body = await request.json()
+    const parsed = updateOrderActionSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({
+        error: 'Validation failed',
+        details: parsed.error.flatten().fieldErrors,
+      }, { status: 400 })
     }
+
+    const { orderId, action, restaurantId } = parsed.data
 
     const order = await prisma.order.findUnique({ where: { id: orderId } })
     if (!order) {
