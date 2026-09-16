@@ -171,30 +171,6 @@ export function useAdminRealtime({
       })
       .subscribe()
 
-    let sseSource: EventSource | null = null
-    try {
-      sseSource = new EventSource('/api/sse/orders')
-      sseSource.onerror = () => {
-        try { sseSource?.close() } catch (_) {}
-      }
-      sseSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
-          if (data.type === 'new-order') {
-            toast.success(`🛎️ New Order Received: #${data.readableId || data.orderId?.slice(0, 8)}`)
-            playNewOrderChime()
-            debouncedRefresh()
-          } else if (data.type === 'order-update') {
-            debouncedRefresh()
-          }
-        } catch (e) {
-          logger.warn('realtime', 'Failed to parse SSE event data', e)
-        }
-      }
-    } catch (e) {
-      logger.warn('realtime', 'SSE connection failed', e)
-    }
-
     let railwayWs: WebSocket | null = null
     try {
       railwayWs = new WebSocket('wss://fastkirana-production-a4b8.up.railway.app/ws')
@@ -219,7 +195,6 @@ export function useAdminRealtime({
 
     return () => {
       supabase.removeChannel(channel)
-      if (sseSource) sseSource.close()
       if (railwayWs) railwayWs.close()
       if (updateTimeout) clearTimeout(updateTimeout)
     }
@@ -254,6 +229,7 @@ export function useAdminRealtime({
 
     const fetchCartsDetail = async () => {
       if (activeTab !== 'liveops') return
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
       setIsLoadingCarts(true)
       try {
         const storeQuery =
@@ -273,14 +249,26 @@ export function useAdminRealtime({
       }
     }
 
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchCartsDetail()
+      }
+    }
+
     if (activeTab === 'liveops') {
       fetchCartsDetail()
-      intervalId = setInterval(fetchCartsDetail, 3000)
+      intervalId = setInterval(fetchCartsDetail, 20000)
+      if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', handleVisibility)
+      }
     }
 
     return () => {
       active = false
       if (intervalId) clearInterval(intervalId)
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibility)
+      }
     }
   }, [activeTab, cartsRefreshKey, selectedHubId])
 

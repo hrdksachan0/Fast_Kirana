@@ -244,7 +244,7 @@ export async function GET(request: NextRequest) {
       cached['grocery_mart_open'] = liveGrocery ? 'true' : 'false'
       return NextResponse.json(cached, {
         headers: {
-          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=15',
         },
       })
     }
@@ -254,7 +254,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(settingsMap, {
       headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=15',
       },
     })
   } catch (error) {
@@ -266,7 +266,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(settingsMap, {
       headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=15',
       },
     })
   }

@@ -128,8 +128,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     _fetchLiveOrder();
     _initSupabaseRealtime();
 
-    // Fallback polling every 4 seconds to back up Supabase Realtime WebSocket
-    _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+    // Fallback polling every 25 seconds to back up Supabase Realtime WebSocket
+    _pollTimer = Timer.periodic(const Duration(seconds: 25), (_) {
       _silentPollOrder();
     });
   }
