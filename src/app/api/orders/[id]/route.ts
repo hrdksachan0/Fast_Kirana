@@ -375,6 +375,14 @@ export async function PATCH(
       if (!isOwner && !isAdmin && !isPicker && !isRestaurantStaff && !isDelivery) {
         return NextResponse.json({ error: 'Unauthorized to cancel this order' }, { status: 403 })
       }
+      // Customers can ONLY cancel before the order is confirmed
+      if (isOwner && !isAdmin && !isPicker && !isRestaurantStaff && !isDelivery) {
+        if (existingOrder.status !== 'PENDING') {
+          return NextResponse.json({
+            error: 'Order cannot be cancelled after confirmation. The kitchen or store is already preparing your order.',
+          }, { status: 400 })
+        }
+      }
     } else if (status === 'CONFIRMED' || status === 'PACKED') {
       if (isRestaurantOrder) {
         if (!isAdmin && !isRestaurantStaff) {

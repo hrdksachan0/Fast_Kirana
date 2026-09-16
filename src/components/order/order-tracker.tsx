@@ -149,6 +149,33 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
   const [allProducts, setAllProducts] = useState<any[]>([])
   const [modifySearchQuery, setModifySearchQuery] = useState('')
 
+  // Customer Pre-Confirmation Order Cancellation
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
+
+  const handleCancelOrder = async () => {
+    setIsCancelling(true)
+    try {
+      const res = await fetch(`/api/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'CANCELLED' }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to cancel order')
+      }
+      toast.success('Order cancelled successfully')
+      setIsCancelModalOpen(false)
+      setOrder((prev: any) => ({ ...prev, status: 'CANCELLED' }))
+      router.refresh()
+    } catch (err: any) {
+      toast.error(err.message || 'Could not cancel order')
+    } finally {
+      setIsCancelling(false)
+    }
+  }
+
   const isModifyCafeOrder = useMemo(() => {
     const shop = order.shopName || ''
     return shop.includes('Cafe') || order.items.some((i: any) => i.product?.tags?.includes('cafe'))
@@ -900,6 +927,18 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
               <Clock className="h-3.5 w-3.5 text-primary" />
               <span>Placed at: {formatOrderTime(order.createdAt)}</span>
             </div>
+
+            {/* Cancel Order Button: Only accessible before confirmation */}
+            {order.status === 'PENDING' && combinedStatus === 'PENDING' && (
+              <button
+                onClick={() => setIsCancelModalOpen(true)}
+                className="flex items-center gap-1.5 text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/40 px-3 py-1.5 rounded-xl border border-red-200 dark:border-red-900/50 transition-colors shadow-2xs cursor-pointer"
+                title="Cancel order before store confirmation"
+              >
+                <X className="h-3.5 w-3.5" />
+                <span>Cancel Order</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -979,6 +1018,23 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
             })}
           </div>
         </div>
+
+        {/* Pre-Confirmation Cancel Option Banner */}
+        {order.status === 'PENDING' && combinedStatus === 'PENDING' && (
+          <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-medium">
+              <span className="text-base">⏳</span>
+              <span>Awaiting store confirmation. Need to change your mind? You can cancel right now.</span>
+            </div>
+            <button
+              onClick={() => setIsCancelModalOpen(true)}
+              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs transition-colors shrink-0 shadow-xs cursor-pointer flex items-center gap-1"
+            >
+              <X className="h-3.5 w-3.5" />
+              <span>Cancel Order</span>
+            </button>
+          </div>
+        )}
 
         {/* Fulfillment & Order Details Badge Row */}
         <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -1483,6 +1539,48 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
           </div>
         </div>
       </div>
+
+      {/* Customer Cancellation Confirmation Modal */}
+      {isCancelModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-card border border-border/80 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 animate-scale-in">
+            <div className="h-12 w-12 rounded-2xl bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto text-xl">
+              ⚠️
+            </div>
+            <div className="text-center space-y-1.5">
+              <h3 className="text-lg font-black text-text-primary">Cancel This Order?</h3>
+              <p className="text-xs text-text-secondary leading-relaxed">
+                Are you sure you want to cancel order <span className="font-bold text-text-primary">#{String(order.baseReadableId || order.readableId || '').replace(/-[GR\d]+$/i, '') || order.id.slice(-6)}</span>? Once confirmed by the kitchen or store, orders cannot be cancelled.
+              </p>
+            </div>
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={isCancelling}
+                onClick={() => setIsCancelModalOpen(false)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-border bg-muted/60 text-text-primary font-bold text-xs hover:bg-muted transition-colors cursor-pointer"
+              >
+                Keep Order
+              </button>
+              <button
+                type="button"
+                disabled={isCancelling}
+                onClick={handleCancelOrder}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
+              >
+                {isCancelling ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Cancelling...</span>
+                  </>
+                ) : (
+                  <span>Yes, Cancel</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

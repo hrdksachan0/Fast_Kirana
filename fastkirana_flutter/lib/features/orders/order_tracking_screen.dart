@@ -83,6 +83,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   Razorpay? _razorpay;
   final CFPaymentGatewayService _cfService = CFPaymentGatewayService();
   bool _isProcessingPayment = false;
+  bool _isCancelling = false;
 
   // Animation controller for smooth rider marker movement
   late AnimationController _riderAnimController;
@@ -540,6 +541,204 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         break;
       default:
         HapticFeedback.selectionClick();
+    }
+  }
+
+  Future<void> _confirmAndCancelOrder() async {
+    HapticFeedback.lightImpact();
+    final isPaid = _order?.paymentStatus == 'PAID';
+    final totalAmount = _order?.total ?? 0.0;
+    final displayNum = _order?.displayId ?? (_order?.readableId ?? widget.orderId);
+    final cleanDisplayId = '#${displayNum.replaceAll('#', '').replaceAll('FK-', '').trim()}';
+
+    final shouldCancel = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        elevation: 16,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEE2E2),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFFECACA), width: 1.5),
+                ),
+                child: const Center(
+                  child: Icon(Icons.cancel_outlined, size: 28, color: primaryRed),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Cancel Order?',
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 18),
+                  fontWeight: FontWeight.w900,
+                  color: slateDark,
+                  letterSpacing: -0.3,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Are you sure you want to cancel $cleanDisplayId? This action cannot be undone.',
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 13),
+                  fontWeight: FontWeight.w500,
+                  color: slateMuted,
+                  height: 1.35,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              if (isPaid) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFBBF7D0)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.currency_rupee_rounded, size: 18, color: brandGreen),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '₹${totalAmount.toStringAsFixed(0)} will be refunded back to your original payment method within 2-4 business days.',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 11),
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF166534),
+                            height: 1.25,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 22),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: const BorderSide(color: slateBorder, width: 1.2),
+                      ),
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                      child: Text(
+                        'Keep Order',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 13),
+                          fontWeight: FontWeight.w700,
+                          color: slateDark,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryRed,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                      child: Text(
+                        'Yes, Cancel',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 13),
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (shouldCancel != true) return;
+
+    HapticFeedback.mediumImpact();
+    setState(() => _isCancelling = true);
+
+    try {
+      final dio = ref.read(dioProvider);
+      var cleanId = widget.orderId.trim();
+      if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
+
+      await dio.patch('/api/orders/$cleanId', data: {
+        'status': 'CANCELLED',
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: slateDark,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Order cancelled successfully.',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      await _fetchLiveOrder();
+    } catch (e) {
+      LoggerService.error("Cancel order error", e);
+      String errorMsg = 'Failed to cancel order. Please try again.';
+      if (e is DioException && e.response?.data != null) {
+        final data = e.response?.data;
+        if (data is Map && data['error'] != null) {
+          errorMsg = data['error'].toString();
+        }
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: primaryRed,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            content: Text(
+              errorMsg,
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isCancelling = false);
+      }
     }
   }
 
@@ -1223,6 +1422,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     final isPaid = _order?.paymentStatus == 'PAID';
     final displayNum = _order?.displayId ?? (_order?.readableId ?? widget.orderId);
     final cleanDisplayId = '#${displayNum.replaceAll('#', '').replaceAll('FK-', '').trim()}';
+    final canCancel = (_order?.status == OrderStatus.pending || _order?.status == OrderStatus.adminPending) &&
+        !isCancelled &&
+        !isDelivered &&
+        (_order?.subOrders?.every((s) => s.status == OrderStatus.pending || s.status == OrderStatus.adminPending) ?? true);
 
     final initialTarget = _riderPosition ?? _storePosition ?? LatLng(AppConfig.darkstoreLat, AppConfig.darkstoreLng);
 
@@ -1263,6 +1466,38 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           ],
         ),
         actions: [
+          // Pre-Confirmation Cancel Header Action
+          if (canCancel)
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: InkWell(
+                onTap: _isCancelling ? null : _confirmAndCancelOrder,
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFFECACA)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.cancel_outlined, size: 13, color: primaryRed),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Cancel',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
+                          fontWeight: FontWeight.w800,
+                          color: primaryRed,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           // Supabase Realtime Live Badge
           Container(
             margin: const EdgeInsets.only(right: 6),
@@ -1326,6 +1561,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                           },
                           offlineText: 'Offline • Connecting to live delivery tracker...',
                         ),
+
+                        // Pre-Confirmation Cancel Option Banner
+                        if (canCancel) ...[
+                          _buildCancelOrderCard(),
+                          const SizedBox(height: 12),
+                        ],
 
                         // 0. Cancelled Order Alert Card
                         if (isCancelled) ...[
@@ -1462,22 +1703,114 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     );
   }
 
+  /// Pre-Confirmation Cancel Order Banner
+  Widget _buildCancelOrderCard() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF1F2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFECDD3), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFE20A22).withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFE4E6),
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFFDA4AF)),
+            ),
+            child: const Center(
+              child: Icon(Icons.info_outline_rounded, color: primaryRed, size: 20),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Need to change or cancel?',
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 12.5),
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF9F1239),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'You can cancel now for free before the store begins preparation.',
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 11),
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFFBE123C),
+                    height: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: _isCancelling ? null : _confirmAndCancelOrder,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryRed,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: _isCancelling
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  )
+                : Text(
+                    'Cancel',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 11),
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// 0. Order Preparation Hero Card (When Order is Confirmed / Packing)
   Widget _buildPreparingOrderCard() {
     final shopName = _order?.shopName ?? 'FastKirana Store';
+    final isPending = _order?.status == OrderStatus.pending || _order?.status == OrderStatus.adminPending;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFFBEB), Color(0xFFFEF3C7)],
+        gradient: LinearGradient(
+          colors: isPending
+              ? const [Color(0xFFF8FAFC), Color(0xFFF1F5F9)]
+              : const [Color(0xFFFFFBEB), Color(0xFFFEF3C7)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFFDE68A), width: 1.2),
+        border: Border.all(color: isPending ? const Color(0xFFE2E8F0) : const Color(0xFFFDE68A), width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFD97706).withValues(alpha: 0.08),
+            color: (isPending ? const Color(0xFF64748B) : const Color(0xFFD97706)).withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -1491,10 +1824,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFFCD34D), width: 1.5),
+              border: Border.all(color: isPending ? const Color(0xFFCBD5E1) : const Color(0xFFFCD34D), width: 1.5),
             ),
             child: Center(
-              child: Text('👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24))),
+              child: Text(isPending ? '⏳' : '👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 24))),
             ),
           ),
           const SizedBox(width: 14),
@@ -1505,11 +1838,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD97706),
+                    color: isPending ? const Color(0xFF475569) : const Color(0xFFD97706),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    'STORE ACCEPTED & PREPARING',
+                    isPending ? 'AWAITING STORE CONFIRMATION' : 'STORE ACCEPTED & PREPARING',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 9),
                       fontWeight: FontWeight.w900,
@@ -1520,20 +1853,22 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  'Packing Fresh at $shopName',
+                  isPending ? 'Order Sent to $shopName' : 'Packing Fresh at $shopName',
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 13.5),
                     fontWeight: FontWeight.w900,
-                    color: const Color(0xFF78350F),
+                    color: isPending ? slateDark : const Color(0xFF78350F),
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Live GPS tracking map will automatically open as soon as your rider picks up the order.',
+                  isPending
+                      ? 'Waiting for the store to accept your order. You can cancel now if needed.'
+                      : 'Live GPS tracking map will automatically open as soon as your rider picks up the order.',
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 11),
                     fontWeight: FontWeight.w500,
-                    color: const Color(0xFF92400E),
+                    color: isPending ? slateMuted : const Color(0xFF92400E),
                     height: 1.25,
                   ),
                 ),
