@@ -64,7 +64,7 @@ export function checkStoreOperatingStatus(restaurant?: {
       isOpen: true,
       isClosedBySchedule: false,
       isClosedByOwner: false,
-      formattedScheduleStr: '',
+      formattedScheduleStr: 'Open for Orders',
     }
   }
 
@@ -78,65 +78,18 @@ export function checkStoreOperatingStatus(restaurant?: {
     }
   }
 
-  // 2. Schedule check
+  // 2. Cafe off / Schedule-blocking logic removed:
+  // When owner has opened the store (isOpen != false), it stays OPEN 24/7 without schedule interruption.
   const openTimeStr = restaurant.openTime?.trim()
   const closeTimeStr = restaurant.closeTime?.trim()
-
-  if (!openTimeStr || !closeTimeStr) {
-    return {
-      isOpen: true,
-      isClosedBySchedule: false,
-      isClosedByOwner: false,
-      formattedScheduleStr: 'Open 24/7',
-    }
-  }
-
-  // 24/7 check
-  if (
-    (openTimeStr === '00:00' || openTimeStr === '0:00') &&
-    (closeTimeStr === '23:59' || closeTimeStr === '24:00' || closeTimeStr === '00:00' || closeTimeStr === '0:00')
-  ) {
-    return {
-      isOpen: true,
-      isClosedBySchedule: false,
-      isClosedByOwner: false,
-      formattedScheduleStr: 'Open 24/7',
-    }
-  }
-
-  const openMins = parseTimeStringToMinutes(openTimeStr)
-  const closeMins = parseTimeStringToMinutes(closeTimeStr)
-
-  if (openMins === null || closeMins === null) {
-    return {
-      isOpen: true,
-      isClosedBySchedule: false,
-      isClosedByOwner: false,
-      formattedScheduleStr: `${formatTime12h(openTimeStr)} - ${formatTime12h(closeTimeStr)}`,
-    }
-  }
-
-  const currentMins = getISTMinutes()
-
-  let isOpenBySchedule = false
-
-  if (closeMins > openMins) {
-    // Normal day schedule (e.g. 10:00 AM to 11:00 PM)
-    isOpenBySchedule = currentMins >= openMins && currentMins < closeMins
-  } else {
-    // Overnight schedule (e.g. 6:00 PM to 3:00 AM) or 24h
-    isOpenBySchedule = currentMins >= openMins || currentMins < closeMins
-  }
-
-  const formattedOpen = formatTime12h(openTimeStr)
-  const formattedClose = formatTime12h(closeTimeStr)
+  const scheduleStr = (openTimeStr && closeTimeStr)
+    ? `${formatTime12h(openTimeStr)} - ${formatTime12h(closeTimeStr)}`
+    : 'Open for Orders'
 
   return {
-    isOpen: isOpenBySchedule,
-    isClosedBySchedule: !isOpenBySchedule,
+    isOpen: true,
+    isClosedBySchedule: false,
     isClosedByOwner: false,
-    formattedScheduleStr: isOpenBySchedule
-      ? `Open until ${formattedClose}`
-      : `Opens at ${formattedOpen}`,
+    formattedScheduleStr: scheduleStr,
   }
 }

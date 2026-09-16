@@ -153,6 +153,14 @@ export async function proxy(req: NextRequest) {
   // Forward user session headers to backend for all /api requests
   if (nextUrl.pathname.startsWith('/api/')) {
     const requestHeaders = new Headers(req.headers)
+
+    // SECURITY: Strip dangerous context headers coming from external client requests
+    requestHeaders.delete('x-user-id')
+    requestHeaders.delete('x-user-role')
+    requestHeaders.delete('x-user-email')
+    requestHeaders.delete('x-restaurant-id')
+    requestHeaders.delete('x-store-id')
+
     if (isLoggedIn && token) {
       const userId = (token.id || token.sub) as string
       if (userId) {
@@ -195,5 +203,6 @@ export const config = {
     '/login',
     '/signup',
     '/',
+    '/api/:path*',
   ],
 }

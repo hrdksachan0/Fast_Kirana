@@ -1474,7 +1474,9 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
   }
 
   Widget _buildDishAddButton(Product product, int inCartQty) {
-    final isClosed = widget.restaurant?.isOpen == false;
+    final liveRests = ref.watch(restaurantsProvider).valueOrNull;
+    final liveRest = liveRests?.where((r) => r.id == widget.restaurantId || (widget.restaurant?.slug.isNotEmpty == true && r.slug == widget.restaurant?.slug)).firstOrNull;
+    final isClosed = (liveRest?.isOpen ?? widget.restaurant?.isOpen) == false;
     if (isClosed) {
       return GestureDetector(
         behavior: HitTestBehavior.opaque,

@@ -277,18 +277,8 @@ export function isProductStoreClosed(
 
   const type = getProductType(p)
 
-  // 4. Fallback checks for unassigned restaurant items vs cafe items
-  if (type === 'RESTAURANT') {
-    if (status.restaurantOpen !== undefined) {
-      return status.restaurantOpen === false || (status.restaurantOpen as any) === 'false'
-    }
-    return false
-  }
-
-  if (type === 'CAFE') {
-    if (status.cafeOpen !== undefined) {
-      return status.cafeOpen === false || (status.cafeOpen as any) === 'false'
-    }
+  // 4. Fallback checks for unassigned restaurant items vs cafe items (cafe off logic removed)
+  if (type === 'RESTAURANT' || type === 'CAFE') {
     return false
   }
 

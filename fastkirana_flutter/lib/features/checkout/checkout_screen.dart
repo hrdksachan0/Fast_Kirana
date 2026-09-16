@@ -337,17 +337,22 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       return;
     }
 
-    if (hasRestaurant && !settings.restaurantOpen) {
+    final closedRestItem = cart.items.firstWhere(
+      (it) => isRestaurantProduct(it.product) && it.product.restaurant?.isOpen == false,
+      orElse: () => cart.items.first,
+    );
+    if (hasRestaurant && closedRestItem.product.restaurant?.isOpen == false) {
       setState(() => _isPlacingOrder = false);
+      final rName = closedRestItem.product.restaurant?.name ?? 'Restaurant';
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: AppDesignSystem.rose500,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          content: const Text(
-            'Restaurant Kitchen is currently closed. Orders cannot be placed right now.',
-            style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+          content: Text(
+            '$rName is currently closed for new orders.',
+            style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
           ),
         ),
       );

@@ -35,7 +35,7 @@ class VariantSelectorSheet extends ConsumerWidget {
     final isFood = isCafeProduct(product);
     final settings = ref.watch(storeSettingsProvider).valueOrNull;
     final isGroceryOpen = settings?.groceryMartOpen ?? true;
-    final isRestaurantOpen = (settings?.restaurantOpen ?? true) && (product.restaurant?.isOpen ?? true);
+    final isRestaurantOpen = product.restaurant?.isOpen != false;
     final isStoreOpen = isFood ? isRestaurantOpen : isGroceryOpen;
 
     return Container(

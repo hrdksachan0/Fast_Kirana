@@ -2141,6 +2141,14 @@ $formattedItems
               if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty && _assignedRestaurantId != 'ALL') {
                 final dio = ref.read(dioProvider);
                 await dio.patch('/api/restaurants/$_assignedRestaurantId', data: {'isOpen': val});
+                if (val) {
+                  try {
+                    await dio.post('/api/admin/store-status', data: {
+                      'restaurantOpen': true,
+                      'cafeOpen': true,
+                    });
+                  } catch (_) {}
+                }
               }
             } catch (e) {
               LoggerService.error('Store open toggle error: $e');

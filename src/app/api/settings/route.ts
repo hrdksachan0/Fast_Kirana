@@ -84,12 +84,15 @@ const DEFAULT_SETTINGS: Record<string, string> = {
 }
 
 export function checkIsStoreOpen(settingsMap: Record<string, string>, prefix: 'grocery' | 'cafe' | 'restaurant'): boolean {
+  // Cafe off logic removed: cafe and restaurant are directly controlled by outlet owner (no schedule interruption)
+  if (prefix === 'cafe' || prefix === 'restaurant') {
+    return prefix === 'cafe'
+      ? settingsMap['cafe_open'] !== 'false'
+      : settingsMap['restaurant_open'] !== 'false'
+  }
+
   const autoTiming = settingsMap[`${prefix}_auto_timing`] === 'true'
-  const isManuallyOpen = prefix === 'grocery'
-    ? settingsMap['grocery_mart_open'] !== 'false'
-    : prefix === 'cafe'
-    ? settingsMap['cafe_open'] !== 'false'
-    : settingsMap['restaurant_open'] !== 'false'
+  const isManuallyOpen = settingsMap['grocery_mart_open'] !== 'false'
 
   // When auto timing is active, store automatically opens & closes strictly according to schedule
   if (autoTiming) {
@@ -176,18 +179,20 @@ async function buildSettingsMap(storeId?: string | null): Promise<Record<string,
 
   const wedson = activeRestaurants.find(r => r.slug?.includes('wedson') || r.name?.toLowerCase().includes('wedson'))
   if (wedson) {
-    const st = checkStoreOperatingStatus(wedson)
-    settingsMap['restaurant_open'] = st.isOpen ? 'true' : 'false'
+    settingsMap['restaurant_open'] = wedson.isOpen !== false ? 'true' : 'false'
     if (wedson.openTime) settingsMap['restaurant_open_time'] = wedson.openTime
     if (wedson.closeTime) settingsMap['restaurant_close_time'] = wedson.closeTime
+  } else {
+    settingsMap['restaurant_open'] = 'true'
   }
 
   const cafe = activeRestaurants.find(r => r.slug?.includes('as-restaurant') || r.slug?.includes('cafe') || r.name?.toLowerCase().includes('a.s.'))
   if (cafe) {
-    const st = checkStoreOperatingStatus(cafe)
-    settingsMap['cafe_open'] = st.isOpen ? 'true' : 'false'
+    settingsMap['cafe_open'] = cafe.isOpen !== false ? 'true' : 'false'
     if (cafe.openTime) settingsMap['cafe_open_time'] = cafe.openTime
     if (cafe.closeTime) settingsMap['cafe_close_time'] = cafe.closeTime
+  } else {
+    settingsMap['cafe_open'] = 'true'
   }
 
   // Grocery store status calculation:

@@ -827,7 +827,8 @@ class _ProductCardState extends ConsumerState<ProductCard> {
 
     final settings = ref.watch(storeSettingsProvider).valueOrNull;
     final isGroceryOpen = settings?.groceryMartOpen ?? true;
-    final isRestaurantOpen = (settings?.restaurantOpen ?? true) && (product.restaurant?.isOpen ?? true);
+    // Cafe off logic removed: restaurant products directly follow outlet status without intermediate cafe_open block
+    final isRestaurantOpen = product.restaurant?.isOpen != false;
     final isStoreOpen = isFood ? isRestaurantOpen : isGroceryOpen;
 
     final isOutOfStock = product.stock <= 0 || !product.isAvailable;

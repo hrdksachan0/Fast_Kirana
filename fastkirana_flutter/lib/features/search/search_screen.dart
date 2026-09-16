@@ -865,7 +865,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 }
 
                 final isGroceryOpen = storeSettings?.groceryMartOpen ?? true;
-                final isRestaurantOpen = (storeSettings?.restaurantOpen ?? true) && (product.restaurant?.isOpen ?? true);
+                final isRestaurantOpen = product.restaurant?.isOpen != false;
                 final isStoreOpen = isFood ? isRestaurantOpen : isGroceryOpen;
                 final isOutOfStock = product.stock <= 0 || !product.isAvailable;
                 final isClosed = !isStoreOpen || isOutOfStock;

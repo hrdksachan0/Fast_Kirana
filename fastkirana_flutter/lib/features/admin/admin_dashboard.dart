@@ -490,6 +490,19 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
         await sb.from('restaurants').update({
           'isOpen': val,
         }).eq('id', rest.id);
+
+        if (val) {
+          await sb.from('store_settings').upsert({
+            'key': 'restaurant_open',
+            'value': 'true',
+            'updated_at': DateTime.now().toIso8601String(),
+          });
+          await sb.from('store_settings').upsert({
+            'key': 'cafe_open',
+            'value': 'true',
+            'updated_at': DateTime.now().toIso8601String(),
+          });
+        }
       } catch (_) {}
     }
 
@@ -497,9 +510,16 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
       await ref.read(dioProvider).patch('/api/restaurants/${rest.id}', data: {
         'isOpen': val,
       });
+      if (val) {
+        await ref.read(dioProvider).post('/api/admin/store-status', data: {
+          'restaurantOpen': true,
+          'cafeOpen': true,
+        });
+      }
     } catch (_) {}
 
     ref.refresh(restaurantsProvider);
+    ref.refresh(storeSettingsProvider);
   }
 
   Future<void> _updateMaster(bool val) async {
