@@ -155,6 +155,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
 
   final List<String> _liveStatusFilters = [
     'ALL',
+    'PAYMENT_PENDING',
     'ADMIN_PENDING',
     'PENDING',
     'CONFIRMED',
@@ -1030,6 +1031,214 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
     }
   }
 
+  bool _isUnpaidOnline(Order order) {
+    final isCOD = order.paymentMethod == PaymentMethod.cod;
+    final isPaid = order.paymentStatus.toUpperCase() == 'PAID';
+    return !isCOD && !isPaid;
+  }
+
+  Future<void> _verifyRazorpayPayment(Order order) async {
+    HapticFeedback.heavyImpact();
+    AppToast.showInfo(
+      context,
+      'Verifying Razorpay Payment...',
+      subtitle: 'Checking live payment status for #${order.readableId ?? order.id}',
+    );
+
+    try {
+      final dio = ref.read(dioProvider);
+      final res = await dio.post(
+        '/api/admin/orders/sync-razorpay',
+        data: {'orderId': order.id},
+        options: await AdminAuthorization.optionsAsync(),
+      );
+
+      if (mounted) {
+        if (res.data != null && res.data['success'] == true) {
+          AppToast.showSuccess(
+            context,
+            'Payment Verified & Synced! ✅',
+            subtitle: 'Order marked as PAID and Confirmed.',
+          );
+          _fetchAdminOrders();
+        } else {
+          final msg = res.data?['error']?.toString() ?? 'No captured Razorpay payment found.';
+          AppToast.showError(
+            context,
+            'Verification Notice',
+            subtitle: msg,
+          );
+        }
+      }
+    } catch (e) {
+      String errStr = 'No captured Razorpay payment found for this order.';
+      if (e is DioException && e.response?.data != null) {
+        final d = e.response!.data;
+        if (d is Map && d['error'] != null) {
+          errStr = d['error'].toString();
+        }
+      }
+      if (mounted) {
+        AppToast.showError(
+          context,
+          'Verification Incomplete',
+          subtitle: errStr,
+        );
+      }
+    }
+  }
+
+  Future<void> _convertToCOD(Order order) async {
+    HapticFeedback.lightImpact();
+    final total = order.total.toInt();
+    final displayId = order.readableId ?? order.id;
+
+    final shouldConvert = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: const BoxDecoration(
+                  color: AppDesignSystem.green100,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.local_atm_rounded, color: AppDesignSystem.green600, size: 26),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Convert to Cash on Delivery?',
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: AppDesignSystem.slate900),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Order #$displayId (₹$total) will be converted to COD, confirmed, and queued for kitchen/store packing.',
+                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate600, height: 1.35),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        side: const BorderSide(color: AppDesignSystem.slate300),
+                      ),
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: AppDesignSystem.slate700)),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppDesignSystem.green600,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: Text('Convert & Confirm', style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (shouldConvert != true) return;
+
+    HapticFeedback.heavyImpact();
+
+    final targetIds = (order.isCombined && order.subOrders != null && order.subOrders!.isNotEmpty)
+        ? order.subOrders!.map((s) => s.id).toList()
+        : [order.id];
+
+    // Instant optimistic update
+    setState(() {
+      _allOrders = _allOrders.map((o) {
+        if (o.id == order.id || targetIds.contains(o.id) || (order.combinedId != null && o.combinedId == order.combinedId)) {
+          return o.copyWith(
+            paymentMethod: PaymentMethod.cod,
+            paymentStatus: 'PENDING',
+            status: OrderStatus.confirmed,
+          );
+        }
+        return o;
+      }).toList();
+    });
+
+    if (mounted) {
+      AppToast.showSuccess(
+        context,
+        'Converted to COD & Confirmed! 💵',
+        subtitle: 'Order #$displayId moved to Confirmed queue.',
+      );
+    }
+
+    try {
+      final dio = ref.read(dioProvider);
+      final opt = await AdminAuthorization.optionsAsync();
+      await Future.wait(targetIds.map((tid) => dio.patch(
+        '/api/orders/$tid',
+        data: {
+          'paymentMethod': 'COD',
+          'paymentStatus': 'PENDING',
+          'status': 'CONFIRMED',
+        },
+        options: opt,
+      )));
+      _fetchAdminOrders();
+    } catch (e) {
+      debugPrint('[Admin Convert to COD error]: $e');
+    }
+  }
+
+  Future<void> _sendWhatsAppPaymentReminder(Order order) async {
+    HapticFeedback.lightImpact();
+    final custPhone = (order.customerPhone != null && order.customerPhone!.trim().isNotEmpty)
+        ? order.customerPhone!.trim()
+        : (order.addressRaw?['phone']?.toString().isNotEmpty == true
+            ? order.addressRaw!['phone'].toString().trim()
+            : '');
+    final cleanPhone = custPhone.replaceAll(RegExp(r'[^\d]'), '').replaceFirst(RegExp(r'^91'), '');
+
+    if (cleanPhone.length < 10) {
+      AppToast.showError(
+        context,
+        'Customer Phone Missing',
+        subtitle: 'Cannot send WhatsApp reminder without a valid mobile number.',
+      );
+      return;
+    }
+
+    final custName = order.customerName?.isNotEmpty == true ? order.customerName! : 'Customer';
+    final displayId = order.readableId ?? order.id;
+    final total = order.total.toInt();
+    final trackUrl = 'https://fast-kirana-gtm.vercel.app/order/${order.id}/track';
+
+    final message = 'Namaste $custName ji, aapka FastKirana order #$displayId (₹$total) payment ke liye pending hai.\n\nAap is link se online pay kar sakte hain ya status track kar sakte hain:\n$trackUrl\n\nFastKirana Ghatampur se judne ke liye dhanyawad!';
+
+    final uri = Uri.parse('https://wa.me/91$cleanPhone?text=${Uri.encodeComponent(message)}');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   void _showSubstitutionModal(Order order, OrderItem item) {
     final repController = TextEditingController();
     final custPhone = order.customerPhone ?? '';
@@ -1873,7 +2082,13 @@ $formattedItems
     if (_selectedTab == 0) {
       // Live Tab
       list = _allOrders.where(_isLiveOrder).toList();
-      if (_liveSubFilter != 'ALL') {
+      if (_liveSubFilter == 'ALL') {
+        list = list.where((o) => !(o.status == OrderStatus.pending && _isUnpaidOnline(o))).toList();
+      } else if (_liveSubFilter == 'PAYMENT_PENDING') {
+        list = list.where((o) => o.status == OrderStatus.pending && _isUnpaidOnline(o)).toList();
+      } else if (_liveSubFilter == 'PENDING') {
+        list = list.where((o) => o.status == OrderStatus.pending && !_isUnpaidOnline(o)).toList();
+      } else {
         list = list.where((o) => o.status.name.toUpperCase() == _liveSubFilter).toList();
       }
     } else {
@@ -1898,7 +2113,8 @@ $formattedItems
 
   @override
   Widget build(BuildContext context) {
-    final liveCount = _allOrders.where(_isLiveOrder).length;
+    final pendingPaymentCount = _allOrders.where((o) => _isLiveOrder(o) && o.status == OrderStatus.pending && _isUnpaidOnline(o)).length;
+    final liveCount = _allOrders.where((o) => _isLiveOrder(o) && !(o.status == OrderStatus.pending && _isUnpaidOnline(o))).length;
     final historyCount = _allOrders.where((o) => !_isLiveOrder(o)).length;
     final displayOrders = _getFilteredOrders();
 
@@ -2311,20 +2527,34 @@ $formattedItems
                         }
                       },
                       label: Text(
-                        status == 'ALL' ? (_selectedTab == 0 ? 'All Live' : 'All History') : status,
+                        status == 'ALL'
+                            ? (_selectedTab == 0 ? 'All Live' : 'All History')
+                            : (status == 'PAYMENT_PENDING'
+                                ? '⚠️ Payment Pending' + (pendingPaymentCount > 0 ? ' ($pendingPaymentCount)' : '')
+                                : status),
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
-                          color: isSelected ? Colors.white : AppDesignSystem.slate600,
+                          color: isSelected
+                              ? Colors.white
+                              : (status == 'PAYMENT_PENDING' && pendingPaymentCount > 0
+                                  ? const Color(0xFFE11D48)
+                                  : AppDesignSystem.slate600),
                         ),
                       ),
-                      selectedColor: AppDesignSystem.slate900,
-                      backgroundColor: AppDesignSystem.slate100,
+                      selectedColor: status == 'PAYMENT_PENDING' ? const Color(0xFFE11D48) : AppDesignSystem.slate900,
+                      backgroundColor: status == 'PAYMENT_PENDING' && pendingPaymentCount > 0
+                          ? const Color(0xFFFFF1F2)
+                          : AppDesignSystem.slate100,
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                         side: BorderSide(
-                          color: isSelected ? AppDesignSystem.slate900 : AppDesignSystem.slate200,
+                          color: isSelected
+                              ? (status == 'PAYMENT_PENDING' ? const Color(0xFFE11D48) : AppDesignSystem.slate900)
+                              : (status == 'PAYMENT_PENDING' && pendingPaymentCount > 0
+                                  ? const Color(0xFFFDA4AF)
+                                  : AppDesignSystem.slate200),
                           width: 1,
                         ),
                       ),
@@ -3278,6 +3508,118 @@ $formattedItems
                 ],
               ),
             ),
+
+          // ───── UNPAID ONLINE PAYMENT ACTIONS (Payment Pending Queue) ─────
+          if (_isUnpaidOnline(order)) ...[
+            Container(
+              margin: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF1F2),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFFDA4AF), width: 1.2),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFE4E6),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.warning_amber_rounded, size: 18, color: Color(0xFFE11D48)),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Payment Pending (₹${order.total.toInt()})',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 12.5),
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF9F1239),
+                              ),
+                            ),
+                            Text(
+                              'Online payment incomplete. Verify Razorpay, convert to COD, or send WhatsApp link.',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 10.5),
+                                color: const Color(0xFFBE123C),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      // 1. Verify Online
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _verifyRazorpayPayment(order),
+                          icon: const Icon(Icons.bolt_rounded, size: 14, color: Colors.white),
+                          label: Text(
+                            'Verify',
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w800, color: Colors.white),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0284C7),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      // 2. Convert to COD
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _convertToCOD(order),
+                          icon: const Icon(Icons.local_atm_rounded, size: 14, color: Colors.white),
+                          label: Text(
+                            'To COD',
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w800, color: Colors.white),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF059669),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      // 3. WhatsApp Reminder
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _sendWhatsAppPaymentReminder(order),
+                          icon: const Icon(Icons.chat_bubble_outline_rounded, size: 14, color: Color(0xFF15803D)),
+                          label: Text(
+                            'Remind',
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w800, color: const Color(0xFF15803D)),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFDCFCE7),
+                            side: const BorderSide(color: Color(0xFF86EFAC)),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
 
           // ───── ADMIN APPROVAL GATE (only for ADMIN_PENDING orders) ─────
           if (order.status == OrderStatus.adminPending) ...[

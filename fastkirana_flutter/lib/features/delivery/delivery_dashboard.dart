@@ -22,9 +22,10 @@ import '../../core/config/app_config.dart';
 import '../../core/services/rider_location_service.dart';
 import '../../core/services/supabase_service.dart';
 import '../../core/utils/restaurant_utils.dart';
+import '../../data/models/restaurant.dart';
+import '../../data/repositories/restaurant_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/store_settings_provider.dart';
-import '../../core/utils/app_toast.dart';
 import 'widgets/connectivity_banner.dart';
 import 'widgets/delivery_header.dart';
 import '../../core/services/notification_service.dart';
@@ -120,6 +121,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
     _loadUserInfo();
     _initConnectivityAndOfflineQueue();
+    _hydrateRestaurants();
     _fetchOrders();
     _fetchWallet();
 
@@ -212,6 +214,36 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       }
     } catch (e) {
       debugPrint('[DeliveryDashboard] Offline queue flush error: $e');
+    }
+  }
+
+  /// Hydrates RestaurantRegistry dynamically from Supabase & API
+  Future<void> _hydrateRestaurants() async {
+    try {
+      final sb = SupabaseService.client;
+      if (sb != null) {
+        final List<dynamic> data = await sb.from('restaurants').select('*');
+        final list = data
+            .map((json) => Restaurant.fromJson(Map<String, dynamic>.from(json as Map)))
+            .toList();
+        if (list.isNotEmpty) {
+          RestaurantRegistry.registerAll(list);
+          if (mounted) setState(() {});
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint('[DeliveryDashboard] hydrateRestaurants Supabase error: $e');
+    }
+
+    try {
+      final repo = RestaurantRepository(ref.read(dioProvider));
+      final list = await repo.getRestaurants(forceRefresh: true);
+      if (list.isNotEmpty && mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      debugPrint('[DeliveryDashboard] hydrateRestaurants REST error: $e');
     }
   }
 
@@ -415,23 +447,43 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     try {
       final sb = SupabaseService.client;
       if (sb != null) {
-        var query = sb
-            .from('orders')
-            .select('*, order_items(*), addresses(*), user:users!orders_userId_fkey(name,phone)');
-        
-        if (_assignedStoreId != null && _assignedStoreId!.isNotEmpty) {
-          query = query.or('storeId.eq.$_assignedStoreId,storeId.is.null');
-        }
+        List<dynamic> data;
+        try {
+          var query = sb
+              .from('orders')
+              .select('*, order_items(*), addresses(*), restaurant:restaurants(*), user:users!orders_userId_fkey(name,phone)');
+          
+          if (_assignedStoreId != null && _assignedStoreId!.isNotEmpty) {
+            query = query.or('storeId.eq.$_assignedStoreId,storeId.is.null');
+          }
 
-        final List<dynamic> data = await query
-            .order('createdAt', ascending: false)
-            .limit(50);
+          data = await query
+              .order('createdAt', ascending: false)
+              .limit(50);
+        } catch (queryErr) {
+          debugPrint('[DeliveryDashboard] Supabase orders with restaurant join failed: $queryErr');
+          var fallbackQuery = sb
+              .from('orders')
+              .select('*, order_items(*), addresses(*), user:users!orders_userId_fkey(name,phone)');
+          if (_assignedStoreId != null && _assignedStoreId!.isNotEmpty) {
+            fallbackQuery = fallbackQuery.or('storeId.eq.$_assignedStoreId,storeId.is.null');
+          }
+          data = await fallbackQuery
+              .order('createdAt', ascending: false)
+              .limit(50);
+        }
 
         final parsed = data
             .map((o) {
-              final map = Map<String, dynamic>.from(o);
+              final map = Map<String, dynamic>.from(o as Map);
               map['items'] = (map['order_items'] as List<dynamic>?) ?? [];
               map['address'] = map['addresses'];
+              if (map['restaurant'] != null && map['restaurant'] is Map) {
+                try {
+                  final r = Restaurant.fromJson(Map<String, dynamic>.from(map['restaurant'] as Map));
+                  RestaurantRegistry.register(r);
+                } catch (_) {}
+              }
               return map;
             })
             .where((o) => !_isSelfPickupOrder(o))
@@ -482,7 +534,16 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       if (response.statusCode == 200 && response.data != null) {
         final List<dynamic> list = response.data is List ? response.data : (response.data['orders'] ?? []);
         final parsed = list
-            .map((e) => Map<String, dynamic>.from(e))
+            .map((e) {
+              final map = Map<String, dynamic>.from(e as Map);
+              if (map['restaurant'] != null && map['restaurant'] is Map) {
+                try {
+                  final r = Restaurant.fromJson(Map<String, dynamic>.from(map['restaurant'] as Map));
+                  RestaurantRegistry.register(r);
+                } catch (_) {}
+              }
+              return map;
+            })
             .where((o) => !_isSelfPickupOrder(o))
             .toList();
         final merged = _mergeCombinedOrders(parsed);
@@ -1484,8 +1545,26 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                         ),
                       ),
                       const SizedBox(width: 6),
+                      if (outlet.phone != null && outlet.phone!.isNotEmpty) ...[
+                        Bounceable(
+                          onTap: () {
+                            final clean = outlet.phone!.replaceAll(' ', '').trim();
+                            launchUrl(Uri.parse('tel:$clean'));
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            margin: const EdgeInsets.only(right: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: AppDesignSystem.violet200),
+                            ),
+                            child: const Icon(Icons.phone_rounded, size: 14, color: AppDesignSystem.violet600),
+                          ),
+                        ),
+                      ],
                       Bounceable(
-                        onTap: () => _openGoogleMapsNavigation(outlet.lat, outlet.lng, outlet.name),
+                        onTap: () => _openGoogleMapsNavigation(outlet.lat, outlet.lng, outlet.name, address: outlet.address),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
@@ -1501,7 +1580,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                               Icon(Icons.directions_rounded, size: 12, color: outlet.isRestaurant ? AppDesignSystem.violet600 : AppDesignSystem.green700),
                               const SizedBox(width: 3),
                               Text(
-                                'Go Store',
+                                outlet.isRestaurant ? 'Go Outlet' : 'Go Store',
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 10),
                                   fontWeight: FontWeight.w800,
@@ -1984,10 +2063,16 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     );
   }
 
-  /// Active Out-for-Delivery Card
   Widget _buildActiveDeliveryCard(Map<String, dynamic> order) {
     final orderId = order['id']?.toString() ?? '';
     final orderNum = order['readableId'] ?? orderId.substring(0, math.min(8, orderId.length));
+    final isFood = (order['orderType'] == 'RESTAURANT') || (order['restaurantId'] != null) || orderNum.contains('-R');
+    final outlet = getOutletLocation(
+      restaurantId: order['restaurantId']?.toString(),
+      shopName: order['shopName']?.toString(),
+      orderType: order['orderType']?.toString(),
+      rawOrder: order,
+    );
     final customer = order['user'] is Map ? order['user'] : {'name': 'Customer', 'phone': null};
     final address = order['address'] is Map ? order['address'] : null;
     final total = (order['total'] as num?)?.toDouble() ?? 0.0;
@@ -2073,20 +2158,49 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppDesignSystem.green100,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'STOP #1 • ACTIVE DROP',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 9.5),
-                          fontWeight: FontWeight.w900,
-                          color: AppDesignSystem.green700,
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppDesignSystem.green100,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'STOP #1 • ACTIVE DROP',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 9.5),
+                              fontWeight: FontWeight.w900,
+                              color: AppDesignSystem.green700,
+                            ),
+                          ),
                         ),
-                      ),
+                        if (isFood) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppDesignSystem.violet50,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: AppDesignSystem.violet200, width: 0.8),
+                            ),
+                            child: Row(
+                              children: [
+                                Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 9.5))),
+                                const SizedBox(width: 3),
+                                Text(
+                                  outlet.name,
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 9.5),
+                                    fontWeight: FontWeight.w800,
+                                    color: AppDesignSystem.statusShippedText,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     Text(
                       '#$orderNum',

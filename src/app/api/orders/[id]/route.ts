@@ -173,15 +173,23 @@ export async function GET(
 
         const baseReadableId = (order.readableId || '').replace(/-[GR\d]+$/i, '') || order.readableId
 
+        const restaurantIds = Array.from(new Set(combinedOrders.map(o => o.restaurantId).filter(Boolean)))
+        const restaurants = restaurantIds.length > 0
+          ? await prisma.restaurant.findMany({ where: { id: { in: restaurantIds as string[] } } })
+          : []
+
         const subOrders = combinedOrders.map(o => {
           const subItems = allItems.filter(item => item.orderId === o.id)
           const isRest = (o.orderType === 'RESTAURANT' || !!o.restaurantId || (o.readableId && o.readableId.endsWith('-R')) || (o.shopName && o.shopName.toLowerCase().includes('restaurant')))
+          const matchedRest = isRest && o.restaurantId ? restaurants.find(r => r.id === o.restaurantId) : null
           return {
             id: o.id,
             readableId: o.readableId,
             restaurantId: o.restaurantId || null,
             type: isRest ? 'RESTAURANT' : 'GROCERY',
-            shopName: isRest ? (o.shopName || 'Restaurant') : (o.shopName || 'FastKirana Dark Store'),
+            shopName: isRest ? (matchedRest?.name || o.shopName || 'Restaurant') : (o.shopName || 'FastKirana Dark Store'),
+            shopPhone: o.shopPhone || (matchedRest as any)?.phone || (matchedRest as any)?.ownerPhone || null,
+            restaurant: matchedRest,
             status: o.status,
             subtotal: o.subtotal,
             total: o.total,
@@ -216,6 +224,7 @@ export async function GET(
           restaurantStatus: restaurantSub?.status || null,
           restaurantName: restaurantSub?.shopName || null,
           restaurantItems: restaurantSub?.items || [],
+          restaurant: restaurants.find(r => r.id === restaurantSub?.restaurantId) || null,
           subOrders
         }
         return NextResponse.json(mergedOrder)
@@ -227,7 +236,14 @@ export async function GET(
       where: { orderId: order.id },
     })
 
-    return NextResponse.json({ ...order, items, address, deliveryUser })
+    let restaurant = null
+    if (order.restaurantId) {
+      restaurant = await prisma.restaurant.findUnique({
+        where: { id: order.restaurantId }
+      })
+    }
+
+    return NextResponse.json({ ...order, items, address, deliveryUser, restaurant })
   } catch (error: any) {
     console.error('Order detail API error:', error)
     return NextResponse.json({ error: 'Failed to fetch order details' }, { status: 500 })
@@ -316,8 +332,8 @@ export async function PATCH(
     const body = validation.data
     const { status, paymentStatus, paymentMethod, deliveryPhoto, deliveryLat, deliveryLng, prepTime, isRiderCash, paymentCollectedBy, cashAmount } = body
 
-    if (!status && !paymentStatus) {
-      return NextResponse.json({ error: 'Either status or paymentStatus is required' }, { status: 400 })
+    if (!status && !paymentStatus && !paymentMethod) {
+      return NextResponse.json({ error: 'Either status, paymentStatus, or paymentMethod is required' }, { status: 400 })
     }
 
     // Check order exists and ownership
@@ -331,6 +347,33 @@ export async function PATCH(
 
     const existingOrder = existingOrders[0]
     const isAdmin = userRole === 'ADMIN'
+    const isOwner = existingOrder.userId === userId
+
+    // If only paymentMethod is being updated (e.g. switching to COD while pending)
+    if (paymentMethod && !status && !paymentStatus) {
+      const pmUpper = paymentMethod.toUpperCase()
+      if (pmUpper === 'COD') {
+        if (!isAdmin && (!isOwner || existingOrder.status !== 'PENDING')) {
+          return NextResponse.json({ error: 'Cannot switch payment method after order confirmation' }, { status: 403 })
+        }
+        if (existingOrder.combinedId) {
+          await prisma.$executeRaw`
+            UPDATE orders 
+            SET "paymentMethod" = 'COD'::"PaymentMethod",
+                "updatedAt" = NOW()
+            WHERE "combinedId" = ${existingOrder.combinedId}
+          `
+        } else {
+          await prisma.$executeRaw`
+            UPDATE orders 
+            SET "paymentMethod" = 'COD'::"PaymentMethod",
+                "updatedAt" = NOW()
+            WHERE id = ${existingOrder.id}
+          `
+        }
+        return NextResponse.json({ success: true, paymentMethod: 'COD' })
+      }
+    }
 
     // If only paymentStatus is being updated
     if (paymentStatus && (!status || status === existingOrder.status)) {
@@ -364,7 +407,6 @@ export async function PATCH(
     const isDelivery = userRole === 'DELIVERY'
     const isPicker = userRole === 'PICKER'
     const isRestaurantStaff = (userRole === 'CHEF' || userRole === 'RESTAURANT_OWNER')
-    const isOwner = existingOrder.userId === userId
 
     if (!isOwner && !isAdmin && !isDelivery && !isPicker && !isRestaurantStaff) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

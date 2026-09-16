@@ -44,11 +44,12 @@ export async function GET(request: NextRequest) {
       orders = await prisma.$queryRaw`
         SELECT o.id, o."userId", o."addressId", o."readableId", o."combinedId", o."restaurantId", o."storeId",
                o.status::text as status,
+               o."orderType"::text as "orderType",
                o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
                o."paymentMethod"::text as "paymentMethod",
                o."paymentStatus"::text as "paymentStatus",
                o."estimatedDelivery", o."createdAt",
-               o."shopName", o."deliveryUserId", o.notes,
+               o."shopName", o."shopPhone", o."deliveryUserId", o.notes,
                o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt",
                o."deliveryLat", o."deliveryLng"
         FROM orders o
@@ -69,11 +70,12 @@ export async function GET(request: NextRequest) {
       orders = await prisma.$queryRaw`
         SELECT o.id, o."userId", o."addressId", o."readableId", o."combinedId", o."restaurantId", o."storeId",
                o.status::text as status,
+               o."orderType"::text as "orderType",
                o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
                o."paymentMethod"::text as "paymentMethod",
                o."paymentStatus"::text as "paymentStatus",
                o."estimatedDelivery", o."createdAt",
-               o."shopName", o."deliveryUserId", o.notes,
+               o."shopName", o."shopPhone", o."deliveryUserId", o.notes,
                o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt",
                o."deliveryLat", o."deliveryLng"
         FROM orders o
@@ -93,10 +95,11 @@ export async function GET(request: NextRequest) {
       companionOrders = await prisma.$queryRaw`
         SELECT o.id, o."userId", o."addressId", o."readableId", o."combinedId", o."restaurantId",
                o.status::text as status,
+               o."orderType"::text as "orderType",
                o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
                o."paymentMethod"::text as "paymentMethod",
                o."paymentStatus"::text as "paymentStatus",
-               o."createdAt", o."shopName", o."deliveryUserId"
+               o."createdAt", o."shopName", o."shopPhone", o."deliveryUserId"
         FROM orders o
         WHERE o."combinedId" IN (${Prisma.join(combinedIds)})
           AND (o."paymentMethod" = 'COD' OR o."paymentStatus" = 'PAID')
@@ -107,8 +110,9 @@ export async function GET(request: NextRequest) {
     const allOrderIds = Array.from(new Set([...orders.map(o => o.id), ...companionOrders.map(c => c.id)]))
     const userIds = Array.from(new Set([...orders.map(o => o.userId), ...companionOrders.map(c => c.userId)].filter(Boolean)))
     const addressIds = Array.from(new Set([...orders.map(o => o.addressId), ...companionOrders.map(c => c.addressId)].filter(Boolean)))
+    const restaurantIds = Array.from(new Set([...orders.map(o => o.restaurantId), ...companionOrders.map(c => c.restaurantId)].filter(Boolean)))
 
-    const [allItems, allUsers, allAddresses] = await Promise.all([
+    const [allItems, allUsers, allAddresses, allRestaurants] = await Promise.all([
       allOrderIds.length > 0
         ? prisma.orderItem.findMany({ where: { orderId: { in: allOrderIds } } })
         : [],
@@ -117,6 +121,9 @@ export async function GET(request: NextRequest) {
         : [],
       addressIds.length > 0
         ? prisma.address.findMany({ where: { id: { in: addressIds as string[] } } })
+        : [],
+      restaurantIds.length > 0
+        ? prisma.restaurant.findMany({ where: { id: { in: restaurantIds as string[] } } })
         : [],
     ])
 
@@ -127,6 +134,7 @@ export async function GET(request: NextRequest) {
         if (matchingCompanion) {
           companion = {
             ...matchingCompanion,
+            restaurant: allRestaurants.find(r => r.id === matchingCompanion.restaurantId) || null,
             items: allItems.filter(item => item.orderId === matchingCompanion.id)
           }
         }
@@ -137,6 +145,7 @@ export async function GET(request: NextRequest) {
         items: allItems.filter(item => item.orderId === o.id),
         user: allUsers.find(u => u.id === o.userId) || { name: 'Customer', phone: null },
         address: allAddresses.find(a => a.id === o.addressId),
+        restaurant: allRestaurants.find(r => r.id === o.restaurantId) || null,
         companionOrder: companion
       }
     })
