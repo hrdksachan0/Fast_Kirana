@@ -193,6 +193,11 @@ export async function PATCH(request: NextRequest) {
         if (order.status !== 'PENDING') {
           return NextResponse.json({ error: 'Can only accept PENDING orders' }, { status: 400 })
         }
+        if (order.paymentMethod !== 'COD' && order.paymentStatus !== 'PAID') {
+          return NextResponse.json({
+            error: 'Cannot accept order: Customer online payment is still pending.',
+          }, { status: 400 })
+        }
         updateData = { status: 'CONFIRMED', confirmedAt: new Date() }
         break
 

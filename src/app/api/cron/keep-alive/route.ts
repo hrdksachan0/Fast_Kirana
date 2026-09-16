@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+import { runPaymentRecoveryCron } from '@/services/payment-recovery.service'
+
 export async function GET(request: Request) {
   // If CRON_SECRET is set in environment, check it; otherwise allow keep-alive ping
   const authHeader = request.headers.get('authorization')
@@ -15,10 +17,14 @@ export async function GET(request: Request) {
   try {
     // Run a light ping query to keep Prisma & serverless PostgreSQL connection pool warm
     await prisma.$queryRaw`SELECT 1`
+
+    // Run automated payment recovery & timeout lifecycle
+    const recoverySummary = await runPaymentRecoveryCron()
     
     return NextResponse.json({
       success: true,
-      message: 'Database kept warm & active',
+      message: 'Database kept warm & payment recovery cycle executed',
+      recovery: recoverySummary,
       timestamp: new Date().toISOString()
     })
   } catch (error: any) {

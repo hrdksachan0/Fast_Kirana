@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../data/models/product.dart';
-import '../core/theme/responsive.dart';
 import '../providers/cart_provider.dart';
 import '../providers/store_settings_provider.dart';
 import '../core/utils/restaurant_utils.dart';
@@ -352,7 +351,6 @@ class VariantSelectorSheet extends ConsumerWidget {
                 final conflictRestaurant = ref.read(cartProvider.notifier).checkRestaurantConflict(variantProduct);
                 if (conflictRestaurant != null) {
                   final groceryCount = ref.read(cartProvider.notifier).groceryItemsCount;
-                  final newOutlet = getOutletName(variantProduct);
                   CartConflictDialog.show(
                     context,
                     product: variantProduct,

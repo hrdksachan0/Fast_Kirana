@@ -440,7 +440,6 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
   bool _masterOpen = true;
   bool _martOpen = true;
   final Map<String, bool> _outletsOpen = {};
-  bool _initialized = false;
 
   @override
   void initState() {
@@ -477,7 +476,7 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
       });
     } catch (_) {}
 
-    ref.refresh(storeSettingsProvider);
+    ref.invalidate(storeSettingsProvider);
   }
 
   Future<void> _updateRestaurant(Restaurant rest, bool val) async {
@@ -518,8 +517,8 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
       }
     } catch (_) {}
 
-    ref.refresh(restaurantsProvider);
-    ref.refresh(storeSettingsProvider);
+    ref.invalidate(restaurantsProvider);
+    ref.invalidate(storeSettingsProvider);
   }
 
   Future<void> _updateMaster(bool val) async {
@@ -552,8 +551,8 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
       });
     } catch (_) {}
 
-    ref.refresh(storeSettingsProvider);
-    ref.refresh(restaurantsProvider);
+    ref.invalidate(storeSettingsProvider);
+    ref.invalidate(restaurantsProvider);
   }
 
   @override

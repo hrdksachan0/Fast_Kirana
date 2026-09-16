@@ -898,7 +898,6 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     final currentCart = ref.read(cartProvider).value;
                     final settings = ref.read(storeSettingsProvider).valueOrNull;
                     final isGroceryOpen = settings?.groceryMartOpen ?? true;
-                    final isRestaurantOpen = settings?.restaurantOpen ?? true;
 
                     if (currentCart != null) {
                       final hasGrocery = currentCart.items.any((i) => !isRestaurantProduct(i.product));

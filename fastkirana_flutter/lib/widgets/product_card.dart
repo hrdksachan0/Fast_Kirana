@@ -801,12 +801,6 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     return true;
   }
 
-  void _triggerAddAnimation() {
-    setState(() => _showAddedCheck = true);
-    Future.delayed(const Duration(milliseconds: 550), () {
-      if (mounted) setState(() => _showAddedCheck = false);
-    });
-  }
 
   @override
   Widget build(BuildContext context) {

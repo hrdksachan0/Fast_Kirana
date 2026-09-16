@@ -650,6 +650,12 @@ export async function PATCH(
         `
       }
     } else if (status === 'CONFIRMED') {
+      if (existingOrder.paymentMethod !== 'COD' && existingOrder.paymentStatus !== 'PAID') {
+        return NextResponse.json({
+          error: 'Cannot confirm order: Customer online payment is still pending.',
+        }, { status: 400 })
+      }
+
       let estimatedDeliveryVal: Date | null = null
       if (prepTime && !isNaN(parseInt(String(prepTime)))) {
         estimatedDeliveryVal = new Date(Date.now() + parseInt(String(prepTime)) * 60 * 1000)
