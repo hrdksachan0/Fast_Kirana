@@ -149,6 +149,57 @@ export function OrdersTab({
     }
   }
 
+  const handleConvertToCOD = async (order: any, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    setUpdatingPaymentId(order.id)
+    try {
+      const targetIds = order.isCombined && order.subOrders?.length > 0
+        ? order.subOrders.map((s: any) => s.id)
+        : [order.id]
+
+      await Promise.all(
+        targetIds.map((tid: string) =>
+          fetch(`/api/orders/${tid}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentMethod: 'COD', paymentStatus: 'PENDING', status: 'CONFIRMED' }),
+          })
+        )
+      )
+
+      order.paymentMethod = 'COD'
+      order.paymentStatus = 'PENDING'
+      order.status = 'CONFIRMED'
+      if (order.subOrders) {
+        order.subOrders.forEach((s: any) => {
+          s.paymentMethod = 'COD'
+          s.paymentStatus = 'PENDING'
+          s.status = 'CONFIRMED'
+        })
+      }
+      toast.success(`Order #${order.readableId || order.id.slice(0, 8)} converted to COD & Confirmed!`)
+      onUpdateOrderStatus(order.id, 'CONFIRMED')
+    } catch (_) {
+      toast.error('Network error converting to COD')
+    } finally {
+      setUpdatingPaymentId(null)
+    }
+  }
+
+  const handleSendWhatsAppReminder = (order: any, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    const cleanPhone = (order.userPhone || '').replace(/\D/g, '').slice(-10)
+    if (!cleanPhone) {
+      toast.error('No customer phone number available')
+      return
+    }
+    const cleanDisplayId = `#${String(order.readableId || order.id.slice(0, 8)).replace('#', '').trim()}`
+    const paymentUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://fastkirana.in'}/order/${order.id}/track`
+    const message = `Namaste ${order.userName || 'Customer'} ji, aapka FastKirana order ${cleanDisplayId} (₹${Number(order.total).toFixed(0)}) payment ke liye pending hai.\n\nAap is link se online pay kar sakte hain ya status track kar sakte hain:\n${paymentUrl}\n\nFastKirana Ghatampur se judne ke liye dhanyawad!`
+    const waUrl = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(message)}`
+    window.open(waUrl, '_blank')
+  }
+
   const handleStatusSelectChange = (order: any, newStatus: string) => {
     if (newStatus === 'CANCELLED') {
       setCancelConfirmOrder(order)
@@ -262,7 +313,7 @@ export function OrdersTab({
     return consolidateOrders(list)
   }, [orders, consolidateOrders])
 
-  const totalActiveQueueCount = (orderCounts?.PENDING || 0) + (orderCounts?.CONFIRMED || 0) + (orderCounts?.PACKED || 0) + (orderCounts?.SHIPPED || 0)
+  const totalActiveQueueCount = (orderCounts?.PENDING || 0) + (orderCounts?.PAYMENT_PENDING || 0) + (orderCounts?.CONFIRMED || 0) + (orderCounts?.PACKED || 0) + (orderCounts?.SHIPPED || 0)
   const totalHistoryCount = (orderCounts?.DELIVERED || 0) + (orderCounts?.CANCELLED || 0)
 
   const getOrderMethod = (o: any) => {
@@ -501,7 +552,14 @@ export function OrdersTab({
 
   // Filter Active Table by status, store, method & search query
   const filteredActiveOrders = rawActiveList.filter((o) => {
-    const matchesFilter = orderStatusFilter === 'ALL' || !activeStatuses.includes(orderStatusFilter) || o.status === orderStatusFilter || (o.subOrders && o.subOrders.some((s: any) => s.status === orderStatusFilter))
+    const isUnpaidOnline = o.paymentStatus !== 'PAID' && o.paymentMethod !== 'COD'
+    const matchesFilter = orderStatusFilter === 'ALL'
+      ? (!isUnpaidOnline || o.status !== 'PENDING')
+      : orderStatusFilter === 'PAYMENT_PENDING'
+      ? (o.status === 'PENDING' && isUnpaidOnline)
+      : orderStatusFilter === 'PENDING'
+      ? (o.status === 'PENDING' && !isUnpaidOnline)
+      : (o.status === orderStatusFilter || (o.subOrders && o.subOrders.some((s: any) => s.status === orderStatusFilter)))
     const matchesShop = orderShopFilter === 'ALL' || getOrderStoreType(o) === orderShopFilter
     const matchesMethod = orderMethodFilter === 'ALL' || getOrderMethod(o) === orderMethodFilter
     const q = orderSearchQuery.toLowerCase().trim().replace(/^#/, '')
@@ -612,16 +670,18 @@ export function OrdersTab({
           <div className="flex flex-col md:flex-row gap-3 items-center justify-between mb-3 border-b border-border/40 pb-3">
             <div className="flex flex-wrap gap-1.5 w-full md:w-auto">
               {[
-                { key: 'ALL', label: '🔥 All Active', color: 'bg-amber-500/10 text-amber-700 border-amber-500/20' },
-                { key: 'PENDING', label: '⏳ Placed (New)', color: 'bg-amber-500/10 text-amber-600 border border-amber-500/20' },
-                { key: 'CONFIRMED', label: '✓ Confirmed', color: 'bg-blue-500/10 text-blue-600 border border-blue-500/20' },
-                { key: 'PACKED', label: '📦 Packed', color: 'bg-[#00b140]/10 text-[#00b140] border border-[#00b140]/20' },
-                { key: 'SHIPPED', label: '🛵 On the Way', color: 'bg-purple-500/10 text-purple-600 border border-purple-500/20' },
+                { key: 'ALL', label: '🔥 All Active' },
+                { key: 'PENDING', label: '⏳ Placed (New)' },
+                { key: 'PAYMENT_PENDING', label: '⚠️ Payment Pending' },
+                { key: 'CONFIRMED', label: '✓ Confirmed' },
+                { key: 'PACKED', label: '📦 Packed' },
+                { key: 'SHIPPED', label: '🛵 On the Way' },
               ].map((pill) => {
                 const count = pill.key === 'ALL' 
                   ? (totalActiveQueueCount || rawActiveList.length)
                   : (orderCounts[pill.key] ?? 0)
                 const isActive = orderStatusFilter === pill.key || (orderStatusFilter === 'ALL' && pill.key === 'ALL')
+                const isPaymentPendingAlert = pill.key === 'PAYMENT_PENDING' && count > 0 && !isActive
                 return (
                   <button
                     key={pill.key}
@@ -629,7 +689,11 @@ export function OrdersTab({
                     onClick={() => setOrderStatusFilter(pill.key)}
                     className={`px-2.5 py-1 text-[10px] font-black rounded-xl transition-all cursor-pointer border ${
                       isActive 
-                        ? 'bg-amber-500 text-white border-amber-500 shadow-xs scale-102' 
+                        ? pill.key === 'PAYMENT_PENDING'
+                          ? 'bg-rose-600 text-white border-rose-600 shadow-xs scale-102'
+                          : 'bg-amber-500 text-white border-amber-500 shadow-xs scale-102' 
+                        : isPaymentPendingAlert
+                        ? 'bg-rose-500/15 border-rose-500/30 text-rose-600 dark:text-rose-400 animate-pulse font-black'
                         : 'bg-card border-border hover:bg-muted text-text-secondary'
                     }`}
                   >
@@ -931,22 +995,48 @@ export function OrdersTab({
                             )}
                           </button>
                           {o.paymentStatus !== 'PAID' && (
-                            <button
-                              type="button"
-                              onClick={(e) => handleSyncRazorpayPayment(o, e)}
-                              disabled={syncingOrderId === o.id}
-                              className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-blue-700 dark:text-blue-300 bg-blue-500/15 border border-blue-500/30 hover:bg-blue-500/25 px-2 py-0.5 rounded-full mt-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
-                              title="Fetch & verify live payment directly from Razorpay gateway"
-                            >
-                              {syncingOrderId === o.id ? (
-                                <>
-                                  <Loader2 className="h-2.5 w-2.5 animate-spin text-blue-600" />
-                                  <span>Syncing...</span>
-                                </>
-                              ) : (
-                                <span>⚡ Fetch Razorpay</span>
+                            <div className="flex flex-col gap-1 mt-1">
+                              <button
+                                type="button"
+                                onClick={(e) => handleSyncRazorpayPayment(o, e)}
+                                disabled={syncingOrderId === o.id}
+                                className="inline-flex items-center justify-center gap-1 text-[8.5px] font-black uppercase text-blue-700 dark:text-blue-300 bg-blue-500/15 border border-blue-500/30 hover:bg-blue-500/25 px-1.5 py-0.5 rounded-md transition-all active:scale-95 cursor-pointer shadow-2xs"
+                                title="Fetch & verify live payment directly from Razorpay gateway"
+                              >
+                                {syncingOrderId === o.id ? (
+                                  <>
+                                    <Loader2 className="h-2.5 w-2.5 animate-spin text-blue-600" />
+                                    <span>Syncing...</span>
+                                  </>
+                                ) : (
+                                  <span>⚡ Verify Online</span>
+                                )}
+                              </button>
+                              {o.paymentMethod !== 'COD' && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleConvertToCOD(o, e)}
+                                  disabled={updatingPaymentId === o.id}
+                                  className="inline-flex items-center justify-center gap-1 text-[8.5px] font-black uppercase text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 px-1.5 py-0.5 rounded-md transition-all active:scale-95 cursor-pointer shadow-2xs"
+                                  title="Convert unpaid online order to Cash on Delivery and send to store"
+                                >
+                                  {updatingPaymentId === o.id ? (
+                                    <Loader2 className="h-2.5 w-2.5 animate-spin text-amber-600" />
+                                  ) : (
+                                    <span>💵 Convert to COD</span>
+                                  )}
+                                </button>
                               )}
-                            </button>
+                              <button
+                                type="button"
+                                onClick={(e) => handleSendWhatsAppReminder(o, e)}
+                                className="inline-flex items-center justify-center gap-1 text-[8.5px] font-black uppercase text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 hover:bg-emerald-500/25 px-1.5 py-0.5 rounded-md transition-all active:scale-95 cursor-pointer shadow-2xs"
+                                title="Send WhatsApp payment link to customer"
+                              >
+                                <MessageSquare className="h-2.5 w-2.5" />
+                                <span>WhatsApp Link</span>
+                              </button>
+                            </div>
                           )}
                         </td>
                         <td className="py-3 px-3 text-center">

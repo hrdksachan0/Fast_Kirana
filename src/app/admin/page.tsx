@@ -84,6 +84,7 @@ export default async function AdminPage(props: {
   let initialOrderCounts = {
     ALL: 0,
     PENDING: 0,
+    PAYMENT_PENDING: 0,
     CONFIRMED: 0,
     PACKED: 0,
     SHIPPED: 0,
@@ -138,6 +139,7 @@ export default async function AdminPage(props: {
       prisma.$queryRaw<Array<{
         total: number
         pending: number
+        payment_pending: number
         confirmed: number
         packed: number
         shipped: number
@@ -145,8 +147,9 @@ export default async function AdminPage(props: {
         cancelled: number
       }>>`
         SELECT 
-          COUNT(DISTINCT COALESCE("combinedId", id))::int as total,
-          COUNT(DISTINCT CASE WHEN status::text = 'PENDING' THEN COALESCE("combinedId", id) END)::int as pending,
+          COUNT(DISTINCT CASE WHEN "paymentMethod" = 'COD' OR "paymentStatus" = 'PAID' OR status::text != 'PENDING' THEN COALESCE("combinedId", id) END)::int as total,
+          COUNT(DISTINCT CASE WHEN status::text = 'PENDING' AND ("paymentMethod" = 'COD' OR "paymentStatus" = 'PAID') THEN COALESCE("combinedId", id) END)::int as pending,
+          COUNT(DISTINCT CASE WHEN status::text = 'PENDING' AND "paymentMethod" != 'COD' AND "paymentStatus" != 'PAID' THEN COALESCE("combinedId", id) END)::int as payment_pending,
           COUNT(DISTINCT CASE WHEN status::text = 'CONFIRMED' THEN COALESCE("combinedId", id) END)::int as confirmed,
           COUNT(DISTINCT CASE WHEN status::text = 'PACKED' THEN COALESCE("combinedId", id) END)::int as packed,
           COUNT(DISTINCT CASE WHEN status::text = 'SHIPPED' THEN COALESCE("combinedId", id) END)::int as shipped,
@@ -294,6 +297,7 @@ export default async function AdminPage(props: {
     initialOrderCounts = {
       ALL: totalOrdersCount,
       PENDING: statusRow.pending || 0,
+      PAYMENT_PENDING: statusRow.payment_pending || 0,
       CONFIRMED: statusRow.confirmed || 0,
       PACKED: statusRow.packed || 0,
       SHIPPED: statusRow.shipped || 0,

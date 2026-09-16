@@ -54,10 +54,15 @@ export async function GET(request: Request) {
 
     let ordersRaw: any[] = []
     
+    const isPaymentPendingFilter = status === 'PAYMENT_PENDING'
+    const sqlStatus = isPaymentPendingFilter ? 'PENDING' : status
+
     // Construct dynamic raw SQL query based on filters to avoid enum deserialization bug
     if (status && status !== 'ALL' && cleanSearch) {
       const searchLike = `%${cleanSearch}%`
-      const onlinePaidFilter = status === 'PENDING'
+      const onlinePaidFilter = isPaymentPendingFilter
+        ? Prisma.sql`AND o."paymentMethod" != 'COD' AND o."paymentStatus" != 'PAID'`
+        : status === 'PENDING'
         ? Prisma.sql`AND (o."paymentMethod" = 'COD' OR o."paymentStatus" = 'PAID')`
         : Prisma.empty
 
@@ -69,7 +74,7 @@ export async function GET(request: Request) {
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
           FROM orders o
           LEFT JOIN users u ON o."userId" = u.id
-          WHERE o.status::text = ${status}
+          WHERE o.status::text = ${sqlStatus}
             ${onlinePaidFilter}
             AND o."storeId" = ${effectiveStoreId}
             AND (
@@ -90,7 +95,7 @@ export async function GET(request: Request) {
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
           FROM orders o
           LEFT JOIN users u ON o."userId" = u.id
-          WHERE o.status::text = ${status}
+          WHERE o.status::text = ${sqlStatus}
             ${onlinePaidFilter}
             AND (
               o.id ILIKE ${searchLike}
@@ -104,7 +109,9 @@ export async function GET(request: Request) {
         `
       }
     } else if (status && status !== 'ALL') {
-      const onlinePaidFilter = status === 'PENDING'
+      const onlinePaidFilter = isPaymentPendingFilter
+        ? Prisma.sql`AND o."paymentMethod" != 'COD' AND o."paymentStatus" != 'PAID'`
+        : status === 'PENDING'
         ? Prisma.sql`AND (o."paymentMethod" = 'COD' OR o."paymentStatus" = 'PAID')`
         : Prisma.empty
 
@@ -115,7 +122,7 @@ export async function GET(request: Request) {
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
           FROM orders o
-          WHERE o.status::text = ${status}
+          WHERE o.status::text = ${sqlStatus}
             ${onlinePaidFilter}
             AND o."storeId" = ${effectiveStoreId}
           ORDER BY o."createdAt" DESC
@@ -128,7 +135,7 @@ export async function GET(request: Request) {
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
           FROM orders o
-          WHERE o.status::text = ${status}
+          WHERE o.status::text = ${sqlStatus}
             ${onlinePaidFilter}
           ORDER BY o."createdAt" DESC
           LIMIT ${limit} OFFSET ${skip}
@@ -236,6 +243,7 @@ export async function GET(request: Request) {
       prisma.$queryRaw<Array<{
         total: number
         pending: number
+        payment_pending: number
         confirmed: number
         packed: number
         shipped: number
@@ -243,8 +251,9 @@ export async function GET(request: Request) {
         cancelled: number
       }>>`
         SELECT 
-          COUNT(DISTINCT COALESCE("combinedId", id))::int as total,
+          COUNT(DISTINCT CASE WHEN "paymentMethod" = 'COD' OR "paymentStatus" = 'PAID' OR status::text != 'PENDING' THEN COALESCE("combinedId", id) END)::int as total,
           COUNT(DISTINCT CASE WHEN status::text = 'PENDING' AND ("paymentMethod" = 'COD' OR "paymentStatus" = 'PAID') THEN COALESCE("combinedId", id) END)::int as pending,
+          COUNT(DISTINCT CASE WHEN status::text = 'PENDING' AND "paymentMethod" != 'COD' AND "paymentStatus" != 'PAID' THEN COALESCE("combinedId", id) END)::int as payment_pending,
           COUNT(DISTINCT CASE WHEN status::text = 'CONFIRMED' THEN COALESCE("combinedId", id) END)::int as confirmed,
           COUNT(DISTINCT CASE WHEN status::text = 'PACKED' THEN COALESCE("combinedId", id) END)::int as packed,
           COUNT(DISTINCT CASE WHEN status::text = 'SHIPPED' THEN COALESCE("combinedId", id) END)::int as shipped,
@@ -252,7 +261,6 @@ export async function GET(request: Request) {
           COUNT(DISTINCT CASE WHEN status::text = 'CANCELLED' THEN COALESCE("combinedId", id) END)::int as cancelled
         FROM orders
         WHERE ("deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL)
-          AND ("paymentMethod" = 'COD' OR "paymentStatus" = 'PAID' OR status::text != 'PENDING')
           ${storeSqlWhere}
       `,
       prisma.$queryRaw<Array<{
@@ -277,11 +285,12 @@ export async function GET(request: Request) {
       `
     ])
 
-    const statRow = (statusStatsRaw as any[])?.[0] || { total: 0, pending: 0, confirmed: 0, packed: 0, shipped: 0, delivered: 0, cancelled: 0 }
+    const statRow = (statusStatsRaw as any[])?.[0] || { total: 0, pending: 0, payment_pending: 0, confirmed: 0, packed: 0, shipped: 0, delivered: 0, cancelled: 0 }
     const todayRow = (todayStatsRaw as any[])?.[0] || { today_orders: 0, today_sales: 0, today_delivered_sales: 0, today_delivery_fee: 0, today_packaging_fee: 0 }
 
     const allCount = statRow.total || 0
     const pendingCount = statRow.pending || 0
+    const paymentPendingCount = statRow.payment_pending || 0
     const confirmedCount = statRow.confirmed || 0
     const packedCount = statRow.packed || 0
     const shippedCount = statRow.shipped || 0
@@ -292,7 +301,7 @@ export async function GET(request: Request) {
     const todayNetSales = todayRow.today_delivered_sales || 0
     const todayOrdersCount = todayRow.today_orders || 0
     const total = status && status !== 'ALL'
-      ? (statRow[status.toLowerCase() as keyof typeof statRow] ?? allCount)
+      ? (status === 'PAYMENT_PENDING' ? paymentPendingCount : (statRow[status.toLowerCase() as keyof typeof statRow] ?? allCount))
       : allCount
 
     // Background auto-sync: Automatically check Razorpay for recent unpaid orders (last 2 hours)
@@ -420,6 +429,7 @@ export async function GET(request: Request) {
       counts: {
         ALL: allCount,
         PENDING: pendingCount,
+        PAYMENT_PENDING: paymentPendingCount,
         CONFIRMED: confirmedCount,
         PACKED: packedCount,
         SHIPPED: shippedCount,

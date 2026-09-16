@@ -21,7 +21,8 @@ export function useAdminOrders({
     const list = initialOrders || []
     return {
       ALL: list.length,
-      PENDING: list.filter((o: any) => o.status === 'PENDING').length,
+      PENDING: list.filter((o: any) => o.status === 'PENDING' && (o.paymentMethod === 'COD' || o.paymentStatus === 'PAID')).length,
+      PAYMENT_PENDING: list.filter((o: any) => o.status === 'PENDING' && o.paymentMethod !== 'COD' && o.paymentStatus !== 'PAID').length,
       CONFIRMED: list.filter((o: any) => o.status === 'CONFIRMED').length,
       PACKED: list.filter((o: any) => o.status === 'PACKED').length,
       SHIPPED: list.filter((o: any) => o.status === 'SHIPPED').length,

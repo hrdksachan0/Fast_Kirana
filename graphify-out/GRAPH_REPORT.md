@@ -1,16 +1,16 @@
 # Graph Report - Fastkirana  (2026-09-16)
 
 ## Corpus Check
-- 886 files · ~3,248,644 words
+- 886 files · ~3,249,166 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 8358 nodes · 14607 edges · 426 communities (347 shown, 79 thin omitted)
+- 8358 nodes · 14607 edges · 427 communities (348 shown, 79 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 350 edges (avg confidence: 0.52)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b83ffe2b`
+- Built from commit: `24df4d73`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -402,12 +402,13 @@
 - stats-cards.tsx
 - BuildContext
 - whatsapp-alert-modal.tsx
-- clsx
+- get_ai_demand_forecast
 - libphonenumber-js
 - contact/page.tsx
 - refund-policy/page.tsx
 - shipping-policy/page.tsx
 - terms/page.tsx
+- lru-cache
 
 ## God Nodes (most connected - your core abstractions)
 1. `auth()` - 147 edges
@@ -436,7 +437,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (426 total, 79 thin omitted)
+## Communities (427 total, 79 thin omitted)
 
 ### Community 0 - "package:flutter/material.dart"
 Cohesion: 0.03
@@ -600,7 +601,7 @@ Nodes (26): 1. Generate Release Keystore, 2. Configure Signing, 3. Verify Fireba
 
 ### Community 39 - "dependencies"
 Cohesion: 0.07
-Nodes (29): @auth/prisma-adapter, bcryptjs, class-variance-authority, framer-motion, lru-cache, nodemailer, dependencies, @auth/prisma-adapter (+21 more)
+Nodes (29): @auth/prisma-adapter, bcryptjs, class-variance-authority, clsx, framer-motion, nodemailer, dependencies, @auth/prisma-adapter (+21 more)
 
 ### Community 40 - "delivery_dashboard.dart"
 Cohesion: 0.02
@@ -1423,8 +1424,8 @@ Cohesion: 0.40
 Nodes (3): DEFAULT_FESTIVE_CARDS, FestiveBrandingGrid(), FestiveCard
 
 ### Community 297 - "models.py"
-Cohesion: 0.11
-Nodes (27): Cart, CashDepositTransaction, Coupon, DarkStore, FcmToken, InventoryLog, OrderItem, OtpToken (+19 more)
+Cohesion: 0.16
+Nodes (22): Cart, CashDepositTransaction, Coupon, DarkStore, FcmToken, InventoryLog, OrderItem, OtpToken (+14 more)
 
 ### Community 298 - "admin-dashboard-context.tsx"
 Cohesion: 0.22
@@ -1698,6 +1699,10 @@ Nodes (3): DashboardStats, DashboardStatsCards(), DashboardStatsCardsProps
 Cohesion: 0.50
 Nodes (3): WhatsAppAlertModal(), WhatsAppAlertModalProps, WhatsAppTargetUser
 
+### Community 420 - "get_ai_demand_forecast"
+Cohesion: 0.33
+Nodes (5): get_ai_demand_forecast(), Any, AsyncSession, get, Native Python AI Demand Forecasting Engine for Inventory & Stock Optimization
+
 ## Knowledge Gaps
 - **4602 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+4597 more)
   These have ≤1 connection - possible missing edges or undocumented components.
@@ -1708,7 +1713,7 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `delete` connect `admin_extended.py` to `Category`, `User`, `fastapi-backend/routers/products.py`, `Restaurant`, `fastapi-backend/routers/addresses.py`, `Order`, `fastapi-backend/routers/cart.py`, `secure_storage_service.dart`, `app/routers/addresses.py`?**
   _High betweenness centrality (0.017) - this node is a cross-community bridge._
-- **Why does `Product` connect `admin_extended.py` to `Order`, `Category`, `models.py`, `get_buy_again_products`, `fastapi-backend/routers/products.py`, `Restaurant`, `User`, `fastapi-backend/routers/cart.py`?**
+- **Why does `Product` connect `admin_extended.py` to `Order`, `get_ai_demand_forecast`, `Category`, `models.py`, `get_buy_again_products`, `fastapi-backend/routers/products.py`, `Restaurant`, `User`, `fastapi-backend/routers/cart.py`?**
   _High betweenness centrality (0.015) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
   _4602 weakly-connected nodes found - possible documentation gaps or missing edges._
