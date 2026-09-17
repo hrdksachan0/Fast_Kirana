@@ -948,6 +948,7 @@ export function DealsCurationHub({
                           {/* Interactive See All Pill */}
                           <Link
                             href={seeAllCategoryHref}
+                            prefetch={false}
                             className="group/btn inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-zinc-700 dark:text-zinc-200 bg-zinc-100/90 hover:bg-zinc-200/90 dark:bg-zinc-800/90 dark:hover:bg-zinc-700/90 transition-all shadow-2xs border border-zinc-200/60 dark:border-zinc-700/60 select-none active:scale-95 shrink-0"
                           >
                             <span>See All</span>
@@ -990,6 +991,7 @@ export function DealsCurationHub({
                                     {/* Direct subcategory explore link */}
                                     <Link
                                       href={subHref}
+                                      prefetch={false}
                                       className="group/sublink inline-flex items-center gap-1 text-[11px] font-bold text-zinc-500 hover:text-emerald-600 dark:text-zinc-400 dark:hover:text-emerald-400 transition-colors ml-2 select-none shrink-0"
                                     >
                                       <span>See All</span>
@@ -1007,6 +1009,7 @@ export function DealsCurationHub({
                                       sub.products.length >= 6 ? (
                                         <Link
                                           href={subHref}
+                                          prefetch={false}
                                           className="h-full min-h-[220px] rounded-[20px] border border-dashed border-emerald-500/30 hover:border-emerald-500/60 bg-gradient-to-b from-emerald-50/40 via-white to-zinc-50/50 dark:from-emerald-950/20 dark:via-[#121215] dark:to-[#121215] flex flex-col items-center justify-center p-4 text-center transition-all duration-300 group select-none shadow-xs hover:shadow-md active:scale-[0.98] cursor-pointer"
                                         >
                                           <div className="w-11 h-11 rounded-full bg-emerald-500 text-white flex items-center justify-center mb-2.5 shadow-[0_4px_12px_rgba(16,185,129,0.35)] group-hover:scale-110 group-hover:bg-emerald-600 transition-all duration-300">
@@ -1035,6 +1038,7 @@ export function DealsCurationHub({
                               group.products.length >= 6 ? (
                                 <Link
                                   href={seeAllCategoryHref}
+                                  prefetch={false}
                                   className="h-full min-h-[220px] rounded-[20px] border border-dashed border-emerald-500/30 hover:border-emerald-500/60 bg-gradient-to-b from-emerald-50/40 via-white to-zinc-50/50 dark:from-emerald-950/20 dark:via-[#121215] dark:to-[#121215] flex flex-col items-center justify-center p-4 text-center transition-all duration-300 group select-none shadow-xs hover:shadow-md active:scale-[0.98] cursor-pointer"
                                 >
                                   <div className="w-11 h-11 rounded-full bg-emerald-500 text-white flex items-center justify-center mb-2.5 shadow-[0_4px_12px_rgba(16,185,129,0.35)] group-hover:scale-110 group-hover:bg-emerald-600 transition-all duration-300">

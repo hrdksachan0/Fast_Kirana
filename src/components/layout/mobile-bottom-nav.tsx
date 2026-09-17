@@ -220,7 +220,7 @@ export function MobileBottomNav() {
               className="flex-1 flex flex-col justify-center h-full items-center select-none outline-none relative py-1 cursor-pointer"
               aria-label={tab.label}
               aria-current={isActive ? 'page' : undefined}
-              prefetch={true}
+              prefetch={false}
             >
               <div className="flex flex-col items-center justify-center w-full relative">
                 {/* Icon Container with Elastic Jelly Bounce Pop */}

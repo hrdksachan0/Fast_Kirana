@@ -166,7 +166,7 @@ void main() {
       );
 
       expect(find.textContaining('Pay Online:'), findsOneWidget);
-      expect(find.text('Payment pending • Tap to complete'), findsOneWidget);
+      expect(find.text('Payment pending • Tap to pay'), findsOneWidget);
       expect(find.text('Pay Online'), findsOneWidget);
       await tester.tap(find.text('Pay Online'));
       await tester.pump();

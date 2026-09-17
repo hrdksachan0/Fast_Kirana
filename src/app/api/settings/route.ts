@@ -34,6 +34,7 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   avg_delivery_time: 'Fast',
   delivered_today: '1,231+',
   fresh_stock_loaded: '2 hrs ago',
+  admin_auto_approve_orders: 'false',
   only_cod: 'false',
   tax_rate: '5',
   misc_fee: '0',

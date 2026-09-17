@@ -33,6 +33,7 @@ export const CATEGORIES = [
 ] as const
 
 export const ORDER_STATUS_LABELS: Record<string, string> = {
+  ADMIN_PENDING: 'Awaiting Admin Approval',
   PENDING: 'Order Placed',
   CONFIRMED: 'Confirmed',
   PACKED: 'Packed',
@@ -42,6 +43,7 @@ export const ORDER_STATUS_LABELS: Record<string, string> = {
 }
 
 export const ORDER_STATUS_COLORS: Record<string, string> = {
+  ADMIN_PENDING: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300',
   PENDING: 'bg-yellow-100 text-yellow-800',
   CONFIRMED: 'bg-blue-100 text-blue-800',
   PACKED: 'bg-indigo-100 text-indigo-800',

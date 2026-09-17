@@ -226,6 +226,7 @@ export async function GET(
         isVeg: isDishVeg,
         isNonVeg: isDishNonVeg,
         variants: prod.variants,
+        addons: prod.addons,
         availableStartTime: prod.availableStartTime,
         availableEndTime: prod.availableEndTime,
         categoryId: prod.categoryId,

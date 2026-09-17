@@ -242,6 +242,7 @@ export async function GET(request: Request) {
     const [statusStatsRaw, todayStatsRaw] = await Promise.all([
       prisma.$queryRaw<Array<{
         total: number
+        admin_pending: number
         pending: number
         payment_pending: number
         confirmed: number
@@ -252,6 +253,7 @@ export async function GET(request: Request) {
       }>>`
         SELECT 
           COUNT(DISTINCT CASE WHEN "paymentMethod" = 'COD' OR "paymentStatus" = 'PAID' OR status::text != 'PENDING' THEN COALESCE("combinedId", id) END)::int as total,
+          COUNT(DISTINCT CASE WHEN status::text = 'ADMIN_PENDING' THEN COALESCE("combinedId", id) END)::int as admin_pending,
           COUNT(DISTINCT CASE WHEN status::text = 'PENDING' AND ("paymentMethod" = 'COD' OR "paymentStatus" = 'PAID') THEN COALESCE("combinedId", id) END)::int as pending,
           COUNT(DISTINCT CASE WHEN status::text = 'PENDING' AND "paymentMethod" != 'COD' AND "paymentStatus" != 'PAID' THEN COALESCE("combinedId", id) END)::int as payment_pending,
           COUNT(DISTINCT CASE WHEN status::text = 'CONFIRMED' THEN COALESCE("combinedId", id) END)::int as confirmed,
@@ -285,10 +287,11 @@ export async function GET(request: Request) {
       `
     ])
 
-    const statRow = (statusStatsRaw as any[])?.[0] || { total: 0, pending: 0, payment_pending: 0, confirmed: 0, packed: 0, shipped: 0, delivered: 0, cancelled: 0 }
+    const statRow = (statusStatsRaw as any[])?.[0] || { total: 0, admin_pending: 0, pending: 0, payment_pending: 0, confirmed: 0, packed: 0, shipped: 0, delivered: 0, cancelled: 0 }
     const todayRow = (todayStatsRaw as any[])?.[0] || { today_orders: 0, today_sales: 0, today_delivered_sales: 0, today_delivery_fee: 0, today_packaging_fee: 0 }
 
     const allCount = statRow.total || 0
+    const adminPendingCount = statRow.admin_pending || 0
     const pendingCount = statRow.pending || 0
     const paymentPendingCount = statRow.payment_pending || 0
     const confirmedCount = statRow.confirmed || 0
@@ -301,7 +304,7 @@ export async function GET(request: Request) {
     const todayNetSales = todayRow.today_delivered_sales || 0
     const todayOrdersCount = todayRow.today_orders || 0
     const total = status && status !== 'ALL'
-      ? (status === 'PAYMENT_PENDING' ? paymentPendingCount : (statRow[status.toLowerCase() as keyof typeof statRow] ?? allCount))
+      ? (status === 'ADMIN_PENDING' ? adminPendingCount : status === 'PAYMENT_PENDING' ? paymentPendingCount : (statRow[status.toLowerCase() as keyof typeof statRow] ?? allCount))
       : allCount
 
     // Background auto-sync: Automatically check Razorpay for recent unpaid orders (last 2 hours)
@@ -428,6 +431,7 @@ export async function GET(request: Request) {
       todayPackagingFee: todayRow.today_packaging_fee || 0,
       counts: {
         ALL: allCount,
+        ADMIN_PENDING: adminPendingCount,
         PENDING: pendingCount,
         PAYMENT_PENDING: paymentPendingCount,
         CONFIRMED: confirmedCount,

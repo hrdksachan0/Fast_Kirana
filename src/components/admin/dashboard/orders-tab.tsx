@@ -246,6 +246,7 @@ export function OrdersTab({
             const allItems = group.flatMap(s => s.items || [])
 
             const isAllDelivered = group.every(s => s.status === 'DELIVERED')
+            const isAnyAdminPending = group.some(s => s.status === 'ADMIN_PENDING')
             const isAnyPending = group.some(s => s.status === 'PENDING')
             const isAnyConfirmed = group.some(s => s.status === 'CONFIRMED')
             const isAllPacked = group.every(s => s.status === 'PACKED' || s.status === 'SHIPPED' || s.status === 'DELIVERED')
@@ -253,6 +254,8 @@ export function OrdersTab({
 
             const consStatus = isAllDelivered
               ? 'DELIVERED'
+              : isAnyAdminPending
+              ? 'ADMIN_PENDING'
               : isAnyPending
               ? 'PENDING'
               : isAnyConfirmed
@@ -300,7 +303,7 @@ export function OrdersTab({
   }, [])
 
   // Split orders into Active Processing Queue vs Past History
-  const activeStatuses = ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED']
+  const activeStatuses = ['ADMIN_PENDING', 'PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED']
   const historyStatuses = ['DELIVERED', 'CANCELLED']
 
   const rawActiveList = React.useMemo(() => {
@@ -313,7 +316,7 @@ export function OrdersTab({
     return consolidateOrders(list)
   }, [orders, consolidateOrders])
 
-  const totalActiveQueueCount = (orderCounts?.PENDING || 0) + (orderCounts?.PAYMENT_PENDING || 0) + (orderCounts?.CONFIRMED || 0) + (orderCounts?.PACKED || 0) + (orderCounts?.SHIPPED || 0)
+  const totalActiveQueueCount = (orderCounts?.ADMIN_PENDING || 0) + (orderCounts?.PENDING || 0) + (orderCounts?.PAYMENT_PENDING || 0) + (orderCounts?.CONFIRMED || 0) + (orderCounts?.PACKED || 0) + (orderCounts?.SHIPPED || 0)
   const totalHistoryCount = (orderCounts?.DELIVERED || 0) + (orderCounts?.CANCELLED || 0)
 
   const getOrderMethod = (o: any) => {
@@ -648,6 +651,31 @@ export function OrdersTab({
             </div>
           </div>
 
+          {/* Admin Approval Needed Alert Banner */}
+          {(orderCounts?.ADMIN_PENDING ?? 0) > 0 && (
+            <div className="mb-4 p-3.5 rounded-2xl border-2 border-amber-500/40 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 text-xs shadow-sm flex items-center justify-between gap-3 flex-wrap animate-fade-in">
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl">🛡️</span>
+                <div>
+                  <h4 className="font-black text-amber-800 dark:text-amber-300">
+                    {orderCounts.ADMIN_PENDING} Order{(orderCounts.ADMIN_PENDING || 0) > 1 ? 's' : ''} Awaiting Admin Approval
+                  </h4>
+                  <p className="text-[10px] text-text-secondary mt-0.5 font-semibold">
+                    Review and approve incoming customer orders to dispatch to Kitchen / Dark Store.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOrderStatusFilter('ADMIN_PENDING')}
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-black text-[10px] transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1"
+              >
+                <span>🛡️ Review Approvals</span>
+                <span>({orderCounts.ADMIN_PENDING})</span>
+              </button>
+            </div>
+          )}
+
           {/* Direct Load Alert Banner inside Active Queue */}
           {activeOrdersCount >= 8 && (
             <div className="mb-4 p-3.5 rounded-2xl border border-rose-500/25 bg-gradient-to-r from-rose-500/10 via-amber-500/5 to-rose-500/10 text-xs animate-glow-pulse">
@@ -671,6 +699,7 @@ export function OrdersTab({
             <div className="flex flex-wrap gap-1.5 w-full md:w-auto">
               {[
                 { key: 'ALL', label: '🔥 All Active' },
+                { key: 'ADMIN_PENDING', label: '🛡️ Needs Approval' },
                 { key: 'PENDING', label: '⏳ Placed (New)' },
                 { key: 'PAYMENT_PENDING', label: '⚠️ Payment Pending' },
                 { key: 'CONFIRMED', label: '✓ Confirmed' },
@@ -682,6 +711,7 @@ export function OrdersTab({
                   : (orderCounts[pill.key] ?? 0)
                 const isActive = orderStatusFilter === pill.key || (orderStatusFilter === 'ALL' && pill.key === 'ALL')
                 const isPaymentPendingAlert = pill.key === 'PAYMENT_PENDING' && count > 0 && !isActive
+                const isAdminPendingAlert = pill.key === 'ADMIN_PENDING' && count > 0 && !isActive
                 return (
                   <button
                     key={pill.key}
@@ -689,9 +719,13 @@ export function OrdersTab({
                     onClick={() => setOrderStatusFilter(pill.key)}
                     className={`px-2.5 py-1 text-[10px] font-black rounded-xl transition-all cursor-pointer border ${
                       isActive 
-                        ? pill.key === 'PAYMENT_PENDING'
+                        ? pill.key === 'ADMIN_PENDING'
+                          ? 'bg-amber-600 text-white border-amber-600 shadow-xs scale-102'
+                          : pill.key === 'PAYMENT_PENDING'
                           ? 'bg-rose-600 text-white border-rose-600 shadow-xs scale-102'
                           : 'bg-amber-500 text-white border-amber-500 shadow-xs scale-102' 
+                        : isAdminPendingAlert
+                        ? 'bg-amber-500/20 border-amber-500/40 text-amber-700 dark:text-amber-300 animate-pulse font-black ring-1 ring-amber-500/30'
                         : isPaymentPendingAlert
                         ? 'bg-rose-500/15 border-rose-500/30 text-rose-600 dark:text-rose-400 animate-pulse font-black'
                         : 'bg-card border-border hover:bg-muted text-text-secondary'
@@ -803,6 +837,11 @@ export function OrdersTab({
                             <span className="font-mono font-black text-[12px] text-text-primary group-hover/cell:text-amber-600 transition-colors underline decoration-dotted">
                               #{o.readableId || o.id.slice(0, 8)}
                             </span>
+                            {o.status === 'ADMIN_PENDING' && (
+                              <span className="text-[8.5px] font-black px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/40 flex items-center gap-1 shadow-2xs animate-pulse">
+                                🛡️ APPROVAL REQUIRED
+                              </span>
+                            )}
                             {o.isCombined && (
                               <span className="text-[8.5px] font-black px-1.5 py-0.5 rounded-md bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/25 flex items-center gap-1 shadow-2xs">
                                 🛍️ COMBO (KIRANA + KITCHEN)
@@ -1047,6 +1086,7 @@ export function OrdersTab({
                               disabled={updatingOrderId === o.id}
                               className="bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-lg border border-border text-[11px] font-extrabold text-text-primary focus:outline-none cursor-pointer w-full text-center shadow-2xs"
                             >
+                              <option value="ADMIN_PENDING">🛡️ Needs Approval</option>
                               <option value="PENDING">Placed</option>
                               <option value="CONFIRMED">Confirmed</option>
                               <option value="PACKED">Packed</option>
@@ -1055,6 +1095,27 @@ export function OrdersTab({
                               <option value="CANCELLED">Cancelled</option>
                             </select>
                             
+                            {o.status === 'ADMIN_PENDING' && (
+                              <div className="flex flex-col gap-1 w-full">
+                                <button
+                                  onClick={() => onUpdateOrderStatus(o.id, 'PENDING')}
+                                  disabled={updatingOrderId === o.id}
+                                  className="w-full py-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-[10px] font-black rounded-lg transition-all active:scale-95 shadow-xs cursor-pointer flex items-center justify-center gap-1"
+                                  title="Approve Order & Dispatch to Store/Kitchen"
+                                >
+                                  <span>🛡️ Approve</span>
+                                </button>
+                                <button
+                                  onClick={() => setCancelConfirmOrder(o)}
+                                  disabled={updatingOrderId === o.id}
+                                  className="w-full py-0.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-[9px] font-extrabold rounded-md transition-all active:scale-95 cursor-pointer"
+                                  title="Reject / Cancel Order"
+                                >
+                                  ✕ Reject
+                                </button>
+                              </div>
+                            )}
+
                             {o.status === 'PENDING' && (
                               <button
                                 onClick={() => onUpdateOrderStatus(o.id, 'CONFIRMED')}

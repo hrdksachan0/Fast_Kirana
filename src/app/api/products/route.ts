@@ -228,6 +228,7 @@ export async function GET(request: NextRequest) {
       isAvailable: true,
       tags: true,
       variants: true,
+      addons: true,
       minStock: true,
       expiryDate: true,
       isFlashDeal: true,

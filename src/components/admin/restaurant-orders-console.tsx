@@ -564,10 +564,10 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
     }
   }, [status, fetchOrders, activeOrder])
 
-  // Auto-refresh every 30 seconds
+  // Auto-refresh every 120 seconds
   useEffect(() => {
     if (status !== 'authenticated') return
-    const interval = setInterval(() => fetchOrders(true), 30000)
+    const interval = setInterval(() => fetchOrders(true), 120000)
     return () => clearInterval(interval)
   }, [status])
 

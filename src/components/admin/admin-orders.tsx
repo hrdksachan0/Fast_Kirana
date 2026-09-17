@@ -14,13 +14,17 @@ interface AdminOrdersProps {
 export function AdminOrders({ initialOrders }: AdminOrdersProps) {
   const [orders, setOrders] = useState(initialOrders)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
-  const [filterMode, setFilterMode] = useState<'ALL' | 'PREMIUM' | 'COMBINED'>('ALL')
+  const [filterMode, setFilterMode] = useState<'ALL' | 'PENDING_APPROVAL' | 'PREMIUM' | 'COMBINED'>('ALL')
   const [cancelConfirmOrder, setCancelConfirmOrder] = useState<any | null>(null)
 
+  const pendingApprovalCount = orders.filter((o) => o.status === 'ADMIN_PENDING').length
   const premiumCount = orders.filter((o) => o.notes?.includes('Premium') || o.miscFee === 15 || o.miscFee === 20).length
   const combinedCount = orders.filter((o) => !!o.combinedId).length
 
   const filteredOrders = orders.filter((o) => {
+    if (filterMode === 'PENDING_APPROVAL') {
+      return o.status === 'ADMIN_PENDING'
+    }
     if (filterMode === 'PREMIUM') {
       return o.notes?.includes('Premium') || o.miscFee === 15 || o.miscFee === 20
     }
@@ -50,7 +54,7 @@ export function AdminOrders({ initialOrders }: AdminOrdersProps) {
       if (res.ok) {
         const updated = await res.json()
         setOrders(orders.map((o) => (o.id === orderId ? { ...o, status: updated.status } : o)))
-        toast.success(`Order status updated to ${ORDER_STATUS_LABELS[newStatus]}`)
+        toast.success(`Order status updated to ${ORDER_STATUS_LABELS[newStatus] || newStatus}`)
       } else {
         toast.error('Failed to update order status')
       }
@@ -63,6 +67,30 @@ export function AdminOrders({ initialOrders }: AdminOrdersProps) {
 
   return (
     <div className="bg-card border border-border rounded-2xl p-6 shadow-sm overflow-hidden space-y-4">
+      {/* High-priority Attention Alert for Pending Approvals */}
+      {pendingApprovalCount > 0 && (
+        <div className="bg-amber-500/10 border-2 border-amber-500/40 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-pulse">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🚨</span>
+            <div>
+              <h4 className="text-sm font-black text-amber-800 dark:text-amber-300">
+                {pendingApprovalCount} {pendingApprovalCount === 1 ? 'Order' : 'Orders'} Awaiting Admin Approval
+              </h4>
+              <p className="text-xs text-amber-700/80 dark:text-amber-400 font-medium">
+                Verify customer details before approving. Once approved, kitchen and delivery staff will be alerted automatically.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFilterMode('PENDING_APPROVAL')}
+            className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black rounded-lg shadow-sm cursor-pointer shrink-0 transition-all active:scale-95"
+          >
+            Review {pendingApprovalCount} {pendingApprovalCount === 1 ? 'Order' : 'Orders'} ⏳
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h3 className="font-extrabold text-text-primary text-base">Manage Orders</h3>
 
@@ -79,6 +107,19 @@ export function AdminOrders({ initialOrders }: AdminOrdersProps) {
           >
             All Orders ({orders.length})
           </button>
+          {pendingApprovalCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setFilterMode('PENDING_APPROVAL')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                filterMode === 'PENDING_APPROVAL'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/25'
+              }`}
+            >
+              <span>🚨</span> Awaiting Approval ({pendingApprovalCount})
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setFilterMode('PREMIUM')}
@@ -198,31 +239,60 @@ export function AdminOrders({ initialOrders }: AdminOrdersProps) {
                       </span>
                     )}
                   </td>
-                  <td className="py-3 px-4">
-                    <select
-                      value={o.status}
-                      onChange={(e) => handleSelectStatusChange(o, e.target.value)}
-                      disabled={updatingId === o.id}
-                      className="bg-muted px-2 py-1 rounded-lg border text-xs font-bold text-text-primary focus:outline-none cursor-pointer"
-                    >
-                      <option value="PENDING">Placed</option>
-                      <option value="CONFIRMED">Confirmed</option>
-                      <option value="PACKED">Packed</option>
-                      <option value="SHIPPED">On the Way</option>
-                      <option value="DELIVERED">Delivered</option>
-                      <option value="CANCELLED">Cancelled</option>
-                    </select>
+                  <td className="py-3 px-4 min-w-[140px]">
+                    {o.status === 'ADMIN_PENDING' ? (
+                      <div className="flex flex-col gap-1.5">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-amber-800 dark:text-amber-300 bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 rounded-md">
+                          ⏳ Awaiting Approval
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleStatusChange(o.id, 'PENDING')}
+                            disabled={updatingId === o.id}
+                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-md shadow-xs transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                          >
+                            ✅ Approve
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSelectStatusChange(o, 'CANCELLED')}
+                            disabled={updatingId === o.id}
+                            className="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black rounded-md shadow-xs transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                          >
+                            ❌ Reject
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <select
+                        value={o.status}
+                        onChange={(e) => handleSelectStatusChange(o, e.target.value)}
+                        disabled={updatingId === o.id}
+                        className="bg-muted px-2 py-1 rounded-lg border text-xs font-bold text-text-primary focus:outline-none cursor-pointer"
+                      >
+                        <option value="ADMIN_PENDING">Awaiting Approval</option>
+                        <option value="PENDING">Placed</option>
+                        <option value="CONFIRMED">Confirmed</option>
+                        <option value="PACKED">Packed</option>
+                        <option value="SHIPPED">On the Way</option>
+                        <option value="DELIVERED">Delivered</option>
+                        <option value="CANCELLED">Cancelled</option>
+                      </select>
+                    )}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 whitespace-nowrap">
                     {updatingId === o.id ? (
                       <Loader2 className="h-4 w-4 animate-spin text-primary" />
                     ) : (
-                      <Link
-                        href={`/order/${o.id}/track`}
-                        className="text-primary hover:underline text-[11px] font-bold"
-                      >
-                        Track
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/order/${o.id}/track`}
+                          className="text-primary hover:underline text-[11px] font-bold"
+                        >
+                          Track
+                        </Link>
+                      </div>
                     )}
                   </td>
                 </tr>

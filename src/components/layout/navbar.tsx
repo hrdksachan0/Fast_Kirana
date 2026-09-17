@@ -73,6 +73,7 @@ export function Navbar() {
   const prevGroceryOpenRef = useRef<boolean | null>(null)
   const prevCafeOpenRef = useRef<boolean | null>(null)
   const prevRestaurantOpenRef = useRef<boolean | null>(null)
+  const lastFetchRef = useRef(0)
 
   const getDashboardLink = useCallback(() => {
     if (!session?.user) return '/account'
@@ -111,123 +112,131 @@ export function Navbar() {
 
 
 
-  useEffect(() => {
-    hydrateLocation()
+  const fetchStatus = useCallback(() => {
+    lastFetchRef.current = Date.now()
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        const gOpen = data.grocery_mart_open !== 'false'
+        const cOpen = data.cafe_open !== 'false'
+        const rOpen = data.restaurant_open !== 'false'
+        const radius = data.delivery_radius ? parseFloat(data.delivery_radius) : 2.0
+        const storeLat = data.store_lat ? parseFloat(data.store_lat) : 26.1534185
+        const storeLng = data.store_lng ? parseFloat(data.store_lng) : 80.1714024
 
-    const fetchStatus = () => {
-      fetch('/api/settings')
-        .then(res => res.json())
-        .then(data => {
-          const gOpen = data.grocery_mart_open !== 'false'
-          const cOpen = data.cafe_open !== 'false'
-          const rOpen = data.restaurant_open !== 'false'
-          const radius = data.delivery_radius ? parseFloat(data.delivery_radius) : 2.0
-          const storeLat = data.store_lat ? parseFloat(data.store_lat) : 26.1534185
-          const storeLng = data.store_lng ? parseFloat(data.store_lng) : 80.1714024
-
-          // Parse category statuses
-          const categoryStatus: Record<string, boolean> = {}
-          Object.keys(data).forEach((key) => {
-            if (key.startsWith('category_open_')) {
-              const slug = key.replace('category_open_', '')
-              categoryStatus[slug] = data[key] === 'true'
-            }
-          })
-
-          // Trigger alerts on opening transition
-          if (prevGroceryOpenRef.current !== null && prevGroceryOpenRef.current === false && gOpen === true) {
-            triggerHaptic('success')
-            toast.success('🏪 Grocery Mart is now OPEN! Order your fresh groceries now.', {
-              duration: 6000,
-              id: 'grocery-mart-opened-alert',
-            })
-            playCartPop()
-          }
-
-          if (prevCafeOpenRef.current !== null && prevCafeOpenRef.current === false && cOpen === true) {
-            triggerHaptic('success')
-            toast.success('☕ FastKirana Cafe is now OPEN! Order fresh sandwiches & coffee now.', {
-              duration: 6000,
-              id: 'cafe-opened-alert',
-            })
-            playCartPop()
-          }
-
-          if (prevRestaurantOpenRef.current !== null && prevRestaurantOpenRef.current === false && rOpen === true) {
-            triggerHaptic('success')
-            toast.success('🍳 Wedson Restaurant is now OPEN! Order hot meals & combos now.', {
-              duration: 6000,
-              id: 'restaurant-opened-alert',
-            })
-            playCartPop()
-          }
-
-          // Trigger alerts on closing transition
-          if (prevGroceryOpenRef.current !== null && prevGroceryOpenRef.current === true && gOpen === false) {
-            triggerHaptic('warning')
-            toast.error('🏪 Grocery Mart has been temporarily closed by admin.', {
-              duration: 6000,
-              id: 'grocery-mart-closed-alert',
-            })
-          }
-
-          if (prevCafeOpenRef.current !== null && prevCafeOpenRef.current === true && cOpen === false) {
-            triggerHaptic('warning')
-            toast.error('🍽️ A.S. Restaurant kitchen has been temporarily closed by admin.', {
-              id: 'cafe-closed-alert',
-              duration: 3000,
-            })
-          }
-
-          if (prevRestaurantOpenRef.current !== null && prevRestaurantOpenRef.current === true && rOpen === false) {
-            triggerHaptic('warning')
-            toast.error('🍳 Wedson Restaurant has been temporarily closed by admin.', {
-              duration: 6000,
-              id: 'restaurant-closed-alert',
-            })
-          }
-
-          prevGroceryOpenRef.current = gOpen
-          prevCafeOpenRef.current = cOpen
-          prevRestaurantOpenRef.current = rOpen
-          
-          setGroceryMartOpen(gOpen)
-          setCafeOpen(cOpen)
-          setRestaurantOpen(rOpen)
-          setStoreStatus(gOpen, cOpen, rOpen, radius, categoryStatus)
-          setSettings(data)
-
-          // Automatically set default location if not set, without intrusive geolocation prompts
-          const currentLoc = useUIStore.getState().selectedLocation
-          if (!currentLoc || currentLoc === 'Select Location') {
-            const fallbackArea = "Ghatampur Market"
-            setSelectedLocation(fallbackArea)
-            setUserCoords({ lat: storeLat, lng: storeLng })
+        // Parse category statuses
+        const categoryStatus: Record<string, boolean> = {}
+        Object.keys(data).forEach((key) => {
+          if (key.startsWith('category_open_')) {
+            const slug = key.replace('category_open_', '')
+            categoryStatus[slug] = data[key] === 'true'
           }
         })
-        .catch(err => console.error('Error loading store status/location in navbar:', err))
-    }
+
+        // Trigger alerts on opening transition
+        if (prevGroceryOpenRef.current !== null && prevGroceryOpenRef.current === false && gOpen === true) {
+          triggerHaptic('success')
+          toast.success('🏪 Grocery Mart is now OPEN! Order your fresh groceries now.', {
+            duration: 6000,
+            id: 'grocery-mart-opened-alert',
+          })
+          playCartPop()
+        }
+
+        if (prevCafeOpenRef.current !== null && prevCafeOpenRef.current === false && cOpen === true) {
+          triggerHaptic('success')
+          toast.success('☕ FastKirana Cafe is now OPEN! Order fresh sandwiches & coffee now.', {
+            duration: 6000,
+            id: 'cafe-opened-alert',
+          })
+          playCartPop()
+        }
+
+        if (prevRestaurantOpenRef.current !== null && prevRestaurantOpenRef.current === false && rOpen === true) {
+          triggerHaptic('success')
+          toast.success('🍳 Wedson Restaurant is now OPEN! Order hot meals & combos now.', {
+            duration: 6000,
+            id: 'restaurant-opened-alert',
+          })
+          playCartPop()
+        }
+
+        // Trigger alerts on closing transition
+        if (prevGroceryOpenRef.current !== null && prevGroceryOpenRef.current === true && gOpen === false) {
+          triggerHaptic('warning')
+          toast.error('🏪 Grocery Mart has been temporarily closed by admin.', {
+            duration: 6000,
+            id: 'grocery-mart-closed-alert',
+          })
+        }
+
+        if (prevCafeOpenRef.current !== null && prevCafeOpenRef.current === true && cOpen === false) {
+          triggerHaptic('warning')
+          toast.error('🍽️ A.S. Restaurant kitchen has been temporarily closed by admin.', {
+            id: 'cafe-closed-alert',
+            duration: 3000,
+          })
+        }
+
+        if (prevRestaurantOpenRef.current !== null && prevRestaurantOpenRef.current === true && rOpen === false) {
+          triggerHaptic('warning')
+          toast.error('🍳 Wedson Restaurant has been temporarily closed by admin.', {
+            duration: 6000,
+            id: 'restaurant-closed-alert',
+          })
+        }
+
+        prevGroceryOpenRef.current = gOpen
+        prevCafeOpenRef.current = cOpen
+        prevRestaurantOpenRef.current = rOpen
+        
+        setGroceryMartOpen(gOpen)
+        setCafeOpen(cOpen)
+        setRestaurantOpen(rOpen)
+        setStoreStatus(gOpen, cOpen, rOpen, radius, categoryStatus)
+        setSettings(data)
+
+        // Automatically set default location if not set, without intrusive geolocation prompts
+        const currentLoc = useUIStore.getState().selectedLocation
+        if (!currentLoc || currentLoc === 'Select Location') {
+          const fallbackArea = "Ghatampur Market"
+          setSelectedLocation(fallbackArea)
+          setUserCoords({ lat: storeLat, lng: storeLng })
+        }
+      })
+      .catch(err => console.error('Error loading store status/location in navbar:', err))
+  }, [setSelectedLocation, setSettings, setStoreStatus, setUserCoords])
+
+  const fetchStatusThrottled = useCallback(() => {
+    const now = Date.now()
+    if (now - lastFetchRef.current < 60000) return
+    lastFetchRef.current = now
+    fetchStatus()
+  }, [fetchStatus])
+
+  useEffect(() => {
+    hydrateLocation()
 
     // Initial fetch
     fetchStatus()
 
-    // Background polling (every 60 seconds) only when tab is visible to avoid Vercel resource exhaustion
+    // Background polling (every 180 seconds) only when tab is visible to avoid Vercel resource exhaustion
     const statusInterval = setInterval(() => {
       if (document.visibilityState === 'visible') {
         fetchStatus()
       }
-    }, 60000)
+    }, 180000)
 
     // Re-fetch status immediately when user refocusses or returns to the window tab
     const handleFocus = () => {
-      fetchStatus()
+      fetchStatusThrottled()
     }
     window.addEventListener('focus', handleFocus)
 
     // Re-fetch status immediately when tab becomes visible
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        fetchStatus()
+        fetchStatusThrottled()
       }
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -238,7 +247,7 @@ export function Navbar() {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
 
-  }, [hydrateLocation, setStoreStatus, setSettings, setSelectedLocation, setUserCoords])
+  }, [hydrateLocation, fetchStatus, fetchStatusThrottled])
 
   const handleScroll = useCallback(() => {
     setIsScrolled(window.scrollY > 10)

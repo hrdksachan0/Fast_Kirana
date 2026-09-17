@@ -8,6 +8,7 @@ import { Role } from '@prisma/client'
 import { sseEmitter } from '@/lib/sse-emitter'
 import { getLast10Digits } from '@/lib/phone'
 import { validateBodyLegacy, updateOrderStatusSchema } from '@/lib/validation'
+import { dispatchAdminApprovedNotifications } from '@/lib/order-notification-dispatcher'
 
 const STAFF_ROLES = ['ADMIN', 'DELIVERY', 'PICKER', 'CHEF', 'RESTAURANT_OWNER']
 const VALID_STATUSES = ['ADMIN_PENDING', 'PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED']
@@ -915,38 +916,12 @@ export async function PATCH(
         data: { orderId: existingOrder.id }
       }).catch(err => console.error('Background sendPushNotificationToRoles error:', err))
 
-      // If order was approved by Admin from ADMIN_PENDING to PENDING, alert Restaurant or Dark Store specifically
-      const isAdminApproved = existingOrder.status === 'ADMIN_PENDING' && status === 'PENDING'
+      // If order was approved by Admin from ADMIN_PENDING to PENDING / CONFIRMED / etc, alert Restaurant or Dark Store specifically
+      const isAdminApproved = existingOrder.status === 'ADMIN_PENDING' && status !== 'ADMIN_PENDING' && status !== 'CANCELLED'
       if (isAdminApproved) {
-        if (existingOrder.restaurantId) {
-          sendPushNotificationToRestaurant(existingOrder.restaurantId, {
-            title: `👨‍🍳 New Food Order #${baseOrderNo}!`,
-            body: `Order #${baseOrderNo} for ${existingOrder.shopName || 'Kitchen'} was approved by Admin. Start preparing dishes!`,
-            tag: `restaurant-order-${existingOrder.id}`,
-            data: { orderId: existingOrder.id, restaurantId: existingOrder.restaurantId }
-          }).catch((err: any) => console.error('Error sending push to restaurant on admin approval:', err))
-
-          try {
-            const { fcmMessaging } = await import('@/lib/firebase-admin')
-            if (fcmMessaging) {
-              const restPayload = buildOrderFcmPayload(
-                `👨‍🍳 New Food Order #${baseOrderNo}!`,
-                `Order #${baseOrderNo} for ${existingOrder.shopName || 'Kitchen'} was approved by Admin. Start preparing dishes!`,
-                {
-                  title: `👨‍🍳 New Food Order #${baseOrderNo}!`,
-                  body: `Order #${baseOrderNo} for ${existingOrder.shopName || 'Kitchen'} was approved by Admin. Start preparing dishes!`,
-                  orderId: existingOrder.id,
-                  readableId: baseOrderNo,
-                  restaurantId: existingOrder.restaurantId,
-                  status: 'PENDING',
-                  screen: 'restaurant-console',
-                  timestamp: Date.now().toString(),
-                }
-              )
-              sendTopicWithRetry(fcmMessaging, { topic: `restaurant_orders_${existingOrder.restaurantId}`, ...restPayload }).catch(() => {})
-            }
-          } catch (_) {}
-        }
+        dispatchAdminApprovedNotifications(existingOrder.id, origin).catch(err =>
+          console.error('Error dispatching admin approved notifications:', err)
+        )
       }
 
       // FCM push notification for mobile app customers (Universal Multi-Topic Broadcast)

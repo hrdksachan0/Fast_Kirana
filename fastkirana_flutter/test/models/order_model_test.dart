@@ -110,14 +110,14 @@ void main() {
 
       final order = Order.fromJson(orderJson);
       expect(order.status, OrderStatus.adminPending);
-      expect(order.status.displayName, 'Verifying Order');
+      expect(order.status.displayName, 'Verifying');
       expect(Order.parseStatus('ADMIN_PENDING'), OrderStatus.adminPending);
       expect(Order.parseStatus('admin_pending'), OrderStatus.adminPending);
 
       // Approve order -> status pending
       final approved = order.copyWith(status: OrderStatus.pending);
       expect(approved.status, OrderStatus.pending);
-      expect(approved.status.displayName, 'Order Placed');
+      expect(approved.status.displayName, 'Placed');
     });
   });
 }

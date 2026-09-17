@@ -41,18 +41,15 @@ export default function robots(): MetadataRoute.Robots {
       },
       {
         userAgent: 'GPTBot',
-        allow: '/',
-        disallow: ['/api/', '/admin/'],
+        disallow: ['/api/', '/admin/', '/product/', '/category/', '/food/', '/search'],
       },
       {
         userAgent: 'PerplexityBot',
-        allow: '/',
-        disallow: ['/api/', '/admin/'],
+        disallow: ['/api/', '/admin/', '/product/', '/category/', '/food/', '/search'],
       },
       {
         userAgent: 'ClaudeBot',
-        allow: '/',
-        disallow: ['/api/', '/admin/'],
+        disallow: ['/api/', '/admin/', '/product/', '/category/', '/food/', '/search'],
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,

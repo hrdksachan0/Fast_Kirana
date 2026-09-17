@@ -257,7 +257,7 @@ export function useAdminRealtime({
 
     if (activeTab === 'liveops') {
       fetchCartsDetail()
-      intervalId = setInterval(fetchCartsDetail, 20000)
+      intervalId = setInterval(fetchCartsDetail, 120000)
       if (typeof document !== 'undefined') {
         document.addEventListener('visibilitychange', handleVisibility)
       }

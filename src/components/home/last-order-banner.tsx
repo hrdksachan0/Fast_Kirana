@@ -96,7 +96,7 @@ export function LastOrderBanner() {
       } catch (err) {
         console.error('Error polling last order status in banner:', err)
       }
-    }, 6000)
+    }, 45000)
 
     return () => {
       clearInterval(pollInterval)
@@ -140,6 +140,7 @@ export function LastOrderBanner() {
     >
       <Link
         href={`/order/${lastOrder.id}/track`}
+        prefetch={false}
         className="block group"
       >
         <div className="relative overflow-hidden rounded-2xl border border-primary/35 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md p-3.5 shadow-xl transition-all duration-350 hover:shadow-2xl hover:border-primary/50">

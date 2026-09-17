@@ -21,6 +21,7 @@ export function useAdminOrders({
     const list = initialOrders || []
     return {
       ALL: list.length,
+      ADMIN_PENDING: list.filter((o: any) => o.status === 'ADMIN_PENDING').length,
       PENDING: list.filter((o: any) => o.status === 'PENDING' && (o.paymentMethod === 'COD' || o.paymentStatus === 'PAID')).length,
       PAYMENT_PENDING: list.filter((o: any) => o.status === 'PENDING' && o.paymentMethod !== 'COD' && o.paymentStatus !== 'PAID').length,
       CONFIRMED: list.filter((o: any) => o.status === 'CONFIRMED').length,
@@ -95,7 +96,7 @@ export function useAdminOrders({
     const interval = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
       fetchOrders()
-    }, 30000)
+    }, 120000)
 
     const handleVisibility = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {

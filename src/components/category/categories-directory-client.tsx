@@ -356,6 +356,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
                   {/* Image Section inside Light Container */}
                   <Link
                     href={destinationHref as any}
+                    prefetch={false}
                     className="relative w-full aspect-square sm:aspect-[4/3] rounded-xl overflow-hidden block border border-zinc-100 dark:border-zinc-900 bg-[#F8FAFC] dark:bg-zinc-900/40"
                   >
                     {/* Floating Badge in Top Left */}
@@ -409,6 +410,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
                           <Link
                             key={sub.id}
                             href={`/category/${c.slug}?subcat=${sub.id}` as any}
+                            prefetch={false}
                             className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-primary/10 hover:text-primary transition-colors border border-zinc-200/60 dark:border-zinc-700/40"
                             title={`ID: ${sub.id}`}
                           >
@@ -438,6 +440,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
                   <div className="w-full">
                     <Link
                       href={destinationHref as any}
+                      prefetch={false}
                       className={cn(
                         'flex items-center justify-between text-[10px] sm:text-[11px] font-black px-3 py-2 sm:py-2.5 rounded-full transition-all duration-300 uppercase w-full text-white cursor-pointer active:scale-95 select-none border border-white/10 shadow-xs hover:shadow-md group/btn',
                         config.btnBg

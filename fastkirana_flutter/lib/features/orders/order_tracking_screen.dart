@@ -58,7 +58,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   Order? _order;
   bool _isLoading = true;
   bool _isRealtimeConnected = false;
-  String _etaText = 'Calculating ETA...';
+  String _etaText = '';
   String _distanceText = '';
 
   // Google Maps state
@@ -1136,13 +1136,14 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           );
         }
 
-        // Average speed 22 km/h in city + 3 min buffer
-        final estMinutes = math.max(3, ((distanceKm / 22.0) * 60).round() + 3);
+        // Distance-wise calculation: ~20 km/h average speed (3 mins per km) + exactly 1 min extra buffer
+        final driveMinutes = ((distanceKm / 20.0) * 60).round();
+        final estMinutes = math.max(2, driveMinutes + 1);
         _etaText = '$estMinutes mins';
-      } else if (_order?.status == OrderStatus.packed) {
-        _etaText = '15-20 mins';
       } else {
-        _etaText = '20-25 mins';
+        // Before Out for Delivery (adminPending, pending, confirmed, packed):
+        // Do not show timing, only show distance/status
+        _etaText = '';
       }
     });
   }
@@ -1610,17 +1611,20 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           ),
           onPressed: () => Navigator.pop(context),
         ),
+        titleSpacing: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'Order Tracking',
               style: GoogleFonts.inter(
-                fontSize: Responsive.scaledFontSize(context, 16),
+                fontSize: Responsive.scaledFontSize(context, 15),
                 fontWeight: FontWeight.w900,
                 color: slateDark,
                 letterSpacing: -0.3,
               ),
+              maxLines: 1,
             ),
             Text(
               cleanDisplayId,
@@ -1639,7 +1643,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                 onTap: _isCancelling ? null : _confirmAndCancelOrder,
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFEF2F2),
                     borderRadius: BorderRadius.circular(8),
@@ -1648,12 +1652,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.cancel_outlined, size: 13, color: primaryRed),
-                      const SizedBox(width: 4),
+                      const Icon(Icons.close_rounded, size: 13, color: primaryRed),
+                      const SizedBox(width: 3),
                       Text(
                         'Cancel',
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 10.5),
+                          fontSize: Responsive.scaledFontSize(context, 10),
                           fontWeight: FontWeight.w800,
                           color: primaryRed,
                         ),
@@ -1665,8 +1669,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
             ),
           // Supabase Realtime Live Badge
           Container(
-            margin: const EdgeInsets.only(right: 6),
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            margin: const EdgeInsets.only(right: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
             decoration: BoxDecoration(
               color: _isRealtimeConnected ? const Color(0xFFECFDF5) : const Color(0xFFFEF3C7),
               borderRadius: BorderRadius.circular(6),
@@ -1675,18 +1679,19 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
               ),
             ),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 6,
-                  height: 6,
+                  width: 5,
+                  height: 5,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: _isRealtimeConnected ? const Color(0xFF00A344) : const Color(0xFFD97706),
                   ),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 3),
                 Text(
-                  _isRealtimeConnected ? 'LIVE GPS' : 'SYNC',
+                  _isRealtimeConnected ? 'LIVE' : 'SYNC',
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 8.5),
                     fontWeight: FontWeight.w900,
@@ -1698,12 +1703,15 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: slateDark),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            icon: const Icon(Icons.refresh_rounded, color: slateDark, size: 20),
             onPressed: () {
               HapticFeedback.lightImpact();
               _fetchLiveOrder();
             },
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: Stack(

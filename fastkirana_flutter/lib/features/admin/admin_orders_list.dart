@@ -376,9 +376,10 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
       final dio = ref.read(dioProvider);
       final prefs = await SharedPreferences.getInstance();
       final storeId = _assignedStoreId ?? prefs.getString('assigned_store_id');
+      await notif.subscribeToTopic('admin_orders');
+      await notif.subscribeToTopic('admin_orders_all');
       if (storeId != null && storeId.isNotEmpty) {
         await notif.subscribeToTopic('admin_orders_$storeId');
-        await notif.unsubscribeFromTopic('admin_orders');
       }
       await notif.registerDeviceToken(dio, role: 'ADMIN', assignedStoreId: storeId);
     } catch (e) {
@@ -846,7 +847,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
         }).toList();
       });
 
-      if (newStatus == OrderStatus.cancelled) {
+      if (newStatus != OrderStatus.adminPending && newStatus != OrderStatus.pending) {
         _stopPendingAlarm();
       }
 
@@ -915,7 +916,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
         }).toList();
       });
 
-      if (newStatus == OrderStatus.cancelled) {
+      if (newStatus != OrderStatus.adminPending && newStatus != OrderStatus.pending) {
         _stopPendingAlarm();
       }
 

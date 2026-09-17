@@ -8,8 +8,8 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['sharp'],
   experimental: {
     staleTimes: {
-      dynamic: 10,
-      static: 60,
+      dynamic: 30,
+      static: 300,
     },
   },
   images: {

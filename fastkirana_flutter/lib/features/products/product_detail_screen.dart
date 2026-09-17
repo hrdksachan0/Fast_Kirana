@@ -28,6 +28,7 @@ class ProductDetailScreen extends ConsumerStatefulWidget {
 
 class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   ProductVariant? _selectedVariant;
+  final Map<String, Set<String>> _selectedAddons = {};
   bool _isFavorite = false;
   bool _isNotified = false;
   static const Color primaryRed = AppDesignSystem.primary;
@@ -39,6 +40,108 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     if (variants.isNotEmpty) {
       _selectedVariant = variants.reduce((a, b) => a.price < b.price ? a : b);
     }
+  }
+
+  Product _buildCustomizedProduct(Product p, ProductVariant? variant, List<AddonItem> selectedAddonItems) {
+    final addonTotal = selectedAddonItems.fold(0.0, (sum, a) => sum + a.price);
+    final basePrice = variant?.price ?? p.price;
+    final baseMrp = variant != null ? (variant.mrp > 0 ? variant.mrp : variant.price) : (p.mrp > 0 ? p.mrp : p.price);
+    final finalPrice = basePrice + addonTotal;
+    final finalMrp = (baseMrp > 0 ? baseMrp : basePrice) + addonTotal;
+
+    final discount = finalMrp > finalPrice && finalMrp > 0
+        ? ((finalMrp - finalPrice) / finalMrp * 100).round()
+        : 0;
+
+    final addonSuffix = selectedAddonItems.isNotEmpty
+        ? ' + ${selectedAddonItems.map((a) => a.name).join(', ')}'
+        : '';
+    final addonIdSuffix = selectedAddonItems.isNotEmpty
+        ? '_addons_${selectedAddonItems.map((a) => a.name.replaceAll(' ', '-')).join('_')}'
+        : '';
+    final baseId = variant != null ? '${p.id}_${variant.name}' : p.id;
+    final baseName = variant != null ? '${p.name} (${variant.name})' : p.name;
+    final unitName = variant != null ? variant.name : p.unit;
+
+    return Product(
+      id: '$baseId$addonIdSuffix',
+      name: '$baseName$addonSuffix',
+      slug: p.slug,
+      description: p.description,
+      imageUrl: p.imageUrl,
+      categoryId: p.categoryId,
+      restaurantId: p.restaurantId,
+      mrp: finalMrp,
+      price: finalPrice,
+      discount: discount.toDouble(),
+      unit: unitName,
+      stock: p.stock,
+      isAvailable: p.isAvailable,
+      tags: p.tags,
+      variants: p.variants,
+      addons: p.addons,
+      minStock: p.minStock,
+      expiryDate: p.expiryDate,
+      costPrice: p.costPrice,
+      location: p.location,
+      isFlashDeal: p.isFlashDeal,
+      isTopPick: p.isTopPick,
+      isBestSeller: p.isBestSeller,
+      sortOrder: p.sortOrder,
+      availableStartTime: p.availableStartTime,
+      availableEndTime: p.availableEndTime,
+      barcode: p.barcode,
+      createdAt: p.createdAt,
+      category: p.category,
+      restaurant: p.restaurant,
+      menuSection: p.menuSection,
+    );
+  }
+
+  void _addToCart(Product p, ProductVariant? activeVariant, List<AddonItem> selectedAddonItems, bool isStoreOpen) {
+    if (!isStoreOpen || !p.isAvailable || p.stock <= 0) return;
+
+    // Validate required addon groups
+    for (final group in p.parsedAddons) {
+      if (group.required) {
+        final selected = _selectedAddons[group.title] ?? {};
+        if (selected.isEmpty) {
+          HapticFeedback.heavyImpact();
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Please select an option for "${group.title}"',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: AppDesignSystem.red600,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+      }
+    }
+
+    final customizedProduct = _buildCustomizedProduct(p, activeVariant, selectedAddonItems);
+    final conflictRestaurant = ref.read(cartProvider.notifier).checkRestaurantConflict(customizedProduct);
+    if (conflictRestaurant != null) {
+      _promptRestaurantConflict(context, customizedProduct, activeVariant?.name);
+      return;
+    }
+
+    HapticFeedback.mediumImpact();
+    ref.read(cartProvider.notifier).addProduct(customizedProduct, 1, activeVariant?.name);
   }
 
   void _promptRestaurantConflict(BuildContext context, Product product, String? variantName) {
@@ -91,20 +194,38 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     final variants = p.parsedVariants;
     final hasVariants = variants.isNotEmpty;
     final activeVariant = _selectedVariant ?? (hasVariants ? variants.first : null);
-    final activePrice = activeVariant?.price ?? p.price;
-    final activeMrp = activeVariant?.mrp ?? p.mrp;
+
+    // Calculate addon total
+    double addonTotal = 0.0;
+    final List<AddonItem> selectedAddonItems = [];
+    for (final group in p.parsedAddons) {
+      final selected = _selectedAddons[group.title] ?? {};
+      for (final item in group.items) {
+        if (selected.contains(item.name)) {
+          addonTotal += item.price;
+          selectedAddonItems.add(item);
+        }
+      }
+    }
+
+    final basePrice = activeVariant?.price ?? p.price;
+    final baseMrp = activeVariant?.mrp ?? p.mrp;
+    final activePrice = basePrice + addonTotal;
+    final activeMrp = (baseMrp > 0 ? baseMrp : basePrice) + addonTotal;
     final activeUnit = activeVariant != null
         ? activeVariant.name
         : (p.unit.isNotEmpty && p.unit != '1 pc' && p.unit != '1 unit'
             ? p.unit
             : (isRestaurantProduct(p) ? 'Freshly Prepared' : 'Standard Pack'));
 
+    final effectiveProduct = _buildCustomizedProduct(p, activeVariant, selectedAddonItems);
+    final effectiveProductId = effectiveProduct.id;
+
     final cart = ref.watch(cartProvider).value;
-    final effectiveProductId = activeVariant != null ? '${p.id}_${activeVariant.name}' : p.id;
     final cartItem = cart?.items.where((i) =>
         i.productId == effectiveProductId ||
-        (activeVariant == null && (i.productId == p.id || i.product.id == p.id)) ||
-        (activeVariant != null && i.selectedVariant == activeVariant.name && (i.productId == p.id || i.product.id == p.id))).firstOrNull;
+        (selectedAddonItems.isEmpty && activeVariant == null && (i.productId == p.id || i.product.id == p.id)) ||
+        (selectedAddonItems.isEmpty && activeVariant != null && i.selectedVariant == activeVariant.name && (i.productId == p.id || i.product.id == p.id))).firstOrNull;
     final inCartQty = cartItem?.quantity ?? 0;
     final discountPct = activeMrp > activePrice && activeMrp > 0
         ? (((activeMrp - activePrice) / activeMrp) * 100).toInt()
@@ -404,6 +525,185 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 18),
+                    ],
+
+                    // Customization / Addon Options (if available)
+                    if (p.parsedAddons.isNotEmpty) ...[
+                      ...p.parsedAddons.map((group) {
+                        final selectedSet = _selectedAddons[group.title] ?? {};
+                        final isRadio = group.maxSelect == 1;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 18),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    group.title,
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 14),
+                                      fontWeight: FontWeight.w800,
+                                      color: AppDesignSystem.gray900,
+                                    ),
+                                  ),
+                                  if (group.required)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppDesignSystem.statusCancelled,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        'REQUIRED',
+                                        style: GoogleFonts.inter(
+                                          fontSize: Responsive.scaledFontSize(context, 9.5),
+                                          fontWeight: FontWeight.w900,
+                                          color: primaryRed,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                isRadio
+                                    ? 'Select any 1'
+                                    : 'Select up to ${group.maxSelect}',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 11.5),
+                                  fontWeight: FontWeight.w500,
+                                  color: AppDesignSystem.textTertiary,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: AppDesignSystem.border),
+                                ),
+                                child: ListView.separated(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: group.items.length,
+                                  separatorBuilder: (_, __) => const Divider(
+                                    height: 1,
+                                    thickness: 1,
+                                    color: AppDesignSystem.surfaceMuted,
+                                    indent: 14,
+                                    endIndent: 14,
+                                  ),
+                                  itemBuilder: (ctx, idx) {
+                                    final addon = group.items[idx];
+                                    final isChecked = selectedSet.contains(addon.name);
+
+                                    return InkWell(
+                                      onTap: () {
+                                        HapticFeedback.selectionClick();
+                                        setState(() {
+                                          final current = _selectedAddons[group.title] ?? {};
+                                          if (isRadio) {
+                                            if (current.contains(addon.name)) {
+                                              if (!group.required) {
+                                                current.remove(addon.name);
+                                              }
+                                            } else {
+                                              current.clear();
+                                              current.add(addon.name);
+                                            }
+                                          } else {
+                                            if (current.contains(addon.name)) {
+                                              current.remove(addon.name);
+                                            } else if (current.length < group.maxSelect) {
+                                              current.add(addon.name);
+                                            }
+                                          }
+                                          _selectedAddons[group.title] = current;
+                                        });
+                                      },
+                                      borderRadius: BorderRadius.vertical(
+                                        top: idx == 0 ? const Radius.circular(16) : Radius.zero,
+                                        bottom: idx == group.items.length - 1 ? const Radius.circular(16) : Radius.zero,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                        child: Row(
+                                          children: [
+                                            // Radio / Checkbox
+                                            if (isRadio)
+                                              Container(
+                                                width: 20,
+                                                height: 20,
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                    color: isChecked ? primaryRed : AppDesignSystem.gray400,
+                                                    width: isChecked ? 2 : 1.5,
+                                                  ),
+                                                ),
+                                                child: isChecked
+                                                    ? Center(
+                                                        child: Container(
+                                                          width: 10,
+                                                          height: 10,
+                                                          decoration: const BoxDecoration(
+                                                            color: primaryRed,
+                                                            shape: BoxShape.circle,
+                                                          ),
+                                                        ),
+                                                      )
+                                                    : null,
+                                              )
+                                            else
+                                              Container(
+                                                width: 20,
+                                                height: 20,
+                                                decoration: BoxDecoration(
+                                                  borderRadius: BorderRadius.circular(5),
+                                                  color: isChecked ? primaryRed : Colors.transparent,
+                                                  border: Border.all(
+                                                    color: isChecked ? primaryRed : AppDesignSystem.gray400,
+                                                    width: 1.5,
+                                                  ),
+                                                ),
+                                                child: isChecked
+                                                    ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+                                                    : null,
+                                              ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Text(
+                                                addon.name,
+                                                style: GoogleFonts.inter(
+                                                  fontSize: Responsive.scaledFontSize(context, 13.5),
+                                                  fontWeight: isChecked ? FontWeight.w700 : FontWeight.w500,
+                                                  color: isChecked ? AppDesignSystem.gray900 : AppDesignSystem.gray700,
+                                                ),
+                                              ),
+                                            ),
+                                            Text(
+                                              addon.price > 0 ? '+ ₹${addon.price.toInt()}' : 'Free',
+                                              style: GoogleFonts.inter(
+                                                fontSize: Responsive.scaledFontSize(context, 13),
+                                                fontWeight: FontWeight.w700,
+                                                color: addon.price > 0 ? AppDesignSystem.gray700 : AppDesignSystem.emerald700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
                     ],
 
                     // Product Highlights & Quality Promise

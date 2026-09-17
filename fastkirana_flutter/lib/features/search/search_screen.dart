@@ -19,6 +19,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/restaurant_card.dart';
 import '../../widgets/variant_selector_sheet.dart';
 import '../../widgets/cart_conflict_dialog.dart';
+import '../../data/models/restaurant.dart';
 import '../products/product_detail_screen.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {

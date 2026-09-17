@@ -36,6 +36,7 @@ export function RestaurantCard({ restaurant, index = 0 }: RestaurantCardProps) {
     >
       <Link
         href={`/food/${restaurant.slug}`}
+        prefetch={false}
         className="block group"
       >
         <div className={cn(

@@ -6,7 +6,7 @@ import { cn, formatPrice } from '@/lib/utils'
 import { FREE_DELIVERY_THRESHOLD } from '@/lib/constants'
 import { ShoppingBag, ChevronRight } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { triggerHaptic } from '@/lib/haptic'
 
@@ -28,13 +28,7 @@ export function CartStickyBar() {
   const isLocationServiceable = useUIStore((s) => s.isLocationServiceable)
   const [isBouncing, setIsBouncing] = useState(false)
 
-  const router = useRouter()
   const pathname = usePathname()
-
-  // Prefetch checkout page on mount for instant page loading
-  useEffect(() => {
-    router.prefetch('/checkout')
-  }, [router])
 
   // Listen for cart-bounce event to trigger visual bounce animation
   useEffect(() => {

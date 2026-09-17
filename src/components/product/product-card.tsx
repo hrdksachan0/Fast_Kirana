@@ -367,7 +367,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
         )}
       </AnimatePresence>
 
-      <Link href={`/product/${product.slug}`} className="relative block shrink-0">
+      <Link href={`/product/${product.slug}`} prefetch={false} className="relative block shrink-0">
 
         {/* Discount Badge — top left */}
         {resolvedDiscount > 0 && (
@@ -621,7 +621,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
         </div>
 
         {/* ROW 2, ROW 3, and Restaurant Outlet wrapped in Link for tap navigation */}
-        <Link href={`/product/${product.slug}`} className="flex flex-col flex-1 min-h-0 min-w-0 justify-between">
+        <Link href={`/product/${product.slug}`} prefetch={false} className="flex flex-col flex-1 min-h-0 min-w-0 justify-between">
           {/* ROW 2: Price & MRP */}
           <div className="flex items-baseline gap-1.5 flex-wrap leading-none mb-1">
             <motion.span

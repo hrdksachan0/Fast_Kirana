@@ -458,10 +458,12 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       if (outletId != null && outletId.isNotEmpty) {
         await notif.subscribeToTopic('restaurant_$outletId');
         await notif.subscribeToTopic('kitchen_$outletId');
+        await notif.subscribeToTopic('restaurant_orders_$outletId');
         final restObj = RestaurantRegistry.find(outletId);
         if (restObj != null && restObj.slug.isNotEmpty && restObj.slug != outletId) {
           await notif.subscribeToTopic('restaurant_${restObj.slug}');
           await notif.subscribeToTopic('kitchen_${restObj.slug}');
+          await notif.subscribeToTopic('restaurant_orders_${restObj.slug}');
         }
       }
       final prefs = await SharedPreferences.getInstance();

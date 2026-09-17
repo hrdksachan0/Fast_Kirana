@@ -394,6 +394,7 @@ export function CategoryPageClient({
                   <Link
                     key={cat.id}
                     href={`/category/${cat.slug}`}
+                    prefetch={false}
                     className={cn(
                       'flex items-center gap-3 w-full px-3 py-2 text-sm font-semibold rounded-xl transition-all duration-200 group',
                       isActive
@@ -596,6 +597,7 @@ export function CategoryPageClient({
                 key={cat.id}
                 id={`category-tab-${cat.slug}`}
                 href={`/category/${cat.slug}`}
+                prefetch={false}
                 className="group flex flex-col items-center gap-1 cursor-pointer shrink-0 snap-start outline-none select-none active:scale-95 transition-transform duration-300"
               >
                 {/* Circular image container */}

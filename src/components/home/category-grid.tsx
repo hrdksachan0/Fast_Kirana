@@ -229,6 +229,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
           </button>
           <Link 
             href="/category" 
+            prefetch={false}
             className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary hover:bg-primary/15 transition-all duration-300 shadow-[0_1.5px_4px_rgba(0,0,0,0.015)] active:scale-95 whitespace-nowrap ml-0.5"
           >
             See all
@@ -271,6 +272,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
               >
                 <Link
                   href={category.slug === 'cafe' || category.isCafeSection ? '/food/as-cafe' : category.slug === 'restaurant' ? '/food' : `/category/${category.slug}`}
+                  prefetch={false}
                   className="group flex flex-col items-center text-center cursor-pointer"
                 >
                   {/* Pastel Rounded Card with Real Photo or 3D Glassmorphic Emoji */}
@@ -348,6 +350,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
               >
                 <Link
                   href={category.slug === 'cafe' || category.isCafeSection ? '/food/as-cafe' : category.slug === 'restaurant' ? '/food' : `/category/${category.slug}`}
+                  prefetch={false}
                   className="flex flex-col items-center text-center"
                 >
                   <div

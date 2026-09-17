@@ -119,6 +119,7 @@ export function FestiveBrandingGrid() {
           >
             <Link
               href={card.linkUrl}
+              prefetch={false}
               className="group relative block rounded-3xl overflow-hidden p-4 sm:p-5 text-white shadow-md hover:shadow-xl transition-all duration-300 active:scale-[0.98] border border-white/10"
             >
               {/* Background Gradient */}

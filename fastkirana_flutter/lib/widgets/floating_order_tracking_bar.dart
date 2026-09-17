@@ -198,6 +198,7 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Builder(
                                 builder: (context) {
@@ -208,62 +209,56 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                                     cleanId = cleanId.substring(cleanId.length - 4);
                                   }
                                   final formattedId = cleanId.startsWith('#') ? cleanId : '#$cleanId';
-                                  return Flexible(
-                                    child: Text(
-                                      formattedId,
-                                      style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 12.5),
-                                        fontWeight: FontWeight.w900,
-                                        color: AppDesignSystem.slate900,
-                                        letterSpacing: -0.2,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                                  return Text(
+                                    formattedId,
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 12.5),
+                                      fontWeight: FontWeight.w900,
+                                      color: AppDesignSystem.slate900,
+                                      letterSpacing: -0.2,
                                     ),
                                   );
                                 },
                               ),
-                              const SizedBox(width: 5),
-                              Flexible(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
-                                  decoration: BoxDecoration(
-                                    color: AppDesignSystem.statusDelivered,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: AppDesignSystem.emerald200),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: latestOrder.status == OrderStatus.adminPending
+                                      ? const Color(0xFFFFF7ED)
+                                      : AppDesignSystem.statusDelivered,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: latestOrder.status == OrderStatus.adminPending
+                                        ? const Color(0xFFFED7AA)
+                                        : AppDesignSystem.emerald200,
                                   ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        width: 4.5,
-                                        height: 4.5,
-                                        decoration: BoxDecoration(
-                                          color: AppDesignSystem.success,
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: AppDesignSystem.success.withValues(alpha: 0.8),
-                                              blurRadius: 4,
-                                            ),
-                                          ],
-                                        ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 5,
+                                      height: 5,
+                                      decoration: BoxDecoration(
+                                        color: latestOrder.status == OrderStatus.adminPending
+                                            ? const Color(0xFFEA580C)
+                                            : AppDesignSystem.success,
+                                        shape: BoxShape.circle,
                                       ),
-                                      const SizedBox(width: 3.5),
-                                      Flexible(
-                                        child: Text(
-                                          latestOrder.status.displayName,
-                                          style: GoogleFonts.inter(
-                                            fontSize: Responsive.scaledFontSize(context, 9.5),
-                                            fontWeight: FontWeight.w800,
-                                            color: AppDesignSystem.emerald600,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      latestOrder.status.displayName,
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 10),
+                                        fontWeight: FontWeight.w800,
+                                        color: latestOrder.status == OrderStatus.adminPending
+                                            ? const Color(0xFFC2410C)
+                                            : AppDesignSystem.emerald600,
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],

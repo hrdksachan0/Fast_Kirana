@@ -39,6 +39,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [groceryAutoTiming, setGroceryAutoTiming] = useState(false)
   const [groceryOpenTime, setGroceryOpenTime] = useState('06:00')
   const [groceryCloseTime, setGroceryCloseTime] = useState('23:59')
+  const [adminAutoApproveOrders, setAdminAutoApproveOrders] = useState(false)
 
   const isGroceryCurrentlyOpen = useMemo(() => {
     if (!groceryAutoTiming) return groceryMartOpen
@@ -152,6 +153,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         if (data.grocery_auto_timing !== undefined) setGroceryAutoTiming(data.grocery_auto_timing === 'true')
         if (data.grocery_open_time) setGroceryOpenTime(data.grocery_open_time)
         if (data.grocery_close_time) setGroceryCloseTime(data.grocery_close_time)
+        if (data.admin_auto_approve_orders !== undefined) setAdminAutoApproveOrders(data.admin_auto_approve_orders === 'true')
         if (data.only_cod !== undefined) setOnlyCod(data.only_cod === 'true')
         if (data.delivery_radius !== undefined) setDeliveryRadius(data.delivery_radius)
         if (data.store_upi_vpa) setStoreUpiVpa(data.store_upi_vpa)
@@ -276,6 +278,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           grocery_auto_timing: groceryAutoTiming ? 'true' : 'false',
           grocery_open_time: groceryOpenTime,
           grocery_close_time: groceryCloseTime,
+          admin_auto_approve_orders: adminAutoApproveOrders ? 'true' : 'false',
           only_cod: onlyCod ? 'true' : 'false',
           delivery_radius: deliveryRadius.trim(),
           store_upi_vpa: storeUpiVpa.trim(),
@@ -595,6 +598,37 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                       </div>
                     </div>
                   </div>
+                  {/* Admin Order Approval Mode (Manual vs Auto) */}
+                  <div className="space-y-1.5 bg-muted/20 p-4 rounded-2xl border border-border/60">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black uppercase tracking-wider text-text-primary flex items-center gap-1.5">
+                        🛡️ Admin Order Approval Gate
+                      </label>
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${
+                        adminAutoApproveOrders
+                          ? 'bg-amber-500/10 text-amber-600 border-amber-500/30'
+                          : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
+                      }`}>
+                        {adminAutoApproveOrders ? '⚡ AUTO-APPROVE' : '🛡️ MANUAL REVIEW'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-text-secondary font-medium">
+                      {adminAutoApproveOrders
+                        ? 'Orders direct kitchen/rider consoles pe chale jayenge bina admin approval ke.'
+                        : 'Har naya order pehle "Awaiting Approval" me aayega aur admin ke phone par loud alarm bajega. Admin ke approve karne ke baad hi kitchen/delivery ko order dikhega.'}
+                    </p>
+                    <div className="pt-2">
+                      <select
+                        value={adminAutoApproveOrders ? 'true' : 'false'}
+                        onChange={(e) => setAdminAutoApproveOrders(e.target.value === 'true')}
+                        className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold cursor-pointer shadow-xs"
+                      >
+                        <option value="false">🛡️ Manual Approval Required (Recommended — Rings Admin Alarm)</option>
+                        <option value="true">⚡ Auto-Approve Orders (Skip Approval Gate)</option>
+                      </select>
+                    </div>
+                  </div>
+
                   {/* Only Cash on Delivery */}
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Only Cash on Delivery</label>

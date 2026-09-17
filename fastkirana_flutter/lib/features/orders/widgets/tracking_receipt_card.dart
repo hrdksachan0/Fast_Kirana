@@ -57,7 +57,7 @@ class TrackingReceiptCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  ' ITEMS',
+                  '${items.length} ${items.length == 1 ? 'ITEM' : 'ITEMS'}',
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 10),
                     fontWeight: FontWeight.w800,
@@ -71,14 +71,14 @@ class TrackingReceiptCard extends StatelessWidget {
           const SizedBox(height: 14),
           ...items.map((item) {
             final isItemRefunded = item.isRefunded || item.refundAmount > 0;
+            final itemTotal = (item.price * item.quantity).toInt();
             return Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 24,
-                    height: 24,
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                     decoration: BoxDecoration(
                       color: isItemRefunded ? const Color(0xFFFFE4E6) : const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(5),
@@ -86,7 +86,7 @@ class TrackingReceiptCard extends StatelessWidget {
                     ),
                     child: Center(
                       child: Text(
-                        'x',
+                        '${item.quantity}x',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 10),
                           fontWeight: FontWeight.w800,
@@ -123,8 +123,9 @@ class TrackingReceiptCard extends StatelessWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Text(
-                    isItemRefunded ? '₹0' : '₹',
+                    isItemRefunded ? '₹0' : '₹$itemTotal',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 13),
                       fontWeight: FontWeight.w800,

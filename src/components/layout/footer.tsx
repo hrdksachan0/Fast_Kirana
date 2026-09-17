@@ -101,10 +101,10 @@ export function Footer() {
           <div>
             <h4 className="text-[11.5px] font-bold mb-4.5 text-zinc-200 uppercase tracking-widest select-none">Shop</h4>
             <ul className="space-y-3">
-              <li><Link href="/category/fruits-vegetables" className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Fruits &amp; Vegetables</Link></li>
-              <li><Link href="/category/dairy-breakfast" className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Dairy &amp; Breakfast</Link></li>
-              <li><Link href="/category/snacks-munchies" className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Snacks</Link></li>
-              <li><Link href="/category/beverages" className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Beverages</Link></li>
+              <li><Link href="/category/fruits-vegetables" prefetch={false} className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Fruits &amp; Vegetables</Link></li>
+              <li><Link href="/category/dairy-breakfast" prefetch={false} className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Dairy &amp; Breakfast</Link></li>
+              <li><Link href="/category/snacks-munchies" prefetch={false} className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Snacks</Link></li>
+              <li><Link href="/category/beverages" prefetch={false} className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Beverages</Link></li>
             </ul>
           </div>
 
@@ -112,10 +112,10 @@ export function Footer() {
           <div>
             <h4 className="text-[11.5px] font-bold mb-4.5 text-zinc-200 uppercase tracking-widest select-none">Account</h4>
             <ul className="space-y-3">
-              <li><Link href="/account?tab=profile" className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">My Profile</Link></li>
-              <li><Link href="/account?tab=orders" className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">My Orders</Link></li>
-              <li><Link href="/account?tab=addresses" className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Saved Addresses</Link></li>
-              <li><Link href="/cart" className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Cart</Link></li>
+              <li><Link href="/account?tab=profile" prefetch={false} className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">My Profile</Link></li>
+              <li><Link href="/account?tab=orders" prefetch={false} className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">My Orders</Link></li>
+              <li><Link href="/account?tab=addresses" prefetch={false} className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Saved Addresses</Link></li>
+              <li><Link href="/cart" prefetch={false} className="text-xs font-semibold text-zinc-400 hover:text-white hover:translate-x-0.5 transition-all duration-300 inline-block">Cart</Link></li>
             </ul>
           </div>
 

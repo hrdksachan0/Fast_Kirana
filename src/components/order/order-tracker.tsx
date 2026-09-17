@@ -351,6 +351,8 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
     if (statuses.includes('SHIPPED')) return 'SHIPPED'
     if (statuses.every(s => s === 'PACKED' || s === 'SHIPPED' || s === 'DELIVERED')) return 'PACKED'
     if (statuses.includes('CONFIRMED')) return 'CONFIRMED'
+    if (statuses.includes('PENDING')) return 'PENDING'
+    if (statuses.includes('ADMIN_PENDING')) return 'ADMIN_PENDING'
     return 'PENDING'
   }
   const combinedStatus = getCombinedStatus()
@@ -400,7 +402,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
   // Determine active step index based on order status
   useEffect(() => {
     const currentStatus = order.status
-    const mappedStatus = ['READY_FOR_PICKUP', 'READY', 'PREPARED'].includes(currentStatus) ? 'SHIPPED' : currentStatus
+    const mappedStatus = ['READY_FOR_PICKUP', 'READY', 'PREPARED'].includes(currentStatus) ? 'SHIPPED' : (currentStatus === 'ADMIN_PENDING' ? 'PENDING' : currentStatus)
     const idx = statusSteps.findIndex((s) => s.status === mappedStatus)
     if (idx !== -1) {
       setActiveStep(idx)
@@ -854,7 +856,8 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                  combinedStatus === 'DELIVERED' ? 'Delivered' : 
                  order.status === 'SHIPPED' ? 'Out for Delivery' : 
                  order.status === 'PACKED' ? 'Packed & Ready' : 
-                 order.status === 'CONFIRMED' ? 'Confirmed & Preparing' : 'Order Placed'}
+                 order.status === 'CONFIRMED' ? 'Confirmed & Preparing' : 
+                 (order.status === 'ADMIN_PENDING' || combinedStatus === 'ADMIN_PENDING') ? 'Verifying Order' : 'Order Placed'}
               </span>
 
               {/* Live Payment Status Pill in Header */}
@@ -900,6 +903,8 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                 ? 'Order Packed & Ready'
                 : order.status === 'CONFIRMED'
                 ? 'Order Confirmed & Preparing'
+                : (order.status === 'ADMIN_PENDING' || combinedStatus === 'ADMIN_PENDING')
+                ? 'Verifying Order Details 🛡️'
                 : 'Order Placed'}
             </h1>
 
@@ -918,6 +923,8 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
                 ? 'Your delivery partner has picked up the order and is on the way.'
                 : order.status === 'PACKED'
                 ? 'Items packed safely. Waiting for rider pickup.'
+                : (order.status === 'ADMIN_PENDING' || combinedStatus === 'ADMIN_PENDING')
+                ? 'Our team is reviewing your order details. Verification takes less than 2 minutes.'
                 : 'Your order is being freshly prepared with hygiene checks.'}
             </p>
           </div>
@@ -929,7 +936,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
             </div>
 
             {/* Cancel Order Button: Only accessible before confirmation */}
-            {order.status === 'PENDING' && combinedStatus === 'PENDING' && (
+            {(order.status === 'PENDING' || order.status === 'ADMIN_PENDING') && (combinedStatus === 'PENDING' || combinedStatus === 'ADMIN_PENDING') && (
               <button
                 onClick={() => setIsCancelModalOpen(true)}
                 className="flex items-center gap-1.5 text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/40 px-3 py-1.5 rounded-xl border border-red-200 dark:border-red-900/50 transition-colors shadow-2xs cursor-pointer"

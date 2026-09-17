@@ -11,23 +11,14 @@ import { ProductImage } from '@/components/product/product-image'
 import { isCafeProduct, cn, getProductLimit, isProductStoreClosed } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 
-import { useRouter } from 'next/navigation'
 import { useCartStore } from '@/stores/cart-store'
 import { toast } from 'sonner'
 import { BogoCartGiftCard } from '@/components/cart/bogo-cart-gift-card'
 
 export function CartDrawer() {
-  const router = useRouter()
   const isOpen = useUIStore((s) => s.isCartOpen)
   const setCartOpen = useUIStore((s) => s.setCartOpen)
   const setActiveVariantProduct = useUIStore((s) => s.setActiveVariantProduct)
-
-  // Prefetch checkout page on drawer open for instant transitions
-  useEffect(() => {
-    if (isOpen) {
-      router.prefetch('/checkout')
-    }
-  }, [isOpen, router])
 
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
@@ -1123,6 +1114,7 @@ export function CartDrawer() {
                   ) : (
                     <Link
                       href="/checkout"
+                      prefetch={false}
                       onClick={() => setCartOpen(false)}
                       className="group relative overflow-hidden w-full h-12 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 text-white hover:text-white transition-all duration-300 active:scale-[0.97] shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-600/40 flex items-center justify-between px-4 cursor-pointer hover:scale-[1.01]"
                     >

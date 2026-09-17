@@ -16,9 +16,9 @@ enum OrderStatus {
   String get displayName {
     switch (this) {
       case OrderStatus.adminPending:
-        return 'Verifying Order';
+        return 'Verifying';
       case OrderStatus.pending:
-        return 'Order Placed';
+        return 'Placed';
       case OrderStatus.confirmed:
         return 'Confirmed';
       case OrderStatus.packed:

@@ -388,6 +388,7 @@ export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
           {currentBanner.linkUrl ? (
             <Link 
               href={currentBanner.linkUrl} 
+              prefetch={false}
               className="block w-full h-full cursor-pointer"
               onClick={(e) => {
                 if (isDragging) {

@@ -53,12 +53,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Update ALL sub-orders in the combined group (or just this one if standalone)
-    // Mark paymentStatus = PAID and paymentMethod = UPI, while keeping order status (e.g. PENDING) for admin confirmation
+    // Mark paymentStatus = PAID and paymentMethod = UPI, and promote ADMIN_PENDING to PENDING
     if (order.combinedId) {
       await prisma.$executeRaw`
         UPDATE orders 
         SET "paymentStatus" = 'PAID'::"PaymentStatus",
             "paymentMethod" = 'UPI'::"PaymentMethod",
+            "status" = CASE WHEN status = 'ADMIN_PENDING'::"OrderStatus" THEN 'PENDING'::"OrderStatus" ELSE status END,
             "updatedAt" = NOW()
         WHERE "combinedId" = ${order.combinedId}
       `
@@ -67,6 +68,7 @@ export async function POST(req: NextRequest) {
         UPDATE orders 
         SET "paymentStatus" = 'PAID'::"PaymentStatus",
             "paymentMethod" = 'UPI'::"PaymentMethod",
+            "status" = CASE WHEN status = 'ADMIN_PENDING'::"OrderStatus" THEN 'PENDING'::"OrderStatus" ELSE status END,
             "updatedAt" = NOW()
         WHERE id = ${order.id}
       `

@@ -30,10 +30,18 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
     const isRestaurant = Boolean(order.orderType === 'RESTAURANT' || order.restaurantId)
     const displayId = order.readableId ? String(order.readableId) : order.id.slice(-6).toUpperCase()
 
+    const isAdminPending = order.status === OrderStatus.ADMIN_PENDING
+
     // 1. Web Push Notification to Customer
     sendPushNotification(order.userId, {
-      title: isOnlinePaid ? '💳 Order Confirmed & Paid!' : notificationTitle,
-      body: isOnlinePaid
+      title: isAdminPending
+        ? '⏳ Order Placed — Waiting for Store Approval'
+        : isOnlinePaid
+        ? '💳 Order Confirmed & Paid!'
+        : notificationTitle,
+      body: isAdminPending
+        ? `Your order #${displayId} of ₹${order.total} is received and awaiting store confirmation.`
+        : isOnlinePaid
         ? `Order #${displayId} of ₹${order.total} has been placed and paid online.`
         : `Your order #${displayId} of ₹${order.total} has been placed.`,
       icon: `${origin}/icons/icon-192.png`,
@@ -44,8 +52,20 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
     }).catch((err: any) => console.error('Error sending customer web push:', err))
 
     // 2. Web Push Notification to Staff
-    if (isRestaurant && order.restaurantId) {
-      // Restaurant order: Only Admin and Delivery roles
+    if (isAdminPending) {
+      // Manual approval mode: ONLY Super Admins receive alerts
+      const rolesToNotify = [Role.ADMIN].filter((r) => !notifiedWebRoles.has(r))
+      if (rolesToNotify.length > 0) {
+        rolesToNotify.forEach((r) => notifiedWebRoles.add(r))
+        sendPushNotificationToRoles(rolesToNotify, {
+          title: '🚨 New Order Awaiting Admin Approval!',
+          body: `Order #${displayId} (${order.shopName || 'Store'}, ₹${order.total}) requires your approval. Tap to review.`,
+          tag: `order-approval-${order.id}`,
+          data: { orderId: order.id },
+        }).catch((err: any) => console.error('Error sending push to admin:', err))
+      }
+    } else if (isRestaurant && order.restaurantId) {
+      // Auto-approved Restaurant order: Admin, Delivery, and Restaurant Owner
       const rolesToNotify = [Role.ADMIN, Role.DELIVERY].filter((r) => !notifiedWebRoles.has(r))
       if (rolesToNotify.length > 0) {
         rolesToNotify.forEach((r) => notifiedWebRoles.add(r))
@@ -59,8 +79,8 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         }).catch((err: any) => console.error('Error sending push to admin/delivery:', err))
       }
 
-      // Notify Restaurant Owner (only if auto-approved / not ADMIN_PENDING)
-      if (order.status !== OrderStatus.CANCELLED && order.status !== OrderStatus.ADMIN_PENDING) {
+      // Notify Restaurant Owner
+      if (order.status !== OrderStatus.CANCELLED) {
         sendPushNotificationToRestaurant(order.restaurantId, {
           title: `👨‍🍳 New Food Order #${displayId}!`,
           body: `New order #${displayId} received for ${order.shopName || 'Kitchen'}. Tap to prepare dishes.`,
@@ -69,7 +89,7 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         }).catch((err: any) => console.error('Error sending push notification to restaurant:', err))
       }
     } else {
-      // Pure Grocery order: Admin, Picker, Delivery
+      // Auto-approved Pure Grocery order: Admin, Picker, Delivery
       const rolesToNotify = [Role.ADMIN, Role.PICKER, Role.DELIVERY].filter((r) => !notifiedWebRoles.has(r))
       if (rolesToNotify.length > 0) {
         rolesToNotify.forEach((r) => notifiedWebRoles.add(r))
@@ -89,11 +109,23 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
       const { fcmMessaging } = await import('@/lib/firebase-admin')
       if (fcmMessaging) {
         const staffPayload = buildOrderFcmPayload(
-          isOnlinePaid ? '💳 New PAID Order Received!' : '🛎️ New Order Received!',
-          `New order #${displayId} of ₹${order.total} has been placed.`,
+          isAdminPending
+            ? '🚨 New Order Awaiting Approval!'
+            : isOnlinePaid
+            ? '💳 New PAID Order Received!'
+            : '🛎️ New Order Received!',
+          isAdminPending
+            ? `Order #${displayId} of ₹${order.total} needs admin approval. Tap to review.`
+            : `New order #${displayId} of ₹${order.total} has been placed.`,
           {
-            title: isOnlinePaid ? '💳 New PAID Order Received!' : '🛎️ New Order Received!',
-            body: `New order #${displayId} of ₹${order.total} has been placed.`,
+            title: isAdminPending
+              ? '🚨 New Order Awaiting Approval!'
+              : isOnlinePaid
+              ? '💳 New PAID Order Received!'
+              : '🛎️ New Order Received!',
+            body: isAdminPending
+              ? `Order #${displayId} of ₹${order.total} needs admin approval. Tap to review.`
+              : `New order #${displayId} of ₹${order.total} has been placed.`,
             orderId: order.id,
             readableId: displayId,
             status: order.status,
@@ -102,14 +134,15 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
           }
         )
 
+        // Broadcast to Admin Topics
         if (order.storeId) {
           sendTopicWithRetry(fcmMessaging, { topic: `admin_orders_${order.storeId}`, ...staffPayload }).catch(() => {})
-          if (!isRestaurant) {
+          if (!isAdminPending && !isRestaurant) {
             sendTopicWithRetry(fcmMessaging, { topic: `staff_orders_${order.storeId}`, ...staffPayload }).catch(() => {})
           }
         } else {
           sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders', ...staffPayload }).catch(() => {})
-          if (!isRestaurant) {
+          if (!isAdminPending && !isRestaurant) {
             sendTopicWithRetry(fcmMessaging, { topic: 'staff_orders', ...staffPayload }).catch(() => {})
           }
         }
@@ -127,78 +160,81 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
           fcmMessaging.send({ token: aToken.token, ...staffPayload }).catch(() => {})
         }
 
-        // Direct FCM push to Delivery & Picker staff for grocery orders
-        if (!isRestaurant) {
-          const riderPayload = buildOrderFcmPayload(
-            isOnlinePaid ? '💳 New PAID Order!' : '🛵 New Order to Deliver / Pick!',
-            `New order #${displayId} of ₹${order.total} is ready for processing.`,
-            {
-              title: isOnlinePaid ? '💳 New PAID Order!' : '🛵 New Order to Deliver / Pick!',
-              body: `New order #${displayId} of ₹${order.total} is ready for processing.`,
-              orderId: order.id,
-              readableId: displayId,
-              status: order.status,
-              screen: 'delivery',
-              timestamp: Date.now().toString(),
-            }
-          )
-          const staffTokens = await prisma.fcmToken.findMany({
-            where: {
-              user: { role: { in: [Role.DELIVERY, Role.PICKER] } },
-            },
-            select: { token: true },
-          })
-          for (const sToken of staffTokens) {
-            fcmMessaging.send({ token: sToken.token, ...riderPayload }).catch(() => {})
-          }
-        }
-
-        // Restaurant owner direct push (only when not in ADMIN_PENDING)
-        if (isRestaurant && order.restaurantId && order.status !== OrderStatus.CANCELLED && order.status !== OrderStatus.ADMIN_PENDING) {
-          const restInfo = await prisma.restaurant.findUnique({
-            where: { id: order.restaurantId },
-            select: { ownerPhone: true },
-          })
-          const cleanRestPhone = restInfo?.ownerPhone ? getLast10Digits(restInfo.ownerPhone) : ''
-
-          const restaurantPayload = buildOrderFcmPayload(
-            `👨‍🍳 New Order for ${order.shopName || 'Kitchen'}!`,
-            `Order #${displayId} received! Open kitchen console to prepare dishes.`,
-            {
-              title: `👨‍🍳 New Order for ${order.shopName || 'Kitchen'}!`,
-              body: `Order #${displayId} received! Open kitchen console to prepare dishes.`,
-              orderId: order.id,
-              readableId: displayId,
-              restaurantId: order.restaurantId,
-              status: order.status,
-              screen: 'restaurant-console',
-              timestamp: Date.now().toString(),
-            }
-          )
-
-          const restTokens = await prisma.fcmToken.findMany({
-            where: {
-              user: {
-                OR: [
-                  { assignedRestaurantId: order.restaurantId },
-                  { role: { in: [Role.RESTAURANT_OWNER, Role.CHEF] } },
-                  ...(cleanRestPhone ? [{ phone: { contains: cleanRestPhone } }] : []),
-                ],
-              },
-            },
-            select: { token: true },
-          })
-
-          const uniqueRestTokens = Array.from(new Set(restTokens.map((t) => t.token)))
-          for (const rToken of uniqueRestTokens) {
-            fcmMessaging.send({ token: rToken, ...restaurantPayload }).catch((err) =>
-              console.error(`Error sending direct restaurant FCM to token ${rToken}:`, err)
+        // Only notify Pickers/Riders and Kitchens if NOT awaiting admin approval
+        if (!isAdminPending) {
+          // Direct FCM push to Delivery & Picker staff for grocery orders
+          if (!isRestaurant) {
+            const riderPayload = buildOrderFcmPayload(
+              isOnlinePaid ? '💳 New PAID Order!' : '🛵 New Order to Deliver / Pick!',
+              `New order #${displayId} of ₹${order.total} is ready for processing.`,
+              {
+                title: isOnlinePaid ? '💳 New PAID Order!' : '🛵 New Order to Deliver / Pick!',
+                body: `New order #${displayId} of ₹${order.total} is ready for processing.`,
+                orderId: order.id,
+                readableId: displayId,
+                status: order.status,
+                screen: 'delivery',
+                timestamp: Date.now().toString(),
+              }
             )
+            const staffTokens = await prisma.fcmToken.findMany({
+              where: {
+                user: { role: { in: [Role.DELIVERY, Role.PICKER] } },
+              },
+              select: { token: true },
+            })
+            for (const sToken of staffTokens) {
+              fcmMessaging.send({ token: sToken.token, ...riderPayload }).catch(() => {})
+            }
           }
 
-          sendTopicWithRetry(fcmMessaging, { topic: `restaurant_orders_${order.restaurantId}`, ...restaurantPayload }).catch(() => {})
-          sendTopicWithRetry(fcmMessaging, { topic: `restaurant_${order.restaurantId}`, ...restaurantPayload }).catch(() => {})
-          sendTopicWithRetry(fcmMessaging, { topic: `kitchen_${order.restaurantId}`, ...restaurantPayload }).catch(() => {})
+          // Restaurant owner direct push
+          if (isRestaurant && order.restaurantId && order.status !== OrderStatus.CANCELLED) {
+            const restInfo = await prisma.restaurant.findUnique({
+              where: { id: order.restaurantId },
+              select: { ownerPhone: true },
+            })
+            const cleanRestPhone = restInfo?.ownerPhone ? getLast10Digits(restInfo.ownerPhone) : ''
+
+            const restaurantPayload = buildOrderFcmPayload(
+              `👨‍🍳 New Order for ${order.shopName || 'Kitchen'}!`,
+              `Order #${displayId} received! Open kitchen console to prepare dishes.`,
+              {
+                title: `👨‍🍳 New Order for ${order.shopName || 'Kitchen'}!`,
+                body: `Order #${displayId} received! Open kitchen console to prepare dishes.`,
+                orderId: order.id,
+                readableId: displayId,
+                restaurantId: order.restaurantId,
+                status: order.status,
+                screen: 'restaurant-console',
+                timestamp: Date.now().toString(),
+              }
+            )
+
+            const restTokens = await prisma.fcmToken.findMany({
+              where: {
+                user: {
+                  OR: [
+                    { assignedRestaurantId: order.restaurantId },
+                    { role: { in: [Role.RESTAURANT_OWNER, Role.CHEF] } },
+                    ...(cleanRestPhone ? [{ phone: { contains: cleanRestPhone } }] : []),
+                  ],
+                },
+              },
+              select: { token: true },
+            })
+
+            const uniqueRestTokens = Array.from(new Set(restTokens.map((t) => t.token)))
+            for (const rToken of uniqueRestTokens) {
+              fcmMessaging.send({ token: rToken, ...restaurantPayload }).catch((err) =>
+                console.error(`Error sending direct restaurant FCM to token ${rToken}:`, err)
+              )
+            }
+
+            sendTopicWithRetry(fcmMessaging, { topic: `restaurant_orders_${order.restaurantId}`, ...restaurantPayload }).catch(() => {})
+            sendTopicWithRetry(fcmMessaging, { topic: `restaurant_${order.restaurantId}`, ...restaurantPayload }).catch(() => {})
+            sendTopicWithRetry(fcmMessaging, { topic: `kitchen_${order.restaurantId}`, ...restaurantPayload }).catch(() => {})
+          }
         }
       }
     } catch (fcmErr) {
@@ -212,7 +248,9 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
       const outletName = order.shopName || (isRestaurant ? 'Restaurant' : 'FastKirana Dark Store')
       const customerName = order.user?.name || 'Customer'
       const customerPhone = order.address?.phone || order.user?.phone || 'N/A'
-      const adminText = isOnlinePaid
+      const adminText = isAdminPending
+        ? `🚨 *ACTION REQUIRED: New Order Awaiting Approval* #${displayId} for [${outletName}] of ₹${order.total} from ${customerName} (${customerPhone}). Status: ADMIN_PENDING. Please verify and approve in Admin: ${cleanAppUrl}/admin`
+        : isOnlinePaid
         ? `💳 *PAID Online Order* #${displayId} for [${outletName}] of ₹${order.total} from ${customerName} (${customerPhone}). Payment: Online PAID ✅. Manage: ${cleanAppUrl}/admin`
         : `🛎️ *COD Order* #${displayId} for [${outletName}] of ₹${order.total} from ${customerName} (${customerPhone}). Payment: Cash On Delivery. Manage: ${cleanAppUrl}/admin`
 
@@ -286,3 +324,208 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
     console.error('Unified customer order FCM notification error:', custNotifErr)
   }
 }
+
+/**
+ * Dispatches targeted multi-channel notifications when an Admin approves
+ * an order from ADMIN_PENDING to PENDING / CONFIRMED.
+ */
+export async function dispatchAdminApprovedNotifications(orderId: string, origin?: string): Promise<void> {
+  try {
+    const baseOrigin = origin || process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
+    const primaryOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        user: true,
+        address: true,
+        restaurant: true,
+        items: true,
+      },
+    })
+
+    if (!primaryOrder) return
+
+    // If part of a combined order, fetch all sibling sub-orders so both Restaurant and Grocery outlets are notified
+    const allTargetOrders = primaryOrder.combinedId
+      ? await prisma.order.findMany({
+          where: { combinedId: primaryOrder.combinedId },
+          include: {
+            user: true,
+            address: true,
+            restaurant: true,
+            items: true,
+          },
+        })
+      : [primaryOrder]
+
+    const { fcmMessaging } = await import('@/lib/firebase-admin')
+    const { createClient } = await import('@supabase/supabase-js')
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bberzasmxwioxjynbuaf.supabase.co'
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    const supabase = (supabaseUrl && supabaseKey)
+      ? createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } })
+      : null
+
+    for (const order of allTargetOrders) {
+      const displayId = order.readableId ? String(order.readableId) : order.id.slice(-6).toUpperCase()
+      const isRestaurant = Boolean(order.orderType === 'RESTAURANT' || order.restaurantId)
+      const outletName = order.shopName || (isRestaurant ? 'Restaurant' : 'FastKirana Dark Store')
+
+      // 1. Notify Customer (Web Push + FCM)
+      sendPushNotification(order.userId, {
+        title: '✅ Order Approved & Confirmed!',
+        body: `Your order #${displayId} of ₹${order.total} has been approved by ${outletName} and is now being prepared.`,
+        icon: `${baseOrigin}/icons/icon-192.png`,
+        badge: `${baseOrigin}/icons/icon-192.png`,
+        tag: `order-${order.id}`,
+        renotify: true,
+        data: { orderId: order.id },
+      }).catch((err: any) => console.error('Error sending customer approval web push:', err))
+
+      // 2. Staff Web & FCM Notifications
+      if (isRestaurant && order.restaurantId) {
+        // Instant Realtime Supabase Broadcast for Kitchen Console Chime & Refresh
+        if (supabase) {
+          try {
+            const ch = supabase.channel('restaurant-orders-live')
+            ch.subscribe((status) => {
+              if (status === 'SUBSCRIBED') {
+                ch.send({
+                  type: 'broadcast',
+                  event: 'new_order',
+                  payload: {
+                    orderId: order.id,
+                    readableId: displayId,
+                    restaurantId: order.restaurantId,
+                    restaurantName: order.restaurant?.name || order.shopName,
+                    shopName: order.shopName,
+                    status: order.status || 'PENDING',
+                  },
+                }).then(() => supabase.removeChannel(ch)).catch(() => {})
+              }
+            })
+          } catch (_) {}
+        }
+
+        // Web push to Restaurant Owner
+        sendPushNotificationToRestaurant(order.restaurantId, {
+          title: `👨‍🍳 New Food Order #${displayId}!`,
+          body: `Order #${displayId} for ${outletName} is APPROVED by Admin. Open Kitchen Console to start cooking!`,
+          tag: `restaurant-order-${order.id}`,
+          data: { orderId: order.id, restaurantId: order.restaurantId },
+        }).catch((err: any) => console.error('Error sending restaurant approval web push:', err))
+
+        // FCM to Restaurant & Kitchen
+        if (fcmMessaging) {
+          const restPayload = buildOrderFcmPayload(
+            `👨‍🍳 New Food Order #${displayId}!`,
+            `Order #${displayId} for ${outletName} is APPROVED by Admin. Start cooking!`,
+            {
+              title: `👨‍🍳 New Food Order #${displayId}!`,
+              body: `Order #${displayId} for ${outletName} is APPROVED by Admin. Start cooking!`,
+              orderId: order.id,
+              readableId: displayId,
+              restaurantId: order.restaurantId,
+              status: order.status || 'PENDING',
+              screen: 'restaurant-console',
+              timestamp: Date.now().toString(),
+            }
+          )
+
+          // Topic broadcasts
+          sendTopicWithRetry(fcmMessaging, { topic: `restaurant_orders_${order.restaurantId}`, ...restPayload }).catch(() => {})
+          sendTopicWithRetry(fcmMessaging, { topic: `restaurant_${order.restaurantId}`, ...restPayload }).catch(() => {})
+          sendTopicWithRetry(fcmMessaging, { topic: `kitchen_${order.restaurantId}`, ...restPayload }).catch(() => {})
+
+          // Direct FCM tokens to chefs & owners
+          prisma.restaurant.findUnique({
+            where: { id: order.restaurantId },
+            select: { ownerPhone: true },
+          }).then(async (restInfo) => {
+            const cleanRestPhone = restInfo?.ownerPhone ? getLast10Digits(restInfo.ownerPhone) : ''
+            const restTokens = await prisma.fcmToken.findMany({
+              where: {
+                user: {
+                  OR: [
+                    { assignedRestaurantId: order.restaurantId },
+                    { role: { in: [Role.RESTAURANT_OWNER, Role.CHEF] } },
+                    ...(cleanRestPhone ? [{ phone: { contains: cleanRestPhone } }] : []),
+                  ],
+                },
+              },
+              select: { token: true },
+            })
+            const uniqueTokens = Array.from(new Set(restTokens.map((t) => t.token)))
+            for (const token of uniqueTokens) {
+              fcmMessaging.send({ token, ...restPayload }).catch(() => {})
+            }
+          }).catch(() => {})
+        }
+      } else {
+        // Pure Grocery Order -> Pickers & Riders
+        sendPushNotificationToRoles([Role.PICKER, Role.DELIVERY], {
+          title: '📦 New Approved Order to Pick & Deliver!',
+          body: `Order #${displayId} of ₹${order.total} has been approved. Ready for packing!`,
+          tag: `order-${order.id}`,
+          data: { orderId: order.id },
+        }).catch((err: any) => console.error('Error sending push to pickers/riders:', err))
+
+        if (fcmMessaging) {
+          const staffPayload = buildOrderFcmPayload(
+            '📦 New Approved Order to Pick & Deliver!',
+            `Order #${displayId} of ₹${order.total} is approved. Ready for packing!`,
+            {
+              title: '📦 New Approved Order to Pick & Deliver!',
+              body: `Order #${displayId} of ₹${order.total} is approved. Ready for packing!`,
+              orderId: order.id,
+              readableId: displayId,
+              status: order.status || 'PENDING',
+              screen: 'delivery',
+              timestamp: Date.now().toString(),
+            }
+          )
+
+          if (order.storeId) {
+            sendTopicWithRetry(fcmMessaging, { topic: `staff_orders_${order.storeId}`, ...staffPayload }).catch(() => {})
+          } else {
+            sendTopicWithRetry(fcmMessaging, { topic: 'staff_orders', ...staffPayload }).catch(() => {})
+          }
+
+          prisma.fcmToken.findMany({
+            where: {
+              user: { role: { in: [Role.DELIVERY, Role.PICKER] } },
+            },
+            select: { token: true },
+          }).then((staffTokens) => {
+            for (const sToken of staffTokens) {
+              fcmMessaging.send({ token: sToken.token, ...staffPayload }).catch(() => {})
+            }
+          }).catch(() => {})
+        }
+      }
+
+      // 3. Direct Customer Phone Broadcast
+      const customerPhone = order.address?.phone || order.user?.phone || ''
+      const cleanPhone = getLast10Digits(customerPhone)
+      if (fcmMessaging && cleanPhone && cleanPhone.length === 10) {
+        const custApprovalPayload = buildOrderFcmPayload(
+          '✅ Order Approved & Confirmed!',
+          `Your order #${displayId} has been approved and is now being prepared.`,
+          {
+            title: '✅ Order Approved & Confirmed!',
+            body: `Your order #${displayId} has been approved and is now being prepared.`,
+            orderId: order.id,
+            readableId: displayId,
+            status: order.status || 'PENDING',
+            screen: 'order-tracking',
+            timestamp: Date.now().toString(),
+          }
+        )
+        sendTopicWithRetry(fcmMessaging, { topic: `phone_${cleanPhone}`, ...custApprovalPayload }).catch(() => {})
+      }
+    }
+  } catch (err) {
+    console.error('dispatchAdminApprovedNotifications error:', err)
+  }
+}
+

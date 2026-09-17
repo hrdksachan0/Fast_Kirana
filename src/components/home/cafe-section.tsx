@@ -632,6 +632,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
                       key={cat.tag}
                       id={`cafe-category-tab-${cat.tag}`}
                       href={href}
+                      prefetch={false}
                       onClick={(e) => {
                         if (showProducts) {
                           e.preventDefault()

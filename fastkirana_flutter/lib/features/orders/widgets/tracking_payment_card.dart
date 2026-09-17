@@ -97,8 +97,8 @@ class TrackingPaymentCard extends StatelessWidget {
                 const SizedBox(height: 1),
                 Text(
                   isOnlinePayment
-                      ? 'Payment pending • Tap to complete'
-                      : 'Pay via UPI, GPay, or Cash at door',
+                      ? 'Payment pending • Tap to pay'
+                      : 'Pay via Cash or UPI at door',
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 10.5),
                     fontWeight: FontWeight.w500,

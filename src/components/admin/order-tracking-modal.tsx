@@ -81,12 +81,13 @@ interface OrderTrackingModalProps {
 }
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; dot: string }> = {
+  ADMIN_PENDING: { bg: 'bg-amber-500/20', text: 'text-amber-700 dark:text-amber-300', dot: 'bg-amber-500' },
   DELIVERED: { bg: 'bg-emerald-500/12', text: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-500' },
   SHIPPED: { bg: 'bg-indigo-500/12', text: 'text-indigo-600 dark:text-indigo-400', dot: 'bg-indigo-500' },
   PACKED: { bg: 'bg-violet-500/12', text: 'text-violet-600 dark:text-violet-400', dot: 'bg-violet-500' },
   CONFIRMED: { bg: 'bg-blue-500/12', text: 'text-blue-600 dark:text-blue-400', dot: 'bg-blue-500' },
   CANCELLED: { bg: 'bg-rose-500/12', text: 'text-rose-600 dark:text-rose-400', dot: 'bg-rose-500' },
-  PENDING: { bg: 'bg-amber-500/12', text: 'text-amber-600 dark:text-amber-400', dot: 'bg-amber-500' },
+  PENDING: { bg: 'bg-yellow-500/12', text: 'text-yellow-700 dark:text-yellow-400', dot: 'bg-yellow-500' },
 }
 
 export default function OrderTrackingModal({
@@ -297,6 +298,58 @@ export default function OrderTrackingModal({
 
         {/* ─── Scrollable Content ─── */}
         <div className="px-5 py-4 space-y-3.5 max-h-[65vh] overflow-y-auto overscroll-contain">
+          
+          {/* ── Admin Approval Gate ── */}
+          {order.status === 'ADMIN_PENDING' && (
+            <div className="p-3.5 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border-2 border-amber-500/40 rounded-xl space-y-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🛡️</span>
+                <div>
+                  <div className="text-xs font-black text-amber-800 dark:text-amber-300">
+                    Admin Approval Required
+                  </div>
+                  <div className="text-[10px] text-text-secondary font-semibold">
+                    Review customer address & order details before dispatching to store/kitchen.
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`/api/orders/${order.id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'PENDING' }),
+                      })
+                      if (res.ok) {
+                        toast.success(`Order #${order.readableId || order.id.slice(0, 8)} Approved!`)
+                        order.status = 'PENDING'
+                        setSelectedOrderForTracking({ ...order })
+                      } else {
+                        toast.error('Failed to approve order')
+                      }
+                    } catch {
+                      toast.error('Network error approving order')
+                    }
+                  }}
+                  className="flex-1 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs rounded-lg transition-all active:scale-95 shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span>✅ Approve Order</span>
+                </button>
+                {customerPhone && (
+                  <a
+                    href={`tel:${customerPhone}`}
+                    className="px-3 py-2 bg-card hover:bg-muted border border-border text-text-primary font-bold text-xs rounded-lg transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+                  >
+                    <Phone className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>Call</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
           
           {/* ── Customer Row ── */}
           <div className="flex items-center justify-between gap-3">
