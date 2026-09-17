@@ -36,6 +36,13 @@ export function useAdminReviewsCoupons({
   const [newCoupon, setNewCoupon] = useState({
     code: '',
     discountType: 'PERCENT',
+    bogoType: 'BUY_LARGE_GET_SMALL',
+    triggerVariant: 'Large',
+    rewardVariant: 'Small',
+    restaurantId: '',
+    badgeText: '',
+    autoApply: false,
+    syncRestaurantBadge: true,
     value: '',
     minOrder: '',
     maxDiscount: '',
@@ -51,6 +58,13 @@ export function useAdminReviewsCoupons({
   const [couponEditForm, setCouponEditForm] = useState({
     code: '',
     discountType: 'PERCENT',
+    bogoType: 'BUY_LARGE_GET_SMALL',
+    triggerVariant: 'Large',
+    rewardVariant: 'Small',
+    restaurantId: '',
+    badgeText: '',
+    autoApply: false,
+    syncRestaurantBadge: true,
     value: '',
     minOrder: '',
     maxDiscount: '',
@@ -176,17 +190,31 @@ export function useAdminReviewsCoupons({
   // Coupons handlers
   const handleCreateCoupon = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newCoupon.code || !newCoupon.value) {
-      toast.error('Coupon code and discount value are required')
+    if (!newCoupon.code) {
+      toast.error('Coupon code is required')
+      return
+    }
+
+    const isBogoOrFreeDelivery = newCoupon.discountType === 'BOGO' || newCoupon.discountType === 'FREE_DELIVERY'
+    if (!isBogoOrFreeDelivery && !newCoupon.value) {
+      toast.error('Discount value is required')
       return
     }
 
     setIsCreatingCoupon(true)
     try {
+      const payload = {
+        ...newCoupon,
+        value: isBogoOrFreeDelivery ? (newCoupon.discountType === 'FREE_DELIVERY' ? 0 : 100) : (parseFloat(newCoupon.value) || 0),
+        minOrder: parseFloat(newCoupon.minOrder) || 0,
+        maxDiscount: newCoupon.maxDiscount ? parseFloat(newCoupon.maxDiscount) : null,
+        maxUses: newCoupon.maxUses ? parseInt(newCoupon.maxUses) : null,
+      }
+
       const res = await fetch('/api/admin/coupons', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newCoupon),
+        body: JSON.stringify(payload),
       })
 
       if (res.ok) {
@@ -197,6 +225,13 @@ export function useAdminReviewsCoupons({
         setNewCoupon({
           code: '',
           discountType: 'PERCENT',
+          bogoType: 'BUY_LARGE_GET_SMALL',
+          triggerVariant: 'Large',
+          rewardVariant: 'Small',
+          restaurantId: '',
+          badgeText: '',
+          autoApply: false,
+          syncRestaurantBadge: true,
           value: '',
           minOrder: '',
           maxDiscount: '',
@@ -222,6 +257,13 @@ export function useAdminReviewsCoupons({
     setCouponEditForm({
       code: c.code || '',
       discountType: c.discountType || 'PERCENT',
+      bogoType: c.bogoType || 'BUY_LARGE_GET_SMALL',
+      triggerVariant: c.triggerVariant || 'Large',
+      rewardVariant: c.rewardVariant || 'Small',
+      restaurantId: c.restaurantId || '',
+      badgeText: c.badgeText || '',
+      autoApply: c.autoApply === true,
+      syncRestaurantBadge: true,
       value: String(c.value || ''),
       minOrder: String(c.minOrder || ''),
       maxDiscount: c.maxDiscount ? String(c.maxDiscount) : '',
@@ -239,6 +281,7 @@ export function useAdminReviewsCoupons({
 
     setSavingCouponId(editingCoupon.id)
     try {
+      const isBogoOrFreeDelivery = couponEditForm.discountType === 'BOGO' || couponEditForm.discountType === 'FREE_DELIVERY'
       const res = await fetch('/api/admin/coupons', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -246,7 +289,14 @@ export function useAdminReviewsCoupons({
           couponId: editingCoupon.id,
           code: couponEditForm.code,
           discountType: couponEditForm.discountType,
-          value: parseFloat(couponEditForm.value) || 0,
+          bogoType: couponEditForm.bogoType,
+          triggerVariant: couponEditForm.triggerVariant,
+          rewardVariant: couponEditForm.rewardVariant,
+          restaurantId: couponEditForm.restaurantId || null,
+          badgeText: couponEditForm.badgeText || null,
+          autoApply: couponEditForm.autoApply,
+          syncRestaurantBadge: couponEditForm.syncRestaurantBadge,
+          value: isBogoOrFreeDelivery ? (couponEditForm.discountType === 'FREE_DELIVERY' ? 0 : 100) : (parseFloat(couponEditForm.value) || 0),
           minOrder: parseFloat(couponEditForm.minOrder) || 0,
           maxDiscount: couponEditForm.maxDiscount ? parseFloat(couponEditForm.maxDiscount) : null,
           maxUses: couponEditForm.maxUses ? parseInt(couponEditForm.maxUses) : null,

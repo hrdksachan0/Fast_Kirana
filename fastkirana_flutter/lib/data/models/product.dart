@@ -16,7 +16,8 @@ class Product {
   final int stock;
   final bool isAvailable;
   final List<String> tags;
-  final dynamic variants;
+  final List<ProductVariant>? variants;
+  final List<AddonGroup>? addons;
   final int minStock;
   final DateTime? expiryDate;
   final double costPrice;
@@ -48,6 +49,7 @@ class Product {
     required this.isAvailable,
     required this.tags,
     this.variants,
+    this.addons,
     required this.minStock,
     this.expiryDate,
     required this.costPrice,
@@ -117,7 +119,8 @@ class Product {
       stock: int.tryParse(json['stock']?.toString() ?? '999') ?? 999,
       isAvailable: json['isAvailable'] != false,
       tags: tagsList,
-      variants: json['variants'],
+      variants: _parseVariantsFromJson(json['variants'], double.tryParse(json['price']?.toString() ?? '0') ?? 0, double.tryParse(json['mrp']?.toString() ?? '0') ?? 0, int.tryParse(json['stock']?.toString() ?? '0') ?? 0, json['unit']?.toString() ?? ''),
+      addons: _parseAddonsFromJson(json['addons']),
       minStock: int.tryParse(json['minStock']?.toString() ?? '0') ?? 0,
       expiryDate: parsedExpiry,
       costPrice: double.tryParse(json['costPrice']?.toString() ?? '0') ?? 0.0,
@@ -154,7 +157,8 @@ class Product {
         'stock': stock,
         'isAvailable': isAvailable,
         'tags': tags,
-        'variants': variants,
+        'variants': variants?.map((v) => v.toJson()).toList(),
+        'addons': addons?.map((a) => a.toJson()).toList(),
         'minStock': minStock,
         'expiryDate': expiryDate?.toIso8601String(),
         'costPrice': costPrice,
@@ -175,38 +179,69 @@ class Product {
   double get savings => mrp - price;
   int get discountPercentage => discount.toInt();
 
-  List<ProductVariant> get parsedVariants {
-    if (variants == null) return [];
-    dynamic listData = variants;
-    if (variants is String) {
+  List<ProductVariant> get parsedVariants => variants ?? [];
+  List<AddonGroup> get parsedAddons => addons ?? [];
+
+  static List<ProductVariant>? _parseVariantsFromJson(
+    dynamic raw,
+    double defaultPrice,
+    double defaultMrp,
+    int defaultStock,
+    String defaultUnit,
+  ) {
+    if (raw == null) return null;
+    dynamic listData = raw;
+    if (raw is String) {
       try {
-        listData = jsonDecode(variants as String);
-      } catch (e) { LoggerService.error('Product: error', e);
-        return [];
+        listData = jsonDecode(raw);
+      } catch (e) {
+        LoggerService.error('Product: variants json error', e);
+        return null;
       }
     }
     if (listData is List) {
       final list = listData.map((v) {
         if (v is Map) {
           final vMap = Map<String, dynamic>.from(v);
-          final p = double.tryParse(vMap['price']?.toString() ?? '') ?? price;
-          final m = double.tryParse(vMap['mrp']?.toString() ?? '') ?? (p > 0 ? p : mrp);
-          final s = int.tryParse(vMap['stock']?.toString() ?? '') ?? stock;
+          final p = double.tryParse(vMap['price']?.toString() ?? '') ?? defaultPrice;
+          final m = double.tryParse(vMap['mrp']?.toString() ?? '') ?? (p > 0 ? p : defaultMrp);
+          final s = int.tryParse(vMap['stock']?.toString() ?? '') ?? defaultStock;
           return ProductVariant(
-            name: vMap['name']?.toString() ?? vMap['unit']?.toString() ?? unit,
+            name: vMap['name']?.toString() ?? vMap['unit']?.toString() ?? defaultUnit,
             price: p,
             mrp: m,
             stock: s,
           );
         } else if (v is String) {
-          return ProductVariant(name: v, price: price, mrp: mrp, stock: stock);
+          return ProductVariant(name: v, price: defaultPrice, mrp: defaultMrp, stock: defaultStock);
         }
-        return ProductVariant(name: v.toString(), price: price, mrp: mrp, stock: stock);
+        return ProductVariant(name: v.toString(), price: defaultPrice, mrp: defaultMrp, stock: defaultStock);
       }).toList();
       list.sort((a, b) => a.price.compareTo(b.price));
       return list;
     }
-    return [];
+    return null;
+  }
+
+  static List<AddonGroup>? _parseAddonsFromJson(dynamic raw) {
+    if (raw == null) return null;
+    dynamic listData = raw;
+    if (raw is String) {
+      try {
+        listData = jsonDecode(raw);
+      } catch (e) {
+        return null;
+      }
+    }
+    if (listData is List) {
+      return listData.map((g) {
+        if (g is Map) {
+          return AddonGroup.fromJson(Map<String, dynamic>.from(g));
+        }
+        return null;
+      }).whereType<AddonGroup>().toList();
+    }
+    return null;
   }
 
   bool get isTrending =>
@@ -284,6 +319,50 @@ class ProductVariant {
       };
 }
 
+class AddonItem {
+  final String name;
+  final double price;
+
+  AddonItem({required this.name, required this.price});
+
+  factory AddonItem.fromJson(Map<String, dynamic> json) => AddonItem(
+    name: json['name']?.toString() ?? '',
+    price: double.tryParse(json['price']?.toString() ?? '0') ?? 0,
+  );
+
+  Map<String, dynamic> toJson() => {'name': name, 'price': price};
+}
+
+class AddonGroup {
+  final String title;
+  final bool required;
+  final int maxSelect;
+  final List<AddonItem> items;
+
+  AddonGroup({
+    required this.title,
+    this.required = false,
+    this.maxSelect = 5,
+    required this.items,
+  });
+
+  factory AddonGroup.fromJson(Map<String, dynamic> json) => AddonGroup(
+    title: json['title']?.toString() ?? '',
+    required: json['required'] == true,
+    maxSelect: int.tryParse(json['maxSelect']?.toString() ?? '5') ?? 5,
+    items: (json['items'] as List?)
+        ?.map((e) => AddonItem.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList() ?? [],
+  );
+
+  Map<String, dynamic> toJson() => {
+    'title': title,
+    'required': required,
+    'maxSelect': maxSelect,
+    'items': items.map((e) => e.toJson()).toList(),
+  };
+}
+
 class CategoryInfo {
   final String id;
   final String name;
@@ -329,6 +408,7 @@ class RestaurantInfo {
   final double? lng;
   final double? deliveryRadiusKm;
   final String? address;
+  final String? discountOffer;
 
   RestaurantInfo({
     required this.id,
@@ -343,6 +423,7 @@ class RestaurantInfo {
     this.lng,
     this.deliveryRadiusKm,
     this.address,
+    this.discountOffer,
   });
 
   factory RestaurantInfo.fromJson(Map<String, dynamic> json) {
@@ -381,6 +462,7 @@ class RestaurantInfo {
       lng: parseLng(),
       deliveryRadiusKm: double.tryParse(json['deliveryRadiusKm']?.toString() ?? '5.0') ?? 5.0,
       address: json['address']?.toString(),
+      discountOffer: json['discountOffer']?.toString() ?? json['offer']?.toString(),
     );
   }
 
@@ -397,5 +479,6 @@ class RestaurantInfo {
         'lng': lng,
         'deliveryRadiusKm': deliveryRadiusKm,
         'address': address,
+        'discountOffer': discountOffer,
       };
 }

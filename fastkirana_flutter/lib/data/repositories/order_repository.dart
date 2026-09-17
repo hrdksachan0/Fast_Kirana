@@ -6,6 +6,7 @@ import '../models/order.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/supabase_service.dart';
 import '../../core/services/admin_authorization.dart';
+import '../../core/services/secure_storage_service.dart';
 
 class OrderRepository {
   final Dio dio;
@@ -219,15 +220,22 @@ class OrderRepository {
   /// then the admin fallback. Returns true only if at least one endpoint
   /// succeeded. Mutates the local cache to reflect the new status.
   Future<bool> updateOrderStatus(String orderId, OrderStatus newStatus) async {
-    final statusStr = newStatus.name.toUpperCase();
-    final adminHeaders = AdminAuthorization.currentStaffHeaders();
-    if (adminHeaders == null || adminHeaders.isEmpty) {
+    final statusStr = newStatus == OrderStatus.adminPending ? 'ADMIN_PENDING' : newStatus.name.toUpperCase();
+    final options = await AdminAuthorization.optionsAsync();
+    final adminHeaders = Map<String, String>.from(options.headers ?? {});
+
+    // Ensure Bearer auth token is also present
+    final token = SecureStorage.cachedToken;
+    if (token != null && token.isNotEmpty && !adminHeaders.containsKey('Authorization')) {
+      adminHeaders['Authorization'] = 'Bearer $token';
+    }
+
+    if (adminHeaders.isEmpty) {
       LoggerService.error('OrderRepository: no admin/staff user authenticated');
       return false;
     }
 
     var primarySucceeded = false;
-    var fallbackSucceeded = false;
 
     // Try primary endpoint
     try {
@@ -245,22 +253,8 @@ class OrderRepository {
       LoggerService.error('OrderRepository: primary status update failed', e, st);
     }
 
-    // Try admin fallback endpoint
-    if (!primarySucceeded) {
-      try {
-        final res = await dio.patch(
-          '/api/admin/orders/$orderId/status',
-          data: {'status': statusStr},
-          options: Options(headers: adminHeaders),
-        );
-        fallbackSucceeded = res.statusCode != null && (res.statusCode! < 300);
-      } catch (e, st) {
-        LoggerService.error('OrderRepository: fallback status update failed', e, st);
-      }
-    }
-
-    // Update local cache if either endpoint succeeded
-    if (primarySucceeded || fallbackSucceeded) {
+    // Update local cache if endpoint succeeded
+    if (primarySucceeded) {
       try {
         await _updateOrderStatusInCache(orderId, statusStr);
       } catch (e, st) {
@@ -268,7 +262,7 @@ class OrderRepository {
       }
     }
 
-    return primarySucceeded || fallbackSucceeded;
+    return primarySucceeded;
   }
 
   /// Updates a single order's status in the local SharedPreferences cache.

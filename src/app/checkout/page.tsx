@@ -285,6 +285,8 @@ export default function CheckoutPage() {
               items={items}
               cookingInstruction={cookingInstruction}
               setCookingInstruction={setCookingInstruction}
+              freeGiftDetails={pricing.appliedCoupon?.freeGiftDetails}
+              offerName={pricing.appliedCoupon?.badgeText || pricing.appliedCoupon?.code}
             />
 
             {/* Food Packaging Option (Cafe/Restaurant) */}

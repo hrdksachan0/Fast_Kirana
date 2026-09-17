@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       where: { id: { in: productIds } },
       select: {
         id: true, name: true, price: true, mrp: true, stock: true,
-        isAvailable: true, variants: true, category: true, tags: true,
+        isAvailable: true, variants: true, addons: true, category: true, tags: true,
       },
     })
 
@@ -33,8 +33,19 @@ export async function POST(request: NextRequest) {
       const clientQty = item.quantity
       if (!clientProduct?.id) continue
 
-      const isVariant = clientProduct.id.includes('_')
-      const [productId, variantName] = isVariant ? clientProduct.id.split('_') : [clientProduct.id, null]
+      const rawId = clientProduct.id
+      const isVariant = rawId.includes('_')
+      let productId = rawId
+      let variantName: string | null = null
+
+      if (isVariant) {
+        const parts = rawId.split('_')
+        productId = parts[0]
+        // If has _addons_, the variant name is parts[1] (if not 'addons')
+        if (parts[1] && parts[1] !== 'addons') {
+          variantName = parts[1]
+        }
+      }
 
       const dbProduct = dbProducts.find((p: any) => p.id === productId)
 
@@ -51,13 +62,36 @@ export async function POST(request: NextRequest) {
       let dbMrp = dbProduct.mrp
       let dbStock = dbProduct.stock
 
-      if (isVariant && dbProduct.variants && Array.isArray(dbProduct.variants)) {
+      if (variantName && dbProduct.variants && Array.isArray(dbProduct.variants)) {
         const variant = (dbProduct.variants as any[]).find((v: any) => v.name === variantName)
         if (variant) {
           dbPrice = variant.price
           dbMrp = variant.mrp
           dbStock = variant.stock
         }
+      }
+
+      // Add verified addon pricing from DB if item has selectedAddons
+      const selectedAddons = (clientProduct as any).selectedAddons || (item as any).selectedAddons
+      if (Array.isArray(selectedAddons) && selectedAddons.length > 0) {
+        let addonSum = 0
+        // If DB has addons, verify price from DB, otherwise trust client addon price
+        const dbAddons = Array.isArray(dbProduct.addons) ? (dbProduct.addons as any[]) : []
+        selectedAddons.forEach((sa: any) => {
+          let foundPrice = parseFloat(sa.price) || 0
+          for (const g of dbAddons) {
+            if (Array.isArray(g.items)) {
+              const matched = g.items.find((i: any) => i.name === sa.name)
+              if (matched) {
+                foundPrice = parseFloat(matched.price) || 0
+                break
+              }
+            }
+          }
+          addonSum += foundPrice
+        })
+        dbPrice += addonSum
+        dbMrp += addonSum
       }
 
       if (dbStock <= 0) {

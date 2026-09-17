@@ -79,24 +79,7 @@ class _DynamicHeroBannerCarouselState extends ConsumerState<DynamicHeroBannerCar
     );
   }
 
-  void _goToPrevious() {
-    HapticFeedback.selectionClick();
-    final bannersAsync = ref.read(bannersProvider(widget.type));
-    final banners = bannersAsync.valueOrNull ?? [];
-    if (banners.length <= 1) return;
 
-    final prevPage = (_currentPage - 1 + banners.length) % banners.length;
-    _pageController.animateToPage(
-      prevPage,
-      duration: const Duration(milliseconds: 720),
-      curve: const Cubic(0.22, 1.0, 0.36, 1.0),
-    );
-  }
-
-  void _goToNext() {
-    HapticFeedback.selectionClick();
-    _advanceToNext();
-  }
 
   @override
   void dispose() {

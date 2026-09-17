@@ -6,9 +6,11 @@ class CouponRepository {
   final Dio dio;
   CouponRepository(this.dio);
 
-  Future<List<Coupon>> getCoupons() async {
+  Future<List<Coupon>> getCoupons({String? restaurantId}) async {
     try {
-      final response = await dio.get('/api/coupons');
+      final response = await dio.get('/api/coupons', queryParameters: {
+        if (restaurantId != null && restaurantId.isNotEmpty) 'restaurantId': restaurantId,
+      });
       final data = response.data;
       if (data is List) {
         return data.map((json) => Coupon.fromJson(json as Map<String, dynamic>)).toList();

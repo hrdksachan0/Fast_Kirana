@@ -21,6 +21,8 @@ export function UnserviceableLocationBanner() {
   const [isNotified, setIsNotified] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const availableHubs = useUIStore((s) => s.availableHubs)
+
   // Store Hub coordinates (default: Ghatampur Store Hub)
   const hubLat = parseFloat(settings['store_lat'] || '26.1534185')
   const hubLng = parseFloat(settings['store_lng'] || '80.1714024')
@@ -35,14 +37,24 @@ export function UnserviceableLocationBanner() {
     }
   }, [isLocationServiceable, userCoords])
 
-  // Switch to Ghatampur Central Hub in 1-click
-  const handleSwitchToGhatampur = () => {
-    setUserCoords({ lat: hubLat, lng: hubLng })
-    setSelectedLocation('Ghatampur Central Market')
-    setShowModal(false)
-    toast.success(`Switched to ${hubName} (Delivering in 10-15 mins)`, {
-      icon: '🚀',
-    })
+  // Switch to an active Hub in 1-click
+  const handleSwitchToHub = (targetHub?: any) => {
+    const hub = targetHub || availableHubs[0]
+    if (hub && hub.latitude && hub.longitude) {
+      setUserCoords({ lat: hub.latitude, lng: hub.longitude })
+      setSelectedLocation(`${hub.city || hub.name} Central`)
+      setShowModal(false)
+      toast.success(`Switched to ${hub.name} (Delivering in 10-15 mins)`, {
+        icon: '🚀',
+      })
+    } else {
+      setUserCoords({ lat: hubLat, lng: hubLng })
+      setSelectedLocation('Ghatampur Central Market')
+      setShowModal(false)
+      toast.success(`Switched to ${hubName} (Delivering in 10-15 mins)`, {
+        icon: '🚀',
+      })
+    }
   }
 
   // Handle Notify Me submit
@@ -162,7 +174,7 @@ export function UnserviceableLocationBanner() {
 
                 <button
                   type="button"
-                  onClick={handleSwitchToGhatampur}
+                  onClick={() => handleSwitchToHub()}
                   className="w-full bg-muted/60 hover:bg-muted text-text-primary py-2.5 px-4 rounded-2xl font-bold text-xs border border-border/60 transition-colors flex items-center justify-center gap-2"
                 >
                   <Navigation className="w-4 h-4 text-text-secondary" />

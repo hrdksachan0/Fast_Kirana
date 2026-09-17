@@ -10,7 +10,8 @@ import '../../providers/coupon_provider.dart';
 
 class CouponsScreen extends ConsumerStatefulWidget {
   final double currentSubtotal;
-  const CouponsScreen({super.key, this.currentSubtotal = 0.0});
+  final String? restaurantId;
+  const CouponsScreen({super.key, this.currentSubtotal = 0.0, this.restaurantId});
 
   @override
   ConsumerState<CouponsScreen> createState() => _CouponsScreenState();
@@ -46,7 +47,9 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final couponsAsync = ref.watch(couponsProvider);
+    final couponsAsync = widget.restaurantId != null && widget.restaurantId!.isNotEmpty
+        ? ref.watch(restaurantCouponsProvider(widget.restaurantId!))
+        : ref.watch(couponsProvider);
 
     return Scaffold(
       backgroundColor: AppDesignSystem.slate50,
@@ -84,7 +87,13 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: slateMuted, size: 20),
-            onPressed: () => ref.invalidate(couponsProvider),
+            onPressed: () {
+              if (widget.restaurantId != null && widget.restaurantId!.isNotEmpty) {
+                ref.invalidate(restaurantCouponsProvider(widget.restaurantId!));
+              } else {
+                ref.invalidate(couponsProvider);
+              }
+            },
           ),
         ],
         bottom: const PreferredSize(
@@ -97,7 +106,12 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
         fillHeight: true,
         child: RefreshIndicator(
           color: primaryRed,
-          onRefresh: () async => ref.refresh(couponsProvider.future),
+          onRefresh: () async {
+            if (widget.restaurantId != null && widget.restaurantId!.isNotEmpty) {
+              return ref.refresh(restaurantCouponsProvider(widget.restaurantId!).future);
+            }
+            return ref.refresh(couponsProvider.future);
+          },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
@@ -256,23 +270,59 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
 
   /// 2. World-Class Ticket Notch Coupon Card
   Widget _buildCouponCard(Coupon coupon) {
-    final discountTitle = coupon.discountType == DiscountType.percent
-        ? 'FLAT ${coupon.value.toInt()}% OFF'
-        : 'FLAT ₹${coupon.value.toInt()} OFF';
+    final isBogo = coupon.isBogo || coupon.discountType == DiscountType.bogo;
+    final isFreeDelivery = coupon.discountType == DiscountType.freeDelivery;
 
-    String conditionText = '';
-    if (coupon.minOrder > 0) {
-      conditionText = 'Valid on orders above ₹${coupon.minOrder.toInt()}';
+    String discountTitle = '';
+    if (isBogo) {
+      discountTitle = (coupon.badgeText != null && coupon.badgeText!.isNotEmpty)
+          ? coupon.badgeText!
+          : 'BUY 1 GET 1 FREE';
+    } else if (isFreeDelivery) {
+      discountTitle = (coupon.badgeText != null && coupon.badgeText!.isNotEmpty)
+          ? coupon.badgeText!
+          : '100% FREE DELIVERY';
+    } else if (coupon.discountType == DiscountType.percent) {
+      discountTitle = 'FLAT ${coupon.value.toInt()}% OFF';
     } else {
-      conditionText = 'Valid on all orders. No minimum cart value.';
+      discountTitle = 'FLAT ₹${coupon.value.toInt()} OFF';
     }
 
-    if (coupon.maxDiscount > 0 && coupon.discountType == DiscountType.percent) {
-      conditionText += ' (Max ₹${coupon.maxDiscount.toInt()})';
+    String conditionText = '';
+    if (isBogo) {
+      if (coupon.bogoType == 'BUY_LARGE_GET_SMALL') {
+        conditionText = 'Buy ${coupon.triggerVariant ?? 'Large'} & get ${coupon.rewardVariant ?? 'Small'} 100% FREE!';
+      } else if (coupon.bogoType == 'SAME_ITEM') {
+        conditionText = 'Buy 1 item & get exact same dish 100% FREE!';
+      } else if (coupon.bogoType == 'CHEAPEST_FREE') {
+        conditionText = 'Buy 2 or more qualifying dishes, get cheapest 100% FREE!';
+      } else {
+        conditionText = 'Buy 1 Get 1 Free on qualifying dishes';
+      }
+      if (coupon.minOrder > 0) {
+        conditionText += ' • Min order ₹${coupon.minOrder.toInt()}';
+      }
+    } else if (isFreeDelivery) {
+      conditionText = coupon.minOrder > 0
+          ? 'Free delivery on orders above ₹${coupon.minOrder.toInt()}'
+          : '100% Free delivery on this order. No minimum cart value.';
+    } else {
+      if (coupon.minOrder > 0) {
+        conditionText = 'Valid on orders above ₹${coupon.minOrder.toInt()}';
+      } else {
+        conditionText = 'Valid on all orders. No minimum cart value.';
+      }
+      if (coupon.maxDiscount > 0 && coupon.discountType == DiscountType.percent) {
+        conditionText += ' (Max ₹${coupon.maxDiscount.toInt()})';
+      }
     }
 
     final isEligible = widget.currentSubtotal == 0.0 || widget.currentSubtotal >= coupon.minOrder;
     final diff = coupon.minOrder - widget.currentSubtotal;
+
+    final cardBorderColor = isBogo
+        ? const Color(0xFFFED7AA)
+        : (isEligible ? AppDesignSystem.rose200 : slateBorder);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -280,12 +330,12 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isEligible ? AppDesignSystem.rose200 : slateBorder,
-          width: 1.2,
+          color: cardBorderColor,
+          width: isBogo ? 1.5 : 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: isBogo ? const Color(0xFFEA580C).withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),
@@ -304,30 +354,85 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Coupon Code Pill
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppDesignSystem.statusCancelled,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppDesignSystem.red300),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              coupon.code,
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 13),
-                                fontWeight: FontWeight.w900,
-                                color: primaryRed,
-                                letterSpacing: 0.8,
+                      // Badge / Tag Row
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          // Coupon Code Pill
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isBogo ? const Color(0xFFFFF7ED) : AppDesignSystem.statusCancelled,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isBogo ? const Color(0xFFFDBA74) : AppDesignSystem.red300,
                               ),
                             ),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.copy_rounded, size: 12, color: primaryRed),
-                          ],
-                        ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  coupon.code,
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 13),
+                                    fontWeight: FontWeight.w900,
+                                    color: isBogo ? const Color(0xFFEA580C) : primaryRed,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.copy_rounded,
+                                  size: 12,
+                                  color: isBogo ? const Color(0xFFEA580C) : primaryRed,
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (isBogo)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEA580C),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.local_fire_department_rounded, size: 12, color: Colors.white),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    'BOGO DEAL',
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 10.5),
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (coupon.autoApply)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF5F3FF),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFDDD6FE)),
+                              ),
+                              child: Text(
+                                '⚡ AUTO-APPLIES',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 10),
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF7C3AED),
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -335,7 +440,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 16),
                           fontWeight: FontWeight.w900,
-                          color: slateDark,
+                          color: isBogo ? const Color(0xFFC2410C) : slateDark,
                           letterSpacing: -0.2,
                         ),
                       ),
@@ -359,7 +464,9 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: isEligible ? AppDesignSystem.red600 : AppDesignSystem.slate100,
+                      color: isEligible
+                          ? (isBogo ? const Color(0xFFEA580C) : AppDesignSystem.red600)
+                          : AppDesignSystem.slate100,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
@@ -383,7 +490,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
               30,
               (index) => Expanded(
                 child: Container(
-                  color: index % 2 == 0 ? Colors.transparent : AppDesignSystem.slate200,
+                  color: index % 2 == 0 ? Colors.transparent : (isBogo ? const Color(0xFFFED7AA) : AppDesignSystem.slate200),
                   height: 1.2,
                 ),
               ),
@@ -394,26 +501,38 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: isEligible ? AppDesignSystem.orange50 : AppDesignSystem.slate50,
+              color: !isEligible
+                  ? AppDesignSystem.slate50
+                  : (isBogo ? const Color(0xFFFFF7ED) : AppDesignSystem.orange50),
               borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
             ),
             child: Row(
               children: [
                 Icon(
-                  isEligible ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+                  !isEligible
+                      ? Icons.info_outline_rounded
+                      : (isBogo ? Icons.redeem_rounded : Icons.check_circle_rounded),
                   size: 13,
-                  color: isEligible ? AppDesignSystem.orange600 : slateMuted,
+                  color: !isEligible
+                      ? slateMuted
+                      : (isBogo ? const Color(0xFFEA580C) : AppDesignSystem.orange600),
                 ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    isEligible
-                        ? 'Tap APPLY to save with this coupon'
-                        : 'Add ₹${diff.toInt()} more items to unlock this coupon',
+                    !isEligible
+                        ? 'Add ₹${diff.toInt()} more items to unlock this coupon'
+                        : (isBogo
+                            ? (coupon.autoApply
+                                ? '⚡ Automatically applied in cart when qualifying items are present'
+                                : '🎁 Free dish added to your cart automatically when applied')
+                            : 'Tap APPLY to save with this coupon'),
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 11),
                       fontWeight: FontWeight.w600,
-                      color: isEligible ? AppDesignSystem.amber800 : slateMuted,
+                      color: !isEligible
+                          ? slateMuted
+                          : (isBogo ? const Color(0xFFC2410C) : AppDesignSystem.amber800),
                     ),
                   ),
                 ),

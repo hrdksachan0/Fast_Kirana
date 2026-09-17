@@ -551,7 +551,6 @@ class ProfileScreen extends ConsumerWidget {
     final ordersAsync = ref.watch(ordersProvider(userId));
     final wishlist = ref.watch(wishlistProvider);
     final addresses = ref.watch(addressesProvider).valueOrNull ?? [];
-    final categories = ref.watch(categoriesProvider).valueOrNull ?? [];
 
     final ordersCount = ordersAsync.valueOrNull?.length ?? 0;
 

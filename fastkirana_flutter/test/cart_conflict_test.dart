@@ -14,6 +14,9 @@ void main() {
   });
 
   group('Restaurant Utility & Conflict Tests', () {
+    const outletWedsonId = 'REST-102';
+    const outletBalUdyanId = 'REST-103';
+
     final groceryItem = Product(
       id: 'g1',
       name: 'Amul Butter 500g',

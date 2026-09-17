@@ -19,6 +19,7 @@ import { triggerHaptic } from '@/lib/haptic'
 import { FloatingEmojis } from '@/components/shared/floating-emojis'
 
 import { FoodEditorialCuration } from '@/components/home/food-editorial-curation'
+import { HubComingSoon } from '@/components/home/hub-coming-soon'
 
 interface StorefrontClientProps {
   categories: Category[]
@@ -169,51 +170,57 @@ export function StorefrontClient({
             transition={{ duration: 0.35, ease: 'easeInOut' }}
             className="container mx-auto px-4 pt-1 flex flex-col gap-1.5 md:gap-8 max-w-7xl relative z-10 min-h-[50vh]"
           >
-            {/* 1. Hero Banners */}
-            <div>
-              <HeroArea initialBanners={promoBanners} />
-            </div>
+            {allGroceryProducts.length === 0 ? (
+              <HubComingSoon />
+            ) : (
+              <>
+                {/* 1. Hero Banners */}
+                <div>
+                  <HeroArea initialBanners={promoBanners} />
+                </div>
 
-            {/* 2. Trending Categories */}
-            <div>
-              <CategoryGrid categories={categories} />
-            </div>
+                {/* 2. Trending Categories */}
+                <div>
+                  <CategoryGrid categories={categories} />
+                </div>
 
-            {/* 3. Speed Strip */}
-            <div>
-              <SpeedStrip
-                avgDelivery={settingsMap.avg_delivery_time}
-                deliveredCount={settingsMap.delivered_today}
-                freshStock={settingsMap.fresh_stock_loaded}
-                happyFamilies={settingsMap.happy_families}
-              />
-            </div>
+                {/* 3. Speed Strip */}
+                <div>
+                  <SpeedStrip
+                    avgDelivery={settingsMap.avg_delivery_time}
+                    deliveredCount={settingsMap.delivered_today}
+                    freshStock={settingsMap.fresh_stock_loaded}
+                    happyFamilies={settingsMap.happy_families}
+                  />
+                </div>
 
-            {/* 4. Deals & Curations Hub */}
-            <div className="section-lazy-render">
-              <DealsCurationHub
-                categories={categories}
-                allProducts={allGroceryProducts}
-                flashDeals={flashDeals}
-                bestSellers={bestSellers}
-                topPicks={topPicks}
-                breakfastProducts={breakfastProducts}
-                lunchProducts={lunchProducts}
-                teaProducts={teaProducts}
-                nightProducts={nightProducts}
-                sortRules={sortRules}
-              />
-            </div>
+                {/* 4. Deals & Curations Hub */}
+                <div className="section-lazy-render">
+                  <DealsCurationHub
+                    categories={categories}
+                    allProducts={allGroceryProducts}
+                    flashDeals={flashDeals}
+                    bestSellers={bestSellers}
+                    topPicks={topPicks}
+                    breakfastProducts={breakfastProducts}
+                    lunchProducts={lunchProducts}
+                    teaProducts={teaProducts}
+                    nightProducts={nightProducts}
+                    sortRules={sortRules}
+                  />
+                </div>
 
-            {/* 5. Value Proposition Banner */}
-            <div className="section-lazy-render">
-              <DeliveryBanner />
-            </div>
+                {/* 5. Value Proposition Banner */}
+                <div className="section-lazy-render">
+                  <DeliveryBanner />
+                </div>
 
-            {/* 6. Last Order Banner */}
-            <div className="section-lazy-render">
-              <LastOrderBanner />
-            </div>
+                {/* 6. Last Order Banner */}
+                <div className="section-lazy-render">
+                  <LastOrderBanner />
+                </div>
+              </>
+            )}
           </motion.div>
         ) : (
           <motion.div
@@ -226,7 +233,11 @@ export function StorefrontClient({
           >
             {/* Swiggy-style restaurant listing — banner + cards */}
             <FoodBanner />
-            <RestaurantListing initialRestaurants={restaurants} />
+            {!restaurants || restaurants.length === 0 ? (
+              <HubComingSoon city="Local Restaurants & Kitchens" />
+            ) : (
+              <RestaurantListing initialRestaurants={restaurants} />
+            )}
           </motion.div>
         )}
       </AnimatePresence>

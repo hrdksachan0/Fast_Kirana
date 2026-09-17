@@ -1,17 +1,47 @@
-﻿import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-export async function GET() {
+export const dynamic = 'force-dynamic'
+
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const restaurantId = searchParams.get('restaurantId')
     const now = new Date()
+
+    const whereClause: any = {
+      isActive: true,
+      OR: [
+        { expiresAt: null },
+        { expiresAt: { gt: now } },
+      ],
+    }
+
+    if (restaurantId) {
+      whereClause.AND = [
+        {
+          OR: [
+            { restaurantId: restaurantId },
+            { restaurantId: null, categoryId: null }, // Global coupons also available
+          ],
+        },
+      ]
+    }
+
     const coupons = await prisma.coupon.findMany({
-      where: {
-        isActive: true,
-      },
+      where: whereClause,
       select: {
         id: true,
         code: true,
         discountType: true,
+        bogoType: true,
+        triggerVariant: true,
+        rewardVariant: true,
+        defaultFreeDishId: true,
+        maxFreeItems: true,
+        bogoDishId: true,
+        autoApply: true,
+        badgeText: true,
         value: true,
         minOrder: true,
         maxDiscount: true,
@@ -19,19 +49,27 @@ export async function GET() {
         restaurantId: true,
         isActive: true,
         expiresAt: true,
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          }
+        }
       },
-      orderBy: { value: 'desc' },
+      orderBy: [
+        { autoApply: 'desc' },
+        { value: 'desc' },
+      ],
     })
 
-    const validCoupons = coupons.filter(c => !c.expiresAt || new Date(c.expiresAt) > now)
-
-    return NextResponse.json(validCoupons, {
+    return NextResponse.json(coupons, {
       headers: {
-        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+        'Cache-Control': 'no-store, max-age=0',
       },
     })
   } catch (error: any) {
-    console.error('Error fetching public coupons:', error)
+    console.error('Error fetching coupons:', error)
     return NextResponse.json([], { status: 200 })
   }
 }

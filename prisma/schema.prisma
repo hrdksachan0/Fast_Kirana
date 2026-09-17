@@ -48,6 +48,14 @@ enum OrderType {
 enum DiscountType {
   FLAT
   PERCENT
+  BOGO
+  FREE_DELIVERY
+}
+
+enum BogoType {
+  SAME_ITEM
+  BUY_LARGE_GET_SMALL
+  CHEAPEST_FREE
 }
 
 model Account {
@@ -192,6 +200,7 @@ model Product {
   isAvailable Boolean   @default(true)
   tags        String[]
   variants    Json?
+  addons      Json?
   minStock    Int       @default(10)
   expiryDate  DateTime?
   costPrice   Float     @default(0)
@@ -352,6 +361,9 @@ model Order {
   @@index([storeId])
   @@index([restaurantId])
   @@index([combinedId])
+  @@index([combinedId, status])
+  @@index([restaurantId, createdAt(sort: Desc)])
+  @@index([storeId, status, createdAt(sort: Desc)])
   @@index([shopName, createdAt])
   @@index([createdAt])
   @@map("orders")
@@ -381,20 +393,28 @@ model OrderItem {
 }
 
 model Coupon {
-  id              String       @id @default(cuid())
-  code            String       @unique
-  discountType    DiscountType
-  value           Float
-  minOrder        Float        @default(0)
-  maxDiscount     Float?
-  maxUses         Int?
-  usedCount       Int          @default(0)
-  isActive        Boolean      @default(true)
-  expiresAt       DateTime?
-  createdAt       DateTime     @default(now())
-  categoryId      String?
-  restaurantId    String?
-  oncePerCustomer Boolean      @default(false)
+  id                 String        @id @default(cuid())
+  code               String        @unique
+  discountType       DiscountType
+  bogoType           BogoType?
+  triggerVariant     String?       // e.g. "Large", "Full"
+  rewardVariant      String?       // e.g. "Small", "Half"
+  defaultFreeDishId  String?       // Dish ID auto-dropped into cart
+  maxFreeItems       Int?          @default(3) // Cap on free items per order
+  value              Float         @default(0)
+  minOrder           Float         @default(0)
+  maxDiscount        Float?
+  maxUses            Int?
+  usedCount          Int           @default(0)
+  isActive           Boolean       @default(true)
+  expiresAt          DateTime?
+  createdAt          DateTime      @default(now())
+  categoryId         String?
+  restaurantId       String?
+  bogoDishId         String?
+  autoApply          Boolean       @default(false)
+  badgeText          String?
+  oncePerCustomer    Boolean       @default(false)
 
   category        Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   restaurant      Restaurant?  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)

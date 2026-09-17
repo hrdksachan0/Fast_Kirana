@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { useCartStore } from '@/stores/cart-store'
 import { toast } from 'sonner'
+import { BogoCartGiftCard } from '@/components/cart/bogo-cart-gift-card'
 
 export function CartDrawer() {
   const router = useRouter()
@@ -79,9 +80,12 @@ export function CartDrawer() {
           subtotal,
           items: items.map(i => ({
             id: i.product.id,
+            name: i.product.name,
             price: i.product.price,
             categoryId: i.product.category?.id,
-            quantity: i.quantity
+            quantity: i.quantity,
+            selectedVariant: (i.product as any).selectedVariant || (i as any).selectedVariant,
+            variant: (i.product as any).variant || (i as any).variant,
           }))
         }),
       })
@@ -91,12 +95,23 @@ export function CartDrawer() {
       if (!res.ok) {
         toast.error(data.error || 'Failed to apply coupon')
       } else {
-        setAppliedCoupon({
+        const couponObj = {
           code: data.coupon.code,
           discountAmount: data.coupon.discountAmount,
-        })
+          discountType: data.coupon.discountType,
+          bogoType: data.coupon.bogoType,
+          badgeText: data.coupon.badgeText,
+          freeGiftDetails: data.coupon.freeGiftDetails,
+          nudgeMessage: data.coupon.nudgeMessage,
+        }
+        setAppliedCoupon(couponObj)
         setAppliedCouponCode(data.coupon.code)
-        toast.success(`Coupon "${data.coupon.code}" applied! You saved ₹${data.coupon.discountAmount.toFixed(0)}`)
+
+        if (data.coupon.nudgeMessage) {
+          toast.info(data.coupon.nudgeMessage, { icon: '🎁', duration: 4000 })
+        } else {
+          toast.success(`Coupon "${data.coupon.code}" applied! You saved ₹${data.coupon.discountAmount.toFixed(0)}`)
+        }
       }
     } catch (err) {
       toast.error('Failed to validate coupon code')
@@ -154,9 +169,12 @@ export function CartDrawer() {
           subtotal,
           items: items.map(i => ({
             id: i.product.id,
+            name: i.product.name,
             price: i.product.price,
             categoryId: i.product.category?.id,
-            quantity: i.quantity
+            quantity: i.quantity,
+            selectedVariant: (i.product as any).selectedVariant || (i as any).selectedVariant,
+            variant: (i.product as any).variant || (i as any).variant,
           }))
         })
       })
@@ -168,6 +186,11 @@ export function CartDrawer() {
         setAppliedCoupon({
           code: data.coupon.code,
           discountAmount: data.coupon.discountAmount,
+          discountType: data.coupon.discountType,
+          bogoType: data.coupon.bogoType,
+          badgeText: data.coupon.badgeText,
+          freeGiftDetails: data.coupon.freeGiftDetails,
+          nudgeMessage: data.coupon.nudgeMessage,
         })
       })
       .catch(() => {
@@ -266,6 +289,18 @@ export function CartDrawer() {
             <div className="flex-1 min-w-0">
               <h4 className="text-xs sm:text-sm font-bold text-zinc-850 dark:text-zinc-100 line-clamp-2 leading-snug break-words">{item.product.name}</h4>
               <p className="text-[10px] text-zinc-500 font-bold mt-0.5">{item.product.unit}</p>
+              {Array.isArray(item.product.selectedAddons) && item.product.selectedAddons.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {item.product.selectedAddons.map((addon) => (
+                    <span
+                      key={addon.name}
+                      className="inline-flex items-center text-[9px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800/40"
+                    >
+                      +{addon.name} (₹{addon.price})
+                    </span>
+                  ))}
+                </div>
+              )}
               <div className="flex items-center gap-2 mt-1.5">
                 <span className="text-sm font-black text-zinc-850 dark:text-zinc-100">{formatPrice(item.product.price)}</span>
                 {item.product.mrp > item.product.price && (
@@ -614,6 +649,31 @@ export function CartDrawer() {
                   </div>
                 </div>
               )}
+              {/* BOGO Free Gift Card */}
+              {appliedCoupon?.freeGiftDetails && (
+                <div className="mx-1 my-2">
+                  <BogoCartGiftCard
+                    giftItem={appliedCoupon.freeGiftDetails}
+                    offerName={appliedCoupon.badgeText || appliedCoupon.code}
+                  />
+                </div>
+              )}
+
+              {/* BOGO Nudge Alert */}
+              {appliedCoupon?.nudgeMessage && !appliedCoupon?.freeGiftDetails && (
+                <div className="mx-1 my-2 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-2.5 shadow-xs animate-slide-down">
+                  <span className="text-xl animate-bounce">🎁</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-black text-amber-700 dark:text-amber-300 leading-snug">
+                      {appliedCoupon.nudgeMessage}
+                    </p>
+                    <span className="text-[10px] font-bold text-amber-600/80 dark:text-amber-400/80">
+                      Coupon {appliedCoupon.code} applied!
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Coupon Code Section */}
               <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-150 dark:border-zinc-800 p-3.5 rounded-2xl space-y-2 mt-4 mx-1">
                 <h4 className="text-xs font-black text-zinc-800 dark:text-zinc-250 flex items-center gap-1.5 leading-none">
@@ -622,10 +682,21 @@ export function CartDrawer() {
                 {appliedCoupon ? (
                   <div className="flex items-center justify-between border border-accent/20 bg-accent/5 p-2 rounded-xl">
                     <div className="text-left">
-                      <span className="text-[10px] font-black text-accent bg-accent/10 px-2 py-0.5 rounded border border-accent/20">
-                        {appliedCoupon.code}
-                      </span>
-                      <p className="text-[9px] text-accent font-semibold mt-1">Saved ₹{couponDiscount.toFixed(0)}</p>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-black text-accent bg-accent/10 px-2 py-0.5 rounded border border-accent/20">
+                          {appliedCoupon.code}
+                        </span>
+                        {appliedCoupon.bogoType && (
+                          <span className="text-[9px] font-black text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 px-1.5 py-0.5 rounded">
+                            🎁 BOGO
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[9px] text-accent font-semibold mt-1">
+                        {appliedCoupon.bogoType
+                          ? `Saved ₹${couponDiscount.toFixed(0)} on free item!`
+                          : `Saved ₹${couponDiscount.toFixed(0)}`}
+                      </p>
                     </div>
                     <button
                       onClick={handleRemoveCoupon}

@@ -35,6 +35,7 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
   const [storeLat, setStoreLat] = useState(26.1534185)
   const [storeLng, setStoreLng] = useState(80.1714024)
   const [deliveryRadius, setDeliveryRadius] = useState(2.0)
+  const [hubs, setHubs] = useState<any[]>([])
 
   // Location state
   const [currentLat, setCurrentLat] = useState<number>(26.156803)
@@ -44,6 +45,19 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
   const [isDetecting, setIsDetecting] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
   const [isMapFullscreen, setIsMapFullscreen] = useState(false)
+
+  // Fetch all dark store hubs when modal opens
+  useEffect(() => {
+    if (!open) return
+    fetch('/api/stores/hubs')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.hubs && Array.isArray(data.hubs)) {
+          setHubs(data.hubs)
+        }
+      })
+      .catch(() => {})
+  }, [open])
 
   // Google Maps state
   const [apiKey, setApiKey] = useState<string | null>(null)
@@ -162,29 +176,32 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
       const map = new google.maps.Map(mapContainerRef.current, mapOptions)
       mapRef.current = map
 
-      // Draw red circle representing the delivery radius zone
-      new google.maps.Circle({
-        strokeColor: '#EA4335',
-        strokeOpacity: 0.8,
-        strokeWeight: 2,
-        fillColor: '#EA4335',
-        fillOpacity: 0.15,
-        map: map,
-        center: { lat: storeLat, lng: storeLng },
-        radius: deliveryRadius * 1000, // in meters
-        clickable: false
-      })
+      // Draw delivery circles and markers for all active hubs
+      const hubsToDraw = hubs.length > 0 ? hubs : [{ latitude: storeLat, longitude: storeLng, deliveryRadiusKm: deliveryRadius, name: 'Store Hub' }]
+      for (const h of hubsToDraw) {
+        if (!h.latitude || !h.longitude) continue
+        new google.maps.Circle({
+          strokeColor: '#EA4335',
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+          fillColor: '#EA4335',
+          fillOpacity: 0.15,
+          map: map,
+          center: { lat: h.latitude, lng: h.longitude },
+          radius: (h.deliveryRadiusKm || 5.0) * 1000,
+          clickable: false
+        })
 
-      // Draw Admin Store Marker
-      new google.maps.Marker({
-        position: { lat: storeLat, lng: storeLng },
-        map: map,
-        title: "FastKirana Dark Store Hub",
-        label: {
-          text: "🏪",
-          fontSize: "24px"
-        }
-      })
+        new google.maps.Marker({
+          position: { lat: h.latitude, lng: h.longitude },
+          map: map,
+          title: h.name || "FastKirana Dark Store Hub",
+          label: {
+            text: "🏪",
+            fontSize: "20px"
+          }
+        })
+      }
 
       map.addListener('dragstart', () => setIsDragging(true))
       map.addListener('drag', () => {
@@ -233,12 +250,53 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
     }
   }, [isMapLoaded, open, resolveAddress])
 
-  // Calculate distance
-  const distance = useMemo(() => {
-    return getDistance(storeLat, storeLng, currentLat, currentLng)
-  }, [storeLat, storeLng, currentLat, currentLng])
+  // Calculate distance to closest hub and serviceability
+  const { matchedHub, nearestHub, distance, isWithinZone } = useMemo(() => {
+    if (hubs.length > 0) {
+      let closestInRadius: any = null
+      let minInRadiusDist = Infinity
+      let closestAny: any = null
+      let minAnyDist = Infinity
 
-  const isWithinZone = distance <= deliveryRadius
+      for (const h of hubs) {
+        if (!h.latitude || !h.longitude) continue
+        const d = getDistance(h.latitude, h.longitude, currentLat, currentLng)
+        const rad = h.deliveryRadiusKm || 5.0
+        if (d <= rad && d < minInRadiusDist) {
+          minInRadiusDist = d
+          closestInRadius = h
+        }
+        if (d < minAnyDist) {
+          minAnyDist = d
+          closestAny = h
+        }
+      }
+
+      if (closestInRadius) {
+        return {
+          matchedHub: closestInRadius,
+          nearestHub: closestInRadius,
+          distance: minInRadiusDist,
+          isWithinZone: true,
+        }
+      }
+
+      return {
+        matchedHub: null,
+        nearestHub: closestAny,
+        distance: minAnyDist !== Infinity ? minAnyDist : 0,
+        isWithinZone: false,
+      }
+    }
+
+    const d = getDistance(storeLat, storeLng, currentLat, currentLng)
+    return {
+      matchedHub: d <= deliveryRadius ? { id: 'default', name: 'Ghatampur' } : null,
+      nearestHub: { id: 'default', name: 'Ghatampur' },
+      distance: d,
+      isWithinZone: d <= deliveryRadius,
+    }
+  }, [hubs, storeLat, storeLng, deliveryRadius, currentLat, currentLng])
 
   // GPS detect location handler using Google Maps API & IP fallback
   const handleDetectLocation = useCallback(() => {
@@ -362,14 +420,15 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
       return
     }
 
-    const finalName = addressName || `Ghatampur (${currentLat.toFixed(4)}, ${currentLng.toFixed(4)})`
+    const hubLabel = matchedHub?.city || matchedHub?.name || 'FastKirana'
+    const finalName = addressName || `${hubLabel} (${currentLat.toFixed(4)}, ${currentLng.toFixed(4)})`
 
     setSelectedLocation(finalName)
     setUserCoords({ lat: currentLat, lng: currentLng })
 
     toast.success(`Delivery location set to ${finalName}`, { icon: '📍' })
     onClose()
-  }, [isWithinZone, distance, deliveryRadius, addressName, currentLat, currentLng, setSelectedLocation, setUserCoords, onClose])
+  }, [isWithinZone, distance, addressName, currentLat, currentLng, matchedHub, setSelectedLocation, setUserCoords, onClose])
 
   return (
     <AnimatePresence>
@@ -465,6 +524,41 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
                   </p>
                 </div>
               </button>
+
+              {/* Quick Hub Switcher Chips */}
+              {hubs.length > 0 && (
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase shrink-0">Active Hubs:</span>
+                  {hubs.map((h) => {
+                    const isSelected = matchedHub?.id === h.id
+                    return (
+                      <button
+                        key={h.id}
+                        type="button"
+                        onClick={() => {
+                          setCurrentLat(h.latitude)
+                          setCurrentLng(h.longitude)
+                          setAddressName(`${h.city || h.name} Center`)
+                          if (mapRef.current) {
+                            mapRef.current.panTo({ lat: h.latitude, lng: h.longitude })
+                            mapRef.current.setZoom(15)
+                          }
+                          toast.success(`Jumped to ${h.name} delivery zone!`)
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all border flex items-center gap-1.5 ${
+                          isSelected
+                            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 ring-1 ring-emerald-500/30'
+                            : 'bg-slate-100 dark:bg-zinc-800/80 text-slate-700 dark:text-zinc-300 border-slate-200/80 dark:border-zinc-700 hover:border-slate-300'
+                        }`}
+                      >
+                        <span>📍</span>
+                        <span>{h.city || h.name}</span>
+                        {isSelected && <span className="text-[9px] bg-emerald-600 text-white px-1.5 py-0.2 rounded-full">Active</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
 
               {/* Map Container */}
               <div className={`relative w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-800 shadow-inner bg-slate-100 dark:bg-zinc-900 transition-all ${isMapFullscreen ? 'h-80' : 'h-60 sm:h-64'}`}>

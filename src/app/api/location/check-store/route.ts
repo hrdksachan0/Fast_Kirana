@@ -18,6 +18,18 @@ function isPointInPolygon(point: { lat: number; lng: number }, polygon: { lat: n
   return inside
 }
 
+function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371
+  const dLat = (lat2 - lat1) * (Math.PI / 180)
+  const dLon = (lon2 - lon1) * (Math.PI / 180)
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -31,13 +43,19 @@ export async function GET(request: NextRequest) {
     const lat = parseFloat(latStr)
     const lng = parseFloat(lngStr)
 
+    if (isNaN(lat) || isNaN(lng)) {
+      return NextResponse.json({ error: 'Invalid coordinates' }, { status: 400 })
+    }
+
     // Fetch all active dark stores
     const stores = await prisma.darkStore.findMany({
       where: { isActive: true }
     })
 
-    // Find the first store whose delivery polygon contains the user's coordinates
-    let matchedStore = null
+    // 1. Check delivery polygon containment first
+    let matchedStore: any = null
+    let matchedDistanceKm = 0
+
     for (const store of stores) {
       if (store.deliveryPolygon) {
         try {
@@ -47,6 +65,7 @@ export async function GET(request: NextRequest) {
 
           if (Array.isArray(polygon) && isPointInPolygon({ lat, lng }, polygon)) {
             matchedStore = store
+            matchedDistanceKm = calculateDistanceKm(lat, lng, store.latitude, store.longitude)
             break
           }
         } catch (e) {
@@ -55,29 +74,83 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Fallback logic for local testing/demo: if no geofenced store matches,
-    // return the first active store in the database, or a default fallback object.
+    // 2. Check circular delivery radius (Haversine distance)
     if (!matchedStore) {
-      if (stores.length > 0) {
-        matchedStore = stores[0]
-      } else {
-        // Return a mock default store so the app functions out-of-the-box
-        matchedStore = {
-          id: 'default-swaroop-nagar',
-          name: 'Swaroop Nagar Hub',
-          latitude: 26.4950,
-          longitude: 80.3050,
-          isActive: true,
-          surgeCharge: 0.0,
-          groceryOpen: true,
-          deliveryPolygon: null,
-          createdAt: new Date(),
-          updatedAt: new Date()
+      let closestStore: any = null
+      let minDistance = Infinity
+
+      for (const store of stores) {
+        const dist = calculateDistanceKm(lat, lng, store.latitude, store.longitude)
+        const allowedRadius = store.deliveryRadiusKm || 5.0
+        if (dist <= allowedRadius && dist < minDistance) {
+          minDistance = dist
+          closestStore = store
         }
+      }
+
+      if (closestStore) {
+        matchedStore = closestStore
+        matchedDistanceKm = minDistance
       }
     }
 
-    return NextResponse.json(matchedStore)
+    const isInsideZone = !!matchedStore
+
+    // 3. If no store within zone, find the overall closest store for distance reporting
+    let closestHub: any = null
+    let closestHubDistance = Infinity
+    for (const store of stores) {
+      const dist = calculateDistanceKm(lat, lng, store.latitude, store.longitude)
+      if (dist < closestHubDistance) {
+        closestHubDistance = dist
+        closestHub = store
+      }
+    }
+
+    const targetStore = matchedStore || closestHub || stores[0] || {
+      id: 'default-hub',
+      name: 'Central Hub',
+      latitude: 26.1534,
+      longitude: 80.1714,
+      isActive: true,
+      surgeCharge: 0.0,
+      groceryOpen: true,
+      deliveryPolygon: null,
+      deliveryRadiusKm: 5.0,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+
+    // Check inventory & restaurant availability for this hub
+    let inventoryCount = 0
+    let restaurantCount = 0
+    if (targetStore.id) {
+      try {
+        const [invCount, restCount] = await Promise.all([
+          prisma.storeInventory.count({
+            where: { storeId: targetStore.id, stock: { gt: 0 } }
+          }),
+          prisma.restaurant.count({
+            where: { isActive: true }
+          })
+        ])
+        inventoryCount = invCount
+        restaurantCount = restCount
+      } catch (countErr) {
+        console.warn('Failed to check hub inventory count:', countErr)
+      }
+    }
+
+    return NextResponse.json({
+      ...targetStore,
+      isServiceable: isInsideZone,
+      distanceKm: isInsideZone ? matchedDistanceKm : closestHubDistance,
+      hasInventory: inventoryCount > 0,
+      inventoryCount,
+      hasRestaurants: restaurantCount > 0,
+      restaurantCount,
+      isComingSoon: !isInsideZone || (inventoryCount === 0 && restaurantCount === 0),
+    })
   } catch (error: any) {
     console.error('Error in check-store API:', error)
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })

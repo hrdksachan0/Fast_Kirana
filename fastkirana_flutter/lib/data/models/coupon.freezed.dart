@@ -24,6 +24,11 @@ mixin _$Coupon {
   double get maxDiscount => throw _privateConstructorUsedError;
   String? get categoryId => throw _privateConstructorUsedError;
   String? get restaurantId => throw _privateConstructorUsedError;
+  String? get bogoType => throw _privateConstructorUsedError;
+  String? get triggerVariant => throw _privateConstructorUsedError;
+  String? get rewardVariant => throw _privateConstructorUsedError;
+  String? get badgeText => throw _privateConstructorUsedError;
+  bool get autoApply => throw _privateConstructorUsedError;
   bool get isActive => throw _privateConstructorUsedError;
   DateTime get expiresAt => throw _privateConstructorUsedError;
 
@@ -47,6 +52,11 @@ abstract class $CouponCopyWith<$Res> {
       double maxDiscount,
       String? categoryId,
       String? restaurantId,
+      String? bogoType,
+      String? triggerVariant,
+      String? rewardVariant,
+      String? badgeText,
+      bool autoApply,
       bool isActive,
       DateTime expiresAt});
 }
@@ -110,6 +120,26 @@ class _$CouponCopyWithImpl<$Res, $Val extends Coupon>
           ? _value.restaurantId
           : restaurantId // ignore: cast_nullable_to_non_nullable
               as String?,
+      bogoType: freezed == bogoType
+          ? _value.bogoType
+          : bogoType // ignore: cast_nullable_to_non_nullable
+              as String?,
+      triggerVariant: freezed == triggerVariant
+          ? _value.triggerVariant
+          : triggerVariant // ignore: cast_nullable_to_non_nullable
+              as String?,
+      rewardVariant: freezed == rewardVariant
+          ? _value.rewardVariant
+          : rewardVariant // ignore: cast_nullable_to_non_nullable
+              as String?,
+      badgeText: freezed == badgeText
+          ? _value.badgeText
+          : badgeText // ignore: cast_nullable_to_non_nullable
+              as String?,
+      autoApply: null == autoApply
+          ? _value.autoApply
+          : autoApply // ignore: cast_nullable_to_non_nullable
+              as bool,
       isActive: null == isActive
           ? _value.isActive
           : isActive // ignore: cast_nullable_to_non_nullable
@@ -138,6 +168,11 @@ abstract class _$$CouponImplCopyWith<$Res> implements $CouponCopyWith<$Res> {
       double maxDiscount,
       String? categoryId,
       String? restaurantId,
+      String? bogoType,
+      String? triggerVariant,
+      String? rewardVariant,
+      String? badgeText,
+      bool autoApply,
       bool isActive,
       DateTime expiresAt});
 }
@@ -163,6 +198,11 @@ class __$$CouponImplCopyWithImpl<$Res>
     Object? maxDiscount = null,
     Object? categoryId = freezed,
     Object? restaurantId = freezed,
+    Object? bogoType = freezed,
+    Object? triggerVariant = freezed,
+    Object? rewardVariant = freezed,
+    Object? badgeText = freezed,
+    Object? autoApply = null,
     Object? isActive = null,
     Object? expiresAt = null,
   }) {
@@ -199,6 +239,26 @@ class __$$CouponImplCopyWithImpl<$Res>
           ? _value.restaurantId
           : restaurantId // ignore: cast_nullable_to_non_nullable
               as String?,
+      bogoType: freezed == bogoType
+          ? _value.bogoType
+          : bogoType // ignore: cast_nullable_to_non_nullable
+              as String?,
+      triggerVariant: freezed == triggerVariant
+          ? _value.triggerVariant
+          : triggerVariant // ignore: cast_nullable_to_non_nullable
+              as String?,
+      rewardVariant: freezed == rewardVariant
+          ? _value.rewardVariant
+          : rewardVariant // ignore: cast_nullable_to_non_nullable
+              as String?,
+      badgeText: freezed == badgeText
+          ? _value.badgeText
+          : badgeText // ignore: cast_nullable_to_non_nullable
+              as String?,
+      autoApply: null == autoApply
+          ? _value.autoApply
+          : autoApply // ignore: cast_nullable_to_non_nullable
+              as bool,
       isActive: null == isActive
           ? _value.isActive
           : isActive // ignore: cast_nullable_to_non_nullable
@@ -223,6 +283,11 @@ class _$CouponImpl extends _Coupon {
       this.maxDiscount = 0.0,
       this.categoryId,
       this.restaurantId,
+      this.bogoType,
+      this.triggerVariant,
+      this.rewardVariant,
+      this.badgeText,
+      this.autoApply = false,
       this.isActive = true,
       required this.expiresAt})
       : super._();
@@ -247,6 +312,17 @@ class _$CouponImpl extends _Coupon {
   @override
   final String? restaurantId;
   @override
+  final String? bogoType;
+  @override
+  final String? triggerVariant;
+  @override
+  final String? rewardVariant;
+  @override
+  final String? badgeText;
+  @override
+  @JsonKey()
+  final bool autoApply;
+  @override
   @JsonKey()
   final bool isActive;
   @override
@@ -254,7 +330,7 @@ class _$CouponImpl extends _Coupon {
 
   @override
   String toString() {
-    return 'Coupon(id: $id, code: $code, discountType: $discountType, value: $value, minOrder: $minOrder, maxDiscount: $maxDiscount, categoryId: $categoryId, restaurantId: $restaurantId, isActive: $isActive, expiresAt: $expiresAt)';
+    return 'Coupon(id: $id, code: $code, discountType: $discountType, value: $value, minOrder: $minOrder, maxDiscount: $maxDiscount, categoryId: $categoryId, restaurantId: $restaurantId, bogoType: $bogoType, triggerVariant: $triggerVariant, rewardVariant: $rewardVariant, badgeText: $badgeText, autoApply: $autoApply, isActive: $isActive, expiresAt: $expiresAt)';
   }
 
   @override
@@ -275,6 +351,16 @@ class _$CouponImpl extends _Coupon {
                 other.categoryId == categoryId) &&
             (identical(other.restaurantId, restaurantId) ||
                 other.restaurantId == restaurantId) &&
+            (identical(other.bogoType, bogoType) ||
+                other.bogoType == bogoType) &&
+            (identical(other.triggerVariant, triggerVariant) ||
+                other.triggerVariant == triggerVariant) &&
+            (identical(other.rewardVariant, rewardVariant) ||
+                other.rewardVariant == rewardVariant) &&
+            (identical(other.badgeText, badgeText) ||
+                other.badgeText == badgeText) &&
+            (identical(other.autoApply, autoApply) ||
+                other.autoApply == autoApply) &&
             (identical(other.isActive, isActive) ||
                 other.isActive == isActive) &&
             (identical(other.expiresAt, expiresAt) ||
@@ -282,8 +368,23 @@ class _$CouponImpl extends _Coupon {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, id, code, discountType, value,
-      minOrder, maxDiscount, categoryId, restaurantId, isActive, expiresAt);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      code,
+      discountType,
+      value,
+      minOrder,
+      maxDiscount,
+      categoryId,
+      restaurantId,
+      bogoType,
+      triggerVariant,
+      rewardVariant,
+      badgeText,
+      autoApply,
+      isActive,
+      expiresAt);
 
   /// Create a copy of Coupon
   /// with the given fields replaced by the non-null parameter values.
@@ -304,6 +405,11 @@ abstract class _Coupon extends Coupon {
       final double maxDiscount,
       final String? categoryId,
       final String? restaurantId,
+      final String? bogoType,
+      final String? triggerVariant,
+      final String? rewardVariant,
+      final String? badgeText,
+      final bool autoApply,
       final bool isActive,
       required final DateTime expiresAt}) = _$CouponImpl;
   const _Coupon._() : super._();
@@ -324,6 +430,16 @@ abstract class _Coupon extends Coupon {
   String? get categoryId;
   @override
   String? get restaurantId;
+  @override
+  String? get bogoType;
+  @override
+  String? get triggerVariant;
+  @override
+  String? get rewardVariant;
+  @override
+  String? get badgeText;
+  @override
+  bool get autoApply;
   @override
   bool get isActive;
   @override

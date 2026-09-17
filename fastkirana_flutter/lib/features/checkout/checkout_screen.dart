@@ -650,9 +650,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final user = ref.read(authProvider).value;
     final prefs = await SharedPreferences.getInstance();
     final userId = user?.id ?? prefs.getString('user_id') ?? '';
-    final phoneFromPrefs = prefs.getString('user_phone') ?? prefs.getString('auth_phone') ?? '';
+    final buyerPhone = user?.phone?.isNotEmpty == true
+        ? user!.phone!
+        : (prefs.getString('user_phone') ?? prefs.getString('auth_phone') ?? '');
+    final buyerName = user?.name?.isNotEmpty == true
+        ? user!.name!
+        : (prefs.getString('user_name') ?? 'FastKirana Customer');
 
-    final customerName = _customReceiverName?.isNotEmpty == true
+    final isOrderForSomeone = _customReceiverName?.isNotEmpty == true || _customReceiverPhone?.isNotEmpty == true;
+
+    final receiverName = _customReceiverName?.isNotEmpty == true
         ? _customReceiverName!
         : (user?.name?.isNotEmpty == true
             ? user!.name!
@@ -660,15 +667,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ? selectedAddress.label
                 : 'FastKirana Customer'));
 
-    final customerPhone = _customReceiverPhone?.isNotEmpty == true
+    final receiverPhone = _customReceiverPhone?.isNotEmpty == true
         ? _customReceiverPhone!
         : (user?.phone?.isNotEmpty == true
             ? user!.phone!
-            : (phoneFromPrefs.isNotEmpty ? phoneFromPrefs : (selectedAddress?.phone.isNotEmpty == true ? selectedAddress!.phone : '')));
+            : (buyerPhone.isNotEmpty ? buyerPhone : (selectedAddress?.phone.isNotEmpty == true ? selectedAddress!.phone : '')));
 
     String orderNotes = _deliveryInstruction;
-    if (_customReceiverName?.isNotEmpty == true || _customReceiverPhone?.isNotEmpty == true) {
-      final forStr = '🎁 Order for: $customerName${customerPhone.isNotEmpty ? ' ($customerPhone)' : ''}';
+    if (isOrderForSomeone) {
+      final forStr = '🎁 Order for: $receiverName${receiverPhone.isNotEmpty ? ' ($receiverPhone)' : ''}';
       orderNotes = '$forStr | $orderNotes';
     }
 
@@ -708,8 +715,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       paymentMethod: _selectedPayment == 'online' ? PaymentMethod.upi : PaymentMethod.cod,
       paymentStatus: paymentId != null ? 'PAID' : 'PENDING',
       deliveryMethod: _deliveryMethod,
-      customerName: customerName,
-      customerPhone: customerPhone,
+      customerName: receiverName,
+      customerPhone: receiverPhone,
       customerAddress: selectedAddr,
       notes: orderNotes,
       createdAt: DateTime.now(),
@@ -736,18 +743,23 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       final isOnlinePaid = paymentId != null && paymentId.isNotEmpty;
       final apiPayload = {
         ...newOrder.toJson(),
+        'userId': userId,
+        'userPhone': buyerPhone,
+        'userName': buyerName,
+        'buyerPhone': buyerPhone,
+        'buyerName': buyerName,
+        'isOrderForSomeone': isOrderForSomeone,
+        'receiverName': receiverName,
+        'receiverPhone': receiverPhone,
+        'customerName': receiverName,
+        'customerPhone': receiverPhone,
+        'phone': buyerPhone.isNotEmpty ? buyerPhone : receiverPhone,
         'storeId': nearestHub.id,
         'addressId': selectedAddress?.id ?? 'addr_default',
         'paymentMethod': _selectedPayment == 'online' ? 'UPI' : 'COD',
         'paymentStatus': isOnlinePaid ? 'PAID' : 'PENDING',
         'paymentId': paymentId,
         'deliveryMethod': _deliveryMethod,
-        'customerName': customerName,
-        'customerPhone': customerPhone,
-        'receiverName': customerName,
-        'receiverPhone': customerPhone,
-        'userName': customerName,
-        'phone': customerPhone,
         'notes': orderNotes,
         'customerAddress': selectedAddr,
         'latitude': selectedAddress?.latitude,

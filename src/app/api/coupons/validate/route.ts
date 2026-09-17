@@ -49,6 +49,11 @@ export async function POST(request: NextRequest) {
     }
 
     let eligibleSubtotal = subtotal
+    let discountAmount = 0
+    let nudgeMessage: string | null = null
+    let freeGiftDetails: any = null
+
+    // 1. Category-restricted coupon
     if (coupon.categoryId) {
       if (!items || items.length === 0) {
         return NextResponse.json({ error: 'This coupon is restricted to a category. Cart items are required.' }, { status: 400 })
@@ -63,19 +68,21 @@ export async function POST(request: NextRequest) {
 
       if (categorySubtotal < coupon.minOrder) {
         return NextResponse.json(
-          { error: `Minimum order of ${coupon.minOrder} in the restricted category is required.` },
+          { error: `Minimum order of ₹${coupon.minOrder} in the restricted category is required.` },
           { status: 400 }
         )
       }
       eligibleSubtotal = categorySubtotal
-    } else if (coupon.restaurantId) {
+    } 
+    // 2. Restaurant-restricted coupon (including BOGO & Free Delivery)
+    else if (coupon.restaurantId) {
       if (!items || items.length === 0) {
-        return NextResponse.json({ error: 'This coupon is restricted to a restaurant. Cart items are required.' }, { status: 400 })
+        return NextResponse.json({ error: 'Cart items from this restaurant are required.' }, { status: 400 })
       }
 
       const restaurant = await prisma.restaurant.findUnique({
         where: { id: coupon.restaurantId },
-        select: { name: true }
+        select: { id: true, name: true, slug: true }
       })
 
       const restaurantItems = items.filter((item: any) => {
@@ -85,26 +92,165 @@ export async function POST(request: NextRequest) {
       const restaurantSubtotal = restaurantItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)
 
       if (restaurantSubtotal === 0) {
-        return NextResponse.json({ error: `This coupon is only valid for items from ${restaurant?.name || 'the restricted restaurant'}.` }, { status: 400 })
+        return NextResponse.json({ error: `This coupon is only valid for items from ${restaurant?.name || 'this restaurant'}.` }, { status: 400 })
       }
 
       if (restaurantSubtotal < coupon.minOrder) {
         return NextResponse.json(
-          { error: `Minimum order of ${coupon.minOrder} from ${restaurant?.name || 'the restaurant'} is required.` },
+          { error: `Minimum order of ₹${coupon.minOrder} from ${restaurant?.name || 'this restaurant'} is required.` },
           { status: 400 }
         )
       }
       eligibleSubtotal = restaurantSubtotal
-    } else {
+
+      // ── BOGO CALCULATION ENGINE ──
+      if (coupon.discountType === 'BOGO') {
+        const maxFreeCap = coupon.maxFreeItems || 3
+
+        if (coupon.bogoType === 'BUY_LARGE_GET_SMALL') {
+          const triggerVariant = (coupon.triggerVariant || 'large').toLowerCase().trim()
+          const rewardVariant = (coupon.rewardVariant || 'small').toLowerCase().trim()
+
+          // Trigger Items (e.g. Large pizzas)
+          const triggerItems = restaurantItems.filter((it: any) => {
+            const v = (it.selectedVariant || it.variant || it.name || '').toLowerCase()
+            return v.includes(triggerVariant)
+          })
+          const totalTriggerQty = triggerItems.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0)
+
+          if (totalTriggerQty === 0) {
+            return NextResponse.json({
+              error: `This offer requires adding a ${coupon.triggerVariant || 'Large'} item from ${restaurant?.name || 'this restaurant'}.`,
+            }, { status: 400 })
+          }
+
+          // Reward Items (e.g. Small pizzas)
+          const rewardItems = restaurantItems.filter((it: any) => {
+            const v = (it.selectedVariant || it.variant || it.name || '').toLowerCase()
+            return v.includes(rewardVariant)
+          })
+
+          const allowedFreeCount = Math.min(totalTriggerQty, maxFreeCap)
+
+          if (rewardItems.length === 0) {
+            // Free item not yet in cart -> Nudge customer or trigger auto-drop
+            nudgeMessage = `Add any ${coupon.rewardVariant || 'Small'} item to get it 100% FREE! 🎁`
+            discountAmount = 0
+            
+            // Look up default free dish if configured
+            if (coupon.defaultFreeDishId) {
+              try {
+                const defaultDish = await prisma.foodDish.findUnique({
+                  where: { id: coupon.defaultFreeDishId },
+                  select: { id: true, name: true, price: true, imageUrl: true }
+                })
+                if (defaultDish) {
+                  freeGiftDetails = {
+                    ...defaultDish,
+                    rewardVariant: coupon.rewardVariant || 'Small',
+                    eligibleQty: allowedFreeCount
+                  }
+                }
+              } catch (err) {
+                console.warn('Failed to load default free dish:', err)
+              }
+            }
+          } else {
+            // Reward items are in cart -> Sort cheapest first and discount 100%
+            const sortedRewards = [...rewardItems].sort((a: any, b: any) => a.price - b.price)
+            let remainingFree = allowedFreeCount
+            let bogoSavings = 0
+
+            for (const item of sortedRewards) {
+              const freeQty = Math.min(item.quantity, remainingFree)
+              bogoSavings += freeQty * item.price
+              remainingFree -= freeQty
+              if (remainingFree <= 0) break
+            }
+
+            discountAmount = bogoSavings
+            if (coupon.maxDiscount) {
+              discountAmount = Math.min(discountAmount, coupon.maxDiscount)
+            }
+          }
+        } 
+        else if (coupon.bogoType === 'CHEAPEST_FREE') {
+          const totalQty = restaurantItems.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0)
+          if (totalQty < 2) {
+            return NextResponse.json({
+              error: `Add at least 2 dishes from ${restaurant?.name || 'this restaurant'} to get the cheapest one FREE!`,
+            }, { status: 400 })
+          }
+
+          // Flatten into unit items to find the single cheapest item
+          const unitPrices: number[] = []
+          restaurantItems.forEach((it: any) => {
+            const qty = it.quantity || 1
+            for (let i = 0; i < qty; i++) {
+              unitPrices.push(it.price)
+            }
+          })
+          unitPrices.sort((a, b) => a - b)
+          discountAmount = unitPrices[0] || 0
+          if (coupon.maxDiscount) {
+            discountAmount = Math.min(discountAmount, coupon.maxDiscount)
+          }
+        } 
+        else {
+          // SAME_ITEM BOGO (Default)
+          let eligibleItems = restaurantItems
+          if (coupon.bogoDishId) {
+            eligibleItems = restaurantItems.filter((it: any) => {
+              const pid = it.productId || it.id
+              return pid === coupon.bogoDishId
+            })
+          }
+
+          let totalBogoDiscount = 0
+          let totalFreeUnlocked = 0
+
+          for (const it of eligibleItems) {
+            const pairs = Math.floor((it.quantity || 1) / 2)
+            const freeCount = Math.min(pairs, maxFreeCap - totalFreeUnlocked)
+            if (freeCount > 0) {
+              totalBogoDiscount += freeCount * it.price
+              totalFreeUnlocked += freeCount
+            }
+          }
+
+          if (totalBogoDiscount === 0) {
+            const singleItems = eligibleItems.filter((it: any) => (it.quantity || 1) === 1)
+            if (singleItems.length > 0) {
+              nudgeMessage = `Add 1 more ${singleItems[0].name || 'item'} to get 1 FREE! 🎁`
+            }
+            return NextResponse.json({
+              error: nudgeMessage || `Add 2 of the same eligible item to unlock Buy 1 Get 1 Free!`,
+              nudgeMessage,
+            }, { status: 400 })
+          }
+
+          discountAmount = totalBogoDiscount
+          if (coupon.maxDiscount) {
+            discountAmount = Math.min(discountAmount, coupon.maxDiscount)
+          }
+        }
+      }
+      // ── FREE DELIVERY CALCULATION ──
+      else if (coupon.discountType === 'FREE_DELIVERY') {
+        discountAmount = 25.0 // Standard restaurant delivery fee waived
+      }
+    } 
+    // 3. Global coupon
+    else {
       if (subtotal < coupon.minOrder) {
         return NextResponse.json(
-          { error: `Minimum order of ${coupon.minOrder} required for this coupon` },
+          { error: `Minimum order of ₹${coupon.minOrder} required for this coupon` },
           { status: 400 }
         )
       }
     }
 
-    let discountAmount = 0
+    // Standard PERCENT & FLAT discount calculations (if not BOGO or FREE_DELIVERY)
     if (coupon.discountType === 'FLAT') {
       discountAmount = Math.min(coupon.value, eligibleSubtotal)
     } else if (coupon.discountType === 'PERCENT') {
@@ -120,8 +266,14 @@ export async function POST(request: NextRequest) {
         id: coupon.id,
         code: coupon.code,
         discountType: coupon.discountType,
+        bogoType: coupon.bogoType,
+        triggerVariant: coupon.triggerVariant,
+        rewardVariant: coupon.rewardVariant,
+        badgeText: coupon.badgeText || (coupon.discountType === 'BOGO' ? 'BUY 1 GET 1 FREE' : undefined),
         value: coupon.value,
-        discountAmount,
+        discountAmount: Math.round(discountAmount * 100) / 100,
+        nudgeMessage,
+        freeGiftDetails,
       },
     })
   } catch (error: any) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 import { prisma } from '@/lib/prisma'
+import { ApiResponder } from '@/lib/api-response'
 import { createAddressSchema, updateAddressSchema, patchAddressSchema, deleteAddressSchema, validateBody, validateBodyLegacy } from '@/lib/validation'
 
 async function resolveUserId(request: NextRequest | Request, session: any) {
@@ -49,9 +50,9 @@ export async function GET(request: NextRequest) {
       orderBy: { isDefault: 'desc' },
     })
     return NextResponse.json(addresses)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in GET /api/addresses:', error)
-    return NextResponse.json({ error: 'Failed to fetch addresses' }, { status: 500 })
+    return ApiResponder.error('Failed to fetch addresses', 500, 'INTERNAL_ERROR', error?.stack, request)
   }
 }
 

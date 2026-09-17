@@ -5,6 +5,7 @@ import { sseEmitter } from '@/lib/sse-emitter'
 import { sendPushNotificationToRoles, sendPushNotificationToRestaurant } from '@/lib/push-notification'
 import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
 import { Role } from '@prisma/client'
+import { cache } from '@/lib/redis-client'
 
 export async function GET() {
   return NextResponse.json({ status: 'active', message: 'Cashfree Webhook Endpoint Active' }, { status: 200 })
@@ -44,6 +45,12 @@ export async function POST(req: NextRequest) {
       const orderId = orderData?.order_id
       if (orderId) {
         const cleanId = String(orderId).trim()
+        const lockKey = `lock:webhook:cf:${cleanId}`
+        const acquired = await cache.acquireLock(lockKey, 30)
+        if (!acquired) {
+          console.log(`[CashfreeWebhook] Duplicate/concurrent webhook ignored for order #${cleanId}`)
+          return NextResponse.json({ received: true, status: 'already_processing' })
+        }
 
         const orders: any[] = await prisma.$queryRaw`
           SELECT o.id, o."combinedId", o."readableId", o.status::text as status,

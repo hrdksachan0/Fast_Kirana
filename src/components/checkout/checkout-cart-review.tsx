@@ -4,20 +4,31 @@ import Link from 'next/link'
 import { ShoppingBag } from 'lucide-react'
 import type { CartItem } from '@/stores/cart-store'
 import { formatPrice } from '@/lib/formatters'
+import { BogoCartGiftCard } from '@/components/cart/bogo-cart-gift-card'
 
 interface CheckoutCartReviewProps {
   items: CartItem[]
   cookingInstruction: string
   setCookingInstruction: (val: string) => void
+  freeGiftDetails?: any
+  offerName?: string
 }
 
 export function CheckoutCartReview({
   items,
   cookingInstruction,
   setCookingInstruction,
+  freeGiftDetails,
+  offerName,
 }: CheckoutCartReviewProps) {
   return (
     <div className="border-t border-border/40 pt-4 space-y-3">
+      {freeGiftDetails && (
+        <div className="mb-3">
+          <BogoCartGiftCard giftItem={freeGiftDetails} offerName={offerName || 'BOGO Deal'} />
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-black text-text-primary flex items-center gap-2">
           <ShoppingBag className="h-4 w-4 text-primary" />

@@ -74,7 +74,7 @@ class CartItemCard extends StatelessWidget {
               children: [
                 Text(
                   product.name,
-                  maxLines: 2,
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: AppDesignSystem.bodyMedium.copyWith(
                     fontWeight: FontWeight.w700,

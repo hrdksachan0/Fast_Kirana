@@ -121,7 +121,42 @@ export const cache = {
         memoryStore.delete(key)
       }
     }
-  }
+  },
+
+  /**
+   * Distributed Lock with TTL.
+   * Returns true if lock was successfully acquired, false if already locked.
+   */
+  async acquireLock(key: string, ttlSeconds: number = 30): Promise<boolean> {
+    const upstash = initUpstash()
+    if (upstash) {
+      try {
+        const res = await upstash.set(key, 'locked', { nx: true, ex: ttlSeconds })
+        return res === 'OK'
+      } catch (err) {
+        console.warn(`Redis acquireLock failed for "${key}", falling back to memory:`, err)
+      }
+    }
+
+    const now = Date.now()
+    const entry = memoryStore.get(key)
+    if (entry && entry.expiresAt > now) {
+      return false // Already locked
+    }
+
+    memoryStore.set(key, {
+      value: 'locked',
+      expiresAt: now + ttlSeconds * 1000,
+    })
+    return true
+  },
+
+  /**
+   * Release a distributed lock.
+   */
+  async releaseLock(key: string): Promise<void> {
+    await this.del(key)
+  },
 }
 
 /**

@@ -12650,18 +12650,6 @@
       "norm_label": "loadbanners()"
     },
     {
-      "label": "get_ai_demand_forecast()",
-      "file_type": "code",
-      "source_file": "fastapi-backend/routers/forecast.py",
-      "source_location": "L16",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "fastapi_backend_routers_forecast_get_ai_demand_forecast",
-      "community": 297,
-      "community_name": "models.py",
-      "norm_label": "get_ai_demand_forecast()"
-    },
-    {
       "label": "get_products()",
       "file_type": "code",
       "source_file": "fastapi-backend/routers/products.py",
@@ -15828,6 +15816,18 @@
       "community": 418,
       "community_name": "whatsapp-alert-modal.tsx",
       "norm_label": "whatsappalertmodal()"
+    },
+    {
+      "label": "get_ai_demand_forecast()",
+      "file_type": "code",
+      "source_file": "fastapi-backend/routers/forecast.py",
+      "source_location": "L16",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "fastapi_backend_routers_forecast_get_ai_demand_forecast",
+      "community": 420,
+      "community_name": "get_ai_demand_forecast",
+      "norm_label": "get_ai_demand_forecast()"
     },
     {
       "label": "ContactPage()",
@@ -55204,50 +55204,6 @@
       "norm_label": "base"
     },
     {
-      "label": "forecast.py",
-      "file_type": "code",
-      "source_file": "fastapi-backend/routers/forecast.py",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "fastapi_backend_routers_forecast",
-      "community": 297,
-      "community_name": "models.py",
-      "norm_label": "forecast.py"
-    },
-    {
-      "label": "Any",
-      "file_type": "code",
-      "source_file": "",
-      "source_location": "",
-      "_origin": "ast",
-      "id": "fastapi_backend_routers_forecast_py_any",
-      "community": 297,
-      "community_name": "models.py",
-      "norm_label": "any"
-    },
-    {
-      "label": "AsyncSession",
-      "file_type": "code",
-      "source_file": "",
-      "source_location": "",
-      "_origin": "ast",
-      "id": "fastapi_backend_routers_forecast_py_asyncsession",
-      "community": 297,
-      "community_name": "models.py",
-      "norm_label": "asyncsession"
-    },
-    {
-      "label": "get",
-      "file_type": "code",
-      "source_file": "",
-      "source_location": "",
-      "_origin": "ast",
-      "id": "fastapi_backend_routers_forecast_py_get",
-      "community": 297,
-      "community_name": "models.py",
-      "norm_label": "get"
-    },
-    {
       "label": "Response",
       "file_type": "code",
       "source_file": "",
@@ -55257,17 +55213,6 @@
       "community": 297,
       "community_name": "models.py",
       "norm_label": "response"
-    },
-    {
-      "label": "Native Python AI Demand Forecasting Engine for Inventory & Stock Optimization",
-      "file_type": "rationale",
-      "source_file": "fastapi-backend/routers/forecast.py",
-      "source_location": "L21",
-      "_origin": "ast",
-      "id": "fastapi_backend_routers_forecast_rationale_21",
-      "community": 297,
-      "community_name": "models.py",
-      "norm_label": "native python ai demand forecasting engine for inventory & stock optimization"
     },
     {
       "label": "Fetch products with search filters, sorting, category hierarchies,\u2026",
@@ -70835,6 +70780,17 @@
       "norm_label": "class-variance-authority"
     },
     {
+      "label": "clsx",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L41",
+      "_origin": "ast",
+      "id": "package_dependencies_clsx",
+      "community": 39,
+      "community_name": "dependencies",
+      "norm_label": "clsx"
+    },
+    {
       "label": "framer-motion",
       "file_type": "code",
       "source_file": "package.json",
@@ -70844,17 +70800,6 @@
       "community": 39,
       "community_name": "dependencies",
       "norm_label": "framer-motion"
-    },
-    {
-      "label": "lru-cache",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L47",
-      "_origin": "ast",
-      "id": "package_dependencies_lru_cache",
-      "community": 39,
-      "community_name": "dependencies",
-      "norm_label": "lru-cache"
     },
     {
       "label": "nodemailer",
@@ -70989,6 +70934,17 @@
       "norm_label": "class-variance-authority"
     },
     {
+      "label": "clsx",
+      "file_type": "concept",
+      "source_file": "package.json",
+      "source_location": "L41",
+      "_origin": "ast",
+      "id": "clsx",
+      "community": 39,
+      "community_name": "dependencies",
+      "norm_label": "clsx"
+    },
+    {
       "label": "framer-motion",
       "file_type": "concept",
       "source_file": "package.json",
@@ -70998,17 +70954,6 @@
       "community": 39,
       "community_name": "dependencies",
       "norm_label": "framer-motion"
-    },
-    {
-      "label": "lru-cache",
-      "file_type": "concept",
-      "source_file": "package.json",
-      "source_location": "L47",
-      "_origin": "ast",
-      "id": "lru_cache",
-      "community": 39,
-      "community_name": "dependencies",
-      "norm_label": "lru-cache"
     },
     {
       "label": "nodemailer",
@@ -74509,26 +74454,59 @@
       "norm_label": "@jsonserializable"
     },
     {
-      "label": "clsx",
+      "label": "forecast.py",
       "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L41",
+      "source_file": "fastapi-backend/routers/forecast.py",
+      "source_location": "L1",
       "_origin": "ast",
-      "id": "package_dependencies_clsx",
+      "id": "fastapi_backend_routers_forecast",
       "community": 420,
-      "community_name": "clsx",
-      "norm_label": "clsx"
+      "community_name": "get_ai_demand_forecast",
+      "norm_label": "forecast.py"
     },
     {
-      "label": "clsx",
-      "file_type": "concept",
-      "source_file": "package.json",
-      "source_location": "L41",
+      "label": "Any",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
       "_origin": "ast",
-      "id": "clsx",
+      "id": "fastapi_backend_routers_forecast_py_any",
       "community": 420,
-      "community_name": "clsx",
-      "norm_label": "clsx"
+      "community_name": "get_ai_demand_forecast",
+      "norm_label": "any"
+    },
+    {
+      "label": "AsyncSession",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast",
+      "id": "fastapi_backend_routers_forecast_py_asyncsession",
+      "community": 420,
+      "community_name": "get_ai_demand_forecast",
+      "norm_label": "asyncsession"
+    },
+    {
+      "label": "get",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast",
+      "id": "fastapi_backend_routers_forecast_py_get",
+      "community": 420,
+      "community_name": "get_ai_demand_forecast",
+      "norm_label": "get"
+    },
+    {
+      "label": "Native Python AI Demand Forecasting Engine for Inventory & Stock Optimization",
+      "file_type": "rationale",
+      "source_file": "fastapi-backend/routers/forecast.py",
+      "source_location": "L21",
+      "_origin": "ast",
+      "id": "fastapi_backend_routers_forecast_rationale_21",
+      "community": 420,
+      "community_name": "get_ai_demand_forecast",
+      "norm_label": "native python ai demand forecasting engine for inventory & stock optimization"
     },
     {
       "label": "libphonenumber-js",
@@ -74639,6 +74617,28 @@
       "community": 425,
       "community_name": "terms/page.tsx",
       "norm_label": "metadata"
+    },
+    {
+      "label": "lru-cache",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L47",
+      "_origin": "ast",
+      "id": "package_dependencies_lru_cache",
+      "community": 426,
+      "community_name": "lru-cache",
+      "norm_label": "lru-cache"
+    },
+    {
+      "label": "lru-cache",
+      "file_type": "concept",
+      "source_file": "package.json",
+      "source_location": "L47",
+      "_origin": "ast",
+      "id": "lru_cache",
+      "community": 426,
+      "community_name": "lru-cache",
+      "norm_label": "lru-cache"
     },
     {
       "label": "cart/page.tsx",
@@ -95311,7 +95311,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/app/admin/page.tsx",
-      "source_location": "L112",
+      "source_location": "L113",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_admin_page_adminpage",
@@ -95347,7 +95347,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/app/admin/page.tsx",
-      "source_location": "L445",
+      "source_location": "L449",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_admin_page_adminpage",
@@ -101155,7 +101155,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/admin/dashboard/orders-tab.tsx",
-      "source_location": "L1070",
+      "source_location": "L1160",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_admin_dashboard_orders_tab_orderstab",
@@ -101167,7 +101167,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/admin/dashboard/orders-tab.tsx",
-      "source_location": "L877",
+      "source_location": "L941",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_admin_dashboard_orders_tab_orderstab",
@@ -101179,7 +101179,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/admin/dashboard/orders-tab.tsx",
-      "source_location": "L899",
+      "source_location": "L963",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_admin_dashboard_orders_tab_orderstab",
@@ -259902,5 +259902,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "b83ffe2bf60b2df0ebf1f878fd62d33319f81bf2"
+  "built_at_commit": "24df4d73e9cfc16f19ed911378600f0a429195cd"
 }

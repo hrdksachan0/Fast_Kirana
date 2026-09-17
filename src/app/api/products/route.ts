@@ -576,7 +576,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Products API Error:', error)
-    return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })
+    return ApiResponder.error('Failed to fetch products', 500, 'INTERNAL_ERROR', error?.stack, request)
   }
 }
 
@@ -649,7 +649,7 @@ export async function POST(request: NextRequest) {
     const validation = await validateBody(request, createProductSchema)
     if (!validation.success) return validation.error
 
-    const { name, description, imageUrl, categoryId, restaurantId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode, vendor, vendorId } = validation.data
+    const { name, description, imageUrl, categoryId, restaurantId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode, vendor, vendorId, addons } = validation.data as any
 
     let finalCategoryId = categoryId
     let tagsList = Array.isArray(tags)
@@ -780,6 +780,7 @@ export async function POST(request: NextRequest) {
         isAvailable: isAvailable !== undefined ? !!isAvailable : true,
         tags: tagsList,
         variants: (sortedVariants && Array.isArray(sortedVariants) && sortedVariants.length > 0) ? sortedVariants : undefined,
+        addons: (addons && Array.isArray(addons) && addons.length > 0) ? addons : undefined,
         minStock: Number(minStock || 0),
         expiryDate: parsedExpiry,
         costPrice: Number(costPrice || 0),

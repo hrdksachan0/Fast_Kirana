@@ -16,6 +16,7 @@ import { useUIStore } from '@/stores/ui-store'
 import { useCartStore } from '@/stores/cart-store'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CartConflictDialog } from '@/components/cart/cart-conflict-dialog'
+import { BogoCartGiftCard } from '@/components/cart/bogo-cart-gift-card'
 
 export default function CartPage() {
   const { data: session } = useSession()
@@ -62,6 +63,17 @@ export default function CartPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<{
     code: string
     discountAmount: number
+    discountType?: string
+    bogoType?: string
+    badgeText?: string
+    freeGiftDetails?: {
+      id: string
+      name: string
+      price: number
+      imageUrl?: string | null
+      rewardVariant?: string
+    }
+    nudgeMessage?: string
   } | null>(null)
   const [isCouponLoading, setIsCouponLoading] = useState(false)
 
@@ -80,9 +92,12 @@ export default function CartPage() {
           subtotal,
           items: items.map(i => ({
             id: i.product.id,
+            name: i.product.name,
             price: i.product.price,
             categoryId: i.product.category?.id,
-            quantity: i.quantity
+            quantity: i.quantity,
+            selectedVariant: (i.product as any).selectedVariant || (i as any).selectedVariant,
+            variant: (i.product as any).variant || (i as any).variant,
           }))
         })
       })
@@ -94,6 +109,11 @@ export default function CartPage() {
         setAppliedCoupon({
           code: data.coupon.code,
           discountAmount: data.coupon.discountAmount,
+          discountType: data.coupon.discountType,
+          bogoType: data.coupon.bogoType,
+          badgeText: data.coupon.badgeText,
+          freeGiftDetails: data.coupon.freeGiftDetails,
+          nudgeMessage: data.coupon.nudgeMessage,
         })
       })
       .catch(() => {
@@ -116,9 +136,12 @@ export default function CartPage() {
           subtotal,
           items: items.map(i => ({
             id: i.product.id,
+            name: i.product.name,
             price: i.product.price,
             categoryId: i.product.category?.id,
-            quantity: i.quantity
+            quantity: i.quantity,
+            selectedVariant: (i.product as any).selectedVariant || (i as any).selectedVariant,
+            variant: (i.product as any).variant || (i as any).variant,
           }))
         }),
       })
@@ -131,9 +154,18 @@ export default function CartPage() {
         setAppliedCoupon({
           code: data.coupon.code,
           discountAmount: data.coupon.discountAmount,
+          discountType: data.coupon.discountType,
+          bogoType: data.coupon.bogoType,
+          badgeText: data.coupon.badgeText,
+          freeGiftDetails: data.coupon.freeGiftDetails,
+          nudgeMessage: data.coupon.nudgeMessage,
         })
         setAppliedCouponCode(data.coupon.code)
-        toast.success(`Coupon "${data.coupon.code}" applied! You saved ₹${data.coupon.discountAmount.toFixed(0)}`)
+        if (data.coupon.nudgeMessage) {
+          toast.info(data.coupon.nudgeMessage, { icon: '🎁', duration: 4000 })
+        } else {
+          toast.success(`Coupon "${data.coupon.code}" applied! You saved ₹${data.coupon.discountAmount.toFixed(0)}`)
+        }
       }
     } catch (err) {
       toast.error('Failed to validate coupon code')
@@ -412,6 +444,29 @@ export default function CartPage() {
 
         {/* Right: Summary and Checkout */}
         <div className="space-y-4">
+          {/* BOGO Free Gift Card */}
+          {appliedCoupon?.freeGiftDetails && (
+            <BogoCartGiftCard
+              giftItem={appliedCoupon.freeGiftDetails}
+              offerName={appliedCoupon.badgeText || appliedCoupon.code}
+            />
+          )}
+
+          {/* BOGO Nudge Alert */}
+          {appliedCoupon?.nudgeMessage && !appliedCoupon?.freeGiftDetails && (
+            <div className="bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-2.5 shadow-xs animate-slide-down">
+              <span className="text-xl animate-bounce">🎁</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-black text-amber-700 dark:text-amber-300 leading-snug">
+                  {appliedCoupon.nudgeMessage}
+                </p>
+                <span className="text-[10px] font-bold text-amber-600/80 dark:text-amber-400/80">
+                  Coupon {appliedCoupon.code} applied!
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Coupon entry */}
           <div className="bg-card border border-border p-3.5 min-[375px]:p-4 rounded-2xl shadow-sm space-y-3">
             <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">

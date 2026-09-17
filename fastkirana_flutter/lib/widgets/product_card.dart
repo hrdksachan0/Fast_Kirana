@@ -202,6 +202,28 @@ class ProductBadge extends StatelessWidget {
     );
   }
 
+  factory ProductBadge.bogo({required double s, String? text}) {
+    return ProductBadge(
+      s: s,
+      margin: EdgeInsets.only(bottom: s * 3),
+      padding: EdgeInsets.symmetric(horizontal: s * 5.5, vertical: s * 2),
+      gradient: const LinearGradient(colors: [Color(0xFFEA580C), Color(0xFFDC2626)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+      radius: s * 5,
+      shadowColor: const Color(0xFFEA580C),
+      shadowAlpha: 0.35,
+      shadowBlur: s * 4,
+      shadowOffset: Offset(0, s),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('🔥', style: TextStyle(fontSize: s * 8)),
+          SizedBox(width: s * 2.5),
+          Text(text ?? 'BOGO', style: GoogleFonts.inter(fontSize: s * 7.5, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3)),
+        ],
+      ),
+    );
+  }
+
   factory ProductBadge.trending({required double s}) {
     return ProductBadge(
       s: s,
@@ -782,7 +804,6 @@ class ProductCard extends ConsumerStatefulWidget {
 
 class _ProductCardState extends ConsumerState<ProductCard> {
   bool _isPressed = false;
-  bool _showAddedCheck = false;
 
   double get _uiScale {
     final effectiveWidth = widget.width ?? (widget.isCompact
@@ -839,7 +860,12 @@ class _ProductCardState extends ConsumerState<ProductCard> {
         ? s(100)
         : Responsive.isSmallMobile(context) ? s(95) : (isFood ? 116 : 110) * _uiScale;
 
-    final hasBadges = product.isBestsellerProduct || product.isTrending || product.isFlashDealProduct || product.isOrganic || product.isMustTry;
+    final isBogoDish = isFood && (
+      (product.restaurant?.discountOffer != null && (product.restaurant!.discountOffer!.toUpperCase().contains('BOGO') || product.restaurant!.discountOffer!.toUpperCase().contains('FREE'))) ||
+      product.tags.any((t) => t.toLowerCase().contains('bogo')) ||
+      product.name.toLowerCase().contains('bogo')
+    );
+    final hasBadges = isBogoDish || product.isBestsellerProduct || product.isTrending || product.isFlashDealProduct || product.isOrganic || product.isMustTry;
 
     return RepaintBoundary(
       child: GestureDetector(
@@ -870,6 +896,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                 _ImageShowcase(
                   product: product,
                   isFood: isFood,
+                  isBogoDish: isBogoDish,
                   uiScale: _uiScale,
                   imageHeight: imageHeight,
                   resolvedDiscount: resolvedDiscount,
@@ -950,6 +977,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
 class _ImageShowcase extends StatelessWidget {
   final Product product;
   final bool isFood;
+  final bool isBogoDish;
   final double uiScale;
   final double imageHeight;
   final int resolvedDiscount;
@@ -963,6 +991,7 @@ class _ImageShowcase extends StatelessWidget {
   const _ImageShowcase({
     required this.product,
     required this.isFood,
+    this.isBogoDish = false,
     required this.uiScale,
     required this.imageHeight,
     required this.resolvedDiscount,
@@ -1001,7 +1030,14 @@ class _ImageShowcase extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (product.isFlashDealProduct) ProductBadge.flashDeal(s: s)
+                  if (isBogoDish)
+                    ProductBadge.bogo(
+                      s: s,
+                      text: product.restaurant?.discountOffer?.toUpperCase().contains('LARGE') == true
+                          ? 'BUY 1 GET 1'
+                          : 'BOGO',
+                    )
+                  else if (product.isFlashDealProduct) ProductBadge.flashDeal(s: s)
                   else if (product.isBestsellerProduct) ProductBadge.bestseller(s: s)
                   else if (product.isTrending) ProductBadge.trending(s: s)
                   else if (product.isOrganic) ProductBadge.organic(s: s)

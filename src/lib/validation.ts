@@ -124,6 +124,10 @@ export const validateCouponSchema = z.object({
   subtotal: z.coerce.number().nonnegative('Subtotal must be a positive number'),
   items: z.array(z.object({
     productId: z.string().nullable().optional(),
+    id: z.string().nullable().optional(),
+    name: z.string().nullable().optional(),
+    selectedVariant: z.string().nullable().optional(),
+    variant: z.string().nullable().optional(),
     categoryId: z.string().nullable().optional(),
     restaurantId: z.string().nullable().optional(),
     price: z.coerce.number().nonnegative(),
@@ -211,7 +215,7 @@ export const createOnBehalfOrderSchema = z.object({
 })
 
 export const updateOrderStatusSchema = z.object({
-  status: z.enum(['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED']).optional(),
+  status: z.enum(['ADMIN_PENDING', 'PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED']).optional(),
   paymentStatus: z.enum(['PENDING', 'PAID', 'FAILED', 'REFUNDED']).optional(),
   paymentMethod: z.string().optional(),
   deliveryPhoto: z.string().nullable().optional(),

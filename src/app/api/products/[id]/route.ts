@@ -137,7 +137,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'You can only edit products for your assigned restaurant' }, { status: 403 })
     }
 
-    const { name, description, imageUrl, categoryId, restaurantId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode, vendor, vendorId } = body
+    const { name, description, imageUrl, categoryId, restaurantId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode, vendor, vendorId, addons } = body
 
     const updateData: any = {}
     if (name !== undefined && typeof name === 'string') updateData.name = name.trim()
@@ -234,6 +234,11 @@ export async function PATCH(
       }
     } else if (variants !== undefined) {
       updateData.variants = variants
+    }
+
+    // Handle addons (restaurant customization groups)
+    if (addons !== undefined) {
+      updateData.addons = (addons && Array.isArray(addons) && addons.length > 0) ? addons : null
     }
 
     if (mrp !== undefined && (!variants || !Array.isArray(variants) || variants.length === 0)) {

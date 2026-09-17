@@ -22,7 +22,15 @@ interface CheckoutBillSummaryProps {
   appliedSurgeFee: number
   packagingFee: number
   couponDiscount: number
-  appliedCoupon: { code: string; discountAmount: number } | null
+  appliedCoupon: {
+    code: string
+    discountAmount: number
+    discountType?: string
+    bogoType?: string
+    badgeText?: string
+    freeGiftDetails?: any
+    nudgeMessage?: string
+  } | null
   taxRate: number
   taxes: number
   effectiveMiscFee: number
@@ -136,9 +144,20 @@ export function CheckoutBillSummary({
         )}
 
         {couponDiscount > 0 && (
-          <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
-            <span>Coupon Applied ({appliedCoupon?.code})</span>
-            <span>{formatPriceDiscount(couponDiscount)}</span>
+          <div className="space-y-1">
+            <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+              <span className="flex items-center gap-1.5">
+                <span>{appliedCoupon?.bogoType ? '🎁 BOGO Deal' : 'Coupon Applied'}</span>
+                <span>({appliedCoupon?.code})</span>
+              </span>
+              <span>{formatPriceDiscount(couponDiscount)}</span>
+            </div>
+            {appliedCoupon?.bogoType && (
+              <div className="text-[10px] font-black text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md flex items-center justify-between">
+                <span>100% Free BOGO item discount included</span>
+                <span className="uppercase">FREE</span>
+              </div>
+            )}
           </div>
         )}
 

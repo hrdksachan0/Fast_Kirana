@@ -412,7 +412,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
       width: double.infinity,
       decoration: BoxDecoration(
         color: AppDesignSystem.slate900,
-        border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2))),
+        border: Border(bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.2))),
       ),
       child: Stack(
         alignment: Alignment.center,

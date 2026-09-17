@@ -7,6 +7,9 @@ import 'package:fastkirana_flutter/data/repositories/cart_repository.dart';
 import 'package:fastkirana_flutter/providers/cart_provider.dart';
 import 'package:fastkirana_flutter/core/utils/restaurant_utils.dart';
 
+const outletWedsonId = 'REST-102';
+const outletAsRestaurantId = 'REST-101';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 

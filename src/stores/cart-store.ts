@@ -29,6 +29,7 @@ export interface CartProduct {
     parentId: string | null
     sortOrder: number
   } | null
+  selectedAddons?: { name: string; price: number }[]
 }
 
 export interface CartItem {

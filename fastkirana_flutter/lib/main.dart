@@ -13,7 +13,6 @@ import 'core/services/notification_service.dart';
 import 'core/services/supabase_service.dart';
 import 'core/services/secure_storage_service.dart';
 import 'core/services/deep_link_service.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'firebase_options.dart';
 
 void main() async {

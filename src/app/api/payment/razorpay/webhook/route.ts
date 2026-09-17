@@ -5,6 +5,7 @@ import { sseEmitter } from '@/lib/sse-emitter'
 import { sendPushNotificationToRoles } from '@/lib/push-notification'
 import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
 import { Role } from '@prisma/client'
+import { cache } from '@/lib/redis-client'
 
 export async function POST(req: Request) {
   try {
@@ -45,6 +46,16 @@ export async function POST(req: Request) {
       const razorpayOrderId = paymentEntity.order_id || orderEntity.id
       const razorpayPaymentId = paymentEntity.id
       const paymentMethod = (paymentEntity.method || 'ONLINE').toUpperCase()
+
+      const lockIdentifier = razorpayPaymentId || razorpayOrderId || payload.payload?.payment?.entity?.id
+      if (lockIdentifier) {
+        const lockKey = `lock:webhook:rzp:${lockIdentifier}`
+        const acquired = await cache.acquireLock(lockKey, 30)
+        if (!acquired) {
+          console.log(`[RazorpayWebhook] Duplicate/concurrent webhook ignored for identifier: ${lockIdentifier}`)
+          return NextResponse.json({ status: 'ok', message: 'already_processing' })
+        }
+      }
 
       // Try finding orderId from notes or receipt
       const targetOrderId =

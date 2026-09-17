@@ -2,6 +2,7 @@ import { NextRequest, NextResponse, after } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { OrderStatus, PaymentStatus, PaymentMethod, Role } from '@prisma/client'
+import { ApiResponder } from '@/lib/api-response'
 import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED_FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, TAX_RATE } from '@/lib/constants'
 import { STORE_PINCODE, GROCERY_PICKUP_ADDRESS, RESTAURANT_PICKUP_ADDRESS, resolvePincode } from '@/lib/store-config'
 import { orderLimiter, apiReadLimiter } from '@/lib/rate-limit'
@@ -16,6 +17,9 @@ import { checkIsStoreOpen } from '@/app/api/settings/route'
 import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
 import { resolveDarkStoreForCustomer, extractCityFromStoreName, extractPincodeFromStoreId } from '@/lib/store-resolver'
 import { evaluateSurgeStatus } from '@/lib/surge-manager'
+import { calculateOrderDeliveryFees } from '@/lib/delivery-fee-calculator'
+import { deductOrderInventory } from '@/lib/order-inventory-manager'
+import { dispatchOrderNotifications } from '@/lib/order-notification-dispatcher'
 
 const inFlightOrderPlacements = new Set<string>()
 
@@ -30,28 +34,72 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
   const session = await auth()
-  let userId = session?.user?.id
   const isStaffSession = Boolean(session?.user?.role && session.user.role !== Role.USER)
 
-  // If mobile app request without NextAuth cookie OR admin placing order on behalf of customer:
-  const rawPhone = body.phone || body.customerPhone || request.headers.get('x-user-phone')
-  const cleanPhone = rawPhone ? getLast10Digits(rawPhone.toString()) : ''
+  // ─── 1. Identify Order Owner (Buyer / Logged-in Account Holder) ──────────────────────────
+  // The person placing/paying for the order is ALWAYS the owner (userId).
+  // Priority: 1. NextAuth Web Session -> 2. Mobile Request Header (x-user-id) -> 3. Request Payload (body.userId)
+  const headerUserId = request.headers.get('x-user-id')?.trim()
+  const candidateUserId = (!isStaffSession && session?.user?.id)
+    ? session.user.id
+    : (headerUserId && headerUserId !== 'null' && headerUserId !== 'undefined'
+        ? headerUserId
+        : (body.userId && body.userId !== 'null' && body.userId !== 'undefined' ? body.userId : null))
 
-  if (!userId || (isStaffSession && cleanPhone && cleanPhone.length === 10)) {
-    if (!cleanPhone || cleanPhone.length < 10) {
+  let userId: string | null = null
+
+  // Verify candidate user exists in database
+  if (candidateUserId && !isStaffSession) {
+    const dbCandidate = await prisma.user.findUnique({
+      where: { id: candidateUserId },
+      select: { id: true, isBlocked: true, blockReason: true }
+    })
+    if (dbCandidate) {
+      userId = dbCandidate.id
+    }
+  }
+
+  // If candidateUserId wasn't passed or not found, try the buyer's account phone (from x-user-phone header or body.userPhone)
+  if (!userId && !isStaffSession) {
+    const headerPhone = request.headers.get('x-user-phone')?.trim()
+    const buyerRawPhone = headerPhone || body.userPhone || body.buyerPhone
+    const cleanBuyerPhone = buyerRawPhone ? getLast10Digits(buyerRawPhone.toString()) : ''
+    if (cleanBuyerPhone && cleanBuyerPhone.length === 10) {
+      const dbBuyer = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { phone: cleanBuyerPhone },
+            { phone: `+91${cleanBuyerPhone}` },
+            { phone: { contains: cleanBuyerPhone } },
+          ]
+        },
+        select: { id: true, isBlocked: true, blockReason: true }
+      })
+      if (dbBuyer) {
+        userId = dbBuyer.id
+      }
+    }
+  }
+
+  // ─── 2. Staff POS / Walk-in order OR anonymous guest without an account ───────────
+  // ONLY in these cases do we resolve/create an account from the recipient/delivery phone!
+  const rawRecipientPhone = body.phone || body.customerPhone || body.receiverPhone
+  const cleanRecipientPhone = rawRecipientPhone ? getLast10Digits(rawRecipientPhone.toString()) : ''
+
+  if (!userId || (isStaffSession && cleanRecipientPhone && cleanRecipientPhone.length === 10)) {
+    if (!cleanRecipientPhone || cleanRecipientPhone.length < 10) {
       if (!userId) {
         return NextResponse.json({ error: 'Valid 10-digit customer phone is required' }, { status: 400 })
       }
     } else {
-      const userName = body.userName || body.customerName || `Customer ${cleanPhone.slice(-4)}`
+      const recipientName = body.customerName || body.receiverName || body.userName || `Customer ${cleanRecipientPhone.slice(-4)}`
 
       let dbUser = await prisma.user.findFirst({
         where: {
           OR: [
-            { phone: cleanPhone },
-            { phone: `+91${cleanPhone}` },
-            { phone: { contains: cleanPhone } },
-            ...(body.userId ? [{ id: body.userId }] : []),
+            { phone: cleanRecipientPhone },
+            { phone: `+91${cleanRecipientPhone}` },
+            { phone: { contains: cleanRecipientPhone } },
           ]
         }
       })
@@ -59,9 +107,9 @@ export async function POST(request: NextRequest) {
       if (!dbUser) {
         dbUser = await prisma.user.create({
           data: {
-            phone: `+91${cleanPhone}`,
-            email: body.email || `customer_${cleanPhone}@fastkirana.in`,
-            name: userName.toString(),
+            phone: `+91${cleanRecipientPhone}`,
+            email: body.email || `customer_${cleanRecipientPhone}@fastkirana.in`,
+            name: recipientName.toString(),
             role: Role.USER,
           }
         })
@@ -217,7 +265,7 @@ export async function POST(request: NextRequest) {
     finalAddressId = address.id
 
     // Update address recipient phone number if customer entered a phone for this delivery address (account phone remains untouched)
-    const rawCustomerPhone = body.phone || body.customerPhone
+    const rawCustomerPhone = body.receiverPhone || body.customerPhone || body.phone
     if (rawCustomerPhone) {
       const cleanPhone = getLast10Digits(rawCustomerPhone.toString())
       if (cleanPhone && cleanPhone.length === 10) {
@@ -356,6 +404,7 @@ export async function POST(request: NextRequest) {
         },
         quantity: typeof i.quantity === 'number' ? i.quantity : (parseInt(i.quantity || '1', 10) || 1),
         selectedVariant: i.selectedVariant,
+        selectedAddons: Array.isArray(i.selectedAddons) ? i.selectedAddons : [],
       }
     })
 
@@ -501,7 +550,12 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      return sum + itemPrice * item.quantity
+      // Add addon prices to item price
+      const addonTotal = Array.isArray(item.selectedAddons)
+        ? item.selectedAddons.reduce((a: number, addon: any) => a + (parseFloat(addon.price) || 0), 0)
+        : 0
+
+      return sum + (itemPrice + addonTotal) * item.quantity
     }, 0)
 
     if (combinedSubtotal < 20) {
@@ -596,7 +650,111 @@ export async function POST(request: NextRequest) {
 
             if (meetsMinOrder) {
               couponId = coupon.id
-              if (coupon.discountType === 'FLAT') {
+              if (coupon.discountType === 'BOGO') {
+                const maxFreeCap = coupon.maxFreeItems || 3
+                const rItems = items.filter((item: any) => {
+                  const dbProduct = dbProducts.find((p) => p.id === item.product.id.split('_')[0])
+                  return dbProduct && dbProduct.restaurantId === coupon.restaurantId
+                })
+
+                if (coupon.bogoType === 'BUY_LARGE_GET_SMALL') {
+                  const triggerVariant = (coupon.triggerVariant || 'large').toLowerCase().trim()
+                  const rewardVariant = (coupon.rewardVariant || 'small').toLowerCase().trim()
+
+                  const triggerItems = rItems.filter((it: any) => {
+                    const name = (it.product.name || '').toLowerCase()
+                    const varName = (it.selectedVariant || it.variant || it.product.id.split('_')[1] || '').toLowerCase()
+                    return `${name} ${varName}`.includes(triggerVariant)
+                  })
+                  const totalTriggerQty = triggerItems.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0)
+
+                  const rewardItems = rItems.filter((it: any) => {
+                    const name = (it.product.name || '').toLowerCase()
+                    const varName = (it.selectedVariant || it.variant || it.product.id.split('_')[1] || '').toLowerCase()
+                    return `${name} ${varName}`.includes(rewardVariant)
+                  })
+
+                  const allowedFree = Math.min(totalTriggerQty, maxFreeCap)
+                  let bogoSavings = 0
+                  let remainingFree = allowedFree
+
+                  const sortedRewards = [...rewardItems].sort((a: any, b: any) => {
+                    const pA = dbProducts.find((p) => p.id === a.product.id.split('_')[0])?.price || 0
+                    const pB = dbProducts.find((p) => p.id === b.product.id.split('_')[0])?.price || 0
+                    return pA - pB
+                  })
+
+                  for (const it of sortedRewards) {
+                    const dbProduct = dbProducts.find((p) => p.id === it.product.id.split('_')[0])
+                    let itemPrice = dbProduct ? dbProduct.price : 0
+                    const isVariant = it.product.id.includes('_')
+                    if (dbProduct && isVariant && dbProduct.variants && Array.isArray(dbProduct.variants)) {
+                      const [_, vName] = it.product.id.split('_')
+                      const variant = (dbProduct.variants as any[]).find((v) => v.name === vName)
+                      if (variant) itemPrice = variant.price
+                    }
+
+                    const freeQty = Math.min(it.quantity || 1, remainingFree)
+                    bogoSavings += freeQty * itemPrice
+                    remainingFree -= freeQty
+                    if (remainingFree <= 0) break
+                  }
+
+                  combinedDiscount = bogoSavings
+                  if (coupon.maxDiscount) {
+                    combinedDiscount = Math.min(combinedDiscount, coupon.maxDiscount)
+                  }
+                } else if (coupon.bogoType === 'CHEAPEST_FREE') {
+                  const unitPrices: number[] = []
+                  for (const it of rItems) {
+                    const dbProduct = dbProducts.find((p) => p.id === it.product.id.split('_')[0])
+                    let itemPrice = dbProduct ? dbProduct.price : 0
+                    const isVariant = it.product.id.includes('_')
+                    if (dbProduct && isVariant && dbProduct.variants && Array.isArray(dbProduct.variants)) {
+                      const [_, vName] = it.product.id.split('_')
+                      const variant = (dbProduct.variants as any[]).find((v) => v.name === vName)
+                      if (variant) itemPrice = variant.price
+                    }
+                    const qty = it.quantity || 1
+                    for (let i = 0; i < qty; i++) unitPrices.push(itemPrice)
+                  }
+                  unitPrices.sort((a, b) => a - b)
+                  combinedDiscount = unitPrices[0] || 0
+                  if (coupon.maxDiscount) {
+                    combinedDiscount = Math.min(combinedDiscount, coupon.maxDiscount)
+                  }
+                } else {
+                  // SAME_ITEM BOGO
+                  let eligibleItems = rItems
+                  if (coupon.bogoDishId) {
+                    eligibleItems = rItems.filter((it: any) => it.product.id.split('_')[0] === coupon.bogoDishId)
+                  }
+                  let totalBogo = 0
+                  let freeUnlocked = 0
+                  for (const it of eligibleItems) {
+                    const dbProduct = dbProducts.find((p) => p.id === it.product.id.split('_')[0])
+                    let itemPrice = dbProduct ? dbProduct.price : 0
+                    const isVariant = it.product.id.includes('_')
+                    if (dbProduct && isVariant && dbProduct.variants && Array.isArray(dbProduct.variants)) {
+                      const [_, vName] = it.product.id.split('_')
+                      const variant = (dbProduct.variants as any[]).find((v) => v.name === vName)
+                      if (variant) itemPrice = variant.price
+                    }
+                    const pairs = Math.floor((it.quantity || 1) / 2)
+                    const freeCount = Math.min(pairs, maxFreeCap - freeUnlocked)
+                    if (freeCount > 0) {
+                      totalBogo += freeCount * itemPrice
+                      freeUnlocked += freeCount
+                    }
+                  }
+                  combinedDiscount = totalBogo
+                  if (coupon.maxDiscount) {
+                    combinedDiscount = Math.min(combinedDiscount, coupon.maxDiscount)
+                  }
+                }
+              } else if (coupon.discountType === 'FREE_DELIVERY') {
+                combinedDiscount = 25.0
+              } else if (coupon.discountType === 'FLAT') {
                 combinedDiscount = Math.min(coupon.value, eligibleSubtotal)
               } else if (coupon.discountType === 'PERCENT') {
                 combinedDiscount = (eligibleSubtotal * coupon.value) / 100
@@ -630,7 +788,11 @@ export async function POST(request: NextRequest) {
           itemPrice = variant.price
         }
       }
-      return sum + itemPrice * item.quantity
+      // Add addon prices
+      const addonTotal = Array.isArray(item.selectedAddons)
+        ? item.selectedAddons.reduce((a: number, addon: any) => a + (parseFloat(addon.price) || 0), 0)
+        : 0
+      return sum + (itemPrice + addonTotal) * item.quantity
     }, 0)
 
     const grocerySubtotal = getSubtotal(groceryItems)
@@ -641,110 +803,32 @@ export async function POST(request: NextRequest) {
       return { rId, restaurant: group.restaurant, items: group.items, subtotal: sub, deliveryFee: 0 }
     })
 
-    const deliveryFeeVal = settingsMap['delivery_fee'] ? parseFloat(settingsMap['delivery_fee']) : DELIVERY_FEE
+    const deliveryResult = await calculateOrderDeliveryFees({
+      deliveryMethod,
+      isB2B: Boolean(isB2B),
+      resolvedLat,
+      resolvedLng,
+      storeLat,
+      storeLng,
+      maxRadiusKm,
+      storeDisplayName,
+      targetDarkStore,
+      settingsMap,
+      groceryItems,
+      grocerySubtotal,
+      restaurantData,
+      combinedSubtotal,
+    })
 
-    let groceryDeliveryFee = 0
-    let hubSurgeFee = 0
-    let hubSurgeReason = ''
+    if (deliveryResult.error) {
+      return NextResponse.json({ error: deliveryResult.error }, { status: 400 })
+    }
 
-    if (deliveryMethod === 'DELIVERY' && !isB2B) {
-      // Evaluate active surge for target DarkStore hub
-      try {
-        const activeSurge = await evaluateSurgeStatus(
-          settingsMap,
-          targetDarkStore?.id,
-          targetDarkStore ? { lat: targetDarkStore.latitude, lng: targetDarkStore.longitude } : null
-        )
-        if (activeSurge.isSurgeActive && activeSurge.surgeFee > 0) {
-          hubSurgeFee = activeSurge.surgeFee
-          hubSurgeReason = activeSurge.surgeReason || 'Safety & Weather Surge'
-        }
-      } catch (surgeErr) {
-        console.error('Failed to evaluate hub surge fee:', surgeErr)
-      }
-
-      // Evaluate combined order threshold
-      const isCombinedOrder = groceryItems.length > 0 && restaurantData.length > 0
-      const combinedThreshold = settingsMap['combined_free_delivery_threshold']
-        ? parseFloat(settingsMap['combined_free_delivery_threshold'])
-        : (settingsMap['grocery_free_delivery_threshold']
-          ? parseFloat(settingsMap['grocery_free_delivery_threshold'])
-          : COMBINED_FREE_DELIVERY_THRESHOLD)
-
-      // In a combined order (e.g. Food + Grocery), if the combined cart reaches threshold, delivery is FREE for all parts!
-      const isCombinedFree = isCombinedOrder && (combinedSubtotal >= combinedThreshold)
-
-      // 1. Process Grocery Items Delivery Fee & Validation from DarkStore Hub
-      if (groceryItems.length > 0) {
-        const defaultThreshold = settingsMap['grocery_free_delivery_threshold'] ? parseFloat(settingsMap['grocery_free_delivery_threshold']) : GROCERY_FREE_DELIVERY_THRESHOLD
-
-        if (resolvedLat && resolvedLng) {
-          const groceryDistKm = getDistanceKm(storeLat, storeLng, resolvedLat, resolvedLng)
-          const groceryRules = getDeliveryRules(groceryDistKm, { maxRadiusKm, surgeFee: hubSurgeFee })
-
-          if (!groceryRules.isServiceable || groceryDistKm > maxRadiusKm) {
-            return NextResponse.json({
-              error: `Your delivery address is ${groceryDistKm.toFixed(1)} km away. Grocery delivery is strictly limited to ${maxRadiusKm.toFixed(1)} km from ${storeDisplayName}.`
-            }, { status: 400 })
-          }
-
-          if (isCombinedFree || grocerySubtotal >= groceryRules.freeDeliveryThreshold || combinedSubtotal >= groceryRules.freeDeliveryThreshold) {
-            groceryDeliveryFee = 0
-          } else {
-            groceryDeliveryFee = groceryRules.deliveryFee
-          }
-        } else {
-          groceryDeliveryFee = ((isCombinedFree || grocerySubtotal >= defaultThreshold || combinedSubtotal >= defaultThreshold) ? 0 : deliveryFeeVal) + hubSurgeFee
-        }
-      }
-
-      // 2. Process EACH Restaurant's Delivery Fee & Validation based on THAT restaurant's GPS location!
-      for (const rData of restaurantData) {
-        const r = rData.restaurant
-        const rLat = r?.lat ?? (r?.latitude ? parseFloat(String(r.latitude)) : null)
-        const rLng = r?.lng ?? (r?.longitude ? parseFloat(String(r.longitude)) : null)
-        const rMaxRadius = r?.deliveryRadiusKm ? parseFloat(String(r.deliveryRadiusKm)) : 5.0
-        const rName = r?.name || 'Restaurant'
-
-        const rDefaultThreshold = settingsMap['restaurant_free_delivery_threshold']
-          ? parseFloat(settingsMap['restaurant_free_delivery_threshold'])
-          : (settingsMap['combined_free_delivery_threshold'] ? parseFloat(settingsMap['combined_free_delivery_threshold']) : 200)
-
-        if (resolvedLat && resolvedLng && rLat && rLng) {
-          // Calculate real distance from the restaurant to the customer's home!
-          const rDistKm = getDistanceKm(rLat, rLng, resolvedLat, resolvedLng)
-          const rRules = getDeliveryRules(rDistKm, { maxRadiusKm: rMaxRadius, surgeFee: hubSurgeFee })
-
-          if (!rRules.isServiceable || rDistKm > rMaxRadius) {
-            return NextResponse.json({
-              error: `Your delivery address is ${rDistKm.toFixed(1)} km away from ${rName}. Delivery from this restaurant is strictly limited to ${rMaxRadius.toFixed(1)} km.`
-            }, { status: 400 })
-          }
-
-          if (isCombinedFree || rData.subtotal >= rRules.freeDeliveryThreshold || combinedSubtotal >= rRules.freeDeliveryThreshold) {
-            rData.deliveryFee = 0
-          } else {
-            rData.deliveryFee = rRules.deliveryFee
-          }
-        } else {
-          // Fallback if restaurant has no GPS saved
-          if (isCombinedFree || rData.subtotal >= rDefaultThreshold || combinedSubtotal >= rDefaultThreshold) {
-            rData.deliveryFee = 0
-          } else {
-            rData.deliveryFee = deliveryFeeVal + hubSurgeFee
-          }
-        }
-      }
-
-      // Single delivery fee rule for combined order under threshold:
-      // If grocery has already been charged a delivery fee, waive delivery fee on the restaurant portion so customer is never double-charged
-      if (isCombinedOrder && !isCombinedFree) {
-        if (groceryDeliveryFee > 0) {
-          for (const rData of restaurantData) {
-            rData.deliveryFee = 0
-          }
-        }
-      }
+    const groceryDeliveryFee = deliveryResult.groceryDeliveryFee
+    const hubSurgeFee = deliveryResult.hubSurgeFee
+    const hubSurgeReason = deliveryResult.hubSurgeReason
+    for (const rData of restaurantData) {
+      rData.deliveryFee = deliveryResult.restaurantFees[rData.rId] ?? 0
     }
 
     const isPremiumPackaging = packagingOption === 'PREMIUM' || packagingFee === 15
@@ -832,7 +916,11 @@ export async function POST(request: NextRequest) {
       resolvedPaymentMethod = PaymentMethod.WALLET
     }
 
-    const initialOrderStatus = OrderStatus.PENDING
+    const autoApproveSetting = settingsMap['admin_auto_approve_orders']
+    // If admin_auto_approve_orders is 'true', orders immediately enter PENDING.
+    // Otherwise, they wait in ADMIN_PENDING for admin approval.
+    const isAutoApprove = autoApproveSetting === 'true'
+    const initialOrderStatus = isAutoApprove ? OrderStatus.PENDING : OrderStatus.ADMIN_PENDING
 
     // 6. Create orders inside a Prisma Transaction
     const createdOrders = await prisma.$transaction(async (tx) => {
@@ -882,15 +970,26 @@ export async function POST(request: NextRequest) {
             }
           }
 
+          // Add addon prices to item price
+          const addonTotal = Array.isArray(item.selectedAddons) && item.selectedAddons.length > 0
+            ? item.selectedAddons.reduce((a: number, addon: any) => a + (parseFloat(addon.price) || 0), 0)
+            : 0
+          const finalItemPrice = itemPrice + addonTotal
+
+          // Store both product variants and selected addons in OrderItem.variants JSON
+          const orderItemVariants = item.selectedAddons && item.selectedAddons.length > 0
+            ? { productVariants: item.dbProduct.variants || null, selectedAddons: item.selectedAddons }
+            : (item.dbProduct.variants || null)
+
           return {
             productId: item.dbProduct.id,
             name: item.product.name,
-            price: itemPrice,
+            price: finalItemPrice,
             quantity: item.quantity,
             imageUrl: item.dbProduct.imageUrl,
             selectedVariant: variantName,
             costPrice: itemCostPrice,
-            variants: item.dbProduct.variants || null,
+            variants: orderItemVariants,
             notes: item.notes || null,
           }
         })
@@ -1115,112 +1214,8 @@ export async function POST(request: NextRequest) {
 
         results.push(newOrder)
 
-        // Deduct stock
-        for (const item of orderItemsData) {
-          const dbProd = await tx.product.findUnique({
-            where: { id: item.productId },
-            include: { category: true }
-          })
-
-          if (dbProd && dbProd.restaurantId) {
-            continue
-          }
-
-          if (item.selectedVariant) {
-            // Deduct stock from the variant in JSON variants
-            if (dbProd && dbProd.variants && Array.isArray(dbProd.variants)) {
-              const prevStock = dbProd.stock
-              const updatedVariants = (dbProd.variants as any[]).map((v) => {
-                if (v.name === item.selectedVariant) {
-                  return { ...v, stock: Math.max(0, v.stock - item.quantity) }
-                }
-                return v
-              })
-              const newTotalStock = updatedVariants.reduce((sum, v) => sum + v.stock, 0)
-              
-              await tx.product.update({
-                where: { id: item.productId },
-                data: {
-                  variants: updatedVariants,
-                  stock: newTotalStock,
-                }
-              })
-
-              await tx.stockLog.create({
-                data: {
-                  productId: item.productId,
-                  quantity: -item.quantity,
-                  type: 'ONLINE_ORDER',
-                  prevStock,
-                  newStock: newTotalStock
-                }
-              })
-            }
-          } else {
-            const batches = await tx.productBatch.findMany({
-              where: {
-                productId: item.productId,
-                quantity: { gt: 0 }
-              },
-              orderBy: {
-                expiryDate: 'asc'
-              }
-            })
-
-            let remainingToDeduct = item.quantity
-
-            if (batches.length > 0) {
-              for (const batch of batches) {
-                if (remainingToDeduct <= 0) break
-                const deductFromThisBatch = Math.min(batch.quantity, remainingToDeduct)
-                await tx.productBatch.update({
-                  where: { id: batch.id },
-                  data: { quantity: { decrement: deductFromThisBatch } }
-                })
-                remainingToDeduct -= deductFromThisBatch
-              }
-            }
-
-            const activeBatches = await tx.productBatch.findMany({
-              where: {
-                productId: item.productId,
-                quantity: { gt: 0 }
-              },
-              orderBy: { expiryDate: 'asc' }
-            })
-
-            const prevStock = dbProd ? dbProd.stock : 0
-            const newTotalStock = activeBatches.length > 0 
-              ? activeBatches.reduce((sum, b) => sum + b.quantity, 0)
-              : Math.max(0, prevStock - item.quantity)
-            const newEarliestExpiry = activeBatches.length > 0 ? activeBatches[0].expiryDate : null
-
-            if (activeBatches.length > 0 || batches.length > 0) {
-              await tx.product.update({
-                where: { id: item.productId },
-                data: {
-                  stock: newTotalStock,
-                  expiryDate: newEarliestExpiry
-                }
-              })
-            } else {
-              await tx.product.update({
-                where: { id: item.productId },
-                data: { stock: { decrement: item.quantity } }
-              })
-            }
-
-            await tx.stockLog.create({
-              data: {
-                productId: item.productId,
-                quantity: -item.quantity,
-                type: 'ONLINE_ORDER',
-                prevStock,
-                newStock: newTotalStock
-              }
-            })
-          }
-        }
+        // Deduct stock via domain inventory manager
+        await deductOrderInventory(tx, orderItemsData)
       }
 
       // Update coupon usage
@@ -1271,15 +1266,7 @@ export async function POST(request: NextRequest) {
           if (clean && !adminPhones.includes(clean)) adminPhones.push(clean)
         }
 
-        const sentFcmTokensThisCheckout = new Set<string>()
-        const notifiedWebRoles = new Set<string>()
-
         for (const order of createdOrders) {
-          const displayId = order.readableId || order.id.slice(-6).toUpperCase()
-          const isRestaurant = !!order.restaurantId
-          const orderType = isRestaurant ? 'Restaurant' : 'Grocery'
-          const notificationTitle = isRestaurant ? `New Order for ${order.shopName} 🍲` : 'New Grocery Order 📦'
-
           sseEmitter.emit('order', {
             type: 'new-order',
             orderId: order.id,
@@ -1292,227 +1279,17 @@ export async function POST(request: NextRequest) {
             createdAt: order.createdAt,
             restaurantId: order.restaurantId,
           })
-
-          // Send push notifications to workers (deduplicated per checkout across combined orders)
-          if (isRestaurant) {
-            // 1. Notify Admin & Delivery with full info
-            const rolesToNotify = [Role.ADMIN, Role.DELIVERY].filter(r => !notifiedWebRoles.has(r))
-            if (rolesToNotify.length > 0) {
-              rolesToNotify.forEach(r => notifiedWebRoles.add(r))
-              sendPushNotificationToRoles(rolesToNotify, {
-                title: isOnlinePaid ? '💳 Online Payment Order Confirmed!' : notificationTitle,
-                body: isOnlinePaid ? `Order #${displayId} of ₹${order.total} — PAID Online ✅` : `Order #${displayId} of ₹${order.total} has been placed.`,
-                tag: `order-${order.id}`,
-                data: { orderId: order.id }
-              }).catch((err: any) => console.error('Error sending push notification to admins:', err))
-            }
-
-            // 2. Notify ONLY the specific Restaurant Owner / Chef WITHOUT ANY AMOUNT (only if approved)
-            if (order.status !== OrderStatus.CANCELLED) {
-              sendPushNotificationToRestaurant(order.restaurantId, {
-                title: `👨‍🍳 New Food Order #${displayId}!`,
-                body: `New order #${displayId} received for ${order.shopName || 'Kitchen'}. Tap to prepare dishes.`,
-                tag: `restaurant-order-${order.id}`,
-                data: { orderId: order.id, restaurantId: order.restaurantId }
-              }).catch((err: any) => console.error('Error sending push notification to restaurant:', err))
-            }
-          } else {
-            // Pure Grocery order — ONLY notify Admin, Picker, Delivery. (CHEF/RESTAURANT NEVER NOTIFIED)
-            const rolesToNotify = [Role.ADMIN, Role.PICKER, Role.DELIVERY].filter(r => !notifiedWebRoles.has(r))
-            if (rolesToNotify.length > 0) {
-              rolesToNotify.forEach(r => notifiedWebRoles.add(r))
-              sendPushNotificationToRoles(rolesToNotify, {
-                title: isOnlinePaid ? '💳 Online Payment Order Confirmed!' : notificationTitle,
-                body: isOnlinePaid ? `Order #${displayId} of ₹${order.total} — PAID Online ✅` : `Order #${displayId} of ₹${order.total} has been placed.`,
-                tag: `order-${order.id}`,
-                data: { orderId: order.id }
-              }).catch((err: any) => console.error('Error sending push notification to grocery staff:', err))
-            }
-          }
-
-          // Send FCM Push Notification to Staff (Admin, Delivery, Picker, Restaurant)
-          // Strictly deduplicated: each physical device token receives at most ONE notification per checkout
-          try {
-            const { fcmMessaging } = await import('@/lib/firebase-admin')
-            if (fcmMessaging) {
-              // 1. Direct device token push to Admin & Grocery Staff (Admin, Delivery, Picker)
-              const staffRoles = isRestaurant ? ['ADMIN', 'DELIVERY'] : ['ADMIN', 'PICKER', 'DELIVERY']
-              const staffPayload = buildOrderFcmPayload(
-                isOnlinePaid ? '💳 New PAID Order Received!' : '🛎️ New Order Received!',
-                `New order #${displayId} of ₹${order.total} has been placed.`,
-                {
-                  title: isOnlinePaid ? '💳 New PAID Order Received!' : '🛎️ New Order Received!',
-                  body: `New order #${displayId} of ₹${order.total} has been placed.`,
-                  orderId: order.id,
-                  readableId: displayId,
-                  status: order.status,
-                  screen: 'admin-orders',
-                  timestamp: Date.now().toString(),
-                }
-              )
-              // Send FCM Push Notification to Staff (Admin, Delivery, Picker)
-              // Strictly partitioned by storeId ("id wise") so Pukhraya/Akbarpur admins don't get Ghatampur notifications!
-              if (order.storeId) {
-                sendTopicWithRetry(fcmMessaging, { topic: `admin_orders_${order.storeId}`, ...staffPayload }).catch(() => {})
-                if (!isRestaurant) {
-                  sendTopicWithRetry(fcmMessaging, { topic: `staff_orders_${order.storeId}`, ...staffPayload }).catch(() => {})
-                }
-              } else {
-                sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders', ...staffPayload }).catch(() => {})
-                if (!isRestaurant) {
-                  sendTopicWithRetry(fcmMessaging, { topic: 'staff_orders', ...staffPayload }).catch(() => {})
-                }
-              }
-              // Super admin / HQ global listener
-              sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders_all', ...staffPayload }).catch(() => {})
-
-              // 3. Direct device token push STRICTLY to the specific restaurant owner ONLY (WITHOUT AMOUNT)
-              if (isRestaurant && order.restaurantId && order.status !== OrderStatus.CANCELLED) {
-                const restInfo = await prisma.restaurant.findUnique({
-                  where: { id: order.restaurantId },
-                  select: { ownerPhone: true }
-                })
-                const cleanRestPhone = restInfo?.ownerPhone ? getLast10Digits(restInfo.ownerPhone) : ''
-
-                const restaurantPayload = buildOrderFcmPayload(
-                  `👨‍🍳 New Order for ${order.shopName || 'Kitchen'}!`,
-                  `Order #${displayId} received! Open kitchen console to prepare dishes.`,
-                  {
-                    title: `👨‍🍳 New Order for ${order.shopName || 'Kitchen'}!`,
-                    body: `Order #${displayId} received! Open kitchen console to prepare dishes.`,
-                    orderId: order.id,
-                    readableId: displayId,
-                    restaurantId: order.restaurantId,
-                    status: order.status,
-                    screen: 'restaurant-console',
-                    timestamp: Date.now().toString(),
-                  }
-                )
-                const restTokens = await prisma.fcmToken.findMany({
-                  where: {
-                    user: {
-                      OR: [
-                        { assignedRestaurantId: order.restaurantId },
-                        ...(cleanRestPhone ? [{ phone: { contains: cleanRestPhone } }] : []),
-                      ]
-                    }
-                  },
-                  select: { token: true },
-                  orderBy: { createdAt: 'desc' },
-                  take: 10,
-                })
-                const uniqueRestTokens = Array.from(new Set(restTokens.map(t => t.token)))
-                if (uniqueRestTokens.length > 0) {
-                  // Direct token delivery to registered restaurant devices (Fastest, exactly 1 delivery per device)
-                  for (const token of uniqueRestTokens) {
-                    if (!sentFcmTokensThisCheckout.has(token)) {
-                      sentFcmTokensThisCheckout.add(token)
-                      fcmMessaging.send({ token, ...restaurantPayload }).catch(() => {})
-                    }
-                  }
-                }
-                // Always broadcast to canonical restaurant topic for guaranteed delivery
-                if (order.restaurantId) {
-                  sendTopicWithRetry(fcmMessaging, { topic: `restaurant_${order.restaurantId}`, ...restaurantPayload }).catch(() => {})
-                  sendTopicWithRetry(fcmMessaging, { topic: `kitchen_${order.restaurantId}`, ...restaurantPayload }).catch(() => {})
-                }
-              }
-            }
-          } catch (fcmErr) {
-            console.error('Customer order placement FCM error:', fcmErr)
-          }
-
-          const whatsappPromises: Promise<any>[] = []
-
-          // 2. Automated KOT Remote Broadcast: DISABLED by business rule.
-          // KOT is strictly controlled by Admin and is ONLY dispatched when Admin clicks "Send KOT" in the Admin Dashboard (/admin).
-
-
-          // 3. WhatsApp Alert to Admins/Staff
-          if (adminPhones.length > 0) {
-            const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
-            const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
-            const outletName = order.shopName || (isRestaurant ? 'Restaurant' : 'FastKirana Dark Store')
-            const customerName = order.user?.name || 'Customer'
-            const customerPhone = order.address?.phone || order.user?.phone || 'N/A'
-            const adminText = isOnlinePaid
-              ? `💳 *PAID Online Order* #${displayId} for [${outletName}] of ₹${order.total} from ${customerName} (${customerPhone}). Payment: Online PAID ✅. Manage: ${cleanAppUrl}/admin`
-              : `New Order #${displayId} for [${outletName}] of ₹${order.total} from ${customerName} (${customerPhone}). Manage: ${cleanAppUrl}/admin`
-            
-            for (const adminPhone of adminPhones) {
-              whatsappPromises.push(
-                sendWhatsAppOrderAlert(adminPhone, adminText)
-                  .catch((err: any) => console.error(`Failed to send admin (${adminPhone}) WhatsApp order alert:`, err))
-              )
-            }
-          }
-
-          // Wait for all WhatsApp notifications to finish before continuing
-          if (whatsappPromises.length > 0) {
-            await Promise.allSettled(whatsappPromises)
-          }
         }
 
-        // =========================================================================
-        // Send EXACTLY 1 Customer Notification for the entire checkout
-        // Consolidates Combined Orders (Grocery + Food) into a single notification!
-        // =========================================================================
-        try {
-          const primaryOrder = createdOrders.find((o) => !o.restaurantId) || createdOrders[0]
-          const isCombined = createdOrders.length > 1
-          const baseDisplayId = (primaryOrder.readableId || primaryOrder.id).replace(/-[GR]\d*$/i, '')
-          const combinedTotal = createdOrders.reduce((sum, o) => sum + Number(o.total || 0), 0)
-          const customerPhone = primaryOrder.address?.phone || primaryOrder.user?.phone || body.phone || ''
-          const cleanPhone = getLast10Digits(customerPhone)
-
-          const { fcmMessaging } = await import('@/lib/firebase-admin')
-          if (fcmMessaging) {
-            const notifTitle = isOnlinePaid
-              ? (isCombined ? '💳 Combined Order Confirmed & Paid!' : '💳 Order Confirmed & Paid!')
-              : (isCombined ? '📦 Combined Order Placed Successfully!' : '📦 Order Placed Successfully!')
-            const notifBody = isCombined
-              ? `Your FastKirana combined order #${baseDisplayId} (₹${combinedTotal.toFixed(0)}) is confirmed and being prepared.`
-              : `Your FastKirana order #${primaryOrder.readableId || primaryOrder.id} (₹${Number(primaryOrder.total).toFixed(0)}) is confirmed and being prepared.`
-
-            const dataPayload: Record<string, string> = {
-              title: notifTitle,
-              body: notifBody,
-              orderId: primaryOrder.id,
-              readableId: baseDisplayId,
-              status: primaryOrder.status,
-              screen: 'order-tracking',
-              url: `/orders/${primaryOrder.id}`,
-              timestamp: Date.now().toString(),
-            }
-
-            const custPayload = buildOrderFcmPayload(notifTitle, notifBody, dataPayload)
-
-            // Direct device token push to customer's latest active device (Exact 1 push)
-            const customerTokens = await prisma.fcmToken.findMany({
-              where: {
-                OR: [
-                  ...(primaryOrder.userId ? [{ userId: primaryOrder.userId }] : []),
-                  ...(cleanPhone ? [{ user: { phone: { contains: cleanPhone } } }] : []),
-                ],
-              },
-              select: { token: true },
-              orderBy: { createdAt: 'desc' },
-              take: 1,
-            })
-
-            if (customerTokens.length > 0) {
-              const custToken = customerTokens[0].token
-              if (!sentFcmTokensThisCheckout.has(custToken)) {
-                sentFcmTokensThisCheckout.add(custToken)
-                fcmMessaging.send({ token: custToken, ...custPayload }).catch((e) => console.error('Error sending customer FCM:', e))
-              }
-            } else if (cleanPhone && cleanPhone.length === 10) {
-              await sendTopicWithRetry(fcmMessaging, { topic: `phone_${cleanPhone}`, ...custPayload }).catch((e) => console.error('Error sending customer topic FCM:', e))
-            }
-          }
-        } catch (custNotifErr) {
-          console.error('Unified customer order FCM notification error:', custNotifErr)
-        }
+        // Multi-channel notifications via domain dispatcher
+        await dispatchOrderNotifications({
+          createdOrders,
+          isOnlinePaid,
+          notificationTitle: 'New Order Received 📦',
+          adminPhones,
+          origin,
+          userPhone: body.phone,
+        })
       } catch (sseErr) {
         console.error('Failed to emit SSE/notifications for new orders:', sseErr)
       }
@@ -1745,9 +1522,9 @@ export async function GET(request: NextRequest) {
     groupedResult.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
     return NextResponse.json(groupedResult)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Orders list API error:', error)
-    return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
+    return ApiResponder.error('Failed to fetch orders', 500, 'INTERNAL_ERROR', error?.stack, request)
   }
 }
 

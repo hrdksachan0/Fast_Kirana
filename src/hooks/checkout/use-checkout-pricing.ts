@@ -33,6 +33,17 @@ export function useCheckoutPricing({
   const [appliedCoupon, setAppliedCoupon] = useState<{
     code: string
     discountAmount: number
+    discountType?: string
+    bogoType?: string
+    badgeText?: string
+    freeGiftDetails?: {
+      id: string
+      name: string
+      price: number
+      imageUrl?: string | null
+      rewardVariant?: string
+    }
+    nudgeMessage?: string
   } | null>(null)
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false)
 
@@ -60,9 +71,12 @@ export function useCheckoutPricing({
           subtotal,
           items: items.map((i) => ({
             id: i.product.id,
+            name: i.product.name,
             price: i.product.price,
             categoryId: i.product.category?.id,
             quantity: i.quantity,
+            selectedVariant: (i.product as any).selectedVariant || (i as any).selectedVariant,
+            variant: (i.product as any).variant || (i as any).variant,
           })),
         }),
       })
@@ -74,6 +88,11 @@ export function useCheckoutPricing({
           setAppliedCoupon({
             code: data.coupon.code,
             discountAmount: data.coupon.discountAmount,
+            discountType: data.coupon.discountType,
+            bogoType: data.coupon.bogoType,
+            badgeText: data.coupon.badgeText,
+            freeGiftDetails: data.coupon.freeGiftDetails,
+            nudgeMessage: data.coupon.nudgeMessage,
           })
         })
         .catch(() => {

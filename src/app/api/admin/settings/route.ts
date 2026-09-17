@@ -8,7 +8,7 @@ import { requireAdmin } from '@/lib/auth-guard'
 import { checkIsStoreOpen } from '@/app/api/settings/route'
 
 export async function PATCH(request: NextRequest) {
-  const adminResult = await requireAdmin()
+  const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
   const session = adminResult.session
 

@@ -246,6 +246,11 @@ export function buildOrderPayload(
     contactPhone?: string
     packagingOption?: 'NORMAL' | 'PREMIUM'
     packagingFee?: number
+    userId?: string
+    userPhone?: string
+    isOrderForSomeone?: boolean
+    receiverName?: string
+    receiverPhone?: string
   }
 ) {
   return {
@@ -257,8 +262,13 @@ export function buildOrderPayload(
     scheduledSlot: ctx.scheduledSlot,
     shopName: DEFAULT_SHOP_NAME,
     shopPhone: ctx.contactPhone || DEFAULT_CONTACT_PHONE,
-    phone: ctx.customerPhone || undefined,
+    userId: ctx.userId,
+    userPhone: ctx.userPhone,
+    phone: ctx.userPhone || ctx.customerPhone || undefined,
     customerPhone: ctx.customerPhone || undefined,
+    receiverName: ctx.receiverName,
+    receiverPhone: ctx.receiverPhone,
+    isOrderForSomeone: ctx.isOrderForSomeone,
     couponCode: ctx.appliedCouponCode,
     packagingOption: ctx.packagingOption || 'NORMAL',
     packagingFee: ctx.packagingFee || 0,

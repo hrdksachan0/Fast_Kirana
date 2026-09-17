@@ -179,6 +179,71 @@ export function ProductEditModal({
     return tagsLower.includes('veg') && !tagsLower.includes('nonveg') && !tagsLower.includes('non-veg')
   }, [productEditForm.tags])
 
+  // Add-on / Customization Groups state (for Restaurant Dishes)
+  const [addonGroups, setAddonGroups] = useState<
+    { title: string; required: boolean; maxSelect: number; items: { name: string; price: string }[] }[]
+  >([])
+
+  useEffect(() => {
+    if (editingProduct?.addons) {
+      let raw = editingProduct.addons
+      if (typeof raw === 'string') {
+        try {
+          raw = JSON.parse(raw)
+        } catch {
+          raw = []
+        }
+      }
+      if (Array.isArray(raw)) {
+        setAddonGroups(
+          raw.map((g: any) => ({
+            title: g.title || '',
+            required: g.required === true,
+            maxSelect: Number(g.maxSelect) || 5,
+            items: Array.isArray(g.items)
+              ? g.items.map((i: any) => ({
+                  name: String(i.name || ''),
+                  price: String(i.price ?? 0),
+                }))
+              : [],
+          }))
+        )
+        return
+      }
+    }
+    setAddonGroups([])
+  }, [editingProduct])
+
+  const handleSaveWithAddons = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (editingProduct?.id && isRestaurantMode) {
+      const cleanAddons = addonGroups
+        .filter((g) => g.title.trim() && g.items.length > 0)
+        .map((g) => ({
+          title: g.title.trim(),
+          required: g.required,
+          maxSelect: g.maxSelect,
+          items: g.items
+            .filter((i) => i.name.trim())
+            .map((i) => ({
+              name: i.name.trim(),
+              price: parseFloat(i.price) || 0,
+            })),
+        }))
+
+      try {
+        await fetch(`/api/products/${editingProduct.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ addons: cleanAddons }),
+        })
+      } catch (err) {
+        console.error('Failed to sync addons:', err)
+      }
+    }
+    return saveProductChanges(e)
+  }
+
   const handleToggleVeg = (veg: boolean) => {
     let cleanTags = productEditForm.tags
       .split(',')
@@ -211,7 +276,7 @@ export function ProductEditModal({
         </div>
 
         {/* Modal Body / Form */}
-        <form onSubmit={saveProductChanges} className="flex-1 overflow-y-auto p-5 space-y-5">
+        <form onSubmit={handleSaveWithAddons} className="flex-1 overflow-y-auto p-5 space-y-5">
           {/* Card 1: Store / Outlet Assignment */}
           <div className="p-3.5 rounded-xl border border-primary/20 bg-primary/5 space-y-2">
             <div>
@@ -1044,6 +1109,197 @@ export function ProductEditModal({
               </div>
             )}
           </div>
+
+          {/* Card 4B: Customization Groups & Add-ons (Restaurant / Food Products Only) */}
+          {isRestaurantMode && (
+            <div className="p-4 rounded-xl border border-amber-500/30 bg-card space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h5 className="text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>✨</span> Customization Groups & Add-ons (Extras)
+                  </h5>
+                  <p className="text-[10px] text-text-muted mt-0.5">
+                    Extra Dahi, Extra Sambhar, Extra Chach, Toppings, etc. Customer can select these while ordering.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddonGroups([
+                      ...addonGroups,
+                      {
+                        title: 'Extra Sides',
+                        required: false,
+                        maxSelect: 5,
+                        items: [{ name: '', price: '0' }],
+                      },
+                    ])
+                  }}
+                  className="px-2.5 py-1 text-[11px] font-black bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-lg transition-colors cursor-pointer"
+                >
+                  + Add Group
+                </button>
+              </div>
+
+              {addonGroups.length === 0 ? (
+                <div className="p-3 text-center border border-dashed border-border rounded-xl text-[11px] text-text-muted">
+                  No addon groups configured yet. Click "+ Add Group" to add extra options (e.g. Extra Dahi, Extra Sambhar, Extra Roti).
+                </div>
+              ) : (
+                <div className="space-y-3 pt-1">
+                  {addonGroups.map((group, gIdx) => (
+                    <div
+                      key={gIdx}
+                      className="p-3 rounded-xl border border-border/80 bg-muted/10 space-y-2.5 shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 tracking-wider">
+                          Group #{gIdx + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setAddonGroups(addonGroups.filter((_, i) => i !== gIdx))}
+                          className="text-[10px] text-rose-500 hover:text-rose-600 font-extrabold cursor-pointer"
+                        >
+                          Remove Group ✕
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div>
+                          <label className="text-[9px] font-bold text-text-muted block mb-0.5">
+                            Group Title *
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Extra Sides, Add Beverages"
+                            value={group.title}
+                            onChange={(e) => {
+                              const updated = [...addonGroups]
+                              updated[gIdx] = { ...updated[gIdx], title: e.target.value }
+                              setAddonGroups(updated)
+                            }}
+                            className="w-full px-2.5 py-1.5 text-xs font-bold rounded-lg border bg-background focus:outline-none focus:border-amber-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[9px] font-bold text-text-muted block mb-0.5">
+                            Max Items Customer Can Pick
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="20"
+                            value={group.maxSelect}
+                            onChange={(e) => {
+                              const updated = [...addonGroups]
+                              updated[gIdx] = {
+                                ...updated[gIdx],
+                                maxSelect: parseInt(e.target.value) || 1,
+                              }
+                              setAddonGroups(updated)
+                            }}
+                            className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border bg-background focus:outline-none focus:border-amber-500"
+                          />
+                        </div>
+
+                        <div className="flex items-center pt-4">
+                          <label className="flex items-center gap-1.5 text-xs font-bold text-text-primary cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={group.required}
+                              onChange={(e) => {
+                                const updated = [...addonGroups]
+                                updated[gIdx] = { ...updated[gIdx], required: e.target.checked }
+                                setAddonGroups(updated)
+                              }}
+                              className="h-4 w-4 text-amber-500 focus:ring-amber-500 border-border rounded cursor-pointer"
+                            />
+                            <span className="text-[11px]">Compulsory (Required)</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Items in this group */}
+                      <div className="space-y-1.5 pt-1 border-t border-border/50">
+                        <span className="text-[9px] font-black uppercase text-text-secondary tracking-wider block">
+                          Options / Items ({group.items.length})
+                        </span>
+
+                        {group.items.map((item, iIdx) => (
+                          <div key={iIdx} className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              placeholder="Item name (e.g. Extra Dahi)"
+                              value={item.name}
+                              onChange={(e) => {
+                                const updated = [...addonGroups]
+                                const items = [...updated[gIdx].items]
+                                items[iIdx] = { ...items[iIdx], name: e.target.value }
+                                updated[gIdx] = { ...updated[gIdx], items }
+                                setAddonGroups(updated)
+                              }}
+                              className="flex-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border bg-background focus:outline-none focus:border-amber-500"
+                            />
+
+                            <div className="w-28 flex items-center gap-1">
+                              <span className="text-xs font-bold text-text-muted">+₹</span>
+                              <input
+                                type="number"
+                                step="1"
+                                placeholder="Price"
+                                value={item.price}
+                                onChange={(e) => {
+                                  const updated = [...addonGroups]
+                                  const items = [...updated[gIdx].items]
+                                  items[iIdx] = { ...items[iIdx], price: e.target.value }
+                                  updated[gIdx] = { ...updated[gIdx], items }
+                                  setAddonGroups(updated)
+                                }}
+                                className="w-full px-2 py-1.5 text-xs font-bold text-emerald-600 rounded-lg border bg-background focus:outline-none focus:border-amber-500"
+                              />
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = [...addonGroups]
+                                updated[gIdx] = {
+                                  ...updated[gIdx],
+                                  items: updated[gIdx].items.filter((_, i) => i !== iIdx),
+                                }
+                                setAddonGroups(updated)
+                              }}
+                              className="p-1 text-text-muted hover:text-rose-500 text-xs font-bold cursor-pointer"
+                              title="Delete Item"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = [...addonGroups]
+                            updated[gIdx] = {
+                              ...updated[gIdx],
+                              items: [...updated[gIdx].items, { name: '', price: '10' }],
+                            }
+                            setAddonGroups(updated)
+                          }}
+                          className="text-[10px] font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer pt-1"
+                        >
+                          + Add Item (e.g. Extra Sambhar, Chach)
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Card 5: Search Keywords & Custom Tags */}
           <div className="p-4 rounded-xl border border-border bg-card space-y-2.5">

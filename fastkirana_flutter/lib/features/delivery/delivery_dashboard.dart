@@ -1,5 +1,4 @@
 import 'package:fastkirana_flutter/core/theme/design_system.dart';
-import '../../core/theme/responsive.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -13,14 +12,13 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:confetti/confetti.dart';
-import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:dio/dio.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../core/network/api_client.dart';
-import '../../core/config/app_config.dart';
 import '../../core/services/rider_location_service.dart';
 import '../../core/services/supabase_service.dart';
+import '../../core/services/offline_sync_service.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../../data/models/restaurant.dart';
 import '../../data/repositories/restaurant_repository.dart';
@@ -28,6 +26,9 @@ import '../../providers/auth_provider.dart';
 import '../../providers/store_settings_provider.dart';
 import 'widgets/connectivity_banner.dart';
 import 'widgets/delivery_header.dart';
+import 'widgets/rider_pickup_card.dart';
+import 'widgets/rider_active_delivery_card.dart';
+import '../common/widgets/battery_optimization_dialog.dart';
 import '../../core/services/notification_service.dart';
 
 class DeliveryDashboard extends ConsumerStatefulWidget {
@@ -44,40 +45,11 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
   late bool _isLoading = _cachedDeliveryOrders.isEmpty;
   bool _isRefreshing = false;
   int _activeTab = 0; // 0: Deliveries, 1: Cash Wallet, 2: History
+  int _pendingSyncCount = 0;
 
   List<Map<String, dynamic>> _orders = _cachedDeliveryOrders;
 
-  static const String _diskDeliveryOrdersKey = 'cached_delivery_orders_v2';
 
-  Future<void> _loadDiskDeliveryOrders() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_diskDeliveryOrdersKey);
-      if (raw != null && raw.isNotEmpty && mounted) {
-        final List<dynamic> decoded = jsonDecode(raw);
-        final list = decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        if (list.isNotEmpty && _orders.isEmpty) {
-          _cachedDeliveryOrders = list;
-          setState(() {
-            _orders = list;
-            _isLoading = false;
-          });
-        }
-      }
-    } catch (e) {
-      debugPrint('[DeliveryDashboard] disk load error: $e');
-    }
-  }
-
-  Future<void> _saveDiskDeliveryOrders(List<Map<String, dynamic>> orders) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final toSave = orders.take(50).toList();
-      await prefs.setString(_diskDeliveryOrdersKey, jsonEncode(toSave));
-    } catch (e) {
-      debugPrint('[DeliveryDashboard] disk save error: $e');
-    }
-  }
   Map<String, dynamic>? _walletInfo;
   Timer? _autoRefreshTimer;
   final int _refreshCountdown = 30;
@@ -120,6 +92,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
 
     _loadUserInfo();
+    _loadPersistedOfflineCache();
     _initConnectivityAndOfflineQueue();
     _hydrateRestaurants();
     _fetchOrders();
@@ -130,6 +103,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     // Immediately request GPS / Location permission as soon as Rider opens dashboard
     WidgetsBinding.instance.addPostFrameCallback((_) {
       RiderLocationService.requestPermissions();
+      BatteryOptimizationDialog.showIfNecessary(context);
     });
 
     // 30-second calm background refresh (without 1-second full-screen rebuilds)
@@ -153,45 +127,87 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     });
   }
 
-  Future<void> _flushOfflineQueue() async {
+  Future<void> _loadPersistedOfflineCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final queueJson = prefs.getString('offline_delivery_queue');
-      if (queueJson == null || queueJson.isEmpty) return;
+      final cachedJson = prefs.getString('cached_delivery_orders_json');
+      if (cachedJson != null && cachedJson.isNotEmpty) {
+        final List<dynamic> decoded = jsonDecode(cachedJson);
+        final list = decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        if (mounted && _orders.isEmpty && list.isNotEmpty) {
+          setState(() {
+            _orders = list;
+            _isLoading = false;
+          });
+        }
+      }
+      final pending = await OfflineSyncService.getPendingCount(OfflineSyncService.queueDelivery);
+      if (mounted) {
+        setState(() => _pendingSyncCount = pending);
+      }
+      if (!_isDeviceOffline && pending > 0) {
+        _flushOfflineQueue();
+      }
+    } catch (e) {
+      debugPrint('[DeliveryDashboard] _loadPersistedOfflineCache error: $e');
+    }
+  }
 
-      final List<dynamic> queue = jsonDecode(queueJson);
-      if (queue.isEmpty) return;
+  Future<void> _savePersistedOrders(List<Map<String, dynamic>> orders) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final sanitized = orders.map((o) => Map<String, dynamic>.from(o)).toList();
+      await prefs.setString('cached_delivery_orders_json', jsonEncode(sanitized));
+      _cachedDeliveryOrders = orders;
+    } catch (e) {
+      debugPrint('[DeliveryDashboard] _savePersistedOrders error: $e');
+    }
+  }
+
+  Future<void> _flushOfflineQueue() async {
+    try {
+      final pendingBefore = await OfflineSyncService.getPendingCount(OfflineSyncService.queueDelivery);
+      if (pendingBefore == 0) return;
 
       final dio = ref.read(dioProvider);
-      int syncedCount = 0;
 
-      for (final item in queue) {
-        try {
-          final orderId = item['orderId']?.toString();
-          final newStatus = item['newStatus']?.toString();
-          final extra = item['extra'] is Map ? Map<String, dynamic>.from(item['extra']) : null;
-          if (orderId != null && newStatus != null) {
-            await dio.patch(
-              '/api/orders/$orderId',
-              data: {
-                'status': newStatus,
-                if (_currentUserId != null) 'deliveryUserId': _currentUserId,
-                if (newStatus == 'DELIVERED') 'paymentStatus': 'PAID',
-                if (extra != null) ...extra,
+      final syncedCount = await OfflineSyncService.flushQueue(
+        OfflineSyncService.queueDelivery,
+        (actionItem) async {
+          final payload = actionItem['payload'] is Map
+              ? Map<String, dynamic>.from(actionItem['payload'] as Map)
+              : <String, dynamic>{};
+          final orderId = payload['orderId']?.toString();
+          final newStatus = payload['newStatus']?.toString();
+          final extra = payload['extra'] is Map ? Map<String, dynamic>.from(payload['extra']) : null;
+          final userId = payload['userId']?.toString() ?? _currentUserId ?? 'delivery_1';
+
+          if (orderId == null || newStatus == null) return true;
+
+          final response = await dio.patch(
+            '/api/orders/$orderId',
+            data: {
+              'status': newStatus,
+              'deliveryUserId': userId,
+              if (newStatus == 'DELIVERED') 'paymentStatus': 'PAID',
+              if (extra != null) ...extra,
+            },
+            options: Options(
+              headers: {
+                'x-user-id': userId,
+                'x-user-role': 'DELIVERY',
               },
-              options: Options(
-                headers: {
-                  'x-user-id': _currentUserId ?? 'delivery_1',
-                  'x-user-role': 'DELIVERY',
-                },
-              ),
-            );
-            syncedCount++;
-          }
-        } catch (e, _) { LoggerService.error('DeliveryDashboard: silent catch', e); }
-      }
+            ),
+          );
 
-      await prefs.remove('offline_delivery_queue');
+          return response.statusCode == 200 || response.statusCode == 204;
+        },
+      );
+
+      final pendingAfter = await OfflineSyncService.getPendingCount(OfflineSyncService.queueDelivery);
+      if (mounted) {
+        setState(() => _pendingSyncCount = pendingAfter);
+      }
 
       if (syncedCount > 0 && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -203,8 +219,10 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
               children: [
                 const Icon(Icons.cloud_done_rounded, color: Colors.white, size: 20),
                 const SizedBox(width: 10),
-                Text('✅ $syncedCount offline action(s) synced to server!',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: Colors.white)),
+                Text(
+                  '✅ $syncedCount offline action(s) synced to server!',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: Colors.white),
+                ),
               ],
             ),
           ),
@@ -249,18 +267,21 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
   Future<void> _enqueueOfflineAction(String orderId, String newStatus, Map<String, dynamic>? extra) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final queueJson = prefs.getString('offline_delivery_queue');
-      final List<dynamic> queue = queueJson != null ? jsonDecode(queueJson) : [];
-      queue.add({
-        'orderId': orderId,
-        'newStatus': newStatus,
-        'extra': extra,
-        'timestamp': DateTime.now().toIso8601String(),
-      });
-      await prefs.setString('offline_delivery_queue', jsonEncode(queue));
+      await OfflineSyncService.enqueueAction(
+        queueName: OfflineSyncService.queueDelivery,
+        action: 'UPDATE_STATUS',
+        payload: {
+          'orderId': orderId,
+          'newStatus': newStatus,
+          'extra': extra,
+          'userId': _currentUserId,
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      );
 
+      final pending = await OfflineSyncService.getPendingCount(OfflineSyncService.queueDelivery);
       if (mounted) {
+        setState(() => _pendingSyncCount = pending);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: AppDesignSystem.warning,
@@ -271,8 +292,14 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                 const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 20),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text('Network offline! Action saved locally. Will auto-sync when online.',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white, fontSize: Responsive.scaledFontSize(context, 12))),
+                  child: Text(
+                    'Offline Mode: Action saved locally. Will auto-sync when online ($pending pending).',
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      fontSize: Responsive.scaledFontSize(context, 12),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -498,6 +525,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
             _isRefreshing = false;
           });
 
+          _savePersistedOrders(merged);
           _checkAndTriggerNewOrderAlert(merged);
           _manageGpsTrackingLifecycle(merged);
           _calculateWalletFromOrders(parsed); // wallet uses un-merged for accurate per-order COD total
@@ -555,6 +583,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
             _isRefreshing = false;
           });
 
+          _savePersistedOrders(merged);
           _checkAndTriggerNewOrderAlert(merged);
           _manageGpsTrackingLifecycle(merged);
           _calculateWalletFromOrders(parsed);
@@ -799,6 +828,21 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     setState(() => _updatingOrderId = orderId);
     HapticFeedback.mediumImpact();
 
+    // 1. Instant offline handling (0ms lag in elevator/basement)
+    if (_isDeviceOffline) {
+      setState(() {
+        for (final o in _orders) {
+          if (o['id'] == orderId || (o['subOrderIds'] is List && (o['subOrderIds'] as List).contains(orderId))) {
+            o['status'] = newStatus;
+          }
+        }
+      });
+      _savePersistedOrders(_orders);
+      await _enqueueOfflineAction(orderId, newStatus, extra);
+      if (mounted) setState(() => _updatingOrderId = null);
+      return;
+    }
+
     try {
       final dio = ref.read(dioProvider);
 
@@ -920,6 +964,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
             }
           }
         });
+        _savePersistedOrders(_orders);
       }
     } catch (e) {
       debugPrint('[DeliveryDashboard] Status update error: $e');
@@ -932,6 +977,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           }
         }
       });
+      _savePersistedOrders(_orders);
     } finally {
       if (mounted) setState(() => _updatingOrderId = null);
     }
@@ -1102,10 +1148,18 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           children: [
             Column(
               children: [
-                if (_isDeviceOffline)
-                  const SafeArea(
+                if (_isDeviceOffline || _pendingSyncCount > 0)
+                  SafeArea(
                     bottom: false,
-                    child: ConnectivityBanner(),
+                    child: ConnectivityBanner(
+                      isOffline: _isDeviceOffline,
+                      pendingCount: _pendingSyncCount,
+                      onRetry: () {
+                        if (!_isDeviceOffline) {
+                          _flushOfflineQueue();
+                        }
+                      },
+                    ),
                   ),
 
                 DeliveryHeader(
@@ -1125,7 +1179,13 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                     }
                   },
                   onToggleDarkMode: _toggleDarkMode,
-                  onRefresh: () => _fetchOrders(silent: true),
+                  onRefresh: () async {
+                    if (!_isDeviceOffline) {
+                      await _flushOfflineQueue();
+                    }
+                    await _fetchOrders(silent: true);
+                    await _fetchWallet();
+                  },
                   onLogout: () async {
                     final confirm = await showDialog<bool>(
                       context: context,
@@ -1217,9 +1277,16 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           const SizedBox(height: 12),
 
           if (activeDeliveries.isEmpty)
-            _buildEmptyOutForDeliveryCard()
+            const EmptyOutForDeliveryCard()
           else
-            ...activeDeliveries.map((o) => _buildActiveDeliveryCard(o)),
+            ...activeDeliveries.map((o) => RiderActiveDeliveryCard(
+                  key: ValueKey(o['id']),
+                  order: o,
+                  isUpdating: _updatingOrderId == o['id']?.toString(),
+                  onOpenNavigation: _openGoogleMapsNavigation,
+                  onShowDoorstepQr: _showDoorstepUpiQrModal,
+                  onShowConfirmation: _showDeliveryConfirmationModal,
+                )),
 
           const SizedBox(height: 22),
 
@@ -1272,1341 +1339,20 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           const SizedBox(height: 12),
 
           if (pendingPickups.isEmpty)
-            _buildEmptyPendingPickupCard()
+            const EmptyPendingPickupCard()
           else
-            ...pendingPickups.map((o) => _buildPickupCard(o)),
+            ...pendingPickups.map((o) => RiderPickupCard(
+                  key: ValueKey(o['id']),
+                  order: o,
+                  isUpdating: _updatingOrderId == o['id']?.toString(),
+                  onOpenNavigation: _openGoogleMapsNavigation,
+                  onUpdateStatus: _updateOrderStatus,
+                )),
         ],
       ),
     );
   }
 
-  Widget _buildEmptyOutForDeliveryCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 26, horizontal: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppDesignSystem.slate100, width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: AppDesignSystem.slate900.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 32))),
-          const SizedBox(height: 10),
-          Text(
-            'No orders out for delivery',
-            style: GoogleFonts.inter(
-              fontSize: Responsive.scaledFontSize(context, 14),
-              fontWeight: FontWeight.w900,
-              color: slateDark,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Accept new pickup orders from below to start delivering.',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              fontSize: Responsive.scaledFontSize(context, 11.5),
-              fontWeight: FontWeight.w500,
-              color: slateMuted,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyPendingPickupCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppDesignSystem.slate100, width: 1.2),
-      ),
-      child: Center(
-        child: Text(
-          'No pickup orders waiting at store right now.',
-          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted, fontWeight: FontWeight.w600),
-        ),
-      ),
-    );
-  }
-
-  /// Pickup Order Card (Matching Screenshot 1)
-  Widget _buildPickupCard(Map<String, dynamic> order) {
-    final orderId = order['id']?.toString() ?? '';
-    final orderNum = order['readableId'] ?? orderId.substring(0, math.min(8, orderId.length));
-    final isFood = (order['orderType'] == 'RESTAURANT') || (order['restaurantId'] != null) || orderNum.contains('-R');
-    final outlet = getOutletLocation(
-      restaurantId: order['restaurantId']?.toString(),
-      shopName: order['shopName']?.toString(),
-      orderType: order['orderType']?.toString(),
-      rawOrder: order,
-    );
-    final shopName = outlet.name;
-    final status = (order['status'] ?? 'CONFIRMED').toString().toUpperCase();
-    final customer = order['user'] is Map ? order['user'] : {'name': 'Customer', 'phone': null};
-    final address = order['address'] is Map ? order['address'] : null;
-    final total = (order['total'] as num?)?.toDouble() ?? 0.0;
-    final rawPayMethod = (order['paymentMethod'] ?? '').toString().toUpperCase().trim();
-    final rawPayStatus = (order['paymentStatus'] ?? '').toString().toUpperCase().trim();
-    final isPaid = rawPayStatus == 'PAID';
-    final isCod = rawPayMethod == 'COD' || rawPayMethod.isEmpty;
-    final items = (order['items'] as List<dynamic>?) ?? [];
-    final lat = (address?['lat'] as num?)?.toDouble() ?? AppConfig.darkstoreLat;
-    final lng = (address?['lng'] as num?)?.toDouble() ?? AppConfig.darkstoreLng;
-    final isUpdating = _updatingOrderId == orderId;
-
-    final customerName = (address?['name']?.toString().trim().isNotEmpty == true)
-        ? address!['name'].toString().trim()
-        : (customer['name']?.toString() ?? 'Customer');
-    final customerPhone = (address?['phone']?.toString().trim().isNotEmpty == true)
-        ? address!['phone'].toString().trim()
-        : (customer['phone']?.toString().trim() ?? '');
-    final avatarLetter = customerName.isNotEmpty ? customerName[0].toUpperCase() : 'C';
-
-    DateTime orderDate = DateTime.now();
-    if (order['createdAt'] != null) {
-      try {
-        String s = order['createdAt'].toString().trim();
-        if (!s.endsWith('Z') && !s.contains('+') && !RegExp(r'-\d{2}:\d{2}$').hasMatch(s)) {
-          s = '${s.replaceAll(' ', 'T')}Z';
-        }
-        orderDate = DateTime.parse(s).toLocal();
-      } catch (e, _) { LoggerService.error('DeliveryDashboard: silent catch', e); }
-    }
-    final orderTimeStr = DateFormat('hh:mm a').format(orderDate);
-
-    String deliverAddress = '';
-    if (address != null) {
-      if (address['formattedAddress'] != null && address['formattedAddress'].toString().trim().isNotEmpty) {
-        deliverAddress = address['formattedAddress'].toString().trim();
-      } else {
-        final parts = [
-          address['houseNo'],
-          address['street'],
-          address['area'],
-          address['landmark'],
-          address['city'],
-          address['pincode'],
-        ].where((p) => p != null && p.toString().trim().isNotEmpty && p.toString() != 'null')
-         .map((p) => p.toString().trim())
-         .toList();
-        deliverAddress = parts.isNotEmpty ? parts.join(', ') : '';
-      }
-    }
-    if (deliverAddress.isEmpty) deliverAddress = 'Ghatampur, Kanpur Nagar';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: isFood ? AppDesignSystem.rose100 : AppDesignSystem.teal100,
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppDesignSystem.slate900.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Top Colored Highlight Line
-          Container(
-            height: 3,
-            decoration: BoxDecoration(
-              color: isFood ? AppDesignSystem.rose500 : AppDesignSystem.emeraldBrand,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
-            ),
-          ),
-
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header: Order ID + FOOD pill | Status Pill
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          '#$orderNum',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 13),
-                            fontWeight: FontWeight.w900,
-                            color: slateDark,
-                          ),
-                        ),
-                        if (isFood) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppDesignSystem.statusCancelled,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              children: [
-                                Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
-                                const SizedBox(width: 3),
-                                Text(
-                                  'FOOD',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 9.5),
-                                    fontWeight: FontWeight.w900,
-                                    color: AppDesignSystem.red600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    // Status Pill
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
-                      decoration: BoxDecoration(
-                        color: status == 'PACKED'
-                            ? AppDesignSystem.green100
-                            : (status == 'PREPARING' ? AppDesignSystem.statusPending : AppDesignSystem.blue50),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: status == 'PACKED'
-                              ? AppDesignSystem.emerald200
-                              : (status == 'PREPARING' ? AppDesignSystem.yellow200 : AppDesignSystem.blue200),
-                        ),
-                      ),
-                      child: Text(
-                        status == 'PACKED' ? 'PACKED • READY' : status,
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 9.5),
-                          fontWeight: FontWeight.w900,
-                          color: status == 'PACKED'
-                              ? AppDesignSystem.green700
-                              : (status == 'PREPARING' ? AppDesignSystem.amber700 : AppDesignSystem.blue700),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: outlet.isRestaurant ? AppDesignSystem.violet50 : AppDesignSystem.green50,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: outlet.isRestaurant ? AppDesignSystem.violet200 : AppDesignSystem.green200,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Text(outlet.isRestaurant ? '🍽️' : '🏪', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              outlet.name,
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 11.5),
-                                fontWeight: FontWeight.w800,
-                                color: outlet.isRestaurant ? AppDesignSystem.statusShippedText : AppDesignSystem.green800,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              outlet.address,
-                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), color: AppDesignSystem.slate500),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      if (outlet.phone != null && outlet.phone!.isNotEmpty) ...[
-                        Bounceable(
-                          onTap: () {
-                            final clean = outlet.phone!.replaceAll(' ', '').trim();
-                            launchUrl(Uri.parse('tel:$clean'));
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            margin: const EdgeInsets.only(right: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: AppDesignSystem.violet200),
-                            ),
-                            child: const Icon(Icons.phone_rounded, size: 14, color: AppDesignSystem.violet600),
-                          ),
-                        ),
-                      ],
-                      Bounceable(
-                        onTap: () => _openGoogleMapsNavigation(outlet.lat, outlet.lng, outlet.name, address: outlet.address),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: outlet.isRestaurant ? AppDesignSystem.violet300 : AppDesignSystem.emerald200,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.directions_rounded, size: 12, color: outlet.isRestaurant ? AppDesignSystem.violet600 : AppDesignSystem.green700),
-                              const SizedBox(width: 3),
-                              Text(
-                                outlet.isRestaurant ? 'Go Outlet' : 'Go Store',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 10),
-                                  fontWeight: FontWeight.w800,
-                                  color: outlet.isRestaurant ? AppDesignSystem.violet600 : AppDesignSystem.green700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // Customer Info Box with Order Received Time
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppDesignSystem.slate50,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppDesignSystem.slate100),
-                  ),
-                  child: Row(
-                    children: [
-                      // Letter Avatar
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: const BoxDecoration(
-                          color: AppDesignSystem.info,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            avatarLetter,
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 15),
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    customerName,
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 13),
-                                      fontWeight: FontWeight.w800,
-                                      color: slateDark,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
-                                  decoration: BoxDecoration(
-                                    color: AppDesignSystem.blue50,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: AppDesignSystem.blue200, width: 0.8),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.access_time_rounded, size: 9, color: AppDesignSystem.blue600),
-                                      const SizedBox(width: 2.5),
-                                      Text(
-                                        orderTimeStr,
-                                        style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 9),
-                                          fontWeight: FontWeight.w800,
-                                          color: AppDesignSystem.blue700,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (customerPhone.isNotEmpty)
-                              Text(
-                                customerPhone.startsWith('+') ? customerPhone : '+91$customerPhone',
-                                style: GoogleFonts.robotoMono(
-                                  fontSize: Responsive.scaledFontSize(context, 10.5),
-                                  fontWeight: FontWeight.w600,
-                                  color: slateMuted,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Action button: Direct Call (Google Maps is prominently available below)
-                      Bounceable(
-                        onTap: () {
-                          if (customerPhone.isNotEmpty) {
-                            launchUrl(Uri.parse('tel:$customerPhone'));
-                          }
-                        },
-                        child: Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: AppDesignSystem.blue50,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppDesignSystem.blue200, width: 0.8),
-                          ),
-                          child: const Center(
-                            child: Icon(Icons.phone_outlined, size: 18, color: AppDesignSystem.blue600),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // Pickup & Deliver Routes Box
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppDesignSystem.slate50,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppDesignSystem.success, shape: BoxShape.circle)),
-                          const SizedBox(width: 6),
-                          Text('PICKUP: ', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w800, color: slateMuted)),
-                          Expanded(
-                            child: Text(
-                              shopName,
-                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w800, color: slateDark),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppDesignSystem.info, shape: BoxShape.circle)),
-                          const SizedBox(width: 6),
-                          Text('DELIVER: ', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w800, color: slateMuted)),
-                          Expanded(
-                            child: Text(
-                              deliverAddress,
-                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w600, color: slateDark),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // 📍 1-Tap Turn-by-Turn Google Maps Navigation Banner
-                Bounceable(
-                  onTap: () => _openGoogleMapsNavigation(lat, lng, customerName, address: deliverAddress),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppDesignSystem.emerald700, AppDesignSystem.success],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppDesignSystem.success.withValues(alpha: 0.3),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.navigation_rounded, color: Colors.white, size: 16),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Navigate in Google Maps ➔',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 12.5),
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // Items List (Clean vertical list for delivery boy to check all products)
-                if (items.isNotEmpty) ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppDesignSystem.slate50,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppDesignSystem.slate100),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.shopping_bag_outlined, size: 14, color: AppDesignSystem.indigo700),
-                                const SizedBox(width: 5),
-                                Text(
-                                  'ITEMS TO PICK UP (${items.length})',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 10),
-                                    fontWeight: FontWeight.w900,
-                                    color: AppDesignSystem.indigo900,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppDesignSystem.indigo50,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                '${items.fold<int>(0, (sum, it) => sum + ((it['quantity'] as num?)?.toInt() ?? 1))} qty',
-                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w800, color: AppDesignSystem.indigo700),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        ...items.map((item) {
-                          final title = item['title'] ?? item['name'] ?? 'Item';
-                          final qty = item['quantity'] ?? 1;
-                          final price = (item['price'] as num?)?.toDouble();
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 3),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: AppDesignSystem.slate200),
-                                  ),
-                                  child: Text(
-                                    '${qty}x',
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 10.5),
-                                      fontWeight: FontWeight.w900,
-                                      color: slateDark,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    title,
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 11.5),
-                                      fontWeight: FontWeight.w700,
-                                      color: slateDark,
-                                    ),
-                                  ),
-                                ),
-                                if (price != null && price > 0)
-                                  Text(
-                                    '₹${(price * (qty is num ? qty : 1)).toInt()}',
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 11),
-                                      fontWeight: FontWeight.w800,
-                                      color: slateMuted,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-
-                const Divider(height: 1, color: AppDesignSystem.slate100),
-                const SizedBox(height: 10),
-
-                // Footer: Total Value | Action Button
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'TOTAL ORDER VALUE',
-                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 8.5), fontWeight: FontWeight.w800, color: slateMuted),
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Text(
-                                '₹${total.toInt()}',
-                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 17), fontWeight: FontWeight.w900, color: slateDark),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: isPaid
-                                      ? AppDesignSystem.green100
-                                      : (isCod ? AppDesignSystem.statusPending : AppDesignSystem.statusCancelled),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: isPaid
-                                        ? AppDesignSystem.emerald200
-                                        : (isCod ? AppDesignSystem.yellow200 : AppDesignSystem.red200),
-                                  ),
-                                ),
-                                child: Text(
-                                  isPaid
-                                      ? '✅ PAID'
-                                      : (isCod ? '💵 COD' : '⚠️ UNPAID (${rawPayMethod.isNotEmpty ? rawPayMethod : 'ONLINE'})'),
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 9),
-                                    fontWeight: FontWeight.w900,
-                                    color: isPaid
-                                        ? AppDesignSystem.green700
-                                        : (isCod ? AppDesignSystem.amber700 : AppDesignSystem.red600),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Text(isPaid ? '💳' : (isCod ? '🔥' : '⚠️'), style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
-                              const SizedBox(width: 3),
-                              Expanded(
-                                child: Text(
-                                  isPaid
-                                      ? 'Paid Online'
-                                      : (isCod ? 'Collect ₹${total.toInt()} Cash' : 'Collect ₹${total.toInt()} (Payment Pending)'),
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 9.5),
-                                    fontWeight: FontWeight.w800,
-                                    color: isPaid
-                                        ? AppDesignSystem.emerald600
-                                        : (isCod ? AppDesignSystem.amber600 : AppDesignSystem.red600),
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-
-                    // Right Button
-                    if (status == 'PREPARING' || status == 'CONFIRMED')
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                            decoration: BoxDecoration(
-                              color: AppDesignSystem.statusPending,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppDesignSystem.yellow200),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.access_time_rounded, size: 12, color: AppDesignSystem.amber600),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Preparing in Kitchen...',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 10.5),
-                                    fontWeight: FontWeight.w800,
-                                    color: AppDesignSystem.amber600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Bounceable(
-                            onTap: () => _updateOrderStatus(orderId, 'SHIPPED'),
-                            child: Text(
-                              'Food Ready? Pick Up',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 9.5),
-                                fontWeight: FontWeight.w800,
-                                color: AppDesignSystem.emerald600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    else
-                      Bounceable(
-                        onTap: isUpdating ? null : () => _updateOrderStatus(orderId, 'SHIPPED'),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: AppDesignSystem.indigo700,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppDesignSystem.indigo700.withValues(alpha: 0.35),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (isUpdating)
-                                const SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              else ...[
-                                const Icon(Icons.send_rounded, size: 14, color: Colors.white),
-                                const SizedBox(width: 5),
-                                Text(
-                                  'Pick Up Order ➔',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 12),
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActiveDeliveryCard(Map<String, dynamic> order) {
-    final orderId = order['id']?.toString() ?? '';
-    final orderNum = order['readableId'] ?? orderId.substring(0, math.min(8, orderId.length));
-    final isFood = (order['orderType'] == 'RESTAURANT') || (order['restaurantId'] != null) || orderNum.contains('-R');
-    final outlet = getOutletLocation(
-      restaurantId: order['restaurantId']?.toString(),
-      shopName: order['shopName']?.toString(),
-      orderType: order['orderType']?.toString(),
-      rawOrder: order,
-    );
-    final customer = order['user'] is Map ? order['user'] : {'name': 'Customer', 'phone': null};
-    final address = order['address'] is Map ? order['address'] : null;
-    final total = (order['total'] as num?)?.toDouble() ?? 0.0;
-    final rawPayMethod = (order['paymentMethod'] ?? '').toString().toUpperCase().trim();
-    final rawPayStatus = (order['paymentStatus'] ?? '').toString().toUpperCase().trim();
-    final isPaid = rawPayStatus == 'PAID';
-    final isCod = rawPayMethod == 'COD' || rawPayMethod.isEmpty;
-    final items = (order['items'] as List<dynamic>?) ?? [];
-    final lat = (address?['lat'] as num?)?.toDouble() ?? AppConfig.darkstoreLat;
-    final lng = (address?['lng'] as num?)?.toDouble() ?? AppConfig.darkstoreLng;
-    final isUpdating = _updatingOrderId == orderId;
-
-    final customerName = (address?['name']?.toString().trim().isNotEmpty == true)
-        ? address!['name'].toString().trim()
-        : (customer['name']?.toString() ?? 'Customer');
-    final customerPhone = (address?['phone']?.toString().trim().isNotEmpty == true)
-        ? address!['phone'].toString().trim()
-        : (customer['phone']?.toString().trim() ?? '');
-    final avatarLetter = customerName.isNotEmpty ? customerName[0].toUpperCase() : 'C';
-
-    DateTime orderDate = DateTime.now();
-    if (order['createdAt'] != null) {
-      try {
-        String s = order['createdAt'].toString().trim();
-        if (!s.endsWith('Z') && !s.contains('+') && !RegExp(r'-\d{2}:\d{2}$').hasMatch(s)) {
-          s = '${s.replaceAll(' ', 'T')}Z';
-        }
-        orderDate = DateTime.parse(s).toLocal();
-      } catch (e, _) { LoggerService.error('DeliveryDashboard: silent catch', e); }
-    }
-    final orderTimeStr = DateFormat('hh:mm a').format(orderDate);
-
-    String deliverAddress = '';
-    if (address != null) {
-      if (address['formattedAddress'] != null && address['formattedAddress'].toString().trim().isNotEmpty) {
-        deliverAddress = address['formattedAddress'].toString().trim();
-      } else {
-        final parts = [
-          address['houseNo'],
-          address['street'],
-          address['area'],
-          address['landmark'],
-          address['city'],
-          address['pincode'],
-        ].where((p) => p != null && p.toString().trim().isNotEmpty && p.toString() != 'null')
-         .map((p) => p.toString().trim())
-         .toList();
-        deliverAddress = parts.isNotEmpty ? parts.join(', ') : '';
-      }
-    }
-    if (deliverAddress.isEmpty) deliverAddress = 'Ghatampur, Kanpur Nagar';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppDesignSystem.emerald200, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: AppDesignSystem.success.withValues(alpha: 0.08),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Ambient Green Top Strip
-          Container(
-            height: 4,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(colors: [AppDesignSystem.success, AppDesignSystem.emerald600]),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppDesignSystem.green100,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'STOP #1 • ACTIVE DROP',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 9.5),
-                              fontWeight: FontWeight.w900,
-                              color: AppDesignSystem.green700,
-                            ),
-                          ),
-                        ),
-                        if (isFood) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppDesignSystem.violet50,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: AppDesignSystem.violet200, width: 0.8),
-                            ),
-                            child: Row(
-                              children: [
-                                Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 9.5))),
-                                const SizedBox(width: 3),
-                                Text(
-                                  outlet.name,
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 9.5),
-                                    fontWeight: FontWeight.w800,
-                                    color: AppDesignSystem.statusShippedText,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    Text(
-                      '#$orderNum',
-                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w900, color: slateDark),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-
-                // Customer details with Order Time & Call Action Button
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppDesignSystem.slate50,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppDesignSystem.slate100),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: const BoxDecoration(color: AppDesignSystem.info, shape: BoxShape.circle),
-                        child: Center(
-                          child: Text(avatarLetter,
-                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: Colors.white)),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    customerName,
-                                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: slateDark),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
-                                  decoration: BoxDecoration(
-                                    color: AppDesignSystem.blue50,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: AppDesignSystem.blue200, width: 0.8),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.access_time_rounded, size: 9, color: AppDesignSystem.blue600),
-                                      const SizedBox(width: 2.5),
-                                      Text(
-                                        orderTimeStr,
-                                        style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 9),
-                                          fontWeight: FontWeight.w800,
-                                          color: AppDesignSystem.blue700,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            if (customerPhone.isNotEmpty)
-                              Text(
-                                customerPhone.startsWith('+') ? customerPhone : '+91 $customerPhone',
-                                style: GoogleFonts.robotoMono(
-                                  fontSize: Responsive.scaledFontSize(context, 10.5),
-                                  fontWeight: FontWeight.w600,
-                                  color: slateMuted,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Call Button
-                      Bounceable(
-                        onTap: () {
-                          if (customerPhone.isNotEmpty) {
-                            final cleanPhone = customerPhone.replaceAll(' ', '').trim();
-                            launchUrl(Uri.parse('tel:$cleanPhone'));
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Customer phone number not available')),
-                            );
-                          }
-                        },
-                        child: Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: AppDesignSystem.blue50,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppDesignSystem.blue200, width: 0.8),
-                          ),
-                          child: const Center(
-                            child: Icon(Icons.phone_outlined, size: 18, color: AppDesignSystem.blue600),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // 📍 1-Tap Turn-by-Turn Google Maps Navigation Banner
-                Bounceable(
-                  onTap: () => _openGoogleMapsNavigation(lat, lng, customerName, address: deliverAddress),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppDesignSystem.emerald700, AppDesignSystem.success],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppDesignSystem.success.withValues(alpha: 0.3),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.navigation_rounded, color: Colors.white, size: 16),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Navigate in Google Maps ➔',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 12.5),
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Delivery Address Row
-                if (deliverAddress.isNotEmpty)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppDesignSystem.statusCancelled,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppDesignSystem.red200),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.location_on_rounded, size: 14, color: AppDesignSystem.red600),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            deliverAddress,
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 11),
-                              fontWeight: FontWeight.w600,
-                              color: AppDesignSystem.statusCancelledText,
-                              height: 1.3,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                const SizedBox(height: 10),
-
-                // Items List (Clean vertical list for delivery boy to check all products)
-                if (items.isNotEmpty) ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppDesignSystem.slate50,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppDesignSystem.slate100),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.shopping_bag_outlined, size: 14, color: AppDesignSystem.emerald600),
-                                const SizedBox(width: 5),
-                                Text(
-                                  'ITEMS IN THIS DROP (${items.length})',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 10),
-                                    fontWeight: FontWeight.w900,
-                                    color: AppDesignSystem.statusDeliveredText,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppDesignSystem.green100,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                '${items.fold<int>(0, (sum, it) => sum + ((it['quantity'] as num?)?.toInt() ?? 1))} qty',
-                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w800, color: AppDesignSystem.green700),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        ...items.map((item) {
-                          final title = item['title'] ?? item['name'] ?? 'Item';
-                          final qty = item['quantity'] ?? 1;
-                          final price = (item['price'] as num?)?.toDouble();
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 3),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: AppDesignSystem.slate200),
-                                  ),
-                                  child: Text(
-                                    '${qty}x',
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 10.5),
-                                      fontWeight: FontWeight.w900,
-                                      color: slateDark,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    title,
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 11.5),
-                                      fontWeight: FontWeight.w700,
-                                      color: slateDark,
-                                    ),
-                                  ),
-                                ),
-                                if (price != null && price > 0)
-                                  Text(
-                                    '₹${(price * (qty is num ? qty : 1)).toInt()}',
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 11),
-                                      fontWeight: FontWeight.w800,
-                                      color: slateMuted,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-
-                // Payment Status Highlight Strip (Crystal Clear for Rider)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isPaid
-                        ? AppDesignSystem.green100
-                        : (isCod ? AppDesignSystem.statusPending : AppDesignSystem.statusCancelled),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isPaid
-                          ? AppDesignSystem.emerald200
-                          : (isCod ? AppDesignSystem.yellow200 : AppDesignSystem.red200),
-                      width: 1.2,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Text(isPaid ? '💳' : (isCod ? '💵' : '⚠️'), style: const TextStyle(fontSize: 15)),
-                          const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isPaid
-                                    ? 'PAID ONLINE (PREPAID)'
-                                    : (isCod ? 'CASH ON DELIVERY' : 'PAYMENT PENDING / UNPAID (${rawPayMethod.isNotEmpty ? rawPayMethod : 'ONLINE'})'),
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 10),
-                                  fontWeight: FontWeight.w900,
-                                  color: isPaid
-                                      ? AppDesignSystem.statusDeliveredText
-                                      : (isCod ? const Color(0xFFD97706) : AppDesignSystem.red600),
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
-                              Text(
-                                isPaid
-                                    ? '₹0 to collect • Payment already done'
-                                    : (isCod
-                                        ? 'Collect ₹${total.toInt()} cash from customer'
-                                        : '⚠️ Payment NOT received! Collect ₹${total.toInt()} via QR or Cash'),
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 11),
-                                  fontWeight: FontWeight.w700,
-                                  color: isPaid
-                                      ? AppDesignSystem.statusDeliveredText
-                                      : (isCod ? const Color(0xFF78350F) : AppDesignSystem.red700),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      Text(
-                        '₹${total.toInt()}',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 17),
-                          fontWeight: FontWeight.w900,
-                          color: isPaid
-                              ? AppDesignSystem.statusDeliveredText
-                              : (isCod ? const Color(0xFF78350F) : AppDesignSystem.red700),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Action Buttons: Doorstep UPI QR + Delivered
-                Row(
-                  children: [
-                    if (!isPaid) ...[
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => _showDoorstepUpiQrModal(order),
-                          icon: const Icon(Icons.qr_code_rounded, size: 16, color: AppDesignSystem.blue600),
-                          label: Text('Doorstep QR',
-                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: AppDesignSystem.blue600)),
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: AppDesignSystem.blue300),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            padding: const EdgeInsets.symmetric(vertical: 11),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: isUpdating ? null : () => _showDeliveryConfirmationModal(order, lat, lng),
-                        icon: isUpdating
-                            ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Icon(Icons.check_circle_rounded, size: 16, color: Colors.white),
-                        label: Text(
-                          !isPaid ? 'Collect ₹${total.toInt()} & Deliver' : 'Mark Delivered',
-                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: Colors.white),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppDesignSystem.success,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(vertical: 11),
-                          elevation: 0,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Tab 1: Cash Wallet (Matching Screenshot 2)
   Widget _buildWalletTab() {
     final wallet = _walletInfo?['wallet'] ?? {};
     final cashInHand = (wallet['cashInHand'] as num?)?.toDouble() ?? 0.0;

@@ -186,6 +186,11 @@ export function useCheckoutPayment({
         contactPhone,
         packagingOption,
         packagingFee,
+        userId: session?.user?.id || undefined,
+        userPhone: (session?.user as any)?.phone || undefined,
+        isOrderForSomeone: Boolean(orderForSomeone),
+        receiverName: orderForSomeone ? recipientName.trim() : undefined,
+        receiverPhone: orderForSomeone ? recipientPhone.replace(/\D/g, '') : undefined,
       })
 
       const res = await fetch('/api/orders', {
@@ -260,6 +265,11 @@ export function useCheckoutPayment({
         contactPhone,
         packagingOption,
         packagingFee,
+        userId: session?.user?.id || undefined,
+        userPhone: (session?.user as any)?.phone || undefined,
+        isOrderForSomeone: Boolean(orderForSomeone),
+        receiverName: orderForSomeone ? recipientName.trim() : undefined,
+        receiverPhone: orderForSomeone ? recipientPhone.replace(/\D/g, '') : undefined,
       })
 
       const orderRes = await fetch('/api/orders', {
@@ -457,6 +467,11 @@ export function useCheckoutPayment({
         contactPhone,
         packagingOption,
         packagingFee,
+        userId: session?.user?.id || undefined,
+        userPhone: (session?.user as any)?.phone || undefined,
+        isOrderForSomeone: Boolean(orderForSomeone),
+        receiverName: orderForSomeone ? recipientName.trim() : undefined,
+        receiverPhone: orderForSomeone ? recipientPhone.replace(/\D/g, '') : undefined,
       })
 
       const orderRes = await fetch('/api/orders', {

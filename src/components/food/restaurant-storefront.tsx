@@ -15,6 +15,7 @@ import { toast } from 'sonner'
 import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
 import { formatDate } from '@/lib/date-helpers'
 import { FloatingEmojis } from '@/components/shared/floating-emojis'
+import { RestaurantOffersCarousel } from '@/components/food/restaurant-offers-carousel'
 
 const getCafeSectionImage = (tag: string) => {
   const mapping: Record<string, string> = {
@@ -641,6 +642,14 @@ export function RestaurantStorefront({ restaurant, products, recommendedAddons =
 
       {activeSubTab === 'menu' ? (
         <>
+          {/* Swiggy/Zepto-style Restaurant Offers Carousel */}
+          <div className={cn("mx-auto px-4 pt-1", isCafe ? "max-w-4xl" : "max-w-3xl")}>
+            <RestaurantOffersCarousel
+              restaurantId={restaurant.id}
+              restaurantName={restaurant.name}
+            />
+          </div>
+
           {/* Veg Toggle + Info Bar */}
           <div className={cn("mx-auto px-4 py-2 flex items-center justify-between bg-zinc-100/60 dark:bg-zinc-900/60 rounded-2xl border border-zinc-200/50 dark:border-zinc-800/50 my-2", isCafe ? "max-w-4xl" : "max-w-3xl")}>
             <div className="flex items-center gap-2 min-w-0">

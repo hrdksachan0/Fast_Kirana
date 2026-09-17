@@ -50,6 +50,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     );
 
     _mainController.forward();
+    _requestAppPermissions();
 
     // Fast, responsive splash: 450ms minimum brand presentation while resolving auth in parallel
     final prefFuture = SharedPreferences.getInstance();

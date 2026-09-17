@@ -43,6 +43,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   double _couponDiscount = 0.0;
   bool _isApplyingCoupon = false;
 
+  Map<String, dynamic>? _freeGiftDetails;
+  String? _nudgeMessage;
+  bool _isBogoApplied = false;
+  String? _bogoBadgeText;
+  String? _lastValidatedCartHash;
+
   int _selectedTip = 0;
   final Set<String> _selectedInstructions = {};
 
@@ -59,31 +65,61 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     super.dispose();
   }
 
-  Future<void> _applyCoupon(String code, double subtotal) async {
-    HapticFeedback.mediumImpact();
+  Future<void> _applyCoupon(String code, double subtotal, {bool silent = false}) async {
+    if (!silent) HapticFeedback.mediumImpact();
     setState(() => _isApplyingCoupon = true);
 
     try {
       final repo = CartRepository(ref.read(dioProvider));
-      final result = await repo.applyCoupon(code, subtotal: subtotal);
+      final cart = ref.read(cartProvider).value;
+      final itemsPayload = cart?.items.map((i) => {
+        'id': i.productId,
+        'productId': i.productId,
+        'name': i.product.name,
+        'price': i.product.price,
+        'quantity': i.quantity,
+        'selectedVariant': i.selectedVariant,
+        'variant': i.selectedVariant,
+        'restaurantId': i.product.restaurantId,
+      }).toList();
+
+      final result = await repo.applyCoupon(code, subtotal: subtotal, items: itemsPayload);
       final couponData = result['coupon'] as Map<String, dynamic>?;
+      final freeGift = result['freeGiftDetails'] as Map<String, dynamic>?;
+      final nudge = result['nudgeMessage']?.toString();
       final discount = (couponData?['discountAmount'] as num?)?.toDouble() ?? 0.0;
+      final isBogo = result['bogo'] != null || couponData?['discountType'] == 'BOGO';
+      final badge = couponData?['badgeText']?.toString();
       final cleanCode = code.trim().toUpperCase();
 
       if (mounted) {
         setState(() {
           _appliedCoupon = cleanCode;
-          _couponDiscount = discount > 0 ? discount : 20.0;
+          _couponDiscount = discount;
+          _freeGiftDetails = freeGift;
+          _nudgeMessage = nudge;
+          _isBogoApplied = isBogo;
+          _bogoBadgeText = badge;
           _isApplyingCoupon = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: brandGreen,
-            content: Text('🎉 Coupon "$cleanCode" applied! You saved ₹${_couponDiscount.toInt()}'),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
+
+        if (!silent) {
+          final successMsg = isBogo
+              ? (freeGift != null
+                  ? '🎉 Free BOGO gift added to cart! Saved ₹${(freeGift['originalPrice'] as num?)?.toInt() ?? 0}'
+                  : '🎉 BOGO coupon applied! ${nudge ?? ''}')
+              : '🎉 Coupon "$cleanCode" applied! You saved ₹${_couponDiscount.toInt()}';
+
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: isBogo ? const Color(0xFFEA580C) : brandGreen,
+              content: Text(successMsg),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
+        }
       }
     } catch (e) {
       final cleanCode = code.trim().toUpperCase();
@@ -93,28 +129,35 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           setState(() {
             _appliedCoupon = cleanCode;
             _couponDiscount = discount;
+            _freeGiftDetails = null;
+            _nudgeMessage = null;
+            _isBogoApplied = false;
             _isApplyingCoupon = false;
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: brandGreen,
-              content: Text('🎉 Coupon "$cleanCode" applied! You saved ₹${discount.toInt()}'),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          );
+          if (!silent) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: brandGreen,
+                content: Text('🎉 Coupon "$cleanCode" applied! You saved ₹${discount.toInt()}'),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            );
+          }
         }
       } else {
         if (mounted) {
           setState(() => _isApplyingCoupon = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: primaryRed,
-              content: Text(e is ApiException ? e.message : 'Invalid coupon code. Try RESTAURANT50 or FIRST5'),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          );
+          if (!silent) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: primaryRed,
+                content: Text(e is ApiException ? e.message : 'Invalid coupon code. Try RESTAURANT50 or FIRST5'),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            );
+          }
         }
       }
     }
@@ -125,6 +168,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     setState(() {
       _appliedCoupon = null;
       _couponDiscount = 0.0;
+      _freeGiftDetails = null;
+      _nudgeMessage = null;
+      _isBogoApplied = false;
+      _bogoBadgeText = null;
       _couponController.clear();
     });
   }
@@ -375,9 +422,25 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     const packagingFee = 5.0;
     const packagingLabel = 'Standard Packaging';
     final itemSavings = cart.savings;
-    final totalSavings = itemSavings + _couponDiscount;
+    final freeGiftSavings = (_freeGiftDetails != null && _freeGiftDetails!['originalPrice'] != null)
+        ? ((_freeGiftDetails!['originalPrice'] as num).toDouble())
+        : 0.0;
+    final totalSavings = itemSavings + _couponDiscount + freeGiftSavings;
     final grandTotal = (subtotal + deliveryFee + packagingFee + _selectedTip - _couponDiscount).clamp(0.0, 999999.0);
     final totalItems = cart.totalItems;
+
+    // Silent re-validation if cart items change while a coupon is applied
+    final currentCartHash = cart.items.map((i) => '${i.productId}_${i.quantity}_${i.selectedVariant}').join('|');
+    if (_appliedCoupon != null && _lastValidatedCartHash != null && _lastValidatedCartHash != currentCartHash) {
+      _lastValidatedCartHash = currentCartHash;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _appliedCoupon != null) {
+          _applyCoupon(_appliedCoupon!, subtotal, silent: true);
+        }
+      });
+    } else {
+      _lastValidatedCartHash = currentCartHash;
+    }
 
     final groceryItems = cart.items.where((i) => !isRestaurantProduct(i.product)).toList();
     final restaurantItems = cart.items.where((i) => isRestaurantProduct(i.product)).toList();
@@ -387,6 +450,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       final outlet = getOutletName(item.product);
       restaurantGroups.putIfAbsent(outlet, () => []).add(item);
     }
+    final String? cartRestaurantId = restaurantItems.isNotEmpty
+        ? restaurantItems.first.product.restaurantId
+        : null;
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -466,6 +532,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   ref: ref,
                 ),
 
+              // 1.5 BOGO Nudge Alert Banner
+              if (_nudgeMessage != null && _nudgeMessage!.isNotEmpty)
+                _buildBogoNudgeBanner(),
+
               // 2. Restaurant Items Section (Grouped by Outlet)
               ...restaurantGroups.entries.map((entry) {
                 final outletName = entry.key;
@@ -479,6 +549,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   ref: ref,
                 );
               }),
+
+              // 2.5 BOGO 100% Free Gift Card
+              if (_freeGiftDetails != null)
+                _buildBogoFreeGiftCard(_freeGiftDetails!),
+
               const SizedBox(height: 14),
 
               // 3. Frequently Bought Together Carousel (Web App Recommendation Engine)
@@ -546,7 +621,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               const SizedBox(height: 14),
 
               // 6. Apply Promo / Coupon Code Card (Ultra-Premium Zepto/Swiggy Voucher Card)
-              _buildCouponSection(subtotal),
+              _buildCouponSection(subtotal, restaurantId: cartRestaurantId),
               const SizedBox(height: 14),
 
               // 7. Bill Details Card
@@ -761,6 +836,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           const SizedBox(height: 10),
           _buildBillRow('Item Total (MRP)', '₹${(subtotal + itemSavings).toInt()}'),
           if (itemSavings > 0) _buildBillRow('Product Savings', '-₹${itemSavings.toInt()}', isGreen: true),
+          if (_freeGiftDetails != null)
+            _buildBillRow(
+              '🎁 ${_freeGiftDetails!['name']} (BOGO Gift)',
+              'FREE (-₹${((_freeGiftDetails!['originalPrice'] as num?)?.toDouble() ?? 0.0).toInt()})',
+              isGreen: true,
+            ),
           if (_couponDiscount > 0) _buildBillRow('Coupon Discount', '-₹${_couponDiscount.toInt()}', isGreen: true),
           _buildBillRow('Delivery Fee', deliveryFee == 0 ? 'FREE' : '₹${deliveryFee.toInt()}', isGreen: deliveryFee == 0),
           _buildBillRow(packagingLabel, packagingFee == 0 ? 'FREE' : '₹${packagingFee.toInt()}', isGreen: packagingFee == 0),
@@ -1930,7 +2011,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     );
   }
 
-  Widget _buildCouponSection(double subtotal) {
+  Widget _buildCouponSection(double subtotal, {String? restaurantId}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1980,7 +2061,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   HapticFeedback.lightImpact();
                   final selected = await Navigator.push<String>(
                     context,
-                    FadeSlideRoute(page: CouponsScreen(currentSubtotal: subtotal)),
+                    FadeSlideRoute(page: CouponsScreen(currentSubtotal: subtotal, restaurantId: restaurantId)),
                   );
                   if (selected != null && selected.isNotEmpty) {
                     _couponController.text = selected;
@@ -2012,23 +2093,26 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppDesignSystem.statusDelivered, AppDesignSystem.statusDelivered],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: _isBogoApplied ? const Color(0xFFFFF7ED) : AppDesignSystem.statusDelivered,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppDesignSystem.emerald300, width: 1.2),
+                border: Border.all(
+                  color: _isBogoApplied ? const Color(0xFFFDBA74) : AppDesignSystem.emerald300,
+                  width: 1.2,
+                ),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
-                      color: AppDesignSystem.success,
+                    decoration: BoxDecoration(
+                      color: _isBogoApplied ? const Color(0xFFEA580C) : AppDesignSystem.success,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.check_rounded, size: 14, color: Colors.white),
+                    child: Icon(
+                      _isBogoApplied ? Icons.local_fire_department_rounded : Icons.check_rounded,
+                      size: 14,
+                      color: Colors.white,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -2042,7 +2126,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 13),
                                 fontWeight: FontWeight.w900,
-                                color: AppDesignSystem.statusDeliveredText,
+                                color: _isBogoApplied ? const Color(0xFFC2410C) : AppDesignSystem.statusDeliveredText,
                                 letterSpacing: 0.5,
                               ),
                             ),
@@ -2050,11 +2134,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                               decoration: BoxDecoration(
-                                color: AppDesignSystem.emerald700,
+                                color: _isBogoApplied ? const Color(0xFFEA580C) : AppDesignSystem.emerald700,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                'APPLIED',
+                                _isBogoApplied ? 'BOGO DEAL' : 'APPLIED',
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 8.5),
                                   fontWeight: FontWeight.w900,
@@ -2066,11 +2150,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'You saved ₹${_couponDiscount.toInt()} with this coupon!',
+                          _freeGiftDetails != null
+                              ? '🎁 Free "${_freeGiftDetails!['name']}" added to your cart!'
+                              : (_nudgeMessage ?? (_couponDiscount > 0 ? 'You saved ₹${_couponDiscount.toInt()} with this coupon!' : 'Offer active on qualifying items')),
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 11),
-                            fontWeight: FontWeight.w600,
-                            color: AppDesignSystem.emerald700,
+                            fontWeight: FontWeight.w700,
+                            color: _isBogoApplied ? const Color(0xFFC2410C) : AppDesignSystem.emerald700,
                           ),
                         ),
                       ],
@@ -2196,6 +2282,185 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 ],
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBogoNudgeBanner() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFDBA74), width: 1.2),
+      ),
+      child: Row(
+        children: [
+          const Text('🎁', style: TextStyle(fontSize: 18)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _nudgeMessage!,
+              style: GoogleFonts.inter(
+                fontSize: Responsive.scaledFontSize(context, 12),
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFFC2410C),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBogoFreeGiftCard(Map<String, dynamic> gift) {
+    final name = gift['name']?.toString() ?? 'Free Item';
+    final variant = gift['variant']?.toString();
+    final originalPrice = (gift['originalPrice'] as num?)?.toDouble() ?? 0.0;
+    final message = gift['message']?.toString() ?? '100% Free with BOGO Promotion';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFF86EFAC), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF16A34A).withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF10B981), Color(0xFF059669)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF059669).withValues(alpha: 0.3),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Center(
+              child: Text('🎁', style: TextStyle(fontSize: 22)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF16A34A),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '100% FREE GIFT',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 9),
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    if (variant != null && variant.isNotEmpty) ...[
+                      const SizedBox(width: 5),
+                      Text(
+                        '• $variant',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF15803D),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  name,
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 13),
+                    fontWeight: FontWeight.w900,
+                    color: AppDesignSystem.slate900,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  message,
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 10.5),
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF15803D),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (originalPrice > 0)
+                Text(
+                  '₹${originalPrice.toInt()}',
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 11),
+                    fontWeight: FontWeight.w600,
+                    color: AppDesignSystem.slate400,
+                    decoration: TextDecoration.lineThrough,
+                  ),
+                ),
+              Text(
+                'FREE',
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 14),
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF16A34A),
+                  letterSpacing: 0.2,
+                ),
+              ),
+              if (originalPrice > 0)
+                Container(
+                  margin: const EdgeInsets.only(top: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'Saved ₹${originalPrice.toInt()}!',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 9),
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF15803D),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );

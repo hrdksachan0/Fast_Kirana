@@ -211,6 +211,19 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
     return Math.max(0, Math.round(((resolvedMrp - resolvedPrice) / resolvedMrp) * 100))
   }, [resolvedMrp, resolvedPrice])
 
+  const restaurantOffer = (product as any).restaurant?.discountOffer || (product as any).restaurant?.discountBadge
+  const bogoOfferText = useMemo(() => {
+    if ((product as any).bogoBadge) return (product as any).bogoBadge
+    if (!restaurantOffer) return null
+    const up = String(restaurantOffer).toUpperCase()
+    if (up.includes('BOGO') || up.includes('BUY 1') || up.includes('BUY LARGE') || up.includes('CHEAPEST')) {
+      if (up.includes('BUY LARGE')) return 'BUY 1 GET 1'
+      if (up.includes('CHEAPEST')) return 'BUY 2 GET 1'
+      return 'BOGO DEAL'
+    }
+    return null
+  }, [product, restaurantOffer])
+
   const handleAdd = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -311,6 +324,18 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
             isCompact ? "text-[7.5px]" : "text-[8px] min-[375px]:text-[8.5px]"
           )}>
             {resolvedDiscount}% OFF
+          </div>
+        )}
+
+        {/* BOGO Tag */}
+        {bogoOfferText && (
+          <div className={cn(
+            "absolute left-1.5 z-10 rounded-md bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 px-1.5 py-0.5 font-black text-white shadow-[0_2px_6px_rgba(245,158,11,0.4)] tracking-wider whitespace-nowrap pointer-events-none select-none flex items-center gap-0.5",
+            resolvedDiscount > 0 ? "top-7" : "top-1.5",
+            isCompact ? "text-[7.5px]" : "text-[8px] min-[375px]:text-[8.5px]"
+          )}>
+            <span>🔥</span>
+            <span>{bogoOfferText}</span>
           </div>
         )}
 
