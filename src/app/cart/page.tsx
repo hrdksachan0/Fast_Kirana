@@ -81,46 +81,116 @@ export default function CartPage() {
   const mrpTotal = getMrpTotal()
   const itemDiscount = getSavings()
 
-  // Auto-validate coupon on mount if already applied
+  const formatItemsForCoupon = (cartItems: any[]) => {
+    return cartItems.map((i) => {
+      const p = i.product || {}
+      return {
+        id: p.id || i.productId || i.id,
+        productId: p.id || i.productId || i.id,
+        name: p.name || i.name,
+        price: Number(p.price) || Number(i.price) || 0,
+        categoryId: p.category?.id || p.categoryId || (i as any).categoryId,
+        restaurantId: p.restaurantId || (p.restaurant as any)?.id || (i as any).restaurantId || null,
+        menuSection: p.menuSection || (i as any).menuSection || null,
+        tags: p.tags || (i as any).tags || [],
+        quantity: i.quantity || 1,
+        selectedVariant: (p as any).selectedVariant || (i as any).selectedVariant || (p as any).unit || (i as any).unit || null,
+        variant: (p as any).variant || (i as any).variant || (p as any).unit || (i as any).unit || null,
+        unit: (p as any).unit || (i as any).unit || null,
+      }
+    })
+  }
+
+  // Auto-validate or auto-apply coupon when cart items or subtotal change
   useEffect(() => {
-    if (appliedCouponCode && items.length > 0 && !appliedCoupon) {
+    if (items.length === 0) {
+      setAppliedCoupon(null)
+      setAppliedCouponCode(null)
+      return
+    }
+
+    const payloadItems = formatItemsForCoupon(items)
+
+    // 1. If coupon code is already applied, re-validate against current items
+    if (appliedCouponCode) {
       fetch('/api/coupons/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           code: appliedCouponCode,
           subtotal,
-          items: items.map(i => ({
-            id: i.product.id,
-            name: i.product.name,
-            price: i.product.price,
-            categoryId: i.product.category?.id,
-            quantity: i.quantity,
-            selectedVariant: (i.product as any).selectedVariant || (i as any).selectedVariant,
-            variant: (i.product as any).variant || (i as any).variant,
-          }))
+          items: payloadItems,
+        }),
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.coupon) {
+            setAppliedCoupon({
+              code: data.coupon.code,
+              discountAmount: data.coupon.discountAmount,
+              discountType: data.coupon.discountType,
+              bogoType: data.coupon.bogoType,
+              badgeText: data.coupon.badgeText,
+              freeGiftDetails: data.coupon.freeGiftDetails,
+              nudgeMessage: data.coupon.nudgeMessage,
+            })
+          } else {
+            setAppliedCouponCode(null)
+            setAppliedCoupon(null)
+          }
         })
-      })
-      .then(res => {
-        if (res.ok) return res.json()
-        throw new Error('Invalid')
-      })
-      .then(data => {
-        setAppliedCoupon({
-          code: data.coupon.code,
-          discountAmount: data.coupon.discountAmount,
-          discountType: data.coupon.discountType,
-          bogoType: data.coupon.bogoType,
-          badgeText: data.coupon.badgeText,
-          freeGiftDetails: data.coupon.freeGiftDetails,
-          nudgeMessage: data.coupon.nudgeMessage,
+        .catch(() => {
+          setAppliedCouponCode(null)
+          setAppliedCoupon(null)
         })
-      })
-      .catch(() => {
-        setAppliedCouponCode(null)
-      })
+      return
     }
-  }, [appliedCouponCode, items.length])
+
+    // 2. If NO coupon code is applied, check for active auto-apply coupons!
+    const restId = payloadItems.find((it) => it.restaurantId)?.restaurantId || null
+    const url = restId ? `/api/coupons?restaurantId=${restId}` : '/api/coupons'
+
+    fetch(url)
+      .then((res) => (res.ok ? res.json() : []))
+      .then(async (coupons: any[]) => {
+        const autoCoupons = (coupons || []).filter((c: any) => c.autoApply && c.isActive)
+        for (const c of autoCoupons) {
+          try {
+            const valRes = await fetch('/api/coupons/validate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                code: c.code,
+                subtotal,
+                items: payloadItems,
+              }),
+            })
+            if (valRes.ok) {
+              const data = await valRes.json()
+              if (data.coupon && (data.coupon.discountAmount > 0 || data.coupon.nudgeMessage)) {
+                setAppliedCouponCode(data.coupon.code)
+                setAppliedCoupon({
+                  code: data.coupon.code,
+                  discountAmount: data.coupon.discountAmount,
+                  discountType: data.coupon.discountType,
+                  bogoType: data.coupon.bogoType,
+                  badgeText: data.coupon.badgeText,
+                  freeGiftDetails: data.coupon.freeGiftDetails,
+                  nudgeMessage: data.coupon.nudgeMessage,
+                })
+                if (data.coupon.discountAmount > 0) {
+                  toast.success(`⚡ Offer "${data.coupon.code}" auto-applied! You saved ₹${data.coupon.discountAmount.toFixed(0)}`, {
+                    icon: '🎉',
+                  })
+                }
+                break
+              }
+            }
+          } catch {}
+        }
+      })
+      .catch(() => {})
+  }, [appliedCouponCode, items.length, subtotal])
 
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -128,21 +198,14 @@ export default function CartPage() {
 
     setIsCouponLoading(true)
     try {
+      const payloadItems = formatItemsForCoupon(items)
       const res = await fetch('/api/coupons/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           code: couponCode,
           subtotal,
-          items: items.map(i => ({
-            id: i.product.id,
-            name: i.product.name,
-            price: i.product.price,
-            categoryId: i.product.category?.id,
-            quantity: i.quantity,
-            selectedVariant: (i.product as any).selectedVariant || (i as any).selectedVariant,
-            variant: (i.product as any).variant || (i as any).variant,
-          }))
+          items: payloadItems,
         }),
       })
 

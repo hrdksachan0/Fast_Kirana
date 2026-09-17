@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
         bogoDishId: true,
         autoApply: true,
         badgeText: true,
+        menuSection: true,
         value: true,
         minOrder: true,
         maxDiscount: true,

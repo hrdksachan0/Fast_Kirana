@@ -16,6 +16,9 @@ export interface CartProduct {
   tags?: string[]
   restaurantId?: string | null
   restaurantName?: string | null
+  menuSection?: string | null
+  selectedVariant?: string | null
+  variant?: string | null
   restaurant?: {
     id: string
     name: string

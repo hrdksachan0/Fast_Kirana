@@ -231,12 +231,28 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
     if (!restaurantOffer) return null
     const up = String(restaurantOffer).toUpperCase()
     if (up.includes('BOGO') || up.includes('BUY 1') || up.includes('BUY LARGE') || up.includes('CHEAPEST')) {
+      const pTags = (product.tags || []).map((t: string) => t.toLowerCase())
+      const pName = (product.name || '').toLowerCase()
+      const pSec = String((product as any).menuSection || '').toLowerCase()
+      const pSlug = (product.slug || '').toLowerCase()
+
+      // If offer specifies pizza or large pizza, only show on pizza / large-variant items
+      if (up.includes('PIZZA') || up.includes('BUY LARGE')) {
+        const isPizza = pTags.includes('pizza') || pSec.includes('pizza') || pName.includes('pizza') || pSlug.includes('pizza')
+        const hasLarge = variantsList.some(v => (v.name || '').toLowerCase().includes('large'))
+        if (!isPizza && !hasLarge) return null
+      }
+
+      // If offer specifies other specific sections
+      if (up.includes('BURGER') && !pTags.includes('burger') && !pSec.includes('burger') && !pName.includes('burger')) return null
+      if (up.includes('SANDWICH') && !pTags.includes('sandwich') && !pSec.includes('sandwich') && !pName.includes('sandwich')) return null
+
       if (up.includes('BUY LARGE')) return 'BUY 1 GET 1'
       if (up.includes('CHEAPEST')) return 'BUY 2 GET 1'
       return 'BOGO DEAL'
     }
     return null
-  }, [product, restaurantOffer])
+  }, [product, restaurantOffer, variantsList])
 
   const handleAdd = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
@@ -258,6 +274,8 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
         stock: resolvedStock,
         isAvailable: resolvedIsAvailable,
         category: product.category,
+        tags: product.tags,
+        menuSection: (product as any).menuSection || null,
         restaurantId: (product as any).restaurantId || (product as any).restaurant?.id,
         restaurantName: (product as any).restaurantName || (product as any).restaurant?.name,
         restaurant: (product as any).restaurant,

@@ -85,10 +85,34 @@ export async function POST(request: NextRequest) {
         select: { id: true, name: true, slug: true }
       })
 
-      const restaurantItems = items.filter((item: any) => {
-        const itemRestaurantId = item.restaurantId || item.product?.restaurantId
+      // Robust restaurant items matching with DB fallback if client omits restaurantId
+      let restaurantItems = items.filter((item: any) => {
+        const itemRestaurantId = item.restaurantId || item.product?.restaurantId || item.product?.restaurant?.id
         return itemRestaurantId === coupon.restaurantId
       })
+
+      if (restaurantItems.length === 0 && items.length > 0) {
+        const baseProductIds = items.map((i: any) => String(i.id || i.productId || '').split('_')[0]).filter(Boolean)
+        const dbMatching = await prisma.product.findMany({
+          where: { id: { in: baseProductIds }, restaurantId: coupon.restaurantId },
+          select: { id: true, restaurantId: true, tags: true }
+        })
+        const matchedIds = new Set(dbMatching.map(p => p.id))
+        restaurantItems = items.filter((i: any) => {
+          const baseId = String(i.id || i.productId || '').split('_')[0]
+          return matchedIds.has(baseId)
+        }).map((i: any) => {
+          const baseId = String(i.id || i.productId || '').split('_')[0]
+          const dbP = dbMatching.find(p => p.id === baseId)
+          return {
+            ...i,
+            restaurantId: coupon.restaurantId,
+            menuSection: i.menuSection || null,
+            tags: i.tags || dbP?.tags || []
+          }
+        })
+      }
+
       const restaurantSubtotal = restaurantItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)
 
       if (restaurantSubtotal === 0) {
@@ -107,26 +131,47 @@ export async function POST(request: NextRequest) {
       if (coupon.discountType === 'BOGO') {
         const maxFreeCap = coupon.maxFreeItems || 3
 
+        // If coupon has a restricted menu section (e.g. "pizza", "burger", "sandwich")
+        let bogoItems = restaurantItems
+        if (coupon.menuSection) {
+          const secFilter = coupon.menuSection.toLowerCase().replace(/[^a-z0-9]/g, '')
+          bogoItems = restaurantItems.filter((it: any) => {
+            const mSec = String(it.menuSection || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+            const tags = (it.tags || []).map((t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, ''))
+            const name = String(it.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+            return mSec.includes(secFilter) || tags.some((t: string) => t.includes(secFilter)) || name.includes(secFilter)
+          })
+        }
+
+        const getItemVariantText = (it: any) => {
+          const selVar = String(it.selectedVariant || '')
+          const varStr = String(it.variant || '')
+          const unitStr = String(it.unit || '')
+          const nameStr = String(it.name || '')
+          return `${selVar} ${varStr} ${unitStr} ${nameStr}`.toLowerCase()
+        }
+
         if (coupon.bogoType === 'BUY_LARGE_GET_SMALL') {
           const triggerVariant = (coupon.triggerVariant || 'large').toLowerCase().trim()
           const rewardVariant = (coupon.rewardVariant || 'small').toLowerCase().trim()
 
-          // Trigger Items (e.g. Large pizzas)
-          const triggerItems = restaurantItems.filter((it: any) => {
-            const v = (it.selectedVariant || it.variant || it.name || '').toLowerCase()
+          // Trigger Items (e.g. Any Large pizza from menu section)
+          const triggerItems = bogoItems.filter((it: any) => {
+            const v = getItemVariantText(it)
             return v.includes(triggerVariant)
           })
           const totalTriggerQty = triggerItems.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0)
 
           if (totalTriggerQty === 0) {
+            const secName = coupon.menuSection ? ` ${coupon.menuSection}` : ''
             return NextResponse.json({
-              error: `This offer requires adding a ${coupon.triggerVariant || 'Large'} item from ${restaurant?.name || 'this restaurant'}.`,
+              error: `This offer requires adding a ${coupon.triggerVariant || 'Large'}${secName} item from ${restaurant?.name || 'this restaurant'}.`,
             }, { status: 400 })
           }
 
-          // Reward Items (e.g. Small pizzas)
-          const rewardItems = restaurantItems.filter((it: any) => {
-            const v = (it.selectedVariant || it.variant || it.name || '').toLowerCase()
+          // Reward Items (e.g. Any Small pizza from menu section)
+          const rewardItems = bogoItems.filter((it: any) => {
+            const v = getItemVariantText(it)
             return v.includes(rewardVariant)
           })
 
@@ -134,7 +179,8 @@ export async function POST(request: NextRequest) {
 
           if (rewardItems.length === 0) {
             // Free item not yet in cart -> Nudge customer or trigger auto-drop
-            nudgeMessage = `Add any ${coupon.rewardVariant || 'Small'} item to get it 100% FREE! 🎁`
+            const secName = coupon.menuSection ? ` ${coupon.menuSection}` : ''
+            nudgeMessage = `Add any ${coupon.rewardVariant || 'Small'}${secName} to get it 100% FREE! 🎁`
             discountAmount = 0
             
             // Look up default free dish if configured
@@ -157,7 +203,7 @@ export async function POST(request: NextRequest) {
             }
           } else {
             // Reward items are in cart -> Sort cheapest first and discount 100%
-            const sortedRewards = [...rewardItems].sort((a: any, b: any) => a.price - b.price)
+            const sortedRewards = [...rewardItems].sort((a: any, b: any) => (a.price || 0) - (b.price || 0))
             let remainingFree = allowedFreeCount
             let bogoSavings = 0
 
@@ -175,7 +221,7 @@ export async function POST(request: NextRequest) {
           }
         } 
         else if (coupon.bogoType === 'CHEAPEST_FREE') {
-          const totalQty = restaurantItems.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0)
+          const totalQty = bogoItems.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0)
           if (totalQty < 2) {
             return NextResponse.json({
               error: `Add at least 2 dishes from ${restaurant?.name || 'this restaurant'} to get the cheapest one FREE!`,
@@ -269,6 +315,7 @@ export async function POST(request: NextRequest) {
         bogoType: coupon.bogoType,
         triggerVariant: coupon.triggerVariant,
         rewardVariant: coupon.rewardVariant,
+        menuSection: coupon.menuSection,
         badgeText: coupon.badgeText || (coupon.discountType === 'BOGO' ? 'BUY 1 GET 1 FREE' : undefined),
         value: coupon.value,
         discountAmount: Math.round(discountAmount * 100) / 100,

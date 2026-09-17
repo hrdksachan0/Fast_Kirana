@@ -652,26 +652,39 @@ export async function POST(request: NextRequest) {
               couponId = coupon.id
               if (coupon.discountType === 'BOGO') {
                 const maxFreeCap = coupon.maxFreeItems || 3
-                const rItems = items.filter((item: any) => {
+                let rItems = items.filter((item: any) => {
                   const dbProduct = dbProducts.find((p) => p.id === item.product.id.split('_')[0])
                   return dbProduct && dbProduct.restaurantId === coupon.restaurantId
                 })
+
+                if (coupon.menuSection) {
+                  const sec = coupon.menuSection.toLowerCase().replace(/[^a-z0-9]/g, '')
+                  rItems = rItems.filter((item: any) => {
+                    const dbProduct = dbProducts.find((p) => p.id === item.product.id.split('_')[0])
+                    const name = `${dbProduct?.name || ''} ${item.product?.name || ''}`.toLowerCase().replace(/[^a-z0-9]/g, '')
+                    const tags = (dbProduct?.tags || []).map((t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, ''))
+                    const mSec = String((dbProduct as any)?.menuSection || (item.product as any)?.menuSection || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+                    return name.includes(sec) || tags.some((t: string) => t.includes(sec)) || mSec.includes(sec)
+                  })
+                }
+
+                const getItemVarText = (it: any) => {
+                  const name = (it.product.name || '').toLowerCase()
+                  const varName = (it.selectedVariant || it.variant || it.unit || it.product.unit || it.product.id.split('_')[1] || '').toLowerCase()
+                  return `${name} ${varName}`
+                }
 
                 if (coupon.bogoType === 'BUY_LARGE_GET_SMALL') {
                   const triggerVariant = (coupon.triggerVariant || 'large').toLowerCase().trim()
                   const rewardVariant = (coupon.rewardVariant || 'small').toLowerCase().trim()
 
                   const triggerItems = rItems.filter((it: any) => {
-                    const name = (it.product.name || '').toLowerCase()
-                    const varName = (it.selectedVariant || it.variant || it.product.id.split('_')[1] || '').toLowerCase()
-                    return `${name} ${varName}`.includes(triggerVariant)
+                    return getItemVarText(it).includes(triggerVariant)
                   })
                   const totalTriggerQty = triggerItems.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0)
 
                   const rewardItems = rItems.filter((it: any) => {
-                    const name = (it.product.name || '').toLowerCase()
-                    const varName = (it.selectedVariant || it.variant || it.product.id.split('_')[1] || '').toLowerCase()
-                    return `${name} ${varName}`.includes(rewardVariant)
+                    return getItemVarText(it).includes(rewardVariant)
                   })
 
                   const allowedFree = Math.min(totalTriggerQty, maxFreeCap)

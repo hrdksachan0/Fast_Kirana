@@ -59,6 +59,9 @@ export interface Product {
   category?: Category | null
   restaurant?: Restaurant | null
   restaurantName?: string | null
+  menuSection?: string | null
+  selectedVariant?: string | null
+  variant?: string | null
   images?: ProductImage[]
   reviews?: Review[]
   isBestSeller?: boolean
@@ -157,8 +160,19 @@ export interface Review {
 export interface Coupon {
   id: string
   code: string
-  discountType: 'FLAT' | 'PERCENT'
+  discountType: 'FLAT' | 'PERCENT' | 'BOGO' | 'FREE_DELIVERY'
+  bogoType?: 'SAME_ITEM' | 'BUY_LARGE_GET_SMALL' | 'CHEAPEST_FREE' | null
+  triggerVariant?: string | null
+  rewardVariant?: string | null
+  defaultFreeDishId?: string | null
+  maxFreeItems?: number | null
+  bogoDishId?: string | null
+  autoApply?: boolean
+  badgeText?: string | null
+  menuSection?: string | null
   value: number
   minOrder: number
   maxDiscount: number | null
+  restaurantId?: string | null
+  categoryId?: string | null
 }

@@ -42,6 +42,7 @@ export async function POST(request: Request) {
       bogoDishId,
       autoApply = false,
       badgeText,
+      menuSection,
       value = 0, 
       minOrder = 0, 
       maxDiscount, 
@@ -99,6 +100,7 @@ export async function POST(request: Request) {
         "bogoDishId",
         "autoApply",
         "badgeText",
+        "menuSection",
         value, 
         "minOrder", 
         "maxDiscount", 
@@ -123,6 +125,7 @@ export async function POST(request: Request) {
         ${bogoDishId || null},
         ${autoApply === true},
         ${effectiveBadge},
+        ${menuSection || null},
         ${parseFloat(String(value)) || 0},
         ${parseFloat(String(minOrder)) || 0},
         ${maxDiscount ? parseFloat(String(maxDiscount)) : null},
@@ -192,6 +195,7 @@ export async function PATCH(request: Request) {
       bogoDishId,
       autoApply,
       badgeText,
+      menuSection,
       categoryId, 
       restaurantId,
       oncePerCustomer,
@@ -211,6 +215,7 @@ export async function PATCH(request: Request) {
     if (expiresAt !== undefined) updateData.expiresAt = expiresAt ? new Date(expiresAt) : null
     if (categoryId !== undefined) updateData.categoryId = categoryId ? categoryId : null
     if (restaurantId !== undefined) updateData.restaurantId = restaurantId ? restaurantId : null
+    if (menuSection !== undefined) updateData.menuSection = menuSection ? menuSection : null
     if (oncePerCustomer !== undefined) updateData.oncePerCustomer = oncePerCustomer
     if (triggerVariant !== undefined) updateData.triggerVariant = triggerVariant
     if (rewardVariant !== undefined) updateData.rewardVariant = rewardVariant

@@ -17,35 +17,143 @@ import { formatDate } from '@/lib/date-helpers'
 import { FloatingEmojis } from '@/components/shared/floating-emojis'
 import { RestaurantOffersCarousel } from '@/components/food/restaurant-offers-carousel'
 
-const getCafeSectionImage = (tag: string) => {
+const getCafeSectionImage = (rawTag: string) => {
+  if (!rawTag) return null
+  const tag = rawTag.toLowerCase().replace(/[^a-z0-9]/g, '')
   const mapping: Record<string, string> = {
-    'hot-beverage': '/cafe_brews_category.webp',
-    'hot-bite': '/cafe_snacks_category.webp',
+    'all': '/cafe_all_menu_category.webp',
+    'hotbeverage': '/cafe_brews_category.webp',
+    'hotbeverages': '/cafe_brews_category.webp',
+    'brews': '/cafe_brews_category.webp',
+    'brew': '/cafe_brews_category.webp',
+    'tea': '/cafe_brews_category.webp',
+    'chai': '/cafe_brews_category.webp',
+    'coffee': '/cafe_coffee_category.webp',
+    'hotbite': '/cafe_snacks_category.webp',
+    'hotbites': '/cafe_snacks_category.webp',
+    'sandwich': '/cafe_sandwiches_category.webp',
     'sandwiches': '/cafe_sandwiches_category.webp',
-    'frankie-rolls': '/cafe_rolls_category.webp',
+    'frankierolls': '/cafe_rolls_category.webp',
+    'frankieroll': '/cafe_rolls_category.webp',
+    'rolls': '/cafe_rolls_category.webp',
+    'roll': '/cafe_rolls_category.webp',
+    'wrap': '/cafe_rolls_category.webp',
+    'wraps': '/cafe_rolls_category.webp',
     'chinese': '/cafe_chinese_category.webp',
-    'italian-pasta': '/cafe_pasta_category.webp',
-    'bombay-bites': '/cafe_bombay_bites_category.webp',
-    'rice-dishes': '/cafe_rice_category.webp',
+    'noodles': '/cafe_chinese_category.webp',
+    'italianpasta': '/cafe_pasta_category.webp',
+    'pasta': '/cafe_pasta_category.webp',
+    'pastas': '/cafe_pasta_category.webp',
+    'bombaybites': '/cafe_bombay_bites_category.webp',
+    'ricedishes': '/cafe_rice_category.webp',
+    'rice': '/cafe_rice_category.webp',
     'shakes': '/cafe_shakes_category.webp',
+    'shake': '/cafe_shakes_category.webp',
+    'milkshake': '/cafe_shakes_category.webp',
+    'milkshakes': '/cafe_shakes_category.webp',
     'mocktails': '/cafe_mocktails_category.webp',
-    'cold-coffee': '/cafe_coffee_category.webp',
-    'south-indian': '/cafe_south_indian_category.webp',
+    'mocktail': '/cafe_mocktails_category.webp',
+    'mocktailsshakes': '/cafe_mocktails_category.webp',
+    'shakesmocktails': '/cafe_mocktails_category.webp',
+    'coldcoffee': '/cafe_coffee_category.webp',
+    'southindian': '/cafe_south_indian_category.webp',
+    'northindian': '/cafe_south_indian_category.webp',
     'chilled': '/cafe_cold_drinks_category.webp',
-    'chilled-drinks': '/cafe_cold_drinks_category.webp',
+    'chilleddrinks': '/cafe_cold_drinks_category.webp',
     'beverages': '/cafe_cold_drinks_category.webp',
+    'beverage': '/cafe_cold_drinks_category.webp',
     'drinks': '/cafe_cold_drinks_category.webp',
+    'drink': '/cafe_cold_drinks_category.webp',
     'bakery': '/bakery_biscuits_category.webp',
     'pizza': '/cafe_pizza_category.webp',
+    'pizzas': '/cafe_pizza_category.webp',
+    'calzone': '/cafe_pizza_category.webp',
+    'calzones': '/cafe_pizza_category.webp',
     'burgers': '/cafe_burgers_category.webp',
-    'garlic-bread': '/cafe_garlic_bread_category.webp',
+    'burger': '/cafe_burgers_category.webp',
+    'garlicbread': '/cafe_garlic_bread_category.webp',
+    'garlic': '/cafe_garlic_bread_category.webp',
+    'garlicbreads': '/cafe_garlic_bread_category.webp',
+    'maggie': '/cafe_snacks_category.webp',
+    'maggi': '/cafe_snacks_category.webp',
+    'snacks': '/cafe_snacks_category.webp',
+    'snack': '/cafe_snacks_category.webp',
+    'quickbites': '/cafe_snacks_category.webp',
     'desserts': '/ice_cream_category.webp',
-    'ice-cream': '/ice_cream_category.webp',
-    'ice-creams': '/ice_cream_category.webp',
-    'north-indian': '/cafe_south_indian_category.webp',
-    'biryani-rice': '/cafe_rice_category.webp',
+    'dessert': '/ice_cream_category.webp',
+    'icecream': '/ice_cream_category.webp',
+    'icecreams': '/ice_cream_category.webp',
+    'biryani': '/cafe_rice_category.webp',
+    'biryanirice': '/cafe_rice_category.webp',
   }
   return mapping[tag] || null
+}
+
+function CategoryTabItem({
+  cat,
+  isActive,
+  image,
+  onClick,
+}: {
+  cat: any
+  isActive: boolean
+  image: string | null
+  onClick: (e: React.MouseEvent) => void
+}) {
+  const [imgError, setImgError] = useState(false)
+  const displayImage = !imgError ? image : null
+
+  return (
+    <button
+      id={`mobile-category-tab-${cat.tag}`}
+      onClick={onClick}
+      className={cn(
+        "group flex flex-col items-center gap-1.5 cursor-pointer shrink-0 snap-start outline-none select-none active:scale-95 transition-all duration-200 py-1 px-1.5 rounded-2xl min-w-[72px] max-w-[76px]",
+        isActive ? "scale-105" : "opacity-80 hover:opacity-100"
+      )}
+    >
+      {/* Circle Image Thumbnail */}
+      <div 
+        className={cn(
+          "relative w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 transition-all duration-300 bg-white dark:bg-zinc-900 flex items-center justify-center p-0.5",
+          isActive 
+            ? "border-orange-500 shadow-md shadow-orange-500/25 ring-2 ring-orange-500/20" 
+            : "border-zinc-200 dark:border-zinc-800 hover:border-orange-400/50"
+        )}
+      >
+        <div className="relative w-full h-full rounded-full overflow-hidden bg-zinc-50 dark:bg-zinc-850 flex items-center justify-center">
+          {displayImage ? (
+            <Image
+              src={displayImage}
+              alt={cat.title}
+              fill
+              sizes="48px"
+              className="object-cover"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <span className="text-base select-none">{cat.emoji || '🍽️'}</span>
+          )}
+        </div>
+      </div>
+
+      {/* Category Title - Ample Space, No Overlap */}
+      <span 
+        className={cn(
+          "text-[10px] font-black tracking-tight text-center line-clamp-2 w-full leading-[1.15] min-h-[26px] flex items-center justify-center transition-colors px-0.5",
+          isActive ? "text-orange-600 dark:text-orange-400" : "text-zinc-700 dark:text-zinc-300"
+        )}
+      >
+        {cat.title}
+      </span>
+
+      {/* Active Underline Pip */}
+      <div className={cn(
+        "h-0.5 rounded-full transition-all duration-300",
+        isActive ? "w-4 bg-orange-500" : "w-0 bg-transparent"
+      )} />
+    </button>
+  )
 }
 
 interface RestaurantStorefrontProps {
@@ -267,12 +375,15 @@ export function RestaurantStorefront({ restaurant, products, recommendedAddons =
         if (tLower.includes('drink') || tLower.includes('beverage') || tLower.includes('cold') || tLower.includes('soda')) emoji = '🥤'
         else if (tLower.includes('ice') || tLower.includes('cream') || tLower.includes('dessert') || tLower.includes('sweet') || tLower.includes('kulfi')) emoji = '🍦'
 
+        const firstImg = grp.products.find((p: any) => p.imageUrl || p.image)?.imageUrl || grp.products[0]?.imageUrl || grp.products[0]?.image || null
+
         catsWithProducts.push({
           tag: `custom-${tag}`,
           title: grp.title,
           emoji,
           description: `Delicious ${grp.title} from our kitchen`,
           products: grp.products,
+          imageUrl: firstImg,
         })
       })
     }
@@ -578,61 +689,28 @@ export function RestaurantStorefront({ restaurant, products, recommendedAddons =
             >
               {categories.map((cat: any) => {
                 const isActive = activeCategoryTag === cat.tag
-                const image = cat.tag === 'all' ? null : (cat.image || getCafeSectionImage(cat.tag))
+                const fallbackProductImage =
+                  cat.products?.find((p: any) => p.imageUrl || p.image)?.imageUrl ||
+                  cat.products?.[0]?.imageUrl ||
+                  cat.products?.[0]?.image ||
+                  null
+
+                const image =
+                  cat.tag === 'all'
+                    ? (restaurant.logoUrl || '/cafe_all_menu_category.webp')
+                    : (cat.imageUrl || cat.image || getCafeSectionImage(cat.tag) || fallbackProductImage || null)
 
                 return (
-                  <button
+                  <CategoryTabItem
                     key={cat.tag}
-                    id={`mobile-category-tab-${cat.tag}`}
+                    cat={cat}
+                    isActive={isActive}
+                    image={image}
                     onClick={(e) => {
                       e.preventDefault()
                       scrollToSection(cat.tag)
                     }}
-                    className={cn(
-                      "group flex flex-col items-center gap-1.5 cursor-pointer shrink-0 snap-start outline-none select-none active:scale-95 transition-all duration-200 py-1 px-1.5 rounded-2xl min-w-[72px] max-w-[76px]",
-                      isActive ? "scale-105" : "opacity-80 hover:opacity-100"
-                    )}
-                  >
-                    {/* Circle Image Thumbnail */}
-                    <div 
-                      className={cn(
-                        "relative w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 transition-all duration-300 bg-white dark:bg-zinc-900 flex items-center justify-center p-0.5",
-                        isActive 
-                          ? "border-orange-500 shadow-md shadow-orange-500/25 ring-2 ring-orange-500/20" 
-                          : "border-zinc-200 dark:border-zinc-800 hover:border-orange-400/50"
-                      )}
-                    >
-                      <div className="relative w-full h-full rounded-full overflow-hidden bg-zinc-50 dark:bg-zinc-850 flex items-center justify-center">
-                        {image ? (
-                          <Image
-                            src={image}
-                            alt={cat.title}
-                            fill
-                            sizes="48px"
-                            className="object-cover"
-                          />
-                        ) : (
-                          <span className="text-base select-none">{cat.emoji || '🍽️'}</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Category Title - Ample Space, No Overlap */}
-                    <span 
-                      className={cn(
-                        "text-[10px] font-black tracking-tight text-center line-clamp-2 w-full leading-[1.15] min-h-[26px] flex items-center justify-center transition-colors px-0.5",
-                        isActive ? "text-orange-600 dark:text-orange-400" : "text-zinc-700 dark:text-zinc-300"
-                      )}
-                    >
-                      {cat.title}
-                    </span>
-
-                    {/* Active Underline Pip */}
-                    <div className={cn(
-                      "h-0.5 rounded-full transition-all duration-300",
-                      isActive ? "w-4 bg-orange-500" : "w-0 bg-transparent"
-                    )} />
-                  </button>
+                  />
                 )
               })}
             </div>

@@ -414,6 +414,7 @@ model Coupon {
   bogoDishId         String?
   autoApply          Boolean       @default(false)
   badgeText          String?
+  menuSection        String?       // Optional restriction to restaurant menu section / tag (e.g. "pizza")
   oncePerCustomer    Boolean       @default(false)
 
   category        Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
