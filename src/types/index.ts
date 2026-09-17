@@ -58,6 +58,7 @@ export interface Product {
   minStock?: number
   category?: Category | null
   restaurant?: Restaurant | null
+  restaurantName?: string | null
   images?: ProductImage[]
   reviews?: Review[]
   isBestSeller?: boolean

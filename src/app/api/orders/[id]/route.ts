@@ -891,7 +891,7 @@ export async function PATCH(
       const statusTitle = `Order #${baseOrderNo}: ${displayStatus}`
       const statusBody = `Your FastKirana order #${baseOrderNo} is now ${displayStatus}.`
 
-      const origin = request.headers.get('origin') || 'https://fastkirana.com'
+      const orderTag = `order-${baseOrderNo}`
 
       // Web push notification for PWA / web subscribers
       sendPushNotification(existingOrder.userId, {
@@ -899,8 +899,8 @@ export async function PATCH(
         body: statusBody,
         icon: `${origin}/icons/icon-192.png`,
         badge: `${origin}/icons/icon-192.png`,
-        tag: `order-${existingOrder.id}`,
-        renotify: true,
+        tag: orderTag,
+        renotify: status !== 'CANCELLED',
         data: { orderId: existingOrder.id }
       }).catch(err => console.error('Background sendPushNotification error:', err))
 
@@ -910,8 +910,8 @@ export async function PATCH(
         body: `Order #${baseOrderNo} status changed to ${displayStatus}.`,
         icon: `${origin}/icons/icon-192.png`,
         badge: `${origin}/icons/icon-192.png`,
-        tag: `order-${existingOrder.id}-update`,
-        renotify: true,
+        tag: `${orderTag}-staff-update`,
+        renotify: status !== 'CANCELLED',
         data: { orderId: existingOrder.id }
       }).catch(err => console.error('Background sendPushNotificationToRoles error:', err))
 

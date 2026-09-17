@@ -4,15 +4,43 @@ import { useUIStore } from '@/stores/ui-store'
 import { useCart } from '@/hooks/use-cart'
 import { X, Plus, Minus, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useMemo, useEffect, useState } from 'react'
+import React, { useMemo, useEffect, useState, Component, ErrorInfo, ReactNode } from 'react'
 import { cn, isCafeProduct, getProductLimit, isProductStoreClosed } from '@/lib/utils'
 import { ProductImage } from '@/components/product/product-image'
 import { useLiveStock } from '@/components/providers/live-stock-provider'
 import { Product } from '@/types'
 import { toast } from 'sonner'
 
+class DrawerErrorBoundary extends Component<{ onClose: () => void; children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('VariantSelectorDrawer Error:', error, errorInfo)
+    toast.error('Could not load product options. Please try again.')
+    this.props.onClose()
+  }
+
+  render() {
+    if (this.state.hasError) return null
+    return this.props.children
+  }
+}
+
 function isVegProduct(p: any): boolean {
-  const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : []
+  if (!p) return true
+  const rawTags = Array.isArray(p.tags)
+    ? p.tags
+    : typeof p.tags === 'string'
+    ? p.tags.split(',')
+    : []
+  const tags = rawTags
+    .filter((t: any) => typeof t === 'string')
+    .map((t: string) => t.trim().toLowerCase())
+
   if (
     tags.some((t: string) =>
       t.includes('non-veg') ||
@@ -25,7 +53,7 @@ function isVegProduct(p: any): boolean {
   ) {
     return false
   }
-  const nl = (p.name || '').toLowerCase()
+  const nl = String(p.name || '').toLowerCase()
   if (nl.includes('chicken') || nl.includes('egg') || nl.includes('mutton') || nl.includes('fish')) {
     return false
   }
@@ -70,17 +98,22 @@ function GroceryVariantCard({
   restaurantOpen,
 }: GroceryVariantCardProps) {
   const { getItemQuantity, addItem, updateQuantity } = useCart()
-  const resolvedId = `${product.id}_${variant.name}`
+  const resolvedName = String(variant?.name || variant?.title || variant?.unit || 'Option')
+  const resolvedId = `${product.id}_${resolvedName}`
   const quantity = getItemQuantity(resolvedId)
 
   const liveState = useLiveStock(resolvedId)
-  const resolvedStock = liveState !== null ? liveState.stock : (variant.stock ?? product.stock)
-  const resolvedPrice = liveState !== null ? liveState.price : variant.price
-  const resolvedMrp = liveState !== null ? liveState.mrp : variant.mrp
-  const resolvedIsAvailable = liveState !== null ? liveState.isAvailable : (product.isAvailable ?? true)
+  const baseStock = variant?.stock !== undefined ? Number(variant.stock) : Number(product.stock ?? 10)
+  const basePrice = Number(variant?.price) || Number(product.price) || 0
+  const baseMrp = Number(variant?.mrp) || Number(product.mrp) || basePrice
+
+  const resolvedStock = liveState !== null ? Number(liveState.stock) : baseStock
+  const resolvedPrice = liveState !== null ? Number(liveState.price) : basePrice
+  const resolvedMrp = liveState !== null ? Number(liveState.mrp) : baseMrp
+  const resolvedIsAvailable = liveState !== null ? Boolean(liveState.isAvailable) : (product.isAvailable ?? true)
 
   const discount =
-    resolvedMrp > resolvedPrice
+    resolvedMrp > resolvedPrice && resolvedMrp > 0
       ? Math.max(0, Math.round(((resolvedMrp - resolvedPrice) / resolvedMrp) * 100))
       : 0
 
@@ -94,13 +127,13 @@ function GroceryVariantCard({
   const cartProduct = useMemo(
     () => ({
       id: resolvedId,
-      name: `${product.name} (${variant.name})`,
+      name: `${product.name} (${resolvedName})`,
       slug: product.slug,
       imageUrl: product.imageUrl,
       mrp: resolvedMrp,
       price: resolvedPrice,
       discount: discount,
-      unit: variant.name || product.unit,
+      unit: resolvedName || product.unit,
       stock: resolvedStock,
       isAvailable: resolvedIsAvailable,
       category: product.category,
@@ -109,7 +142,7 @@ function GroceryVariantCard({
       restaurantName: (product as any).restaurantName || (product as any).restaurant?.name,
       restaurant: (product as any).restaurant,
     }),
-    [product, variant, resolvedId, resolvedMrp, resolvedPrice, discount, resolvedStock, resolvedIsAvailable]
+    [product, resolvedName, resolvedId, resolvedMrp, resolvedPrice, discount, resolvedStock, resolvedIsAvailable]
   )
 
   const isVariantSoldOut =
@@ -245,10 +278,26 @@ export function VariantSelectorDrawer() {
   }, [isOpen])
 
   const variantsList = useMemo(() => {
-    if (!activeProduct || !activeProduct.variants || !Array.isArray(activeProduct.variants)) return []
-    const list = [...(activeProduct.variants as any[])]
-    list.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0))
+    if (!activeProduct || !activeProduct.variants) return []
+    let list: any[] = []
+    if (Array.isArray(activeProduct.variants)) {
+      list = [...activeProduct.variants]
+    } else if (typeof activeProduct.variants === 'string') {
+      try {
+        const parsed = JSON.parse(activeProduct.variants)
+        if (Array.isArray(parsed)) list = parsed
+      } catch {}
+    }
     return list
+      .filter((v) => v && typeof v === 'object')
+      .map((v, i) => {
+        const name = String(v.name || v.title || v.unit || `Option ${i + 1}`)
+        const price = Number(v.price) || Number(activeProduct.price) || 0
+        const mrp = Number(v.mrp) || Number(v.price) || Number(activeProduct.mrp) || price
+        const stock = v.stock !== undefined ? Number(v.stock) : Number(activeProduct.stock ?? 10)
+        return { ...v, name, price, mrp, stock }
+      })
+      .sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0))
   }, [activeProduct])
 
   const addonGroups: { title: string; required: boolean; maxSelect: number; items: { name: string; price: number }[] }[] = useMemo(() => {
@@ -263,13 +312,13 @@ export function VariantSelectorDrawer() {
     }
     if (Array.isArray(raw)) {
       return raw.map((g: any) => ({
-        title: g.title || '',
+        title: String(g.title || ''),
         required: g.required === true,
         maxSelect: Number(g.maxSelect) || 5,
         items: Array.isArray(g.items)
           ? g.items.map((i: any) => ({
-              name: String(i.name || ''),
-              price: Number(i.price) || 0,
+              name: String(i?.name || ''),
+              price: Number(i?.price) || 0,
             }))
           : [],
       }))
@@ -302,7 +351,8 @@ export function VariantSelectorDrawer() {
   const addonTotalPerUnit = selectedAddonList.reduce((sum, item) => sum + item.price, 0)
 
   // Handlers for Food customization flow
-  const currentVariant = variantsList[selectedVariantIndex] || variantsList[0] || {}
+  const safeVariantIndex = Math.min(selectedVariantIndex, Math.max(0, variantsList.length - 1))
+  const currentVariant = variantsList[safeVariantIndex] || variantsList[0] || {}
   const baseVariantPrice = Number(currentVariant.price) || Number(activeProduct.price) || 0
   const baseVariantMrp = Number(currentVariant.mrp) || Number(activeProduct.mrp) || baseVariantPrice
   const currentPrice = (baseVariantPrice + addonTotalPerUnit) * foodQuantity
@@ -370,76 +420,77 @@ export function VariantSelectorDrawer() {
   const minPrice = variantsList.length > 0 ? variantsList[0].price : activeProduct.price
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-end justify-center select-none">
-        {/* Dark Backdrop */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs cursor-pointer"
-          onClick={() => setActiveProduct(null)}
-        />
-
-        {/* ========================================================================= */}
-        {/* 1. RESTAURANT / FOOD CUSTOMIZATION MODAL (Swiggy / Image 1 UI)           */}
-        {/* ========================================================================= */}
-        {isFood ? (
+    <DrawerErrorBoundary onClose={() => setActiveProduct(null)}>
+      <AnimatePresence>
+        <div className="fixed inset-0 z-50 flex items-end justify-center select-none">
+          {/* Dark Backdrop */}
           <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 26, stiffness: 240 }}
-            className="gpu-accelerated relative w-full max-w-md flex flex-col max-h-[85dvh] md:max-h-[85vh] overflow-visible"
-          >
-            {/* Floating Dark Circular Close Button above sheet (Image 1) */}
-            <button
-              onClick={() => setActiveProduct(null)}
-              className="self-center mb-2.5 w-9 h-9 rounded-full bg-[#2b2f38] hover:bg-[#3b3f48] text-white flex items-center justify-center shadow-lg transition-all cursor-pointer shrink-0 z-10"
-              aria-label="Close"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs cursor-pointer"
+            onClick={() => setActiveProduct(null)}
+          />
+
+          {/* ========================================================================= */}
+          {/* 1. RESTAURANT / FOOD CUSTOMIZATION MODAL (Swiggy / Image 1 UI)           */}
+          {/* ========================================================================= */}
+          {isFood ? (
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 26, stiffness: 240 }}
+              className="gpu-accelerated relative w-full max-w-md flex flex-col max-h-[85dvh] md:max-h-[85vh] overflow-visible"
             >
-              <X className="w-5 h-5" />
-            </button>
+              {/* Floating Dark Circular Close Button above sheet (Image 1) */}
+              <button
+                onClick={() => setActiveProduct(null)}
+                className="self-center mb-2.5 w-9 h-9 rounded-full bg-[#2b2f38] hover:bg-[#3b3f48] text-white flex items-center justify-center shadow-lg transition-all cursor-pointer shrink-0 z-10"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
 
-            {/* Modal Body Card */}
-            <div className="w-full bg-[#f8f9fa] border-t border-zinc-200 rounded-t-3xl shadow-2xl flex flex-col flex-1 overflow-hidden">
-              {/* Product Info Header */}
-              <div className="bg-white p-4 border-b border-zinc-200 flex items-center gap-3 shrink-0">
-                <div className="h-12 w-12 rounded-xl bg-zinc-100 border border-zinc-200 p-1 flex items-center justify-center shrink-0 overflow-hidden">
-                  <ProductImage
-                    src={activeProduct.imageUrl}
-                    alt={activeProduct.name}
-                    categorySlug={activeProduct.category?.slug}
-                    className="h-full w-full object-contain"
-                  />
+              {/* Modal Body Card */}
+              <div className="w-full bg-[#f8f9fa] border-t border-zinc-200 rounded-t-3xl shadow-2xl flex flex-col flex-1 overflow-hidden">
+                {/* Product Info Header */}
+                <div className="bg-white p-4 border-b border-zinc-200 flex items-center gap-3 shrink-0">
+                  <div className="h-12 w-12 rounded-xl bg-zinc-100 border border-zinc-200 p-1 flex items-center justify-center shrink-0 overflow-hidden">
+                    <ProductImage
+                      src={activeProduct.imageUrl}
+                      alt={activeProduct.name || ''}
+                      categorySlug={activeProduct.category?.slug}
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <h3 className="text-base font-extrabold text-zinc-900 leading-tight truncate">
+                      {activeProduct.name}
+                    </h3>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0 text-left">
-                  <h3 className="text-base font-extrabold text-zinc-900 leading-tight truncate">
-                    {activeProduct.name}
-                  </h3>
-                </div>
-              </div>
 
-              {/* Scrollable Customization Content */}
-              <div className="p-4 flex-1 overflow-y-auto space-y-3">
-                {variantsList.length > 0 && (
-                  <>
-                    <div className="text-left">
-                      <h4 className="text-[15px] font-extrabold text-zinc-900">Choose Option</h4>
-                      <p className="text-xs text-zinc-500 font-medium mt-0.5">Select any 1</p>
-                    </div>
+                {/* Scrollable Customization Content */}
+                <div className="p-4 flex-1 overflow-y-auto space-y-3">
+                  {variantsList.length > 0 && (
+                    <>
+                      <div className="text-left">
+                        <h4 className="text-[15px] font-extrabold text-zinc-900">Choose Option</h4>
+                        <p className="text-xs text-zinc-500 font-medium mt-0.5">Select any 1</p>
+                      </div>
 
-                    {/* Options Box (White Card with Radio Rows - Image 1) */}
-                    <div className="bg-white rounded-2xl border border-zinc-200/90 shadow-2xs divide-y divide-zinc-100 overflow-hidden">
-                  {variantsList.map((v, index) => {
-                    const isSelected = index === selectedVariantIndex
-                    return (
-                      <div
-                        key={v.name}
-                        onClick={() => setSelectedVariantIndex(index)}
-                        className="flex items-center justify-between p-3.5 sm:p-4 hover:bg-zinc-50/70 cursor-pointer transition-colors"
-                      >
+                      {/* Options Box (White Card with Radio Rows - Image 1) */}
+                      <div className="bg-white rounded-2xl border border-zinc-200/90 shadow-2xs divide-y divide-zinc-100 overflow-hidden">
+                    {variantsList.map((v, index) => {
+                      const isSelected = index === safeVariantIndex
+                      return (
+                        <div
+                          key={v.name || `variant-${index}`}
+                          onClick={() => setSelectedVariantIndex(index)}
+                          className="flex items-center justify-between p-3.5 sm:p-4 hover:bg-zinc-50/70 cursor-pointer transition-colors"
+                        >
                         <div className="flex items-center gap-2.5 min-w-0 pr-2">
                           <VegNonVegBadge isVeg={isVeg} size={15} />
                           <span className="text-sm font-semibold text-zinc-900 truncate">
@@ -674,9 +725,9 @@ export function VariantSelectorDrawer() {
 
             {/* Scrollable Variant Cards List (Image 2) */}
             <div className="px-4 py-2 pb-6 flex-1 overflow-y-auto space-y-2.5">
-              {variantsList.map((v) => (
+              {variantsList.map((v, index) => (
                 <GroceryVariantCard
-                  key={v.name}
+                  key={v.name || `variant-${index}`}
                   variant={v}
                   product={activeProduct}
                   cafeOpen={cafeOpen}
@@ -689,5 +740,6 @@ export function VariantSelectorDrawer() {
         )}
       </div>
     </AnimatePresence>
+  </DrawerErrorBoundary>
   )
 }

@@ -257,7 +257,18 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
           }
           debugPrint('[Admin WebSocket] Live order update event: ${record['id']}');
           _silentFetchAdminOrders();
-          _playChime();
+          final status = (record['status'] ?? '').toString().toUpperCase();
+          if (status == 'CANCELLED') {
+            final recordId = record['id']?.toString();
+            final readableId = record['readableId']?.toString();
+            if (OrderAlarmService.instance.isPlaying &&
+                (OrderAlarmService.instance.activeOrderId == recordId ||
+                 OrderAlarmService.instance.activeOrderId == readableId)) {
+              _stopPendingAlarm();
+            }
+          } else if (status == 'PENDING' || status == 'ADMIN_PENDING') {
+            _playChime();
+          }
         }
       },
     );
@@ -835,6 +846,10 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
         }).toList();
       });
 
+      if (newStatus == OrderStatus.cancelled) {
+        _stopPendingAlarm();
+      }
+
       if (mounted) {
         AppToast.showSuccess(
           context,
@@ -899,6 +914,10 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
           return o;
         }).toList();
       });
+
+      if (newStatus == OrderStatus.cancelled) {
+        _stopPendingAlarm();
+      }
 
       if (mounted) {
         AppToast.showSuccess(

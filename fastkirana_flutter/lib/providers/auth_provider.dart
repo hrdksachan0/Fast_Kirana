@@ -41,10 +41,10 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       }
       if (mounted) state = AsyncValue.data(user);
 
-      // Register device FCM push token on startup
+      // Register device FCM push token on startup with user role
       try {
         final dio = _ref.read(dioProvider);
-        NotificationService().registerDeviceToken(dio);
+        NotificationService().registerDeviceToken(dio, role: user.role);
       } catch (e) {
         LoggerService.error("Failed to register FCM token on startup: $e");
       }
@@ -71,10 +71,10 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     await SecureStorage.loadCache();
     state = AsyncValue.data(user);
 
-    // Register device FCM push token on login
+    // Register device FCM push token on login with explicit role
     try {
       final dio = _ref.read(dioProvider);
-      NotificationService().registerDeviceToken(dio);
+      NotificationService().registerDeviceToken(dio, role: user.role);
     } catch (e) {
       LoggerService.error("Failed to register FCM token on login: $e");
     }
@@ -89,17 +89,14 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     state = const AsyncValue.data(null);
     SecureStorage.invalidateCache();
 
-    // 1. Fire-and-forget unsubscribe from FCM topics and clear tray in background
-    // (Never block UI thread or user logout if network is slow/offline)
-    unawaited(
-      Future.wait([
-        NotificationService().unsubscribeAllTopics().timeout(const Duration(seconds: 2), onTimeout: () {}),
-        NotificationService().clearAllNotifications().timeout(const Duration(seconds: 1), onTimeout: () {}),
-      ]).catchError((e) {
-        LoggerService.error('AuthProvider: background notification cleanup error', e);
-        return <void>[];
-      }),
-    );
+    // 1. Unsubscribe from FCM topics, unregister token from backend, and clear tray
+    try {
+      final dio = _ref.read(dioProvider);
+      await NotificationService().unsubscribeAllTopics(dio).timeout(const Duration(seconds: 3), onTimeout: () {});
+      await NotificationService().clearAllNotifications().timeout(const Duration(seconds: 1), onTimeout: () {});
+    } catch (e) {
+      LoggerService.error('AuthProvider: background notification cleanup error', e);
+    }
 
     // 2. Clear all cached addresses and orders from disk
     try {

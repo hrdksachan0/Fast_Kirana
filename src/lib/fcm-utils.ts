@@ -64,25 +64,37 @@ export function buildOrderFcmPayload(
   data: Record<string, string>,
   ttlSeconds = 600,
 ) {
-  const collapseId = data.orderId ? `order_${data.orderId}` : undefined
+  const cleanOrderId = data.readableId
+    ? data.readableId.replace(/-[GR\d]+$/i, '')
+    : (data.orderId ? data.orderId.replace(/-[GR\d]+$/i, '') : undefined)
+  const collapseId = cleanOrderId ? `order_${cleanOrderId}` : undefined
+
+  const orderStatus = (data.status || data.orderStatus || '').toUpperCase()
+  const isCancelledOrTerminal =
+    orderStatus === 'CANCELLED' ||
+    orderStatus === 'REJECTED' ||
+    orderStatus === 'FAILED' ||
+    orderStatus === 'REFUNDED' ||
+    title.toLowerCase().includes('cancel') ||
+    body.toLowerCase().includes('cancel')
 
   const isOrderAlert =
-    data.screen === 'restaurant-console' ||
-    data.screen === 'admin-orders' ||
-    data.screen === 'delivery' ||
-    data.screen === 'picker' ||
-    Boolean(data.restaurantId) ||
-    data.type === 'NEW_ORDER' ||
-    title.includes('Order') ||
-    title.includes('🛎️') ||
-    title.includes('💳') ||
-    title.includes('👨‍🍳')
+    !isCancelledOrTerminal &&
+    (data.screen === 'restaurant-console' ||
+      data.screen === 'admin-orders' ||
+      data.screen === 'delivery' ||
+      data.screen === 'picker' ||
+      Boolean(data.restaurantId) ||
+      data.type === 'NEW_ORDER' ||
+      title.includes('🛎️') ||
+      title.includes('💳') ||
+      title.includes('👨‍🍳'))
 
   return {
     notification: { title, body },
     data,
     android: {
-      priority: 'high' as const,
+      priority: isOrderAlert ? ('high' as const) : ('normal' as const),
       ttl: ttlSeconds,
       ...(collapseId ? { collapseKey: collapseId } : {}),
       notification: {

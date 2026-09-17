@@ -11,6 +11,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/secure_storage_service.dart';
 
 // Top-level background message handler for when app is killed or phone screen is off
+final Map<String, int> _bgRecentMessageTimes = {};
+
+// Top-level background message handler for when app is killed or phone screen is off
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (kIsWeb) return;
@@ -23,10 +26,30 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final title = notification?.title ?? data['title'] ?? '⚡ FastKirana Express';
   final body = notification?.body ?? data['body'] ?? data['message'];
 
-  // If the message already has a notification payload, Android system tray handles it automatically
-  // Calling localNotifications.show here would create a duplicate notification on the user's phone!
-  // Loud alarm with full-screen intent for ALL order alerts (Kitchen, Admin, Delivery, Picker)
-  // BUT NOT for cancel/reject notifications — those should be quiet
+  // Check persisted user role. If current logged-in user is a customer, block all admin/kitchen alerts
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final userRole = (prefs.getString('user_role') ?? (await SecureStorage.read('user_role')) ?? 'CUSTOMER').toUpperCase();
+    final isStaffOrAdminMessage =
+        data['screen'] == 'admin-orders' ||
+        data['screen'] == 'restaurant-console' ||
+        data['screen'] == 'delivery' ||
+        data['screen'] == 'picker' ||
+        data['role'] == 'ADMIN' ||
+        data['type'] == 'STAFF_ALERT' ||
+        data['type'] == 'NEW_ORDER' ||
+        title.toString().contains('👨‍🍳') ||
+        title.toString().contains('🛎️') ||
+        title.toString().toLowerCase().contains('kitchen') ||
+        title.toString().toLowerCase().contains('new order');
+
+    if (isStaffOrAdminMessage && (userRole == 'CUSTOMER' || userRole == 'USER')) {
+      debugPrint('NotificationService: Suppressing staff/admin alert for customer user in background.');
+      return;
+    }
+  } catch (_) {}
+
+  // Detect cancel/reject notifications — those should be quiet and not trigger loud alarm
   final orderStatus = (data['status'] ?? data['orderStatus'] ?? '').toString().toUpperCase();
   final isCancelledOrTerminal = orderStatus == 'CANCELLED' || orderStatus == 'REJECTED' ||
       orderStatus == 'FAILED' || orderStatus == 'REFUNDED' ||
@@ -54,15 +77,29 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Trigger system notification for data-only messages or loud order alarm
   if (body != null && body.toString().trim().isNotEmpty) {
     try {
+      final rawOrderId = data['orderId'] ?? data['readableId'] ?? data['id'];
+      final cleanOrderId = (rawOrderId != null && rawOrderId.toString().trim().isNotEmpty)
+          ? rawOrderId.toString().trim().replaceAll('#', '').replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '')
+          : null;
+
+      // Background Deduplication within 30 seconds
+      final dedupKey = (cleanOrderId != null && cleanOrderId.isNotEmpty)
+          ? 'order_${cleanOrderId}_$orderStatus'
+          : (message.messageId ?? '${title}_${body.hashCode}');
+
+      final now = DateTime.now().millisecondsSinceEpoch;
+      _bgRecentMessageTimes.removeWhere((_, time) => now - time > 30000);
+      if (_bgRecentMessageTimes.containsKey(dedupKey)) {
+        debugPrint("NotificationService: Suppressed duplicate background notification for $dedupKey");
+        return;
+      }
+      _bgRecentMessageTimes[dedupKey] = now;
+
       final localNotifications = FlutterLocalNotificationsPlugin();
       const AndroidInitializationSettings androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
       const InitializationSettings initSettings = InitializationSettings(android: androidInit);
       await localNotifications.initialize(initSettings);
 
-      final rawOrderId = data['orderId'] ?? data['readableId'] ?? data['id'];
-      final cleanOrderId = (rawOrderId != null && rawOrderId.toString().trim().isNotEmpty)
-          ? rawOrderId.toString().trim().replaceAll('#', '').replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '')
-          : null;
       final notifId = (cleanOrderId != null && cleanOrderId.isNotEmpty)
           ? (cleanOrderId.hashCode & 0x7FFFFFFF)
           : (message.messageId?.hashCode ?? message.hashCode);
@@ -75,7 +112,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
             ? 'Loud alarm for kitchen, admin, and staff orders even when phone is locked.'
             : 'Notifications for order updates and tracking.',
         icon: '@mipmap/ic_launcher',
-        importance: Importance.max,
+        importance: isOrderAlert ? Importance.max : Importance.high,
         priority: Priority.high,
         tag: tag,
         fullScreenIntent: isOrderAlert,
@@ -254,24 +291,50 @@ class NotificationService {
 
   final Map<String, int> _recentMessageTimes = {};
 
-  void _handleForegroundMessage(RemoteMessage message) {
+  Future<void> _handleForegroundMessage(RemoteMessage message) async {
     final title = message.notification?.title ?? message.data['title'] ?? '⚡ FastKirana Express';
     final body = message.notification?.body ?? message.data['body'] ?? message.data['message'];
 
     if (body == null || body.toString().trim().isEmpty) return;
 
     final data = message.data;
+
+    // Check current user role to suppress admin/kitchen alerts for customers
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userRole = (prefs.getString('user_role') ?? (await SecureStorage.read('user_role')) ?? 'CUSTOMER').toUpperCase();
+      final isStaffOrAdminMessage =
+          data['screen'] == 'admin-orders' ||
+          data['screen'] == 'restaurant-console' ||
+          data['screen'] == 'delivery' ||
+          data['screen'] == 'picker' ||
+          data['role'] == 'ADMIN' ||
+          data['type'] == 'STAFF_ALERT' ||
+          data['type'] == 'NEW_ORDER' ||
+          title.toString().contains('👨‍🍳') ||
+          title.toString().contains('🛎️') ||
+          title.toString().toLowerCase().contains('kitchen') ||
+          title.toString().toLowerCase().contains('new order');
+
+      if (isStaffOrAdminMessage && (userRole == 'CUSTOMER' || userRole == 'USER')) {
+        debugPrint('NotificationService: Suppressed staff/admin alert for customer user in foreground.');
+        return;
+      }
+    } catch (_) {}
+
     final rawOrderId = data['orderId'] ?? data['readableId'] ?? data['id'];
     final cleanOrderId = (rawOrderId != null && rawOrderId.toString().trim().isNotEmpty)
         ? rawOrderId.toString().trim().replaceAll('#', '').replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '')
         : null;
 
+    final orderStatus = (data['status'] ?? data['orderStatus'] ?? '').toString().toUpperCase();
+
     final dedupKey = (cleanOrderId != null && cleanOrderId.isNotEmpty)
-        ? 'order_$cleanOrderId'
+        ? 'order_${cleanOrderId}_$orderStatus'
         : (message.messageId ?? '${title}_${body.hashCode}');
 
     final now = DateTime.now().millisecondsSinceEpoch;
-    _recentMessageTimes.removeWhere((_, time) => now - time > 15000);
+    _recentMessageTimes.removeWhere((_, time) => now - time > 30000);
     if (_recentMessageTimes.containsKey(dedupKey)) {
       debugPrint("NotificationService: Suppressed duplicate foreground notification for $dedupKey");
       return;
@@ -285,7 +348,6 @@ class NotificationService {
     }
 
     // Detect cancel/reject notifications — these should NOT trigger loud alarm
-    final orderStatus = (data['status'] ?? data['orderStatus'] ?? '').toString().toUpperCase();
     final isCancelledOrTerminal = orderStatus == 'CANCELLED' || orderStatus == 'REJECTED' ||
         orderStatus == 'FAILED' || orderStatus == 'REFUNDED' ||
         title.toString().toLowerCase().contains('cancel') ||
@@ -431,28 +493,32 @@ class NotificationService {
 
       final prefs = await SharedPreferences.getInstance();
       String deviceType = kIsWeb ? 'web' : (Platform.isAndroid ? 'android' : (Platform.isIOS ? 'ios' : 'web'));
-      final userId = prefs.getString('user_id');
-      final phone = prefs.getString('user_phone') ?? '';
+      final userId = (await SecureStorage.read('user_id')) ?? prefs.getString('user_id');
+      final phone = (await SecureStorage.read('user_phone')) ?? prefs.getString('user_phone') ?? '';
+      final resolvedRole = (role ?? (await SecureStorage.read('user_role')) ?? prefs.getString('user_role') ?? 'CUSTOMER').toUpperCase();
 
       // Subscribe to role-based and user-specific topics
       try {
-        final storeId = assignedStoreId ?? prefs.getString('assigned_store_id');
-        if (role == 'ADMIN') {
+        final storeId = assignedStoreId ?? (await SecureStorage.read('assigned_store_id')) ?? prefs.getString('assigned_store_id');
+        if (resolvedRole == 'ADMIN') {
           if (storeId != null && storeId.isNotEmpty) {
             await _fcm?.subscribeToTopic('admin_orders_$storeId');
             await _fcm?.unsubscribeFromTopic('admin_orders');
           } else {
             await _fcm?.subscribeToTopic('admin_orders');
           }
-          // Admin only needs admin_orders topic — prevent duplicate push from staff_orders
+          await _fcm?.subscribeToTopic('admin_orders_all');
           await _fcm?.unsubscribeFromTopic('staff_orders');
-        } else if (role == 'RESTAURANT' || assignedRestaurantId != null) {
-          final rId = assignedRestaurantId ?? prefs.getString('assigned_restaurant_id');
+        } else if (resolvedRole == 'RESTAURANT' || assignedRestaurantId != null) {
+          final rId = assignedRestaurantId ?? (await SecureStorage.read('assigned_restaurant_id')) ?? prefs.getString('assigned_restaurant_id');
           if (rId != null && rId.isNotEmpty) {
             await _fcm?.subscribeToTopic('restaurant_$rId');
             await _fcm?.subscribeToTopic('kitchen_$rId');
+            await _fcm?.subscribeToTopic('restaurant_orders_$rId');
           }
-        } else if (role == 'DELIVERY' || role == 'PICKER') {
+          await _fcm?.unsubscribeFromTopic('admin_orders');
+          await _fcm?.unsubscribeFromTopic('admin_orders_all');
+        } else if (resolvedRole == 'DELIVERY' || resolvedRole == 'PICKER') {
           if (storeId != null && storeId.isNotEmpty) {
             await _fcm?.subscribeToTopic('staff_orders_$storeId');
             await _fcm?.unsubscribeFromTopic('staff_orders');
@@ -460,6 +526,21 @@ class NotificationService {
             await _fcm?.subscribeToTopic('staff_orders');
           }
           await _fcm?.unsubscribeFromTopic('admin_orders');
+          await _fcm?.unsubscribeFromTopic('admin_orders_all');
+        } else {
+          // Normal CUSTOMER / USER: Actively purge ANY leftover admin/staff/kitchen subscriptions on this device!
+          final staffTopicsToPurge = [
+            'admin_orders',
+            'admin_orders_all',
+            'staff_orders',
+            'admin_orders_wedson_store',
+            'admin_orders_ghatampur',
+            'staff_orders_wedson_store',
+            'staff_orders_ghatampur',
+          ];
+          for (final t in staffTopicsToPurge) {
+            try { await _fcm?.unsubscribeFromTopic(t); } catch (_) {}
+          }
         }
 
         if (userId != null && userId.isNotEmpty) {
@@ -482,7 +563,7 @@ class NotificationService {
           'deviceType': deviceType,
           if (userId != null) 'userId': userId,
           'phone': phone,
-          if (role != null) 'role': role,
+          'role': resolvedRole,
           if (assignedRestaurantId != null) 'assignedRestaurantId': assignedRestaurantId,
           if (assignedStoreId != null) 'assignedStoreId': assignedStoreId,
         },
@@ -512,21 +593,40 @@ class NotificationService {
   }
 
   /// Unsubscribe from ALL FCM topics on logout so no notifications arrive when logged out
-  Future<void> unsubscribeAllTopics() async {
+  Future<void> unsubscribeAllTopics([Dio? dio]) async {
     if (kIsWeb) return;
     try {
       final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString('user_id');
-      final phone = prefs.getString('user_phone') ?? '';
-      final restaurantId = prefs.getString('assigned_restaurant_id');
+      final userId = (await SecureStorage.read('user_id')) ?? prefs.getString('user_id');
+      final phone = (await SecureStorage.read('user_phone')) ?? prefs.getString('user_phone') ?? '';
+      final restaurantId = (await SecureStorage.read('assigned_restaurant_id')) ?? prefs.getString('assigned_restaurant_id');
+      final storeId = (await SecureStorage.read('assigned_store_id')) ?? prefs.getString('assigned_store_id');
+      final token = await getFcmToken();
 
-      // Unsubscribe from all possible topics this device may have subscribed to
+      // 1. Tell backend to unbind and delete this token from admin/user records immediately
+      if (dio != null && token != null && token.isNotEmpty) {
+        try {
+          await dio.post('/api/fcm/unregister', data: {'token': token});
+        } catch (_) {}
+      }
+
+      // 2. Unsubscribe from all possible topics this device may have subscribed to
       final topics = <String>[
         'all_users',
         'ghatampur_alerts',
         'admin_orders',
+        'admin_orders_all',
         'staff_orders',
+        'admin_orders_wedson_store',
+        'admin_orders_ghatampur',
+        'staff_orders_wedson_store',
+        'staff_orders_ghatampur',
       ];
+
+      if (storeId != null && storeId.isNotEmpty) {
+        topics.add('admin_orders_$storeId');
+        topics.add('staff_orders_$storeId');
+      }
 
       if (userId != null && userId.isNotEmpty) {
         topics.add('user_$userId');
@@ -540,6 +640,7 @@ class NotificationService {
       if (restaurantId != null && restaurantId.isNotEmpty) {
         topics.add('restaurant_$restaurantId');
         topics.add('kitchen_$restaurantId');
+        topics.add('restaurant_orders_$restaurantId');
       }
 
       for (final topic in topics) {
@@ -548,7 +649,7 @@ class NotificationService {
         } catch (_) {}
       }
 
-      // Also delete the FCM token so backend stops sending to this device
+      // 3. Delete the FCM token on device so a clean new token is minted for subsequent logins
       try {
         await _fcm?.deleteToken();
       } catch (_) {}

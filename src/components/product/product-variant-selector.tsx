@@ -11,13 +11,31 @@ interface ProductVariantSelectorProps {
 }
 
 export function ProductVariantSelector({ product }: ProductVariantSelectorProps) {
-  const hasVariants = product.variants && Array.isArray(product.variants) && product.variants.length > 0
-  const variantsList = useMemo(() => {
-    if (!hasVariants) return []
-    const list = [...(product.variants as any[])]
-    list.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0))
+  const normalizedVariants = useMemo(() => {
+    if (!product.variants) return []
+    let list: any[] = []
+    if (Array.isArray(product.variants)) {
+      list = [...product.variants]
+    } else if (typeof product.variants === 'string') {
+      try {
+        const parsed = JSON.parse(product.variants)
+        if (Array.isArray(parsed)) list = parsed
+      } catch {}
+    }
     return list
-  }, [hasVariants, product.variants])
+      .filter((v) => v && typeof v === 'object')
+      .map((v, i) => ({
+        ...v,
+        name: String(v.name || v.title || v.unit || `Option ${i + 1}`),
+        price: Number(v.price) || Number(product.price) || 0,
+        mrp: Number(v.mrp) || Number(v.price) || Number(product.mrp) || 0,
+        stock: v.stock !== undefined ? Number(v.stock) : Number(product.stock ?? 10),
+      }))
+      .sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0))
+  }, [product.variants, product.price, product.mrp, product.stock])
+
+  const hasVariants = normalizedVariants.length > 0
+  const variantsList = normalizedVariants
 
   // Track selected variant name (default to cheapest variant)
   const [selectedVariantName, setSelectedVariantName] = useState<string>(

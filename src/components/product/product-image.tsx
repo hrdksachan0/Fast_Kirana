@@ -146,7 +146,7 @@ export function ProductImage({
 
   // Get a fallback Unsplash image based on name or slug keywords
   const getFallbackUnsplash = () => {
-    const term = (src || '').toLowerCase() || alt.toLowerCase()
+    const term = (src ? String(src).toLowerCase() : '') || (alt ? String(alt).toLowerCase() : '')
     for (const key of Object.keys(unsplashMap)) {
       if (term.includes(key)) {
         return unsplashMap[key]

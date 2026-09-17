@@ -47,19 +47,33 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
     setMounted(true)
   }, [])
   
-  const hasVariants = product.variants && Array.isArray(product.variants) && product.variants.length > 0
-  const variantsList = hasVariants ? (product.variants as any[]) : []
+  const normalizedVariants = useMemo(() => {
+    if (!product.variants) return []
+    let list: any[] = []
+    if (Array.isArray(product.variants)) {
+      list = product.variants
+    } else if (typeof product.variants === 'string') {
+      try {
+        const parsed = JSON.parse(product.variants)
+        if (Array.isArray(parsed)) list = parsed
+      } catch {}
+    }
+    return list.filter((v) => v && typeof v === 'object')
+  }, [product.variants])
+
+  const hasVariants = normalizedVariants.length > 0
+  const variantsList = normalizedVariants
   
   // Calculate starting price for variant display
   const startingPrice = useMemo(() => {
     if (!hasVariants) return product.price
-    return Math.min(...variantsList.map((v) => v.price))
+    return Math.min(...variantsList.map((v) => Number(v.price) || 0))
   }, [hasVariants, variantsList, product.price])
 
   const startingMrp = useMemo(() => {
     if (!hasVariants) return product.mrp
-    const startVar = variantsList.find(v => v.price === startingPrice)
-    return startVar ? startVar.mrp : product.mrp
+    const startVar = variantsList.find(v => (Number(v.price) || 0) === startingPrice)
+    return startVar ? (Number(startVar.mrp) || Number(startVar.price) || product.mrp) : product.mrp
   }, [hasVariants, variantsList, startingPrice, product.mrp])
 
   const liveState = useLiveStock(product.id)
@@ -230,7 +244,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
     triggerHaptic('light')
     
     if (hasVariants) {
-      setActiveVariantProduct(product)
+      setActiveVariantProduct({ ...product, variants: variantsList })
     } else {
       addItem({
         id: product.id,
@@ -251,14 +265,14 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
       setShowAdded(true)
       setTimeout(() => setShowAdded(false), 600)
     }
-  }, [hasVariants, product, resolvedMrp, resolvedPrice, resolvedDiscount, resolvedStock, resolvedIsAvailable, addItem, setActiveVariantProduct])
+  }, [hasVariants, product, variantsList, resolvedMrp, resolvedPrice, resolvedDiscount, resolvedStock, resolvedIsAvailable, addItem, setActiveVariantProduct])
 
   const handleIncrement = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     triggerHaptic('light')
     if (hasVariants) {
-      setActiveVariantProduct(product)
+      setActiveVariantProduct({ ...product, variants: variantsList })
     } else {
       updateQuantity(product.id, product.name, quantity + 1)
     }
@@ -269,7 +283,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
     e.stopPropagation()
     triggerHaptic('medium')
     if (hasVariants) {
-      setActiveVariantProduct(product)
+      setActiveVariantProduct({ ...product, variants: variantsList })
     } else {
       updateQuantity(product.id, product.name, quantity - 1)
     }
@@ -448,7 +462,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
       </Link>
 
         {/* ROW 1: Pack Size (Left) & ADD Button (Right) — Clean & Balanced */}
-        <div className="flex items-center justify-between gap-1 mt-2 mb-1 shrink-0 w-full min-w-0">
+        <div className="relative z-10 pointer-events-auto flex items-center justify-between gap-1 mt-2 mb-1 shrink-0 w-full min-w-0">
           <div className="min-w-0 flex-1 overflow-hidden">
             {hasVariants ? (
               <span 
@@ -459,7 +473,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
                     toast.error(`Sorry, ${product.name} is currently out of stock!`)
                     return
                   }
-                  setActiveVariantProduct(product)
+                  setActiveVariantProduct({ ...product, variants: variantsList })
                 }}
                 className={cn(
                   "inline-flex items-center gap-0.5 text-[8px] min-[375px]:text-[8.5px] font-extrabold px-1.5 py-0.5 rounded-md border whitespace-nowrap truncate max-w-full leading-tight transition-all",

@@ -64,6 +64,7 @@ const [productRaw, relatedRaw] = await Promise.all([
     where: { slug },
     include: {
       category: true,
+      restaurant: true,
       images: true,
       reviews: {
         include: {
@@ -83,20 +84,38 @@ const [productRaw, relatedRaw] = await Promise.all([
   (async () => {
     const p = await prisma.product.findUnique({
       where: { slug },
-      select: { categoryId: true, id: true }
-    })
+      select: { categoryId: true, id: true, restaurantId: true }
+    }).catch(() => null)
     if (!p) return []
-    return prisma.product.findMany({
-      where: {
-        categoryId: p.categoryId,
-        id: { not: p.id },
-        isAvailable: true,
-      },
-      take: 8,
-      include: {
-        category: true,
-      },
-    }).catch(() => [])
+    if (p.restaurantId) {
+      return prisma.product.findMany({
+        where: {
+          restaurantId: p.restaurantId,
+          id: { not: p.id },
+          isAvailable: true,
+        },
+        take: 8,
+        include: {
+          category: true,
+          restaurant: true,
+        },
+      }).catch(() => [])
+    }
+    if (p.categoryId) {
+      return prisma.product.findMany({
+        where: {
+          categoryId: p.categoryId,
+          id: { not: p.id },
+          isAvailable: true,
+        },
+        take: 8,
+        include: {
+          category: true,
+          restaurant: true,
+        },
+      }).catch(() => [])
+    }
+    return []
   })()
 ])
 
@@ -112,6 +131,9 @@ const [productRaw, relatedRaw] = await Promise.all([
     description: p.description,
     imageUrl: p.imageUrl,
     categoryId: p.categoryId,
+    restaurantId: p.restaurantId,
+    restaurant: p.restaurant,
+    restaurantName: p.restaurant?.name,
     mrp: p.mrp,
     price: p.price,
     discount: p.discount,
@@ -133,12 +155,11 @@ const [productRaw, relatedRaw] = await Promise.all([
   const product = mapProduct(productRaw)
   const relatedProducts = relatedRaw.map(mapProduct)
 
-  // Average rating calculation
-
   // Calculate average rating
-  const reviewCount = productRaw.reviews.length
+  const reviewsList = Array.isArray(productRaw.reviews) ? productRaw.reviews : []
+  const reviewCount = reviewsList.length
   const avgRating = reviewCount > 0
-    ? (productRaw.reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount).toFixed(1)
+    ? (reviewsList.reduce((sum: number, r: any) => sum + (Number(r.rating) || 5), 0) / reviewCount).toFixed(1)
     : null
 
   const productJsonLd = {
@@ -290,7 +311,7 @@ const [productRaw, relatedRaw] = await Promise.all([
           Customer Reviews
         </h2>
         
-        {productRaw.reviews.length === 0 ? (
+        {reviewsList.length === 0 ? (
           <div className="py-10 text-center flex flex-col items-center">
             <Star className="h-10 w-10 text-text-muted stroke-[1.2] mb-2" />
             <p className="text-xs font-semibold text-text-secondary">No reviews yet for this product.</p>
@@ -298,15 +319,15 @@ const [productRaw, relatedRaw] = await Promise.all([
           </div>
         ) : (
           <div className="space-y-4 division-y divide-border/40">
-            {productRaw.reviews.map((review) => (
+            {reviewsList.map((review: any) => (
               <div key={review.id} className="pt-4 first:pt-0 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                      {review.user.name?.charAt(0) || 'U'}
+                      {review.user?.name?.charAt(0) || 'U'}
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-text-primary">{review.user.name || "Verified Customer"}</h4>
+                      <h4 className="text-xs font-bold text-text-primary">{review.user?.name || "Verified Customer"}</h4>
                       <div className="flex gap-0.5 mt-0.5">
                         {[...Array(5)].map((_, i) => (
                           <Star
