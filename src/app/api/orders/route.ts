@@ -1249,7 +1249,6 @@ export async function POST(request: NextRequest) {
     // Perform notifications asynchronously in the background
     // SKIP notifications for unpaid online payment orders — they fire AFTER payment verification
     const isOnlinePaymentOrder = paymentMethod !== 'COD'
-    const isOnlinePaid = paymentStatus === PaymentStatus.PAID
 
     after(async () => {
       if (isOnlinePaymentOrder && !isOnlinePaid) {
