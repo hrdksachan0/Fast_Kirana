@@ -23,16 +23,16 @@ const DEFAULT_CAFE_SECTIONS = [
 ]
 
 const DEFAULT_RESTAURANT_SECTIONS = [
-  { id: 'sec_main_course', tag: 'main-course', title: 'North Indian Curries & Gravies', emoji: '🥘', sortOrder: 1, matchTags: ['main-course', 'curry', 'paneer', 'dal'] },
-  { id: 'sec_roti_breads', tag: 'roti-naan-breads', title: 'Warm Naans, Rotis & Breads', emoji: '🫓', sortOrder: 2, matchTags: ['roti-naan-kulcha', 'roti', 'naan', 'kulcha', 'breads'] },
-  { id: 'sec_starters_tikka', tag: 'starters-tandoori', title: 'Starters & Tandoori Tikkas', emoji: '🍢', sortOrder: 3, matchTags: ['starters-tandoori', 'tandoori-nawab-nawab', 'starter', 'tikka', 'chaap'] },
-  { id: 'sec_biryani_rice', tag: 'biryani-rice', title: 'Biryani & Rice Feasts', emoji: '🍚', sortOrder: 4, matchTags: ['biryani-rice', 'biryani', 'pulav', 'basmati-rice'] },
+  { id: 'sec_main_course', tag: 'main-course', title: 'Curries & Gravies', emoji: '🥘', sortOrder: 1, matchTags: ['main-course', 'curry', 'paneer', 'dal'] },
+  { id: 'sec_roti_breads', tag: 'roti-naan-breads', title: 'Rotis & Naans', emoji: '🫓', sortOrder: 2, matchTags: ['roti-naan-kulcha', 'roti', 'naan', 'kulcha', 'breads'] },
+  { id: 'sec_starters_tikka', tag: 'starters-tandoori', title: 'Starters & Tikka', emoji: '🍢', sortOrder: 3, matchTags: ['starters-tandoori', 'tandoori-nawab-nawab', 'starter', 'tikka', 'chaap'] },
+  { id: 'sec_biryani_rice', tag: 'biryani-rice', title: 'Biryani & Rice', emoji: '🍚', sortOrder: 4, matchTags: ['biryani-rice', 'biryani', 'pulav', 'basmati-rice'] },
   { id: 'sec_dal_special', tag: 'dal', title: 'Choice of Dal', emoji: '🥘', sortOrder: 5, matchTags: ['dal', 'dal-makhani'] },
-  { id: 'sec_chinese_soups', tag: 'chinese-soups', title: 'Chinese Wok, Soups & Pastas', emoji: '🥡', sortOrder: 6, matchTags: ['chinese', 'noodles', 'soup', 'pasta'] },
-  { id: 'sec_pizzas_burgers', tag: 'pizzas-burgers', title: 'Pizzas, Burgers & Bites', emoji: '🍕', sortOrder: 7, matchTags: ['pizza', 'burger', 'sandwich'] },
+  { id: 'sec_chinese_soups', tag: 'chinese-soups', title: 'Chinese & Soups', emoji: '🥡', sortOrder: 6, matchTags: ['chinese', 'noodles', 'soup', 'pasta'] },
+  { id: 'sec_pizzas_burgers', tag: 'pizzas-burgers', title: 'Pizza & Burgers', emoji: '🍕', sortOrder: 7, matchTags: ['pizza', 'burger', 'sandwich'] },
   { id: 'sec_breakfast', tag: 'breakfast', title: 'Breakfast & Nashta', emoji: '🍳', sortOrder: 8, matchTags: ['breakfast', 'paratha', 'chole-bhature'] },
   { id: 'sec_south_indian_res', tag: 'south-indian', title: 'South Indian & Dosa', emoji: '🍛', sortOrder: 9, matchTags: ['south-indian', 'dosa'] },
-  { id: 'sec_beverages_shakes', tag: 'shakes-beverages', title: 'Thick Shakes & Beverages', emoji: '🥤', sortOrder: 10, matchTags: ['shake', 'shakes', 'beverage', 'mocktail'] },
+  { id: 'sec_beverages_shakes', tag: 'shakes-beverages', title: 'Shakes & Drinks', emoji: '🥤', sortOrder: 10, matchTags: ['shake', 'shakes', 'beverage', 'mocktail'] },
   { id: 'sec_desserts_res', tag: 'desserts', title: 'Desserts & Sweets', emoji: '🍨', sortOrder: 11, matchTags: ['desserts', 'gulab-jamun', 'ice-cream', 'sweet'] }
 ]
 

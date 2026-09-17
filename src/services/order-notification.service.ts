@@ -146,6 +146,43 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
           }
           sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders_all', ...staffPayload }).catch(() => {})
 
+          // Direct FCM push to all registered Admin device tokens
+          const adminTokens = await prisma.fcmToken.findMany({
+            where: {
+              user: { role: Role.ADMIN },
+            },
+            select: { token: true },
+          })
+          for (const aToken of adminTokens) {
+            fcmMessaging.send({ token: aToken.token, ...staffPayload }).catch(() => {})
+          }
+
+          // Direct FCM push to Delivery & Picker staff for grocery orders
+          if (!isRestaurant) {
+            const riderPayload = buildOrderFcmPayload(
+              isOnlinePaid ? '💳 New PAID Order!' : '🛵 New Order to Deliver / Pick!',
+              `New order #${displayId} of ₹${order.total} is ready for processing.`,
+              {
+                title: isOnlinePaid ? '💳 New PAID Order!' : '🛵 New Order to Deliver / Pick!',
+                body: `New order #${displayId} of ₹${order.total} is ready for processing.`,
+                orderId: order.id,
+                readableId: displayId,
+                status: order.status,
+                screen: 'delivery',
+                timestamp: Date.now().toString(),
+              }
+            )
+            const staffTokens = await prisma.fcmToken.findMany({
+              where: {
+                user: { role: { in: [Role.DELIVERY, Role.PICKER] } },
+              },
+              select: { token: true },
+            })
+            for (const sToken of staffTokens) {
+              fcmMessaging.send({ token: sToken.token, ...riderPayload }).catch(() => {})
+            }
+          }
+
           // Push strictly to kitchen device
           if (isRestaurant && order.restaurantId && order.status !== OrderStatus.CANCELLED) {
             const restInfo = await prisma.restaurant.findUnique({
@@ -174,6 +211,7 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
                 user: {
                   OR: [
                     { assignedRestaurantId: order.restaurantId },
+                    { role: { in: [Role.RESTAURANT_OWNER, Role.CHEF] } },
                     ...(cleanRestPhone ? [{ phone: { contains: cleanRestPhone } }] : []),
                   ]
                 }

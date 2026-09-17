@@ -33,6 +33,10 @@ const SYNONYM_DICTIONARY: Record<string, string[]> = {
   'namak': ['salt']
 }
 
+const SEARCH_STOP_WORDS = new Set([
+  'ke', 'ka', 'ki', 'ko', 'se', 'me', 'mein', 'par', 'pe', 'aur', 'and', 'the', 'of', 'in', 'for', 'with', 'from'
+])
+
 export async function GET(request: NextRequest) {
   const limited = await apiReadLimiter.check(request)
   if (limited) return limited
@@ -381,11 +385,25 @@ export async function GET(request: NextRequest) {
     let total = 0
     let nextCursor: string | null = null
     if (normalizedSearch) {
-      // 1. Split query into tokens, expand with synonyms, and build an intersection query
-      const searchWords = normalizedSearch.split(/\s+/)
+      // 1. Split query into tokens, filter stop words, expand with synonyms, and build an intersection query
+      const rawWords = normalizedSearch.split(/\s+/).filter(Boolean)
+      const filteredWords = rawWords.filter(w => !SEARCH_STOP_WORDS.has(w))
+      const searchWords = filteredWords.length > 0 ? filteredWords : rawWords
+
       const wordClauses = searchWords.map(w => {
         const syns = SYNONYM_DICTIONARY[w] || []
         const wordOptions = [w, ...syns]
+
+        // Restaurant alias expansions
+        if (w === 'as' || w === 'a.s' || w === 'a.s.') {
+          wordOptions.push('as-restaurant', 'REST-101', 'a.s. restaurant')
+        } else if (w === 'wedson') {
+          wordOptions.push('wedson-restaurant', 'REST-102')
+        } else if (w === 'bal' || w === 'udyan') {
+          wordOptions.push('bal-udyan-restaurant', 'REST-103')
+        } else if (w === 'hot' || w === 'pizza' || w === 'lovers') {
+          wordOptions.push('hot-pizza-lovers', 'REST-104')
+        }
         
         return {
           OR: [
@@ -394,7 +412,8 @@ export async function GET(request: NextRequest) {
               { description: { contains: opt, mode: 'insensitive' as const } },
               { tags: { has: opt } },
               { category: { name: { contains: opt, mode: 'insensitive' as const } } },
-              { restaurant: { name: { contains: opt, mode: 'insensitive' as const } } }
+              { restaurant: { name: { contains: opt, mode: 'insensitive' as const } } },
+              { restaurant: { slug: { contains: opt, mode: 'insensitive' as const } } }
             ]),
             ...(w.toLowerCase() === 'veg' ? [
               { restaurant: { isVeg: true } },

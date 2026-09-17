@@ -124,8 +124,9 @@ void main() {
         ),
       );
 
-      expect(find.textContaining('Order is currently set to Cash on Delivery'), findsOneWidget);
-      expect(find.text('Pay ₹345 Online'), findsOneWidget);
+      expect(find.textContaining('Cash on Delivery:'), findsOneWidget);
+      expect(find.text('₹345'), findsOneWidget);
+      expect(find.text('Pay Online'), findsOneWidget);
     });
 
     testWidgets('TrackingPaymentCard shows Pay Online button for unpaid online orders', (WidgetTester tester) async {
@@ -164,9 +165,10 @@ void main() {
         ),
       );
 
-      expect(find.text('PAYMENT PENDING'), findsOneWidget);
-      expect(find.text('Pay Online Now'), findsOneWidget);
-      await tester.tap(find.text('Pay Online Now'));
+      expect(find.textContaining('Pay Online:'), findsOneWidget);
+      expect(find.text('Payment pending • Tap to complete'), findsOneWidget);
+      expect(find.text('Pay Online'), findsOneWidget);
+      await tester.tap(find.text('Pay Online'));
       await tester.pump();
       expect(payOnlineTapped, isTrue);
     });

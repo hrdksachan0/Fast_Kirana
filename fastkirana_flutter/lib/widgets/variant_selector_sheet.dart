@@ -39,18 +39,29 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
   final Map<String, Set<String>> _selectedAddons = {};
 
   bool _isVeg(Product product) {
-    final tags = product.tags.map((t) => t.toLowerCase()).toList();
+    final tags = product.tags.map((t) => t.toLowerCase().trim()).toList();
+    if (tags.contains('veg') || tags.contains('pure-veg') || tags.contains('pureveg')) {
+      return true;
+    }
     if (tags.any((t) =>
-        t.contains('non-veg') ||
-        t.contains('nonveg') ||
+        t == 'non-veg' ||
+        t == 'nonveg' ||
         t == 'egg' ||
-        t.contains('chicken') ||
-        t.contains('mutton') ||
-        t.contains('fish'))) {
+        t == 'chicken' ||
+        t == 'mutton' ||
+        t == 'fish' ||
+        t.contains('non-veg') ||
+        t.contains('nonveg'))) {
       return false;
     }
     final nl = product.name.toLowerCase();
-    if (nl.contains('chicken') || nl.contains('egg') || nl.contains('mutton') || nl.contains('fish')) {
+    final words = nl.split(RegExp(r'[^a-z0-9]+')).where((w) => w.isNotEmpty).toSet();
+    if (words.contains('chicken') ||
+        words.contains('egg') ||
+        words.contains('eggs') ||
+        words.contains('mutton') ||
+        words.contains('fish') ||
+        words.contains('meat')) {
       return false;
     }
     return true;

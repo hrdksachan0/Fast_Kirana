@@ -44,20 +44,35 @@ function isVegProduct(p: any): boolean {
     .filter((t: any) => typeof t === 'string')
     .map((t: string) => t.trim().toLowerCase())
 
+  if (tags.includes('veg') || tags.includes('pure-veg') || tags.includes('pureveg')) {
+    return true
+  }
+
   if (
     tags.some((t: string) =>
-      t.includes('non-veg') ||
-      t.includes('nonveg') ||
+      t === 'non-veg' ||
+      t === 'nonveg' ||
       t === 'egg' ||
-      t.includes('chicken') ||
-      t.includes('mutton') ||
-      t.includes('fish')
+      t === 'chicken' ||
+      t === 'mutton' ||
+      t === 'fish' ||
+      t.includes('non-veg') ||
+      t.includes('nonveg')
     )
   ) {
     return false
   }
+
   const nl = String(p.name || '').toLowerCase()
-  if (nl.includes('chicken') || nl.includes('egg') || nl.includes('mutton') || nl.includes('fish')) {
+  const words = nl.split(/[^a-z0-9]+/).filter(Boolean)
+  if (
+    words.includes('chicken') ||
+    words.includes('egg') ||
+    words.includes('eggs') ||
+    words.includes('mutton') ||
+    words.includes('fish') ||
+    words.includes('meat')
+  ) {
     return false
   }
   return true

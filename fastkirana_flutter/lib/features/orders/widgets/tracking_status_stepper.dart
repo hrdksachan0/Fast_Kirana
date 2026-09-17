@@ -216,65 +216,69 @@ class TrackingStatusStepper extends StatelessWidget {
           const SizedBox(height: 14),
           if (order?.isCombined == true && order?.subOrders != null && order!.subOrders!.length > 1) ...[
             Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: const Color(0xFFFAF5FF),
+                color: const Color(0xFFF8FAFC),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE9D5FF)),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.hub_rounded, size: 14, color: Color(0xFF7C3AED)),
-                      const SizedBox(width: 6),
+                      const Icon(Icons.hub_rounded, size: 13, color: Color(0xFF64748B)),
+                      const SizedBox(width: 5),
                       Text(
-                        'MULTI-OUTLET COMBINED ORDER',
+                        'COMBINED MULTI-OUTLET ORDER',
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 10),
-                          fontWeight: FontWeight.w900,
-                          color: const Color(0xFF7C3AED),
+                          fontSize: Responsive.scaledFontSize(context, 9.5),
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF64748B),
                           letterSpacing: 0.3,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   ...order!.subOrders!.map((sub) {
                     final subIsDelivered = sub.status == OrderStatus.delivered;
-                    final subIsPacked = sub.status == OrderStatus.packed || sub.status == OrderStatus.shipped;
+                    final isRest = sub.restaurantId != null || (sub.readableId != null && sub.readableId!.toUpperCase().endsWith('-R'));
                     return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 3),
+                      padding: const EdgeInsets.symmetric(vertical: 2.5),
                       child: Row(
                         children: [
-                          Icon(
-                            subIsDelivered
-                                ? Icons.check_circle_rounded
-                                : (subIsPacked ? Icons.inventory_2_rounded : Icons.radio_button_checked_rounded),
-                            size: 13,
-                            color: subIsDelivered
-                                ? const Color(0xFF16A34A)
-                                : (subIsPacked ? const Color(0xFF7C3AED) : const Color(0xFFF59E0B)),
+                          Text(
+                            isRest ? '🍽️' : '🏪',
+                            style: const TextStyle(fontSize: 12),
                           ),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              sub.shopName ?? (sub.restaurantId != null ? 'Restaurant' : 'Darkstore'),
+                              sub.shopName ?? (isRest ? 'Restaurant' : 'FastKirana Darkstore'),
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 11.5),
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w600,
                                 color: slateDark,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Text(
-                            sub.status.displayName,
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 10.5),
-                              fontWeight: FontWeight.w800,
-                              color: sub.status.color,
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: (subIsDelivered ? const Color(0xFF00A344) : const Color(0xFF2563EB)).withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: Text(
+                              sub.status.displayName,
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 10),
+                                fontWeight: FontWeight.w800,
+                                color: subIsDelivered ? const Color(0xFF16A34A) : const Color(0xFF2563EB),
+                              ),
                             ),
                           ),
                         ],

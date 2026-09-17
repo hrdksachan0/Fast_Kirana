@@ -1438,11 +1438,18 @@ export function ProductsTab({
                         </div>
                       </td>
 
-                      {/* Category */}
+                      {/* Category / Restaurant Outlet */}
                       <td className="py-3 px-4">
-                        <span className="bg-muted px-2 py-0.5 border border-border/80 text-[10px] text-text-secondary rounded font-bold uppercase tracking-wider">
-                          {p.category?.name || 'General'}
-                        </span>
+                        {(p as any).restaurant || p.restaurantId ? (
+                          <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 px-2 py-0.5 text-[10px] rounded font-bold uppercase tracking-wider">
+                            <span>🍽️</span>
+                            <span>{(p as any).restaurant?.name || 'Restaurant'}</span>
+                          </span>
+                        ) : (
+                          <span className="bg-muted px-2 py-0.5 border border-border/80 text-[10px] text-text-secondary rounded font-bold uppercase tracking-wider">
+                            {p.category?.name || 'General'}
+                          </span>
+                        )}
                       </td>
 
                       {/* MRP */}

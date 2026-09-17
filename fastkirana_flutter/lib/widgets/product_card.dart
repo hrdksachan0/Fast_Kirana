@@ -815,10 +815,31 @@ class _ProductCardState extends ConsumerState<ProductCard> {
   double s(double v) => v * _uiScale;
 
   bool _isVeg(Product product) {
-    final tags = product.tags.map((t) => t.toLowerCase()).toList();
-    if (tags.any((t) => t.contains('non-veg') || t.contains('nonveg') || t == 'egg' || t.contains('chicken') || t.contains('mutton'))) return false;
+    final tags = product.tags.map((t) => t.toLowerCase().trim()).toList();
+    if (tags.contains('veg') || tags.contains('pure-veg') || tags.contains('pureveg')) {
+      return true;
+    }
+    if (tags.any((t) =>
+        t == 'non-veg' ||
+        t == 'nonveg' ||
+        t == 'egg' ||
+        t == 'chicken' ||
+        t == 'mutton' ||
+        t == 'fish' ||
+        t.contains('non-veg') ||
+        t.contains('nonveg'))) {
+      return false;
+    }
     final nl = product.name.toLowerCase();
-    if (nl.contains('chicken') || nl.contains('egg') || nl.contains('mutton') || nl.contains('fish')) return false;
+    final words = nl.split(RegExp(r'[^a-z0-9]+')).where((w) => w.isNotEmpty).toSet();
+    if (words.contains('chicken') ||
+        words.contains('egg') ||
+        words.contains('eggs') ||
+        words.contains('mutton') ||
+        words.contains('fish') ||
+        words.contains('meat')) {
+      return false;
+    }
     return true;
   }
 

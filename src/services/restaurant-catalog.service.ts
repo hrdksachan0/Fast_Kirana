@@ -79,7 +79,7 @@ export class RestaurantCatalogService {
       menuSectionId,
     } = input
 
-    const targetCategoryId = (categoryId && typeof categoryId === 'string' && categoryId.trim()) ? categoryId.trim() : null
+    const targetCategoryId = null
     const finalUnit = (unit && typeof unit === 'string' && unit.trim()) ? unit.trim() : '1 Serving'
     const parsedPrice = typeof price === 'number' ? price : (parseFloat(price) || 0)
     const parsedMrp = mrp !== undefined ? (typeof mrp === 'number' ? mrp : parseFloat(mrp) || parsedPrice) : parsedPrice

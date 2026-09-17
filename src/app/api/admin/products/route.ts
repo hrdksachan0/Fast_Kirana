@@ -115,6 +115,13 @@ export async function GET(request: Request) {
         where,
         include: {
           category: true,
+          restaurant: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            }
+          },
         },
         orderBy: {
           createdAt: 'desc',
@@ -174,6 +181,11 @@ export async function GET(request: Request) {
           name: p.category.name,
           slug: p.category.slug,
         } : null,
+        restaurant: p.restaurant ? {
+          id: p.restaurant.id,
+          name: p.restaurant.name,
+          slug: p.restaurant.slug,
+        } : null,
       }
     })
 
@@ -191,14 +203,17 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const { name, categoryId, barcode, mrp, price, stock, unit, imageUrl, brand, isAvailable } = body
+    const { name, categoryId, restaurantId, barcode, mrp, price, stock, unit, imageUrl, brand, isAvailable } = body
 
     if (!name || mrp === undefined || price === undefined) {
       return NextResponse.json({ error: 'Name, MRP, and Price are required' }, { status: 400 })
     }
 
     let finalCategoryId = categoryId
-    if (!finalCategoryId) {
+    let finalRestaurantId = restaurantId ? String(restaurantId).trim() : null
+    if (finalRestaurantId) {
+      finalCategoryId = null
+    } else if (!finalCategoryId) {
       const firstCat = await prisma.category.findFirst({
         where: { slug: { notIn: ['restaurant-food', 'restaurant', 'cafe'] } },
         orderBy: { sortOrder: 'asc' }
@@ -230,17 +245,19 @@ export async function POST(request: Request) {
         slug: finalSlug,
         readableId: nextReadableId,
         categoryId: finalCategoryId,
+        restaurantId: finalRestaurantId,
         barcode: barcode && typeof barcode === 'string' ? barcode.trim() : null,
         mrp: parsedMrp,
         price: parsedPrice,
         discount,
         stock: parseInt(String(stock), 10) || 0,
-        unit: (unit && typeof unit === 'string') ? unit.trim() : '1 pc',
+        unit: (unit && typeof unit === 'string') ? unit.trim() : (finalRestaurantId ? '1 Serving' : '1 pc'),
         imageUrl: imageUrl || null,
         isAvailable: isAvailable !== undefined ? !!isAvailable : true,
       },
       include: {
         category: true,
+        restaurant: true,
       }
     })
 

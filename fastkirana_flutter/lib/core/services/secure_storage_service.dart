@@ -35,6 +35,7 @@ class SecureStorage {
   /// Load all auth fields into the in-memory cache once.
   /// Uses instant SharedPreferences first (<1ms) and syncs with encrypted storage.
   static Future<void> loadCache() async {
+    if (_isCacheLoaded) return;
     try {
       final prefs = await SharedPreferences.getInstance();
       _cachedToken = prefs.getString('auth_token') ?? await read('auth_token');
@@ -146,6 +147,13 @@ class SecureStorage {
   }
 
   static Future<void> write(String key, String value) async {
+    if (key == 'auth_token') _cachedToken = value;
+    if (key == 'refresh_token') _cachedRefreshToken = value;
+    if (key == 'user_id') _cachedUserId = value;
+    if (key == 'user_phone') _cachedUserPhone = value;
+    if (key == 'user_email') _cachedUserEmail = value;
+    if (key == 'user_name') _cachedUserName = value;
+    if (key == 'user_role') _cachedUserRole = value;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(key, value);
@@ -156,6 +164,14 @@ class SecureStorage {
   }
 
   static Future<void> delete(String key) async {
+    if (key == 'auth_token') _cachedToken = null;
+    if (key == 'refresh_token') _cachedRefreshToken = null;
+    if (key == 'user_id') _cachedUserId = null;
+    if (key == 'user_phone') _cachedUserPhone = null;
+    if (key == 'user_email') _cachedUserEmail = null;
+    if (key == 'user_name') _cachedUserName = null;
+    if (key == 'user_role') _cachedUserRole = null;
+    if (key == 'user_data') _cachedUserData = null;
     try {
       await _storage.delete(key: key);
     } catch (e, _) { LoggerService.error('SecureStorageService: delete', e); }
@@ -166,6 +182,7 @@ class SecureStorage {
   }
 
   static Future<void> deleteAll() async {
+    invalidateCache();
     try {
       await _storage.deleteAll();
     } catch (e, _) { LoggerService.error('SecureStorageService: deleteAll', e); }

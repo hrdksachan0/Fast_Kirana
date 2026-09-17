@@ -593,26 +593,60 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return productsAsync.when(
       data: (products) {
         final queryClean = _query.toLowerCase().trim();
-        final queryWords = queryClean.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+        final rawWords = queryClean.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
 
-        // 1. Dynamic matching for ANY restaurant registered in database
-        final allRestaurants = restaurantsAsync.valueOrNull ?? [];
-        final matchedRestaurants = allRestaurants.where((r) {
+        // Filter common Hindi / English prepositions & stop words (e.g. "ke", "ka", "ki", "ka pizza", "as ke pizza")
+        const stopWords = {'ke', 'ka', 'ki', 'ko', 'se', 'me', 'mein', 'par', 'pe', 'aur', 'and', 'the', 'of', 'in', 'for', 'with', 'from'};
+        final queryWords = rawWords.where((w) => !stopWords.contains(w)).toList();
+        final effectiveQueryWords = queryWords.isNotEmpty ? queryWords : rawWords;
+
+        // 1. Dynamic matching for ANY restaurant registered in database or registry
+        final allRestaurants = [
+          ...restaurantsAsync.valueOrNull ?? [],
+          ...RestaurantRegistry.all,
+        ];
+        final Map<String, Restaurant> uniqueRestMap = {};
+        for (final r in allRestaurants) {
+          uniqueRestMap[r.id.toLowerCase()] = r;
+          uniqueRestMap[r.slug.toLowerCase()] = r;
+        }
+        final uniqueRestaurants = uniqueRestMap.values.toSet().toList();
+
+        final isAsQuery = queryClean == 'as' ||
+            queryClean.startsWith('as ') ||
+            queryClean.contains(' as ') ||
+            queryClean.endsWith(' as') ||
+            queryClean.contains('a.s') ||
+            queryClean.contains('as-restaurant');
+
+        final matchedRestaurants = uniqueRestaurants.where((r) {
           final rName = r.name.toLowerCase();
+          final rSlug = r.slug.toLowerCase();
           final rCuisines = r.cuisineTags.map((t) => t.toLowerCase()).join(' ');
+
+          if (isAsQuery && (r.id == 'REST-101' || rSlug.contains('as-restaurant') || rName.contains('a.s'))) {
+            return true;
+          }
+
           return rName.contains(queryClean) ||
+              rSlug.contains(queryClean) ||
               rCuisines.contains(queryClean) ||
-              queryWords.any((w) => w.length > 2 && (rName.contains(w) || rCuisines.contains(w)));
+              effectiveQueryWords.any((w) {
+                if (w == 'as' || w == 'a.s' || w == 'a.s.') {
+                  return r.id == 'REST-101' || rSlug.contains('as');
+                }
+                return w.length >= 2 && (rName.contains(w) || rSlug.contains(w) || rCuisines.contains(w));
+              });
         }).toList();
 
-        final isRestaurantQuery = matchedRestaurants.isNotEmpty ||
-            allRestaurants.any((r) => r.name.toLowerCase().contains(queryClean) || queryClean.contains(r.name.toLowerCase())) ||
-            RestaurantRegistry.all.any((r) => r.name.toLowerCase().contains(queryClean) || queryClean.contains(r.name.toLowerCase())) ||
+        final isRestaurantQuery = isAsQuery ||
+            matchedRestaurants.isNotEmpty ||
+            uniqueRestaurants.any((r) => r.name.toLowerCase().contains(queryClean) || queryClean.contains(r.name.toLowerCase())) ||
             ['cafe', 'restaurant', 'dhaba', 'kitchen', 'food court', 'bhojnalaya', 'sweets', 'bakery'].any((r) => queryClean.contains(r));
 
         // 2. Build expanded query terms using Hinglish synonyms
-        final Set<String> expandedTerms = {queryClean, ...queryWords};
-        for (final word in queryWords) {
+        final Set<String> expandedTerms = {queryClean, ...effectiveQueryWords};
+        for (final word in effectiveQueryWords) {
           if (_hinglishSynonyms.containsKey(word)) {
             expandedTerms.addAll(_hinglishSynonyms[word]!);
           }
@@ -636,16 +670,22 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
           int score = 0;
 
-          // If searching for a specific restaurant/outlet
-          if (isRestaurantQuery) {
-            if (matchedRestaurants.isNotEmpty) {
-              final matchesMatchedOutlet = matchedRestaurants.any((r) =>
-                  p.restaurantId == r.id ||
-                  (p.restaurant?.name.toLowerCase() ?? '').contains(r.name.toLowerCase()) ||
-                  outlet.contains(r.name.toLowerCase()));
-              if (matchesMatchedOutlet) score += 100;
-            }
-            if (outlet.contains(queryClean)) score += 80;
+          // If searching for a specific restaurant/outlet (e.g. "as ke pizza", "as", "wedson", "hot pizza")
+          if (isAsQuery && (p.restaurantId == 'REST-101' || tags.contains('as') || tags.contains('as-restaurant') || outlet.contains('a.s'))) {
+            score += 180;
+          }
+
+          if (isRestaurantQuery && matchedRestaurants.isNotEmpty) {
+            final matchesMatchedOutlet = matchedRestaurants.any((r) =>
+                p.restaurantId == r.id ||
+                (p.restaurant?.name.toLowerCase() ?? '').contains(r.name.toLowerCase()) ||
+                outlet.contains(r.name.toLowerCase()) ||
+                tags.contains(r.slug.toLowerCase()));
+            if (matchesMatchedOutlet) score += 120;
+          }
+
+          if (outlet.isNotEmpty && queryClean.isNotEmpty && outlet.contains(queryClean)) {
+            score += 80;
           }
 
           // Exact full name match
@@ -669,7 +709,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
           // Check individual query words and expanded synonyms
           for (final term in expandedTerms) {
-            if (term.isEmpty) continue;
+            if (term.isEmpty || stopWords.contains(term)) continue;
 
             if (pName.contains(term)) {
               score += 40;
@@ -695,19 +735,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           }
 
           // Strict Exclusion Guards for distinct dish types when explicitly typed
-          if (queryWords.any((w) => w == 'burger' || w == 'burgers') && !pName.contains('burger')) {
+          if (effectiveQueryWords.any((w) => w == 'burger' || w == 'burgers') && !pName.contains('burger')) {
             score = 0;
           }
-          if (queryWords.any((w) => w == 'pizza' || w == 'pizzas') && !pName.contains('pizza')) {
+          if (effectiveQueryWords.any((w) => w == 'pizza' || w == 'pizzas') && !pName.contains('pizza')) {
             score = 0;
           }
-          if (queryWords.any((w) => w.contains('sandwich')) && !pName.contains('sandwich')) {
+          if (effectiveQueryWords.any((w) => w.contains('sandwich')) && !pName.contains('sandwich')) {
             score = 0;
           }
-          if (queryWords.any((w) => w == 'roll' || w == 'rolls' || w == 'wrap') && !pName.contains('roll') && !pName.contains('wrap')) {
+          if (effectiveQueryWords.any((w) => w == 'roll' || w == 'rolls' || w == 'wrap') && !pName.contains('roll') && !pName.contains('wrap')) {
             score = 0;
           }
-          if (queryWords.any((w) => w.startsWith('momo')) && !pName.contains('momo')) {
+          if (effectiveQueryWords.any((w) => w.startsWith('momo')) && !pName.contains('momo')) {
             score = 0;
           }
 

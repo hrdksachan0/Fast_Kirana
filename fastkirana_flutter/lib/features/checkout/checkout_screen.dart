@@ -245,11 +245,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final total = _pendingGrandTotal ?? 0.0;
     final cart = _pendingCart ?? ref.read(cartProvider).value;
 
-    // 2. Open 60-second Fallback Sheet: If customer stops -> cancel order; else convert to COD
+    // 2. Open 60-second Fallback Sheet: If customer stops -> cancel order; else convert to COD or retry
     if (mounted && total > 0 && cart != null) {
       await PaymentFailedCodSheet.show(
         context: context,
         grandTotal: total,
+        onRetryPayment: () {
+          if (mounted) {
+            _pendingCashfreeOrderId = null;
+            _handlePlaceOrder(cart);
+          }
+        },
         onCancelOrder: () {
           if (mounted) {
             setState(() => _isPlacingOrder = false);
@@ -259,7 +265,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 content: Text(
-                  'Order cancel kar diya gaya hai. Koi amount deduct nahi hua.',
+                  'Order was cancelled. No amount was debited.',
                   style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
                 ),
               ),
@@ -520,6 +526,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             await PaymentFailedCodSheet.show(
               context: context,
               grandTotal: grandTotal,
+              onRetryPayment: () {
+                if (mounted) {
+                  _pendingCashfreeOrderId = null;
+                  _handlePlaceOrder(cart);
+                }
+              },
               onCancelOrder: () {
                 if (mounted) {
                   setState(() => _isPlacingOrder = false);
@@ -529,7 +541,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       behavior: SnackBarBehavior.floating,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       content: Text(
-                        'Order cancel kar diya gaya hai. Koi amount deduct nahi hua.',
+                        'Order was cancelled. No amount was debited.',
                         style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
                       ),
                     ),

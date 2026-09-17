@@ -36,18 +36,35 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   let restaurants: any[] = []
 
   if (query) {
-    const words = query.split(/\s+/).filter(Boolean)
+    const rawWords = query.split(/\s+/).filter(Boolean)
+    const STOP_WORDS = new Set(['ke', 'ka', 'ki', 'ko', 'se', 'me', 'mein', 'par', 'pe', 'aur', 'and', 'the', 'of', 'in', 'for', 'with', 'from'])
+    const filteredWords = rawWords.filter(w => !STOP_WORDS.has(w.toLowerCase()))
+    const words = filteredWords.length > 0 ? filteredWords : rawWords
 
     const restaurantsRaw = await prisma.restaurant.findMany({
       where: {
         isActive: true,
-        AND: words.map((word) => ({
-          OR: [
-            { name: { contains: word, mode: 'insensitive' } },
-            { description: { contains: word, mode: 'insensitive' } },
-            { cuisineTags: { hasSome: [word.toLowerCase()] } },
-          ],
-        })),
+        OR: [
+          {
+            AND: words.map((word) => {
+              const lowerWord = word.toLowerCase()
+              const wordOptions = [word]
+              if (lowerWord === 'as' || lowerWord === 'a.s' || lowerWord === 'a.s.') {
+                wordOptions.push('A.S.', 'as-restaurant')
+              }
+              return {
+                OR: [
+                  ...wordOptions.map(opt => ({ name: { contains: opt, mode: 'insensitive' as const } })),
+                  ...wordOptions.map(opt => ({ slug: { contains: opt, mode: 'insensitive' as const } })),
+                  { description: { contains: word, mode: 'insensitive' as const } },
+                  { cuisineTags: { hasSome: [lowerWord] } },
+                ],
+              }
+            }),
+          },
+          { name: { contains: query, mode: 'insensitive' } },
+          { slug: { contains: query, mode: 'insensitive' } }
+        ]
       },
     }).catch(() => [])
 
@@ -58,13 +75,18 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         isAvailable: true,
         AND: words.map((word) => {
           const lowerWord = word.toLowerCase()
+          const wordOptions = [word]
+          if (lowerWord === 'as' || lowerWord === 'a.s' || lowerWord === 'a.s.') {
+            wordOptions.push('as-restaurant', 'as', 'a.s')
+          }
           return {
             OR: [
-              { name: { contains: word, mode: 'insensitive' } },
-              { description: { contains: word, mode: 'insensitive' } },
-              { tags: { hasSome: [lowerWord] } },
-              { category: { name: { contains: word, mode: 'insensitive' } } },
-              { restaurant: { name: { contains: word, mode: 'insensitive' } } },
+              ...wordOptions.map(opt => ({ name: { contains: opt, mode: 'insensitive' as const } })),
+              { description: { contains: word, mode: 'insensitive' as const } },
+              { tags: { hasSome: wordOptions.map(w => w.toLowerCase()) } },
+              { category: { name: { contains: word, mode: 'insensitive' as const } } },
+              { restaurant: { name: { contains: word, mode: 'insensitive' as const } } },
+              { restaurant: { slug: { contains: word, mode: 'insensitive' as const } } },
               ...(lowerWord === 'veg' ? [
                 { restaurant: { isVeg: true } },
                 { tags: { has: 'veg' } },

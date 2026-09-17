@@ -41,10 +41,14 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       }
       if (mounted) state = AsyncValue.data(user);
 
-      // Register device FCM push token on startup with user role
+      // Register device FCM push token on startup with user role and restaurant ID
       try {
         final dio = _ref.read(dioProvider);
-        NotificationService().registerDeviceToken(dio, role: user.role);
+        NotificationService().registerDeviceToken(
+          dio,
+          role: user.role,
+          assignedRestaurantId: user.assignedRestaurantId,
+        );
       } catch (e) {
         LoggerService.error("Failed to register FCM token on startup: $e");
       }
@@ -54,9 +58,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   }
 
   Future<void> setUser(User user) async {
-    // Write user data ONLY to SecureStorage (the durable encrypted store).
-    // SharedPreferences is legacy -- no longer needed and creates split-brain risk
-    // if one write succeeds and the other fails.
+    // Write user data to SecureStorage and SharedPreferences (for background isolates)
     await SecureStorage.write('user_data', jsonEncode(user.toJson()));
     final prefs = await SharedPreferences.getInstance();
     final existingToken = prefs.getString('auth_token') ?? '';
@@ -64,17 +66,39 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       await SecureStorage.write('auth_token', existingToken);
     }
     await SecureStorage.write('user_id', user.id);
-    if (user.phone != null && user.phone!.isNotEmpty) await SecureStorage.write('user_phone', user.phone!);
-    if (user.email.isNotEmpty) await SecureStorage.write('user_email', user.email);
-    if (user.name != null && user.name!.isNotEmpty) await SecureStorage.write('user_name', user.name!);
-    if (user.role.isNotEmpty) await SecureStorage.write('user_role', user.role);
+    await prefs.setString('user_id', user.id);
+
+    if (user.phone != null && user.phone!.isNotEmpty) {
+      await SecureStorage.write('user_phone', user.phone!);
+      await prefs.setString('user_phone', user.phone!);
+    }
+    if (user.email.isNotEmpty) {
+      await SecureStorage.write('user_email', user.email);
+      await prefs.setString('user_email', user.email);
+    }
+    if (user.name != null && user.name!.isNotEmpty) {
+      await SecureStorage.write('user_name', user.name!);
+      await prefs.setString('user_name', user.name!);
+    }
+    if (user.role.isNotEmpty) {
+      await SecureStorage.write('user_role', user.role);
+      await prefs.setString('user_role', user.role);
+    }
+    if (user.assignedRestaurantId != null && user.assignedRestaurantId!.isNotEmpty) {
+      await SecureStorage.write('assigned_restaurant_id', user.assignedRestaurantId!);
+      await prefs.setString('assigned_restaurant_id', user.assignedRestaurantId!);
+    }
     await SecureStorage.loadCache();
     state = AsyncValue.data(user);
 
-    // Register device FCM push token on login with explicit role
+    // Register device FCM push token on login with explicit role and restaurant ID
     try {
       final dio = _ref.read(dioProvider);
-      NotificationService().registerDeviceToken(dio, role: user.role);
+      NotificationService().registerDeviceToken(
+        dio,
+        role: user.role,
+        assignedRestaurantId: user.assignedRestaurantId,
+      );
     } catch (e) {
       LoggerService.error("Failed to register FCM token on login: $e");
     }

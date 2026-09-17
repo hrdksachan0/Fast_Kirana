@@ -144,11 +144,11 @@ export async function PATCH(
     if (description !== undefined) updateData.description = description || ''
     if (imageUrl !== undefined) updateData.imageUrl = imageUrl || '📦'
     
-    // Restaurant ID & Category ID auto-alignment
+    // Restaurant ID & Category ID auto-alignment: Restaurant dishes do NOT belong to grocery categories
     const targetRestaurantId = restaurantId !== undefined ? (restaurantId ? normalizeRestaurantId(restaurantId) : null) : (product.restaurantId ? normalizeRestaurantId(product.restaurantId) : null)
     if (targetRestaurantId) {
       updateData.restaurantId = targetRestaurantId
-      updateData.categoryId = (categoryId && typeof categoryId === 'string' && categoryId.trim() !== '') ? categoryId : null
+      updateData.categoryId = null
     } else if (categoryId !== undefined && categoryId !== '') {
       updateData.categoryId = categoryId
       updateData.restaurantId = null

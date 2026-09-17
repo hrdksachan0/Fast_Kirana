@@ -246,15 +246,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
         await SecureStorage.write('user_id', user.id);
         await SecureStorage.write('user_phone', widget.identifier);
         await SecureStorage.write('user_data', jsonEncode(user.toJson()));
-        if (response.token != null && response.token!.isNotEmpty) {
-          await SecureStorage.write('auth_token', response.token!);
-        }
-
-        try {
-          NotificationService().registerDeviceToken(ref.read(dioProvider));
-        } catch (e) { LoggerService.error("Bare catch", e); }
-
-        ref.read(authProvider.notifier).setUser(user);
+        await ref.read(authProvider.notifier).setUser(user);
         HapticFeedback.heavyImpact();
 
         if (!mounted) return;

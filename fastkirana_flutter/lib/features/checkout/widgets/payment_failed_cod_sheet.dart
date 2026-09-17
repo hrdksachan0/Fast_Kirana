@@ -7,12 +7,14 @@ class PaymentFailedCodSheet extends StatefulWidget {
   final double grandTotal;
   final VoidCallback onCancelOrder;
   final VoidCallback onConfirmCod;
+  final VoidCallback? onRetryPayment;
 
   const PaymentFailedCodSheet({
     super.key,
     required this.grandTotal,
     required this.onCancelOrder,
     required this.onConfirmCod,
+    this.onRetryPayment,
   });
 
   static Future<void> show({
@@ -20,6 +22,7 @@ class PaymentFailedCodSheet extends StatefulWidget {
     required double grandTotal,
     required VoidCallback onCancelOrder,
     required VoidCallback onConfirmCod,
+    VoidCallback? onRetryPayment,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -31,6 +34,7 @@ class PaymentFailedCodSheet extends StatefulWidget {
         grandTotal: grandTotal,
         onCancelOrder: onCancelOrder,
         onConfirmCod: onConfirmCod,
+        onRetryPayment: onRetryPayment,
       ),
     );
   }
@@ -94,10 +98,22 @@ class _PaymentFailedCodSheetState extends State<PaymentFailedCodSheet> {
     widget.onConfirmCod();
   }
 
+  void _handleRetryPayment() {
+    if (_isActionTaken) return;
+    _isActionTaken = true;
+    _timer?.cancel();
+    HapticFeedback.mediumImpact();
+    Navigator.of(context).pop();
+    if (widget.onRetryPayment != null) {
+      widget.onRetryPayment!();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final progress = _secondsRemaining / _totalSeconds;
     final timeStr = '00:${_secondsRemaining < 10 ? '0' : ''}$_secondsRemaining';
+    final formattedAmount = widget.grandTotal.toStringAsFixed(widget.grandTotal.truncateToDouble() == widget.grandTotal ? 0 : 2);
 
     return PopScope(
       canPop: false, // Prevent dismissing without clicking an explicit action
@@ -108,8 +124,8 @@ class _PaymentFailedCodSheetState extends State<PaymentFailedCodSheet> {
           boxShadow: [
             BoxShadow(
               color: Colors.black26,
-              blurRadius: 20,
-              offset: Offset(0, -4),
+              blurRadius: 24,
+              offset: Offset(0, -6),
             ),
           ],
         ),
@@ -121,30 +137,31 @@ class _PaymentFailedCodSheetState extends State<PaymentFailedCodSheet> {
             // Top Handle Bar
             Center(
               child: Container(
-                width: 44,
+                width: 42,
                 height: 4.5,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFCBD5E1),
+                  color: const Color(0xFFE2E8F0),
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
             ),
 
-            // Warning Badge & Header
+            // Header Row: Status Icon & Title
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: 46,
                   height: 46,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEF3C7),
+                    color: const Color(0xFFFFF1F2),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFFDE68A)),
+                    border: Border.all(color: const Color(0xFFFECDD3)),
                   ),
                   child: const Icon(
-                    Icons.warning_amber_rounded,
-                    color: Color(0xFFD97706),
+                    Icons.error_outline_rounded,
+                    color: Color(0xFFE11D48),
                     size: 26,
                   ),
                 ),
@@ -154,29 +171,39 @@ class _PaymentFailedCodSheetState extends State<PaymentFailedCodSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFE4E6),
+                          color: const Color(0xFFFFF1F2),
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(color: const Color(0xFFFECDD3)),
                         ),
                         child: Text(
-                          'Payment Not Completed',
+                          'PAYMENT INCOMPLETE',
                           style: GoogleFonts.inter(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
                             color: const Color(0xFFBE123C),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 4),
                       Text(
-                        'Online Payment Cancel Ho Gaya',
+                        'Online Payment Not Completed',
                         style: GoogleFonts.inter(
-                          fontSize: 15.5,
-                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
                           color: const Color(0xFF0F172A),
-                          letterSpacing: -0.2,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'No money was debited from your account.',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF64748B),
                         ),
                       ),
                     ],
@@ -184,54 +211,67 @@ class _PaymentFailedCodSheetState extends State<PaymentFailedCodSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
 
-            // Friendly Clarification Card
+            // Option 1: Cash on Delivery Benefit Card
             Container(
-              padding: const EdgeInsets.all(13),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: const Color(0xFFF8FAFC),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.payments_rounded, size: 16, color: Color(0xFF16A34A)),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Order COD par mangwayein:',
-                        style: GoogleFonts.inter(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF0F172A),
-                        ),
-                      ),
-                    ],
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDCFCE7),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.delivery_dining_rounded,
+                      color: Color(0xFF16A34A),
+                      size: 20,
+                    ),
                   ),
-                  const SizedBox(height: 5),
-                  Text(
-                    'Aapka order automatically Cash on Delivery (Ghar par payment) mein convert ho raha hai. Agar aapko yeh order nahi chahiye, toh turant "Roko / Cancel" dabayein.',
-                    style: GoogleFonts.inter(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF475569),
-                      height: 1.35,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Pay on Delivery Available',
+                          style: GoogleFonts.inter(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF0F172A),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Pay via Cash or UPI at your doorstep.',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
-            // 60-Second Slider / Countdown Progress Container
+            // Countdown Timer Container
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 color: const Color(0xFFFFFBEB),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: const Color(0xFFFDE68A)),
               ),
               child: Column(
@@ -244,20 +284,20 @@ class _PaymentFailedCodSheetState extends State<PaymentFailedCodSheet> {
                           const Icon(Icons.timer_outlined, size: 16, color: Color(0xFFB45309)),
                           const SizedBox(width: 6),
                           Text(
-                            'COD mein convert hone ka time:',
+                            'Auto-switching to COD in:',
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: const Color(0xFF78350F),
+                              color: const Color(0xFF92400E),
                             ),
                           ),
                         ],
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(6),
                           border: Border.all(color: const Color(0xFFFCD34D)),
                           boxShadow: [
                             BoxShadow(
@@ -271,32 +311,23 @@ class _PaymentFailedCodSheetState extends State<PaymentFailedCodSheet> {
                           timeStr,
                           style: GoogleFonts.jetBrainsMono(
                             fontSize: 13,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w800,
                             color: const Color(0xFFB45309),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
 
-                  // Progress Bar Slider Track
+                  // Progress Bar
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(6),
                     child: LinearProgressIndicator(
                       value: progress,
-                      minHeight: 8,
+                      minHeight: 6,
                       backgroundColor: const Color(0xFFFDE68A),
                       valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF59E0B)),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '⏰ 1 minute slider chal raha hai — rokein ya confirm karein',
-                    style: GoogleFonts.inter(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF92400E),
                     ),
                   ),
                 ],
@@ -304,46 +335,69 @@ class _PaymentFailedCodSheetState extends State<PaymentFailedCodSheet> {
             ),
             const SizedBox(height: 18),
 
-            // 🛑 Cancel / Stop Button ("Roko")
+            // 1. Primary Button: Confirm COD
             SizedBox(
               height: 48,
-              child: OutlinedButton.icon(
-                onPressed: _handleCancel,
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFF1F2),
-                  side: const BorderSide(color: Color(0xFFFDA4AF), width: 1.5),
+              child: ElevatedButton.icon(
+                onPressed: _handleConfirmCod,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF16A34A),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                icon: const Icon(Icons.cancel_rounded, color: Color(0xFFBE123C), size: 18),
+                icon: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
                 label: Text(
-                  '🛑 Roko / Cancel Order (Nahi Chahiye)',
+                  'Confirm Pay on Delivery (₹$formattedAmount)',
                   style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFFBE123C),
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
             ),
             const SizedBox(height: 10),
 
-            // 💵 Confirm COD Immediately Button
-            SizedBox(
-              height: 48,
-              child: ElevatedButton.icon(
-                onPressed: _handleConfirmCod,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF15803D),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            // 2. Secondary Button: Retry Online Payment
+            if (widget.onRetryPayment != null) ...[
+              SizedBox(
+                height: 46,
+                child: OutlinedButton.icon(
+                  onPressed: _handleRetryPayment,
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.2),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  icon: const Icon(Icons.refresh_rounded, color: Color(0xFF0F172A), size: 18),
+                  label: Text(
+                    'Retry Online Payment (UPI / Cards)',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
                 ),
-                icon: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+              ),
+              const SizedBox(height: 10),
+            ],
+
+            // 3. Cancel / Discard Action
+            SizedBox(
+              height: 40,
+              child: TextButton.icon(
+                onPressed: _handleCancel,
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFE11D48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.close_rounded, size: 16),
                 label: Text(
-                  '💵 Abhi COD Confirm Karein (₹${widget.grandTotal.toInt()})',
+                  'Cancel Order',
                   style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),

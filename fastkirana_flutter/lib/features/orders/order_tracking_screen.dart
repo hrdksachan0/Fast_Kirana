@@ -1727,21 +1727,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                           offlineText: 'Offline • Connecting to live delivery tracker...',
                         ),
 
-                        // Pre-Confirmation Cancel Option Banner
-                        if (canCancel) ...[
-                          TrackingCancelBanner(
-                            isCancelling: _isCancelling,
-                            onCancel: _confirmAndCancelOrder,
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-
                         // 0. Cancelled Order Alert Card
                         if (isCancelled) ...[
                           const TrackingCancelCard(),
                           const SizedBox(height: 14),
                         ] else ...[
-                          // Pay Online Banner (if COD)
+                          // Pay Online Banner (if unpaid COD)
                           if (!isPaid && !isDelivered && _order?.deliveryMethod != 'PICKUP') ...[
                             TrackingPaymentCard(
                               order: _order,
@@ -1789,7 +1780,41 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                           ],
                         ],
 
-                        // 2. Dedicated Sponsored Ad Banner Slot (Type: sponsored_ad)
+                        // Refund Notice Card (If applicable)
+                        if ((_order?.refundAmount ?? 0) > 0 || ((_order?.notes ?? '').toLowerCase().contains('refund'))) ...[
+                          TrackingRefundNoticeCard(order: _order),
+                          const SizedBox(height: 14),
+                        ],
+
+                        // 2. Rider Profile & Contact Card (When Assigned/Out for Delivery)
+                        if (statusStep >= 2 && !isDelivered && !isCancelled) ...[
+                          TrackingRiderCard(order: _order),
+                          const SizedBox(height: 14),
+                        ],
+
+                        // 3. Multi-Stage Order Stepper (Live status, ETA & milestones)
+                        TrackingStatusStepper(
+                          order: _order,
+                          statusStep: statusStep,
+                          isDelivered: isDelivered,
+                          isCancelled: isCancelled,
+                          cleanDisplayId: cleanDisplayId,
+                          etaText: _etaText,
+                          distanceText: _distanceText,
+                        ),
+                        const SizedBox(height: 14),
+
+                        // 4. Delivery Address Card
+                        if (_order?.deliveryMethod != 'PICKUP') ...[
+                          TrackingDestinationCard(order: _order),
+                          const SizedBox(height: 12),
+                        ],
+
+                        // 5. Order Items & Receipt Card
+                        TrackingReceiptCard(order: _order),
+                        const SizedBox(height: 14),
+
+                        // 6. Sponsored Partner Ad Banner (Placed at the bottom for clean UX)
                         Consumer(
                           builder: (context, ref, _) {
                             final bannersAsync = ref.watch(bannersProvider('sponsored_ad'));
@@ -1810,72 +1835,14 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                     },
                                   );
                                 }
-                                return SponsoredAdCard(
-                                  title: '📢 Feature Your Restaurant or Shop Here!',
-                                  subtitle: 'Reach thousands of daily shoppers in Ghatampur. Tap to partner.',
-                                  discountText: 'PARTNER WITH US',
-                                  actionText: 'Contact Admin',
-                                  onTap: () {
-                                    HapticFeedback.lightImpact();
-                                    launchUrl(
-                                      Uri.parse('https://wa.me/918112849854?text=Hi%20FastKirana%2C%20I%20want%20to%20feature%20my%20business%20on%20FastKirana%20App'),
-                                      mode: LaunchMode.externalApplication,
-                                    );
-                                  },
-                                );
+                                return const SizedBox.shrink();
                               },
                               loading: () => const SizedBox.shrink(),
-                              error: (_, __) => SponsoredAdCard(
-                                title: '📢 Feature Your Restaurant or Shop Here!',
-                                subtitle: 'Reach thousands of daily shoppers in Ghatampur. Tap to partner.',
-                                discountText: 'PARTNER WITH US',
-                                actionText: 'Contact Admin',
-                                onTap: () {
-                                  HapticFeedback.lightImpact();
-                                  launchUrl(
-                                    Uri.parse('https://wa.me/918112849854?text=Hi%20FastKirana%2C%20I%20want%20to%20feature%20my%20business%20on%20FastKirana%20App'),
-                                    mode: LaunchMode.externalApplication,
-                                  );
-                                },
-                              ),
+                              error: (_, __) => const SizedBox.shrink(),
                             );
                           },
                         ),
-                        const SizedBox(height: 14),
-
-                        // Refund Notice Card
-                        if ((_order?.refundAmount ?? 0) > 0 || ((_order?.notes ?? '').toLowerCase().contains('refund'))) ...[
-                          TrackingRefundNoticeCard(order: _order),
-                          const SizedBox(height: 14),
-                        ],
-
-                        // 3. Rider Profile & Contact Card (When Assigned/Out for Delivery)
-                        if (statusStep >= 2 && !isDelivered && !isCancelled) ...[
-                          TrackingRiderCard(order: _order),
-                          const SizedBox(height: 14),
-                        ],
-
-                        // 4. Swiggy/Zomato Multi-Stage Order Stepper
-                        TrackingStatusStepper(
-                          order: _order,
-                          statusStep: statusStep,
-                          isDelivered: isDelivered,
-                          isCancelled: isCancelled,
-                          cleanDisplayId: cleanDisplayId,
-                          etaText: _etaText,
-                          distanceText: _distanceText,
-                        ),
-                        const SizedBox(height: 14),
-
-                        // 5. Delivery Address Card
-                        if (_order?.deliveryMethod != 'PICKUP') ...[
-                          TrackingDestinationCard(order: _order),
-                          const SizedBox(height: 12),
-                        ],
-
-                        // 6. Order Items & Receipt Card
-                        TrackingReceiptCard(order: _order),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 12),
 
                         // 7. Review Card (If delivered)
                         if (isDelivered) ...[

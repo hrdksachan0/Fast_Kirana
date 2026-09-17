@@ -26,10 +26,28 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final title = notification?.title ?? data['title'] ?? '⚡ FastKirana Express';
   final body = notification?.body ?? data['body'] ?? data['message'];
 
-  // Check persisted user role. If current logged-in user is a customer, block all admin/kitchen alerts
+  // Check persisted user role. Only suppress staff/admin alerts if user is CONFIRMED to be a CUSTOMER/USER.
   try {
     final prefs = await SharedPreferences.getInstance();
-    final userRole = (prefs.getString('user_role') ?? (await SecureStorage.read('user_role')) ?? 'CUSTOMER').toUpperCase();
+    final prefRole = prefs.getString('user_role');
+    final secureRole = await SecureStorage.read('user_role');
+    final userRole = (prefRole ?? secureRole ?? '').toUpperCase().trim();
+
+    final isStaff = userRole == 'ADMIN' ||
+        userRole == 'SUPER_ADMIN' ||
+        userRole == 'STORE_MANAGER' ||
+        userRole == 'STAFF' ||
+        userRole == 'RESTAURANT' ||
+        userRole == 'RESTAURANT_OWNER' ||
+        userRole == 'CHEF' ||
+        userRole == 'VENDOR' ||
+        userRole == 'STORE_OWNER' ||
+        userRole == 'DELIVERY' ||
+        userRole == 'PICKER' ||
+        userRole == 'RIDER' ||
+        userRole == 'DELIVERY_PARTNER' ||
+        userRole == 'DRIVER';
+
     final isStaffOrAdminMessage =
         data['screen'] == 'admin-orders' ||
         data['screen'] == 'restaurant-console' ||
@@ -43,7 +61,8 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         title.toString().toLowerCase().contains('kitchen') ||
         title.toString().toLowerCase().contains('new order');
 
-    if (isStaffOrAdminMessage && (userRole == 'CUSTOMER' || userRole == 'USER')) {
+    // ONLY suppress if the user is explicitly identified as a normal CUSTOMER / USER and NOT staff
+    if (!isStaff && (userRole == 'CUSTOMER' || userRole == 'USER') && isStaffOrAdminMessage) {
       debugPrint('NotificationService: Suppressing staff/admin alert for customer user in background.');
       return;
     }
@@ -299,10 +318,28 @@ class NotificationService {
 
     final data = message.data;
 
-    // Check current user role to suppress admin/kitchen alerts for customers
+    // Check current user role to suppress admin/kitchen alerts ONLY for confirmed customers
     try {
       final prefs = await SharedPreferences.getInstance();
-      final userRole = (prefs.getString('user_role') ?? (await SecureStorage.read('user_role')) ?? 'CUSTOMER').toUpperCase();
+      final prefRole = prefs.getString('user_role');
+      final secureRole = await SecureStorage.read('user_role');
+      final userRole = (prefRole ?? secureRole ?? '').toUpperCase().trim();
+
+      final isStaff = userRole == 'ADMIN' ||
+          userRole == 'SUPER_ADMIN' ||
+          userRole == 'STORE_MANAGER' ||
+          userRole == 'STAFF' ||
+          userRole == 'RESTAURANT' ||
+          userRole == 'RESTAURANT_OWNER' ||
+          userRole == 'CHEF' ||
+          userRole == 'VENDOR' ||
+          userRole == 'STORE_OWNER' ||
+          userRole == 'DELIVERY' ||
+          userRole == 'PICKER' ||
+          userRole == 'RIDER' ||
+          userRole == 'DELIVERY_PARTNER' ||
+          userRole == 'DRIVER';
+
       final isStaffOrAdminMessage =
           data['screen'] == 'admin-orders' ||
           data['screen'] == 'restaurant-console' ||
@@ -316,7 +353,7 @@ class NotificationService {
           title.toString().toLowerCase().contains('kitchen') ||
           title.toString().toLowerCase().contains('new order');
 
-      if (isStaffOrAdminMessage && (userRole == 'CUSTOMER' || userRole == 'USER')) {
+      if (!isStaff && (userRole == 'CUSTOMER' || userRole == 'USER') && isStaffOrAdminMessage) {
         debugPrint('NotificationService: Suppressed staff/admin alert for customer user in foreground.');
         return;
       }
@@ -495,39 +532,48 @@ class NotificationService {
       String deviceType = kIsWeb ? 'web' : (Platform.isAndroid ? 'android' : (Platform.isIOS ? 'ios' : 'web'));
       final userId = (await SecureStorage.read('user_id')) ?? prefs.getString('user_id');
       final phone = (await SecureStorage.read('user_phone')) ?? prefs.getString('user_phone') ?? '';
-      final resolvedRole = (role ?? (await SecureStorage.read('user_role')) ?? prefs.getString('user_role') ?? 'CUSTOMER').toUpperCase();
+      final resolvedRole = (role ?? prefs.getString('user_role') ?? (await SecureStorage.read('user_role')) ?? 'USER').toUpperCase().trim();
+      final storeId = assignedStoreId ?? prefs.getString('assigned_store_id') ?? (await SecureStorage.read('assigned_store_id'));
+      final rId = assignedRestaurantId ?? prefs.getString('assigned_restaurant_id') ?? (await SecureStorage.read('assigned_restaurant_id'));
+
+      final isAdmin = resolvedRole == 'ADMIN' ||
+          resolvedRole == 'SUPER_ADMIN' ||
+          resolvedRole == 'STORE_MANAGER' ||
+          resolvedRole == 'STAFF';
+
+      final isRestaurant = resolvedRole == 'RESTAURANT' ||
+          resolvedRole == 'RESTAURANT_OWNER' ||
+          resolvedRole == 'CHEF' ||
+          resolvedRole == 'VENDOR' ||
+          resolvedRole == 'STORE_OWNER' ||
+          (rId != null && rId.isNotEmpty);
+
+      final isDeliveryOrPicker = resolvedRole == 'DELIVERY' ||
+          resolvedRole == 'PICKER' ||
+          resolvedRole == 'RIDER' ||
+          resolvedRole == 'DELIVERY_PARTNER' ||
+          resolvedRole == 'DRIVER';
 
       // Subscribe to role-based and user-specific topics
       try {
-        final storeId = assignedStoreId ?? (await SecureStorage.read('assigned_store_id')) ?? prefs.getString('assigned_store_id');
-        if (resolvedRole == 'ADMIN') {
+        if (isAdmin) {
           if (storeId != null && storeId.isNotEmpty) {
             await _fcm?.subscribeToTopic('admin_orders_$storeId');
-            await _fcm?.unsubscribeFromTopic('admin_orders');
-          } else {
-            await _fcm?.subscribeToTopic('admin_orders');
           }
+          await _fcm?.subscribeToTopic('admin_orders');
           await _fcm?.subscribeToTopic('admin_orders_all');
-          await _fcm?.unsubscribeFromTopic('staff_orders');
-        } else if (resolvedRole == 'RESTAURANT' || assignedRestaurantId != null) {
-          final rId = assignedRestaurantId ?? (await SecureStorage.read('assigned_restaurant_id')) ?? prefs.getString('assigned_restaurant_id');
+        } else if (isRestaurant) {
           if (rId != null && rId.isNotEmpty) {
             await _fcm?.subscribeToTopic('restaurant_$rId');
             await _fcm?.subscribeToTopic('kitchen_$rId');
             await _fcm?.subscribeToTopic('restaurant_orders_$rId');
           }
-          await _fcm?.unsubscribeFromTopic('admin_orders');
-          await _fcm?.unsubscribeFromTopic('admin_orders_all');
-        } else if (resolvedRole == 'DELIVERY' || resolvedRole == 'PICKER') {
+        } else if (isDeliveryOrPicker) {
           if (storeId != null && storeId.isNotEmpty) {
             await _fcm?.subscribeToTopic('staff_orders_$storeId');
-            await _fcm?.unsubscribeFromTopic('staff_orders');
-          } else {
-            await _fcm?.subscribeToTopic('staff_orders');
           }
-          await _fcm?.unsubscribeFromTopic('admin_orders');
-          await _fcm?.unsubscribeFromTopic('admin_orders_all');
-        } else {
+          await _fcm?.subscribeToTopic('staff_orders');
+        } else if (resolvedRole == 'CUSTOMER' || resolvedRole == 'USER') {
           // Normal CUSTOMER / USER: Actively purge ANY leftover admin/staff/kitchen subscriptions on this device!
           final staffTopicsToPurge = [
             'admin_orders',

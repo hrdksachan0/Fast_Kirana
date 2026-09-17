@@ -247,6 +247,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
   late TabController _tabController;
   final Map<String, bool> _collapsedSections = {};
 
+  final GlobalKey _topMenuKey = GlobalKey();
   final ScrollController _horizontalCategoryController = ScrollController();
   final Map<String, GlobalKey> _sectionKeys = {};
   bool _isManualTabClick = false;
@@ -310,7 +311,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
     final index = cats.indexWhere((c) => c.tag == tag);
     if (index < 0) return;
 
-    const itemWidth = 74.0;
+    const itemWidth = 76.0;
     final screenWidth = MediaQuery.of(context).size.width;
     final targetScroll = (index * itemWidth) - (screenWidth / 2) + (itemWidth / 2);
 
@@ -319,29 +320,64 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
 
     _horizontalCategoryController.animateTo(
       clampedScroll,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 250),
       curve: Curves.easeOutCubic,
     );
   }
 
   void _scrollToSection(String tag) {
     HapticFeedback.selectionClick();
-    setState(() => _activeCategoryTag = tag);
     _isManualTabClick = true;
 
-    _centerCategoryInHorizontalBar(tag);
+    if (tag == 'all') {
+      setState(() => _activeCategoryTag = 'all');
+      _centerCategoryInHorizontalBar('all');
+      if (_topMenuKey.currentContext != null) {
+        Scrollable.ensureVisible(
+          _topMenuKey.currentContext!,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOutCubic,
+          alignment: 0.0,
+        );
+      }
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (mounted) _isManualTabClick = false;
+      });
+      return;
+    }
 
-    final key = tag == 'all' ? _sectionKeys.values.firstOrNull : _sectionKeys[tag];
+    // Resolve matching section tag if tag came from cuisine tags or fuzzy matching
+    String resolvedTag = tag;
+    if (!_sectionKeys.containsKey(tag)) {
+      final clean = tag.toLowerCase().replaceAll(' ', '_').replaceAll('&', 'and');
+      for (final secKey in _sectionKeys.keys) {
+        final cleanSec = secKey.toLowerCase().replaceAll(' ', '_').replaceAll('&', 'and');
+        if (cleanSec.contains(clean) || clean.contains(cleanSec)) {
+          resolvedTag = secKey;
+          break;
+        }
+      }
+    }
+
+    // Auto-uncollapse target section so its contents are immediately visible
+    if (_collapsedSections[resolvedTag] == true) {
+      _collapsedSections[resolvedTag] = false;
+    }
+
+    setState(() => _activeCategoryTag = resolvedTag);
+    _centerCategoryInHorizontalBar(resolvedTag);
+
+    final key = _sectionKeys[resolvedTag] ?? _sectionKeys[tag];
     if (key?.currentContext != null) {
       Scrollable.ensureVisible(
         key!.currentContext!,
-        duration: const Duration(milliseconds: 400),
+        duration: const Duration(milliseconds: 350),
         curve: Curves.easeInOutCubic,
         alignment: 0.0,
       );
     }
 
-    Future.delayed(const Duration(milliseconds: 500), () {
+    Future.delayed(const Duration(milliseconds: 450), () {
       if (mounted) _isManualTabClick = false;
     });
   }
@@ -720,22 +756,28 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                       ),
                       onPressed: () {
                         HapticFeedback.lightImpact();
-                        final shareUrl = 'https://fastkirana.in/cafe';
+                        const shareUrl = 'https://fastkirana.in/cafe';
                         final shareText = '🍔 Craving delicious food? Check out the fresh menu of $restaurantName on FastKirana!\nOrder online for fast express delivery: $shareUrl';
                         Share.share(shareText, subject: '$restaurantName Menu - FastKirana');
                       },
                     ),
                   ),
                 ],
-                centerTitle: true,
+                centerTitle: false,
+                titleSpacing: 0,
                 title: innerBoxIsScrolled
-                    ? Text(
-                        restaurantName,
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 16.5),
-                          fontWeight: FontWeight.w900,
-                          color: AppDesignSystem.slate900,
-                          letterSpacing: -0.2,
+                    ? Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: Text(
+                          restaurantName,
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 16),
+                            fontWeight: FontWeight.w900,
+                            color: AppDesignSystem.slate900,
+                            letterSpacing: -0.2,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       )
                     : null,
@@ -832,19 +874,22 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                                   children: [
                                     ...cuisineTags.take(4).map((tag) => Padding(
                                       padding: const EdgeInsets.only(right: 5),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withValues(alpha: 0.18),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          tag.toUpperCase(),
-                                          style: GoogleFonts.inter(
-                                            fontSize: Responsive.scaledFontSize(context, 9.5),
-                                            fontWeight: FontWeight.w800,
-                                            color: Colors.white,
-                                            letterSpacing: 0.3,
+                                      child: GestureDetector(
+                                        onTap: () => _scrollToSection(tag),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(alpha: 0.18),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            tag.toUpperCase(),
+                                            style: GoogleFonts.inter(
+                                              fontSize: Responsive.scaledFontSize(context, 9.5),
+                                              fontWeight: FontWeight.w800,
+                                              color: Colors.white,
+                                              letterSpacing: 0.3,
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -1048,6 +1093,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
             slivers: [
               // 1. Items Count Bar
               SliverToBoxAdapter(
+                key: _topMenuKey,
                 child: Container(
                   margin: const EdgeInsets.fromLTRB(0, 0, 0, 4),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -1148,7 +1194,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
             border: Border.all(color: AppDesignSystem.slate200),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(alpha: 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -1601,8 +1647,8 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                     children: [
                       if (activeCoupons.isNotEmpty)
                         ...activeCoupons.map((coupon) => _buildOfferTicketCard(coupon))
-                      else if (hasOffer)
-                        _buildFallbackOfferTicket(currentRestaurant!.discountOffer!),
+                      else if (hasOffer && currentRestaurant != null && currentRestaurant.discountOffer != null)
+                        _buildFallbackOfferTicket(currentRestaurant.discountOffer!),
                     ],
                   ),
                 ),
@@ -1865,15 +1911,36 @@ class _CategoryChipsDelegate extends SliverPersistentHeaderDelegate {
   });
 
   @override
-  double get maxExtent => 96;
+  double get maxExtent => 102;
 
   @override
-  double get minExtent => 96;
+  double get minExtent => 102;
 
   @override
   bool shouldRebuild(covariant _CategoryChipsDelegate oldDelegate) {
     return activeCategoryTag != oldDelegate.activeCategoryTag ||
         menuAsync != oldDelegate.menuAsync;
+  }
+
+  static String _formatCategoryTitle(String title) {
+    final t = title.trim();
+    final lower = t.toLowerCase();
+    if (lower.contains('north indian') || lower.contains('curries & grav')) return 'Curries & Gravy';
+    if (lower.contains('warm naan') || lower.contains('rotis, naan') || lower.contains('roti-naan') || lower.contains('rotis & naan') || lower.contains('naans, roti')) return 'Rotis & Naan';
+    if (lower.contains('starters & tandoori') || lower.contains('starters & tikka') || lower.contains('tandoori tikka')) return 'Starters & Tikka';
+    if (lower.contains('biryani & rice') || lower.contains('biryani-rice') || lower.contains('rice feast')) return 'Biryani & Rice';
+    if (lower.contains('chinese') && (lower.contains('wok') || lower.contains('soup') || lower.contains('cuisine') || lower.contains('pasta'))) return 'Chinese & Soups';
+    if (lower.contains('pizza') && (lower.contains('burger') || lower.contains('snack') || lower.contains('bite'))) return 'Pizza & Burgers';
+    if (lower.contains('shake') && (lower.contains('beverage') || lower.contains('drink'))) return 'Shakes & Drinks';
+    if (lower.contains('dessert') || lower.contains('ice cream') || lower.contains('sweet')) return 'Desserts';
+    if (lower.contains('breakfast') || lower.contains('nashta')) return 'Breakfast';
+    if (lower.contains('pav bhaji') || lower.contains('bombay bite')) return 'Pav Bhaji';
+    if (lower.contains('dosa') || lower.contains('south indian')) return 'South Indian';
+    if (lower.contains('garlic bread')) return 'Garlic Bread';
+    if (lower.contains('frankie') || lower.contains('roll')) return 'Frankie & Rolls';
+    if (lower.contains('sandwich')) return 'Sandwiches';
+    if (lower.contains('pasta')) return 'Pastas';
+    return t;
   }
 
   Widget _buildCategoryThumbnail(RenderedCategory cat) {
@@ -1930,58 +1997,60 @@ class _CategoryChipsDelegate extends SliverPersistentHeaderDelegate {
         data: (products) {
           final cats = buildCategories(products);
           return SizedBox(
-            height: 96,
+            height: 102,
             child: ListView.separated(
               controller: horizontalController,
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               itemCount: cats.length,
               separatorBuilder: (_, __) => const SizedBox(width: 4),
               itemBuilder: (context, index) {
                 final cat = cats[index];
                 final isSelected = activeCategoryTag == cat.tag;
+                final formattedTitle = _formatCategoryTitle(cat.title);
 
                 return GestureDetector(
                   onTap: () => onCategoryTap(cat.tag),
                   child: SizedBox(
-                    width: 68,
+                    width: 76,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          width: 48,
-                          height: 48,
-                          padding: const EdgeInsets.all(2),
+                          width: 50,
+                          height: 50,
+                          padding: const EdgeInsets.all(2.5),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: isSelected ? AppDesignSystem.orange50 : Colors.white,
                             border: Border.all(
-                              color: isSelected ? AppDesignSystem.orange600 : AppDesignSystem.slate200,
-                              width: isSelected ? 2.5 : 1.2,
+                              color: isSelected ? AppDesignSystem.orange600 : const Color(0xFFE2E8F0),
+                              width: isSelected ? 2.2 : 1.2,
                             ),
-                            boxShadow: isSelected
-                                ? [
-                                    BoxShadow(
-                                      color: AppDesignSystem.orange600.withValues(alpha: 0.25),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ]
-                                : null,
+                            boxShadow: [
+                              BoxShadow(
+                                color: isSelected
+                                    ? AppDesignSystem.orange600.withValues(alpha: 0.28)
+                                    : Colors.black.withValues(alpha: 0.04),
+                                blurRadius: isSelected ? 8 : 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: ClipOval(
                             child: _buildCategoryThumbnail(cat),
                           ),
                         ),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 4),
                         Text(
-                          cat.title,
+                          formattedTitle,
                           style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 9.5),
+                            fontSize: Responsive.scaledFontSize(context, 10),
                             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                            color: isSelected ? AppDesignSystem.orange600 : AppDesignSystem.slate600,
+                            color: isSelected ? AppDesignSystem.orange600 : const Color(0xFF334155),
                             height: 1.15,
+                            letterSpacing: -0.1,
                           ),
                           textAlign: TextAlign.center,
                           maxLines: 2,
@@ -1995,8 +2064,8 @@ class _CategoryChipsDelegate extends SliverPersistentHeaderDelegate {
             ),
           );
         },
-        loading: () => const SizedBox(height: 96),
-        error: (_, __) => const SizedBox(height: 96),
+        loading: () => const SizedBox(height: 102),
+        error: (_, __) => const SizedBox(height: 102),
       ),
     );
   }
