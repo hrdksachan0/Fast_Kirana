@@ -1,4 +1,5 @@
 import { normalizePhone } from '@/lib/phone'
+import { cache } from '@/lib/redis-client'
 
 const getCleanEnv = (key: string): string => {
   let val = process.env[key] || ''
@@ -131,7 +132,7 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
   }
 }
 
-export async function sendWhatsAppOrderAlert(phone: string, textParam: string): Promise<boolean> {
+export async function sendWhatsAppOrderAlert(phone: string, textParam: string, dedupeKey?: string): Promise<boolean> {
   const token = getCleanEnv('WHATSAPP_TOKEN')
   const phoneId = getCleanEnv('WHATSAPP_PHONE_NUMBER_ID')
   const templateName = getCleanEnv('WHATSAPP_ORDER_TEMPLATE_NAME') || 'fastkirana_order'
@@ -141,6 +142,21 @@ export async function sendWhatsAppOrderAlert(phone: string, textParam: string): 
   }
 
   const cleanPhone = normalizePhone(phone).replace(/^\+/, '')
+
+  // Deduplication guard: prevent duplicate WhatsApp alerts for the same order/event within 1 hour
+  if (dedupeKey || textParam) {
+    const rawKey = dedupeKey || (textParam.match(/#([A-Za-z0-9-]+)/)?.[1] ?? textParam.slice(0, 32))
+    const lockKey = `lock:wa:alert:${cleanPhone}:${rawKey.replace(/\s+/g, '_')}`
+    try {
+      const acquired = await cache.acquireLock(lockKey, 3600)
+      if (!acquired) {
+        console.log(`[WhatsApp Alert] Skipping duplicate message to ${cleanPhone} (key: ${lockKey})`)
+        return true
+      }
+    } catch (e) {
+      console.warn('[WhatsApp Alert] Dedupe lock check failed, proceeding with send:', e)
+    }
+  }
 
   try {
     let body: any
