@@ -99,7 +99,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             : (isRestaurantProduct(p) ? 'Freshly Prepared' : 'Standard Pack'));
 
     final cart = ref.watch(cartProvider).value;
-    final cartItem = cart?.items.where((i) => i.productId == p.id).firstOrNull;
+    final effectiveProductId = activeVariant != null ? '${p.id}_${activeVariant.name}' : p.id;
+    final cartItem = cart?.items.where((i) =>
+        i.productId == effectiveProductId ||
+        (activeVariant == null && (i.productId == p.id || i.product.id == p.id)) ||
+        (activeVariant != null && i.selectedVariant == activeVariant.name && (i.productId == p.id || i.product.id == p.id))).firstOrNull;
     final inCartQty = cartItem?.quantity ?? 0;
     final discountPct = activeMrp > activePrice && activeMrp > 0
         ? (((activeMrp - activePrice) / activeMrp) * 100).toInt()
@@ -776,7 +780,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                         borderRadius: const BorderRadius.horizontal(left: Radius.circular(13)),
                                         onTap: () {
                                           HapticFeedback.lightImpact();
-                                          ref.read(cartProvider.notifier).decrement(p.id);
+                                          ref.read(cartProvider.notifier).decrement(cartItem?.productId ?? (cartItem?.id ?? effectiveProductId));
                                         },
                                         child: Container(
                                           width: 34,
@@ -835,7 +839,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                             return;
                                           }
                                           HapticFeedback.lightImpact();
-                                          ref.read(cartProvider.notifier).increment(p);
+                                          ref.read(cartProvider.notifier).increment(cartItem?.product ?? p);
                                         },
                                         child: Container(
                                           width: 34,
@@ -929,9 +933,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
                         return GestureDetector(
                           onTap: () {
+                            final targetId = activeVariant != null ? '${p.id}_${activeVariant.name}' : p.id;
+                            final targetName = activeVariant != null ? '${p.name} (${activeVariant.name})' : p.name;
                             final productToCart = Product(
-                              id: p.id,
-                              name: p.name,
+                              id: targetId,
+                              name: targetName,
                               slug: p.slug,
                               description: p.description,
                               imageUrl: p.imageUrl,
@@ -956,6 +962,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                               createdAt: p.createdAt,
                               category: p.category,
                               restaurant: p.restaurant,
+                              menuSection: p.menuSection,
                             );
 
                             final conflictRestaurant =

@@ -719,6 +719,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       customerPhone: receiverPhone,
       customerAddress: selectedAddr,
       notes: orderNotes,
+      couponCode: widget.couponCode,
       createdAt: DateTime.now(),
       items: cart.items.map<OrderItem>((i) {
         final rawId = i.product.id;
@@ -731,7 +732,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           price: i.product.price,
           quantity: i.quantity,
           imageUrl: i.product.imageUrl,
-          selectedVariant: i.selectedVariant,
+          selectedVariant: i.selectedVariant ?? (i.product.unit.isNotEmpty ? i.product.unit : null),
         );
       }).toList(),
     );
@@ -761,6 +762,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         'paymentId': paymentId,
         'deliveryMethod': _deliveryMethod,
         'notes': orderNotes,
+        'couponCode': widget.couponCode,
+        'discount': widget.discountAmount,
         'customerAddress': selectedAddr,
         'latitude': selectedAddress?.latitude,
         'longitude': selectedAddress?.longitude,
@@ -774,15 +777,22 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           'quantity': i.quantity,
           'price': i.product.price,
           'name': i.product.name,
-          'selectedVariant': i.selectedVariant,
+          'selectedVariant': i.selectedVariant ?? (i.product.unit.isNotEmpty ? i.product.unit : null),
+          'variant': i.selectedVariant ?? (i.product.unit.isNotEmpty ? i.product.unit : null),
+          'unit': i.product.unit,
           'restaurantId': i.product.restaurantId ?? i.product.restaurant?.id,
+          'menuSection': i.product.menuSection,
+          'tags': i.product.tags,
           'product': {
             'id': i.product.id,
             'name': i.product.name,
             'price': i.product.price,
             'imageUrl': i.product.imageUrl,
             'slug': i.product.slug,
+            'unit': i.product.unit,
             'restaurantId': i.product.restaurantId ?? i.product.restaurant?.id,
+            'menuSection': i.product.menuSection,
+            'tags': i.product.tags,
           }
         }).toList(),
       };

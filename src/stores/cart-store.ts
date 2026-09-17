@@ -67,14 +67,14 @@ export const useCartStore = create<CartState>()(
       setAppliedCouponCode: (code) => set({ appliedCouponCode: code }),
 
       addItem: (product: CartProduct) => {
-        if (product.stock <= 0 || product.isAvailable === false) return
+        if (!product || product.stock <= 0 || product.isAvailable === false) return
         const limit = getProductLimit(product)
         set((state) => {
-          const existing = state.items.find((item) => item.product.id === product.id)
+          const existing = state.items.find((item) => item?.product?.id === product.id)
           if (existing) {
             return {
               items: state.items.map((item) =>
-                item.product.id === product.id
+                item?.product?.id === product.id
                   ? { ...item, quantity: Math.min(item.quantity + 1, item.product.stock, limit) }
                   : item
               ),
@@ -86,18 +86,18 @@ export const useCartStore = create<CartState>()(
 
       removeItem: (productId: string) => {
         set((state) => ({
-          items: state.items.filter((item) => item.product.id !== productId),
+          items: state.items.filter((item) => item?.product?.id !== productId),
         }))
       },
 
       updateQuantity: (productId: string, quantity: number) => {
         set((state) => {
           if (quantity <= 0) {
-            return { items: state.items.filter((item) => item.product.id !== productId) }
+            return { items: state.items.filter((item) => item?.product?.id !== productId) }
           }
           return {
             items: state.items.map((item) => {
-              if (item.product.id === productId) {
+              if (item?.product?.id === productId) {
                 const limit = getProductLimit(item.product)
                 return { ...item, quantity: Math.min(quantity, item.product.stock, limit) }
               }
@@ -111,30 +111,36 @@ export const useCartStore = create<CartState>()(
 
       clearRestaurantItems: () => {
         set((state) => ({
-          items: state.items.filter((item) => !isCafeProduct(item.product)),
+          items: state.items.filter((item) => item?.product && !isCafeProduct(item.product)),
         }))
       },
 
       getItemQuantity: (productId: string) => {
-        const item = get().items.find((i) => i.product.id === productId)
+        const item = get().items.find((i) => i?.product?.id === productId)
         return item?.quantity || 0
       },
 
       getTotalItems: () => {
-        return get().items.reduce((sum, item) => sum + item.quantity, 0)
+        return get().items.reduce((sum, item) => sum + (Number(item?.quantity) || 0), 0)
       },
 
       getSubtotal: () => {
-        return get().items.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
+        return get().items.reduce(
+          (sum, item) => sum + (Number(item?.product?.price) || 0) * (Number(item?.quantity) || 0),
+          0
+        )
       },
 
       getMrpTotal: () => {
-        return get().items.reduce((sum, item) => sum + item.product.mrp * item.quantity, 0)
+        return get().items.reduce((sum, item) => {
+          const mrp = Number(item?.product?.mrp) || Number(item?.product?.price) || 0
+          return sum + mrp * (Number(item?.quantity) || 0)
+        }, 0)
       },
 
       getSavings: () => {
         const state = get()
-        return state.getMrpTotal() - state.getSubtotal()
+        return Math.max(0, state.getMrpTotal() - state.getSubtotal())
       },
       updateCartProduct: (productId: string, updates: Partial<CartProduct>) => {
         set((state) => ({

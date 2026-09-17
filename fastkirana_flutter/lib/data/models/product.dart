@@ -32,6 +32,7 @@ class Product {
   final DateTime createdAt;
   final CategoryInfo? category;
   final RestaurantInfo? restaurant;
+  final String? menuSection;
 
   Product({
     required this.id,
@@ -64,6 +65,7 @@ class Product {
     required this.createdAt,
     this.category,
     this.restaurant,
+    this.menuSection,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -139,6 +141,7 @@ class Product {
       restaurant: json['restaurant'] is Map<String, dynamic>
           ? RestaurantInfo.fromJson(json['restaurant'] as Map<String, dynamic>)
           : null,
+      menuSection: json['menuSection']?.toString() ?? json['sectionTitle']?.toString() ?? json['sectionId']?.toString(),
     );
   }
 
@@ -173,6 +176,7 @@ class Product {
         'createdAt': createdAt.toIso8601String(),
         'category': category?.toJson(),
         'restaurant': restaurant?.toJson(),
+        'menuSection': menuSection,
       };
 
   bool get isInStock => stock > 0 && isAvailable;

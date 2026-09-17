@@ -15,7 +15,9 @@ import '../../core/utils/restaurant_utils.dart';
 import '../../core/services/location_service.dart';
 import '../../data/models/cart.dart';
 import '../../data/models/product.dart';
+import '../../data/models/coupon.dart';
 import '../../data/repositories/cart_repository.dart';
+import '../../data/repositories/coupon_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
@@ -78,18 +80,21 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         'name': i.product.name,
         'price': i.product.price,
         'quantity': i.quantity,
-        'selectedVariant': i.selectedVariant,
-        'variant': i.selectedVariant,
+        'selectedVariant': i.selectedVariant ?? i.product.unit,
+        'variant': i.selectedVariant ?? i.product.unit,
+        'unit': i.product.unit,
         'restaurantId': i.product.restaurantId,
+        'menuSection': i.product.menuSection,
+        'tags': i.product.tags,
       }).toList();
 
       final result = await repo.applyCoupon(code, subtotal: subtotal, items: itemsPayload);
       final couponData = result['coupon'] as Map<String, dynamic>?;
-      final freeGift = result['freeGiftDetails'] as Map<String, dynamic>?;
-      final nudge = result['nudgeMessage']?.toString();
+      final freeGift = (result['freeGiftDetails'] ?? couponData?['freeGiftDetails']) as Map<String, dynamic>?;
+      final nudge = result['nudgeMessage']?.toString() ?? couponData?['nudgeMessage']?.toString();
       final discount = (couponData?['discountAmount'] as num?)?.toDouble() ?? 0.0;
-      final isBogo = result['bogo'] != null || couponData?['discountType'] == 'BOGO';
-      final badge = couponData?['badgeText']?.toString();
+      final isBogo = result['bogo'] != null || couponData?['discountType'] == 'BOGO' || couponData?['bogoType'] != null;
+      final badge = couponData?['badgeText']?.toString() ?? result['badgeText']?.toString();
       final cleanCode = code.trim().toUpperCase();
 
       if (mounted) {
@@ -147,7 +152,17 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         }
       } else {
         if (mounted) {
-          setState(() => _isApplyingCoupon = false);
+          setState(() {
+            _isApplyingCoupon = false;
+            if (silent) {
+              _appliedCoupon = null;
+              _couponDiscount = 0.0;
+              _freeGiftDetails = null;
+              _nudgeMessage = null;
+              _isBogoApplied = false;
+              _bogoBadgeText = null;
+            }
+          });
           if (!silent) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -161,6 +176,19 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         }
       }
     }
+  }
+
+  Future<void> _checkAutoApplyCoupon(double subtotal, String? restaurantId) async {
+    if (_appliedCoupon != null || _isApplyingCoupon) return;
+    try {
+      final repo = CouponRepository(ref.read(dioProvider));
+      final coupons = await repo.getCoupons(restaurantId: restaurantId);
+      final autoCoupons = coupons.where((c) => c.autoApply && c.isValid).toList();
+      for (final c of autoCoupons) {
+        if (_appliedCoupon != null) break;
+        await _applyCoupon(c.code, subtotal, silent: true);
+      }
+    } catch (_) {}
   }
 
   void _removeCoupon() {
@@ -429,17 +457,19 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final grandTotal = (subtotal + deliveryFee + packagingFee + _selectedTip - _couponDiscount).clamp(0.0, 999999.0);
     final totalItems = cart.totalItems;
 
-    // Silent re-validation if cart items change while a coupon is applied
+    // Silent re-validation or auto-apply if cart items change
     final currentCartHash = cart.items.map((i) => '${i.productId}_${i.quantity}_${i.selectedVariant}').join('|');
-    if (_appliedCoupon != null && _lastValidatedCartHash != null && _lastValidatedCartHash != currentCartHash) {
+    if (_lastValidatedCartHash != currentCartHash) {
       _lastValidatedCartHash = currentCartHash;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _appliedCoupon != null) {
+        if (!mounted) return;
+        if (_appliedCoupon != null) {
           _applyCoupon(_appliedCoupon!, subtotal, silent: true);
+        } else if (cart.items.isNotEmpty) {
+          final restId = cart.items.firstWhereOrNull((i) => isRestaurantProduct(i.product))?.product.restaurantId;
+          _checkAutoApplyCoupon(subtotal, restId);
         }
       });
-    } else {
-      _lastValidatedCartHash = currentCartHash;
     }
 
     final groceryItems = cart.items.where((i) => !isRestaurantProduct(i.product)).toList();

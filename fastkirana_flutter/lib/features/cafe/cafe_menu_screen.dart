@@ -19,6 +19,7 @@ import '../../data/models/coupon.dart';
 import '../../providers/coupon_provider.dart';
 
 class WebMenuSection {
+  final String? id;
   final String tag;
   final List<String> matchTags;
   final String title;
@@ -27,6 +28,7 @@ class WebMenuSection {
   final String description;
 
   const WebMenuSection({
+    this.id,
     required this.tag,
     required this.matchTags,
     required this.title,
@@ -124,40 +126,85 @@ const List<WebMenuSection> webRestaurantSections = [
 ];
 
 String? getCategoryAssetImage(String tag) {
+  if (tag.isEmpty) return null;
+  final clean = tag.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
   const mapping = <String, String>{
     'all': 'assets/categories/cafe_all_menu_category.webp',
-    'hot-beverage': 'assets/categories/cafe_brews_category.webp',
-    'hot-bite': 'assets/categories/cafe_snacks_category.webp',
+    'hotbeverage': 'assets/categories/cafe_brews_category.webp',
+    'hotbeverages': 'assets/categories/cafe_brews_category.webp',
+    'brews': 'assets/categories/cafe_brews_category.webp',
+    'brew': 'assets/categories/cafe_brews_category.webp',
+    'tea': 'assets/categories/cafe_brews_category.webp',
+    'chai': 'assets/categories/cafe_brews_category.webp',
+    'hotbite': 'assets/categories/cafe_snacks_category.webp',
+    'hotbites': 'assets/categories/cafe_snacks_category.webp',
+    'snack': 'assets/categories/cafe_snacks_category.webp',
+    'snacks': 'assets/categories/cafe_snacks_category.webp',
+    'quickbites': 'assets/categories/cafe_snacks_category.webp',
+    'momos': 'assets/categories/cafe_snacks_category.webp',
+    'momo': 'assets/categories/cafe_snacks_category.webp',
+    'fries': 'assets/categories/cafe_snacks_category.webp',
+    'sandwich': 'assets/categories/cafe_sandwiches_category.webp',
     'sandwiches': 'assets/categories/cafe_sandwiches_category.webp',
+    'burger': 'assets/categories/cafe_burgers_category.webp',
     'burgers': 'assets/categories/cafe_burgers_category.webp',
-    'frankie-rolls': 'assets/categories/cafe_rolls_category.webp',
-    'garlic-bread': 'assets/categories/cafe_garlic_bread_category.webp',
+    'frankierolls': 'assets/categories/cafe_rolls_category.webp',
+    'frankieroll': 'assets/categories/cafe_rolls_category.webp',
+    'rolls': 'assets/categories/cafe_rolls_category.webp',
+    'roll': 'assets/categories/cafe_rolls_category.webp',
+    'garlicbread': 'assets/categories/cafe_garlic_bread_category.webp',
+    'garlicbreads': 'assets/categories/cafe_garlic_bread_category.webp',
+    'garlic': 'assets/categories/cafe_garlic_bread_category.webp',
     'pizza': 'assets/categories/cafe_pizza_category.webp',
-    'pizzas-burgers': 'assets/categories/cafe_pizza_category.webp',
-    'pav-bhaji': 'assets/categories/cafe_bombay_bites_category.webp',
-    'bombay-bites': 'assets/categories/cafe_bombay_bites_category.webp',
+    'pizzas': 'assets/categories/cafe_pizza_category.webp',
+    'pizzasburgers': 'assets/categories/cafe_pizza_category.webp',
+    'calzone': 'assets/categories/cafe_pizza_category.webp',
+    'calzones': 'assets/categories/cafe_pizza_category.webp',
+    'maggie': 'assets/categories/cafe_chinese_category.webp',
+    'maggi': 'assets/categories/cafe_chinese_category.webp',
+    'pavbhaji': 'assets/categories/cafe_bombay_bites_category.webp',
+    'bombaybites': 'assets/categories/cafe_bombay_bites_category.webp',
     'chinese': 'assets/categories/cafe_chinese_category.webp',
-    'chinese-soups': 'assets/categories/cafe_chinese_category.webp',
-    'italian-pasta': 'assets/categories/cafe_pasta_category.webp',
-    'south-indian': 'assets/categories/cafe_south_indian_category.webp',
-    'rice-dishes': 'assets/categories/cafe_rice_category.webp',
-    'biryani-rice': 'assets/categories/cafe_rice_category.webp',
-    'main-course': 'assets/categories/cafe_south_indian_category.webp',
-    'roti-naan-breads': 'assets/categories/cafe_south_indian_category.webp',
-    'starters-tandoori': 'assets/categories/cafe_snacks_category.webp',
+    'chinesesoups': 'assets/categories/cafe_chinese_category.webp',
+    'noodles': 'assets/categories/cafe_chinese_category.webp',
+    'chowmein': 'assets/categories/cafe_chinese_category.webp',
+    'manchurian': 'assets/categories/cafe_chinese_category.webp',
+    'italianpasta': 'assets/categories/cafe_pasta_category.webp',
+    'pasta': 'assets/categories/cafe_pasta_category.webp',
+    'pastas': 'assets/categories/cafe_pasta_category.webp',
+    'southindian': 'assets/categories/cafe_south_indian_category.webp',
+    'dosa': 'assets/categories/cafe_south_indian_category.webp',
+    'ricedishes': 'assets/categories/cafe_rice_category.webp',
+    'rice': 'assets/categories/cafe_rice_category.webp',
+    'biryanirice': 'assets/categories/cafe_rice_category.webp',
+    'biryani': 'assets/categories/cafe_rice_category.webp',
+    'maincourse': 'assets/categories/cafe_south_indian_category.webp',
+    'curries': 'assets/categories/cafe_south_indian_category.webp',
+    'rotinaanbreads': 'assets/categories/cafe_south_indian_category.webp',
+    'starterstandoori': 'assets/categories/cafe_snacks_category.webp',
+    'starters': 'assets/categories/cafe_snacks_category.webp',
     'breakfast': 'assets/categories/dairy_breakfast_category.webp',
     'shakes': 'assets/categories/cafe_shakes_category.webp',
-    'shakes-beverages': 'assets/categories/cafe_shakes_category.webp',
+    'shake': 'assets/categories/cafe_shakes_category.webp',
+    'shakesbeverages': 'assets/categories/cafe_shakes_category.webp',
     'mocktails': 'assets/categories/cafe_mocktails_category.webp',
-    'cold-coffee': 'assets/categories/cafe_coffee_category.webp',
+    'mocktail': 'assets/categories/cafe_mocktails_category.webp',
+    'mocktailsshakes': 'assets/categories/cafe_mocktails_category.webp',
+    'coldcoffee': 'assets/categories/cafe_coffee_category.webp',
+    'coffee': 'assets/categories/cafe_coffee_category.webp',
     'chilled': 'assets/categories/cafe_cold_drinks_category.webp',
     'beverages': 'assets/categories/cafe_cold_drinks_category.webp',
-    'chilled-drinks': 'assets/categories/cafe_cold_drinks_category.webp',
+    'beverage': 'assets/categories/cafe_cold_drinks_category.webp',
+    'chilleddrinks': 'assets/categories/cafe_cold_drinks_category.webp',
+    'drinks': 'assets/categories/cafe_cold_drinks_category.webp',
+    'drink': 'assets/categories/cafe_cold_drinks_category.webp',
+    'lassi': 'assets/categories/cafe_shakes_category.webp',
     'desserts': 'assets/categories/ice_cream_category.webp',
-    'ice-cream': 'assets/categories/ice_cream_category.webp',
-    'ice-creams': 'assets/categories/ice_cream_category.webp',
+    'dessert': 'assets/categories/ice_cream_category.webp',
+    'icecream': 'assets/categories/ice_cream_category.webp',
+    'icecreams': 'assets/categories/ice_cream_category.webp',
   };
-  return mapping[tag.toLowerCase()];
+  return mapping[clean];
 }
 
 class RenderedCategory {
@@ -322,8 +369,9 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
     if (restaurant?.menuSections != null && restaurant!.menuSections!.isNotEmpty) {
       baseSections = restaurant.menuSections!.map((s) {
         final map = s is Map ? s : <String, dynamic>{};
-        final tag = map['tag']?.toString() ?? 'section';
-        final title = map['title']?.toString() ?? 'Menu Section';
+        final id = map['id']?.toString();
+        final tag = map['tag']?.toString() ?? id ?? 'section';
+        final title = map['title']?.toString() ?? map['name']?.toString() ?? 'Menu Section';
         final emoji = map['emoji']?.toString() ?? '🍽️';
         final desc = map['description']?.toString() ?? '';
         final img = map['imageUrl']?.toString() ?? map['image']?.toString();
@@ -331,6 +379,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
             ? (map['matchTags'] as List).map((e) => e.toString()).toList()
             : <String>[];
         return WebMenuSection(
+          id: id,
           tag: tag,
           title: title,
           emoji: emoji,
@@ -362,8 +411,9 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
     final result = <RenderedCategory>[];
 
     for (final sec in baseSections) {
-      final secTagLower = sec.tag.toLowerCase();
-      final secTitleLower = sec.title.toLowerCase();
+      final secIdLower = (sec.id ?? '').toLowerCase().trim();
+      final secTagLower = sec.tag.toLowerCase().trim();
+      final secTitleLower = sec.title.toLowerCase().trim();
 
       final secProducts = filtered.where((p) {
         if (assignedIds.contains(p.id)) return false;
@@ -371,11 +421,21 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
         final pTags = p.tags.map((t) => t.toLowerCase().trim()).toList();
         final pCatSlug = (p.category?.slug ?? '').toLowerCase().trim();
         final pCatName = (p.category?.name ?? '').toLowerCase().trim();
+        final pMenuSec = (p.menuSection ?? '').toLowerCase().trim();
+        final pName = p.name.toLowerCase().trim();
 
-        final matched = sec.matchTags.any((tag) {
-          final t = tag.toLowerCase().trim();
-          return pTags.contains(t) || pCatSlug == t || pCatName == t;
-        }) || pTags.contains(secTagLower) || pCatSlug == secTagLower || pCatName == secTitleLower;
+        final matched = (secIdLower.isNotEmpty && pTags.contains(secIdLower)) ||
+            (secIdLower.isNotEmpty && pMenuSec == secIdLower) ||
+            (secTagLower.isNotEmpty && pTags.contains(secTagLower)) ||
+            (secTagLower.isNotEmpty && pMenuSec == secTagLower) ||
+            (secTitleLower.isNotEmpty && pMenuSec == secTitleLower) ||
+            sec.matchTags.any((tag) {
+              final t = tag.toLowerCase().trim();
+              return pTags.contains(t) || pCatSlug == t || pCatName == t || pName.contains(t);
+            }) ||
+            pCatSlug == secTagLower ||
+            pCatName == secTitleLower ||
+            (secTagLower.isNotEmpty && secTagLower != 'section' && pName.contains(secTagLower));
 
         if (matched) {
           assignedIds.add(p.id);
@@ -1529,23 +1589,29 @@ class _CategoryChipsDelegate extends SliverPersistentHeaderDelegate {
   }
 
   Widget _buildCategoryThumbnail(RenderedCategory cat) {
-    if (cat.imageUrl != null && cat.imageUrl!.startsWith('http')) {
-      return CachedNetworkImage(
-        imageUrl: cat.imageUrl!,
-        fit: BoxFit.cover,
-        memCacheWidth: 200,
-        memCacheHeight: 200,
-        maxWidthDiskCache: 200,
-        maxHeightDiskCache: 200,
-        placeholder: (_, __) => Center(child: Text(cat.emoji, style: const TextStyle(fontSize: 18))),
-        errorWidget: (_, __, ___) => _buildLocalAssetOrEmoji(cat),
-      );
+    var url = cat.imageUrl;
+    if (url != null && url.isNotEmpty) {
+      if (url.startsWith('/')) {
+        url = 'https://www.fastkirana.in$url';
+      }
+      if (url.startsWith('http')) {
+        return CachedNetworkImage(
+          imageUrl: url,
+          fit: BoxFit.cover,
+          memCacheWidth: 200,
+          memCacheHeight: 200,
+          maxWidthDiskCache: 200,
+          maxHeightDiskCache: 200,
+          placeholder: (_, __) => Center(child: Text(cat.emoji, style: const TextStyle(fontSize: 18))),
+          errorWidget: (_, __, ___) => _buildLocalAssetOrEmoji(cat),
+        );
+      }
     }
     return _buildLocalAssetOrEmoji(cat);
   }
 
   Widget _buildLocalAssetOrEmoji(RenderedCategory cat) {
-    final asset = getCategoryAssetImage(cat.tag);
+    final asset = getCategoryAssetImage(cat.tag) ?? getCategoryAssetImage(cat.title);
     if (asset != null) {
       return Image.asset(
         asset,

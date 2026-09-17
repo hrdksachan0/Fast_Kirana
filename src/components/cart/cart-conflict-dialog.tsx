@@ -16,13 +16,15 @@ export function CartConflictDialog() {
 
   const isOpen = pendingConflictProduct !== null
 
+  if (!isOpen || !pendingConflictProduct) return null
+
   // Find existing restaurant in cart
-  const existingRestaurantItem = items.find((item) => isCafeProduct(item.product))
-  const existingOutletName = existingRestaurantItem ? getOutletName(existingRestaurantItem.product) : 'Current Restaurant'
-  const newOutletName = pendingConflictProduct ? getOutletName(pendingConflictProduct) : 'New Restaurant'
+  const existingRestaurantItem = items.find((item) => item?.product && isCafeProduct(item.product))
+  const existingOutletName = existingRestaurantItem?.product ? (getOutletName(existingRestaurantItem.product) || 'Current Restaurant') : 'Current Restaurant'
+  const newOutletName = pendingConflictProduct ? (getOutletName(pendingConflictProduct) || 'New Restaurant') : 'New Restaurant'
 
   // Count grocery items that will remain safe
-  const groceryItemsCount = items.filter((item) => !isCafeProduct(item.product)).length
+  const groceryItemsCount = items.filter((item) => item?.product && !isCafeProduct(item.product)).length
 
   const handleConfirm = () => {
     triggerHaptic('medium')
@@ -30,11 +32,12 @@ export function CartConflictDialog() {
     // Clear ONLY dishes from the previous restaurant — keep all grocery items intact!
     clearRestaurantItems()
     
-    if (pendingConflictProduct) {
-      addItem(pendingConflictProduct)
-    }
-    
+    const prodToAdd = pendingConflictProduct
     setPendingConflictProduct(null)
+
+    if (prodToAdd) {
+      addItem(prodToAdd)
+    }
     
     if (groceryItemsCount > 0) {
       toast.success(`Switched to ${newOutletName}. ${groceryItemsCount} grocery item(s) kept safe in cart! 🛒`, {
@@ -51,7 +54,7 @@ export function CartConflictDialog() {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && setPendingConflictProduct(null)}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) setPendingConflictProduct(null) }}>
       <DialogContent showCloseButton={false} className="max-w-[340px] w-[92%] mx-auto border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-[28px] shadow-2xl overflow-hidden p-5 gap-0">
         
         <DialogHeader className="pt-1 flex flex-col items-center text-center">
@@ -120,7 +123,7 @@ export function CartConflictDialog() {
             onClick={handleConfirm}
             className="w-full h-10 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black rounded-xl transition-all cursor-pointer shadow-sm shadow-emerald-600/25 hover:shadow-md"
           >
-            Switch to {newOutletName.split(' ')[0]}
+            Switch to {(newOutletName || 'Restaurant').split(' ')[0]}
           </Button>
         </div>
 

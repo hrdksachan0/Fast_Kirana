@@ -25,9 +25,14 @@ export async function withRetry<T>(
   throw lastError
 }
 
-export function formatPrice(price: number): string {
-  return `₹${price.toLocaleString('en-IN')}`
+export function formatPrice(price: number | null | undefined): string {
+  if (price === null || price === undefined || isNaN(Number(price))) {
+    return '₹0'
+  }
+  const numericPrice = Number(price)
+  return `₹${numericPrice.toLocaleString('en-IN')}`
 }
+
 
 import { formatTime12h } from "./date-helpers"
 

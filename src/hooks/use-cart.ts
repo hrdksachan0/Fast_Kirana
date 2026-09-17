@@ -16,8 +16,9 @@ export function useCart() {
     const storeState = useCartStore.getState()
     const prevItems = [...storeState.items]
     const getCategorySubtotal = (itemsList: typeof storeState.items, checkCafe: boolean) => 
-      itemsList.filter((item) => isCafeProduct(item.product) === checkCafe)
-               .reduce((sum, item) => sum + item.product.price * item.quantity, 0)
+      itemsList
+        .filter((item) => item?.product && isCafeProduct(item.product) === checkCafe)
+        .reduce((sum, item) => sum + (Number(item?.product?.price) || 0) * (Number(item?.quantity) || 0), 0)
 
     const prevGrocerySub = getCategorySubtotal(prevItems, false)
     const prevCafeSub = getCategorySubtotal(prevItems, true)
@@ -50,6 +51,7 @@ export function useCart() {
   }, [])
 
   const addItem = useCallback((product: CartProduct) => {
+    if (!product) return
     const { groceryMartOpen, cafeOpen, restaurantOpen, categoryStatus } = useUIStore.getState()
     const categorySlug = product.category?.slug || ''
     const isCategoryOpen = (categoryStatus as Record<string, boolean>)?.[categorySlug] !== false
@@ -80,6 +82,7 @@ export function useCart() {
     const newOutlet = newIsCafe ? getOutletName(product) : null
 
     const incompatibleItem = storeState.items.find((item) => {
+      if (!item?.product) return false
       const existIsCafe = isCafeProduct(item.product)
 
       // 1. Grocery items can mix freely with ANY restaurant outlet or grocery item
@@ -123,8 +126,8 @@ export function useCart() {
 
     if (quantity > currentQty) {
       const { groceryMartOpen, cafeOpen, restaurantOpen, categoryStatus } = useUIStore.getState()
-      const item = storeState.items.find((i) => i.product.id === productId)
-      if (item) {
+      const item = storeState.items.find((i) => i?.product?.id === productId)
+      if (item && item.product) {
         const limit = getProductLimit(item.product)
         if (quantity > limit) {
           triggerHaptic('warning')

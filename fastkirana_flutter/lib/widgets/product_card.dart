@@ -860,11 +860,49 @@ class _ProductCardState extends ConsumerState<ProductCard> {
         ? s(100)
         : Responsive.isSmallMobile(context) ? s(95) : (isFood ? 116 : 110) * _uiScale;
 
-    final isBogoDish = isFood && (
-      (product.restaurant?.discountOffer != null && (product.restaurant!.discountOffer!.toUpperCase().contains('BOGO') || product.restaurant!.discountOffer!.toUpperCase().contains('FREE'))) ||
-      product.tags.any((t) => t.toLowerCase().contains('bogo')) ||
-      product.name.toLowerCase().contains('bogo')
-    );
+    String? bogoBadgeText;
+    final restOffer = product.restaurant?.discountOffer ?? product.restaurant?.discountBadge;
+    if (isFood && restOffer != null && restOffer.trim().isNotEmpty) {
+      final up = restOffer.toUpperCase();
+      if (up.contains('BOGO') || up.contains('BUY 1') || up.contains('BUY LARGE') || up.contains('CHEAPEST') || up.contains('FREE')) {
+        final pTags = product.tags.map((t) => t.toLowerCase().trim()).toList();
+        final pName = product.name.toLowerCase();
+        final pSlug = product.slug.toLowerCase();
+        final pSec = (product.menuSection ?? '').toLowerCase();
+
+        bool qualifies = true;
+        // If offer specifies pizza or buy large, strictly restrict to pizza items / large-variant items
+        if (up.contains('PIZZA') || up.contains('BUY LARGE')) {
+          final isPizza = pTags.contains('pizza') || pTags.any((t) => t.contains('pizza')) || pSec.contains('pizza') || pName.contains('pizza') || pSlug.contains('pizza');
+          final hasLarge = (product.variants ?? []).any((v) => v.name.toLowerCase().contains('large'));
+          if (!isPizza && !hasLarge) {
+            qualifies = false;
+          }
+        } else if (up.contains('BURGER')) {
+          if (!pTags.contains('burger') && !pSec.contains('burger') && !pName.contains('burger')) {
+            qualifies = false;
+          }
+        } else if (up.contains('SANDWICH')) {
+          if (!pTags.contains('sandwich') && !pSec.contains('sandwich') && !pName.contains('sandwich')) {
+            qualifies = false;
+          }
+        }
+
+        if (qualifies) {
+          if (up.contains('BUY LARGE')) {
+            bogoBadgeText = 'BUY 1 GET 1';
+          } else if (up.contains('CHEAPEST')) {
+            bogoBadgeText = 'BUY 2 GET 1';
+          } else {
+            bogoBadgeText = 'BOGO DEAL';
+          }
+        }
+      }
+    } else if (product.tags.any((t) => t.toLowerCase().contains('bogo')) || product.name.toLowerCase().contains('bogo')) {
+      bogoBadgeText = 'BOGO';
+    }
+
+    final isBogoDish = bogoBadgeText != null;
     final hasBadges = isBogoDish || product.isBestsellerProduct || product.isTrending || product.isFlashDealProduct || product.isOrganic || product.isMustTry;
 
     return RepaintBoundary(
@@ -897,6 +935,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                   product: product,
                   isFood: isFood,
                   isBogoDish: isBogoDish,
+                  bogoBadgeText: bogoBadgeText,
                   uiScale: _uiScale,
                   imageHeight: imageHeight,
                   resolvedDiscount: resolvedDiscount,
@@ -978,6 +1017,7 @@ class _ImageShowcase extends StatelessWidget {
   final Product product;
   final bool isFood;
   final bool isBogoDish;
+  final String? bogoBadgeText;
   final double uiScale;
   final double imageHeight;
   final int resolvedDiscount;
@@ -992,6 +1032,7 @@ class _ImageShowcase extends StatelessWidget {
     required this.product,
     required this.isFood,
     this.isBogoDish = false,
+    this.bogoBadgeText,
     required this.uiScale,
     required this.imageHeight,
     required this.resolvedDiscount,
@@ -1033,9 +1074,7 @@ class _ImageShowcase extends StatelessWidget {
                   if (isBogoDish)
                     ProductBadge.bogo(
                       s: s,
-                      text: product.restaurant?.discountOffer?.toUpperCase().contains('LARGE') == true
-                          ? 'BUY 1 GET 1'
-                          : 'BOGO',
+                      text: bogoBadgeText ?? 'BOGO',
                     )
                   else if (product.isFlashDealProduct) ProductBadge.flashDeal(s: s)
                   else if (product.isBestsellerProduct) ProductBadge.bestseller(s: s)

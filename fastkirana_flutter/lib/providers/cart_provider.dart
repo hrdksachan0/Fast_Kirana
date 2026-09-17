@@ -195,7 +195,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
     final cart = _cart;
     if (cart == null) return;
     final items = List<CartItem>.from(cart.items);
-    final idx = items.indexWhere((i) => i.productId == productId || i.product.id == productId);
+    final idx = items.indexWhere((i) => i.productId == productId || i.id == productId || i.product.id == productId);
 
     if (idx >= 0) {
       final item = items[idx];

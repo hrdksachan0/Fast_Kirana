@@ -14,18 +14,23 @@
  * @example formatPrice(1299.5) → "₹1,299.50"
  * @example formatPrice(0)      → "₹0"
  */
-export function formatPrice(amount: number, opts?: { decimals?: number }): string {
+export function formatPrice(amount: number | null | undefined, opts?: { decimals?: number }): string {
+  if (amount === null || amount === undefined || isNaN(Number(amount))) {
+    return '₹0'
+  }
+  const num = Number(amount)
   const decimals = opts?.decimals
   if (decimals !== undefined) {
-    return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`
+    return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`
   }
   // Auto: show decimals only if fractional part is non-zero
-  const isWhole = Number.isInteger(amount) || Math.abs(amount - Math.round(amount)) < 0.01
+  const isWhole = Number.isInteger(num) || Math.abs(num - Math.round(num)) < 0.01
   if (isWhole) {
-    return `₹${Math.round(amount).toLocaleString('en-IN')}`
+    return `₹${Math.round(num).toLocaleString('en-IN')}`
   }
-  return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
+
 
 /**
  * Format a discount amount (always prefixed with minus sign).

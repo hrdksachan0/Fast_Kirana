@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Restaurant {
   final String id;
   final String name;
@@ -86,6 +88,17 @@ class Restaurant {
       return 'Ghatampur Market, UP';
     }
 
+    List<dynamic>? parseMenuSections() {
+      if (json['menuSections'] is List) return json['menuSections'] as List<dynamic>;
+      if (json['menuSections'] is String && (json['menuSections'] as String).trim().isNotEmpty) {
+        try {
+          final decoded = jsonDecode(json['menuSections'] as String);
+          if (decoded is List) return decoded;
+        } catch (_) {}
+      }
+      return null;
+    }
+
     return Restaurant(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? 'Restaurant',
@@ -110,7 +123,7 @@ class Restaurant {
       discountOffer: json['discountOffer']?.toString(),
       discountBadge: json['discountBadge']?.toString(),
       sortOrder: json['sortOrder'] != null ? int.tryParse(json['sortOrder'].toString()) ?? 0 : 0,
-      menuSections: json['menuSections'] is List ? json['menuSections'] as List<dynamic> : null,
+      menuSections: parseMenuSections(),
       lat: parseLat(),
       lng: parseLng(),
       activeOrdersCount: json['activeOrdersCount'] != null ? int.tryParse(json['activeOrdersCount'].toString()) ?? 0 : 0,

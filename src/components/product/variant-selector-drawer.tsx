@@ -21,7 +21,10 @@ class DrawerErrorBoundary extends Component<{ onClose: () => void; children: Rea
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('VariantSelectorDrawer Error:', error, errorInfo)
     toast.error('Could not load product options. Please try again.')
-    this.props.onClose()
+    setTimeout(() => {
+      this.props.onClose()
+      this.setState({ hasError: false })
+    }, 50)
   }
 
   render() {
@@ -326,13 +329,13 @@ export function VariantSelectorDrawer() {
     return []
   }, [activeProduct])
 
-  if (!isOpen || !activeProduct) return null
-
-  const isStoreClosed = isProductStoreClosed(
-    activeProduct,
-    { groceryMartOpen, cafeOpen, restaurantOpen },
-    categoryStatus
-  )
+  const isStoreClosed = activeProduct
+    ? isProductStoreClosed(
+        activeProduct,
+        { groceryMartOpen, cafeOpen, restaurantOpen },
+        categoryStatus
+      )
+    : false
 
   // Calculate addon total
   const selectedAddonList = useMemo(() => {
@@ -353,14 +356,14 @@ export function VariantSelectorDrawer() {
   // Handlers for Food customization flow
   const safeVariantIndex = Math.min(selectedVariantIndex, Math.max(0, variantsList.length - 1))
   const currentVariant = variantsList[safeVariantIndex] || variantsList[0] || {}
-  const baseVariantPrice = Number(currentVariant.price) || Number(activeProduct.price) || 0
-  const baseVariantMrp = Number(currentVariant.mrp) || Number(activeProduct.mrp) || baseVariantPrice
+  const baseVariantPrice = Number(currentVariant.price) || (activeProduct ? Number(activeProduct.price) : 0) || 0
+  const baseVariantMrp = Number(currentVariant.mrp) || (activeProduct ? Number(activeProduct.mrp) : baseVariantPrice) || baseVariantPrice
   const currentPrice = (baseVariantPrice + addonTotalPerUnit) * foodQuantity
   const currentMrp = (baseVariantMrp + addonTotalPerUnit) * foodQuantity
   const hasDiscount = currentMrp > currentPrice
 
   const handleAddFoodItem = () => {
-    if (!currentVariant || isStoreClosed) return
+    if (!activeProduct || !currentVariant || isStoreClosed) return
 
     // Validate required addon groups
     for (const group of addonGroups) {
@@ -419,34 +422,40 @@ export function VariantSelectorDrawer() {
     setActiveProduct(null)
   }
 
-  const isVeg = isVegProduct(activeProduct)
-  const minPrice = variantsList.length > 0 ? variantsList[0].price : activeProduct.price
+  const isVeg = activeProduct ? isVegProduct(activeProduct) : true
+  const minPrice = variantsList.length > 0 ? variantsList[0].price : (activeProduct?.price ?? 0)
 
   return (
     <DrawerErrorBoundary onClose={() => setActiveProduct(null)}>
       <AnimatePresence>
-        <div className="fixed inset-0 z-50 flex items-end justify-center select-none">
-          {/* Dark Backdrop */}
+        {isOpen && activeProduct && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs cursor-pointer"
-            onClick={() => setActiveProduct(null)}
-          />
-
-          {/* ========================================================================= */}
-          {/* 1. RESTAURANT / FOOD CUSTOMIZATION MODAL (Swiggy / Image 1 UI)           */}
-          {/* ========================================================================= */}
-          {isFood ? (
+            key="variant-drawer-root"
+            className="fixed inset-0 z-50 flex items-end justify-center select-none"
+          >
+            {/* Dark Backdrop */}
             <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 26, stiffness: 240 }}
-              className="gpu-accelerated relative w-full max-w-md flex flex-col max-h-[85dvh] md:max-h-[85vh] overflow-visible"
-            >
+              key="variant-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs cursor-pointer"
+              onClick={() => setActiveProduct(null)}
+            />
+
+            {/* ========================================================================= */}
+            {/* 1. RESTAURANT / FOOD CUSTOMIZATION MODAL (Swiggy / Image 1 UI)           */}
+            {/* ========================================================================= */}
+            {isFood ? (
+              <motion.div
+                key="variant-food-sheet"
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 26, stiffness: 240 }}
+                className="gpu-accelerated relative w-full max-w-md flex flex-col max-h-[85dvh] md:max-h-[85vh] overflow-visible"
+              >
               {/* Floating Dark Circular Close Button above sheet (Image 1) */}
               <button
                 onClick={() => setActiveProduct(null)}
@@ -677,6 +686,7 @@ export function VariantSelectorDrawer() {
           /* 2. GROCERY PACK SIZE DRAWER (Zepto / Blinkit / Image 2 UI)               */
           /* ========================================================================= */
           <motion.div
+            key="variant-grocery-sheet"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
@@ -741,8 +751,9 @@ export function VariantSelectorDrawer() {
             </div>
           </motion.div>
         )}
-      </div>
-    </AnimatePresence>
-  </DrawerErrorBoundary>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </DrawerErrorBoundary>
   )
 }

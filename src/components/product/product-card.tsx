@@ -95,8 +95,11 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
   const totalQuantity = useMemo(() => {
     if (!hasVariants) return getItemQuantity(product.id)
     return items
-      .filter((item) => item.product.id === product.id || item.product.id.startsWith(`${product.id}_`))
-      .reduce((sum, item) => sum + item.quantity, 0)
+      .filter((item) => {
+        const itemId = item?.product?.id
+        return Boolean(itemId) && (itemId === product.id || itemId.startsWith(`${product.id}_`))
+      })
+      .reduce((sum, item) => sum + (Number(item?.quantity) || 0), 0)
   }, [items, hasVariants, product.id, getItemQuantity])
   const quantity = totalQuantity
   const resolvedQuantity = mounted ? quantity : 0
@@ -519,6 +522,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
             <AnimatePresence mode="wait">
               {resolvedQuantity === 0 ? (
                 <motion.button
+                  key="product-card-add-button"
                   whileTap={resolvedStock <= 0 || !resolvedIsAvailable ? undefined : { scale: 0.92 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 15 }}
                   type="button"
@@ -562,10 +566,17 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
                   )}
                 </motion.button>
               ) : (
-                <div className={cn(
-                  "flex h-full w-full items-center justify-between rounded-lg text-white font-black shadow-xs overflow-hidden",
-                  isCafe ? "bg-orange-500" : isRestaurant ? "bg-[#e20a22]" : "bg-emerald-600"
-                )}>
+                <motion.div
+                  key="product-card-stepper"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className={cn(
+                    "flex h-full w-full items-center justify-between rounded-lg text-white font-black shadow-xs overflow-hidden",
+                    isCafe ? "bg-orange-500" : isRestaurant ? "bg-[#e20a22]" : "bg-emerald-600"
+                  )}
+                >
                   <motion.button
                     whileTap={{ scale: 0.85 }}
                     transition={{ type: 'spring', stiffness: 400, damping: 15 }}
@@ -586,7 +597,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
                   >
                     <Plus className="h-2.5 w-2.5 stroke-[3]" />
                   </motion.button>
-                </div>
+                </motion.div>
               )}
             </AnimatePresence>
           </div>

@@ -106,28 +106,32 @@ export async function GET(request: NextRequest) {
     }
 
     let subtotal = 0
-    const items = cart.items.map((item) => {
-      let price = item.product.price
-      if (item.selectedVariant && Array.isArray(item.product.variants)) {
-        const variant = (item.product.variants as any[]).find((v: any) => v.name === item.selectedVariant)
-        if (variant && typeof variant.price === 'number') {
-          price = variant.price
+    const items = cart.items
+      .filter((item) => Boolean(item?.product))
+      .map((item) => {
+        let price = Number(item.product.price) || 0
+        if (item.selectedVariant && Array.isArray(item.product.variants)) {
+          const variant = (item.product.variants as any[]).find((v: any) => v.name === item.selectedVariant)
+          if (variant && typeof variant.price === 'number') {
+            price = variant.price
+          }
         }
-      }
 
-      const itemTotal = price * item.quantity
-      subtotal += itemTotal
+        const itemTotal = price * item.quantity
+        subtotal += itemTotal
 
-      return {
-        id: item.id,
-        productId: item.productId,
-        quantity: item.quantity,
-        selectedVariant: item.selectedVariant,
-        notes: item.notes,
-        product: { ...item.product, price },
-        itemTotal,
-      }
-    })
+        const resolvedId = item.selectedVariant ? `${item.productId}_${item.selectedVariant}` : item.product.id
+
+        return {
+          id: item.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          selectedVariant: item.selectedVariant,
+          notes: item.notes,
+          product: { ...item.product, id: resolvedId, price },
+          itemTotal,
+        }
+      })
 
     return NextResponse.json({
       success: true,

@@ -49,24 +49,28 @@ export function CartSyncProvider({ children }: { children: React.ReactNode }) {
 
             // First add server items
             for (const item of serverItems) {
-              mergedMap.set(item.product.id, item)
+              if (item?.product?.id) {
+                mergedMap.set(item.product.id, item)
+              }
             }
 
             // Then merge local items
             for (const item of localItems) {
-              const existing = mergedMap.get(item.product.id)
-              if (existing) {
-                const maxStock = item.product.stock || 99
-                const limit = getProductLimit(item.product)
-                const newQty = Math.min(Math.max(existing.quantity, item.quantity), maxStock, limit)
-                
-                mergedMap.set(item.product.id, {
-                  ...existing,
-                  quantity: newQty,
-                  notes: item.notes || existing.notes
-                })
-              } else {
-                mergedMap.set(item.product.id, item)
+              if (item?.product?.id) {
+                const existing = mergedMap.get(item.product.id)
+                if (existing) {
+                  const maxStock = item.product.stock || 99
+                  const limit = getProductLimit(item.product)
+                  const newQty = Math.min(Math.max(existing.quantity, item.quantity), maxStock, limit)
+                  
+                  mergedMap.set(item.product.id, {
+                    ...existing,
+                    quantity: newQty,
+                    notes: item.notes || existing.notes
+                  })
+                } else {
+                  mergedMap.set(item.product.id, item)
+                }
               }
             }
 
@@ -95,19 +99,21 @@ export function CartSyncProvider({ children }: { children: React.ReactNode }) {
 
     const timer = setTimeout(async () => {
       try {
-        const mappedItems = items.map((item) => {
-          const isVariant = item.product.id.includes('_')
-          const [productId, variantName] = isVariant 
-            ? item.product.id.split('_') 
-            : [item.product.id, null]
+        const mappedItems = items
+          .filter((item) => Boolean(item?.product?.id))
+          .map((item) => {
+            const isVariant = item.product.id.includes('_')
+            const [productId, variantName] = isVariant 
+              ? [item.product.id.split('_')[0], item.product.id.split('_').slice(1).join('_')]
+              : [item.product.id, null]
 
-          return {
-            productId,
-            quantity: item.quantity,
-            selectedVariant: variantName,
-            notes: item.notes || null
-          }
-        })
+            return {
+              productId,
+              quantity: item.quantity,
+              selectedVariant: variantName,
+              notes: item.notes || null
+            }
+          })
 
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',

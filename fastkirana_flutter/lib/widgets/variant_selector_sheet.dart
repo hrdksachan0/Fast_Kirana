@@ -105,6 +105,7 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
       createdAt: widget.product.createdAt,
       category: widget.product.category,
       restaurant: widget.product.restaurant,
+      menuSection: widget.product.menuSection,
     );
   }
 
