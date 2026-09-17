@@ -14,6 +14,7 @@ import '../../data/models/product.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/store_settings_provider.dart';
 import '../../widgets/cart_conflict_dialog.dart';
+import '../../widgets/variant_selector_sheet.dart';
 import '../cart/cart_screen.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
@@ -933,6 +934,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
                         return GestureDetector(
                           onTap: () {
+                            if (p.parsedAddons.isNotEmpty) {
+                              VariantSelectorSheet.show(context, p);
+                              return;
+                            }
+
                             final targetId = activeVariant != null ? '${p.id}_${activeVariant.name}' : p.id;
                             final targetName = activeVariant != null ? '${p.name} (${activeVariant.name})' : p.name;
                             final productToCart = Product(

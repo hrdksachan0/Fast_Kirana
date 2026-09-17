@@ -61,7 +61,24 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
     return list.filter((v) => v && typeof v === 'object')
   }, [product.variants])
 
+  const normalizedAddons = useMemo(() => {
+    const raw = (product as any).addons
+    if (!raw) return []
+    let list: any[] = []
+    if (Array.isArray(raw)) {
+      list = raw
+    } else if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) list = parsed
+      } catch {}
+    }
+    return list.filter((a) => a && typeof a === 'object' && Array.isArray(a.items) && a.items.length > 0)
+  }, [(product as any).addons])
+
   const hasVariants = normalizedVariants.length > 0
+  const hasAddons = normalizedAddons.length > 0
+  const hasOptions = hasVariants || hasAddons
   const variantsList = normalizedVariants
   
   // Calculate starting price for variant display
@@ -91,16 +108,16 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
   // Cart operations
   const { items, getItemQuantity, addItem, updateQuantity } = useCart()
 
-  // Calculate total quantity of all variants of this product in the cart
+  // Calculate total quantity of all variants/customizations of this product in the cart
   const totalQuantity = useMemo(() => {
-    if (!hasVariants) return getItemQuantity(product.id)
+    if (!hasOptions) return getItemQuantity(product.id)
     return items
       .filter((item) => {
         const itemId = item?.product?.id
         return Boolean(itemId) && (itemId === product.id || itemId.startsWith(`${product.id}_`))
       })
       .reduce((sum, item) => sum + (Number(item?.quantity) || 0), 0)
-  }, [items, hasVariants, product.id, getItemQuantity])
+  }, [items, hasOptions, product.id, getItemQuantity])
   const quantity = totalQuantity
   const resolvedQuantity = mounted ? quantity : 0
   const [showAdded, setShowAdded] = useState(false)
@@ -262,7 +279,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
     e.stopPropagation()
     triggerHaptic('light')
     
-    if (hasVariants) {
+    if (hasOptions) {
       setActiveVariantProduct({ ...product, variants: variantsList })
     } else {
       addItem({
@@ -286,13 +303,13 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
       setShowAdded(true)
       setTimeout(() => setShowAdded(false), 600)
     }
-  }, [hasVariants, product, variantsList, resolvedMrp, resolvedPrice, resolvedDiscount, resolvedStock, resolvedIsAvailable, addItem, setActiveVariantProduct])
+  }, [hasOptions, product, variantsList, resolvedMrp, resolvedPrice, resolvedDiscount, resolvedStock, resolvedIsAvailable, addItem, setActiveVariantProduct])
 
   const handleIncrement = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     triggerHaptic('light')
-    if (hasVariants) {
+    if (hasOptions) {
       setActiveVariantProduct({ ...product, variants: variantsList })
     } else {
       updateQuantity(product.id, product.name, quantity + 1)
@@ -303,7 +320,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
     e.preventDefault()
     e.stopPropagation()
     triggerHaptic('medium')
-    if (hasVariants) {
+    if (hasOptions) {
       setActiveVariantProduct({ ...product, variants: variantsList })
     } else {
       updateQuantity(product.id, product.name, quantity - 1)
@@ -485,7 +502,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
         {/* ROW 1: Pack Size (Left) & ADD Button (Right) — Clean & Balanced */}
         <div className="relative z-10 pointer-events-auto flex items-center justify-between gap-1 mt-2 mb-1 shrink-0 w-full min-w-0">
           <div className="min-w-0 flex-1 overflow-hidden">
-            {hasVariants ? (
+            {hasOptions ? (
               <span 
                 onClick={(e) => {
                   e.preventDefault()
@@ -503,7 +520,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
                     : "text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30 cursor-pointer active:scale-95"
                 )}
               >
-                {variantsList.length} Options ▾
+                {hasVariants ? `${variantsList.length} Options ▾` : 'Customise ▾'}
               </span>
             ) : (
               <span className="text-[9px] min-[375px]:text-[10px] sm:text-[11px] font-extrabold text-zinc-400 dark:text-zinc-500 uppercase tracking-tight leading-none truncate block whitespace-nowrap">

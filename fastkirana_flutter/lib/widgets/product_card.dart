@@ -831,7 +831,10 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     final cardWidth = widget.width ?? (context.screenWidth - Responsive.horizontalPadding(context) * 2 - 12) / 2;
 
     final variants = product.parsedVariants;
+    final addons = product.parsedAddons;
     final hasVariants = variants.isNotEmpty;
+    final hasAddons = addons.isNotEmpty;
+    final hasOptions = hasVariants || hasAddons;
     final startingPrice = hasVariants ? variants.map((v) => v.price).reduce((a, b) => a < b ? a : b) : product.price;
     final startingMrp = hasVariants ? (variants.firstWhere((v) => v.price == startingPrice, orElse: () => variants.first).mrp) : product.mrp;
     final resolvedDiscount = startingMrp > startingPrice && startingMrp > 0 ? ((startingMrp - startingPrice) / startingMrp * 100).round() : product.discountPercentage;
@@ -969,7 +972,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                 SizedBox(height: s(4)),
 
                 // 3. VARIANT PILL / UNIT
-                _VariantPill(product: product, variants: variants, hasVariants: hasVariants, isOutOfStock: isOutOfStock, isFood: isFood, uiScale: _uiScale),
+                _VariantPill(product: product, variants: variants, hasVariants: hasOptions, isOutOfStock: isOutOfStock, isFood: isFood, uiScale: _uiScale),
 
                 // 4. PRICE + ADD BUTTON
                 Row(
@@ -989,7 +992,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                         scaffoldContext: context,
                         product: product,
                         inCartQty: inCartQty,
-                        hasVariants: hasVariants,
+                        hasVariants: hasOptions,
                         isOutOfStock: isOutOfStock,
                         isTimingClosed: !timingStatus.isAvailableNow,
                         nextSlot: timingStatus.nextAvailableTimeStr,
@@ -1160,6 +1163,7 @@ class _VariantPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (hasVariants) {
+      final label = variants.isNotEmpty ? '${variants.length} Options' : 'Customise';
       return GestureDetector(
         onTap: () { if (!isOutOfStock) VariantSelectorSheet.show(context, product); },
         child: Container(
@@ -1169,7 +1173,7 @@ class _VariantPill extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('${variants.length} Options', style: GoogleFonts.inter(fontSize: s(9), fontWeight: FontWeight.w700, color: const Color(0xFF475569))),
+              Text(label, style: GoogleFonts.inter(fontSize: s(9), fontWeight: FontWeight.w700, color: const Color(0xFF475569))),
               SizedBox(width: s(2)),
               Icon(Icons.keyboard_arrow_down_rounded, size: s(12), color: const Color(0xFF64748B)),
             ],

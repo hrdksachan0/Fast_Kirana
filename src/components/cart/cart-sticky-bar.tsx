@@ -102,64 +102,64 @@ export function CartStickyBar() {
         />
       </div>
 
-      {/* Balanced Cart Content Row */}
-      <div className="px-3.5 py-2.5 flex items-center justify-between gap-2.5">
-        <div className="flex items-center gap-2.5 min-w-0">
-          {/* Overlapping Item Preview Avatars or Shopping Bag */}
+      {/* Compact Cart Content Row */}
+      <div className="px-3 py-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {/* Compact Overlapping Item Previews */}
           <div className="flex items-center shrink-0">
             {items.length > 0 ? (
-              <div className="flex items-center -space-x-2.5 mr-1">
-                {items.slice(0, 3).map((it, idx) => (
+              <div className="flex items-center -space-x-2">
+                {items.slice(0, 2).map((it, idx) => (
                   <div
                     key={`${it.product.id}-${idx}`}
-                    className="relative w-8 h-8 rounded-full border-2 border-white/90 overflow-hidden bg-white shadow-xs shrink-0"
+                    className="relative w-6 h-6 rounded-full border-[1.5px] border-white/90 overflow-hidden bg-white shadow-xs shrink-0"
                     style={{ zIndex: 10 - idx }}
                   >
                     {it.product.imageUrl ? (
                       <img
                         src={it.product.imageUrl}
                         alt={it.product.name}
-                        className="w-full h-full object-contain p-0.5"
+                        className="w-full h-full object-contain"
                       />
                     ) : (
-                      <div className="w-full h-full bg-orange-100 text-[10px] font-black flex items-center justify-center text-orange-600">
+                      <div className="w-full h-full bg-orange-100 text-[8px] font-black flex items-center justify-center text-orange-600">
                         {it.product.name.charAt(0)}
                       </div>
                     )}
                   </div>
                 ))}
-                {items.length > 3 && (
+                {items.length > 2 && (
                   <div
-                    className="relative w-8 h-8 rounded-full border-2 border-white/90 bg-black/60 text-white text-[10px] font-black flex items-center justify-center shadow-xs shrink-0"
+                    className="relative w-6 h-6 rounded-full border-[1.5px] border-white/90 bg-black/60 text-white text-[8px] font-black flex items-center justify-center shadow-xs shrink-0"
                     style={{ zIndex: 5 }}
                   >
-                    +{items.length - 3}
+                    +{items.length - 2}
                   </div>
                 )}
               </div>
             ) : (
-              <div className="relative w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shrink-0 shadow-inner">
-                <ShoppingBag className="h-4 w-4 text-white stroke-[2.4]" />
+              <div className="relative w-6 h-6 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shrink-0">
+                <ShoppingBag className="h-3.5 w-3.5 text-white stroke-[2.4]" />
               </div>
             )}
           </div>
           
           {/* Title & Subtitle Stack */}
-          <div className="flex flex-col text-left min-w-0">
-            <div className="flex items-center gap-1.5 leading-tight">
-              <span className="text-sm font-black text-white tabular-nums drop-shadow-xs">
+          <div className="flex flex-col text-left min-w-0 flex-1">
+            <div className="flex items-baseline gap-1 leading-tight">
+              <span className="text-[13px] font-black text-white tabular-nums drop-shadow-xs whitespace-nowrap">
                 {formatPrice(subtotal)}
               </span>
-              <span className="text-[10px] font-bold text-white/80">
+              <span className="text-[10px] font-bold text-white/70 whitespace-nowrap">
                 • {totalItems} {totalItems === 1 ? 'item' : 'items'}
               </span>
             </div>
-            <span className="text-[9.5px] font-extrabold text-amber-200/95 leading-tight truncate mt-0.5">
+            <span className="text-[9.5px] font-bold text-amber-200/90 leading-snug whitespace-nowrap overflow-hidden text-ellipsis mt-px">
               {!isLocationServiceable
                 ? "📍 Outside Service Zone"
                 : hasFreeDelivery 
                 ? "✨ Free delivery unlocked!" 
-                : `Add ${formatPrice(needsForFreeDelivery)} for FREE delivery`}
+                : `Add ${formatPrice(needsForFreeDelivery)} for free delivery`}
             </span>
           </div>
         </div>
@@ -174,14 +174,14 @@ export function CartStickyBar() {
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.95 }}
           className={cn(
-            "font-black text-[11px] tracking-wide px-3.5 py-2 rounded-full flex items-center gap-1.5 shadow-md transition-all cursor-pointer shrink-0 uppercase",
+            "font-black text-[10px] tracking-wide px-3 py-1.5 rounded-full flex items-center gap-1 shadow-md transition-all cursor-pointer shrink-0 uppercase",
             !isLocationServiceable
               ? "bg-amber-400 text-black hover:bg-amber-300"
               : "bg-white text-[#e20a22] hover:bg-red-50"
           )}
         >
-          <span>{!isLocationServiceable ? "CHECK ZONE" : "VIEW CART"}</span>
-          <ChevronRight className="h-3.5 w-3.5 stroke-[3]" />
+          <span>{!isLocationServiceable ? "CHECK" : "VIEW CART"}</span>
+          <ChevronRight className="h-3 w-3 stroke-[3]" />
         </motion.button>
       </div>
     </motion.div>

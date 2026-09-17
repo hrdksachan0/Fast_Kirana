@@ -28,7 +28,7 @@ export function SlideToOrder({ onConfirm, isPlacingOrder, disabled, amount }: Sl
         </>
       ) : (
         <>
-          <span className="relative z-10">Place Order (₹{amount.toFixed(0)})</span>
+          <span className="relative z-10">Proceed to Pay (₹{amount.toFixed(0)})</span>
           <ChevronsRight className="h-4 w-4 text-white relative z-10 transition-transform duration-300 ease-out group-hover:translate-x-1.5" />
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
         </>

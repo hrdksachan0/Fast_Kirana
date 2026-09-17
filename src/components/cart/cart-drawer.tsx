@@ -650,16 +650,10 @@ export function CartDrawer() {
             <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
               <ShoppingBag size={18} className="stroke-[2.2]" />
             </div>
-            <div className="flex flex-col text-left min-w-0">
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm sm:text-base font-black text-zinc-900 dark:text-zinc-100">Your Cart</h2>
-                <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-black">
-                  {items.reduce((sum, item) => sum + item.quantity, 0)} {items.reduce((sum, item) => sum + item.quantity, 0) === 1 ? 'item' : 'items'}
-                </span>
-              </div>
-              <span className="text-[10.5px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 leading-tight mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
-                ⚡ Fast 10-15 Mins Delivery
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm sm:text-base font-black text-zinc-900 dark:text-zinc-100">Your Cart</h2>
+              <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-black">
+                {items.reduce((sum, item) => sum + item.quantity, 0)} {items.reduce((sum, item) => sum + item.quantity, 0) === 1 ? 'item' : 'items'}
               </span>
             </div>
           </div>
@@ -1137,7 +1131,7 @@ export function CartDrawer() {
                         <span className="text-sm sm:text-base font-black text-white mt-0.5">{formatPrice(total)}</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs sm:text-sm font-black uppercase tracking-wide">
-                        <span>Proceed to Pay</span>
+                        <span>Checkout</span>
                         <ArrowRight size={16} className="transition-transform duration-300 ease-out group-hover:translate-x-1" />
                       </div>
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
