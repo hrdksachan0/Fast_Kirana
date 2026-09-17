@@ -1246,18 +1246,11 @@ export async function POST(request: NextRequest) {
       return results
     }, { maxWait: 20000, timeout: 25000 })
 
-    // Perform notifications asynchronously in the background
-    // SKIP notifications for unpaid online payment orders — they fire AFTER payment verification
+    // Perform notifications for confirmed orders (COD or already paid)
     const isOnlinePaymentOrder = paymentMethod !== 'COD'
+    const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
 
-    after(async () => {
-      if (isOnlinePaymentOrder && !isOnlinePaid) {
-        // Don't send SSE, push, or WhatsApp for UNPAID online orders yet.
-        // Notifications will be sent when payment is verified via /api/payment/razorpay/verify-signature or /api/payment/cashfree/verify
-        return
-      }
-
-      // Emit real-time SSE event for each newly created order and send push notifications to staff roles
+    if (!isOnlinePaymentOrder || isOnlinePaid) {
       try {
         // Build admin phones list to notify based on settings
         const adminPhones: string[] = []
@@ -1294,19 +1287,21 @@ export async function POST(request: NextRequest) {
           })
         }
 
-        // Multi-channel notifications via domain dispatcher
-        await dispatchOrderNotifications({
+        // Multi-channel notifications via domain dispatcher (Push, FCM, WhatsApp)
+        dispatchOrderNotifications({
           createdOrders,
           isOnlinePaid,
-          notificationTitle: 'New Order Received 📦',
+          notificationTitle: isOnlinePaid ? '💳 Order Confirmed & Paid!' : 'New Order Received 📦',
           adminPhones,
           origin,
-          userPhone: body.phone,
+          userPhone: body.phone || body.customerPhone || address?.phone,
+        }).catch((notifErr) => {
+          console.error('Failed to dispatch order notifications:', notifErr)
         })
       } catch (sseErr) {
         console.error('Failed to emit SSE/notifications for new orders:', sseErr)
       }
-    })
+    }
 
     const mainOrder = createdOrders.find((o) => !o.restaurantId) || createdOrders[0]
     return NextResponse.json({
