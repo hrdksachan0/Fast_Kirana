@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
     let discountAmount = 0
     let nudgeMessage: string | null = null
     let freeGiftDetails: any = null
+    let freeItems: Array<{ id?: string | null; productId?: string | null; name?: string; freeQty: number; price: number }> = []
 
     // 1. Category-restricted coupon
     if (coupon.categoryId) {
@@ -210,6 +211,13 @@ export async function POST(request: NextRequest) {
             for (const item of sortedRewards) {
               const freeQty = Math.min(item.quantity, remainingFree)
               bogoSavings += freeQty * item.price
+              freeItems.push({
+                id: item.id || undefined,
+                productId: item.productId || item.id || undefined,
+                name: String(item.name || ''),
+                freeQty,
+                price: Number(item.price || 0),
+              })
               remainingFree -= freeQty
               if (remainingFree <= 0) break
             }
@@ -228,16 +236,19 @@ export async function POST(request: NextRequest) {
             }, { status: 400 })
           }
 
-          // Flatten into unit items to find the single cheapest item
-          const unitPrices: number[] = []
-          restaurantItems.forEach((it: any) => {
-            const qty = it.quantity || 1
-            for (let i = 0; i < qty; i++) {
-              unitPrices.push(it.price)
-            }
-          })
-          unitPrices.sort((a, b) => a - b)
-          discountAmount = unitPrices[0] || 0
+          // Sort eligible restaurant items by price to find the cheapest
+          const sortedRestaurantItems = [...restaurantItems].sort((a: any, b: any) => (a.price || 0) - (b.price || 0))
+          if (sortedRestaurantItems.length > 0) {
+            const cheapest = sortedRestaurantItems[0]
+            discountAmount = cheapest.price || 0
+            freeItems.push({
+              id: cheapest.id || undefined,
+              productId: cheapest.productId || cheapest.id || undefined,
+              name: String(cheapest.name || ''),
+              freeQty: 1,
+              price: Number(cheapest.price || 0),
+            })
+          }
           if (coupon.maxDiscount) {
             discountAmount = Math.min(discountAmount, coupon.maxDiscount)
           }
@@ -261,6 +272,13 @@ export async function POST(request: NextRequest) {
             if (freeCount > 0) {
               totalBogoDiscount += freeCount * it.price
               totalFreeUnlocked += freeCount
+              freeItems.push({
+                id: it.id || undefined,
+                productId: it.productId || it.id || undefined,
+                name: String(it.name || ''),
+                freeQty: freeCount,
+                price: Number(it.price || 0),
+              })
             }
           }
 
@@ -294,13 +312,15 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
-    }
 
-    // Standard PERCENT & FLAT discount calculations (if not BOGO or FREE_DELIVERY)
-    if (coupon.discountType === 'FLAT') {
-      discountAmount = Math.min(coupon.value, eligibleSubtotal)
-    } else if (coupon.discountType === 'PERCENT') {
-      discountAmount = (eligibleSubtotal * coupon.value) / 100
+      if (coupon.discountType === 'PERCENT') {
+        discountAmount = (eligibleSubtotal * coupon.value) / 100
+      } else if (coupon.discountType === 'FLAT') {
+        discountAmount = coupon.value
+      } else if (coupon.discountType === 'FREE_DELIVERY') {
+        discountAmount = 25.0
+      }
+
       if (coupon.maxDiscount) {
         discountAmount = Math.min(discountAmount, coupon.maxDiscount)
       }
@@ -321,6 +341,7 @@ export async function POST(request: NextRequest) {
         discountAmount: Math.round(discountAmount * 100) / 100,
         nudgeMessage,
         freeGiftDetails,
+        freeItems,
       },
     })
   } catch (error: any) {

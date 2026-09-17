@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -74,6 +74,16 @@ export default function CartPage() {
       rewardVariant?: string
     }
     nudgeMessage?: string
+    freeItems?: Array<{
+      id: string
+      productId?: string
+      name: string
+      freeQty: number
+      price: number
+    }>
+    rewardVariant?: string
+    triggerVariant?: string
+    bogoDishId?: string
   } | null>(null)
   const [isCouponLoading, setIsCouponLoading] = useState(false)
 
@@ -133,6 +143,10 @@ export default function CartPage() {
               badgeText: data.coupon.badgeText,
               freeGiftDetails: data.coupon.freeGiftDetails,
               nudgeMessage: data.coupon.nudgeMessage,
+              freeItems: data.coupon.freeItems || [],
+              rewardVariant: data.coupon.rewardVariant,
+              triggerVariant: data.coupon.triggerVariant,
+              bogoDishId: data.coupon.bogoDishId,
             })
           } else {
             setAppliedCouponCode(null)
@@ -177,6 +191,10 @@ export default function CartPage() {
                   badgeText: data.coupon.badgeText,
                   freeGiftDetails: data.coupon.freeGiftDetails,
                   nudgeMessage: data.coupon.nudgeMessage,
+                  freeItems: data.coupon.freeItems || [],
+                  rewardVariant: data.coupon.rewardVariant,
+                  triggerVariant: data.coupon.triggerVariant,
+                  bogoDishId: data.coupon.bogoDishId,
                 })
                 if (data.coupon.discountAmount > 0) {
                   toast.success(`⚡ Offer "${data.coupon.code}" auto-applied! You saved ₹${data.coupon.discountAmount.toFixed(0)}`, {
@@ -222,6 +240,10 @@ export default function CartPage() {
           badgeText: data.coupon.badgeText,
           freeGiftDetails: data.coupon.freeGiftDetails,
           nudgeMessage: data.coupon.nudgeMessage,
+          freeItems: data.coupon.freeItems || [],
+          rewardVariant: data.coupon.rewardVariant,
+          triggerVariant: data.coupon.triggerVariant,
+          bogoDishId: data.coupon.bogoDishId,
         })
         setAppliedCouponCode(data.coupon.code)
         if (data.coupon.nudgeMessage) {
@@ -338,11 +360,76 @@ export default function CartPage() {
     }
   }
 
+  // Resolve free items from coupon
+  const freeItemsMap = useMemo(() => {
+    const map = new Map<string, { freeQty: number; badgeText?: string }>()
+    if (!appliedCoupon || appliedCoupon.discountAmount <= 0) return map
+
+    // 1. If server explicitly returned freeItems
+    if (Array.isArray(appliedCoupon.freeItems) && appliedCoupon.freeItems.length > 0) {
+      for (const f of appliedCoupon.freeItems) {
+        const targetId = f.productId || f.id
+        const matchedItem = items.find((it) => it.product.id === targetId || it.product.id.startsWith(`${targetId}_`) || it.product.name === f.name)
+        const key = matchedItem ? matchedItem.product.id : targetId
+        if (key) {
+          map.set(key, {
+            freeQty: f.freeQty || 1,
+            badgeText: appliedCoupon.badgeText || (appliedCoupon.discountType === 'BOGO' ? '100% FREE (BOGO)' : 'FREE ITEM'),
+          })
+        }
+      }
+    }
+
+    // 2. Fallback client-side matching if server freeItems wasn't received yet or BOGO is active
+    if (map.size === 0 && appliedCoupon.discountType === 'BOGO') {
+      if (appliedCoupon.bogoType === 'BUY_LARGE_GET_SMALL') {
+        const rewardVar = (appliedCoupon.rewardVariant || 'small').toLowerCase()
+        const smallItems = cafeItems.filter((it) => {
+          const text = `${it.product.unit || ''} ${it.product.name || ''} ${(it.product as any).selectedVariant || ''}`.toLowerCase()
+          return text.includes(rewardVar)
+        })
+        if (smallItems.length > 0) {
+          const sorted = [...smallItems].sort((a, b) => a.product.price - b.product.price)
+          map.set(sorted[0].product.id, {
+            freeQty: 1,
+            badgeText: '100% FREE (BOGO)',
+          })
+        }
+      } else if (appliedCoupon.bogoType === 'CHEAPEST_FREE' && cafeItems.length >= 2) {
+        const sorted = [...cafeItems].sort((a, b) => a.product.price - b.product.price)
+        map.set(sorted[0].product.id, {
+          freeQty: 1,
+          badgeText: 'CHEAPEST FREE',
+        })
+      } else if (appliedCoupon.bogoType === 'SAME_ITEM' || !appliedCoupon.bogoType) {
+        for (const it of cafeItems) {
+          if (appliedCoupon.bogoDishId && (it.product.id === appliedCoupon.bogoDishId || it.product.id.startsWith(`${appliedCoupon.bogoDishId}_`))) {
+            map.set(it.product.id, { freeQty: 1, badgeText: '100% FREE (BOGO)' })
+            break
+          }
+          if (it.quantity >= 2) {
+            map.set(it.product.id, { freeQty: Math.floor(it.quantity / 2), badgeText: '100% FREE (BOGO)' })
+            break
+          }
+        }
+      }
+    }
+
+    return map
+  }, [appliedCoupon, items, cafeItems])
+
   const renderItemRow = (item: typeof items[0]) => {
     const isStoreClosed = isItemClosed(item.product)
 
     const isOOS = item.product.stock <= 0 || item.product.isAvailable === false
     const isExceeded = item.quantity > item.product.stock && !isOOS
+
+    const freeInfo = freeItemsMap.get(item.product.id)
+    const isFreeItem = Boolean(freeInfo && freeInfo.freeQty > 0)
+    const freeQty = freeInfo ? freeInfo.freeQty : 0
+    const isFullyFree = isFreeItem && freeQty >= item.quantity
+    const isPartiallyFree = isFreeItem && freeQty > 0 && freeQty < item.quantity
+    const perItemSaving = isFullyFree ? (item.product.price * item.quantity) : isPartiallyFree ? (item.product.price * freeQty) : 0
 
     return (
       <motion.div
@@ -352,10 +439,25 @@ export default function CartPage() {
         animate={{ height: 'auto', opacity: 1, scale: 1 }}
         exit={{ height: 0, opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.15, ease: 'easeOut' }}
-        className="overflow-hidden border-b border-border/40 last:border-0"
+        className={cn(
+          "overflow-hidden border-b border-border/40 last:border-0 rounded-2xl transition-all duration-300",
+          isFullyFree && "bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/30 p-2 sm:p-2.5 my-1.5 shadow-xs"
+        )}
       >
         <div className="flex flex-col w-full">
-          <div className="flex items-center gap-2.5 min-[375px]:gap-4 py-3 min-[375px]:py-3.5">
+          {/* Top badge if free */}
+          {isFreeItem && (
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border border-emerald-500/25 px-2 py-0.5 rounded-md shadow-2xs animate-pulse-gentle">
+                🎁 {freeInfo?.badgeText || '100% FREE WITH BOGO'}
+              </span>
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                (Price cut to ₹0)
+              </span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2.5 min-[375px]:gap-4 py-2 min-[375px]:py-2.5">
             <div className="relative w-14 h-14 min-[375px]:w-16 min-[375px]:h-16 rounded-xl border border-border bg-muted/20 flex items-center justify-center overflow-hidden shrink-0">
               <ProductImage
                 src={item.product.imageUrl}
@@ -363,17 +465,57 @@ export default function CartPage() {
                 categorySlug={item.product.category?.slug}
                 className="h-full w-full object-contain p-1"
               />
+              {isFullyFree && (
+                <div className="absolute top-1 left-1 bg-emerald-600 text-white text-[8px] font-black uppercase px-1 py-0.5 rounded shadow-xs leading-none">
+                  FREE
+                </div>
+              )}
             </div>
 
-            <div className="flex-grow">
+            <div className="flex-grow min-w-0">
               <h3 className="text-xs min-[375px]:text-sm font-bold text-text-primary line-clamp-1">{item.product.name}</h3>
               <p className="text-xs text-text-secondary mt-0.5">{item.product.unit}</p>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs min-[375px]:text-sm font-bold text-text-primary">₹{item.product.price}</span>
-                {item.product.mrp > item.product.price && (
-                  <span className="text-xs text-text-muted line-through">₹{item.product.mrp}</span>
+              
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                {isFullyFree ? (
+                  <>
+                    <span className="text-xs text-text-muted line-through font-bold">
+                      ₹{(item.product.price * item.quantity).toFixed(0)}
+                    </span>
+                    <span className="text-xs min-[375px]:text-sm font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-1 drop-shadow-xs">
+                      ₹0
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                        FREE
+                      </span>
+                    </span>
+                  </>
+                ) : isPartiallyFree ? (
+                  <>
+                    <span className="text-xs text-text-muted line-through font-bold">
+                      ₹{(item.product.price * item.quantity).toFixed(0)}
+                    </span>
+                    <span className="text-xs min-[375px]:text-sm font-black text-emerald-600 dark:text-emerald-400">
+                      ₹{(item.product.price * (item.quantity - freeQty)).toFixed(0)}
+                    </span>
+                    <span className="text-[9px] font-black text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 px-1.5 py-0.5 rounded border border-emerald-500/25">
+                      ({freeQty} FREE)
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-xs min-[375px]:text-sm font-bold text-text-primary">₹{item.product.price}</span>
+                    {item.product.mrp > item.product.price && (
+                      <span className="text-xs text-text-muted line-through">₹{item.product.mrp}</span>
+                    )}
+                  </>
                 )}
               </div>
+
+              {perItemSaving > 0 && (
+                <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                  🎉 Free Item (₹{perItemSaving.toFixed(0)} saved)
+                </p>
+              )}
             </div>
 
             <div className="flex flex-col items-end gap-3 shrink-0">
@@ -450,6 +592,50 @@ export default function CartPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
         {/* Left: Items list */}
         <div className="lg:col-span-2 space-y-5 md:space-y-6">
+          {/* Celebratory Top Banner for Free Item / BOGO / Applied Coupon */}
+          {appliedCoupon && (
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 p-4 text-white shadow-lg shadow-emerald-500/20 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="relative flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-2xl shrink-0 shadow-inner border border-white/25">
+                    🎁
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] uppercase tracking-wider font-black bg-white/25 text-white px-2.5 py-0.5 rounded-full backdrop-blur-xs">
+                        {appliedCoupon.bogoType ? 'BOGO FREE DEAL ACTIVE' : 'PROMO APPLIED'}
+                      </span>
+                      <span className="text-xs font-bold text-emerald-100">
+                        ({appliedCoupon.code})
+                      </span>
+                    </div>
+                    <h3 className="text-sm sm:text-base font-black text-white mt-1 leading-tight">
+                      {appliedCoupon.bogoType && promoDiscount > 0
+                        ? '🎉 1 Free Item Added at ₹0!'
+                        : appliedCoupon.bogoType
+                        ? '🎁 Buy 1 Get 1 Free Deal Applied!'
+                        : `🎉 Saved ₹${promoDiscount.toFixed(0)} on this order!`}
+                    </h3>
+                    <p className="text-xs text-emerald-100/90 font-medium mt-0.5">
+                      {appliedCoupon.bogoType && promoDiscount > 0
+                        ? 'The eligible free deal item below is discounted to ₹0!'
+                        : appliedCoupon.nudgeMessage
+                        ? appliedCoupon.nudgeMessage
+                        : `Enjoy extra savings with code ${appliedCoupon.code}!`}
+                    </p>
+                  </div>
+                </div>
+                {promoDiscount > 0 && (
+                  <div className="text-right shrink-0 bg-white/15 backdrop-blur-md px-3 py-2 rounded-xl border border-white/20">
+                    <span className="text-[10px] uppercase font-black text-emerald-100 block">YOU SAVE</span>
+                    <span className="text-base sm:text-lg font-black text-white leading-none">₹{promoDiscount.toFixed(0)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Grocery Section */}
           {groceryItems.length > 0 && (
             <div className="bg-card border border-border p-3.5 min-[375px]:p-5 rounded-2xl shadow-sm space-y-3.5 sm:space-y-4">
@@ -631,6 +817,19 @@ export default function CartPage() {
                 <div className="flex justify-between">
                   <span className="text-text-secondary">{miscFeeLabel}</span>
                   <span>₹{miscFee.toFixed(0)}</span>
+                </div>
+              )}
+
+              {(itemDiscount + promoDiscount) > 0 && (
+                <div className="flex items-center justify-between rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-100/50 dark:border-emerald-900/30 px-3 py-2 animate-pulse-gentle">
+                  <span className="text-xs font-extrabold text-[#00b140] flex items-center gap-1.5 leading-none">
+                    🎉 You are saving ₹{(itemDiscount + promoDiscount).toFixed(0)} on this order!
+                  </span>
+                  {promoDiscount > 0 && (
+                    <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded-full">
+                      Incl. ₹{promoDiscount.toFixed(0)} deal
+                    </span>
+                  )}
                 </div>
               )}
 

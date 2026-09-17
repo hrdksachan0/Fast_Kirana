@@ -1,30 +1,39 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-
-part 'coupon.freezed.dart';
-
 enum DiscountType { flat, percent, bogo, freeDelivery }
 
-@freezed
-class Coupon with _$Coupon {
-  const Coupon._();
+class Coupon {
+  final String id;
+  final String code;
+  final DiscountType discountType;
+  final double value;
+  final double minOrder;
+  final double maxDiscount;
+  final String? categoryId;
+  final String? restaurantId;
+  final String? bogoType;
+  final String? triggerVariant;
+  final String? rewardVariant;
+  final String? badgeText;
+  final bool autoApply;
+  final bool isActive;
+  final DateTime expiresAt;
 
-  const factory Coupon({
-    required String id,
-    required String code,
-    required DiscountType discountType,
-    @Default(0.0) double value,
-    @Default(0.0) double minOrder,
-    @Default(0.0) double maxDiscount,
-    String? categoryId,
-    String? restaurantId,
-    String? bogoType,
-    String? triggerVariant,
-    String? rewardVariant,
-    String? badgeText,
-    @Default(false) bool autoApply,
-    @Default(true) bool isActive,
-    required DateTime expiresAt,
-  }) = _Coupon;
+  const Coupon({
+    required this.id,
+    required this.code,
+    required this.discountType,
+    this.value = 0.0,
+    this.minOrder = 0.0,
+    this.maxDiscount = 0.0,
+    this.categoryId,
+    this.restaurantId,
+    this.bogoType,
+    this.triggerVariant,
+    this.rewardVariant,
+    this.badgeText,
+    this.autoApply = false,
+    this.isActive = true,
+    required this.expiresAt,
+  });
 
   factory Coupon.fromJson(Map<String, dynamic> json) {
     DiscountType parseDiscountType(dynamic val) {

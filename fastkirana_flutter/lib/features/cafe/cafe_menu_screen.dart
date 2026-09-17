@@ -1554,164 +1554,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
       },
     );
   }
-}
 
-// ═══════════════════════════════════════════════════════
-// PINNED CATEGORY CHIPS DELEGATE (Circular Icons with Real Photos & Auto-Centering)
-// ═══════════════════════════════════════════════════════
-class _CategoryChipsDelegate extends SliverPersistentHeaderDelegate {
-  final ScrollController horizontalController;
-  final AsyncValue<List<Product>> menuAsync;
-  final Restaurant? currentRestaurant;
-  final String activeCategoryTag;
-  final List<RenderedCategory> Function(List<Product>) buildCategories;
-  final Function(String) onCategoryTap;
-
-  _CategoryChipsDelegate({
-    required this.horizontalController,
-    required this.menuAsync,
-    required this.currentRestaurant,
-    required this.activeCategoryTag,
-    required this.buildCategories,
-    required this.onCategoryTap,
-  });
-
-  @override
-  double get maxExtent => 96;
-
-  @override
-  double get minExtent => 96;
-
-  @override
-  bool shouldRebuild(covariant _CategoryChipsDelegate oldDelegate) {
-    return activeCategoryTag != oldDelegate.activeCategoryTag ||
-        menuAsync != oldDelegate.menuAsync;
-  }
-
-  Widget _buildCategoryThumbnail(RenderedCategory cat) {
-    var url = cat.imageUrl;
-    if (url != null && url.isNotEmpty) {
-      if (url.startsWith('/')) {
-        url = 'https://www.fastkirana.in$url';
-      }
-      if (url.startsWith('http')) {
-        return CachedNetworkImage(
-          imageUrl: url,
-          fit: BoxFit.cover,
-          memCacheWidth: 200,
-          memCacheHeight: 200,
-          maxWidthDiskCache: 200,
-          maxHeightDiskCache: 200,
-          placeholder: (_, __) => Center(child: Text(cat.emoji, style: const TextStyle(fontSize: 18))),
-          errorWidget: (_, __, ___) => _buildLocalAssetOrEmoji(cat),
-        );
-      }
-    }
-    return _buildLocalAssetOrEmoji(cat);
-  }
-
-  Widget _buildLocalAssetOrEmoji(RenderedCategory cat) {
-    final asset = getCategoryAssetImage(cat.tag) ?? getCategoryAssetImage(cat.title);
-    if (asset != null) {
-      return Image.asset(
-        asset,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Center(child: Text(cat.emoji, style: const TextStyle(fontSize: 20))),
-      );
-    }
-    return Center(child: Text(cat.emoji, style: const TextStyle(fontSize: 20)));
-  }
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          bottom: BorderSide(color: AppDesignSystem.slate100, width: 1.5),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: menuAsync.when(
-        data: (products) {
-          final cats = buildCategories(products);
-          return SizedBox(
-            height: 96,
-            child: ListView.separated(
-              controller: horizontalController,
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              itemCount: cats.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 4),
-              itemBuilder: (context, index) {
-                final cat = cats[index];
-                final isSelected = activeCategoryTag == cat.tag;
-
-                return GestureDetector(
-                  onTap: () => onCategoryTap(cat.tag),
-                  child: SizedBox(
-                    width: 68,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isSelected ? AppDesignSystem.orange50 : Colors.white,
-                            border: Border.all(
-                              color: isSelected ? AppDesignSystem.orange600 : AppDesignSystem.slate200,
-                              width: isSelected ? 2.5 : 1.2,
-                            ),
-                            boxShadow: isSelected
-                                ? [
-                                    BoxShadow(
-                                      color: AppDesignSystem.orange600.withValues(alpha: 0.25),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ]
-                                : null,
-                          ),
-                          child: ClipOval(
-                            child: _buildCategoryThumbnail(cat),
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          cat.title,
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 9.5),
-                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                            color: isSelected ? AppDesignSystem.orange600 : AppDesignSystem.slate600,
-                            height: 1.15,
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          );
-        },
-        loading: () => const SizedBox(height: 96),
-        error: (_, __) => const SizedBox(height: 96),
-      ),
-    );
-  }
 
   Widget _buildRestaurantOffersStrip(Restaurant? currentRestaurant) {
     final couponsAsync = ref.watch(restaurantCouponsProvider(widget.restaurantId));
@@ -1996,6 +1839,164 @@ class _CategoryChipsDelegate extends SliverPersistentHeaderDelegate {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// PINNED CATEGORY CHIPS DELEGATE (Circular Icons with Real Photos & Auto-Centering)
+// ═══════════════════════════════════════════════════════
+class _CategoryChipsDelegate extends SliverPersistentHeaderDelegate {
+  final ScrollController horizontalController;
+  final AsyncValue<List<Product>> menuAsync;
+  final Restaurant? currentRestaurant;
+  final String activeCategoryTag;
+  final List<RenderedCategory> Function(List<Product>) buildCategories;
+  final Function(String) onCategoryTap;
+
+  _CategoryChipsDelegate({
+    required this.horizontalController,
+    required this.menuAsync,
+    required this.currentRestaurant,
+    required this.activeCategoryTag,
+    required this.buildCategories,
+    required this.onCategoryTap,
+  });
+
+  @override
+  double get maxExtent => 96;
+
+  @override
+  double get minExtent => 96;
+
+  @override
+  bool shouldRebuild(covariant _CategoryChipsDelegate oldDelegate) {
+    return activeCategoryTag != oldDelegate.activeCategoryTag ||
+        menuAsync != oldDelegate.menuAsync;
+  }
+
+  Widget _buildCategoryThumbnail(RenderedCategory cat) {
+    var url = cat.imageUrl;
+    if (url != null && url.isNotEmpty) {
+      if (url.startsWith('/')) {
+        url = 'https://www.fastkirana.in$url';
+      }
+      if (url.startsWith('http')) {
+        return CachedNetworkImage(
+          imageUrl: url,
+          fit: BoxFit.cover,
+          memCacheWidth: 200,
+          memCacheHeight: 200,
+          maxWidthDiskCache: 200,
+          maxHeightDiskCache: 200,
+          placeholder: (_, __) => Center(child: Text(cat.emoji, style: const TextStyle(fontSize: 18))),
+          errorWidget: (_, __, ___) => _buildLocalAssetOrEmoji(cat),
+        );
+      }
+    }
+    return _buildLocalAssetOrEmoji(cat);
+  }
+
+  Widget _buildLocalAssetOrEmoji(RenderedCategory cat) {
+    final asset = getCategoryAssetImage(cat.tag) ?? getCategoryAssetImage(cat.title);
+    if (asset != null) {
+      return Image.asset(
+        asset,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Center(child: Text(cat.emoji, style: const TextStyle(fontSize: 20))),
+      );
+    }
+    return Center(child: Text(cat.emoji, style: const TextStyle(fontSize: 20)));
+  }
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: AppDesignSystem.slate100, width: 1.5),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: menuAsync.when(
+        data: (products) {
+          final cats = buildCategories(products);
+          return SizedBox(
+            height: 96,
+            child: ListView.separated(
+              controller: horizontalController,
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              itemCount: cats.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 4),
+              itemBuilder: (context, index) {
+                final cat = cats[index];
+                final isSelected = activeCategoryTag == cat.tag;
+
+                return GestureDetector(
+                  onTap: () => onCategoryTap(cat.tag),
+                  child: SizedBox(
+                    width: 68,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isSelected ? AppDesignSystem.orange50 : Colors.white,
+                            border: Border.all(
+                              color: isSelected ? AppDesignSystem.orange600 : AppDesignSystem.slate200,
+                              width: isSelected ? 2.5 : 1.2,
+                            ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: AppDesignSystem.orange600.withValues(alpha: 0.25),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: ClipOval(
+                            child: _buildCategoryThumbnail(cat),
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          cat.title,
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 9.5),
+                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                            color: isSelected ? AppDesignSystem.orange600 : AppDesignSystem.slate600,
+                            height: 1.15,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        },
+        loading: () => const SizedBox(height: 96),
+        error: (_, __) => const SizedBox(height: 96),
       ),
     );
   }

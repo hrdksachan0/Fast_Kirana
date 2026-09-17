@@ -6,7 +6,7 @@ import { useUIStore } from '@/stores/ui-store'
 import { formatPrice, formatTime12h } from '@/lib/utils'
 import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED_FREE_DELIVERY_THRESHOLD, FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, getOutletName } from '@/lib/constants'
 import Link from 'next/link'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { ProductImage } from '@/components/product/product-image'
 import { isCafeProduct, cn, getProductLimit, isProductStoreClosed } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -113,6 +113,10 @@ export function CartDrawer() {
           badgeText: data.coupon.badgeText,
           freeGiftDetails: data.coupon.freeGiftDetails,
           nudgeMessage: data.coupon.nudgeMessage,
+          freeItems: data.coupon.freeItems || [],
+          rewardVariant: data.coupon.rewardVariant,
+          triggerVariant: data.coupon.triggerVariant,
+          bogoDishId: data.coupon.bogoDishId,
         }
         setAppliedCoupon(couponObj)
         setAppliedCouponCode(data.coupon.code)
@@ -215,6 +219,10 @@ export function CartDrawer() {
               badgeText: data.coupon.badgeText,
               freeGiftDetails: data.coupon.freeGiftDetails,
               nudgeMessage: data.coupon.nudgeMessage,
+              freeItems: data.coupon.freeItems || [],
+              rewardVariant: data.coupon.rewardVariant,
+              triggerVariant: data.coupon.triggerVariant,
+              bogoDishId: data.coupon.bogoDishId,
             })
           } else {
             setAppliedCouponCode(null)
@@ -259,6 +267,10 @@ export function CartDrawer() {
                   badgeText: data.coupon.badgeText,
                   freeGiftDetails: data.coupon.freeGiftDetails,
                   nudgeMessage: data.coupon.nudgeMessage,
+                  freeItems: data.coupon.freeItems || [],
+                  rewardVariant: data.coupon.rewardVariant,
+                  triggerVariant: data.coupon.triggerVariant,
+                  bogoDishId: data.coupon.bogoDishId,
                 })
                 break
               }
@@ -330,8 +342,76 @@ export function CartDrawer() {
     })
   }
 
+  // Resolve free items from coupon
+  const freeItemsMap = useMemo(() => {
+    const map = new Map<string, { freeQty: number; badgeText?: string }>()
+    if (!appliedCoupon || appliedCoupon.discountAmount <= 0) return map
+
+    // 1. If server explicitly returned freeItems
+    if (Array.isArray(appliedCoupon.freeItems) && appliedCoupon.freeItems.length > 0) {
+      for (const f of appliedCoupon.freeItems) {
+        const targetId = f.productId || f.id
+        const matchedItem = items.find((it) => it.product.id === targetId || it.product.id.startsWith(`${targetId}_`) || it.product.name === f.name)
+        const key = matchedItem ? matchedItem.product.id : targetId
+        if (key) {
+          map.set(key, {
+            freeQty: f.freeQty || 1,
+            badgeText: appliedCoupon.badgeText || (appliedCoupon.discountType === 'BOGO' ? '100% FREE (BOGO)' : 'FREE ITEM'),
+          })
+        }
+      }
+    }
+
+    // 2. Fallback client-side matching if server freeItems wasn't received yet or BOGO is active
+    if (map.size === 0 && appliedCoupon.discountType === 'BOGO') {
+      if (appliedCoupon.bogoType === 'BUY_LARGE_GET_SMALL') {
+        const rewardVar = (appliedCoupon.rewardVariant || 'small').toLowerCase()
+        const smallItems = cafeItems.filter((it) => {
+          const text = `${it.product.unit || ''} ${it.product.name || ''} ${(it.product as any).selectedVariant || ''}`.toLowerCase()
+          return text.includes(rewardVar)
+        })
+        if (smallItems.length > 0) {
+          const sorted = [...smallItems].sort((a, b) => a.product.price - b.product.price)
+          map.set(sorted[0].product.id, {
+            freeQty: 1,
+            badgeText: '100% FREE (BOGO)',
+          })
+        }
+      } else if (appliedCoupon.bogoType === 'CHEAPEST_FREE' && cafeItems.length >= 2) {
+        const sorted = [...cafeItems].sort((a, b) => a.product.price - b.product.price)
+        map.set(sorted[0].product.id, {
+          freeQty: 1,
+          badgeText: 'CHEAPEST FREE',
+        })
+      } else if (appliedCoupon.bogoType === 'SAME_ITEM' || !appliedCoupon.bogoType) {
+        for (const it of cafeItems) {
+          if (appliedCoupon.bogoDishId && (it.product.id === appliedCoupon.bogoDishId || it.product.id.startsWith(`${appliedCoupon.bogoDishId}_`))) {
+            map.set(it.product.id, { freeQty: 1, badgeText: '100% FREE (BOGO)' })
+            break
+          }
+          if (it.quantity >= 2) {
+            map.set(it.product.id, { freeQty: Math.floor(it.quantity / 2), badgeText: '100% FREE (BOGO)' })
+            break
+          }
+        }
+      }
+    }
+
+    return map
+  }, [appliedCoupon, items, cafeItems])
+
   const renderItemRow = (item: typeof items[0]) => {
-    const perItemSaving = item.product.mrp > item.product.price
+    const freeInfo = freeItemsMap.get(item.product.id)
+    const isFreeItem = Boolean(freeInfo && freeInfo.freeQty > 0)
+    const freeQty = freeInfo ? freeInfo.freeQty : 0
+    const isFullyFree = isFreeItem && freeQty >= item.quantity
+    const isPartiallyFree = isFreeItem && freeQty > 0 && freeQty < item.quantity
+
+    const perItemSaving = isFullyFree
+      ? item.product.price * item.quantity
+      : isPartiallyFree
+      ? item.product.price * freeQty
+      : item.product.mrp > item.product.price
       ? (item.product.mrp - item.product.price) * item.quantity
       : 0
 
@@ -340,7 +420,28 @@ export function CartDrawer() {
 
     return (
       <div key={item.product.id} className="mb-3">
-        <div className="flex flex-col gap-2 rounded-2xl border border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/40 p-3.5 transition-all duration-300">
+        <div className={cn(
+          "flex flex-col gap-2 rounded-2xl border p-3.5 transition-all duration-300 relative overflow-hidden",
+          isFullyFree
+            ? "border-emerald-500/50 bg-gradient-to-r from-emerald-500/10 via-emerald-50/40 to-white dark:from-emerald-950/40 dark:via-emerald-950/20 dark:to-zinc-900 shadow-sm"
+            : isPartiallyFree
+            ? "border-emerald-500/30 bg-emerald-50/30 dark:bg-emerald-950/20"
+            : "border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/40"
+        )}>
+          {/* Free Badge ribbon on top of card */}
+          {isFreeItem && (
+            <div className="flex items-center justify-between gap-1.5 -mt-0.5 mb-1 pb-1.5 border-b border-emerald-500/20">
+              <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-600 text-white shadow-xs">
+                <span>🎁</span>
+                <span>{freeInfo?.badgeText || '100% FREE (BOGO)'}</span>
+              </span>
+              <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-300 flex items-center gap-0.5">
+                <span>✨</span>
+                <span>{isFullyFree ? '100% Free Item Unlocked' : `${freeQty} of ${item.quantity} Free`}</span>
+              </span>
+            </div>
+          )}
+
           <div className="flex items-center gap-3.5">
             {/* Product image */}
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800/80 overflow-hidden shadow-sm">
@@ -368,16 +469,44 @@ export function CartDrawer() {
                   ))}
                 </div>
               )}
-              <div className="flex items-center gap-2 mt-1.5">
-                <span className="text-sm font-black text-zinc-850 dark:text-zinc-100">{formatPrice(item.product.price)}</span>
-                {item.product.mrp > item.product.price && (
-                  <span className="text-xs text-zinc-400 dark:text-zinc-500 line-through font-semibold">{formatPrice(item.product.mrp)}</span>
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                {isFullyFree ? (
+                  <>
+                    <span className="text-xs text-zinc-400 dark:text-zinc-500 line-through font-bold">
+                      {formatPrice(item.product.price * item.quantity)}
+                    </span>
+                    <span className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 drop-shadow-xs">
+                      <span className="text-xs">₹</span>0
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 shadow-2xs">
+                        FREE
+                      </span>
+                    </span>
+                  </>
+                ) : isPartiallyFree ? (
+                  <>
+                    <span className="text-xs text-zinc-400 dark:text-zinc-500 line-through font-bold">
+                      {formatPrice(item.product.price * item.quantity)}
+                    </span>
+                    <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                      {formatPrice(item.product.price * (item.quantity - freeQty))}
+                    </span>
+                    <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 px-1.5 py-0.5 rounded border border-emerald-500/25">
+                      ({freeQty} FREE)
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-sm font-black text-zinc-850 dark:text-zinc-100">{formatPrice(item.product.price)}</span>
+                    {item.product.mrp > item.product.price && (
+                      <span className="text-xs text-zinc-400 dark:text-zinc-500 line-through font-semibold">{formatPrice(item.product.mrp)}</span>
+                    )}
+                  </>
                 )}
               </div>
               {/* Per-item savings */}
               {perItemSaving > 0 && (
-                <p className="text-[10px] font-extrabold text-accent mt-1 bg-accent/5 px-2 py-0.5 rounded-md w-fit">
-                  Save {formatPrice(perItemSaving)}
+                <p className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 mt-1 bg-emerald-500/10 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md w-fit border border-emerald-500/20">
+                  {isFreeItem ? `🎉 Free Item (${formatPrice(perItemSaving)} saved)` : `Save ${formatPrice(perItemSaving)}`}
                 </p>
               )}
               {isStoreClosed ? (
@@ -516,22 +645,56 @@ export function CartDrawer() {
               <div className="w-12 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800" />
             </div>
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-900 px-5 py-4 shrink-0">
-          <div className="flex items-center gap-2">
-            <ShoppingBag size={20} className="text-primary" />
-            <h2 className="text-base font-black text-zinc-850 dark:text-zinc-100">Your Cart</h2>
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-black text-primary">
-              {items.reduce((sum, item) => sum + item.quantity, 0)} items
-            </span>
+        <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-900 px-4 sm:px-5 py-3.5 shrink-0 bg-white dark:bg-zinc-950">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <ShoppingBag size={18} className="stroke-[2.2]" />
+            </div>
+            <div className="flex flex-col text-left min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-black text-zinc-900 dark:text-zinc-100">Your Cart</h2>
+                <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-black">
+                  {items.reduce((sum, item) => sum + item.quantity, 0)} {items.reduce((sum, item) => sum + item.quantity, 0) === 1 ? 'item' : 'items'}
+                </span>
+              </div>
+              <span className="text-[10.5px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 leading-tight mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                ⚡ Fast 10-15 Mins Delivery
+              </span>
+            </div>
           </div>
           <button
             onClick={() => setCartOpen(false)}
-            className="rounded-lg p-2 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-850 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Close cart"
           >
-            <X size={20} className="text-zinc-500" />
+            <X size={17} className="stroke-[2.5]" />
           </button>
         </div>
+
+        {/* Free Delivery Tracker Bar */}
+        {items.length > 0 && (
+          <div className="px-4 py-2 bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-teal-500/10 border-b border-zinc-100 dark:border-zinc-900/60 shrink-0">
+            <div className="flex items-center justify-between text-[10.5px] font-extrabold mb-1">
+              <span className="text-zinc-700 dark:text-zinc-300 flex items-center gap-1">
+                {activeSubtotal >= activeThreshold ? (
+                  <>🎉 <strong className="text-emerald-600 dark:text-emerald-400">FREE Delivery</strong> Unlocked!</>
+                ) : (
+                  <>🚚 Add <strong className="text-primary">{formatPrice(activeThreshold - activeSubtotal)}</strong> for <strong className="text-emerald-600 dark:text-emerald-400">FREE Delivery</strong></>
+                )}
+              </span>
+              <span className="text-[10px] font-black text-zinc-500 tabular-nums">
+                {Math.min(100, Math.round((activeSubtotal / activeThreshold) * 100))}%
+              </span>
+            </div>
+            <div className="w-full h-1.5 bg-zinc-200/80 dark:bg-zinc-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-amber-400 to-emerald-500 rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, (activeSubtotal / activeThreshold) * 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Content Area */}
         {items.length === 0 ? (
@@ -558,6 +721,75 @@ export function CartDrawer() {
                 >
                   🪄 Auto-Adjust Out of Stock Items
                 </button>
+              )}
+
+              {/* Celebratory Top Banner for Free Item / BOGO / Applied Coupon */}
+              {appliedCoupon && (
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 p-3.5 text-white shadow-lg shadow-emerald-500/20 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none" />
+                  <div className="relative flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-xl shrink-0 shadow-inner border border-white/25">
+                        🎁
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] uppercase tracking-wider font-black bg-white/25 text-white px-2 py-0.5 rounded-full backdrop-blur-xs">
+                            {appliedCoupon.bogoType ? 'BOGO DEAL ACTIVE' : 'COUPON APPLIED'}
+                          </span>
+                          <span className="text-[10px] font-bold text-emerald-100">
+                            ({appliedCoupon.code})
+                          </span>
+                        </div>
+                        <h4 className="text-xs sm:text-sm font-black text-white mt-0.5 leading-tight">
+                          {appliedCoupon.bogoType && couponDiscount > 0
+                            ? '🎉 1 Free Item Added at ₹0!'
+                            : appliedCoupon.bogoType
+                            ? '🎁 Buy 1 Get 1 Free Applied!'
+                            : `🎉 Saved ₹${couponDiscount.toFixed(0)} on this order!`}
+                        </h4>
+                        <p className="text-[10px] text-emerald-100/90 font-medium mt-0.5 line-clamp-1">
+                          {appliedCoupon.bogoType && couponDiscount > 0
+                            ? 'The eligible free deal item below is discounted to ₹0!'
+                            : appliedCoupon.nudgeMessage
+                            ? appliedCoupon.nudgeMessage
+                            : `Enjoy extra savings with code ${appliedCoupon.code}!`}
+                        </p>
+                      </div>
+                    </div>
+                    {couponDiscount > 0 && (
+                      <div className="text-right shrink-0 bg-white/15 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-white/20">
+                        <span className="text-[9px] uppercase font-black text-emerald-100 block">YOU SAVE</span>
+                        <span className="text-sm font-black text-white leading-none">₹{couponDiscount.toFixed(0)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* BOGO Free Gift Card at Top */}
+              {appliedCoupon?.freeGiftDetails && (
+                <div className="mx-0.5">
+                  <BogoCartGiftCard
+                    giftItem={appliedCoupon.freeGiftDetails}
+                    offerName={appliedCoupon.badgeText || appliedCoupon.code}
+                  />
+                </div>
+              )}
+
+              {/* BOGO Nudge Alert at Top */}
+              {appliedCoupon?.nudgeMessage && !appliedCoupon?.freeGiftDetails && (
+                <div className="bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-2.5 shadow-xs animate-slide-down">
+                  <span className="text-xl animate-bounce shrink-0">🎁</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-black text-amber-700 dark:text-amber-300 leading-snug">
+                      {appliedCoupon.nudgeMessage}
+                    </p>
+                    <span className="text-[10px] font-bold text-amber-600/80 dark:text-amber-400/80">
+                      Coupon {appliedCoupon.code} applied!
+                    </span>
+                  </div>
+                </div>
               )}
 
               {/* Grocery Items Section */}
@@ -716,30 +948,6 @@ export function CartDrawer() {
                   </div>
                 </div>
               )}
-              {/* BOGO Free Gift Card */}
-              {appliedCoupon?.freeGiftDetails && (
-                <div className="mx-1 my-2">
-                  <BogoCartGiftCard
-                    giftItem={appliedCoupon.freeGiftDetails}
-                    offerName={appliedCoupon.badgeText || appliedCoupon.code}
-                  />
-                </div>
-              )}
-
-              {/* BOGO Nudge Alert */}
-              {appliedCoupon?.nudgeMessage && !appliedCoupon?.freeGiftDetails && (
-                <div className="mx-1 my-2 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-2.5 shadow-xs animate-slide-down">
-                  <span className="text-xl animate-bounce">🎁</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-black text-amber-700 dark:text-amber-300 leading-snug">
-                      {appliedCoupon.nudgeMessage}
-                    </p>
-                    <span className="text-[10px] font-bold text-amber-600/80 dark:text-amber-400/80">
-                      Coupon {appliedCoupon.code} applied!
-                    </span>
-                  </div>
-                </div>
-              )}
 
               {/* Coupon Code Section */}
               <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-150 dark:border-zinc-800 p-3.5 rounded-2xl space-y-2 mt-4 mx-1">
@@ -830,11 +1038,16 @@ export function CartDrawer() {
               )}
 
               {/* Savings reminder badge */}
-              {savings > 0 && (
+              {(savings + couponDiscount) > 0 && (
                 <div className="flex items-center justify-between rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-100/50 dark:border-emerald-900/30 px-3.5 py-2 mb-3.5 animate-pulse-gentle">
                   <span className="text-xs font-extrabold text-[#00b140] flex items-center gap-1.5 leading-none">
-                    🎉 You are saving {formatPrice(savings)} on this order!
+                    🎉 You are saving {formatPrice(savings + couponDiscount)} on this order!
                   </span>
+                  {couponDiscount > 0 && (
+                    <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded-full">
+                      Incl. ₹{couponDiscount.toFixed(0)} deal
+                    </span>
+                  )}
                 </div>
               )}
 
@@ -872,55 +1085,61 @@ export function CartDrawer() {
               )}
 
               {/* Main row: price summary + CTA button */}
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center justify-between gap-3 sm:gap-4">
                 {/* Collapsible Price Summary */}
-                <div className="flex flex-col text-left">
-                  <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-extrabold uppercase tracking-wider">Total Bill</span>
-                  <span className="text-lg font-black text-zinc-800 dark:text-zinc-100 leading-tight tabular-nums">
+                <div className="flex flex-col text-left shrink-0">
+                  <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-extrabold uppercase tracking-wider">To Pay</span>
+                  <span className="text-xl font-black text-zinc-900 dark:text-zinc-100 leading-tight tabular-nums">
                     {formatPrice(total)}
                   </span>
                   <button
                     onClick={() => setShowBillDetails(!showBillDetails)}
-                    className="text-[10px] font-extrabold text-[#00b140] flex items-center gap-0.5 hover:underline cursor-pointer select-none leading-none mt-1"
+                    className="text-[10.5px] font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 hover:underline cursor-pointer select-none leading-none mt-1"
                   >
-                    <span>{showBillDetails ? 'Hide Details' : 'View Bill'}</span>
-                    {showBillDetails ? <ChevronDown size={10} /> : <ChevronUp size={10} />}
+                    <span>{showBillDetails ? 'Hide Bill' : 'View Bill'}</span>
+                    {showBillDetails ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
                   </button>
                 </div>
 
                 {/* Checkout Button */}
-                <div className="flex-1 max-w-[240px]">
+                <div className="flex-1 min-w-0">
                   {!isLocationServiceable ? (
                     <button
                       onClick={() => {
                         setCartOpen(false)
                         setLocationPickerOpen(true)
                       }}
-                      className="w-full h-12 rounded-full bg-[#e20a22] hover:bg-[#c9081e] text-[11px] sm:text-xs font-black text-white shadow-md flex items-center justify-center gap-1 cursor-pointer transition-transform active:scale-95"
+                      className="w-full h-12 rounded-2xl bg-[#e20a22] hover:bg-[#c9081e] text-[11px] sm:text-xs font-black text-white shadow-md flex items-center justify-center gap-1 cursor-pointer transition-transform active:scale-95"
                     >
-                      <span>📍 Outside Zone (Change)</span>
+                      <span>📍 Change Delivery Location</span>
                     </button>
                   ) : isCheckoutBlocked ? (
                     <button
                       disabled
-                      className="w-full h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[11px] sm:text-xs font-black text-zinc-400 dark:text-zinc-500 cursor-not-allowed border border-zinc-200 dark:border-zinc-700/50 flex items-center justify-center gap-1"
+                      className="w-full h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-850 text-[11px] sm:text-xs font-black text-zinc-400 dark:text-zinc-500 cursor-not-allowed border border-zinc-200 dark:border-zinc-800 flex items-center justify-center gap-1"
                     >
                       {hasClosedGroceryItems || hasClosedCafeItems ? (
-                        <>Closed Items <ArrowRight size={14} /></>
+                        <>Closed Items in Cart <ArrowRight size={14} /></>
                       ) : hasInventoryIssues ? (
-                        <>Fix Stock <ArrowRight size={14} /></>
+                        <>Fix Stock Issues <ArrowRight size={14} /></>
                       ) : (
-                        <>Min. Order ₹20 <ArrowRight size={14} /></>
+                        <>Min. Order ₹20 Required <ArrowRight size={14} /></>
                       )}
                     </button>
                   ) : (
                     <Link
                       href="/checkout"
                       onClick={() => setCartOpen(false)}
-                      className="group relative overflow-hidden w-full h-12 rounded-full bg-gradient-to-r from-accent to-accent-dark text-sm sm:text-base font-black text-white hover:text-white transition-all duration-300 active:scale-[0.97] shadow-lg shadow-accent/15 hover:shadow-xl hover:shadow-accent/30 flex items-center justify-center gap-1.5 cursor-pointer hover:scale-[1.03]"
+                      className="group relative overflow-hidden w-full h-12 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 text-white hover:text-white transition-all duration-300 active:scale-[0.97] shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-600/40 flex items-center justify-between px-4 cursor-pointer hover:scale-[1.01]"
                     >
-                      <span className="relative z-10">Checkout</span>
-                      <ArrowRight size={16} className="relative z-10 transition-transform duration-300 ease-out group-hover:translate-x-1.5" />
+                      <div className="flex flex-col text-left leading-none">
+                        <span className="text-[9px] uppercase tracking-wider font-extrabold text-emerald-100/90">PAY TOTAL</span>
+                        <span className="text-sm sm:text-base font-black text-white mt-0.5">{formatPrice(total)}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs sm:text-sm font-black uppercase tracking-wide">
+                        <span>Proceed to Pay</span>
+                        <ArrowRight size={16} className="transition-transform duration-300 ease-out group-hover:translate-x-1" />
+                      </div>
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
                     </Link>
                   )}

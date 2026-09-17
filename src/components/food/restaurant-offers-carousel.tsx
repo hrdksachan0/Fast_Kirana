@@ -65,15 +65,18 @@ export function RestaurantOffersCarousel({ restaurantId, restaurantName }: Resta
   }
 
   return (
-    <div className="w-full my-3 sm:my-4">
-      <div className="flex items-center gap-1.5 mb-2 px-1">
-        <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
-        <h4 className="text-xs font-black uppercase tracking-wider text-text-primary">
-          Deals &amp; Offers from {restaurantName}
-        </h4>
+    <div className="w-full my-1.5 sm:my-2">
+      <div className="flex items-center justify-between mb-1.5 px-0.5">
+        <div className="flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-wide text-zinc-600 dark:text-zinc-400">
+          <Sparkles className="w-3 h-3 text-amber-500" />
+          <span>Deals &amp; Offers</span>
+        </div>
+        {offers.length > 1 && (
+          <span className="text-[10px] text-zinc-400 font-bold">{offers.length} available</span>
+        )}
       </div>
 
-      <div className="flex items-center gap-3 overflow-x-auto pb-2 pt-0.5 no-scrollbar px-1">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 no-scrollbar px-0.5">
         {offers.map((offer) => {
           const isApplied = appliedCouponCode?.toUpperCase() === offer.code.toUpperCase()
           const isBogo = offer.discountType === 'BOGO'
@@ -86,9 +89,9 @@ export function RestaurantOffersCarousel({ restaurantId, restaurantName }: Resta
           if (isBogo) {
             if (offer.bogoType === 'BUY_LARGE_GET_SMALL') {
               title = `BUY ${offer.triggerVariant?.toUpperCase() || 'LARGE'} GET ${offer.rewardVariant?.toUpperCase() || 'SMALL'} FREE`
-              subtitle = 'Auto-applied when both added'
+              subtitle = 'Auto-applied when both in cart'
             } else if (offer.bogoType === 'CHEAPEST_FREE') {
-              title = 'BUY ANY 2, CHEAPEST IS FREE'
+              title = 'BUY 2, CHEAPEST IS FREE'
               subtitle = 'Lowest priced item 100% free'
             } else {
               title = 'BUY 1 GET 1 FREE'
@@ -105,66 +108,73 @@ export function RestaurantOffersCarousel({ restaurantId, restaurantName }: Resta
             subtitle = `Up to ₹${offer.maxDiscount} • ${subtitle}`
           }
 
+          // Avoid repeating the title inside badgeText
+          const showBadgeText = offer.badgeText && offer.badgeText.toLowerCase() !== title.toLowerCase()
+
           return (
             <div
               key={offer.id}
-              className="relative shrink-0 flex items-center bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-rose-500/5 dark:from-zinc-900 dark:to-zinc-800/90 border border-orange-500/30 dark:border-orange-500/20 rounded-2xl p-3 shadow-xs hover:shadow-md transition-all duration-300 min-w-[260px] sm:min-w-[300px] overflow-hidden select-none"
+              className={`relative shrink-0 flex items-center bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent dark:from-zinc-900 dark:to-zinc-850 border rounded-xl py-2 px-3 shadow-2xs transition-all duration-200 ${
+                isApplied
+                  ? 'border-emerald-500/40 bg-emerald-500/5'
+                  : 'border-orange-500/25 hover:border-orange-500/40'
+              } ${offers.length === 1 ? 'w-full' : 'min-w-[240px] max-w-[300px]'}`}
             >
-              {/* Ticket Punch Notches (Swiggy / Movie Ticket cutout aesthetic) */}
-              <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-background border-r border-orange-500/30" />
-              <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-background border-l border-orange-500/30" />
-
-              {/* Icon badge */}
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm ml-1.5 mr-3">
-                {isBogo ? <Gift className="w-5 h-5" /> : <Tag className="w-5 h-5" />}
+              {/* Compact Icon badge */}
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mr-2.5 ${
+                isApplied
+                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                  : 'bg-orange-500/15 text-orange-600 dark:text-orange-400'
+              }`}>
+                {isBogo ? <Gift className="w-3.5 h-3.5" /> : <Tag className="w-3.5 h-3.5" />}
               </div>
 
               {/* Details */}
               <div className="flex-1 min-w-0 pr-2">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-orange-600 text-white shadow-xs">
+                <div className="flex items-center gap-1.5 leading-none">
+                  <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-orange-600/15 text-orange-700 dark:text-orange-300 border border-orange-500/20">
                     {offer.code}
                   </span>
-                  {offer.badgeText && (
-                    <span className="text-[8.5px] font-bold text-amber-700 dark:text-amber-400 truncate">
+                  {showBadgeText && (
+                    <span className="text-[9px] font-bold text-amber-700 dark:text-amber-400 truncate">
                       {offer.badgeText}
                     </span>
                   )}
                 </div>
-                <h5 className="text-xs font-black text-text-primary tracking-tight mt-1 truncate">
+                <h5 className="text-[11px] font-black text-text-primary tracking-tight mt-1 truncate leading-tight">
                   {title}
                 </h5>
-                <p className="text-[10px] text-text-secondary font-medium truncate mt-0.5">
+                <p className="text-[9.5px] text-text-secondary font-medium truncate mt-0.5 leading-tight">
                   {subtitle}
                 </p>
               </div>
 
-              {/* 1-Tap Action Button */}
+              {/* Compact 1-Tap Action Button */}
               <button
                 type="button"
                 onClick={() => handleApply(offer)}
-                className={`px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider shrink-0 transition-all active:scale-95 shadow-xs mr-1.5 flex items-center gap-1 ${
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shrink-0 transition-all active:scale-95 flex items-center gap-1 cursor-pointer ${
                   isApplied
-                    ? 'bg-emerald-600 text-white shadow-emerald-600/20'
+                    ? 'bg-emerald-600/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
                     : isCopied
                     ? 'bg-emerald-600 text-white'
-                    : 'bg-orange-600 hover:bg-orange-700 text-white shadow-orange-600/20'
+                    : 'bg-orange-600 hover:bg-orange-700 text-white shadow-xs'
                 }`}
               >
                 {isApplied ? (
                   <>
-                    <Check className="w-3.5 h-3.5" />
+                    <Check className="w-3 h-3" />
                     <span>Applied</span>
                   </>
                 ) : isCopied ? (
                   <>
-                    <Check className="w-3.5 h-3.5" />
+                    <Check className="w-3 h-3" />
                     <span>Copied</span>
                   </>
                 ) : (
                   <>
                     <span>Apply</span>
-                    <ArrowRight className="w-3 h-3" />
+                    <ArrowRight className="w-2.5 h-2.5" />
                   </>
                 )}
               </button>

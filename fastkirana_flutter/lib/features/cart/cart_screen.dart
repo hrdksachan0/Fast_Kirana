@@ -184,7 +184,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       final repo = CouponRepository(ref.read(dioProvider));
       final coupons = await repo.getCoupons(restaurantId: restaurantId);
       final autoCoupons = coupons.where((c) => c.autoApply && c.isValid).toList();
-      for (final c of autoCoupons) {
+      for (final c in autoCoupons) {
         if (_appliedCoupon != null) break;
         await _applyCoupon(c.code, subtotal, silent: true);
       }

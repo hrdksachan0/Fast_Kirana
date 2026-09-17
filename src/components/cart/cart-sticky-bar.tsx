@@ -90,44 +90,73 @@ export function CartStickyBar() {
         ease: [0.16, 1, 0.3, 1],
       }}
       className={cn(
-        "gpu-accelerated fixed left-3.5 right-3.5 z-40 bg-gradient-to-r from-[#e8153a] via-[#ff2d55] to-[#ff4742] backdrop-blur-xl text-white rounded-[20px] shadow-[0_8px_24px_rgba(232,21,58,0.35)] border border-red-300/30 md:hidden animate-slide-up overflow-hidden cursor-pointer select-none flex flex-col",
+        "gpu-accelerated fixed left-3 right-3 z-40 bg-gradient-to-r from-[#e11d48] via-[#e20a22] to-[#b91c1c] backdrop-blur-xl text-white rounded-2xl shadow-[0_8px_30px_rgba(226,10,34,0.4)] border border-white/20 md:hidden animate-slide-up overflow-hidden cursor-pointer select-none flex flex-col",
         isBouncing && "animate-bounce-subtle"
       )}
     >
       {/* Top Edge Progress Bar for Free Delivery */}
-      <div className="w-full h-[3px] bg-black/15 overflow-hidden">
+      <div className="w-full h-[3px] bg-black/20 overflow-hidden">
         <div
-          className="h-full bg-gradient-to-r from-amber-300 via-yellow-300 to-emerald-300 transition-all duration-500 shadow-xs"
+          className="h-full bg-gradient-to-r from-amber-300 via-yellow-200 to-emerald-400 transition-all duration-500"
           style={{ width: `${deliveryProgress}%` }}
         />
       </div>
 
       {/* Balanced Cart Content Row */}
-      <div className="px-3.5 py-2 flex items-center justify-between">
+      <div className="px-3.5 py-2.5 flex items-center justify-between gap-2.5">
         <div className="flex items-center gap-2.5 min-w-0">
-          {/* Shopping Bag Circle Container */}
-          <div className="relative w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shrink-0 shadow-inner">
-            <ShoppingBag className="h-4 w-4 text-white stroke-[2.4]" />
-            {/* Notification Badge */}
-            <motion.span 
-              key={totalItems}
-              initial={{ scale: 0.7 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 500, damping: 15 }}
-              className="absolute -top-1 -right-1 bg-white text-[#e8153a] text-[8.5px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-md tabular-nums border border-red-100"
-            >
-              {totalItems}
-            </motion.span>
+          {/* Overlapping Item Preview Avatars or Shopping Bag */}
+          <div className="flex items-center shrink-0">
+            {items.length > 0 ? (
+              <div className="flex items-center -space-x-2.5 mr-1">
+                {items.slice(0, 3).map((it, idx) => (
+                  <div
+                    key={`${it.product.id}-${idx}`}
+                    className="relative w-8 h-8 rounded-full border-2 border-white/90 overflow-hidden bg-white shadow-xs shrink-0"
+                    style={{ zIndex: 10 - idx }}
+                  >
+                    {it.product.imageUrl ? (
+                      <img
+                        src={it.product.imageUrl}
+                        alt={it.product.name}
+                        className="w-full h-full object-contain p-0.5"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-orange-100 text-[10px] font-black flex items-center justify-center text-orange-600">
+                        {it.product.name.charAt(0)}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {items.length > 3 && (
+                  <div
+                    className="relative w-8 h-8 rounded-full border-2 border-white/90 bg-black/60 text-white text-[10px] font-black flex items-center justify-center shadow-xs shrink-0"
+                    style={{ zIndex: 5 }}
+                  >
+                    +{items.length - 3}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="relative w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shrink-0 shadow-inner">
+                <ShoppingBag className="h-4 w-4 text-white stroke-[2.4]" />
+              </div>
+            )}
           </div>
           
           {/* Title & Subtitle Stack */}
           <div className="flex flex-col text-left min-w-0">
-            <span className="text-xs sm:text-[13px] font-black text-white leading-tight tabular-nums drop-shadow-xs truncate">
-              {totalItems} {totalItems === 1 ? 'Item' : 'Items'} • {formatPrice(subtotal)}
-            </span>
-            <span className="text-[9px] font-extrabold text-red-100/95 leading-tight truncate mt-0.5">
+            <div className="flex items-center gap-1.5 leading-tight">
+              <span className="text-sm font-black text-white tabular-nums drop-shadow-xs">
+                {formatPrice(subtotal)}
+              </span>
+              <span className="text-[10px] font-bold text-white/80">
+                • {totalItems} {totalItems === 1 ? 'item' : 'items'}
+              </span>
+            </div>
+            <span className="text-[9.5px] font-extrabold text-amber-200/95 leading-tight truncate mt-0.5">
               {!isLocationServiceable
-                ? "📍 Outside Ghatampur Zone"
+                ? "📍 Outside Service Zone"
                 : hasFreeDelivery 
                 ? "✨ Free delivery unlocked!" 
                 : `Add ${formatPrice(needsForFreeDelivery)} for FREE delivery`}
@@ -145,10 +174,10 @@ export function CartStickyBar() {
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.95 }}
           className={cn(
-            "font-black text-[10px] tracking-wide px-3.5 py-1.5 rounded-full flex items-center gap-1 shadow-sm transition-all cursor-pointer shrink-0",
+            "font-black text-[11px] tracking-wide px-3.5 py-2 rounded-full flex items-center gap-1.5 shadow-md transition-all cursor-pointer shrink-0 uppercase",
             !isLocationServiceable
               ? "bg-amber-400 text-black hover:bg-amber-300"
-              : "bg-white text-[#e8153a] hover:bg-red-50"
+              : "bg-white text-[#e20a22] hover:bg-red-50"
           )}
         >
           <span>{!isLocationServiceable ? "CHECK ZONE" : "VIEW CART"}</span>

@@ -861,7 +861,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
         : Responsive.isSmallMobile(context) ? s(95) : (isFood ? 116 : 110) * _uiScale;
 
     String? bogoBadgeText;
-    final restOffer = product.restaurant?.discountOffer ?? product.restaurant?.discountBadge;
+    final restOffer = product.restaurant?.discountOffer;
     if (isFood && restOffer != null && restOffer.trim().isNotEmpty) {
       final up = restOffer.toUpperCase();
       if (up.contains('BOGO') || up.contains('BUY 1') || up.contains('BUY LARGE') || up.contains('CHEAPEST') || up.contains('FREE')) {
@@ -943,7 +943,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                   timingStatus: timingStatus,
                   isLowStock: isLowStock,
                   isOutOfStock: isOutOfStock,
-                  showAddedCheck: _showAddedCheck,
+                  showAddedCheck: false,
                   showOutlet: widget.showOutlet,
                 ),
                 SizedBox(height: s(6)),
