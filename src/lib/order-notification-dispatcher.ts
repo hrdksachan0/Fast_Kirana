@@ -214,7 +214,7 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
       const customerPhone = order.address?.phone || order.user?.phone || 'N/A'
       const adminText = isOnlinePaid
         ? `💳 *PAID Online Order* #${displayId} for [${outletName}] of ₹${order.total} from ${customerName} (${customerPhone}). Payment: Online PAID ✅. Manage: ${cleanAppUrl}/admin`
-        : `New Order #${displayId} for [${outletName}] of ₹${order.total} from ${customerName} (${customerPhone}). Manage: ${cleanAppUrl}/admin`
+        : `🛎️ *COD Order* #${displayId} for [${outletName}] of ₹${order.total} from ${customerName} (${customerPhone}). Payment: Cash On Delivery. Manage: ${cleanAppUrl}/admin`
 
       const whatsappPromises = adminPhones.map((phone) =>
         sendWhatsAppOrderAlert(phone, adminText).catch((err: any) =>
