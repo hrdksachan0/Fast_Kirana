@@ -1,6 +1,4 @@
-'use client'
-
-import { MapPin, Plus, Loader2 } from 'lucide-react'
+import { MapPin, Plus, Loader2, Home, Building2, Navigation, Check, Edit2, ChevronDown, ChevronUp } from 'lucide-react'
 import { Address } from '@/types'
 import { cn, formatAddress, formatPhone } from '@/lib/utils'
 import { getDistanceKm } from '@/lib/distance'
@@ -60,11 +58,35 @@ export function CheckoutAddressSection({
   handleEditAddressClick,
   handleCancelAddressForm,
 }: CheckoutAddressSectionProps) {
+  const getAddressIcon = (label?: string) => {
+    const l = (label || '').toLowerCase()
+    if (l.includes('work') || l.includes('office')) {
+      return <Building2 className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+    }
+    if (l.includes('current') || l.includes('other') || l.includes('location')) {
+      return <Navigation className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+    }
+    return <Home className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+  }
+
+  const getAddressIconBg = (label?: string) => {
+    const l = (label || '').toLowerCase()
+    if (l.includes('work') || l.includes('office')) {
+      return 'bg-amber-500/10 border-amber-500/20'
+    }
+    if (l.includes('current') || l.includes('other') || l.includes('location')) {
+      return 'bg-emerald-500/10 border-emerald-500/20'
+    }
+    return 'bg-rose-500/10 border-rose-500/20'
+  }
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-3.5">
       <div className="flex items-center justify-between">
         <h2 className="text-sm sm:text-base font-black text-text-primary flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-primary" />
+          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+            <MapPin className="h-4 w-4" />
+          </div>
           <span>Delivery Address</span>
         </h2>
         {!showNewAddressForm && addresses.length > 0 && (
@@ -87,52 +109,48 @@ export function CheckoutAddressSection({
               setShowNewAddressForm(true)
               setIsChangingAddress(false)
             }}
-            className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+            className="text-xs font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/15 border border-primary/20 cursor-pointer"
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
             <span>Add New</span>
           </button>
         )}
       </div>
 
       {isAddressesLoading ? (
-        <div className="flex justify-center py-6">
-          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+        <div className="flex justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : (
         <div id="address-section" className="space-y-3 scroll-mt-24">
-          {/* Primary Selected Address Card */}
+          {/* Primary Active Delivery Card */}
           {!showNewAddressForm && selectedAddress && (
-            <div className="rounded-2xl border border-border bg-card p-3.5 sm:p-4 relative overflow-hidden transition-all shadow-xs hover:border-primary/40">
+            <div className="rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/[0.03] via-card to-card p-4 relative overflow-hidden transition-all shadow-sm">
               <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 text-lg font-bold">
-                    {selectedAddress.label === 'Work'
-                      ? '🏢'
-                      : selectedAddress.label === 'Other'
-                      ? '📍'
-                      : '🏠'}
+                <div className="flex items-start gap-3 min-w-0 flex-1">
+                  <div className={cn('w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs', getAddressIconBg(selectedAddress.label))}>
+                    {getAddressIcon(selectedAddress.label)}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-black text-sm text-text-primary">
+                      <span className="font-extrabold text-sm text-text-primary">
                         {selectedAddress.label || 'Home'}
                       </span>
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                         Express Delivery
                       </span>
                       {selectedAddress.isDefault && (
-                        <span className="text-[9px] font-bold text-accent bg-accent/10 px-1.5 py-0.5 rounded-md">
+                        <span className="text-[9px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
                           Default
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-text-secondary mt-1 font-medium leading-snug break-words">
+                    <p className="text-xs text-text-secondary mt-1.5 font-medium leading-relaxed">
                       {formatAddress(selectedAddress)}
                     </p>
                     {selectedAddress.phone && (
-                      <p className="text-[11px] text-text-muted mt-0.5 font-medium flex items-center gap-1">
+                      <p className="text-[11px] text-text-muted mt-1 font-semibold flex items-center gap-1.5">
                         <span>📞</span> {formatPhone(selectedAddress.phone)}
                       </p>
                     )}
@@ -142,9 +160,10 @@ export function CheckoutAddressSection({
                   <button
                     type="button"
                     onClick={() => setIsChangingAddress(!isChangingAddress)}
-                    className="px-3 py-1.5 rounded-xl border border-border/80 bg-muted/30 hover:bg-muted text-text-primary text-xs font-bold transition-all shadow-xs cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-xl border border-border/80 bg-white dark:bg-zinc-800 hover:bg-muted text-text-primary text-xs font-bold transition-all shadow-2xs flex items-center gap-1 cursor-pointer"
                   >
-                    {isChangingAddress ? 'Done' : 'Change'}
+                    <span>{isChangingAddress ? 'Done' : 'Change'}</span>
+                    {isChangingAddress ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                   </button>
                 </div>
               </div>
@@ -162,7 +181,7 @@ export function CheckoutAddressSection({
                 )
                 if (addrDist !== null && addrDist > maxRadiusKm) {
                   return (
-                    <div className="mt-3 text-xs font-bold text-rose-600 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20 flex items-center gap-2">
+                    <div className="mt-3 text-xs font-bold text-rose-600 bg-rose-500/10 p-3 rounded-xl border border-rose-500/20 flex items-center gap-2">
                       <span>⚠️</span>
                       <span>
                         This address is {addrDist.toFixed(1)} km away (outside our 5 km delivery
@@ -176,50 +195,73 @@ export function CheckoutAddressSection({
             </div>
           )}
 
-          {/* Expandable list of saved addresses */}
+          {/* Organized List of Other Saved Addresses */}
           {!showNewAddressForm && isChangingAddress && addresses.length > 1 && (
             <div className="space-y-2.5 pt-1 animate-slide-down">
-              <div className="text-[11px] font-bold text-text-muted px-1">
-                Select delivery address:
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs font-black text-text-secondary tracking-tight">
+                  Choose delivery address ({addresses.length})
+                </span>
+                <span className="text-[11px] text-text-muted font-medium">Tap to select</span>
               </div>
-              {addresses.map((addr) => (
-                <div
-                  key={addr.id}
-                  onClick={() => {
-                    setSelectedAddressId(addr.id)
-                    setIsChangingAddress(false)
-                  }}
-                  className={cn(
-                    'p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center justify-between gap-3 text-xs bg-card',
-                    selectedAddressId === addr.id
-                      ? 'border-primary bg-primary/[0.02] shadow-xs'
-                      : 'border-border/60 hover:border-primary/40'
-                  )}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="text-base">
-                      {addr.label === 'Work' ? '🏢' : addr.label === 'Other' ? '📍' : '🏠'}
-                    </span>
-                    <div className="min-w-0">
-                      <span className="font-bold text-text-primary mr-2">{addr.label}</span>
-                      <span className="text-text-secondary truncate">{formatAddress(addr)}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleEditAddressClick(addr)
+              <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
+                {addresses.map((addr) => {
+                  const isSelected = selectedAddressId === addr.id
+                  return (
+                    <div
+                      key={addr.id}
+                      onClick={() => {
+                        setSelectedAddressId(addr.id)
                         setIsChangingAddress(false)
                       }}
-                      className="text-[11px] font-bold text-primary hover:underline"
+                      className={cn(
+                        'p-3.5 rounded-2xl border-2 transition-all flex items-center justify-between gap-3 text-xs bg-card cursor-pointer group',
+                        isSelected
+                          ? 'border-primary bg-primary/[0.03] shadow-xs'
+                          : 'border-border/60 hover:border-primary/40 hover:bg-muted/30'
+                      )}
                     >
-                      Edit
-                    </button>
-                  </div>
-                </div>
-              ))}
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className={cn('w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs', getAddressIconBg(addr.label))}>
+                          {getAddressIcon(addr.label)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-black text-xs text-text-primary">{addr.label || 'Home'}</span>
+                            {addr.isDefault && (
+                              <span className="text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.2 rounded border border-primary/20">
+                                Default
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-text-secondary truncate mt-0.5 font-medium">
+                            {formatAddress(addr)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isSelected && (
+                          <div className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center shadow-xs">
+                            <Check className="h-3 w-3 stroke-[3]" />
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleEditAddressClick(addr)
+                            setIsChangingAddress(false)
+                          }}
+                          className="p-1.5 rounded-lg border border-border/60 hover:border-primary text-text-secondary hover:text-primary transition-all cursor-pointer"
+                          title="Edit address"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
 
