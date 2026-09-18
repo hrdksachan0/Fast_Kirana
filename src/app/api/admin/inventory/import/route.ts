@@ -23,7 +23,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { items } = body as {
+    const { items, storeId: bodyStoreId } = body as {
+      storeId?: string
       items: Array<{
         barcode?: string
         readableId?: string | number
@@ -37,6 +38,10 @@ export async function POST(request: NextRequest) {
         imageUrl?: string
       }>
     }
+
+    const targetStoreId = (session?.user as any)?.role === 'SUPER_ADMIN'
+      ? (bodyStoreId || (session?.user as any)?.storeId || null)
+      : ((session?.user as any)?.storeId || bodyStoreId || null)
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Items array is required' }, { status: 400 })
@@ -117,6 +122,26 @@ export async function POST(request: NextRequest) {
               }
             })
 
+            // Upsert store-specific inventory if a specific store is targeted
+            if (targetStoreId && targetStoreId !== 'all') {
+              await tx.storeInventory.upsert({
+                where: {
+                  productId_storeId: {
+                    productId: existingProduct.id,
+                    storeId: targetStoreId,
+                  },
+                },
+                update: {
+                  stock: { increment: Math.max(0, stockQty) },
+                },
+                create: {
+                  storeId: targetStoreId,
+                  productId: existingProduct.id,
+                  stock: Math.max(0, stockQty),
+                },
+              })
+            }
+
             // Create stock log if stock is added
             if (stockQty > 0) {
               await tx.stockLog.create({
@@ -152,6 +177,17 @@ export async function POST(request: NextRequest) {
                 tags: [brand, slugKey].filter(Boolean)
               }
             })
+
+            // Create store-specific inventory if a specific store is targeted
+            if (targetStoreId && targetStoreId !== 'all') {
+              await tx.storeInventory.create({
+                data: {
+                  storeId: targetStoreId,
+                  productId: newProduct.id,
+                  stock: Math.max(0, stockQty),
+                },
+              })
+            }
 
             // Create stock log if initial stock is > 0
             if (stockQty > 0) {

@@ -117,6 +117,10 @@ class _SubcategoryScreenState extends ConsumerState<SubcategoryScreen> {
                     return pCatId == targetId || pSubId == targetId || pParentId == targetId;
                   }).toList();
                 }
+
+                // Sort products systematically
+                list.sort((a, b) => compareProductsSystematic(a, b));
+
                 if (list.isEmpty) {
                   return Center(
                     child: Text('No items in this subcategory', style: GoogleFonts.inter(color: AppDesignSystem.textSecondary)),

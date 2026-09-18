@@ -1,8 +1,17 @@
 'use client'
 
 import { Truck, Sparkles, ShieldCheck, Store } from 'lucide-react'
+import { useUIStore } from '@/stores/ui-store'
 
 export function DeliveryBanner() {
+  const settings = useUIStore((s) => s.settings) || {}
+  const t1Threshold = settings['delivery_threshold_tier1'] || settings['grocery_free_delivery_threshold'] || '199'
+  const t2Threshold = settings['delivery_threshold_tier2'] || '299'
+  const t3Threshold = settings['delivery_threshold_tier3'] || '399'
+  const t1Fee = settings['delivery_fee_tier1'] || settings['delivery_fee'] || '25'
+  const t2Fee = settings['delivery_fee_tier2'] || '35'
+  const t3Fee = settings['delivery_fee_tier3'] || '50'
+
   return (
     <section className="py-4 md:py-6 mt-1 md:mt-2 mb-0 px-1">
       {/* Floating Tagline Pill */}
@@ -36,9 +45,9 @@ export function DeliveryBanner() {
           <div className="text-left">
             <h3 className="text-xs md:text-sm font-bold text-text-primary">Smart Shipping Rates</h3>
             <div className="text-[10px] md:text-xs text-text-secondary mt-1 leading-relaxed font-medium space-y-0.5">
-              <div>📍 0 to 2 km: FREE delivery above ₹199 (else ₹25)</div>
-              <div>📍 2 to 3 km: FREE delivery above ₹299 (else ₹35)</div>
-              <div>📍 3 to 5 km: FREE delivery above ₹399 (else ₹50)</div>
+              <div>📍 0 to 2 km: FREE delivery above ₹{t1Threshold} (else ₹{t1Fee})</div>
+              <div>📍 2 to 3 km: FREE delivery above ₹{t2Threshold} (else ₹{t2Fee})</div>
+              <div>📍 3 to 5 km: FREE delivery above ₹{t3Threshold} (else ₹{t3Fee})</div>
             </div>
           </div>
         </div>

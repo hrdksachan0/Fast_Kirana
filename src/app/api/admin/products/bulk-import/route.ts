@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { products } = body
+    const { products, storeId } = body
 
     if (!Array.isArray(products) || products.length === 0) {
       return NextResponse.json({ error: 'No products provided' }, { status: 400 })
@@ -276,25 +276,40 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Seed store-level inventory for all dark stores for newly created/updated products
+    // Seed store-level inventory
     try {
-      const allStores = await prisma.darkStore.findMany({ select: { id: true } })
-      if (allStores.length > 0 && createdProducts.length > 0) {
-        const inventoryData: { storeId: string; productId: string; stock: number }[] = []
-        for (const p of createdProducts) {
-          const pStock = typeof p.stock === 'number' ? p.stock : 0
-          for (const s of allStores) {
-            inventoryData.push({
-              storeId: s.id,
-              productId: p.id,
-              stock: pStock,
+      const targetStoreId = (storeId && storeId !== 'all') ? String(storeId).trim() : null
+      if (createdProducts.length > 0) {
+        if (targetStoreId) {
+          const inventoryData = createdProducts.map(p => ({
+            storeId: targetStoreId,
+            productId: p.id,
+            stock: typeof p.stock === 'number' ? p.stock : 0,
+          }))
+          await prisma.storeInventory.createMany({
+            data: inventoryData,
+            skipDuplicates: true,
+          })
+        } else {
+          const allStores = await prisma.darkStore.findMany({ select: { id: true } })
+          if (allStores.length > 0) {
+            const inventoryData: { storeId: string; productId: string; stock: number }[] = []
+            for (const p of createdProducts) {
+              const pStock = typeof p.stock === 'number' ? p.stock : 0
+              for (const s of allStores) {
+                inventoryData.push({
+                  storeId: s.id,
+                  productId: p.id,
+                  stock: pStock,
+                })
+              }
+            }
+            await prisma.storeInventory.createMany({
+              data: inventoryData,
+              skipDuplicates: true,
             })
           }
         }
-        await prisma.storeInventory.createMany({
-          data: inventoryData,
-          skipDuplicates: true,
-        })
       }
     } catch (seedErr) {
       console.warn('Could not seed store_inventories in bulk-import:', seedErr)

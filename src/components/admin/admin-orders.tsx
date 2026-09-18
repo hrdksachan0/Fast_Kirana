@@ -334,7 +334,7 @@ export function AdminOrders({ initialOrders }: AdminOrdersProps) {
             </div>
 
             <p className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold leading-relaxed bg-rose-500/5 border border-rose-500/20 p-2.5 rounded-xl">
-              ⚠️ Warning: Cancelling will notify the customer and rider immediately. If paid online via Razorpay, please issue a refund from Razorpay Dashboard.
+              ⚠️ Warning: Cancelling will notify the customer and rider immediately. If paid online via Cashfree, please issue a refund from Cashfree Dashboard.
             </p>
 
             <div className="flex items-center justify-end gap-2.5 pt-2">

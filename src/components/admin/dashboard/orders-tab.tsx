@@ -7,6 +7,7 @@ import { formatPrice, formatAddress } from '@/lib/utils'
 import { printKOTReceipt, printCustomerInvoice } from '@/lib/kot-print'
 import { supabase } from '@/lib/supabase-client'
 import { RecordRefundModal } from '@/components/admin/record-refund-modal'
+import { MobileOrderCard } from '@/components/admin/dashboard/mobile-order-card'
 
 export interface OrdersTabProps {
   orders: any[]
@@ -55,11 +56,11 @@ export function OrdersTab({
   const [updatingPaymentId, setUpdatingPaymentId] = React.useState<string | null>(null)
   const [syncingOrderId, setSyncingOrderId] = React.useState<string | null>(null)
 
-  const handleSyncRazorpayPayment = async (order: any, e?: React.MouseEvent) => {
+  const handleSyncCashfreePayment = async (order: any, e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
     setSyncingOrderId(order.id)
     try {
-      const res = await fetch('/api/admin/orders/sync-razorpay', {
+      const res = await fetch('/api/payment/cashfree/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId: order.id }),
@@ -68,25 +69,19 @@ export function OrdersTab({
       if (res.ok && data.success) {
         order.paymentStatus = 'PAID'
         order.paymentMethod = 'UPI'
-        if (order.status === 'PENDING' || order.status === 'CANCELLED') {
-          order.status = 'CONFIRMED'
-        }
         if (order.subOrders) {
           order.subOrders.forEach((s: any) => {
             s.paymentStatus = 'PAID'
             s.paymentMethod = 'UPI'
-            if (s.status === 'PENDING' || s.status === 'CANCELLED') {
-              s.status = 'CONFIRMED'
-            }
           })
         }
-        toast.success(data.message || `Order #${order.readableId || order.id.slice(0, 8)} verified & synced as PAID via Razorpay!`)
+        toast.success(`Order #${order.readableId || order.id.slice(0, 8)} payment verified as PAID via Cashfree! ✅`)
         onUpdateOrderStatus(order.id, order.status)
       } else {
-        toast.error(data.error || `No captured payment found on Razorpay for Order #${order.readableId || order.id.slice(0, 8)}`)
+        toast.error(data.error || `No captured payment found on Cashfree for Order #${order.readableId || order.id.slice(0, 8)}`)
       }
     } catch (err: any) {
-      toast.error('Failed to sync Razorpay payment')
+      toast.error('Failed to verify Cashfree payment')
     } finally {
       setSyncingOrderId(null)
     }
@@ -821,8 +816,45 @@ export function OrdersTab({
             </div>
           </div>
 
-          {/* Active Orders Table */}
-          <div className="overflow-x-auto">
+          {/* Active Orders - Mobile Card View */}
+          <div className="md:hidden space-y-2.5 mb-4">
+            {filteredActiveOrders.length === 0 ? (
+              <div className="text-center py-8 text-text-secondary text-[11px] font-bold bg-muted/20 rounded-2xl border border-border/40 p-4">
+                🎉 No active orders in this queue right now. All caught up!
+              </div>
+            ) : (
+              filteredActiveOrders.map((o) => {
+                const pendingIdx = livePendingOrders.findIndex((po) => po.id === o.id)
+                const fifoRank = pendingIdx !== -1 ? pendingIdx + 1 : null
+                return (
+                  <MobileOrderCard
+                    key={o.id}
+                    order={o}
+                    updatingOrderId={updatingOrderId}
+                    updatingPaymentId={updatingPaymentId}
+                    syncingOrderId={syncingOrderId}
+                    onOpenOrderModal={onOpenOrderModal}
+                    onUpdateOrderStatus={onUpdateOrderStatus}
+                    onTogglePaymentStatus={handleTogglePaymentStatus}
+                    onSyncCashfreePayment={handleSyncCashfreePayment}
+                    onConvertToCOD={handleConvertToCOD}
+                    onSendWhatsAppReminder={handleSendWhatsAppReminder}
+                    onCancelOrder={(order) => setCancelConfirmOrder(order)}
+                    onRefundOrder={(order) => setRefundOrder(order)}
+                    onSendKOT={sendRemotePrintKOT}
+                    onShareKitchen={shareKitchenOrder}
+                    onPrintInvoice={printCustomerInvoice}
+                    sendingKotIds={sendingKotIds}
+                    printedKotIds={printedKotIds}
+                    fifoRank={fifoRank}
+                  />
+                )
+              })
+            )}
+          </div>
+
+          {/* Active Orders Table - Desktop View */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-border text-text-secondary uppercase tracking-wider font-extrabold text-[10px]">
@@ -1060,10 +1092,10 @@ export function OrdersTab({
                             <div className="flex flex-col gap-1 mt-1">
                               <button
                                 type="button"
-                                onClick={(e) => handleSyncRazorpayPayment(o, e)}
+                                onClick={(e) => handleSyncCashfreePayment(o, e)}
                                 disabled={syncingOrderId === o.id}
                                 className="inline-flex items-center justify-center gap-1 text-[8.5px] font-black uppercase text-blue-700 dark:text-blue-300 bg-blue-500/15 border border-blue-500/30 hover:bg-blue-500/25 px-1.5 py-0.5 rounded-md transition-all active:scale-95 cursor-pointer shadow-2xs"
-                                title="Fetch & verify live payment directly from Razorpay gateway"
+                                title="Fetch & verify live payment directly from Cashfree gateway"
                               >
                                 {syncingOrderId === o.id ? (
                                   <>
@@ -1364,8 +1396,40 @@ export function OrdersTab({
             </div>
           </div>
 
-          {/* History Orders Table */}
-          <div className="overflow-x-auto">
+          {/* History Orders - Mobile Card View */}
+          <div className="md:hidden space-y-2.5 mb-4">
+            {filteredHistoryOrders.length === 0 ? (
+              <div className="text-center py-8 text-text-secondary text-[11px] font-bold bg-muted/20 rounded-2xl border border-border/40 p-4">
+                🎉 No past orders found with these filters.
+              </div>
+            ) : (
+              filteredHistoryOrders.map((o) => (
+                <MobileOrderCard
+                  key={o.id}
+                  order={o}
+                  updatingOrderId={updatingOrderId}
+                  updatingPaymentId={updatingPaymentId}
+                  syncingOrderId={syncingOrderId}
+                  onOpenOrderModal={onOpenOrderModal}
+                  onUpdateOrderStatus={onUpdateOrderStatus}
+                  onTogglePaymentStatus={handleTogglePaymentStatus}
+                  onSyncCashfreePayment={handleSyncCashfreePayment}
+                  onConvertToCOD={handleConvertToCOD}
+                  onSendWhatsAppReminder={handleSendWhatsAppReminder}
+                  onCancelOrder={(order) => setCancelConfirmOrder(order)}
+                  onRefundOrder={(order) => setRefundOrder(order)}
+                  onSendKOT={sendRemotePrintKOT}
+                  onShareKitchen={shareKitchenOrder}
+                  onPrintInvoice={printCustomerInvoice}
+                  sendingKotIds={sendingKotIds}
+                  printedKotIds={printedKotIds}
+                />
+              ))
+            )}
+          </div>
+
+          {/* History Orders Table - Desktop View */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-border text-text-secondary uppercase tracking-wider font-extrabold text-[10px]">
@@ -1547,10 +1611,10 @@ export function OrdersTab({
                           {o.paymentStatus !== 'PAID' && (
                             <button
                               type="button"
-                              onClick={(e) => handleSyncRazorpayPayment(o, e)}
+                              onClick={(e) => handleSyncCashfreePayment(o, e)}
                               disabled={syncingOrderId === o.id}
                               className="inline-flex items-center gap-1 text-[8px] font-black uppercase text-blue-700 dark:text-blue-300 bg-blue-500/15 border border-blue-500/30 hover:bg-blue-500/25 px-1.5 py-0.5 rounded-full mt-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
-                              title="Fetch & verify live payment directly from Razorpay gateway"
+                              title="Fetch & verify live payment directly from Cashfree gateway"
                             >
                               {syncingOrderId === o.id ? (
                                 <>
@@ -1558,7 +1622,7 @@ export function OrdersTab({
                                   <span>Syncing...</span>
                                 </>
                               ) : (
-                                <span>⚡ Fetch Razorpay</span>
+                                <span>⚡ Verify Cashfree</span>
                               )}
                             </button>
                           )}
@@ -1638,7 +1702,7 @@ export function OrdersTab({
             </div>
 
             <p className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold leading-relaxed bg-rose-500/5 border border-rose-500/20 p-2.5 rounded-xl">
-              ⚠️ Warning: Cancelling will notify the customer and rider immediately. If paid online via Razorpay, please issue a refund from Razorpay Dashboard.
+              ⚠️ Warning: Cancelling will notify the customer and rider immediately. If paid online via Cashfree, please issue a refund from Cashfree Dashboard.
             </p>
 
             <div className="flex items-center justify-end gap-2.5 pt-2">

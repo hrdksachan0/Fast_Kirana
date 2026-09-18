@@ -289,7 +289,7 @@ class ProductRepository {
         .map((json) => Product.fromJson(json as Map<String, dynamic>))
         .toList();
 
-    // Sort: In-stock first, out-of-stock at the end
+    // Stably place in-stock products first, out-of-stock products at the end (1:1 Web App parity)
     liveProducts.sort((a, b) {
       final aInStock = a.isAvailable && a.stock > 0;
       final bInStock = b.isAvailable && b.stock > 0;
@@ -513,7 +513,7 @@ class ProductRepository {
       }).toList();
     }
 
-    // Automatically place all in-stock products first, out-of-stock products at the very end
+    // Stably place in-stock products first, out-of-stock products at the end (1:1 Web App parity)
     result.sort((a, b) {
       final aInStock = a.isAvailable && a.stock > 0;
       final bInStock = b.isAvailable && b.stock > 0;

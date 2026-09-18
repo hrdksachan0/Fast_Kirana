@@ -125,6 +125,7 @@ export const createProductSchema = z.object({
   barcode: z.string().nullable().optional(),
   vendor: z.string().nullable().optional(),
   vendorId: z.string().nullable().optional(),
+  storeId: z.string().nullable().optional(),
 })
 
 // ── Coupon Schema ───────────────────────────────────────────────────

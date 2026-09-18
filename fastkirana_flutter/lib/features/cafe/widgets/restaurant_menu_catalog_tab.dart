@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 
 import '../../../core/theme/design_system.dart';
+import '../../../data/models/product.dart';
 
 class RestaurantMenuCatalogTab extends StatefulWidget {
   final List<Map<String, dynamic>> menuItems;
@@ -104,6 +105,15 @@ class _RestaurantMenuCatalogTabState extends State<RestaurantMenuCatalogTab> {
       if (_menuStockFilter == 'OUT_STOCK') return isAvailable == false;
       return true;
     }).toList();
+
+    // Systematic sort: Section / Category -> ID (Natural sort)
+    filteredItems.sort((a, b) {
+      final secA = (a['menuSection'] ?? (a['category'] is Map ? a['category']['name'] : null) ?? '').toString().toLowerCase();
+      final secB = (b['menuSection'] ?? (b['category'] is Map ? b['category']['name'] : null) ?? '').toString().toLowerCase();
+      final secComp = secA.compareTo(secB);
+      if (secComp != 0) return secComp;
+      return compareProductMapsSystematic(a, b, inStockFirst: _menuStockFilter == 'ALL');
+    });
 
     return Column(
       children: [

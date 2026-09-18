@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { ProductImage } from '@/components/product/product-image'
 import { isCafeProduct, cn, getProductLimit, isProductStoreClosed } from '@/lib/utils'
+import { getDeliveryRules } from '@/lib/distance'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { useCartStore } from '@/stores/cart-store'
@@ -279,16 +280,21 @@ export function CartDrawer() {
   const groceryAdjustedSubtotal = grocerySubtotal
   const cafeAdjustedSubtotal = cafeSubtotal
   const combinedAdjustedSubtotal = groceryAdjustedSubtotal + cafeAdjustedSubtotal
-
   const settings = useUIStore((s) => s.settings) || {}
-  const groceryThreshold = settings.grocery_free_delivery_threshold ? parseFloat(settings.grocery_free_delivery_threshold) : GROCERY_FREE_DELIVERY_THRESHOLD
-  const cafeThreshold = settings.cafe_free_delivery_threshold ? parseFloat(settings.cafe_free_delivery_threshold) : CAFE_FREE_DELIVERY_THRESHOLD
-  const combinedThreshold = settings.combined_free_delivery_threshold ? parseFloat(settings.combined_free_delivery_threshold) : COMBINED_FREE_DELIVERY_THRESHOLD
-  const deliveryFeeVal = settings.delivery_fee ? parseFloat(settings.delivery_fee) : DELIVERY_FEE
+  const userDistanceKm = useUIStore((s) => s.userDistanceKm)
+  const deliveryRules = getDeliveryRules(userDistanceKm ?? 1.0, { settings })
 
-  const activeThreshold = (groceryItems.length > 0 && cafeItems.length > 0)
-    ? combinedThreshold
-    : (cafeItems.length > 0 ? cafeThreshold : groceryThreshold)
+  const activeThreshold = deliveryRules.isServiceable
+    ? deliveryRules.freeDeliveryThreshold
+    : (settings.combined_free_delivery_threshold
+        ? parseFloat(settings.combined_free_delivery_threshold)
+        : (settings.grocery_free_delivery_threshold
+            ? parseFloat(settings.grocery_free_delivery_threshold)
+            : (settings.delivery_threshold_tier1 ? parseFloat(settings.delivery_threshold_tier1) : GROCERY_FREE_DELIVERY_THRESHOLD)))
+
+  const deliveryFeeVal = deliveryRules.isServiceable
+    ? deliveryRules.deliveryFee
+    : (settings.delivery_fee ? parseFloat(settings.delivery_fee) : (settings.delivery_fee_tier1 ? parseFloat(settings.delivery_fee_tier1) : DELIVERY_FEE))
 
   const miscFee = settings.misc_fee ? parseFloat(settings.misc_fee) : 0
   const miscFeeLabel = settings.misc_fee_label || 'Handling & Packaging Charge'

@@ -13,17 +13,17 @@ interface OpsScheduleCardProps {
   setGroceryCloseTime: (v: string) => void
   isGroceryCurrentlyOpen: boolean
 
-  // Restaurant timings
-  restaurantAutoTiming: boolean
-  setRestaurantAutoTiming: (v: boolean) => void
-  restaurantOpenTime: string
-  setRestaurantOpenTime: (v: string) => void
-  restaurantCloseTime: string
-  setRestaurantCloseTime: (v: string) => void
-  isRestaurantCurrentlyOpen: boolean
-  setCafeAutoTiming: (v: boolean) => void
-  setCafeOpenTime: (v: string) => void
-  setCafeCloseTime: (v: string) => void
+  // Restaurant timings (Managed via Manage Outlets)
+  restaurantAutoTiming?: boolean
+  setRestaurantAutoTiming?: (v: boolean) => void
+  restaurantOpenTime?: string
+  setRestaurantOpenTime?: (v: string) => void
+  restaurantCloseTime?: string
+  setRestaurantCloseTime?: (v: string) => void
+  isRestaurantCurrentlyOpen?: boolean
+  setCafeAutoTiming?: (v: boolean) => void
+  setCafeOpenTime?: (v: string) => void
+  setCafeCloseTime?: (v: string) => void
 
   // Admin order approval gate
   adminAutoApproveOrders: boolean
@@ -93,171 +93,100 @@ export function OpsScheduleCard({
 }: OpsScheduleCardProps) {
   return (
     <div className="w-full space-y-6 animate-fade-in text-left">
-      {/* ── SECTION 1: Automated Store Timings (Side-by-side) ── */}
-      <div className="w-full">
-        <h4 className="text-xs font-black text-text-primary uppercase tracking-wider mb-3 flex items-center gap-1.5">
-          <Clock className="h-4 w-4 text-primary" />
-          Automated Operating Schedules
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-          {/* Grocery Mart Schedule Card */}
-          <div className="w-full min-w-0 bg-muted/20 p-4 sm:p-5 rounded-2xl border border-border/60 space-y-3.5">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <label className="text-xs font-black uppercase tracking-wider text-text-primary flex items-center gap-1.5 truncate">
-                  🏪 Grocery Mart Schedule
-                </label>
-                <p className="text-[11px] text-text-secondary mt-0.5 font-medium truncate">
-                  Store timings ke hisaab se rozana automatic ON/OFF.
-                </p>
-              </div>
-              <span
-                className={`text-[11px] font-black px-2.5 py-1 rounded-full border shrink-0 ${
-                  isGroceryCurrentlyOpen
-                    ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                    : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
-                }`}
-              >
-                {isGroceryCurrentlyOpen ? '● OPEN' : '○ CLOSED'}
-              </span>
+      {/* ── SECTION 1: Automated Store Timings ── */}
+      <div className="w-full space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-black text-text-primary uppercase tracking-wider flex items-center gap-1.5">
+            <Clock className="h-4 w-4 text-primary" />
+            Darkstore Operating Schedule
+          </h4>
+        </div>
+
+        {/* Grocery Mart Schedule Card */}
+        <div className="w-full min-w-0 bg-muted/20 p-4 sm:p-5 rounded-2xl border border-border/60 space-y-3.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <label className="text-xs font-black uppercase tracking-wider text-text-primary flex items-center gap-1.5 truncate">
+                🏪 Grocery Mart Schedule
+              </label>
+              <p className="text-[11px] text-text-secondary mt-0.5 font-medium truncate">
+                Store timings ke hisaab se rozana automatic ON/OFF.
+              </p>
             </div>
+            <span
+              className={`text-[11px] font-black px-2.5 py-1 rounded-full border shrink-0 ${
+                isGroceryCurrentlyOpen
+                  ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                  : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+              }`}
+            >
+              {isGroceryCurrentlyOpen ? '● OPEN' : '○ CLOSED'}
+            </span>
+          </div>
 
-            <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 flex items-start gap-2.5">
-              <Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-              <div className="text-xs min-w-0">
-                <p className="font-bold text-text-primary">
-                  {groceryAutoTiming ? 'Auto-Schedule Active (Roj Automatic On/Off)' : 'Manual Override Active'}
-                </p>
-                <p className="text-[11px] text-text-secondary mt-0.5 leading-relaxed">
-                  {groceryAutoTiming
-                    ? `Store subah ${groceryOpenTime || '07:00'} baje apne aap khulega aur raat ${groceryCloseTime || '22:00'} baje band hoga. Roj manually ON karne ki zaroorat nahi hai.`
-                    : 'Auto-timing off hai. Store manual switch par chal raha hai.'}
-                </p>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-border/40 space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary flex items-center gap-1">
-                  <Clock className="h-3 w-3" /> Operating Hours
-                </label>
-                <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold text-text-secondary select-none">
-                  <input
-                    type="checkbox"
-                    checked={groceryAutoTiming}
-                    onChange={(e) => setGroceryAutoTiming(e.target.checked)}
-                    className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
-                  />
-                  <span>Auto-timing apply</span>
-                </label>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-text-muted block">Open Time (Subah)</span>
-                  <input
-                    type="time"
-                    value={groceryOpenTime}
-                    onChange={(e) => setGroceryOpenTime(e.target.value)}
-                    className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold shadow-xs"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-text-muted block">Close Time (Raat)</span>
-                  <input
-                    type="time"
-                    value={groceryCloseTime}
-                    onChange={(e) => setGroceryCloseTime(e.target.value)}
-                    className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold shadow-xs"
-                  />
-                </div>
-              </div>
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 flex items-start gap-2.5">
+            <Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+            <div className="text-xs min-w-0">
+              <p className="font-bold text-text-primary">
+                {groceryAutoTiming ? 'Auto-Schedule Active (Roj Automatic On/Off)' : 'Manual Override Active'}
+              </p>
+              <p className="text-[11px] text-text-secondary mt-0.5 leading-relaxed">
+                {groceryAutoTiming
+                  ? `Store subah ${groceryOpenTime || '07:00'} baje apne aap khulega aur raat ${groceryCloseTime || '22:00'} baje band hoga. Roj manually ON karne ki zaroorat nahi hai.`
+                  : 'Auto-timing off hai. Store manual switch par chal raha hai.'}
+              </p>
             </div>
           </div>
 
-          {/* Restaurant & Cafe Schedule Card */}
-          <div className="w-full min-w-0 bg-muted/20 p-4 sm:p-5 rounded-2xl border border-border/60 space-y-3.5">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <label className="text-xs font-black uppercase tracking-wider text-text-primary flex items-center gap-1.5 truncate">
-                  <Utensils className="h-3.5 w-3.5 text-orange-500" /> Restaurant & Cafe Schedule
-                </label>
-                <p className="text-[11px] text-text-secondary mt-0.5 font-medium truncate">
-                  Outlets subah timely automatic ON honge aur raat ko OFF.
-                </p>
-              </div>
-              <span
-                className={`text-[11px] font-black px-2.5 py-1 rounded-full border shrink-0 ${
-                  isRestaurantCurrentlyOpen
-                    ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                    : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
-                }`}
-              >
-                {isRestaurantCurrentlyOpen ? '● OPEN' : '○ CLOSED'}
-              </span>
+          <div className="pt-2 border-t border-border/40 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary flex items-center gap-1">
+                <Clock className="h-3 w-3" /> Operating Hours
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold text-text-secondary select-none">
+                <input
+                  type="checkbox"
+                  checked={groceryAutoTiming}
+                  onChange={(e) => setGroceryAutoTiming(e.target.checked)}
+                  className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                />
+                <span>Auto-timing apply</span>
+              </label>
             </div>
 
-            <div className="bg-orange-500/5 border border-orange-500/20 rounded-xl p-3 flex items-start gap-2.5">
-              <Sparkles className="h-4 w-4 text-orange-500 shrink-0 mt-0.5" />
-              <div className="text-xs min-w-0">
-                <p className="font-bold text-text-primary">
-                  {restaurantAutoTiming ? 'Auto-Schedule Active (Roj Timely On/Off)' : 'Manual Override Active'}
-                </p>
-                <p className="text-[11px] text-text-secondary mt-0.5 leading-relaxed">
-                  {restaurantAutoTiming
-                    ? `Restaurants subah ${restaurantOpenTime || '10:00'} baje automatically open honge aur raat ${restaurantCloseTime || '22:00'} baje band honge. Roj subah manually ON karne ki zaroorat nahi hai.`
-                    : 'Auto-timing off hai. Outlets manual switch par chal rahe hain.'}
-                </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-text-muted block">Open Time (Subah)</span>
+                <input
+                  type="time"
+                  value={groceryOpenTime}
+                  onChange={(e) => setGroceryOpenTime(e.target.value)}
+                  className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold shadow-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-text-muted block">Close Time (Raat)</span>
+                <input
+                  type="time"
+                  value={groceryCloseTime}
+                  onChange={(e) => setGroceryCloseTime(e.target.value)}
+                  className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold shadow-xs"
+                />
               </div>
             </div>
+          </div>
+        </div>
 
-            <div className="pt-2 border-t border-border/40 space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary flex items-center gap-1">
-                  <Clock className="h-3 w-3" /> Operating Hours
-                </label>
-                <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold text-text-secondary select-none">
-                  <input
-                    type="checkbox"
-                    checked={restaurantAutoTiming}
-                    onChange={(e) => {
-                      const checked = e.target.checked
-                      setRestaurantAutoTiming(checked)
-                      setCafeAutoTiming(checked)
-                    }}
-                    className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
-                  />
-                  <span>Auto-timing apply</span>
-                </label>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-text-muted block">Open Time (Subah)</span>
-                  <input
-                    type="time"
-                    value={restaurantOpenTime}
-                    onChange={(e) => {
-                      setRestaurantOpenTime(e.target.value)
-                      setCafeOpenTime(e.target.value)
-                    }}
-                    className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold shadow-xs"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-text-muted block">Close Time (Raat)</span>
-                  <input
-                    type="time"
-                    value={restaurantCloseTime}
-                    onChange={(e) => {
-                      setRestaurantCloseTime(e.target.value)
-                      setCafeCloseTime(e.target.value)
-                    }}
-                    className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold shadow-xs"
-                  />
-                </div>
-              </div>
-            </div>
+        {/* Informational Outlet Callout */}
+        <div className="bg-orange-500/5 border border-orange-500/20 p-3.5 rounded-2xl flex items-start gap-3">
+          <div className="h-8 w-8 rounded-xl bg-orange-500/15 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0 mt-0.5">
+            <Utensils className="h-4 w-4" />
+          </div>
+          <div className="text-xs">
+            <h5 className="font-bold text-text-primary">🍽️ Restaurant & Cafe Operating Schedules</h5>
+            <p className="text-[11px] text-text-secondary mt-0.5 leading-relaxed font-medium">
+              Har ek kitchen outlet (A.S. Restaurant, Wedson, Bal Udyan, Hot Pizza Lovers) apni individual opening hours, day-wise schedule, aur live status <strong>Manage Outlets</strong> section se independently manage karta hai.
+            </p>
           </div>
         </div>
       </div>

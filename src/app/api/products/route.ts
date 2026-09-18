@@ -669,7 +669,7 @@ export async function POST(request: NextRequest) {
     const validation = await validateBody(request, createProductSchema)
     if (!validation.success) return validation.error
 
-    const { name, description, imageUrl, categoryId, restaurantId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode, vendor, vendorId, addons } = validation.data as any
+    const { name, description, imageUrl, categoryId, restaurantId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode, vendor, vendorId, addons, storeId } = validation.data as any
 
     let finalCategoryId = categoryId
     let tagsList = Array.isArray(tags)
@@ -818,19 +818,42 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Seed store-level inventory for all dark stores
+    // Seed store-level inventory
     try {
-      const allStores = await prisma.darkStore.findMany({ select: { id: true } })
-      if (allStores.length > 0) {
-        const initialStockNum = finalRestaurantId ? 99999 : (parseInt(String(stock), 10) || 0)
-        await prisma.storeInventory.createMany({
-          data: allStores.map((s) => ({
-            storeId: s.id,
+      const initialStockNum = finalRestaurantId ? 99999 : (parseInt(String(stock), 10) || 0)
+      const targetStoreId = (storeId && storeId !== 'all') ? String(storeId).trim() : ((session?.user as any)?.assignedStoreId || null)
+
+      if (targetStoreId && targetStoreId !== 'all') {
+        // Only seed inventory for the specific store console where product was added
+        await prisma.storeInventory.upsert({
+          where: {
+            productId_storeId: {
+              productId: product.id,
+              storeId: targetStoreId,
+            }
+          },
+          create: {
             productId: product.id,
+            storeId: targetStoreId,
             stock: initialStockNum,
-          })),
-          skipDuplicates: true,
+          },
+          update: {
+            stock: initialStockNum,
+          }
         })
+      } else {
+        // Global creation (superadmin with no specific store selected)
+        const allStores = await prisma.darkStore.findMany({ select: { id: true } })
+        if (allStores.length > 0) {
+          await prisma.storeInventory.createMany({
+            data: allStores.map((s) => ({
+              storeId: s.id,
+              productId: product.id,
+              stock: initialStockNum,
+            })),
+            skipDuplicates: true,
+          })
+        }
       }
     } catch (seedErr) {
       console.warn('Could not seed store_inventories for new product:', seedErr)

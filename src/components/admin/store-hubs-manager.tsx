@@ -76,7 +76,7 @@ export function StoreHubsManager({
   const [newHubLng, setNewHubLng] = useState('80.1714')
   const [newHubRadius, setNewHubRadius] = useState('5.0')
   const [newHubSurge, setNewHubSurge] = useState('0')
-  const [seedInventory, setSeedInventory] = useState(true)
+  const [seedInventory, setSeedInventory] = useState(false)
   const [newHubManagerPhone, setNewHubManagerPhone] = useState('')
   const [newHubAddress, setNewHubAddress] = useState('')
   const [newHubPickupAddress, setNewHubPickupAddress] = useState('')
@@ -902,17 +902,22 @@ export function StoreHubsManager({
               </div>
 
               {/* Seed Grocery Dark Store Inventory Checkbox */}
-              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/30 border border-border/60">
+              <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-muted/30 border border-border/60">
                 <input
                   type="checkbox"
                   id="seedInventory"
                   checked={seedInventory}
                   onChange={(e) => setSeedInventory(e.target.checked)}
-                  className="rounded border-border text-[#e20a22] focus:ring-[#e20a22] cursor-pointer h-4 w-4"
+                  className="rounded border-border text-[#e20a22] focus:ring-[#e20a22] cursor-pointer h-4 w-4 mt-0.5"
                 />
-                <label htmlFor="seedInventory" className="text-xs font-bold text-text-primary cursor-pointer select-none">
-                  Auto-seed Central Grocery Dark Store inventory (all items ready for 10-min delivery)
-                </label>
+                <div className="space-y-0.5">
+                  <label htmlFor="seedInventory" className="text-xs font-bold text-text-primary cursor-pointer select-none">
+                    Pre-populate with all catalog products (Out of stock: 0)
+                  </label>
+                  <p className="text-[11px] text-text-tertiary">
+                    Default is off. Leave unchecked so this new outlet starts with clean 0 inventory, completely isolated from other stores.
+                  </p>
+                </div>
               </div>
 
               <div className="pt-2">

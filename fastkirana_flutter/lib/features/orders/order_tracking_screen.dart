@@ -134,6 +134,15 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       duration: const Duration(milliseconds: 1200),
     )..addListener(_interpolateRiderMarker);
 
+    _pulseAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8),
+    )..addListener(_interpolatePolylinePulse);
+
+    if (widget.initialOrder?.status == OrderStatus.shipped) {
+      _pulseAnimController.repeat();
+    }
+
     _initCustomMarkers();
     _checkAndRequestLocationPermission();
     _initRazorpay();
@@ -161,6 +170,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     _etaUpdateTimer?.cancel();
     _sseLineSubscription?.cancel();
     _riderAnimController.dispose();
+    _pulseAnimController.dispose();
     _confettiController.dispose();
     _mapController?.dispose();
     _razorpay?.clear();
@@ -1085,6 +1095,19 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
     _refreshMapElements();
     _calculateETA();
+    _checkPulseAnimationState();
+  }
+
+  void _checkPulseAnimationState() {
+    if (_order?.status == OrderStatus.shipped) {
+      if (!_pulseAnimController.isAnimating) {
+        _pulseAnimController.repeat();
+      }
+    } else {
+      if (_pulseAnimController.isAnimating) {
+        _pulseAnimController.stop();
+      }
+    }
   }
 
   /// Calculate bearing between two geographic coordinates (degrees 0-360)
@@ -1177,7 +1200,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         anchor: const Offset(0.5, 0.5),
         rotation: _riderHeading,
         flat: true,
-        zIndex: 10,
+        zIndexInt: 10,
       ));
     }
     setState(() {});
@@ -1193,6 +1216,73 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     if (progress >= 1.0) {
       _calculateETA();
     }
+  }
+
+  /// Live rider pulse movement along polyline coordinates during OUT_FOR_DELIVERY
+  void _interpolatePolylinePulse() {
+    if (!mounted || _order?.status != OrderStatus.shipped) return;
+
+    final points = _roadPolylinePoints.length >= 2
+        ? _roadPolylinePoints
+        : (((_riderPosition ?? _storePosition) != null && _customerPosition != null)
+            ? [(_riderPosition ?? _storePosition)!, _customerPosition!]
+            : null);
+
+    if (points == null || points.length < 2) return;
+
+    // Calculate cumulative segment distances using Haversine
+    double totalDistance = 0.0;
+    final distances = <double>[];
+    for (int i = 0; i < points.length - 1; i++) {
+      final d = _getHaversineDistance(points[i], points[i + 1]);
+      distances.add(d);
+      totalDistance += d;
+    }
+
+    if (totalDistance <= 0.0001) return;
+
+    final targetDist = _pulseAnimController.value * totalDistance;
+    double accumulated = 0.0;
+    LatLng currentPos = points.first;
+    double currentHeading = 0.0;
+
+    for (int i = 0; i < distances.length; i++) {
+      final segDist = distances[i];
+      if (accumulated + segDist >= targetDist || i == distances.length - 1) {
+        final segProgress = segDist > 0 ? (targetDist - accumulated) / segDist : 0.0;
+        final p1 = points[i];
+        final p2 = points[i + 1];
+
+        final lat = p1.latitude + (p2.latitude - p1.latitude) * segProgress;
+        final lng = p1.longitude + (p2.longitude - p1.longitude) * segProgress;
+        currentPos = LatLng(lat, lng);
+        currentHeading = _calculateBearing(p1.latitude, p1.longitude, p2.latitude, p2.longitude);
+        break;
+      }
+      accumulated += segDist;
+    }
+
+    _pulseRiderPosition = currentPos;
+    _pulseRiderHeading = currentHeading;
+
+    _markers.removeWhere((m) => m.markerId.value == 'pulse_rider');
+    final icon = _pulseRiderMarkerIcon ?? _riderMarkerIcon;
+    if (icon != null) {
+      _markers.add(Marker(
+        markerId: const MarkerId('pulse_rider'),
+        position: _pulseRiderPosition!,
+        icon: icon,
+        anchor: const Offset(0.5, 0.5),
+        rotation: _pulseRiderHeading,
+        flat: true,
+        zIndexInt: 12,
+        infoWindow: const InfoWindow(
+          title: '🛵 Out for Delivery',
+          snippet: 'Live Delivery Partner en route',
+        ),
+      ));
+    }
+    setState(() {});
   }
 
   /// Calculate distance & estimated arrival time using Haversine formula (Throttled, No excess API calls)
@@ -1250,7 +1340,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
   double _getHaversineDistance(LatLng pos1, LatLng pos2) {
     const p = 0.017453292519943295; // Math.PI / 180
-    final c = math.cos;
+    const c = math.cos;
     final a = 0.5 -
         c((pos2.latitude - pos1.latitude) * p) / 2 +
         c(pos1.latitude * p) * c(pos2.latitude * p) * (1 - c((pos2.longitude - pos1.longitude) * p)) / 2;
@@ -1270,6 +1360,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         color: const Color(0xFF7C3AED),
       );
       _riderMarkerIcon = await _createRiderMarkerBitmap();
+      _pulseRiderMarkerIcon = await _createPulseRiderMarkerBitmap();
       _customerMarkerIcon = await _createCustomMarkerBitmap(
         label: 'HOME',
         emoji: '🏠',
@@ -1334,7 +1425,68 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     final picture = pictureRecorder.endRecording();
     final img = await picture.toImage(size.toInt(), size.toInt());
     final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
-    return BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
+    return BitmapDescriptor.bytes(byteData!.buffer.asUint8List());
+  }
+
+  /// Concentric radiant pulse marker for active OUT_FOR_DELIVERY scooter
+  Future<BitmapDescriptor> _createPulseRiderMarkerBitmap() async {
+    final pictureRecorder = ui.PictureRecorder();
+    final canvas = Canvas(pictureRecorder);
+    const size = 110.0;
+    const center = Offset(55, 55);
+
+    // 1. Broad outer glowing pulse halo
+    final outerGlowPaint = Paint()
+      ..color = const Color(0xFF00A344).withValues(alpha: 0.28)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+    canvas.drawCircle(center, 46, outerGlowPaint);
+
+    // 2. Secondary accent pulse ring
+    final ringPaint = Paint()
+      ..color = const Color(0xFF00A344).withValues(alpha: 0.6)
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke;
+    canvas.drawCircle(center, 42, ringPaint);
+
+    // 3. Inner White Disc
+    final whitePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, 34, whitePaint);
+
+    // 4. Primary Emerald Brand Ring
+    final borderPaint = Paint()
+      ..color = const Color(0xFF00A344)
+      ..strokeWidth = 3.5
+      ..style = PaintingStyle.stroke;
+    canvas.drawCircle(center, 34, borderPaint);
+
+    // 5. Direction pointer triangle
+    final arrowPaint = Paint()
+      ..color = const Color(0xFF00A344)
+      ..style = PaintingStyle.fill;
+    final arrowPath = Path()
+      ..moveTo(55, 12)
+      ..lineTo(62, 23)
+      ..lineTo(48, 23)
+      ..close();
+    canvas.drawPath(arrowPath, arrowPaint);
+
+    // 6. Centered Scooter Emoji
+    final emojiPainter = TextPainter(
+      text: const TextSpan(
+        text: '🛵',
+        style: TextStyle(fontSize: 26),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    )..layout();
+    emojiPainter.paint(canvas, Offset(55 - emojiPainter.width / 2, 55 - emojiPainter.height / 2));
+
+    final picture = pictureRecorder.endRecording();
+    final img = await picture.toImage(size.toInt(), size.toInt());
+    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.bytes(byteData!.buffer.asUint8List());
   }
 
   Future<BitmapDescriptor> _createCustomMarkerBitmap({
@@ -1415,7 +1567,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     final picture = pictureRecorder.endRecording();
     final img = await picture.toImage(width.toInt(), height.toInt());
     final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
-    return BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
+    return BitmapDescriptor.bytes(byteData!.buffer.asUint8List());
   }
 
   List<LatLng> _roadPolylinePoints = [];
@@ -1472,6 +1624,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                   ),
                 );
               });
+              _checkPulseAnimationState();
               _isFetchingRoute = false;
               return;
             }
@@ -1557,7 +1710,23 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
 
     // 3. Live Moving Rider Marker
-    if (_riderPosition != null && (_order?.status == OrderStatus.shipped || _order?.status == OrderStatus.packed)) {
+    if (_order?.status == OrderStatus.shipped && _pulseRiderPosition != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('pulse_rider'),
+          position: _pulseRiderPosition!,
+          icon: _pulseRiderMarkerIcon ?? _riderMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+          rotation: _pulseRiderHeading,
+          flat: true,
+          anchor: const Offset(0.5, 0.5),
+          zIndexInt: 12,
+          infoWindow: const InfoWindow(
+            title: '🛵 Out for Delivery',
+            snippet: 'Live Delivery Partner en route',
+          ),
+        ),
+      );
+    } else if (_riderPosition != null && (_order?.status == OrderStatus.shipped || _order?.status == OrderStatus.packed)) {
       markers.add(
         Marker(
           markerId: const MarkerId('rider'),
@@ -1566,6 +1735,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           rotation: _riderHeading,
           flat: true,
           anchor: const Offset(0.5, 0.5),
+          zIndexInt: 10,
           infoWindow: const InfoWindow(
             title: '🛵 Delivery Executive',
             snippet: 'Live On the Way',

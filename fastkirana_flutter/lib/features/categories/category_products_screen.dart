@@ -502,16 +502,28 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                             list.sort((a, b) {
                               final aScore = (a.isBestsellerProduct ? 30 : 0) + (a.isTopPick ? 20 : 0) + (a.isFlashDealProduct ? 10 : 0);
                               final bScore = (b.isBestsellerProduct ? 30 : 0) + (b.isTopPick ? 20 : 0) + (b.isFlashDealProduct ? 10 : 0);
-                              return bScore.compareTo(aScore);
+                              final scoreComp = bScore.compareTo(aScore);
+                              if (scoreComp != 0) return scoreComp;
+                              return compareProductsSystematic(a, b, inStockFirst: false);
                             });
                           } else if (_selectedSort == '⚡ Deals') {
                             list = list.where((p) => p.isFlashDealProduct || p.discount >= 10 || p.tags.any((t) => t.toLowerCase().contains('deal') || t.toLowerCase().contains('flash'))).toList();
+                            list.sort((a, b) => compareProductsSystematic(a, b, inStockFirst: false));
                           } else if (_selectedSort == 'Under ₹199') {
                             list = list.where((p) => p.price <= 199).toList();
+                            list.sort((a, b) => compareProductsSystematic(a, b, inStockFirst: false));
                           } else if (_selectedSort == 'Low to High') {
-                            list.sort((a, b) => a.price.compareTo(b.price));
+                            list.sort((a, b) {
+                              final pComp = a.price.compareTo(b.price);
+                              if (pComp != 0) return pComp;
+                              return compareProductsSystematic(a, b, inStockFirst: false);
+                            });
                           } else if (_selectedSort == 'High to Low') {
-                            list.sort((a, b) => b.price.compareTo(a.price));
+                            list.sort((a, b) {
+                              final pComp = b.price.compareTo(a.price);
+                              if (pComp != 0) return pComp;
+                              return compareProductsSystematic(a, b, inStockFirst: false);
+                            });
                           }
 
                           // ALWAYS move out-of-stock items to the very end

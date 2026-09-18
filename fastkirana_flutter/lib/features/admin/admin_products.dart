@@ -253,6 +253,27 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                   }).toList();
                 }
 
+                // Step D: Systematic ID-wise and Menu/Outlet-wise Sorting
+                if (_selectedCatalogType == 0) {
+                  // Grocery: Systematic ID-wise natural sort (PROD-001, PROD-002...)
+                  filtered.sort((a, b) => compareProductsSystematic(a, b, inStockFirst: false));
+                } else {
+                  // Restaurant: Group & sort by Outlet -> Menu Section -> ID
+                  filtered.sort((a, b) {
+                    final outletA = getOutletName(a);
+                    final outletB = getOutletName(b);
+                    final outletComp = outletA.compareTo(outletB);
+                    if (outletComp != 0) return outletComp;
+
+                    final secA = (a.menuSection ?? a.category?.name ?? '').toLowerCase();
+                    final secB = (b.menuSection ?? b.category?.name ?? '').toLowerCase();
+                    final secComp = secA.compareTo(secB);
+                    if (secComp != 0) return secComp;
+
+                    return compareProductsSystematic(a, b, inStockFirst: false);
+                  });
+                }
+
                 if (filtered.isEmpty) {
                   return Center(
                     child: Column(

@@ -215,7 +215,7 @@ export function RecordRefundModal({
           <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-[11px] font-medium leading-relaxed">
             <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
             <span>
-              This refund will be immediately excluded from restaurant finance and company sales. If paid online via Razorpay/UPI, please execute the payout or bank refund if not already processed.
+              This refund will be immediately excluded from restaurant finance and company sales. If paid online via Cashfree/UPI, please execute the payout or bank refund if not already processed.
             </span>
           </div>
 

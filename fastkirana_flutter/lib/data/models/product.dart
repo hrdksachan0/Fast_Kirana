@@ -486,3 +486,82 @@ class RestaurantInfo {
         'discountOffer': discountOffer,
       };
 }
+
+/// Natural alphanumeric string comparator for systematic ID and name sorting.
+/// Correctly orders numeric chunks (e.g., "PROD-2" before "PROD-10", "1" before "2" before "10").
+int compareNatural(String a, String b) {
+  if (a == b) return 0;
+  final regex = RegExp(r'(\d+|\D+)');
+  final matchesA = regex.allMatches(a).map((m) => m.group(0)!).toList();
+  final matchesB = regex.allMatches(b).map((m) => m.group(0)!).toList();
+
+  final minLen = matchesA.length < matchesB.length ? matchesA.length : matchesB.length;
+  for (int i = 0; i < minLen; i++) {
+    final partA = matchesA[i];
+    final partB = matchesB[i];
+
+    final numA = int.tryParse(partA);
+    final numB = int.tryParse(partB);
+
+    if (numA != null && numB != null) {
+      final comp = numA.compareTo(numB);
+      if (comp != 0) return comp;
+    } else {
+      final comp = partA.toLowerCase().compareTo(partB.toLowerCase());
+      if (comp != 0) return comp;
+    }
+  }
+  return matchesA.length.compareTo(matchesB.length);
+}
+
+/// Systematic product sorting comparator (1:1 Parity with Web App):
+/// 1. In-stock first (if inStockFirst is true)
+/// 2. sortOrder (descending, matching Web App orderBy: [{ sortOrder: 'desc' }, { createdAt: 'desc' }])
+/// 3. createdAt (descending, newest first)
+/// 4. Name (alphabetical ascending fallback)
+int compareProductsSystematic(Product a, Product b, {bool inStockFirst = true}) {
+  if (inStockFirst) {
+    final aInStock = a.isAvailable && a.stock > 0;
+    final bInStock = b.isAvailable && b.stock > 0;
+    if (aInStock && !bInStock) return -1;
+    if (!aInStock && bInStock) return 1;
+  }
+
+  // sortOrder desc (higher number first, exactly like Web App)
+  if (a.sortOrder != b.sortOrder) {
+    return b.sortOrder.compareTo(a.sortOrder);
+  }
+
+  // createdAt desc (newest first, exactly like Web App)
+  final createdComp = b.createdAt.compareTo(a.createdAt);
+  if (createdComp != 0) return createdComp;
+
+  return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+}
+
+/// Systematic product Map sorting comparator (for raw maps in restaurant dashboard / KOT / admin):
+int compareProductMapsSystematic(Map<String, dynamic> a, Map<String, dynamic> b, {bool inStockFirst = true}) {
+  if (inStockFirst) {
+    final aInStock = a['isAvailable'] != false && ((a['stock'] as num?) ?? 999) > 0;
+    final bInStock = b['isAvailable'] != false && ((b['stock'] as num?) ?? 999) > 0;
+    if (aInStock && !bInStock) return -1;
+    if (!aInStock && bInStock) return 1;
+  }
+
+  final aSort = int.tryParse(a['sortOrder']?.toString() ?? '0') ?? 0;
+  final bSort = int.tryParse(b['sortOrder']?.toString() ?? '0') ?? 0;
+  if (aSort != bSort) {
+    return bSort.compareTo(aSort);
+  }
+
+  final aCreated = a['createdAt']?.toString() ?? '';
+  final bCreated = b['createdAt']?.toString() ?? '';
+  if (aCreated.isNotEmpty && bCreated.isNotEmpty) {
+    final cComp = bCreated.compareTo(aCreated);
+    if (cComp != 0) return cComp;
+  }
+
+  final aName = (a['name'] ?? '').toString().toLowerCase();
+  final bName = (b['name'] ?? '').toString().toLowerCase();
+  return aName.compareTo(bName);
+}

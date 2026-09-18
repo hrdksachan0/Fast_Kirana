@@ -202,10 +202,10 @@ export const useUIStore = create<UIState>((set) => ({
     set({ groceryMartOpen: groceryOpen, cafeOpen, restaurantOpen, deliveryRadius: radius, categoryStatus })
   },
   setSettings: (settings) => {
-    set({ settings })
+    set((state) => ({ settings: { ...state.settings, ...settings } }))
     const state = useUIStore.getState()
     if (state.userCoords) {
-      const evalRes = evaluateServiceability(state.userCoords, state.availableHubs, settings)
+      const evalRes = evaluateServiceability(state.userCoords, state.availableHubs, state.settings)
       set({
         isLocationServiceable: evalRes.isServiceable,
         userDistanceKm: evalRes.distanceKm,

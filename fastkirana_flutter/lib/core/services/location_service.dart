@@ -44,6 +44,7 @@ class DeliveryTierInfo {
   final double distanceKm;
   final double deliveryFee;
   final double baseFee;
+  final double surgeFee;
   final double freeDeliveryThreshold;
   final bool isServiceable;
   final String tierName;
@@ -54,6 +55,7 @@ class DeliveryTierInfo {
     required this.distanceKm,
     required this.deliveryFee,
     required this.baseFee,
+    this.surgeFee = 0.0,
     required this.freeDeliveryThreshold,
     required this.isServiceable,
     required this.tierName,
@@ -76,6 +78,7 @@ class LocationService {
   }) {
     final startLat = (originLat != null && originLat != 0.0) ? originLat : AppConfig.darkstoreLat;
     final startLng = (originLng != null && originLng != 0.0) ? originLng : AppConfig.darkstoreLng;
+
     final distanceMeters = Geolocator.distanceBetween(
       startLat,
       startLng,
@@ -86,9 +89,9 @@ class LocationService {
   }
 
   /// Distance-tiered delivery fee & free delivery threshold calculation:
-  /// • Tier 1 (0 to 2 km): dynamic fee (default ₹25) — FREE Delivery on orders above threshold (default ₹199)
-  /// • Tier 2 (2 to 3 km): dynamic fee (default ₹35) — FREE Delivery on orders above threshold (default ₹299)
-  /// • Tier 3 (3 to max radius km): dynamic fee (default ₹50) — FREE Delivery on orders above threshold (default ₹399)
+  /// • Tier 1 (0 to 2 km): dynamic fee (default ₹25) + dynamic surge fee — FREE Delivery on orders above threshold (default ₹199)
+  /// • Tier 2 (2 to 3 km): dynamic fee (default ₹35) + dynamic surge fee — FREE Delivery on orders above threshold (default ₹299)
+  /// • Tier 3 (3 to max radius km): dynamic fee (default ₹50) + dynamic surge fee — FREE Delivery on orders above threshold (default ₹399)
   /// • Outside hub delivery radius: Not serviceable.
   static DeliveryTierInfo getDeliveryTier(
     double distanceKm,
@@ -98,6 +101,7 @@ class LocationService {
     String? storeName,
   }) {
     final radius = maxRadius ?? settings?.deliveryRadiusKm ?? maxDeliveryRadiusKm;
+    final surgeFee = settings?.surgeCharge ?? 0.0;
 
     final tier1Fee = settings?.deliveryFeeTier1 ?? 25.0;
     final tier1Threshold = settings?.deliveryThresholdTier1 ?? 199.0;
@@ -118,39 +122,51 @@ class LocationService {
 
     if (distanceKm <= 2.0) {
       final isFree = subtotal >= tier1Threshold;
+      final totalFee = isFree ? 0.0 : (tier1Fee + surgeFee);
       return DeliveryTierInfo(
         distanceKm: distanceKm,
-        deliveryFee: isFree ? 0.0 : tier1Fee,
+        deliveryFee: totalFee,
         baseFee: tier1Fee,
+        surgeFee: surgeFee,
         freeDeliveryThreshold: tier1Threshold,
         isServiceable: true,
         tierName: '0 to 2 km (${cityLabel}Zone)',
         freeDeliveryLabel: 'FREE Delivery above ₹${tier1Threshold.toInt()}',
-        feeDescription: '₹${tier1Fee.toInt()} fee (FREE above ₹${tier1Threshold.toInt()})',
+        feeDescription: surgeFee > 0
+            ? '₹${totalFee.toInt()} fee (₹${tier1Fee.toInt()} + ₹${surgeFee.toInt()} surge, FREE above ₹${tier1Threshold.toInt()})'
+            : '₹${tier1Fee.toInt()} fee (FREE above ₹${tier1Threshold.toInt()})',
       );
     } else if (distanceKm <= 3.0) {
       final isFree = subtotal >= tier2Threshold;
+      final totalFee = isFree ? 0.0 : (tier2Fee + surgeFee);
       return DeliveryTierInfo(
         distanceKm: distanceKm,
-        deliveryFee: isFree ? 0.0 : tier2Fee,
+        deliveryFee: totalFee,
         baseFee: tier2Fee,
+        surgeFee: surgeFee,
         freeDeliveryThreshold: tier2Threshold,
         isServiceable: true,
         tierName: '2 to 3 km (Suburban Area)',
         freeDeliveryLabel: 'FREE Delivery above ₹${tier2Threshold.toInt()}',
-        feeDescription: '₹${tier2Fee.toInt()} fee (FREE above ₹${tier2Threshold.toInt()})',
+        feeDescription: surgeFee > 0
+            ? '₹${totalFee.toInt()} fee (₹${tier2Fee.toInt()} + ₹${surgeFee.toInt()} surge, FREE above ₹${tier2Threshold.toInt()})'
+            : '₹${tier2Fee.toInt()} fee (FREE above ₹${tier2Threshold.toInt()})',
       );
     } else if (distanceKm <= 5.0) {
       final isFree = subtotal >= tier3Threshold;
+      final totalFee = isFree ? 0.0 : (tier3Fee + surgeFee);
       return DeliveryTierInfo(
         distanceKm: distanceKm,
-        deliveryFee: isFree ? 0.0 : tier3Fee,
+        deliveryFee: totalFee,
         baseFee: tier3Fee,
+        surgeFee: surgeFee,
         freeDeliveryThreshold: tier3Threshold,
         isServiceable: true,
         tierName: '3 to 5 km (Extended Area)',
         freeDeliveryLabel: 'FREE Delivery above ₹${tier3Threshold.toInt()}',
-        feeDescription: '₹${tier3Fee.toInt()} fee (FREE above ₹${tier3Threshold.toInt()})',
+        feeDescription: surgeFee > 0
+            ? '₹${totalFee.toInt()} fee (₹${tier3Fee.toInt()} + ₹${surgeFee.toInt()} surge, FREE above ₹${tier3Threshold.toInt()})'
+            : '₹${tier3Fee.toInt()} fee (FREE above ₹${tier3Threshold.toInt()})',
       );
     } else if (distanceKm <= radius) {
       final extraKm = (distanceKm - 5.0).ceil();
@@ -158,21 +174,26 @@ class LocationService {
       final longDistanceFee = tier3Fee + (extraKm * perKmFee);
       final longDistanceThreshold = tier3Threshold + (extraKm * 50.0);
       final isFree = subtotal >= longDistanceThreshold;
+      final totalFee = isFree ? 0.0 : (longDistanceFee + surgeFee);
       return DeliveryTierInfo(
         distanceKm: distanceKm,
-        deliveryFee: isFree ? 0.0 : longDistanceFee,
+        deliveryFee: totalFee,
         baseFee: longDistanceFee,
+        surgeFee: surgeFee,
         freeDeliveryThreshold: longDistanceThreshold,
         isServiceable: true,
         tierName: '5 to ${radius.toInt()} km (Long Distance)',
         freeDeliveryLabel: 'FREE Delivery above ₹${longDistanceThreshold.toInt()}',
-        feeDescription: '₹${longDistanceFee.toInt()} fee (FREE above ₹${longDistanceThreshold.toInt()})',
+        feeDescription: surgeFee > 0
+            ? '₹${totalFee.toInt()} fee (₹${longDistanceFee.toInt()} + ₹${surgeFee.toInt()} surge, FREE above ₹${longDistanceThreshold.toInt()})'
+            : '₹${longDistanceFee.toInt()} fee (FREE above ₹${longDistanceThreshold.toInt()})',
       );
     } else {
       return DeliveryTierInfo(
         distanceKm: distanceKm,
         deliveryFee: 0.0,
         baseFee: 0.0,
+        surgeFee: 0.0,
         freeDeliveryThreshold: tier3Threshold + 100.0,
         isServiceable: false,
         tierName: 'Outside ${radius.toInt()} km (Out of Zone)',

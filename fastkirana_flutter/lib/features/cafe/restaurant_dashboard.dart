@@ -25,6 +25,7 @@ import '../../core/utils/restaurant_utils.dart';
 import '../common/widgets/battery_optimization_dialog.dart';
 import '../../core/utils/app_toast.dart';
 import '../../data/models/order.dart';
+import '../../data/models/product.dart';
 import '../../data/repositories/order_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../delivery/widgets/connectivity_banner.dart';
@@ -769,9 +770,17 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       final res = await dio.get(url);
       if (res.statusCode == 200 && res.data != null) {
         final List prods = res.data['products'] ?? [];
+        final parsedItems = prods.map((e) => Map<String, dynamic>.from(e)).toList();
+        parsedItems.sort((a, b) {
+          final secA = (a['menuSection'] ?? (a['category'] is Map ? a['category']['name'] : null) ?? '').toString().toLowerCase();
+          final secB = (b['menuSection'] ?? (b['category'] is Map ? b['category']['name'] : null) ?? '').toString().toLowerCase();
+          final secComp = secA.compareTo(secB);
+          if (secComp != 0) return secComp;
+          return compareProductMapsSystematic(a, b, inStockFirst: false);
+        });
         if (mounted) {
           setState(() {
-            _menuItems = prods.map((e) => Map<String, dynamic>.from(e)).toList();
+            _menuItems = parsedItems;
             if (res.data['restaurant'] != null && res.data['restaurant']['name'] != null) {
               _restaurantName = res.data['restaurant']['name'];
             }

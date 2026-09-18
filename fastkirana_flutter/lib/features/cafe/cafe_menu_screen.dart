@@ -41,87 +41,90 @@ class WebMenuSection {
 // 1:1 Parity with www.fastkirana.in DEFAULT_CAFE_MENU_SECTIONS
 const List<WebMenuSection> webCafeSections = [
   WebMenuSection(tag: 'hot-beverage', matchTags: ['hot-beverage', 'hot-coffee', 'hot coffee', 'tea', 'chai'], title: 'Brews & Tea', emoji: '☕', description: 'Chai, hot coffee, and fresh brewing mixes'),
-  WebMenuSection(tag: 'hot-bite', matchTags: ['hot-bite', 'snacks', 'momos', 'fries', 'samosa', 'snack', 'spring-rolls', 'spring roll'], title: 'Quick Bites & Snacks', emoji: '🥟', description: 'Samosas, Momos, French Fries, and warm treats'),
-  WebMenuSection(tag: 'sandwiches', matchTags: ['sandwiches', 'sandwich', 'grilled sandwich', 'veg sandwich', 'cheese sandwich'], title: 'Sandwiches', emoji: '🥪', description: 'Freshly grilled sandwiches loaded with cheese, paneer, and veggies'),
+  WebMenuSection(tag: 'hot-bite', matchTags: ['hot-bite', 'snacks', 'momos'], title: 'Quick Snacks', emoji: '🥟', description: 'Samosas, Momos, French Fries, and warm treats'),
+  WebMenuSection(tag: 'sandwiches', matchTags: ['sandwiches', 'sandwich'], title: 'Sandwiches', emoji: '🥪', description: 'Freshly grilled sandwiches loaded with cheese, paneer, and veggies'),
   WebMenuSection(tag: 'burgers', matchTags: ['burgers', 'burger', 'veg-burger', 'cheese-burger', 'paneer-burger'], title: 'Burgers', emoji: '🍔', description: 'Juicy veg burgers, paneer burgers, and loaded cheese burgers'),
-  WebMenuSection(tag: 'frankie-rolls', matchTags: ['frankie-rolls', 'frankie rolls', 'frankie-roll', 'frankie roll', 'rolls', 'roll', 'kathi roll', 'kathi-roll'], title: 'Frankie Rolls', emoji: '🌯', description: 'Fresh rolls stuffed with paneer, cheese, and veg patties'),
-  WebMenuSection(tag: 'garlic-bread', matchTags: ['garlic-bread', 'garlic bread', 'garlic-breads', 'cheesy garlic bread'], title: 'Cheesy Garlic Breads', emoji: '🧄', description: 'Loaded garlic breads with corn, paneer & cheese'),
-  WebMenuSection(tag: 'pizza', matchTags: ['pizza', 'pizzas', 'cheese pizza', 'paneer pizza', 'capsicum pizza'], title: "Pizza's", emoji: '🍕', description: 'Loaded pizzas with fresh toppings and melted cheese'),
-  WebMenuSection(tag: 'pav-bhaji', matchTags: ['pav-bhaji', 'pav bhaji', 'pavbhaji', 'pav', 'bombay-bites', 'bombay bites', 'bombay-bite', 'bombay bite'], title: 'Pav Bhaji & Bombay Bites', emoji: '🍲', description: 'Butter Pav Bhaji, Paneer Pav Bhaji & Extra Pav'),
-  WebMenuSection(tag: 'chinese', matchTags: ['chinese', 'chinese-cuisine', 'noodles', 'manchurian', 'chilli', 'chowmein'], title: 'Chinese Cuisine', emoji: '🥡', description: 'Momos, noodles, fried dishes & sauces'),
-  WebMenuSection(tag: 'italian-pasta', matchTags: ['italian-pasta', 'italian-pastas', 'pasta', 'red sauce pasta', 'white sauce pasta'], title: 'Italian Pasta', emoji: '🍝', description: 'Fresh penne tossed in aromatic red & white sauces'),
-  WebMenuSection(tag: 'south-indian', matchTags: ['south-indian', 'south indian', 'dosa', 'idli', 'vada', 'uttapam'], title: 'South Indian', emoji: '🥞', description: 'Dosa, Idli, Vada, Uttapam & more'),
-  WebMenuSection(tag: 'rice-dishes', matchTags: ['rice-dishes', 'rice dishes', 'biryani', 'pulav', 'fried rice', 'fried-rice', 'rice'], title: 'Rice & Bowls', emoji: '🍚', description: 'Flavourful biryani, fried rice, and combos'),
-  WebMenuSection(tag: 'shakes', matchTags: ['shakes', 'shake', 'milkshake', 'oreo shake', 'strawberry shake'], title: 'Shakes', emoji: '🥤', description: 'Creamy strawberry, chocolate, and Oreo shakes'),
-  WebMenuSection(tag: 'mocktails', matchTags: ['mocktails', 'mocktail', 'coolers', 'mojito'], title: 'Mocktails', emoji: '🍹', description: 'Iced coolers, Virgin Mojito, and summer drinks'),
-  WebMenuSection(tag: 'chilled-drinks', matchTags: ['chilled-drinks', 'chilled', 'cold-drink', 'beverages', 'beverage', 'drinks', 'drink', 'soda'], title: 'Cold Drinks & Sodas', emoji: '🥤', description: 'Chilled soft drinks, Campa, Coke, Sprite & refreshing beverages'),
-  WebMenuSection(tag: 'desserts', matchTags: ['desserts', 'ice-cream', 'ice cream', 'kulfi', 'dessert', 'sweet', 'icecream', 'ice-creams'], title: 'Ice Creams & Desserts', emoji: '🍦', description: 'Chilled premium ice creams, kulfis, and desserts'),
+  WebMenuSection(tag: 'frankie-rolls', matchTags: ['frankie-rolls', 'frankie rolls', 'frankie-roll', 'frankie roll', 'rolls', 'roll', 'kathi roll', 'kathi-roll'], title: 'Rolls & Frankie', emoji: '🌯', description: 'Fresh rolls stuffed with paneer, cheese, and veg patties'),
+  WebMenuSection(tag: 'garlic-bread', matchTags: ['garlic-bread', 'garlic bread', 'garlic-breads'], title: 'Garlic Bread', emoji: '🧄', description: 'Loaded garlic breads with corn, paneer, cheese & mix veg'),
+  WebMenuSection(tag: 'pizza', matchTags: ['pizza', 'pizzas'], title: 'Pizzas', emoji: '🍕', description: 'Loaded pizzas with fresh toppings and melted cheese'),
+  WebMenuSection(tag: 'pav-bhaji', matchTags: ['pav-bhaji', 'pav bhaji', 'pavbhaji'], title: 'Pav Bhaji', emoji: '🫕', description: 'Butter Pav Bhaji, Paneer Pav Bhaji & Extra Pav'),
+  WebMenuSection(tag: 'chinese', matchTags: ['chinese', 'chinese-cuisine', 'chinese cuisine'], title: 'Chinese', emoji: '🥡', description: 'Momos, noodles, fried dishes & sauces'),
+  WebMenuSection(tag: 'italian-pasta', matchTags: ['italian-pasta', 'italian-pastas', "italian pasta's", 'pasta'], title: 'Pastas', emoji: '🍝', description: 'Fresh penne tossed in aromatic red & white sauces'),
+  WebMenuSection(tag: 'south-indian', matchTags: ['south-indian', 'south indian', 'dosa'], title: 'South Indian', emoji: '🍛', description: 'Dosa, Idli, Vada, Uttapam & more'),
+  WebMenuSection(tag: 'bombay-bites', matchTags: ['bombay-bites', 'bombay bites', 'bombay-bite', 'bombay bite'], title: 'Bombay Bites', emoji: '🥪', description: 'Vada Pav, special Bombay Masala Toast, and street snacks'),
+  WebMenuSection(tag: 'rice-dishes', matchTags: ['rice-dishes', 'rice dishes', 'rice-dish', 'rice dish', 'biryani', 'pulav'], title: 'Rice & Bowls', emoji: '🍚', description: 'Flavourful biryani, fried rice, and combos'),
+  WebMenuSection(tag: 'shakes', matchTags: ['shakes', 'shake', 'milkshake', 'milkshakes'], title: 'Shakes', emoji: '🥤', description: 'Creamy strawberry, chocolate, and Oreo shakes'),
+  WebMenuSection(tag: 'mocktails', matchTags: ['mocktails', 'mocktail', 'coolers', 'cooler', 'mojito'], title: 'Mocktails', emoji: '🍹', description: 'Iced coolers, Virgin Mojito, and summer drinks'),
+  WebMenuSection(tag: 'cold-coffee', matchTags: ['cold-coffee', 'cold coffee', 'iced coffee', 'iced-coffee'], title: 'Cold Coffee', emoji: '🧋', description: 'Classic cold brews, hazelnut cold coffee & iced sips'),
+  WebMenuSection(tag: 'bakery', matchTags: ['bakery', 'bakery-biscuits', 'cake', 'cakes'], title: 'Bakery', emoji: '🎂', description: 'Freshly baked cakes, pastries, and sweet treats'),
+  WebMenuSection(tag: 'chilled', matchTags: ['chilled', 'cold-drink', 'beverages', 'beverage', 'drinks', 'drink'], title: 'Cold Drinks', emoji: '🥤', description: 'Carbonated soft drinks and cold energy boosts'),
+  WebMenuSection(tag: 'desserts', matchTags: ['desserts', 'ice-cream', 'ice cream', 'kulfi', 'dessert', 'sweet'], title: 'Desserts', emoji: '🍦', description: 'Chilled premium ice creams, kulfis, and desserts'),
 ];
 
 // 1:1 Parity with www.fastkirana.in DEFAULT_RESTAURANT_MENU_SECTIONS (Wedson, Bal Udyan)
 const List<WebMenuSection> webRestaurantSections = [
   WebMenuSection(
-    tag: 'breakfast',
-    matchTags: ['breakfast', 'poori', 'chole-bhature', 'nashta', 'poha', 'muli paratha', 'mix paratha', 'aloo paratha', 'gobhi paratha'],
-    title: 'Breakfast & Parathas',
-    emoji: '🍳',
-    description: 'Parathas, Poori, Chole Bhature and morning specials',
-  ),
-  WebMenuSection(
-    tag: 'starters-tandoori',
-    matchTags: ['special-starters', 'tandoori', 'starter', 'starters', 'kebabs', 'kebab', 'tikka', 'chaap', 'malai tikka', 'achari tikka', 'paneer 65', 'cheese balls', 'seekh', 'momos', 'fries', 'spring roll'],
-    title: 'Starters & Tandoori',
-    emoji: '🍢',
-    description: 'Soya Chaap, Paneer Tikka, Veg Seekh Kebab & Tandoori Treats',
+    tag: 'main-course',
+    matchTags: ['north-indian', 'curry', 'dal-makhani', 'paneer-butter-masala', 'paneer', 'main-course', 'dal'],
+    title: 'Curries & Gravies',
+    emoji: '🥘',
+    description: 'Rich paneer butter masala, creamy dal makhani, and Special Kadhai Gravies',
   ),
   WebMenuSection(
     tag: 'roti-naan-breads',
-    matchTags: ['roti-naan-kulcha', 'roti', 'naan', 'kulcha', 'breads', 'missi roti', 'lachha', 'tandoori roti', 'butter naan', 'garlic naan', 'paneer kulcha', 'stuffed'],
-    title: 'Rotis, Naans & Kulchas',
+    matchTags: ['roti-naan-kulcha', 'roti', 'naan', 'kulcha', 'breads', 'paratha-bread'],
+    title: 'Rotis & Naans',
     emoji: '🫓',
     description: 'Butter Naan, Garlic Naan, Tandoori Roti, Missi Roti & Stuffed Kulchas',
   ),
   WebMenuSection(
-    tag: 'main-course',
-    matchTags: ['curry', 'curries', 'gravy', 'gravies', 'dal-makhani', 'dal makhani', 'dal tadka', 'dal fry', 'butter masala', 'kadhai paneer', 'shahi paneer', 'paneer lababdar', 'paneer do pyaza', 'handi paneer', 'matar paneer', 'palak paneer', 'malai kofta', 'dum aloo', 'mix veg', 'chana masala', 'rajma', 'main-course', 'subji', 'sabji', 'kadhai', 'shahi', 'lababdar', 'handi'],
-    title: 'Curries & Gravies',
-    emoji: '🥘',
-    description: 'Rich Paneer Butter Masala, Creamy Dal Makhani & Special Kadhai Gravies',
+    tag: 'starters-tandoori',
+    matchTags: ['special-starters', 'tandoori-nawab-nawab', 'starter', 'starters', 'kebabs', 'tikka', 'chaap'],
+    title: 'Starters & Tandoori',
+    emoji: '🍢',
+    description: 'Soya Malai Chaap, Paneer Tikka, Veg Seekh Kebab & Dahi Kebab',
   ),
   WebMenuSection(
     tag: 'biryani-rice',
-    matchTags: ['biryani-rice', 'biryani', 'pulav', 'fried-rice', 'jeera-rice', 'rice dishes', 'fried rice', 'jeera rice', 'steamed rice'],
+    matchTags: ['biryani-rice', 'biryani', 'pulav', 'fried-rice', 'jeera-rice', 'basmati-rice-/-biryani'],
     title: 'Biryani & Rice',
     emoji: '🍚',
     description: 'Aromatic basmati veg biryanis, paneer pulavs & loaded fried rice bowls',
   ),
   WebMenuSection(
     tag: 'pizzas-burgers',
-    matchTags: ['burger', 'burgers', 'sandwich', 'sandwiches', 'pizza', 'pizzas', 'garlic-bread', 'frankie', 'roll', 'rolls'],
-    title: 'Pizza, Burgers & Snacks',
+    matchTags: ['pizza', 'burger', 'burgers', 'pizzas', 'sandwich'],
+    title: 'Pizza & Burgers',
     emoji: '🍕',
     description: 'Fresh baked pizzas, loaded veggie burgers & grilled sandwiches',
   ),
   WebMenuSection(
     tag: 'chinese-soups',
-    matchTags: ['chinese', 'noodles', 'manchurian', 'chilli-paneer', 'chilli paneer', 'soup', 'soups', 'chowmein', 'pasta'],
+    matchTags: ['chinese', 'noodles', 'manchurian', 'chilli-paneer', 'spring-rolls', 'soup', 'pasta'],
     title: 'Chinese & Soups',
     emoji: '🥡',
     description: 'Stir-fried noodles, saucy veg manchurian, hot soups & pastas',
   ),
   WebMenuSection(
+    tag: 'breakfast',
+    matchTags: ['breakfast', 'paratha', 'poori', 'chole-bhature', 'nashta', 'poha'],
+    title: 'Breakfast',
+    emoji: '🍳',
+    description: 'Chole Bhature, Parathas, Poori and morning favorites',
+  ),
+  WebMenuSection(
     tag: 'shakes-beverages',
-    matchTags: ['shake', 'shakes', 'beverage', 'beverages', 'drinks', 'drink', 'cold-drink', 'mocktail', 'coffee', 'chai', 'tea', 'chilled', 'soda'],
+    matchTags: ['shake', 'shakes', 'beverage', 'beverages', 'drinks', 'drink', 'cold-drink', 'cold-drinks', 'mocktail', 'coffee', 'chilled'],
     title: 'Shakes & Drinks',
     emoji: '🥤',
-    description: 'Thick shakes, cold sodas, tea & coffee',
+    description: 'Chocolate, Oreo, Strawberry thick shakes & refreshing coolers',
   ),
   WebMenuSection(
     tag: 'desserts',
-    matchTags: ['dessert', 'desserts', 'ice-cream', 'ice cream', 'kulfi', 'sweet', 'sweets', 'gulab jamun', 'butterscotch', 'cup'],
-    title: 'Desserts & Sweets',
-    emoji: '🍦',
-    description: 'Chilled premium desserts and traditional sweets',
+    matchTags: ['desserts', 'gulab-jamun', 'ice-cream', 'ice cream', 'kheer', 'dessert', 'sweet', 'sweets'],
+    title: 'Desserts & Sweet Sips',
+    emoji: '🍨',
+    description: 'Hot gulab jamuns, premium ice creams, and traditional sweets',
   ),
 ];
 
@@ -458,20 +461,33 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
         final pCatSlug = (p.category?.slug ?? '').toLowerCase().trim();
         final pCatName = (p.category?.name ?? '').toLowerCase().trim();
         final pMenuSec = (p.menuSection ?? '').toLowerCase().trim();
-        final pName = p.name.toLowerCase().trim();
 
-        final matched = (secIdLower.isNotEmpty && pTags.contains(secIdLower)) ||
-            (secIdLower.isNotEmpty && pMenuSec == secIdLower) ||
-            (secTagLower.isNotEmpty && pTags.contains(secTagLower)) ||
-            (secTagLower.isNotEmpty && pMenuSec == secTagLower) ||
-            (secTitleLower.isNotEmpty && pMenuSec == secTitleLower) ||
-            sec.matchTags.any((tag) {
-              final t = tag.toLowerCase().trim();
-              return pTags.contains(t) || pCatSlug == t || pCatName == t || pName.contains(t);
-            }) ||
-            pCatSlug == secTagLower ||
-            pCatName == secTitleLower ||
-            (secTagLower.isNotEmpty && secTagLower != 'section' && pName.contains(secTagLower));
+        // Match Cold Drinks
+        if (['chilled', 'beverages', 'shakes-beverages', 'sec_chilled_drinks'].contains(secTagLower) || secTagLower == 'chilled') {
+          if (pCatSlug == 'beverages' || pCatSlug == 'chilled' || pTags.contains('beverages') || pTags.contains('cold-drink') || pTags.contains('chilled')) {
+            assignedIds.add(p.id);
+            return true;
+          }
+        }
+
+        // Match Desserts & Ice Cream
+        if (['desserts', 'ice-cream', 'sec_ice_creams'].contains(secTagLower) || secTagLower == 'desserts') {
+          if (pCatSlug == 'ice-cream' || pCatSlug == 'desserts' || pTags.contains('ice-cream') || pTags.contains('desserts') || pTags.contains('kulfi')) {
+            assignedIds.add(p.id);
+            return true;
+          }
+        }
+
+        final matched = 
+          sec.matchTags.any((tag) {
+            final t = tag.toLowerCase().trim();
+            return pTags.contains(t) || pCatSlug.contains(t) || pCatName.contains(t) || pMenuSec == t;
+          }) ||
+          pTags.contains(secTagLower) ||
+          pCatSlug == secTagLower ||
+          pCatName == secTitleLower ||
+          (pMenuSec.isNotEmpty && (pMenuSec == secTagLower || pMenuSec == secIdLower || pMenuSec == secTitleLower)) ||
+          (secIdLower.isNotEmpty && pTags.contains(secIdLower));
 
         if (matched) {
           assignedIds.add(p.id);
@@ -480,14 +496,8 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
       }).toList();
 
       if (secProducts.isNotEmpty) {
-        // Sort: In-stock dishes first, out-of-stock dishes at the end
-        secProducts.sort((a, b) {
-          final aInStock = a.isAvailable && a.stock > 0;
-          final bInStock = b.isAvailable && b.stock > 0;
-          if (aInStock && !bInStock) return -1;
-          if (!aInStock && bInStock) return 1;
-          return 0;
-        });
+        // Sort systematically: in-stock first, sortOrder: desc, createdAt: desc
+        secProducts.sort((a, b) => compareProductsSystematic(a, b));
 
         String? catPhoto = sec.imageUrl;
         if (catPhoto == null || catPhoto.isEmpty) {
@@ -514,21 +524,17 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
     if (unassigned.isNotEmpty) {
       final Map<String, List<Product>> categoryGroups = {};
       for (final p in unassigned) {
-        final groupTitle = (p.category?.name != null && p.category!.name.trim().isNotEmpty && p.category!.name != 'Restaurant Food' && p.category!.name != 'Cafe')
-            ? p.category!.name.trim()
-            : 'Specialties';
+        final groupTitle = (p.menuSection != null && p.menuSection!.trim().isNotEmpty)
+            ? p.menuSection!.trim()
+            : ((p.category?.name != null && p.category!.name.trim().isNotEmpty && p.category!.name != 'Restaurant Food' && p.category!.name != 'Cafe')
+                ? p.category!.name.trim()
+                : 'Specialties');
         categoryGroups.putIfAbsent(groupTitle, () => []).add(p);
       }
 
       categoryGroups.forEach((title, grpProducts) {
-        // Sort: In-stock dishes first, out-of-stock dishes at the end
-        grpProducts.sort((a, b) {
-          final aInStock = a.isAvailable && a.stock > 0;
-          final bInStock = b.isAvailable && b.stock > 0;
-          if (aInStock && !bInStock) return -1;
-          if (!aInStock && bInStock) return 1;
-          return 0;
-        });
+        // Sort systematically: in-stock first, sortOrder, natural ID, then name
+        grpProducts.sort((a, b) => compareProductsSystematic(a, b));
 
         final tag = 'custom-${title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}';
         final firstImg = grpProducts.firstWhere((p) => p.imageUrl != null && p.imageUrl!.startsWith('http'), orElse: () => grpProducts.first).imageUrl;
@@ -549,14 +555,8 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
       });
     }
 
-    // Sort full filtered list as well
-    filtered.sort((a, b) {
-      final aInStock = a.isAvailable && a.stock > 0;
-      final bInStock = b.isAvailable && b.stock > 0;
-      if (aInStock && !bInStock) return -1;
-      if (!aInStock && bInStock) return 1;
-      return 0;
-    });
+    // Sort full filtered list systematically as well
+    filtered.sort((a, b) => compareProductsSystematic(a, b));
 
     return [
       RenderedCategory(

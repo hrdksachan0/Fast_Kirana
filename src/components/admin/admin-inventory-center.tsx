@@ -327,7 +327,8 @@ export function AdminInventoryCenter({ onInventoryUpdated, storeId }: AdminInven
             unit: scannedProduct.unit,
             imageUrl: scannedProduct.imageUrl || null,
             brand: scannedProduct.brand || 'Generic',
-            isAvailable: true
+            isAvailable: true,
+            storeId: storeId || undefined,
           })
         })
 
@@ -689,7 +690,7 @@ export function AdminInventoryCenter({ onInventoryUpdated, storeId }: AdminInven
       const res = await fetch('/api/admin/inventory/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: importPreview })
+        body: JSON.stringify({ items: importPreview, storeId: storeId || undefined })
       })
 
       if (!res.ok) throw new Error('Bulk import failed')

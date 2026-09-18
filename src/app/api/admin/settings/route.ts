@@ -105,7 +105,7 @@ export async function PATCH(request: NextRequest) {
           }
         }
 
-        clearSettingsCache()
+        await clearSettingsCache()
       }
     } else {
       // Global/Platform-wide updates (legacy or superadmin all-hubs mode)
@@ -124,7 +124,18 @@ export async function PATCH(request: NextRequest) {
 
         await Promise.all(updates)
 
-        // Sync all dark_stores table if grocery operating state or auto timing changed
+        // Sync dark stores table if radius or coords changed
+        const darkStoreGlobalUpdate: Record<string, any> = {}
+        if (settingsPayload.delivery_radius && !isNaN(parseFloat(settingsPayload.delivery_radius))) {
+          darkStoreGlobalUpdate.deliveryRadiusKm = parseFloat(settingsPayload.delivery_radius)
+        }
+        if (settingsPayload.store_lat && !isNaN(parseFloat(settingsPayload.store_lat))) {
+          darkStoreGlobalUpdate.latitude = parseFloat(settingsPayload.store_lat)
+        }
+        if (settingsPayload.store_lng && !isNaN(parseFloat(settingsPayload.store_lng))) {
+          darkStoreGlobalUpdate.longitude = parseFloat(settingsPayload.store_lng)
+        }
+
         if (
           settingsPayload.grocery_auto_timing !== undefined ||
           settingsPayload.grocery_mart_open !== undefined ||
@@ -132,13 +143,21 @@ export async function PATCH(request: NextRequest) {
           settingsPayload.grocery_close_time !== undefined
         ) {
           const mergedSettings: Record<string, string> = { ...Object.fromEntries(currentMap.entries()), ...settingsPayload }
-          const isEffectiveOpen = checkIsStoreOpen(mergedSettings, 'grocery')
+          darkStoreGlobalUpdate.groceryOpen = checkIsStoreOpen(mergedSettings, 'grocery')
+        }
+
+        if (Object.keys(darkStoreGlobalUpdate).length > 0) {
           try {
-            await prisma.darkStore.updateMany({
-              data: { groceryOpen: isEffectiveOpen },
-            })
+            // Target central hub only when no storeId is specified, never overwrite all stores' GPS coordinates
+            const centralHub = await prisma.darkStore.findFirst({ where: { id: 'hub-209206' } })
+            if (centralHub) {
+              await prisma.darkStore.update({
+                where: { id: centralHub.id },
+                data: darkStoreGlobalUpdate,
+              })
+            }
           } catch (syncErr) {
-            console.warn('Failed to sync dark stores status:', syncErr)
+            console.warn('Failed to sync dark stores status/radius:', syncErr)
           }
         }
 
@@ -157,7 +176,7 @@ export async function PATCH(request: NextRequest) {
           }
         }
 
-        clearSettingsCache()
+        await clearSettingsCache()
       }
     }
 

@@ -88,5 +88,25 @@ void main() {
       final out = LocationService.getDeliveryTier(6.5, 1000.0, settings: customSettings);
       expect(out.isServiceable, isFalse);
     });
+
+    test('Dynamic Surge Charge: adds surge fee on top of base delivery fee when not free', () {
+      final surgeSettings = StoreSettings.fromJson({
+        'delivery_fee_tier1': '25',
+        'delivery_threshold_tier1': '199',
+        'surge_charge': '15',
+      });
+
+      // Under free delivery threshold: Base ₹25 + Surge ₹15 = ₹40
+      final tier1Surge = LocationService.getDeliveryTier(1.0, 100.0, settings: surgeSettings);
+      expect(tier1Surge.deliveryFee, 40.0);
+      expect(tier1Surge.baseFee, 25.0);
+      expect(tier1Surge.surgeFee, 15.0);
+      expect(tier1Surge.feeDescription, contains('15 surge'));
+
+      // Above free delivery threshold: Free delivery applies (₹0 delivery fee)
+      final tier1Free = LocationService.getDeliveryTier(1.0, 250.0, settings: surgeSettings);
+      expect(tier1Free.deliveryFee, 0.0);
+    });
   });
 }
+

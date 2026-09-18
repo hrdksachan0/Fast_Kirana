@@ -23,7 +23,7 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   restaurant_auto_timing: 'true',
   restaurant_open_time: '10:00',
   restaurant_close_time: '22:00',
-  delivery_radius: '2',
+  delivery_radius: '5.0',
   store_lat: '26.1534185',
   store_lng: '80.1714024',
   store_pincode: '209206',
@@ -39,9 +39,9 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   tax_rate: '5',
   misc_fee: '0',
   misc_fee_label: 'Miscellaneous Additions',
-  grocery_free_delivery_threshold: '200',
-  cafe_free_delivery_threshold: '200',
-  combined_free_delivery_threshold: '200',
+  grocery_free_delivery_threshold: '199',
+  cafe_free_delivery_threshold: '199',
+  combined_free_delivery_threshold: '199',
   delivery_fee: '25',
   delivery_fee_tier1: '25',
   delivery_threshold_tier1: '199',
@@ -49,6 +49,7 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   delivery_threshold_tier2: '299',
   delivery_fee_tier3: '50',
   delivery_threshold_tier3: '399',
+  delivery_fee_per_km_beyond_5km: '10',
   surge_mode: 'MANUAL_OFF',
   surge_rain_amount: '20',
   surge_demand_amount: '15',
@@ -179,9 +180,11 @@ export async function buildSettingsMap(storeId?: string | null): Promise<Record<
         settingsMap['store_id'] = hub.id
         settingsMap['store_name'] = hub.name
         settingsMap['store_lat'] = String(hub.latitude)
-        settingsMap['store_lng'] = String(hub.longitude)
-        settingsMap['delivery_radius'] = String(hub.deliveryRadiusKm || 5.0)
-        settingsMap['grocery_mart_open'] = hub.groceryOpen ? 'true' : 'false'
+        if (hub.deliveryRadiusKm && (!settingsMap['delivery_radius'] || settingsMap['delivery_radius'] === '5.0')) {
+          settingsMap['delivery_radius'] = String(hub.deliveryRadiusKm)
+        } else if (!settingsMap['delivery_radius']) {
+          settingsMap['delivery_radius'] = String(hub.deliveryRadiusKm || 5.0)
+        }
 
         // City & Pincode inference for clean non-leaking store defaults
         const inferredCity = hub.name.replace(/\s+(Hub|Market|Central|Dark\s*Store|Branch).*$/i, '').trim()

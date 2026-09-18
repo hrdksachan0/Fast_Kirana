@@ -112,12 +112,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Update ALL sub-orders in the combined group (or standalone order)
+    // Only mark payment as PAID — do NOT auto-confirm order status
     if (order.combinedId) {
       await prisma.$executeRaw`
         UPDATE orders 
         SET "paymentStatus" = 'PAID'::"PaymentStatus",
             "paymentMethod" = 'UPI'::"PaymentMethod",
-            "status" = CASE WHEN status = 'PENDING' THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
             "updatedAt" = NOW()
         WHERE "combinedId" = ${order.combinedId}
       `
@@ -126,7 +126,6 @@ export async function POST(req: NextRequest) {
         UPDATE orders 
         SET "paymentStatus" = 'PAID'::"PaymentStatus",
             "paymentMethod" = 'UPI'::"PaymentMethod",
-            "status" = CASE WHEN status = 'PENDING' THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
             "updatedAt" = NOW()
         WHERE id = ${order.id}
       `

@@ -178,6 +178,15 @@ class RestaurantRepository {
             .map((json) => Product.fromJson(json as Map<String, dynamic>))
             .toList();
 
+        // Stably place in-stock dishes first, out-of-stock dishes at the end (1:1 Web App parity)
+        menu.sort((a, b) {
+          final aInStock = a.isAvailable && a.stock > 0;
+          final bInStock = b.isAvailable && b.stock > 0;
+          if (aInStock && !bInStock) return -1;
+          if (!aInStock && bInStock) return 1;
+          return 0;
+        });
+
         if (menu.isNotEmpty) {
           _cachedMenus[restaurantId] = menu;
           _menuCacheTimes[restaurantId] = DateTime.now();

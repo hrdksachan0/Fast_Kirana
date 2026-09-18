@@ -5,7 +5,10 @@ export async function clearSettingsCache(): Promise<void> {
     await Promise.all([
       cache.del(CACHE_KEYS.SETTINGS),
       cache.delByPrefix(`${CACHE_KEYS.SETTINGS}:`),
+      cache.del('cache:settings'),
+      cache.delByPrefix('cache:settings:'),
       cache.del('store:status'),
+      cache.del('store:status:global'),
       cache.delByPrefix('store:status:'),
     ])
   } catch (_err) {
