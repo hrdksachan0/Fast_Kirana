@@ -22,7 +22,7 @@ class ProductRepository {
   static const _diskCategoriesKey = 'cached_categories';
   static const _diskFetchTimestampKey = 'cached_products_timestamp';
   static const _diskCategoryTimestampKey = 'cached_categories_timestamp';
-  static const _cacheTTLMinutes = 10;
+  static const _cacheTTLMinutes = 1440; // 24 hours: keep catalog available across app restarts
 
   // ─── Preload disk cache into memory ──────────────────────────
   // getProducts() always awaits this first to ensure cached data
@@ -49,10 +49,7 @@ class ProductRepository {
       // Always promote to in-memory cache on launch so screens show content with 0ms delay (stale-while-revalidate)
       if (diskProducts != null && diskProducts.isNotEmpty) {
         _cachedProducts = diskProducts;
-        final productsFresh = await _isDiskCacheFresh();
-        if (productsFresh) {
-          _lastFetchTime = DateTime.now();
-        }
+        _lastFetchTime = DateTime.now();
       }
 
       if (diskCategories != null && diskCategories.isNotEmpty) {
@@ -153,9 +150,9 @@ class ProductRepository {
     } catch (e) { LoggerService.error('ProductRepository: cache invalidation failed', e); }
   }
 
-  /// Build a stable cache key from query parameters
-  static String _cacheKey({String? search, String? restaurantId, String? category, String? storeId}) {
-    return '${search ?? ''}|${restaurantId ?? ''}|${category ?? ''}|${storeId ?? ''}';
+  /// Build a stable cache key from query parameters including limit
+  static String _cacheKey({String? search, String? restaurantId, String? category, String? storeId, int limit = 500}) {
+    return '${search ?? ''}|${restaurantId ?? ''}|${category ?? ''}|${storeId ?? ''}|$limit';
   }
 
   Future<List<Product>> getProducts({
@@ -175,13 +172,9 @@ class ProductRepository {
       await _preloadFromDisk();
     }
 
-    final isFullCatalog = (category == null || category.isEmpty) &&
-        (search == null || search.isEmpty) &&
-        (restaurantId == null || restaurantId.isEmpty);
-
     try {
       final now = DateTime.now();
-      // 1. In-memory cache hit (fastest path)
+      // 1. In-memory cache hit (fastest path: 0ms render)
       if (!forceRefresh &&
           _cachedProducts != null &&
           _cachedProducts!.length >= 100 &&
@@ -190,22 +183,31 @@ class ProductRepository {
         return _filterProducts(_cachedProducts!, category: category, search: search, restaurantId: restaurantId);
       }
 
-      // 2. Disk cache hit (survives app restarts — prevents hardcoded flash on cold start)
+      // 2. Disk cache hit (survives app restarts — instant render, no cold-start flash)
       if (!forceRefresh) {
-        final diskFresh = await _isDiskCacheFresh();
-        if (diskFresh) {
-          final diskProducts = await _loadProductsFromDisk();
-          if (diskProducts != null && diskProducts.isNotEmpty) {
-            // Promote to in-memory cache so subsequent calls are instant
-            _cachedProducts = diskProducts;
+        final diskProducts = await _loadProductsFromDisk();
+        if (diskProducts != null && diskProducts.isNotEmpty) {
+          _cachedProducts = diskProducts;
+          final diskFresh = await _isDiskCacheFresh();
+          if (diskFresh) {
             _lastFetchTime = DateTime.now();
             return _filterProducts(diskProducts, category: category, search: search, restaurantId: restaurantId);
           }
+          // If disk cache is older than TTL, still return it immediately so user sees products,
+          // but trigger asynchronous background refresh to update stale data without blocking UI!
+          _fetchLiveProducts(
+            limit: limit,
+            search: search,
+            restaurantId: restaurantId,
+            category: category,
+            storeId: effectiveStoreId,
+          ).catchError((_) => <Product>[]);
+          return _filterProducts(diskProducts, category: category, search: search, restaurantId: restaurantId);
         }
       }
 
       // 3. If a network fetch with the same parameters is already in flight, reuse it
-      final key = _cacheKey(search: search, restaurantId: restaurantId, category: category, storeId: effectiveStoreId);
+      final key = _cacheKey(search: search, restaurantId: restaurantId, category: category, storeId: effectiveStoreId, limit: limit);
       if (_inFlightFetches.containsKey(key) && !forceRefresh) {
         final products = await _inFlightFetches[key]!;
         return _filterProducts(products, category: category, search: search, restaurantId: restaurantId);
@@ -226,7 +228,7 @@ class ProductRepository {
       return _filterProducts(liveProducts, category: category, search: search, restaurantId: restaurantId);
     } catch (e, st) {
       LoggerService.error('ProductRepository: fetchProducts failed ($search, cat=$category, rid=$restaurantId, store=$effectiveStoreId)', e, st);
-      _inFlightFetches.remove(_cacheKey(search: search, restaurantId: restaurantId, category: category, storeId: effectiveStoreId));
+      _inFlightFetches.remove(_cacheKey(search: search, restaurantId: restaurantId, category: category, storeId: effectiveStoreId, limit: limit));
       // 5. Fallback chain: in-memory → disk → hardcoded static
       if (_cachedProducts != null && _cachedProducts!.isNotEmpty) {
         return _filterProducts(_cachedProducts!, category: category, search: search, restaurantId: restaurantId);
@@ -289,11 +291,13 @@ class ProductRepository {
       return 0;
     });
 
-    // Cache in memory and on disk when fetching the full catalog without filters
+    // Cache in memory and on disk ONLY when fetching the comprehensive catalog without filters
     final isFullCatalog = (category == null || category.isEmpty) &&
         (search == null || search.isEmpty) &&
-        (restaurantId == null || restaurantId.isEmpty);
-    if (isFullCatalog && liveProducts.isNotEmpty) {
+        (restaurantId == null || restaurantId.isEmpty) &&
+        limit >= 100 &&
+        liveProducts.length >= 20;
+    if (isFullCatalog) {
       _cachedProducts = liveProducts;
       _lastFetchTime = DateTime.now();
       _saveProductsToDisk(liveProducts);
@@ -445,37 +449,6 @@ class ProductRepository {
     return list.map((j) => Product.fromJson(j)).toList();
   }
 
-  static const Map<String, List<String>> _categoryAliases = {
-    'CAT-101': ['fruits-vegetables', 'fruits & vegetables', 'fruits', 'vegetables', 'fresh', 'farm'],
-    'SUB-101-01': ['fresh-fruits', 'fresh fruits', 'fruits', 'fruits-vegetables', 'fruits & vegetables'],
-    'SUB-101-02': ['fresh-vegetables', 'fresh vegetables', 'vegetables', 'fruits-vegetables', 'fruits & vegetables'],
-    'CAT-102': ['snacks-munchies', 'snacks & munchies', 'snacks', 'munchies', 'chips', 'namkeen', 'biscuits'],
-    'CAT-103': ['kitchen-needs', 'kitchen needs', 'atta-rice-dal', 'atta', 'rice', 'dal', 'oil', 'grocery', 'spices'],
-    'CAT-104': ['packaged-foods', 'packaged foods', 'instant', 'noodles', 'maggie', 'pasta'],
-    'CAT-105': ['ice-cream', 'ice cream & desserts', 'ice cream', 'desserts', 'kulfi', 'cones'],
-    'CAT-106': ['chocolates', 'chocolates & sweets', 'sweets', 'chocolate', 'silk', 'cadbury'],
-    'CAT-107': ['home-needs-and-cleaning', 'home needs & cleaning', 'cleaning', 'household', 'detergent', 'cleaner'],
-    'CAT-108': ['beverages', 'beverages & drinks', 'drinks', 'cold drinks', 'juices', 'soda'],
-    'CAT-109': ['personal-care', 'personal care & hygiene', 'personal care', 'soap', 'shampoo', 'creams'],
-    'CAT-110': ['healthy-foods', 'healthy foods', 'healthy', 'diet', 'dry-fruits', 'oats'],
-    'CAT-111': ['bakery', 'bakery & biscuits', 'biscuits', 'cookies', 'bread', 'rusk'],
-    'CAT-112': ['groceries', 'grocery', 'ration', 'kirana', 'oil', 'sugar', 'dry fruits', 'seeds', 'pooja'],
-    'CAT-113': ['kirana-ration', 'kirana & ration', 'kirana', 'ration', 'atta-rice-dal', 'atta', 'rice', 'dal', 'flour'],
-    'SUB-113-01': ['atta-rice-dal', 'atta, rice & dal', 'kirana-ration', 'kirana & ration', 'atta', 'rice', 'dal'],
-    // Legacy CUID mappings for backwards compatibility
-    'cmqh1haw30000zcid4vj7i1yj': ['fruits-vegetables'],
-    'cmt76olwr000104l18kcelx0i': ['healthy-foods'],
-    'cmsfuzs73000404l7q139nk61': ['kitchen-needs'],
-    'cmqh1hb920002zcidoywpi240': ['snacks-munchies'],
-    'cmqgzqfz20008vkidoycqg5u2': ['beverages'],
-    'cmqgzqfv70007vkider7h6e4j': ['ice-cream'],
-    'cmseowmy7000004i562szts34': ['chocolates'],
-    'cmqh1hbyc0005zcidr45bj1ac': ['bakery'],
-    'cmt74ypjp000004laoi3athcy': ['packaged-foods'],
-    'cmqh1hblj0003zcidm9gq5net': ['personal-care'],
-    'cmrv2psby000004ldl25xjrlt': ['home-needs-and-cleaning'],
-  };
-
   List<Product> _filterProducts(
     List<Product> products, {
     String? category,
@@ -498,12 +471,9 @@ class ProductRepository {
     // 2. Category matching
     if (category != null && category.isNotEmpty && category != 'all') {
       final catLower = category.toLowerCase().trim();
-      final catSlugNormalized = catLower.replaceAll(' ', '-').replaceAll('&', 'and').replaceAll('---', '-');
       result = result.where((p) {
-        final prodCatSlug = (p.category?.slug ?? '').toLowerCase().trim();
         final prodCatId = (p.category?.id ?? p.categoryId ?? '').toLowerCase().trim();
         final prodCatParentId = (p.category?.parentId ?? '').toLowerCase().trim();
-        final prodCatName = (p.category?.name ?? '').toLowerCase().trim();
         final pCatIdLower = (p.categoryId ?? '').toLowerCase().trim();
 
         // 1. Direct ID match
@@ -573,15 +543,27 @@ class ProductRepository {
       return _cachedCategories!;
     }
 
-    // 2. Disk cache hit (survives app restarts)
+    // 2. Disk cache hit (survives app restarts — 0ms instant render)
     if (!forceRefresh) {
-      final diskFresh = await _isDiskCategoryCacheFresh();
-      if (diskFresh) {
-        final diskCategories = await _loadCategoriesFromDisk();
-        if (diskCategories != null && diskCategories.isNotEmpty) {
-          _cachedCategories = diskCategories;
+      final diskCategories = await _loadCategoriesFromDisk();
+      if (diskCategories != null && diskCategories.isNotEmpty) {
+        _cachedCategories = diskCategories;
+        final diskFresh = await _isDiskCategoryCacheFresh();
+        if (diskFresh) {
           return diskCategories;
         }
+        // Background refresh if stale without blocking the immediate UI return
+        dio.get('/api/categories').then((response) {
+          final data = response.data;
+          if (data is List) {
+            final cats = data.map((json) => Category.fromJson(json as Map<String, dynamic>)).toList();
+            if (cats.isNotEmpty) {
+              _cachedCategories = cats;
+              _saveCategoriesToDisk(cats);
+            }
+          }
+        }).catchError((_) => null);
+        return diskCategories;
       }
     }
 

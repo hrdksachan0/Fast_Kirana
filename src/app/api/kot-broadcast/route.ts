@@ -78,6 +78,42 @@ export async function POST(request: NextRequest) {
       auth: { persistSession: false },
     })
 
+    // 🛡️ Persistent Offline Queue (Strict Anti-Duplicate Protection):
+    // If this order is ALREADY waiting in PENDING queue, update it rather than inserting a duplicate row!
+    try {
+      const { data: existingPending } = await supabase
+        .from('kitchen_kot_queue')
+        .select('id')
+        .or(`order_id.eq.${cleanId},readable_id.eq.${cleanReadable || cleanId}`)
+        .eq('status', 'PENDING')
+        .maybeSingle()
+
+      if (existingPending) {
+        await supabase
+          .from('kitchen_kot_queue')
+          .update({
+            payload: payloadWithRest,
+            readable_id: cleanReadable || cleanId,
+            restaurant_id: targetRestaurantId || null,
+            created_at: new Date().toISOString(),
+          })
+          .eq('id', existingPending.id)
+        console.log(`[KOT Broadcast API] 🛡️ Anti-Duplicate: Order #${cleanReadable || cleanId} already in queue, updated existing pending row`)
+      } else {
+        await supabase.from('kitchen_kot_queue').insert({
+          order_id: cleanId,
+          readable_id: cleanReadable || cleanId,
+          restaurant_id: targetRestaurantId || null,
+          payload: payloadWithRest,
+          status: 'PENDING',
+          created_at: new Date().toISOString(),
+        })
+        console.log(`[KOT Broadcast API] 📦 Enqueued Order #${cleanReadable || cleanId} into persistent kitchen_kot_queue`)
+      }
+    } catch (queueErr: any) {
+      console.warn('[KOT Broadcast API] Warning: Failed to insert/update kitchen_kot_queue:', queueErr?.message)
+    }
+
     const channelsToNotify = ['restaurant-orders-live']
     if (targetRestaurantId) {
       channelsToNotify.push(`restaurant-orders-${targetRestaurantId}`)

@@ -5,19 +5,60 @@ import { prisma } from '@/lib/prisma'
 import { ApiResponder } from '@/lib/api-response'
 import { createAddressSchema, updateAddressSchema, patchAddressSchema, deleteAddressSchema, validateBody, validateBodyLegacy } from '@/lib/validation'
 
-async function resolveUserId(request: NextRequest | Request, session: any) {
+async function resolveUserId(request: NextRequest | Request, session: any): Promise<string | null> {
   let userId = session?.user?.id || (request.headers as any).get?.('x-user-id')
+
+  // Verify userId actually exists in the database
+  if (userId) {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    })
+    if (dbUser) return dbUser.id
+    userId = null
+  }
+
+  // Fallback to session email lookup
+  if (session?.user?.email) {
+    const cleanEmail = session.user.email.trim().toLowerCase()
+    const dbUser = await prisma.user.findFirst({
+      where: { email: { equals: cleanEmail, mode: 'insensitive' } },
+      select: { id: true },
+    })
+    if (dbUser) return dbUser.id
+  }
+
+  // Fallback to session phone lookup
+  if (session?.user?.phone) {
+    const cleanPhone = getLast10Digits(session.user.phone)
+    if (cleanPhone) {
+      const dbUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { phone: cleanPhone },
+            { phone: `+91${cleanPhone}` },
+            { phone: { contains: cleanPhone } },
+          ],
+        },
+        select: { id: true },
+      })
+      if (dbUser) return dbUser.id
+    }
+  }
+
+  // Fallback to header x-user-phone (mobile / API clients)
   const headerPhone = (request.headers as any).get?.('x-user-phone')
-  if (!userId && headerPhone) {
-    const cleanPhone = headerPhone.replace('+91', '').replaceAll(' ', '').trim()
+  if (headerPhone) {
+    const cleanPhone = getLast10Digits(headerPhone)
     let dbUser = await prisma.user.findFirst({
       where: {
         OR: [
           { phone: cleanPhone },
           { phone: `+91${cleanPhone}` },
           { phone: { contains: cleanPhone } },
-        ]
-      }
+        ],
+      },
+      select: { id: true },
     })
     if (!dbUser && cleanPhone.length === 10) {
       dbUser = await prisma.user.create({
@@ -26,12 +67,14 @@ async function resolveUserId(request: NextRequest | Request, session: any) {
           name: `Customer ${cleanPhone.slice(-4)}`,
           email: `customer_${cleanPhone}@fastkirana.in`,
           role: 'USER',
-        }
+        },
+        select: { id: true },
       })
     }
-    if (dbUser) userId = dbUser.id
+    if (dbUser) return dbUser.id
   }
-  return userId
+
+  return null
 }
 
 export async function GET(request: NextRequest) {
@@ -45,9 +88,9 @@ export async function GET(request: NextRequest) {
     const addresses = await prisma.address.findMany({
       where: {
         userId,
-        label: { notIn: ['STORE_PICKUP', 'STORE_PICKUP_RESTAURANT', 'STORE_PICKUP_CAFE'] }
+        label: { notIn: ['STORE_PICKUP', 'STORE_PICKUP_RESTAURANT', 'STORE_PICKUP_CAFE'] },
       },
-      orderBy: { isDefault: 'desc' },
+      orderBy: [{ isDefault: 'desc' }, { id: 'desc' }],
     })
     return NextResponse.json(addresses)
   } catch (error: any) {
@@ -60,7 +103,7 @@ export async function POST(request: NextRequest) {
   const session = await auth()
   const userId = await resolveUserId(request, session)
   if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'Please log in to save an address' }, { status: 401 })
   }
 
   const validation = await validateBodyLegacy(request, createAddressSchema)
@@ -69,12 +112,6 @@ export async function POST(request: NextRequest) {
   const { label, houseNo, street, area, city, pincode, phone, isDefault, lat, lng } = validation.data
 
   try {
-    let cleanPhone = getLast10Digits(phone.toString().trim())
-
-    if (cleanPhone.length !== 10) {
-      return NextResponse.json({ error: 'Mobile number must be a valid 10-digit number' }, { status: 400 })
-    }
-
     if (isDefault) {
       await prisma.address.updateMany({
         where: { userId },
@@ -85,13 +122,13 @@ export async function POST(request: NextRequest) {
     const address = await prisma.address.create({
       data: {
         userId,
-        label,
-        houseNo,
-        street,
-        area,
-        city,
-        pincode,
-        phone: cleanPhone,
+        label: label.trim(),
+        houseNo: houseNo || '.',
+        street: street.trim(),
+        area: area || '.',
+        city: city || 'Ghatampur',
+        pincode: pincode.trim(),
+        phone: phone.trim(),
         isDefault: !!isDefault,
         lat: lat ? parseFloat(lat.toString()) : null,
         lng: lng ? parseFloat(lng.toString()) : null,
@@ -99,15 +136,16 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json(address)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in POST /api/addresses:', error)
-    return NextResponse.json({ error: 'Failed to create address' }, { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Failed to create address' }, { status: 500 })
   }
 }
 
 export async function DELETE(request: Request) {
   const session = await auth()
-  if (!session?.user?.id) {
+  const userId = await resolveUserId(request, session)
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -118,13 +156,13 @@ export async function DELETE(request: Request) {
 
   try {
     const address = await prisma.address.findUnique({ where: { id } })
-    if (!address || address.userId !== session.user.id) {
+    if (!address || address.userId !== userId) {
       return NextResponse.json({ error: 'Address not found or unauthorized' }, { status: 404 })
     }
 
     const userAddressCount = await prisma.address.count({
       where: {
-        userId: session.user.id,
+        userId,
         label: { notIn: ['STORE_PICKUP', 'STORE_PICKUP_RESTAURANT', 'STORE_PICKUP_CAFE'] },
       },
     })
@@ -147,15 +185,16 @@ export async function DELETE(request: Request) {
 
     await prisma.address.delete({ where: { id } })
     return NextResponse.json({ message: 'Address deleted successfully' })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in DELETE /api/addresses:', error)
-    return NextResponse.json({ error: 'Failed to delete address' }, { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Failed to delete address' }, { status: 500 })
   }
 }
 
 export async function PUT(request: Request) {
   const session = await auth()
-  if (!session?.user?.id) {
+  const userId = await resolveUserId(request, session)
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -166,19 +205,13 @@ export async function PUT(request: Request) {
 
   try {
     const existing = await prisma.address.findUnique({ where: { id } })
-    if (!existing || existing.userId !== session.user.id) {
+    if (!existing || existing.userId !== userId) {
       return NextResponse.json({ error: 'Address not found or unauthorized' }, { status: 404 })
-    }
-
-    let cleanPhone = getLast10Digits(phone.toString().trim())
-
-    if (cleanPhone.length !== 10) {
-      return NextResponse.json({ error: 'Mobile number must be a valid 10-digit number' }, { status: 400 })
     }
 
     if (isDefault) {
       await prisma.address.updateMany({
-        where: { userId: session.user.id },
+        where: { userId },
         data: { isDefault: false },
       })
     }
@@ -186,13 +219,13 @@ export async function PUT(request: Request) {
     const updatedAddress = await prisma.address.update({
       where: { id },
       data: {
-        label,
-        houseNo,
-        street,
-        area,
-        city,
-        pincode,
-        phone: cleanPhone,
+        label: label.trim(),
+        houseNo: houseNo || '.',
+        street: street.trim(),
+        area: area || '.',
+        city: city || 'Ghatampur',
+        pincode: pincode.trim(),
+        phone: phone.trim(),
         isDefault: !!isDefault,
         lat: lat ? parseFloat(lat.toString()) : null,
         lng: lng ? parseFloat(lng.toString()) : null,
@@ -200,15 +233,16 @@ export async function PUT(request: Request) {
     })
 
     return NextResponse.json(updatedAddress)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in PUT /api/addresses:', error)
-    return NextResponse.json({ error: 'Failed to update address' }, { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Failed to update address' }, { status: 500 })
   }
 }
 
 export async function PATCH(request: Request) {
   const session = await auth()
-  if (!session?.user?.id) {
+  const userId = await resolveUserId(request, session)
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -219,7 +253,7 @@ export async function PATCH(request: Request) {
 
   try {
     const address = await prisma.address.findUnique({ where: { id } })
-    if (!address || address.userId !== session.user.id) {
+    if (!address || address.userId !== userId) {
       return NextResponse.json({ error: 'Address not found or unauthorized' }, { status: 404 })
     }
 
@@ -232,8 +266,8 @@ export async function PATCH(request: Request) {
     })
 
     return NextResponse.json(updatedAddress)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in PATCH /api/addresses:', error)
-    return NextResponse.json({ error: 'Failed to update address' }, { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Failed to update address' }, { status: 500 })
   }
 }

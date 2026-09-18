@@ -67,6 +67,40 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
     if (cTotal >= oTotal) return curTotal >= oTotal && curTotal <= cTotal
     return curTotal >= oTotal || curTotal <= cTotal
   }, [groceryAutoTiming, groceryMartOpen, groceryOpenTime, groceryCloseTime])
+
+  const [restaurantAutoTiming, setRestaurantAutoTiming] = useState(true)
+  const [restaurantOpenTime, setRestaurantOpenTime] = useState('10:00')
+  const [restaurantCloseTime, setRestaurantCloseTime] = useState('22:00')
+  const [cafeAutoTiming, setCafeAutoTiming] = useState(true)
+  const [cafeOpenTime, setCafeOpenTime] = useState('10:00')
+  const [cafeCloseTime, setCafeCloseTime] = useState('22:00')
+
+  const isRestaurantCurrentlyOpen = useMemo(() => {
+    if (!restaurantAutoTiming) return true
+    const openTime = restaurantOpenTime || '10:00'
+    const closeTime = restaurantCloseTime || '22:00'
+    if ((openTime === '00:00' || openTime === '0:00') && (closeTime === '23:59' || closeTime === '24:00')) return true
+
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: false,
+      hourCycle: 'h23',
+    })
+    const parts = formatter.formatToParts(new Date())
+    const curH = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10)
+    const curM = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10)
+    const curTotal = curH * 60 + curM
+
+    const [oH = 0, oM = 0] = openTime.split(':').map(Number)
+    const [cH = 23, cM = 59] = closeTime.split(':').map(Number)
+    const oTotal = oH * 60 + oM
+    const cTotal = cH * 60 + cM
+
+    if (cTotal >= oTotal) return curTotal >= oTotal && curTotal <= cTotal
+    return curTotal >= oTotal || curTotal <= cTotal
+  }, [restaurantAutoTiming, restaurantOpenTime, restaurantCloseTime])
   const [onlyCod, setOnlyCod] = useState(false)
   const [deliveryRadius, setDeliveryRadius] = useState('5')
   const [restaurantEmails, setRestaurantEmails] = useState('')
@@ -153,6 +187,12 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         if (data.grocery_auto_timing !== undefined) setGroceryAutoTiming(data.grocery_auto_timing === 'true')
         if (data.grocery_open_time) setGroceryOpenTime(data.grocery_open_time)
         if (data.grocery_close_time) setGroceryCloseTime(data.grocery_close_time)
+        if (data.restaurant_auto_timing !== undefined) setRestaurantAutoTiming(data.restaurant_auto_timing === 'true')
+        if (data.restaurant_open_time) setRestaurantOpenTime(data.restaurant_open_time)
+        if (data.restaurant_close_time) setRestaurantCloseTime(data.restaurant_close_time)
+        if (data.cafe_auto_timing !== undefined) setCafeAutoTiming(data.cafe_auto_timing === 'true')
+        if (data.cafe_open_time) setCafeOpenTime(data.cafe_open_time)
+        if (data.cafe_close_time) setCafeCloseTime(data.cafe_close_time)
         if (data.admin_auto_approve_orders !== undefined) setAdminAutoApproveOrders(data.admin_auto_approve_orders === 'true')
         if (data.only_cod !== undefined) setOnlyCod(data.only_cod === 'true')
         if (data.delivery_radius !== undefined) setDeliveryRadius(data.delivery_radius)
@@ -278,6 +318,12 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           grocery_auto_timing: groceryAutoTiming ? 'true' : 'false',
           grocery_open_time: groceryOpenTime,
           grocery_close_time: groceryCloseTime,
+          restaurant_auto_timing: restaurantAutoTiming ? 'true' : 'false',
+          restaurant_open_time: restaurantOpenTime,
+          restaurant_close_time: restaurantCloseTime,
+          cafe_auto_timing: cafeAutoTiming ? 'true' : 'false',
+          cafe_open_time: cafeOpenTime,
+          cafe_close_time: cafeCloseTime,
           admin_auto_approve_orders: adminAutoApproveOrders ? 'true' : 'false',
           only_cod: onlyCod ? 'true' : 'false',
           delivery_radius: deliveryRadius.trim(),
@@ -592,6 +638,91 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
                             type="time"
                             value={groceryCloseTime}
                             onChange={(e) => setGroceryCloseTime(e.target.value)}
+                            className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold shadow-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Restaurant & Cafe Automated Outlet Timings & Schedule Control */}
+                  <div className="space-y-3.5 bg-muted/20 p-4 sm:p-5 rounded-2xl border border-border/60 text-left">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <label className="text-xs font-black uppercase tracking-wider text-text-primary flex items-center gap-1.5">
+                          🍽️ Restaurant & Cafe Timings & Auto-Schedule
+                        </label>
+                        <p className="text-[11px] text-text-secondary mt-0.5 font-medium">
+                          Restaurants & Cafes subah timely automatically ON honge aur raat ko OFF.
+                        </p>
+                      </div>
+                      <span className={`text-[11px] font-black px-2.5 py-1 rounded-full border shrink-0 ${
+                        isRestaurantCurrentlyOpen
+                          ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                          : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+                      }`}>
+                        {isRestaurantCurrentlyOpen ? '● OPEN' : '○ CLOSED'}
+                      </span>
+                    </div>
+
+                    {/* Auto-Timing Status Banner */}
+                    <div className="bg-orange-500/5 border border-orange-500/20 rounded-xl p-3 flex items-start gap-2.5">
+                      <span className="text-base leading-none">✨</span>
+                      <div className="text-xs">
+                        <p className="font-bold text-text-primary">
+                          {restaurantAutoTiming ? 'Auto-Schedule Active (Roj Timely Automatic On/Off)' : 'Manual Override Active'}
+                        </p>
+                        <p className="text-[11px] text-text-secondary mt-0.5">
+                          {restaurantAutoTiming
+                            ? `Restaurants subah ${restaurantOpenTime || '10:00'} baje automatically open honge aur raat ${restaurantCloseTime || '22:00'} baje band honge. Roj subah manually ON karne ki zaroorat nahi hai.`
+                            : 'Auto-timing off hai. Outlets manual mode par chal rahe hain.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Restaurant Timings (Opening & Closing Hours) */}
+                    <div className="pt-2 border-t border-border/40 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
+                          ⏰ Operating Hours
+                        </label>
+                        <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold text-text-secondary">
+                          <input
+                            type="checkbox"
+                            checked={restaurantAutoTiming}
+                            onChange={(e) => {
+                              const checked = e.target.checked
+                              setRestaurantAutoTiming(checked)
+                              setCafeAutoTiming(checked)
+                            }}
+                            className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                          />
+                          <span>Auto-timing apply</span>
+                        </label>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-bold text-text-muted block">Open Time (Subah)</span>
+                          <input
+                            type="time"
+                            value={restaurantOpenTime}
+                            onChange={(e) => {
+                              setRestaurantOpenTime(e.target.value)
+                              setCafeOpenTime(e.target.value)
+                            }}
+                            className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold shadow-xs"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-bold text-text-muted block">Close Time (Raat)</span>
+                          <input
+                            type="time"
+                            value={restaurantCloseTime}
+                            onChange={(e) => {
+                              setRestaurantCloseTime(e.target.value)
+                              setCafeCloseTime(e.target.value)
+                            }}
                             className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold shadow-xs"
                           />
                         </div>

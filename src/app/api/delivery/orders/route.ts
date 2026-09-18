@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
                o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
                o."paymentMethod"::text as "paymentMethod",
                o."paymentStatus"::text as "paymentStatus",
-               o."createdAt", o."shopName", o."shopPhone", o."deliveryUserId"
+               o."createdAt", o."shopName", o."shopPhone", o."deliveryUserId", o.notes
         FROM orders o
         WHERE o."combinedId" IN (${Prisma.join(combinedIds)})
           AND (o."paymentMethod" = 'COD' OR o."paymentStatus" = 'PAID')

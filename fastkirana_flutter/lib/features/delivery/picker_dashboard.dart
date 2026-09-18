@@ -13,9 +13,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/supabase_service.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/live_clock_badge.dart';
 import '../common/order_edit_modal.dart';
 import 'widgets/add_picker_product_modal.dart';
+import 'widgets/order_recipient_helper.dart';
 import '../../core/services/notification_service.dart';
 
 class PickerDashboard extends ConsumerStatefulWidget {
@@ -267,7 +267,8 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final pendingCount = _orders.where((o) => o['status'] == 'PENDING' || o['status'] == 'CONFIRMED').length;
+    final pendingCount = _orders.where((o) => o['status'] == 'PENDING' || o['status'] == 'CONFIRMED' || o['status'] == 'PREPARING').length;
+    final packedCount = _orders.where((o) => o['status'] == 'PACKED').length;
 
     return Scaffold(
       backgroundColor: bgMain,
@@ -415,7 +416,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
       body: Column(
         children: [
           // Sub-Header Metric Strip
-          _buildMetricStrip(pendingCount),
+          _buildMetricStrip(pendingCount, packedCount),
 
           const Divider(height: 1, color: slateBorder),
 
@@ -480,8 +481,9 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
     );
   }
 
-  Widget _buildMetricStrip(int pendingCount) {
+  Widget _buildMetricStrip(int pendingCount, int packedCount) {
     final bool hasPending = pendingCount > 0;
+    final bool hasPacked = packedCount > 0;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -565,14 +567,23 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                 ),
               ),
               const SizedBox(width: 12),
-              // Live Clock Card
+              // Ready for Rider Card
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    gradient: LinearGradient(
+                      colors: hasPacked
+                          ? [const Color(0xFFECFDF5), const Color(0xFFD1FAE5)]
+                          : [const Color(0xFFF8FAFC), const Color(0xFFF1F5F9)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                    border: Border.all(
+                      color: hasPacked ? const Color(0xFFA7F3D0) : const Color(0xFFE2E8F0),
+                      width: 1.2,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.02),
@@ -585,14 +596,16 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                     children: [
                       Container(
                         padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFEEF2F6),
+                        decoration: BoxDecoration(
+                          color: hasPacked
+                              ? brandGreen.withValues(alpha: 0.15)
+                              : const Color(0xFFE2E8F0),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
-                          Icons.access_time_filled_rounded,
+                        child: Icon(
+                          hasPacked ? Icons.delivery_dining_rounded : Icons.inventory_2_outlined,
                           size: 18,
-                          color: Color(0xFF475569),
+                          color: hasPacked ? const Color(0xFF047857) : const Color(0xFF64748B),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -601,21 +614,22 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            LiveDigitalClockBadge(
-                              backgroundColor: Colors.transparent,
-                              borderColor: Colors.transparent,
-                              textColor: slateDark,
-                              iconColor: Colors.transparent,
-                              fontSize: Responsive.scaledFontSize(context, 14),
-                              showSeconds: false,
+                            Text(
+                              '$packedCount',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 18),
+                                fontWeight: FontWeight.w900,
+                                color: hasPacked ? const Color(0xFF047857) : slateDark,
+                                height: 1.1,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Shift Clock',
+                              hasPacked ? 'Waiting for Rider' : '0 at Pickup Rack',
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 10.5),
                                 fontWeight: FontWeight.w700,
-                                color: slateMuted,
+                                color: hasPacked ? const Color(0xFF047857) : slateMuted,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -898,14 +912,16 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
         ? (order['total'] as num)
         : (num.tryParse(order['total']?.toString() ?? '0') ?? 0);
 
-    final dynamic rawUser = order['user'];
-    final Map<String, dynamic> user = (rawUser is Map<String, dynamic>) ? rawUser : {};
-    final String customerName = (user['name'] ?? 'Customer').toString();
+    final recipient = OrderRecipientDetails.fromOrder(order);
+    final String customerName = recipient.recipientName;
+
+    final String status = (order['status'] ?? 'CONFIRMED').toString().toUpperCase();
+    final bool isPackedStatus = status == 'PACKED';
 
     final pickedSet = _pickedItemIds[orderId] ?? {};
-    final bool allItemsPicked = items.isNotEmpty && pickedSet.length >= items.length;
+    final bool allItemsPicked = isPackedStatus || (items.isNotEmpty && pickedSet.length >= items.length);
     final bool isUpdating = _updatingOrderId == orderId;
-    final double progressFraction = items.isEmpty ? 0.0 : (pickedSet.length / items.length).clamp(0.0, 1.0);
+    final double progressFraction = isPackedStatus ? 1.0 : (items.isEmpty ? 0.0 : (pickedSet.length / items.length).clamp(0.0, 1.0));
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -913,12 +929,12 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: allItemsPicked ? brandGreen : const Color(0xFFE2E8F0),
-          width: allItemsPicked ? 1.6 : 1,
+          color: isPackedStatus ? const Color(0xFF10B981) : (allItemsPicked ? brandGreen : const Color(0xFFE2E8F0)),
+          width: isPackedStatus || allItemsPicked ? 1.6 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: allItemsPicked
+            color: (isPackedStatus || allItemsPicked)
                 ? brandGreen.withValues(alpha: 0.08)
                 : Colors.black.withValues(alpha: 0.03),
             blurRadius: 12,
@@ -940,7 +956,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0F172A),
+                        color: isPackedStatus ? const Color(0xFF064E3B) : const Color(0xFF0F172A),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -956,18 +972,20 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: (allItemsPicked ? brandGreen : brandOrange).withValues(alpha: 0.12),
+                        color: (isPackedStatus ? const Color(0xFF047857) : (allItemsPicked ? brandGreen : brandOrange)).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
-                          color: (allItemsPicked ? brandGreen : brandOrange).withValues(alpha: 0.3),
+                          color: (isPackedStatus ? const Color(0xFF047857) : (allItemsPicked ? brandGreen : brandOrange)).withValues(alpha: 0.3),
                         ),
                       ),
                       child: Text(
-                        allItemsPicked ? 'ALL ITEMS READY' : '${pickedSet.length}/${items.length} PICKED',
+                        isPackedStatus
+                            ? '📦 PACKED • WAITING FOR RIDER 🛵'
+                            : (allItemsPicked ? 'ALL ITEMS READY' : '${pickedSet.length}/${items.length} PICKED'),
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 9.5),
                           fontWeight: FontWeight.w900,
-                          color: allItemsPicked ? brandGreen : brandOrange,
+                          color: isPackedStatus ? const Color(0xFF047857) : (allItemsPicked ? brandGreen : brandOrange),
                           letterSpacing: 0.3,
                         ),
                       ),
@@ -994,7 +1012,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                 value: progressFraction,
                 backgroundColor: const Color(0xFFF1F5F9),
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  allItemsPicked ? brandGreen : brandOrange,
+                  isPackedStatus ? const Color(0xFF059669) : (allItemsPicked ? brandGreen : brandOrange),
                 ),
                 minHeight: 5,
               ),
@@ -1008,55 +1026,75 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.person_outline_rounded, size: 14, color: slateMuted),
+                    Text(recipient.isOrderForSomeone ? '🎁' : '👤', style: const TextStyle(fontSize: 12)),
                     const SizedBox(width: 4),
                     Text(
                       customerName,
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 12),
-                        fontWeight: FontWeight.w600,
-                        color: slateMuted,
+                        fontWeight: FontWeight.w700,
+                        color: recipient.isOrderForSomeone ? const Color(0xFFC2410C) : slateMuted,
                       ),
                     ),
-                  ],
-                ),
-                Bounceable(
-                  onTap: () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (ctx) => OrderEditModal(
-                        order: order,
-                        isRestaurant: false,
-                        onOrderUpdated: () => _fetchPickerOrders(silent: true),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: const Color(0xFFCBD5E1)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.edit_note_rounded, size: 14, color: AppDesignSystem.slate700),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Edit / Out of Stock',
+                    if (recipient.isOrderForSomeone) ...[
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFEDD5),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: const Color(0xFFFDBA74), width: 0.6),
+                        ),
+                        child: Text(
+                          'For Other',
                           style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 10.5),
-                            fontWeight: FontWeight.w800,
-                            color: AppDesignSystem.slate700,
+                            fontSize: Responsive.scaledFontSize(context, 8.5),
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFFC2410C),
                           ),
                         ),
-                      ],
+                      ),
+                    ],
+                  ],
+                ),
+                if (!isPackedStatus)
+                  Bounceable(
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (ctx) => OrderEditModal(
+                          order: order,
+                          isRestaurant: false,
+                          onOrderUpdated: () => _fetchPickerOrders(silent: true),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.edit_note_rounded, size: 14, color: AppDesignSystem.slate700),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Edit / Out of Stock',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 10.5),
+                              fontWeight: FontWeight.w800,
+                              color: AppDesignSystem.slate700,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
 
@@ -1075,10 +1113,10 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
               final num lineTotal = (item['total'] is num)
                   ? (item['total'] as num)
                   : (unitPrice * qty);
-              final bool isPicked = pickedSet.contains(itemId);
+              final bool isPicked = isPackedStatus || pickedSet.contains(itemId);
 
               return Bounceable(
-                onTap: () => _toggleItemPicked(orderId, itemId),
+                onTap: isPackedStatus ? null : () => _toggleItemPicked(orderId, itemId),
                 child: Container(
                   margin: const EdgeInsets.symmetric(vertical: 3),
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -1173,12 +1211,14 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
               height: 46,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: allItemsPicked ? brandGreen : brandOrange,
+                  backgroundColor: isPackedStatus
+                      ? const Color(0xFF059669)
+                      : (allItemsPicked ? brandGreen : brandOrange),
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                onPressed: isUpdating ? null : () => _markOrderAsPacked(orderId),
+                onPressed: (isUpdating || isPackedStatus) ? null : () => _markOrderAsPacked(orderId),
                 child: isUpdating
                     ? const SizedBox(
                         width: 18,
@@ -1189,15 +1229,19 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            allItemsPicked ? Icons.check_circle_rounded : Icons.inventory_2_rounded,
+                            isPackedStatus
+                                ? Icons.inventory_2_rounded
+                                : (allItemsPicked ? Icons.check_circle_rounded : Icons.inventory_2_rounded),
                             size: 18,
                             color: Colors.white,
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            allItemsPicked
-                                ? 'Complete & Notify Rider 🛵'
-                                : 'Mark as Packed & Notify Rider 🛵',
+                            isPackedStatus
+                                ? 'Packed • Waiting for Rider Pickup 🛵'
+                                : (allItemsPicked
+                                    ? 'Complete & Notify Rider 🛵'
+                                    : 'Mark as Packed & Notify Rider 🛵'),
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 13),
                               fontWeight: FontWeight.w800,

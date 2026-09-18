@@ -8,7 +8,7 @@ import { formatPrice, formatAddress } from '@/lib/utils'
 import { useCart } from '@/hooks/use-cart'
 import { useCartStore } from '@/stores/cart-store'
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/lib/constants'
-import { LogOut, MapPin, User, Package, ArrowRight, Pencil, X, Loader2, Trash2, Search, ShoppingBag, Heart, RotateCcw, Sparkles, CheckCircle2, Zap } from 'lucide-react'
+import { LogOut, MapPin, User, Package, ArrowRight, Pencil, X, Loader2, Trash2, Search, ShoppingBag, Heart, RotateCcw, Sparkles, CheckCircle2, Zap, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useState, useEffect, Suspense } from 'react'
@@ -43,6 +43,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
   const [activeTab, setActiveTab] = useState('orders')
   const [orderSubTab, setOrderSubTab] = useState<'LIVE' | 'HISTORY'>('LIVE')
   const [editingAddress, setEditingAddress] = useState<any | null>(null)
+  const [isAddingAddress, setIsAddingAddress] = useState(false)
   const [isSavingAddress, setIsSavingAddress] = useState(false)
   const [addressForm, setAddressForm] = useState({
     label: 'Home',
@@ -403,6 +404,73 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
     })
   }
 
+  const handleCreateAddress = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!addressForm.street || !addressForm.pincode || !addressForm.phone) {
+      toast.error('Please fill in all address details')
+      return
+    }
+
+    const cleanPincode = addressForm.pincode.trim().replace(/\s+/g, '')
+    const validPincodes = ['209206', '224122', '209201', '209214', '209208', '208001', '208002', '208011', '208012', '208020']
+    if (!validPincodes.includes(cleanPincode)) {
+      toast.error('FastKirana delivers to Ghatampur (209206) & Akbarpur (224122)')
+      return
+    }
+
+    const cleanPhone = getLast10Digits(addressForm.phone.trim())
+    if (cleanPhone.length !== 10) {
+      toast.error('Please enter a valid 10-digit mobile number')
+      return
+    }
+
+    setIsSavingAddress(true)
+    try {
+      const city = cleanPincode === '224122' ? 'Akbarpur' : 'Ghatampur'
+      const payload = {
+        label: addressForm.label || 'Home',
+        houseNo: '.',
+        street: addressForm.street.trim(),
+        area: '.',
+        city,
+        pincode: cleanPincode,
+        phone: cleanPhone,
+        isDefault: !!addressForm.isDefault || addresses.length === 0,
+      }
+
+      const res = await fetch('/api/addresses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        if (payload.isDefault) {
+          setAddresses((prev) => [data, ...prev.map((a) => ({ ...a, isDefault: false }))])
+        } else {
+          setAddresses((prev) => [...prev, data])
+        }
+        toast.success('Address added successfully!')
+        setIsAddingAddress(false)
+        setAddressForm({
+          label: 'Home',
+          street: '',
+          phone: user.phone || '',
+          pincode: '209206',
+          isDefault: false,
+        })
+      } else {
+        toast.error(data.error || 'Failed to add address')
+      }
+    } catch {
+      toast.error('Failed to add address. Please try again.')
+    } finally {
+      setIsSavingAddress(false)
+    }
+  }
+
   const handleUpdateAddress = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!addressForm.street || !addressForm.pincode || !addressForm.phone) {
@@ -410,15 +478,22 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
       return
     }
 
-    const validPincodes = ['209206', '224122']
-    if (!validPincodes.includes(addressForm.pincode.trim())) {
+    const cleanPincode = addressForm.pincode.trim().replace(/\s+/g, '')
+    const validPincodes = ['209206', '224122', '209201', '209214', '209208', '208001', '208002', '208011', '208012', '208020']
+    if (!validPincodes.includes(cleanPincode)) {
       toast.error('FastKirana delivers to Ghatampur (209206) & Akbarpur (224122)')
+      return
+    }
+
+    const cleanPhone = getLast10Digits(addressForm.phone.trim())
+    if (cleanPhone.length !== 10) {
+      toast.error('Please enter a valid 10-digit mobile number')
       return
     }
 
     setIsSavingAddress(true)
     try {
-      const city = addressForm.pincode.trim() === '224122' ? 'Akbarpur' : 'Ghatampur'
+      const city = cleanPincode === '224122' ? 'Akbarpur' : 'Ghatampur'
       const payload = {
         id: editingAddress.id,
         label: addressForm.label,
@@ -426,22 +501,28 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
         street: addressForm.street.trim(),
         area: '.',
         city,
-        pincode: addressForm.pincode.trim(),
-        phone: addressForm.phone.trim(),
-        isDefault: addressForm.isDefault,
+        pincode: cleanPincode,
+        phone: cleanPhone,
+        isDefault: !!addressForm.isDefault,
         lat: editingAddress.lat || null,
-        lng: editingAddress.lng || null
+        lng: editingAddress.lng || null,
       }
 
       const res = await fetch('/api/addresses', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       })
 
       if (res.ok) {
         const updated = await res.json()
-        setAddresses(addresses.map(a => a.id === editingAddress.id ? updated : a))
+        if (payload.isDefault) {
+          setAddresses((prev) =>
+            prev.map((a) => (a.id === editingAddress.id ? updated : { ...a, isDefault: false }))
+          )
+        } else {
+          setAddresses((prev) => prev.map((a) => (a.id === editingAddress.id ? updated : a)))
+        }
         toast.success('Address updated successfully!')
         setEditingAddress(null)
       } else {
@@ -844,11 +925,54 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
 
         {/* Tab Content: Saved Addresses */}
         <TabsContent value="addresses" className="space-y-4 animate-fade-in focus-visible:outline-none">
+          <div className="flex items-center justify-between pb-2 border-b border-border/50">
+            <div>
+              <h2 className="text-sm font-black text-text-primary uppercase tracking-wider">Saved Addresses</h2>
+              <p className="text-xs text-text-secondary">Manage your delivery locations</p>
+            </div>
+            <Button
+              onClick={() => {
+                triggerHaptic('light')
+                setAddressForm({
+                  label: 'Home',
+                  street: '',
+                  phone: user.phone || '',
+                  pincode: '209206',
+                  isDefault: addresses.length === 0,
+                })
+                setIsAddingAddress(true)
+              }}
+              size="sm"
+              className="rounded-xl font-black text-xs gap-1.5 shadow-sm bg-primary text-white hover:bg-primary/95 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Add Address</span>
+            </Button>
+          </div>
+
           {addresses.length === 0 ? (
             <div className="text-center py-16 border border-dashed border-border bg-card rounded-2xl p-6">
               <span className="text-4xl mb-2 block">📍</span>
               <h3 className="text-sm font-bold text-text-primary">No addresses saved</h3>
               <p className="text-xs text-text-secondary mt-1">Save delivery destinations for faster checkouts.</p>
+              <Button
+                onClick={() => {
+                  triggerHaptic('light')
+                  setAddressForm({
+                    label: 'Home',
+                    street: '',
+                    phone: user.phone || '',
+                    pincode: '209206',
+                    isDefault: true,
+                  })
+                  setIsAddingAddress(true)
+                }}
+                size="sm"
+                className="mt-4 rounded-xl font-black text-xs gap-1.5 bg-primary text-white hover:bg-primary/95 shadow-sm cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Add First Address</span>
+              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -886,7 +1010,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                       <Button
                         onClick={() => handleDeleteAddress(addr.id)}
                         variant="ghost"
-                        className="text-danger hover:bg-danger/10 hover:text-danger text-[10px] font-bold h-7 px-2.5 rounded-lg"
+                        className="text-danger hover:bg-danger/10 hover:text-danger text-[10px] font-bold h-7 px-2.5 rounded-lg cursor-pointer"
                       >
                         Delete
                       </Button>
@@ -894,7 +1018,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                     <Button
                       onClick={() => handleEditClick(addr)}
                       variant="ghost"
-                      className="text-primary hover:bg-primary/10 text-[10px] font-bold h-7 px-2.5 rounded-lg"
+                      className="text-primary hover:bg-primary/10 text-[10px] font-bold h-7 px-2.5 rounded-lg cursor-pointer"
                     >
                       Edit
                     </Button>
@@ -904,6 +1028,97 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
             </div>
           )}
 
+          {/* Add Address Dialog */}
+          {isAddingAddress && (
+            <Dialog open={isAddingAddress} onOpenChange={setIsAddingAddress}>
+              <DialogContent className="max-w-[340px] w-[92%] mx-auto rounded-[24px] p-5 border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+                <DialogHeader className="text-center">
+                  <DialogTitle className="text-sm font-black text-text-primary tracking-tight">Add New Address</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleCreateAddress} className="space-y-4 text-left mt-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="add-label" className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider">Address Label</Label>
+                    <Input
+                      id="add-label"
+                      required
+                      placeholder="Home, Work, Other"
+                      value={addressForm.label}
+                      onChange={(e) => setAddressForm({ ...addressForm, label: e.target.value })}
+                      className="h-10 rounded-xl text-xs font-semibold"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="add-street" className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider">Complete Address</Label>
+                    <textarea
+                      id="add-street"
+                      required
+                      rows={3}
+                      placeholder="House/Shop no, street, landmark, area"
+                      value={addressForm.street}
+                      onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })}
+                      className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="add-pincode" className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider">Pincode</Label>
+                      <Input
+                        id="add-pincode"
+                        required
+                        maxLength={6}
+                        placeholder="209206"
+                        value={addressForm.pincode}
+                        onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value })}
+                        className="h-10 rounded-xl text-xs font-semibold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="add-phone" className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider">Phone</Label>
+                      <Input
+                        id="add-phone"
+                        required
+                        type="tel"
+                        maxLength={10}
+                        placeholder="10-digit mobile"
+                        value={addressForm.phone}
+                        onChange={(e) => setAddressForm({ ...addressForm, phone: getLast10Digits(e.target.value) })}
+                        className="h-10 rounded-xl text-xs font-semibold"
+                      />
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={addressForm.isDefault}
+                      onChange={(e) => setAddressForm({ ...addressForm, isDefault: e.target.checked })}
+                      className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                    />
+                    <span className="text-xs font-semibold text-text-primary">Set as default delivery address</span>
+                  </label>
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setIsAddingAddress(false)}
+                      disabled={isSavingAddress}
+                      className="flex-1 h-10 rounded-xl text-xs font-bold cursor-pointer"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isSavingAddress}
+                      className="flex-1 h-10 bg-primary text-white rounded-xl text-xs font-black hover:bg-primary/95 shadow-md cursor-pointer"
+                    >
+                      {isSavingAddress ? <Loader2 className="h-4.5 w-4.5 animate-spin mx-auto" /> : 'Save Address'}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {/* Edit Address Dialog */}
           {editingAddress && (
             <Dialog open={editingAddress !== null} onOpenChange={(open) => !open && setEditingAddress(null)}>
               <DialogContent className="max-w-[340px] w-[92%] mx-auto rounded-[24px] p-5 border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-950">
@@ -912,9 +1127,9 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                 </DialogHeader>
                 <form onSubmit={handleUpdateAddress} className="space-y-4 text-left mt-3">
                   <div className="space-y-1">
-                    <Label htmlFor="label" className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider">Address Label</Label>
+                    <Label htmlFor="edit-label" className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider">Address Label</Label>
                     <Input
-                      id="label"
+                      id="edit-label"
                       required
                       value={addressForm.label}
                       onChange={(e) => setAddressForm({ ...addressForm, label: e.target.value })}
@@ -922,9 +1137,9 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="street" className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider">Complete Address</Label>
+                    <Label htmlFor="edit-street" className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider">Complete Address</Label>
                     <textarea
-                      id="street"
+                      id="edit-street"
                       required
                       rows={3}
                       value={addressForm.street}
@@ -934,40 +1149,52 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <Label htmlFor="pincode" className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider">Pincode</Label>
+                      <Label htmlFor="edit-pincode" className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider">Pincode</Label>
                       <Input
-                        id="pincode"
+                        id="edit-pincode"
                         required
+                        maxLength={6}
                         value={addressForm.pincode}
                         onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value })}
                         className="h-10 rounded-xl text-xs font-semibold"
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="phone" className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider">Phone</Label>
+                      <Label htmlFor="edit-phone" className="text-[10px] font-extrabold uppercase text-text-secondary tracking-wider">Phone</Label>
                       <Input
-                        id="phone"
+                        id="edit-phone"
                         required
+                        type="tel"
+                        maxLength={10}
                         value={addressForm.phone}
-                        onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
+                        onChange={(e) => setAddressForm({ ...addressForm, phone: getLast10Digits(e.target.value) })}
                         className="h-10 rounded-xl text-xs font-semibold"
                       />
                     </div>
                   </div>
+                  <label className="flex items-center gap-2 cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={addressForm.isDefault}
+                      onChange={(e) => setAddressForm({ ...addressForm, isDefault: e.target.checked })}
+                      className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                    />
+                    <span className="text-xs font-semibold text-text-primary">Set as default delivery address</span>
+                  </label>
                   <div className="flex gap-2 pt-2">
                     <Button
                       type="button"
                       variant="ghost"
                       onClick={() => setEditingAddress(null)}
                       disabled={isSavingAddress}
-                      className="flex-1 h-10 rounded-xl text-xs font-bold"
+                      className="flex-1 h-10 rounded-xl text-xs font-bold cursor-pointer"
                     >
                       Cancel
                     </Button>
                     <Button
                       type="submit"
                       disabled={isSavingAddress}
-                      className="flex-1 h-10 bg-primary text-white rounded-xl text-xs font-black hover:bg-primary/95 shadow-md"
+                      className="flex-1 h-10 bg-primary text-white rounded-xl text-xs font-black hover:bg-primary/95 shadow-md cursor-pointer"
                     >
                       {isSavingAddress ? <Loader2 className="h-4.5 w-4.5 animate-spin mx-auto" /> : 'Save Changes'}
                     </Button>

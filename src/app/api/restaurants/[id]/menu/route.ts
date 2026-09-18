@@ -77,6 +77,7 @@ export async function GET(
         isOpen: true,
         openTime: true,
         closeTime: true,
+        updatedAt: true,
         discountOffer: true,
         discountBadge: true,
         menuSections: true,

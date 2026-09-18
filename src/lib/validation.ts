@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { getLast10Digits } from '@/lib/phone'
 
 // ── Reusable primitive schemas ──────────────────────────────────────
 
@@ -45,16 +46,25 @@ export const loginSchema = z.object({
 // ── Address Schemas ─────────────────────────────────────────────────
 
 export const createAddressSchema = z.object({
-  label: z.string().min(1, 'Label is required').max(30),
-  houseNo: z.string().min(1, 'House number is required').max(100),
-  street: z.string().min(1, 'Street is required').max(200),
-  area: z.string().min(1, 'Area is required').max(200),
-  city: z.string().min(1, 'City is required').max(100),
-  pincode: z.string().regex(/^\d{6}$/, 'Pincode must be 6 digits'),
-  phone: z.string().regex(/^[6-9]\d{9}$/, 'Invalid 10-digit mobile number'),
-  isDefault: z.union([z.boolean(), z.string()]).optional(),
-  lat: z.union([z.number(), z.string()]).optional(),
-  lng: z.union([z.number(), z.string()]).optional(),
+  label: z.string().min(1, 'Label is required').max(50),
+  houseNo: z.string().optional().default('.').transform((v) => (v && v.trim() ? v.trim() : '.')),
+  street: z.string().min(1, 'Street address is required').max(500),
+  area: z.string().optional().default('.').transform((v) => (v && v.trim() ? v.trim() : '.')),
+  city: z.string().optional().default('Ghatampur').transform((v) => (v && v.trim() ? v.trim() : 'Ghatampur')),
+  pincode: z
+    .string()
+    .transform((v) => (v || '').replace(/\s+/g, '').trim())
+    .pipe(z.string().regex(/^\d{6}$/, 'Pincode must be 6 digits')),
+  phone: z
+    .string()
+    .transform((v) => getLast10Digits((v || '').trim()))
+    .pipe(z.string().regex(/^[6-9]\d{9}$/, 'Invalid 10-digit mobile number')),
+  isDefault: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((v) => v === true || v === 'true'),
+  lat: z.union([z.number(), z.string()]).nullable().optional(),
+  lng: z.union([z.number(), z.string()]).nullable().optional(),
 })
 
 export const updateAddressSchema = createAddressSchema.extend({

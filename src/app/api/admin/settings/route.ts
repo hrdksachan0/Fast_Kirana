@@ -48,6 +48,21 @@ export async function PATCH(request: NextRequest) {
         }
       }
 
+      // Sync active restaurants if restaurant timings updated
+      if (body.restaurant_open_time !== undefined || body.restaurant_close_time !== undefined) {
+        try {
+          const updateData: { openTime?: string; closeTime?: string } = {}
+          if (body.restaurant_open_time) updateData.openTime = body.restaurant_open_time
+          if (body.restaurant_close_time) updateData.closeTime = body.restaurant_close_time
+          await prisma.restaurant.updateMany({
+            where: { isActive: true },
+            data: updateData,
+          })
+        } catch (rErr) {
+          console.warn('Failed to sync restaurant timings:', rErr)
+        }
+      }
+
       // Clear shared in-memory settings cache for instant client sync
       clearSettingsCache()
     }

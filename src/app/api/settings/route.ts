@@ -17,12 +17,12 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   grocery_auto_timing: 'false',
   grocery_open_time: '06:00',
   grocery_close_time: '23:59',
-  cafe_auto_timing: 'false',
-  cafe_open_time: '06:00',
-  cafe_close_time: '23:59',
-  restaurant_auto_timing: 'false',
-  restaurant_open_time: '06:00',
-  restaurant_close_time: '23:59',
+  cafe_auto_timing: 'true',
+  cafe_open_time: '10:00',
+  cafe_close_time: '22:00',
+  restaurant_auto_timing: 'true',
+  restaurant_open_time: '10:00',
+  restaurant_close_time: '22:00',
   delivery_radius: '2',
   store_lat: '26.1534185',
   store_lng: '80.1714024',
@@ -85,20 +85,17 @@ const DEFAULT_SETTINGS: Record<string, string> = {
 }
 
 export function checkIsStoreOpen(settingsMap: Record<string, string>, prefix: 'grocery' | 'cafe' | 'restaurant'): boolean {
-  // Cafe off logic removed: cafe and restaurant are directly controlled by outlet owner (no schedule interruption)
-  if (prefix === 'cafe' || prefix === 'restaurant') {
-    return prefix === 'cafe'
+  const autoTiming = settingsMap[`${prefix}_auto_timing`] === 'true'
+  const isManuallyOpen = prefix === 'grocery'
+    ? settingsMap['grocery_mart_open'] !== 'false'
+    : prefix === 'cafe'
       ? settingsMap['cafe_open'] !== 'false'
       : settingsMap['restaurant_open'] !== 'false'
-  }
-
-  const autoTiming = settingsMap[`${prefix}_auto_timing`] === 'true'
-  const isManuallyOpen = settingsMap['grocery_mart_open'] !== 'false'
 
   // When auto timing is active, store automatically opens & closes strictly according to schedule
   if (autoTiming) {
-    const openTime = settingsMap[`${prefix}_open_time`] || '07:00'
-    const closeTime = settingsMap[`${prefix}_close_time`] || '22:00'
+    const openTime = settingsMap[`${prefix}_open_time`] || (prefix === 'grocery' ? '06:00' : '10:00')
+    const closeTime = settingsMap[`${prefix}_close_time`] || (prefix === 'grocery' ? '23:59' : '22:00')
 
     if ((openTime === '00:00' || openTime === '0:00') && (closeTime === '23:59' || closeTime === '24:00')) return true
 
@@ -137,7 +134,7 @@ async function buildSettingsMap(storeId?: string | null): Promise<Record<string,
     }),
     prisma.restaurant.findMany({
       where: { isActive: true },
-      select: { id: true, slug: true, name: true, isOpen: true, openTime: true, closeTime: true },
+      select: { id: true, slug: true, name: true, isOpen: true, openTime: true, closeTime: true, updatedAt: true },
     }),
   ])
 
@@ -180,20 +177,22 @@ async function buildSettingsMap(storeId?: string | null): Promise<Record<string,
 
   const wedson = activeRestaurants.find(r => r.slug?.includes('wedson') || r.name?.toLowerCase().includes('wedson'))
   if (wedson) {
-    settingsMap['restaurant_open'] = wedson.isOpen !== false ? 'true' : 'false'
+    const opStatus = checkStoreOperatingStatus(wedson)
+    settingsMap['restaurant_open'] = opStatus.isOpen ? 'true' : 'false'
     if (wedson.openTime) settingsMap['restaurant_open_time'] = wedson.openTime
     if (wedson.closeTime) settingsMap['restaurant_close_time'] = wedson.closeTime
   } else {
-    settingsMap['restaurant_open'] = 'true'
+    settingsMap['restaurant_open'] = checkIsStoreOpen(settingsMap, 'restaurant') ? 'true' : 'false'
   }
 
   const cafe = activeRestaurants.find(r => r.slug?.includes('as-restaurant') || r.slug?.includes('cafe') || r.name?.toLowerCase().includes('a.s.'))
   if (cafe) {
-    settingsMap['cafe_open'] = cafe.isOpen !== false ? 'true' : 'false'
+    const opStatus = checkStoreOperatingStatus(cafe)
+    settingsMap['cafe_open'] = opStatus.isOpen ? 'true' : 'false'
     if (cafe.openTime) settingsMap['cafe_open_time'] = cafe.openTime
     if (cafe.closeTime) settingsMap['cafe_close_time'] = cafe.closeTime
   } else {
-    settingsMap['cafe_open'] = 'true'
+    settingsMap['cafe_open'] = checkIsStoreOpen(settingsMap, 'cafe') ? 'true' : 'false'
   }
 
   // Grocery store status calculation:
@@ -243,6 +242,10 @@ export async function GET(request: NextRequest) {
     if (cached) {
       const liveGrocery = checkIsStoreOpen(cached, 'grocery')
       cached['grocery_mart_open'] = liveGrocery ? 'true' : 'false'
+      const liveCafe = checkIsStoreOpen(cached, 'cafe')
+      cached['cafe_open'] = liveCafe ? 'true' : 'false'
+      const liveRestaurant = checkIsStoreOpen(cached, 'restaurant')
+      cached['restaurant_open'] = liveRestaurant ? 'true' : 'false'
       return NextResponse.json(cached, {
         headers: {
           'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=15',

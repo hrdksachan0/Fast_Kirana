@@ -8,6 +8,7 @@ import '../../../core/config/app_config.dart';
 import '../../../core/utils/restaurant_utils.dart';
 import '../../../core/services/logger_service.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
+import 'order_recipient_helper.dart';
 
 class RiderPickupCard extends StatelessWidget {
   final Map<String, dynamic> order;
@@ -55,12 +56,13 @@ class RiderPickupCard extends StatelessWidget {
     final lng = (address?['lng'] as num?)?.toDouble() ?? AppConfig.darkstoreLng;
     // isUpdating is passed via constructor
 
-    final customerName = (address?['name']?.toString().trim().isNotEmpty == true)
-        ? address!['name'].toString().trim()
-        : (customer['name']?.toString() ?? 'Customer');
-    final customerPhone = (address?['phone']?.toString().trim().isNotEmpty == true)
-        ? address!['phone'].toString().trim()
-        : (customer['phone']?.toString().trim() ?? '');
+    final recipient = OrderRecipientDetails.fromOrder(order);
+    final customerName = recipient.recipientName;
+    final customerPhone = (recipient.recipientPhone != null && recipient.recipientPhone!.isNotEmpty)
+        ? recipient.recipientPhone!
+        : ((address?['phone']?.toString().trim().isNotEmpty == true)
+            ? address!['phone'].toString().trim()
+            : (customer['phone']?.toString().trim() ?? ''));
     final avatarLetter = customerName.isNotEmpty ? customerName[0].toUpperCase() : 'C';
 
     DateTime orderDate = DateTime.now();
@@ -285,6 +287,68 @@ class RiderPickupCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
 
+                // Recipient Details Banner if ordered for someone else
+                if (recipient.isOrderForSomeone) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7ED), // amber-50
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFFDBA74), width: 1.2), // amber-300
+                    ),
+                    child: Row(
+                      children: [
+                        const Text('🎁', style: TextStyle(fontSize: 18)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'ORDER FOR SOMEONE ELSE',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 10),
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFFC2410C), // orange-700
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              const SizedBox(height: 1),
+                              Text(
+                                'Deliver to: ${recipient.recipientName}${recipient.buyerName != null ? ' • By: ${recipient.buyerName}' : ''}',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 11),
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF9A3412), // orange-900
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEDD5),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFFDBA74), width: 0.8),
+                          ),
+                          child: Text(
+                            'Gift Order',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 9),
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFFC2410C),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
                 // Customer Info Box with Order Received Time
                 Container(
                   padding: const EdgeInsets.all(10),
@@ -333,6 +397,25 @@ class RiderPickupCard extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
+                                if (recipient.isOrderForSomeone) ...[
+                                  const SizedBox(width: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFFEDD5),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: const Color(0xFFFDBA74), width: 0.6),
+                                    ),
+                                    child: Text(
+                                      'Recipient',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 8.5),
+                                        fontWeight: FontWeight.w900,
+                                        color: const Color(0xFFC2410C),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(width: 6),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
@@ -361,7 +444,7 @@ class RiderPickupCard extends StatelessWidget {
                             ),
                             if (customerPhone.isNotEmpty)
                               Text(
-                                customerPhone.startsWith('+') ? customerPhone : '+91$customerPhone',
+                                customerPhone.startsWith('+') ? customerPhone : '+91 $customerPhone',
                                 style: GoogleFonts.robotoMono(
                                   fontSize: Responsive.scaledFontSize(context, 10.5),
                                   fontWeight: FontWeight.w600,
@@ -378,7 +461,8 @@ class RiderPickupCard extends StatelessWidget {
                       Bounceable(
                         onTap: () {
                           if (customerPhone.isNotEmpty) {
-                            launchUrl(Uri.parse('tel:$customerPhone'));
+                            final cleanPhone = customerPhone.replaceAll(' ', '').trim();
+                            launchUrl(Uri.parse('tel:$cleanPhone'));
                           }
                         },
                         child: Container(
@@ -397,6 +481,38 @@ class RiderPickupCard extends StatelessWidget {
                     ],
                   ),
                 ),
+
+                // Delivery Note callout if instructions are present
+                if (recipient.deliveryInstructions != null && recipient.deliveryInstructions!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppDesignSystem.amber50,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFFDE68A), width: 0.8),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('📝', style: TextStyle(fontSize: 12)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Note: ${recipient.deliveryInstructions!}',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 10.5),
+                              fontWeight: FontWeight.w700,
+                              color: AppDesignSystem.amber800,
+                              height: 1.25,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 10),
 
                 // Pickup & Deliver Routes Box
@@ -677,7 +793,7 @@ class RiderPickupCard extends StatelessWidget {
                                 const Icon(Icons.access_time_rounded, size: 12, color: AppDesignSystem.amber600),
                                 const SizedBox(width: 4),
                                 Text(
-                                  'Preparing in Kitchen...',
+                                  isFood ? 'Cooking in Kitchen...' : 'Packing at Store...',
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 10.5),
                                     fontWeight: FontWeight.w800,
@@ -691,7 +807,7 @@ class RiderPickupCard extends StatelessWidget {
                           Bounceable(
                             onTap: () => onUpdateStatus?.call(orderId, 'SHIPPED'),
                             child: Text(
-                              'Food Ready? Pick Up',
+                              isFood ? 'Food Ready? Pick Up' : 'Items Ready? Pick Up',
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 9.5),
                                 fontWeight: FontWeight.w800,
@@ -707,11 +823,17 @@ class RiderPickupCard extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           decoration: BoxDecoration(
-                            color: AppDesignSystem.indigo700,
+                            gradient: LinearGradient(
+                              colors: isFood
+                                  ? [const Color(0xFFE11D48), const Color(0xFFBE123C)]
+                                  : [const Color(0xFF059669), const Color(0xFF047857)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: AppDesignSystem.indigo700.withValues(alpha: 0.35),
+                                color: (isFood ? AppDesignSystem.rose500 : AppDesignSystem.emerald600).withValues(alpha: 0.35),
                                 blurRadius: 8,
                                 offset: const Offset(0, 3),
                               ),
@@ -727,10 +849,10 @@ class RiderPickupCard extends StatelessWidget {
                                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                 )
                               else ...[
-                                const Icon(Icons.send_rounded, size: 14, color: Colors.white),
+                                const Icon(Icons.delivery_dining_rounded, size: 16, color: Colors.white),
                                 const SizedBox(width: 5),
                                 Text(
-                                  'Pick Up Order ➔',
+                                  isFood ? 'Pick Up Food ➔' : 'Pick Up From Store ➔',
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 12),
                                     fontWeight: FontWeight.w900,

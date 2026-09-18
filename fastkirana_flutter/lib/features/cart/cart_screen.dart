@@ -30,6 +30,7 @@ import '../../widgets/unserviceable_location_banner.dart';
 import '../../widgets/offline_banner.dart';
 import '../../widgets/grid_skeletons.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
+import 'package:confetti/confetti.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -41,6 +42,7 @@ class CartScreen extends ConsumerStatefulWidget {
 class _CartScreenState extends ConsumerState<CartScreen> {
   final TextEditingController _couponController = TextEditingController();
   final TextEditingController _cookingInstructionsController = TextEditingController();
+  late final ConfettiController _confettiController;
   String? _appliedCoupon;
   double _couponDiscount = 0.0;
   bool _isApplyingCoupon = false;
@@ -61,10 +63,165 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   static const Color slateBorder = AppDesignSystem.slate200;
 
   @override
+  void initState() {
+    super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+  }
+
+  @override
   void dispose() {
+    _confettiController.dispose();
     _couponController.dispose();
     _cookingInstructionsController.dispose();
     super.dispose();
+  }
+
+  void _showSavingsCelebrationModal({
+    required String title,
+    required String subtitle,
+    required String savingsText,
+    bool isBogo = false,
+  }) {
+    HapticFeedback.heavyImpact();
+    _confettiController.play();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: (isBogo ? const Color(0xFFEA580C) : AppDesignSystem.emerald600).withValues(alpha: 0.25),
+                blurRadius: 30,
+                offset: const Offset(0, 8),
+              ),
+            ],
+            border: Border.all(
+              color: isBogo ? const Color(0xFFFED7AA) : const Color(0xFFA7F3D0),
+              width: 1.5,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Celebration Icon with Glow
+              Container(
+                width: 68,
+                height: 68,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isBogo
+                        ? [const Color(0xFFEA580C), const Color(0xFFF97316)]
+                        : [AppDesignSystem.emerald600, AppDesignSystem.emerald400],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: (isBogo ? const Color(0xFFEA580C) : AppDesignSystem.emerald600).withValues(alpha: 0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    isBogo ? '🎁' : '🎉',
+                    style: const TextStyle(fontSize: 34),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Title
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 18),
+                  fontWeight: FontWeight.w900,
+                  color: AppDesignSystem.slate900,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 6),
+
+              // Subtitle
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 13),
+                  fontWeight: FontWeight.w600,
+                  color: AppDesignSystem.slate600,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Savings Highlight Pill
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isBogo ? const Color(0xFFFFF7ED) : const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isBogo ? const Color(0xFFFDBA74) : const Color(0xFF6EE7B7),
+                    width: 1.2,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('✨', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
+                    const SizedBox(width: 6),
+                    Text(
+                      savingsText,
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 13.5),
+                        fontWeight: FontWeight.w900,
+                        color: isBogo ? const Color(0xFFC2410C) : AppDesignSystem.emerald900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Continue Button
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isBogo ? const Color(0xFFEA580C) : AppDesignSystem.emerald700,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: Text(
+                    'Awesome, Let\'s Order! 🚀',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 14),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _applyCoupon(String code, double subtotal, {bool silent = false}) async {
@@ -109,20 +266,22 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         });
 
         if (!silent) {
-          final successMsg = isBogo
+          final isBogoOffer = isBogo || freeGift != null;
+          final title = isBogoOffer ? '🎉 BOGO Deal Unlocked!' : '🥳 Discount Applied!';
+          final subtitle = isBogoOffer
               ? (freeGift != null
-                  ? '🎉 Free BOGO gift added to cart! Saved ₹${(freeGift['originalPrice'] as num?)?.toInt() ?? 0}'
-                  : '🎉 BOGO coupon applied! ${nudge ?? ''}')
-              : '🎉 Coupon "$cleanCode" applied! You saved ₹${_couponDiscount.toInt()}';
+                  ? 'Congratulations! A 100% Free "${freeGift['name']}" has been added to your cart!'
+                  : 'Congratulations! BOGO promotional offer applied to your items!')
+              : 'Congratulations! Coupon "$cleanCode" applied successfully to your order!';
+          final savingsText = isBogoOffer && freeGift != null
+              ? 'Saved ₹${(freeGift['originalPrice'] as num?)?.toInt() ?? 0} with BOGO Free Gift'
+              : 'You Saved ₹${_couponDiscount.toInt()} Extra on this Order';
 
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: isBogo ? const Color(0xFFEA580C) : brandGreen,
-              content: Text(successMsg),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
+          _showSavingsCelebrationModal(
+            title: title,
+            subtitle: subtitle,
+            savingsText: savingsText,
+            isBogo: isBogoOffer,
           );
         }
       }
@@ -140,13 +299,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             _isApplyingCoupon = false;
           });
           if (!silent) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                backgroundColor: brandGreen,
-                content: Text('🎉 Coupon "$cleanCode" applied! You saved ₹${discount.toInt()}'),
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+            _showSavingsCelebrationModal(
+              title: '🥳 Discount Applied!',
+              subtitle: 'Congratulations! Coupon "$cleanCode" applied successfully to your order!',
+              savingsText: 'You Saved ₹${discount.toInt()} Extra on this Order',
+              isBogo: false,
             );
           }
         }
@@ -534,135 +691,161 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       ),
       body: SafeArea(
         bottom: false,
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(16, 12, 16, 150 + MediaQuery.of(context).padding.bottom),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Offline Network Recovery Banner
-              OfflineBanner(
-                onRetry: () {
-                  ref.read(cartProvider.notifier).loadCart();
-                },
-                offlineText: 'Offline • Reconnecting cart sync...',
-              ),
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 150 + MediaQuery.of(context).padding.bottom),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Offline Network Recovery Banner
+                  OfflineBanner(
+                    onRetry: () {
+                      ref.read(cartProvider.notifier).loadCart();
+                    },
+                    offlineText: 'Offline • Reconnecting cart sync...',
+                  ),
 
-              // 0. Dynamic Distance-Tiered Delivery Progress Bar
-              _buildFreeDeliveryProgressBar(subtotal, tier),
+                  // 0. Dynamic Distance-Tiered Delivery Progress Bar
+                  _buildFreeDeliveryProgressBar(subtotal, tier),
 
-              // 1. Grocery Items Section (if present)
-              if (groceryItems.isNotEmpty)
-                _buildSectionCard(
-                  context: context,
-                  isGrocery: true,
-                  title: 'Grocery & Daily Essentials',
-                  subtitle: 'Delivered from FastKirana Darkstore',
-                  items: groceryItems,
-                  ref: ref,
-                ),
+                  // 1. Grocery Items Section (if present)
+                  if (groceryItems.isNotEmpty)
+                    _buildSectionCard(
+                      context: context,
+                      isGrocery: true,
+                      title: 'Grocery & Daily Essentials',
+                      subtitle: 'Delivered from FastKirana Darkstore',
+                      items: groceryItems,
+                      ref: ref,
+                    ),
 
-              // 1.5 BOGO Nudge Alert Banner
-              if (_nudgeMessage != null && _nudgeMessage!.isNotEmpty)
-                _buildBogoNudgeBanner(),
+                  // 1.5 BOGO Nudge Alert Banner
+                  if (_nudgeMessage != null && _nudgeMessage!.isNotEmpty)
+                    _buildBogoNudgeBanner(),
 
-              // 2. Restaurant Items Section (Grouped by Outlet)
-              ...restaurantGroups.entries.map((entry) {
-                final outletName = entry.key;
-                final items = entry.value;
-                return _buildSectionCard(
-                  context: context,
-                  isGrocery: false,
-                  title: outletName,
-                  subtitle: 'Freshly prepared at outlet kitchen',
-                  items: items,
-                  ref: ref,
-                );
-              }),
+                  // 2. Restaurant Items Section (Grouped by Outlet)
+                  ...restaurantGroups.entries.map((entry) {
+                    final outletName = entry.key;
+                    final items = entry.value;
+                    return _buildSectionCard(
+                      context: context,
+                      isGrocery: false,
+                      title: outletName,
+                      subtitle: 'Freshly prepared at outlet kitchen',
+                      items: items,
+                      ref: ref,
+                    );
+                  }),
 
-              // 2.5 BOGO 100% Free Gift Card
-              if (_freeGiftDetails != null)
-                _buildBogoFreeGiftCard(_freeGiftDetails!),
+                  // 2.5 BOGO 100% Free Gift Card
+                  if (_freeGiftDetails != null)
+                    _buildBogoFreeGiftCard(_freeGiftDetails!),
 
-              const SizedBox(height: 14),
+                  const SizedBox(height: 14),
 
-              // 3. Frequently Bought Together Carousel (Web App Recommendation Engine)
-              ref.watch(cartUpsellProductsProvider(cart.items.map((i) => i.productId).toList())).when(
-                data: (products) {
-                  if (products.isEmpty) return const SizedBox.shrink();
+                  // 3. Frequently Bought Together Carousel (Web App Recommendation Engine)
+                  ref.watch(cartUpsellProductsProvider(cart.items.map((i) => i.productId).toList())).when(
+                    data: (products) {
+                      if (products.isEmpty) return const SizedBox.shrink();
 
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('🛒', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
-                              const SizedBox(width: 6),
+                              Row(
+                                children: [
+                                  Text('🛒', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Frequently bought together',
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 13),
+                                      fontWeight: FontWeight.w800,
+                                      color: slateDark,
+                                    ),
+                                  ),
+                                ],
+                              ),
                               Text(
-                                'Frequently bought together',
+                                'Slide for more →',
                                 style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 13),
-                                  fontWeight: FontWeight.w800,
-                                  color: slateDark,
+                                  fontSize: Responsive.scaledFontSize(context, 10.5),
+                                  fontWeight: FontWeight.w600,
+                                  color: AppDesignSystem.slate400,
                                 ),
                               ),
                             ],
                           ),
-                          Text(
-                            'Slide for more →',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 10.5),
-                              fontWeight: FontWeight.w600,
-                              color: AppDesignSystem.slate400,
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            height: 192,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              itemCount: products.length,
+                              itemBuilder: (context, idx) {
+                                final p = products[idx];
+                                return _buildUpsellCardFromProduct(ref, p);
+                              },
                             ),
                           ),
+                          const SizedBox(height: 16),
                         ],
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        height: 192,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: products.length,
-                          itemBuilder: (context, idx) {
-                            final p = products[idx];
-                            return _buildUpsellCardFromProduct(ref, p);
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                  );
-                },
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
+                      );
+                    },
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
+
+                  // 4. Delivery Instructions Section
+                  _buildDeliveryInstructions(),
+                  const SizedBox(height: 14),
+
+                  // 5. Delivery Partner Tip Card
+                  _buildTipSelector(),
+                  const SizedBox(height: 14),
+
+                  // 6. Apply Promo / Coupon Code Card (Ultra-Premium Zepto/Swiggy Voucher Card)
+                  _buildCouponSection(subtotal, restaurantId: cartRestaurantId),
+                  const SizedBox(height: 14),
+
+                  // 7. Bill Details Card
+                  _buildBillDetailsCard(subtotal, itemSavings, deliveryFee, packagingFee, packagingLabel, totalSavings, grandTotal),
+                  const SizedBox(height: 14),
+
+                  // 8. Cancellation Policy Info
+                  _buildCancellationPolicy(),
+                  const SizedBox(height: 20),
+                ],
               ),
-
-              // 4. Delivery Instructions Section
-              _buildDeliveryInstructions(),
-              const SizedBox(height: 14),
-
-              // 5. Delivery Partner Tip Card
-              _buildTipSelector(),
-              const SizedBox(height: 14),
-
-              // 6. Apply Promo / Coupon Code Card (Ultra-Premium Zepto/Swiggy Voucher Card)
-              _buildCouponSection(subtotal, restaurantId: cartRestaurantId),
-              const SizedBox(height: 14),
-
-              // 7. Bill Details Card
-              _buildBillDetailsCard(subtotal, itemSavings, deliveryFee, packagingFee, packagingLabel, totalSavings, grandTotal),
-              const SizedBox(height: 14),
-
-              // 8. Cancellation Policy Info
-              _buildCancellationPolicy(),
-              const SizedBox(height: 20),
-            ],
-          ),
+            ),
+            // Celebration Confetti Overlay
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirectionality: BlastDirectionality.explosive,
+                shouldLoop: false,
+                maxBlastForce: 28,
+                minBlastForce: 10,
+                emissionFrequency: 0.05,
+                numberOfParticles: 40,
+                gravity: 0.25,
+                colors: const [
+                  Color(0xFFEA580C),
+                  Color(0xFF16A34A),
+                  Color(0xFFEAB308),
+                  Color(0xFF3B82F6),
+                  Color(0xFFEC4899),
+                  Color(0xFF8B5CF6),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: Container(

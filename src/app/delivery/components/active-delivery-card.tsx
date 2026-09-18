@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { MapPin, Phone, User, ShoppingBag, CheckCircle2, Loader2, Navigation, ChevronDown, ChevronUp, Sparkles, QrCode } from 'lucide-react'
 import { formatPrice, formatPhone, formatAddress } from '@/lib/utils'
+import { parseOrderRecipient } from '../recipient-helper'
 
 interface ActiveDeliveryCardProps {
   order: any
@@ -31,7 +32,8 @@ export default function ActiveDeliveryCard({
   const totalAmount = (order.total || 0) + (order.companionOrder ? (order.companionOrder.total || 0) : 0)
   const allItems = [...(order.items || []), ...(order.companionOrder?.items || [])]
 
-  const customerPhone = order.address?.phone || order.user?.phone || order.shopPhone
+  const recipient = parseOrderRecipient(order)
+  const customerPhone = recipient.recipientPhone || order.address?.phone || order.user?.phone || order.shopPhone
   const customerAddress = formatAddress(order.address)
   const mapUrl =
     (order.deliveryLat || order.address?.lat) && (order.deliveryLng || order.address?.lng)
@@ -69,6 +71,31 @@ export default function ActiveDeliveryCard({
             </div>
             <span className="text-[10px] font-black bg-purple-500/20 text-purple-700 dark:text-purple-300 px-2.5 py-0.5 rounded-full border border-purple-500/30">
               2 Pickups
+            </span>
+          </div>
+        )}
+
+        {/* Recipient Details Badge if ordered for someone else */}
+        {recipient.isOrderForSomeone && (
+          <div className="p-3 bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/15 border border-amber-500/30 rounded-2xl flex items-center justify-between gap-2 shadow-xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="text-xl shrink-0">🎁</span>
+              <div className="min-w-0">
+                <div className="text-[10px] font-black uppercase text-amber-700 dark:text-amber-400 tracking-wider flex items-center gap-1">
+                  <span>ORDER FOR SOMEONE ELSE</span>
+                </div>
+                <div className="text-xs font-black text-text-primary truncate">
+                  Deliver to: {recipient.recipientName}
+                </div>
+                {recipient.buyerName && (
+                  <div className="text-[10px] font-bold text-text-secondary truncate">
+                    Ordered by: {recipient.buyerName}
+                  </div>
+                )}
+              </div>
+            </div>
+            <span className="text-[10px] font-black bg-amber-500/20 text-amber-700 dark:text-amber-400 px-2.5 py-0.5 rounded-full border border-amber-500/30 shrink-0">
+              Gift Order
             </span>
           </div>
         )}
@@ -114,8 +141,15 @@ export default function ActiveDeliveryCard({
                 <User className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-black text-text-primary truncate">
-                  {order.user?.name || order.userName || 'Customer'}
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <div className="text-xs font-black text-text-primary truncate">
+                    {recipient.recipientName}
+                  </div>
+                  {recipient.isOrderForSomeone && (
+                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 shrink-0">
+                      Recipient
+                    </span>
+                  )}
                 </div>
                 <div className="text-[11px] text-text-secondary font-mono mt-0.5">
                   {formatPhone(customerPhone) || 'No phone provided'}
@@ -142,7 +176,7 @@ export default function ActiveDeliveryCard({
                 className="flex items-center justify-center gap-1.5 py-2.5 px-3 min-h-[44px] rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-xs font-black tracking-tight transition-all active:scale-95 shadow-xs"
               >
                 <Phone className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-                <span>Call Customer 📞</span>
+                <span>Call {recipient.isOrderForSomeone ? 'Recipient' : 'Customer'} 📞</span>
               </a>
             ) : (
               <span className="flex items-center justify-center gap-1.5 py-2.5 px-3 min-h-[44px] rounded-xl bg-muted/40 text-text-muted text-xs font-bold opacity-60">
@@ -151,6 +185,14 @@ export default function ActiveDeliveryCard({
               </span>
             )}
           </div>
+
+          {/* Delivery Note if present */}
+          {recipient.deliveryInstructions && (
+            <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2 text-xs">
+              <span className="shrink-0 text-amber-600 font-bold">📝 Note:</span>
+              <span className="font-semibold text-text-primary leading-tight">{recipient.deliveryInstructions}</span>
+            </div>
+          )}
         </div>
 
         {/* Route Timeline: Store -> Destination */}

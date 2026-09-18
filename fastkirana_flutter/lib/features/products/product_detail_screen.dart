@@ -1134,13 +1134,13 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                             return;
                                           }
                                           final conflictRestaurant =
-                                              ref.read(cartProvider.notifier).checkRestaurantConflict(p);
+                                              ref.read(cartProvider.notifier).checkRestaurantConflict(effectiveProduct);
                                           if (conflictRestaurant != null) {
-                                            _promptRestaurantConflict(context, p, _selectedVariant?.name);
+                                            _promptRestaurantConflict(context, effectiveProduct, _selectedVariant?.name);
                                             return;
                                           }
                                           HapticFeedback.lightImpact();
-                                          ref.read(cartProvider.notifier).increment(cartItem?.product ?? p);
+                                          ref.read(cartProvider.notifier).increment(cartItem?.product ?? effectiveProduct);
                                         },
                                         child: Container(
                                           width: 34,
@@ -1233,54 +1233,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         }
 
                         return GestureDetector(
-                          onTap: () {
-                            if (p.parsedAddons.isNotEmpty) {
-                              VariantSelectorSheet.show(context, p);
-                              return;
-                            }
-
-                            final targetId = activeVariant != null ? '${p.id}_${activeVariant.name}' : p.id;
-                            final targetName = activeVariant != null ? '${p.name} (${activeVariant.name})' : p.name;
-                            final productToCart = Product(
-                              id: targetId,
-                              name: targetName,
-                              slug: p.slug,
-                              description: p.description,
-                              imageUrl: p.imageUrl,
-                              categoryId: p.categoryId,
-                              restaurantId: p.restaurantId,
-                              mrp: activeMrp,
-                              price: activePrice,
-                              discount: activeMrp > activePrice
-                                  ? ((activeMrp - activePrice) / activeMrp * 100)
-                                  : 0,
-                              unit: activeUnit,
-                              stock: p.stock,
-                              isAvailable: p.isAvailable,
-                              tags: p.tags,
-                              variants: p.variants,
-                              minStock: p.minStock,
-                              costPrice: p.costPrice,
-                              isFlashDeal: p.isFlashDeal,
-                              isTopPick: p.isTopPick,
-                              isBestSeller: p.isBestSeller,
-                              sortOrder: p.sortOrder,
-                              createdAt: p.createdAt,
-                              category: p.category,
-                              restaurant: p.restaurant,
-                              menuSection: p.menuSection,
-                            );
-
-                            final conflictRestaurant =
-                                ref.read(cartProvider.notifier).checkRestaurantConflict(productToCart);
-                            if (conflictRestaurant != null) {
-                              _promptRestaurantConflict(context, productToCart, _selectedVariant?.name);
-                              return;
-                            }
-
-                            HapticFeedback.mediumImpact();
-                            ref.read(cartProvider.notifier).addProduct(productToCart, 1, _selectedVariant?.name);
-                          },
+                          onTap: () => _addToCart(p, activeVariant, selectedAddonItems, isStoreOpen),
                           child: Container(
                             height: 50,
                             decoration: BoxDecoration(

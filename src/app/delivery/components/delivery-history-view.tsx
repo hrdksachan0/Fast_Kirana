@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { Clock, Trophy, Flame } from 'lucide-react'
 import { formatPrice, formatAddress } from '@/lib/utils'
 import { formatOrderTime } from '@/lib/date-helpers'
+import { parseOrderRecipient } from '../recipient-helper'
 
 interface DeliveryHistoryViewProps {
   todayDeliveries: number
@@ -159,9 +160,19 @@ export default function DeliveryHistoryView({
 
                 <div className="pt-2 border-t border-border/40 flex justify-between items-center text-xs">
                   <div className="truncate pr-2">
-                    <span className="font-bold text-text-primary block truncate">
-                      {order.user?.name || 'Customer'}
-                    </span>
+                    {(() => {
+                      const recipient = parseOrderRecipient(order)
+                      return (
+                        <div className="flex items-center gap-1.5 truncate">
+                          {recipient.isOrderForSomeone && (
+                            <span className="text-xs" title="Order for someone else">🎁</span>
+                          )}
+                          <span className="font-bold text-text-primary truncate">
+                            {recipient.recipientName}
+                          </span>
+                        </div>
+                      )
+                    })()}
                     <span className="text-[10px] text-text-secondary truncate block">
                       {formatAddress(order.address, false)}
                     </span>

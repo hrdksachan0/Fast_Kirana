@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { MapPin, Phone, ShoppingBag, Navigation, Clock, Loader2 } from 'lucide-react'
 import { formatPrice, formatPhone, formatAddress } from '@/lib/utils'
+import { parseOrderRecipient } from '../recipient-helper'
 
 interface PendingPickupCardProps {
   order: any
@@ -28,8 +29,9 @@ export default function PendingPickupCard({
     ? `https://www.google.com/maps/search/?api=1&query=${order.deliveryLat || order.address.lat},${order.deliveryLng || order.address.lng}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formatAddress(order.address))}`
     
-  // Phone
-  const phoneRaw = order.address?.phone || order.user?.phone || order.shopPhone
+  // Recipient & Phone
+  const recipient = parseOrderRecipient(order)
+  const phoneRaw = recipient.recipientPhone || order.address?.phone || order.user?.phone || order.shopPhone
   const phoneUrl = phoneRaw ? `tel:${formatPhone(phoneRaw).replace(/\s+/g, '')}` : null
 
   // Items
@@ -101,19 +103,51 @@ export default function PendingPickupCard({
           </span>
         </div>
 
+        {/* Recipient Details Badge if ordered for someone else */}
+        {recipient.isOrderForSomeone && (
+          <div className="p-2.5 bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/15 border border-amber-500/30 rounded-2xl flex items-center justify-between gap-2 shadow-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-base shrink-0">🎁</span>
+              <div className="min-w-0">
+                <div className="text-[9px] font-black uppercase text-amber-700 dark:text-amber-400 tracking-wider">
+                  ORDER FOR SOMEONE ELSE
+                </div>
+                <div className="text-xs font-black text-text-primary truncate">
+                  Deliver to: {recipient.recipientName}
+                </div>
+                {recipient.buyerName && (
+                  <div className="text-[10px] font-bold text-text-secondary truncate">
+                    Ordered by: {recipient.buyerName}
+                  </div>
+                )}
+              </div>
+            </div>
+            <span className="text-[9px] font-black bg-amber-500/20 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-500/30 shrink-0">
+              Gift Order
+            </span>
+          </div>
+        )}
+
         {/* 4. Customer + actions row */}
         <div className="flex justify-between items-center bg-secondary/30 border border-border/50 p-3 rounded-2xl gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-xs font-black text-white shadow-sm shrink-0">
-              {(order.user?.name || order.userName || 'C').charAt(0).toUpperCase()}
+              {(recipient.recipientName || 'C').charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <span className="text-xs font-black text-text-primary truncate block">
-                {order.user?.name || order.userName || 'Customer'}
-              </span>
-              {(order.address?.phone || order.user?.phone) && (
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-xs font-black text-text-primary truncate block">
+                  {recipient.recipientName}
+                </span>
+                {recipient.isOrderForSomeone && (
+                  <span className="text-[8.5px] font-black uppercase px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 shrink-0">
+                    Recipient
+                  </span>
+                )}
+              </div>
+              {phoneRaw && (
                 <span className="text-[11px] font-mono text-text-secondary mt-0.5 block">
-                  {formatPhone(order.address?.phone || order.user?.phone)}
+                  {formatPhone(phoneRaw)}
                 </span>
               )}
             </div>
@@ -144,6 +178,14 @@ export default function PendingPickupCard({
             )}
           </div>
         </div>
+
+        {/* Delivery Note if present */}
+        {recipient.deliveryInstructions && (
+          <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2 text-xs">
+            <span className="shrink-0 text-amber-600 font-bold">📝 Note:</span>
+            <span className="font-semibold text-text-primary leading-tight">{recipient.deliveryInstructions}</span>
+          </div>
+        )}
 
         {/* 5. Route info */}
         <div className="p-3 rounded-2xl bg-muted/20 border border-border/40 space-y-2 text-xs font-bold">

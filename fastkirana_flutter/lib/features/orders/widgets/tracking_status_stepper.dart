@@ -145,7 +145,7 @@ class TrackingStatusStepper extends StatelessWidget {
                     'Live Order Status',
                     style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w900, color: slateDark),
                   ),
-                  if (!isDelivered && (etaText.isNotEmpty || distanceText.isNotEmpty))
+                  if (!isDelivered && order?.status == OrderStatus.shipped && (etaText.isNotEmpty || distanceText.isNotEmpty))
                     Padding(
                       padding: const EdgeInsets.only(top: 2),
                       child: Text(

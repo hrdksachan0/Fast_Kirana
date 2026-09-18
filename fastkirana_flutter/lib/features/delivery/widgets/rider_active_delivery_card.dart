@@ -8,6 +8,7 @@ import '../../../core/config/app_config.dart';
 import '../../../core/utils/restaurant_utils.dart';
 import '../../../core/services/logger_service.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
+import 'order_recipient_helper.dart';
 
 class RiderActiveDeliveryCard extends StatelessWidget {
   final Map<String, dynamic> order;
@@ -55,12 +56,13 @@ class RiderActiveDeliveryCard extends StatelessWidget {
     final lng = (address?['lng'] as num?)?.toDouble() ?? AppConfig.darkstoreLng;
     // isUpdating is passed via constructor
 
-    final customerName = (address?['name']?.toString().trim().isNotEmpty == true)
-        ? address!['name'].toString().trim()
-        : (customer['name']?.toString() ?? 'Customer');
-    final customerPhone = (address?['phone']?.toString().trim().isNotEmpty == true)
-        ? address!['phone'].toString().trim()
-        : (customer['phone']?.toString().trim() ?? '');
+    final recipient = OrderRecipientDetails.fromOrder(order);
+    final customerName = recipient.recipientName;
+    final customerPhone = (recipient.recipientPhone != null && recipient.recipientPhone!.isNotEmpty)
+        ? recipient.recipientPhone!
+        : ((address?['phone']?.toString().trim().isNotEmpty == true)
+            ? address!['phone'].toString().trim()
+            : (customer['phone']?.toString().trim() ?? ''));
     final avatarLetter = customerName.isNotEmpty ? customerName[0].toUpperCase() : 'C';
 
     DateTime orderDate = DateTime.now();
@@ -180,6 +182,68 @@ class RiderActiveDeliveryCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
 
+                // Recipient Details Banner if ordered for someone else
+                if (recipient.isOrderForSomeone) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7ED), // amber-50
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFFDBA74), width: 1.2), // amber-300
+                    ),
+                    child: Row(
+                      children: [
+                        const Text('🎁', style: TextStyle(fontSize: 18)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'ORDER FOR SOMEONE ELSE',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 10),
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFFC2410C), // orange-700
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              const SizedBox(height: 1),
+                              Text(
+                                'Deliver to: ${recipient.recipientName}${recipient.buyerName != null ? ' • By: ${recipient.buyerName}' : ''}',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 11),
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF9A3412), // orange-900
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEDD5),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFFDBA74), width: 0.8),
+                          ),
+                          child: Text(
+                            'Gift Order',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 9),
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFFC2410C),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
                 // Customer details with Order Time & Call Action Button
                 Container(
                   padding: const EdgeInsets.all(10),
@@ -214,6 +278,25 @@ class RiderActiveDeliveryCard extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
+                                if (recipient.isOrderForSomeone) ...[
+                                  const SizedBox(width: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFFEDD5),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: const Color(0xFFFDBA74), width: 0.6),
+                                    ),
+                                    child: Text(
+                                      'Recipient',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 8.5),
+                                        fontWeight: FontWeight.w900,
+                                        color: const Color(0xFFC2410C),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(width: 6),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
@@ -284,6 +367,38 @@ class RiderActiveDeliveryCard extends StatelessWidget {
                     ],
                   ),
                 ),
+
+                // Delivery Note callout if instructions are present
+                if (recipient.deliveryInstructions != null && recipient.deliveryInstructions!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppDesignSystem.amber50,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFFDE68A), width: 0.8),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('📝', style: TextStyle(fontSize: 12)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Note: ${recipient.deliveryInstructions!}',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 10.5),
+                              fontWeight: FontWeight.w700,
+                              color: AppDesignSystem.amber800,
+                              height: 1.25,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 8),
 
                 // 📍 1-Tap Turn-by-Turn Google Maps Navigation Banner

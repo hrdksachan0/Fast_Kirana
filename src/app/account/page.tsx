@@ -31,48 +31,55 @@ export default async function AccountPage() {
   let allItems: any[] = []
 
   try {
-    // Fast parallel execution with primary key indexes
-    const [dbUser, dbAddresses, dbOrders] = await Promise.all([
-      // 1. Fetch user by ID or Email
-      prisma.user.findFirst({
-        where: {
-          OR: [
-            ...(sessionId ? [{ id: sessionId }] : []),
-            ...(sessionEmail ? [{ email: { equals: sessionEmail, mode: 'insensitive' as const } }] : []),
-            ...(sessionPhone ? [{ phone: { contains: sessionPhone } }] : [])
-          ]
-        },
-        select: { id: true, name: true, email: true, phone: true, role: true }
-      }),
+    // 1. Fetch user by ID, Email, or Phone to resolve canonical user ID
+    const dbUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          ...(sessionId ? [{ id: sessionId }] : []),
+          ...(sessionEmail ? [{ email: { equals: sessionEmail, mode: 'insensitive' as const } }] : []),
+          ...(sessionPhone ? [{ phone: { contains: sessionPhone } }] : [])
+        ]
+      },
+      select: { id: true, name: true, email: true, phone: true, role: true }
+    })
 
-      // 2. Fetch addresses
-      prisma.address.findMany({
-        where: { userId: sessionId },
-        orderBy: { id: 'desc' },
-      }),
+    const targetUserId = dbUser?.id || sessionId
 
-      // 3. Fetch orders with items in a single query
-      prisma.order.findMany({
-        where: { userId: sessionId },
-        orderBy: { createdAt: 'desc' },
-        take: 30,
-        select: {
-          id: true,
-          readableId: true,
-          status: true,
-          total: true,
-          createdAt: true,
-          items: {
+    // 2. Fetch addresses & orders in parallel using the resolved user ID
+    const [dbAddresses, dbOrders] = await Promise.all([
+      targetUserId
+        ? prisma.address.findMany({
+            where: {
+              userId: targetUserId,
+              label: { notIn: ['STORE_PICKUP', 'STORE_PICKUP_RESTAURANT', 'STORE_PICKUP_CAFE'] }
+            },
+            orderBy: [{ isDefault: 'desc' }, { id: 'desc' }],
+          })
+        : Promise.resolve([]),
+
+      targetUserId
+        ? prisma.order.findMany({
+            where: { userId: targetUserId },
+            orderBy: { createdAt: 'desc' },
+            take: 30,
             select: {
               id: true,
-              orderId: true,
-              name: true,
-              quantity: true,
-              price: true,
+              readableId: true,
+              status: true,
+              total: true,
+              createdAt: true,
+              items: {
+                select: {
+                  id: true,
+                  orderId: true,
+                  name: true,
+                  quantity: true,
+                  price: true,
+                }
+              }
             }
-          }
-        }
-      })
+          })
+        : Promise.resolve([])
     ])
 
     user = dbUser
@@ -105,9 +112,11 @@ export default async function AccountPage() {
     street: addr.street,
     area: addr.area,
     city: addr.city,
+    pincode: addr.pincode,
     phone: addr.phone,
     lat: addr.lat,
     lng: addr.lng,
+    isDefault: !!addr.isDefault,
   }))
 
   const serializedOrders = orders.map((o) => ({

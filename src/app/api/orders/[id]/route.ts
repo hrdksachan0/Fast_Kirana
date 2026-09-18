@@ -314,17 +314,16 @@ export async function PATCH(
 
   const headerUserId = request.headers.get('x-user-id')
   const headerUserRole = request.headers.get('x-user-role')
-  const headerUserPhone = request.headers.get('x-user-phone')
-  const headerUserEmail = request.headers.get('x-user-email')
 
-  const isSuperPhone = Boolean((verifiedUserPhone || headerUserPhone) && ((verifiedUserPhone || headerUserPhone)!.includes('7054470303') || (verifiedUserPhone || headerUserPhone)!.includes('8112849854')))
-  const isSuperEmail = Boolean(headerUserEmail && (headerUserEmail.startsWith('admin') || headerUserEmail.includes('hrdk')))
-  const isAdminHeader = (headerUserRole || '').toUpperCase() === 'ADMIN'
+  // Super-admin phone check is ONLY valid if verified cryptographically via session or JWT
+  const isSuperPhone = Boolean(verifiedUserPhone && (verifiedUserPhone.includes('7054470303') || verifiedUserPhone.includes('8112849854')))
+  const isVerifiedAdmin = (verifiedUserRole?.toUpperCase() === 'ADMIN') || isSuperPhone
 
-  const userId = verifiedUserId || headerUserId || 'admin'
-  const userRole = (isSuperPhone || isSuperEmail || isAdminHeader)
+  // Never fall back to 'admin' or 'ADMIN' for unauthenticated/untrusted requests
+  const userId = verifiedUserId || headerUserId || ''
+  const userRole = isVerifiedAdmin
     ? 'ADMIN'
-    : (verifiedUserRole || headerUserRole || 'ADMIN')
+    : (verifiedUserRole || 'USER')
 
   const validation = await validateBodyLegacy(request, updateOrderStatusSchema)
   if (!validation.success) return validation.error

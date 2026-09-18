@@ -378,7 +378,30 @@ export function OrdersTab({
       if (targetOrder.restaurantId) {
         chNames.push(`restaurant-orders-${targetOrder.restaurantId}`)
       }
-      
+      // Also insert into persistent queue if direct fallback is used
+      try {
+        await supabase.from('kitchen_kot_queue').insert({
+          order_id: targetOrder.id,
+          readable_id: targetOrder.readableId || targetOrder.id,
+          restaurant_id: targetOrder.restaurantId || null,
+          payload: {
+            orderId: targetOrder.id,
+            readableId: targetOrder.readableId,
+            restaurantId: targetOrder.restaurantId || null,
+            customerName: targetOrder.userName || targetOrder.user?.name || targetOrder.customerName || 'Customer',
+            items: (targetOrder.restaurantItems && targetOrder.restaurantItems.length > 0)
+              ? targetOrder.restaurantItems
+              : (targetOrder.subOrders?.find((s: any) => s.type === 'RESTAURANT')?.items) || targetOrder.items || [],
+            deliveryMethod: targetOrder.deliveryMethod || 'DELIVERY',
+            notes: targetOrder.notes || null,
+            shopName: targetOrder.shopName || targetOrder.restaurantName || 'Kitchen',
+            printedAt: new Date().toISOString(),
+          },
+          status: 'PENDING',
+          created_at: new Date().toISOString(),
+        })
+      } catch (_) {}
+
       for (const chName of chNames) {
         let channel: ReturnType<typeof supabase.channel> | null = null
         try {

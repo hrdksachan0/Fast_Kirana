@@ -97,6 +97,7 @@ export function useCheckoutAddress({
   useEffect(() => {
     async function loadAddresses() {
       try {
+        setIsAddressesLoading(true)
         const res = await fetch('/api/addresses')
         if (res.ok) {
           const data = await res.json()
@@ -114,41 +115,6 @@ export function useCheckoutAddress({
             setSelectedAddressId('')
             setShowNewAddressForm(true)
           }
-
-          // Automatically geocode in background if any saved address lacks coordinates
-          deliveryAddrs.forEach(async (addr: any) => {
-            if (addr.lat === null || addr.lng === null) {
-              try {
-                const searchQuery = `${addr.street}, ${addr.city}, ${addr.pincode}`
-                const geoRes = await fetch(
-                  `/api/geocode?address=${encodeURIComponent(searchQuery)}`
-                )
-                if (geoRes.ok) {
-                  const geoData = await geoRes.json()
-                  let finalLat = null
-                  let finalLng = null
-                  const results = geoData.data?.results
-                  if (results && results.length > 0) {
-                    finalLat = Math.round(results[0].geometry.location.lat * 1000000) / 1000000
-                    finalLng = Math.round(results[0].geometry.location.lng * 1000000) / 1000000
-                  }
-
-                  if (finalLat && finalLng) {
-                    await fetch('/api/addresses', {
-                      method: 'PATCH',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ id: addr.id, lat: finalLat, lng: finalLng }),
-                    })
-                    setAddresses((prev) =>
-                      prev.map((a) => (a.id === addr.id ? { ...a, lat: finalLat, lng: finalLng } : a))
-                    )
-                  }
-                }
-              } catch (err) {
-                console.error('Error auto-geocoding existing address:', addr.id, err)
-              }
-            }
-          })
         }
       } catch (err) {
         toast.error('Failed to load saved addresses')
@@ -271,7 +237,7 @@ export function useCheckoutAddress({
       return null
     }
 
-    const cleanPincode = pincode.trim()
+    const cleanPincode = pincode.trim().replace(/\s+/g, '')
 
     if (!/^\d{6}$/.test(cleanPincode)) {
       toast.error('Pincode must be a 6-digit number')
@@ -279,8 +245,22 @@ export function useCheckoutAddress({
     }
 
     const serviceablePincode = resolveStorePincode(storeSettingsMap)
-    if (cleanPincode !== serviceablePincode) {
-      toast.error(`FastKirana only delivers to pincode ${serviceablePincode}.`)
+    const allowedPincodes = [
+      serviceablePincode,
+      DEFAULT_STORE_PINCODE,
+      '209206',
+      '224122',
+      '209201',
+      '209214',
+      '209208',
+      '208001',
+      '208002',
+      '208011',
+      '208012',
+      '208020',
+    ]
+    if (!allowedPincodes.includes(cleanPincode)) {
+      toast.error(`FastKirana delivers to Ghatampur (209206) & Akbarpur (224122). Pincode ${cleanPincode} is not serviceable.`)
       return null
     }
 
@@ -295,18 +275,23 @@ export function useCheckoutAddress({
       return null
     }
 
-    const inferredCity = 'Ghatampur'
+    const inferredCity = cleanPincode === '224122' ? 'Akbarpur' : (addressForm.city || 'Ghatampur')
 
     setIsSavingAddress(true)
     try {
       let finalLat = addressForm.lat
       let finalLng = addressForm.lng
 
-      // Fallback: If coordinates are not set, try to geocode the manually typed address in the background
+      // Fallback: If coordinates are not set, try a quick geocode (max 1.5s timeout)
       if (!finalLat || !finalLng) {
         try {
           const searchQuery = `${street.trim()}, ${inferredCity}, ${cleanPincode}`
-          const geoRes = await fetch(`/api/geocode?address=${encodeURIComponent(searchQuery)}`)
+          const controller = new AbortController()
+          const timer = setTimeout(() => controller.abort(), 1500)
+          const geoRes = await fetch(`/api/geocode?address=${encodeURIComponent(searchQuery)}`, {
+            signal: controller.signal,
+          })
+          clearTimeout(timer)
           if (geoRes.ok) {
             const geoData = await geoRes.json()
             const results = geoData.data?.results
@@ -315,16 +300,16 @@ export function useCheckoutAddress({
               finalLng = results[0].geometry.location.lng
             }
           }
-        } catch (err) {
-          console.error('Error auto-geocoding manual address:', err)
+        } catch {
+          // Non-blocking fallback
         }
       }
 
       const payload: any = {
         label: label || 'Home',
-        houseNo: '.',
+        houseNo: addressForm.houseNo || '.',
         street: street.trim(),
-        area: '.',
+        area: addressForm.area || '.',
         city: inferredCity,
         pincode: cleanPincode,
         phone: cleanPhone,
@@ -372,12 +357,13 @@ export function useCheckoutAddress({
         })
         return { savedAddress, newAddresses: nextAddresses }
       } else {
-        const errorData = await res.json()
+        const errorData = await res.json().catch(() => ({}))
         toast.error(errorData.error || 'Failed to save address')
         return null
       }
     } catch (err) {
-      toast.error('Something went wrong')
+      console.error('Error saving address:', err)
+      toast.error('Something went wrong saving address')
       return null
     } finally {
       setIsSavingAddress(false)

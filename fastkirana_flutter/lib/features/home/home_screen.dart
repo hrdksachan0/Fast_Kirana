@@ -2658,10 +2658,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     return catalogAsync.when(
       loading: () => groceryCategories.take(4).map((cat) =>
-        SliverToBoxAdapter(child: _buildHorizontalProductSection(cat, [], totalCount: 0))
+        SliverToBoxAdapter(child: _buildProductSectionSkeleton(cat.name))
       ).toList(),
       error: (_, __) => groceryCategories.take(4).map((cat) =>
-        SliverToBoxAdapter(child: _buildHorizontalProductSection(cat, [], totalCount: 0))
+        SliverToBoxAdapter(child: _buildProductSectionSkeleton(cat.name))
       ).toList(),
       data: (allProducts) {
         final slivers = <Widget>[];

@@ -89,14 +89,19 @@ class KotPrintService {
     try {
       final sb = SupabaseService.client;
       if (sb != null) {
-        // Update DB record
+        // Insert into persistent queue if direct path used
         try {
-          await sb.from('orders').update({
-            'kot_printed': true,
-            'kot_sent': true,
-            'kotPrintedAt': DateTime.now().toIso8601String(),
-          }).eq('id', cleanId);
-        } catch (e) { LoggerService.error("Bare catch", e); }
+          await sb.from('kitchen_kot_queue').insert({
+            'order_id': cleanId,
+            'readable_id': cleanReadable.isNotEmpty ? cleanReadable : cleanId,
+            'restaurant_id': restaurantId,
+            'payload': payload,
+            'status': 'PENDING',
+            'created_at': DateTime.now().toIso8601String(),
+          });
+        } catch (e) {
+          LoggerService.error("KOT Queue fallback insert error", e);
+        }
 
         // If the backend API already broadcasted, DO NOT send a duplicate broadcast!
         if (!apiSuccess) {

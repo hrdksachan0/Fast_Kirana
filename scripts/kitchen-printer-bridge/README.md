@@ -1,48 +1,65 @@
-# FastKirana Kitchen Printer Bridge 🖨️
+# FastKirana Kitchen Thermal Printer Bridge (Robust Edition) 🖨️
 
-This background bridge script allows silent, zero-touch KOT printing directly from the kitchen PC's thermal printer, without depending on open browser tabs or facing tab sleep/throttling.
+This background bridge enables 100% resilient, silent, zero-touch KOT printing directly on your kitchen's thermal receipt printer (80mm / 58mm).
+
+## 🛡️ Robust Edition Features
+
+1. **Persistent Database Queue**:
+   - Every KOT order is saved in PostgreSQL (`kitchen_kot_queue`).
+   - If the kitchen laptop loses internet for 10 minutes or is completely turned off, **the moment internet reconnects, all pending KOTs print out automatically!**
+2. **Laptop Sleep & Lid-Close Fix**:
+   - Built-in `Keep-Laptop-Awake-And-Lid-Active.bat` tool configures Windows so closing the laptop lid never stops printing.
+   - Built-in Windows Keep-Awake prevents laptop sleep mode 24/7 while the bridge is running.
+3. **Active Network Health Monitor & Audio Alerts**:
+   - Detects kitchen Wi-Fi disconnection within seconds.
+   - Emits an audible warning beep so kitchen staff knows the Wi-Fi is down.
+   - Emits a recovery chime when internet is restored and immediately drains pending orders.
+4. **Auto-Start on Boot**:
+   - 1-click `Install-AutoStart-Startup.bat` installer configures Windows to launch the bridge on computer startup/reboot.
+
+---
 
 ## Setup Instructions
 
 ### 1. Requirements
-- The kitchen PC must run **Windows**.
-- **Node.js** must be installed. Download & install the LTS version from: [https://nodejs.org/](https://nodejs.org/)
+- The kitchen PC must run **Windows 10 or 11**.
+- **Node.js** (LTS version) installed from: [https://nodejs.org/](https://nodejs.org/)
+- Thermal printer connected via USB (e.g. POS-80C, XP-80, Epson TM-T82).
 
 ### 2. Printer Setup
-- Connect the USB thermal printer to the PC.
-- Go to Windows **Settings -> Bluetooth & devices -> Printers & scanners**.
-- Make note of the printer's exact name (e.g., `XP-80`, `POS-80`, `Epson TM-T88`).
-- Set it as your **Default Printer** if possible.
+- In Windows Settings -> **Bluetooth & devices -> Printers & scanners**, find your printer name (e.g. `POS-80C`).
+- If your printer name is different, update `"PRINTER_NAME"` in `config.json`.
 
-### 3. Copy files
-- Copy this entire `kitchen-printer-bridge` folder onto the kitchen PC (e.g., save it in `C:\FastKiranaPrinter`).
+### 3. Step 1: Run Power & Lid Fix (One-time)
+- Double-click **`Keep-Laptop-Awake-And-Lid-Active.bat`**.
+- This configures Windows so the laptop never sleeps and closing the laptop lid won't stop the printer.
 
-### 4. Configure `config.json`
-Open `config.json` on the kitchen PC using Notepad:
-```json
-{
-  "SUPABASE_URL": "https://xzgrwwghfdsrfhbqlzwc.supabase.co",
-  "SUPABASE_ANON_KEY": "YOUR_SUPABASE_ANON_KEY_HERE",
-  "PRINTER_NAME": "XP-80",
-  "AUTO_PRINT_ON_CONFIRM": false,
-  "RESTAURANT_ID": ""
-}
-```
-1. Replace `YOUR_SUPABASE_ANON_KEY_HERE` with your project's Supabase Anon Key (which you can copy from Vercel env or your Supabase Dashboard).
-2. Set `"PRINTER_NAME"` to match your Windows printer name exactly.
-3. Keep `"AUTO_PRINT_ON_CONFIRM"` as `false` to print only when the Admin clicks **"Send KOT"** on mobile/PC. Set to `true` if you want automatic printing as soon as orders are confirmed.
+### 4. Step 2: Install Auto-Start on Boot (One-time)
+- Double-click **`Install-AutoStart-Startup.bat`**.
+- Now whenever the laptop is turned on or reboots after a power cut, the printer bridge starts automatically in the background!
 
-### 5. Start the Bridge
+### 5. Step 3: Start the Bridge
 - Double-click **`start-bridge.bat`**.
-- On first launch, it will auto-install dependencies.
-- You will see a success message: `🚀 FastKirana Kitchen Printer Bridge is RUNNING!`.
-- Minimize this window and keep it running in the background.
+- You will see: `🚀 FastKirana Kitchen Thermal Printer Bridge is RUNNING & READY!`.
+- Keep this window running or minimized.
 
 ---
 
-### Optional: Run Automatically on Windows Startup
-To make the printer bridge start automatically when the computer turns on:
-1. Right-click on `start-bridge.bat` and click **Create shortcut**.
-2. Press `Win + R` on your keyboard, type `shell:startup`, and press **Enter**. This opens the Windows Startup folder.
-3. Drag/Move the newly created shortcut of `start-bridge.bat` into this Startup folder.
-4. Now, the printer bridge will launch automatically in the background on boot!
+## Configuration (`config.json`)
+
+```json
+{
+  "SUPABASE_URL": "https://bberzasmxwioxjynbuaf.supabase.co",
+  "SUPABASE_ANON_KEY": "sb_publishable_...",
+  "PRINTER_NAME": "POS-80C",
+  "AUTO_PRINT_ON_CONFIRM": false,
+  "RESTAURANT_ID": "",
+  "ENABLE_AUDIO_ALERTS": true,
+  "POLL_INTERVAL_SECONDS": 6
+}
+```
+
+- `"PRINTER_NAME"`: Exact Windows name of your thermal printer.
+- `"AUTO_PRINT_ON_CONFIRM"`: If `true`, prints as soon as orders are confirmed. If `false`, prints when "Send KOT" is clicked.
+- `"ENABLE_AUDIO_ALERTS"`: `true` enables PC speaker chimes for new orders and network disconnect alerts.
+- `"POLL_INTERVAL_SECONDS"`: Frequency of checking persistent database queue for offline orders (default: 6 seconds).
