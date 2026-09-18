@@ -160,6 +160,36 @@ class Order {
   ({String? name, String? phone})? get deliveryUser =>
       (deliveryBoyName != null || deliveryBoyPhone != null) ? (name: deliveryBoyName, phone: deliveryBoyPhone) : null;
 
+  bool get isRestaurantOrder {
+    if (restaurantId != null && restaurantId!.trim().isNotEmpty && restaurantId != 'null') return true;
+    final rId = (readableId ?? '').toUpperCase().trim();
+    if (rId.endsWith('-R') || rId.contains('-R-')) return true;
+    final sName = (shopName ?? '').toLowerCase().trim();
+    if (sName.isNotEmpty &&
+        sName != 'fastkirana store' &&
+        sName != 'fastkirana dark store' &&
+        sName != 'fastkirana darkstore' &&
+        sName != 'fastkirana grocery') {
+      if (sName.contains('restaurant') ||
+          sName.contains('cafe') ||
+          sName.contains('kitchen') ||
+          sName.contains('pizza') ||
+          sName.contains('wedson') ||
+          sName.contains('bal udyan') ||
+          sName.contains('as ') ||
+          RestaurantRegistry.find(sName) != null) {
+        return true;
+      }
+    }
+    if (items != null && items!.isNotEmpty) {
+      if (items!.any((it) => it.isRestaurantItem)) return true;
+    }
+    if (subOrders != null && subOrders!.isNotEmpty) {
+      if (subOrders!.any((s) => s.isRestaurantOrder)) return true;
+    }
+    return false;
+  }
+
   ({String label, String formattedAddress, double? lat, double? lng})? get address {
     final rawLat = (addressRaw?['lat'] as num?)?.toDouble() ?? (addressRaw?['latitude'] as num?)?.toDouble() ?? deliveryLat;
     final rawLng = (addressRaw?['lng'] as num?)?.toDouble() ?? (addressRaw?['longitude'] as num?)?.toDouble() ?? deliveryLng;
@@ -552,6 +582,8 @@ class OrderItem {
   final String? notes;
   final double refundAmount;
   final bool isRefunded;
+  final String? restaurantId;
+  final String? shopName;
 
   String? get variant => selectedVariant;
 
@@ -566,23 +598,88 @@ class OrderItem {
     this.notes,
     this.refundAmount = 0.0,
     this.isRefunded = false,
+    this.restaurantId,
+    this.shopName,
   });
+
+  bool get isRestaurantItem {
+    if (restaurantId != null && restaurantId!.trim().isNotEmpty && restaurantId != 'null') return true;
+    if (shopName != null && shopName!.trim().isNotEmpty) {
+      final s = shopName!.toLowerCase().trim();
+      if (s != 'fastkirana store' &&
+          s != 'fastkirana dark store' &&
+          s != 'fastkirana darkstore' &&
+          s != 'fastkirana grocery') {
+        return true;
+      }
+    }
+    final pid = (productId ?? '').toUpperCase();
+    if (pid.startsWith('REST-') || pid.startsWith('DISH-') || pid.startsWith('CAFE-')) return true;
+    final n = name.toLowerCase().trim();
+    const dishKeywords = [
+      'roll', 'spring roll', 'burger', 'pizza', 'sandwich', 'chowmein', 'noodle',
+      'fried rice', 'paneer', 'manchurian', 'shake', 'coffee', 'pasta', 'thali',
+      'roti', 'naan', 'gravy', 'curry', 'biryani', 'pav bhaji', 'fries', 'momos',
+      'samosa', 'maggi', 'soup', 'kulfi', 'matka kulfi', 'chaat', 'tikki', 'chole',
+      'bhature', 'kulcha', 'paratha', 'dosa', 'idli', 'vada', 'beverage'
+    ];
+    return dishKeywords.any((k) => n.contains(k));
+  }
+
+  OrderItem copyWith({
+    String? id,
+    String? productId,
+    String? name,
+    double? price,
+    int? quantity,
+    String? imageUrl,
+    String? selectedVariant,
+    String? notes,
+    double? refundAmount,
+    bool? isRefunded,
+    String? restaurantId,
+    String? shopName,
+  }) {
+    return OrderItem(
+      id: id ?? this.id,
+      productId: productId ?? this.productId,
+      name: name ?? this.name,
+      price: price ?? this.price,
+      quantity: quantity ?? this.quantity,
+      imageUrl: imageUrl ?? this.imageUrl,
+      selectedVariant: selectedVariant ?? this.selectedVariant,
+      notes: notes ?? this.notes,
+      refundAmount: refundAmount ?? this.refundAmount,
+      isRefunded: isRefunded ?? this.isRefunded,
+      restaurantId: restaurantId ?? this.restaurantId,
+      shopName: shopName ?? this.shopName,
+    );
+  }
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
     final noteStr = json['notes']?.toString() ?? '';
     final hasRefundInNotes = noteStr.toLowerCase().contains('refund');
     final itemRefund = (json['refundAmount'] as num?)?.toDouble() ?? 0.0;
+    final rawRestId = json['restaurantId']?.toString() ??
+        json['restaurant_id']?.toString() ??
+        (json['restaurant'] is Map ? json['restaurant']['id']?.toString() : null);
+    final rawShopName = json['shopName']?.toString() ??
+        json['shop_name']?.toString() ??
+        (json['restaurant'] is Map ? json['restaurant']['name']?.toString() : null);
+
     return OrderItem(
       id: json['id']?.toString() ?? '',
-      productId: json['productId']?.toString(),
+      productId: json['productId']?.toString() ?? json['product_id']?.toString(),
       name: json['name']?.toString() ?? 'Product',
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       quantity: (json['quantity'] as num?)?.toInt() ?? 1,
-      imageUrl: json['imageUrl']?.toString(),
+      imageUrl: json['imageUrl']?.toString() ?? json['image_url']?.toString(),
       selectedVariant: json['selectedVariant']?.toString() ?? json['variant']?.toString(),
       notes: json['notes']?.toString(),
       refundAmount: itemRefund,
       isRefunded: json['isRefunded'] == true || hasRefundInNotes || itemRefund > 0,
+      restaurantId: rawRestId,
+      shopName: rawShopName,
     );
   }
 
@@ -597,6 +694,8 @@ class OrderItem {
     'notes': notes,
     'refundAmount': refundAmount,
     'isRefunded': isRefunded,
+    'restaurantId': restaurantId,
+    'shopName': shopName,
   };
 
   double get lineTotal => price * quantity;
