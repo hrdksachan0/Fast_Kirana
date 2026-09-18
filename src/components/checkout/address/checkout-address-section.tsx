@@ -229,7 +229,7 @@ export function CheckoutAddressSection({
                     <div className="flex items-center justify-between gap-2 flex-wrap mb-1.5">
                       <div className="flex items-center gap-1.5 font-black text-text-primary text-[11.5px]">
                         <span className="text-sm">📍</span>
-                        <span>Dark Store se doori: <strong className="text-emerald-700 dark:text-emerald-300 font-mono">{addrDist.toFixed(1)} km</strong></span>
+                        <span>Delivery Distance: <strong className="text-emerald-700 dark:text-emerald-300 font-mono">{addrDist.toFixed(1)} km</strong></span>
                         <span className="text-[10px] font-bold text-text-muted">({currentRange})</span>
                       </div>
                       <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
@@ -240,10 +240,10 @@ export function CheckoutAddressSection({
                     <div className="text-[11px] text-text-secondary leading-relaxed space-y-1">
                       <p className="flex items-center gap-1.5 font-semibold">
                         <span className="text-emerald-600">✓</span>
-                        <span>Delivery Fee: <strong className="text-text-primary">₹{currentFee}</strong> (Order <strong className="text-emerald-600 dark:text-emerald-400">₹{currentThreshold}+</strong> hone par <strong className="text-emerald-600 dark:text-emerald-400 font-black">FREE 🎉</strong>)</span>
+                        <span>Delivery Fee: <strong className="text-text-primary">₹{currentFee}</strong> (FREE on orders above <strong className="text-emerald-600 dark:text-emerald-400">₹{currentThreshold}</strong>)</span>
                       </p>
                       <p className="text-[10px] text-text-muted font-medium">
-                        💡 Rate transparent hai: 0-2km: ₹{t1Fee} (Free ₹{t1Threshold}+) • 2-3km: ₹{t2Fee} (Free ₹{t2Threshold}+) • 3-5km: ₹{t3Fee} (Free ₹{t3Threshold}+)
+                        Distance pricing: 0–2 km: ₹{t1Fee} (Free ₹{t1Threshold}+) • 2–3 km: ₹{t2Fee} (Free ₹{t2Threshold}+) • 3–5 km: ₹{t3Fee} (Free ₹{t3Threshold}+)
                       </p>
                     </div>
                   </div>

@@ -727,11 +727,24 @@ bool isProductInGroceryCategory(Product p, dynamic category) {
         pSlug == 'laundary-care';
   }
 
-  if (catSlug == 'dairy-products') {
+  if (catSlug == 'dairy-products' ||
+      catSlug == 'dairy-breakfast' ||
+      catSlug == 'dairy' ||
+      catSlug == 'dairy-bread-eggs' ||
+      catName.contains('dairy') ||
+      catName.contains('milk') ||
+      catName.contains('breakfast')) {
     return pCatId == 'cat-116' ||
         pCatId.startsWith('sub-116-') ||
         pParentId == 'cat-116' ||
-        pSlug == 'dairy-products';
+        pSlug == 'dairy-products' ||
+        pSlug == 'dairy-breakfast' ||
+        pSlug == 'dairy' ||
+        pSlug == 'dairy-bread-eggs' ||
+        pSlug == 'milk' ||
+        pCatName.contains('dairy') ||
+        pCatName.contains('milk') ||
+        p.tags.any((t) => t.toLowerCase() == 'milk' || t.toLowerCase() == 'dairy' || t.toLowerCase() == 'doodh');
   }
 
   return false;

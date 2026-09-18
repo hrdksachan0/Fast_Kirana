@@ -348,6 +348,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       }
       return true;
     }).toList();
+    groceryCategories.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
     final List<Product> result;
     if (_selectedFilterIndex > 0 && _selectedFilterIndex <= groceryCategories.length) {
@@ -2681,6 +2682,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       }
       return true;
     }).toList();
+    groceryCategories.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
     if (groceryCategories.isEmpty) return [const SliverToBoxAdapter(child: SizedBox.shrink())];
 

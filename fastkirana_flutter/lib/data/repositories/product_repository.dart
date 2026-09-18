@@ -599,16 +599,17 @@ class ProductRepository {
 
     final fallbacks = [
       const Category(id: 'CAT-101', name: 'Fruits & Vegetables', slug: 'fruits-vegetables', imageUrl: '/fruits_vegetables_category.png', sortOrder: 0),
-      const Category(id: 'CAT-102', name: 'Snacks & Munchies', slug: 'snacks-munchies', imageUrl: '/snacks_munchies_category.png', sortOrder: 1),
-      const Category(id: 'CAT-103', name: 'Kitchen Needs', slug: 'kitchen-needs', imageUrl: '/atta_rice_dal_category.png', sortOrder: 2),
-      const Category(id: 'CAT-104', name: 'Packaged Foods', slug: 'packaged-foods', imageUrl: '/packaged_foods_category.png', sortOrder: 3),
-      const Category(id: 'CAT-105', name: 'Ice Cream & Desserts', slug: 'ice-cream', imageUrl: '/ice_cream_category.png', sortOrder: 4),
-      const Category(id: 'CAT-106', name: 'Chocolates & Sweets', slug: 'chocolates', imageUrl: '/chocolates_category.png', sortOrder: 5),
-      const Category(id: 'CAT-107', name: 'Home Needs & Cleaning', slug: 'home-needs-and-cleaning', imageUrl: '/household_category.png', sortOrder: 6),
-      const Category(id: 'CAT-108', name: 'Cold Drinks & Juices', slug: 'beverages', imageUrl: '/beverages_category.png', sortOrder: 7),
-      const Category(id: 'CAT-109', name: 'Personal Care', slug: 'personal-care', imageUrl: '/personal_care_category.png', sortOrder: 8),
-      const Category(id: 'CAT-110', name: 'Healthy Foods', slug: 'healthy-foods', imageUrl: '/healthy_foods_category.png', sortOrder: 9),
-      const Category(id: 'CAT-111', name: 'Bakery & Biscuits', slug: 'bakery', imageUrl: '/bakery_biscuits_category.png', sortOrder: 10),
+      const Category(id: 'CAT-102', name: 'Dairy & Breakfast', slug: 'dairy-breakfast', imageUrl: '/dairy_breakfast_category.png', sortOrder: 1),
+      const Category(id: 'CAT-103', name: 'Snacks & Munchies', slug: 'snacks-munchies', imageUrl: '/snacks_munchies_category.png', sortOrder: 2),
+      const Category(id: 'CAT-104', name: 'Kitchen Needs', slug: 'kitchen-needs', imageUrl: '/atta_rice_dal_category.png', sortOrder: 3),
+      const Category(id: 'CAT-105', name: 'Packaged Foods', slug: 'packaged-foods', imageUrl: '/packaged_foods_category.png', sortOrder: 4),
+      const Category(id: 'CAT-106', name: 'Ice Cream & Desserts', slug: 'ice-cream', imageUrl: '/ice_cream_category.png', sortOrder: 5),
+      const Category(id: 'CAT-107', name: 'Chocolates & Sweets', slug: 'chocolates', imageUrl: '/chocolates_category.png', sortOrder: 6),
+      const Category(id: 'CAT-108', name: 'Home Needs & Cleaning', slug: 'home-needs-and-cleaning', imageUrl: '/household_category.png', sortOrder: 7),
+      const Category(id: 'CAT-109', name: 'Cold Drinks & Juices', slug: 'beverages', imageUrl: '/beverages_category.png', sortOrder: 8),
+      const Category(id: 'CAT-110', name: 'Personal Care', slug: 'personal-care', imageUrl: '/personal_care_category.png', sortOrder: 9),
+      const Category(id: 'CAT-111', name: 'Healthy Foods', slug: 'healthy-foods', imageUrl: '/healthy_foods_category.png', sortOrder: 10),
+      const Category(id: 'CAT-112', name: 'Bakery & Biscuits', slug: 'bakery', imageUrl: '/bakery_biscuits_category.png', sortOrder: 11),
     ];
     _cachedCategories = fallbacks;
     return fallbacks;

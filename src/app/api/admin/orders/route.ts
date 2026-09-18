@@ -188,7 +188,6 @@ export async function GET(request: Request) {
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
           FROM orders o
           WHERE o."storeId" = ${effectiveStoreId}
-            AND (o."paymentMethod" = 'COD' OR o."paymentStatus" = 'PAID' OR o.status::text != 'PENDING')
           ORDER BY o."createdAt" DESC
           LIMIT ${limit} OFFSET ${skip}
         `
@@ -199,7 +198,6 @@ export async function GET(request: Request) {
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
           FROM orders o
-          WHERE (o."paymentMethod" = 'COD' OR o."paymentStatus" = 'PAID' OR o.status::text != 'PENDING')
           ORDER BY o."createdAt" DESC
           LIMIT ${limit} OFFSET ${skip}
         `
@@ -252,7 +250,7 @@ export async function GET(request: Request) {
         cancelled: number
       }>>`
         SELECT 
-          COUNT(DISTINCT CASE WHEN "paymentMethod" = 'COD' OR "paymentStatus" = 'PAID' OR status::text != 'PENDING' THEN COALESCE("combinedId", id) END)::int as total,
+          COUNT(DISTINCT COALESCE("combinedId", id))::int as total,
           COUNT(DISTINCT CASE WHEN status::text = 'ADMIN_PENDING' THEN COALESCE("combinedId", id) END)::int as admin_pending,
           COUNT(DISTINCT CASE WHEN status::text = 'PENDING' AND ("paymentMethod" = 'COD' OR "paymentStatus" = 'PAID') THEN COALESCE("combinedId", id) END)::int as pending,
           COUNT(DISTINCT CASE WHEN status::text = 'PENDING' AND "paymentMethod" != 'COD' AND "paymentStatus" != 'PAID' THEN COALESCE("combinedId", id) END)::int as payment_pending,

@@ -575,7 +575,7 @@ export function OrdersTab({
   const filteredActiveOrders = rawActiveList.filter((o) => {
     const isUnpaidOnline = o.paymentStatus !== 'PAID' && o.paymentMethod !== 'COD'
     const matchesFilter = orderStatusFilter === 'ALL'
-      ? (!isUnpaidOnline || o.status !== 'PENDING')
+      ? true
       : orderStatusFilter === 'PAYMENT_PENDING'
       ? (o.status === 'PENDING' && isUnpaidOnline)
       : orderStatusFilter === 'PENDING'
@@ -690,6 +690,30 @@ export function OrdersTab({
               >
                 <span>🛡️ Review Approvals</span>
                 <span>({orderCounts.ADMIN_PENDING})</span>
+              </button>
+            </div>
+          )}
+
+          {/* Pending Online Payment Alert Banner */}
+          {(orderCounts?.PAYMENT_PENDING || 0) > 0 && (
+            <div className="mb-4 p-3.5 rounded-2xl border border-rose-500/35 bg-gradient-to-r from-rose-500/15 via-amber-500/10 to-rose-500/15 text-xs flex items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-start gap-2.5">
+                <span className="text-lg animate-pulse">⚠️</span>
+                <div>
+                  <h4 className="font-black text-rose-700 dark:text-rose-300">
+                    {orderCounts.PAYMENT_PENDING} Order(s) Awaiting Online Payment
+                  </h4>
+                  <p className="text-[10.5px] text-text-secondary mt-0.5 font-bold">
+                    Customer is completing UPI payment. Tap to verify on Cashfree, convert to COD, or share WhatsApp payment link.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOrderStatusFilter('PAYMENT_PENDING')}
+                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black text-[10px] transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1 shrink-0"
+              >
+                <span>⚠️ View Pending ({orderCounts.PAYMENT_PENDING})</span>
               </button>
             </div>
           )}

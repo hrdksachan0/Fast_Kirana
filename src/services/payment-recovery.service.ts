@@ -24,10 +24,10 @@ export async function runPaymentRecoveryCron(): Promise<PaymentRecoverySummary> 
 
   const now = new Date()
   const twoMinutesAgo = new Date(now.getTime() - 2 * 60 * 1000)
-  const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000)
+  const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000)
 
   // ---------------------------------------------------------------------------
-  // STEP 1: WhatsApp Drop-off Recovery for Orders between 2 and 10 minutes old
+  // STEP 1: WhatsApp Drop-off Recovery for Orders between 2 and 30 minutes old
   // ---------------------------------------------------------------------------
   try {
     const pendingRecoveryOrders = await prisma.order.findMany({
@@ -37,7 +37,7 @@ export async function runPaymentRecoveryCron(): Promise<PaymentRecoverySummary> 
         status: 'PENDING',
         createdAt: {
           lte: twoMinutesAgo,
-          gte: tenMinutesAgo,
+          gte: thirtyMinutesAgo,
         },
         OR: [
           { notes: null },
@@ -94,7 +94,7 @@ export async function runPaymentRecoveryCron(): Promise<PaymentRecoverySummary> 
   }
 
   // ---------------------------------------------------------------------------
-  // STEP 2: Auto-Timeout and Cancel Orders older than 10 minutes
+  // STEP 2: Auto-Timeout and Cancel Abandoned Orders older than 30 minutes
   // ---------------------------------------------------------------------------
   try {
     const expiredOrders = await prisma.order.findMany({
@@ -103,7 +103,7 @@ export async function runPaymentRecoveryCron(): Promise<PaymentRecoverySummary> 
         paymentStatus: 'PENDING',
         status: 'PENDING',
         createdAt: {
-          lt: tenMinutesAgo,
+          lt: thirtyMinutesAgo,
         },
       },
       include: {
@@ -114,9 +114,29 @@ export async function runPaymentRecoveryCron(): Promise<PaymentRecoverySummary> 
 
     for (const order of expiredOrders) {
       try {
+        // First check Cashfree live before cancelling
+        try {
+          const { getCashfreeOrder } = await import('@/lib/cashfree')
+          const cfOrder = await getCashfreeOrder(order.id)
+          if (cfOrder && cfOrder.order_status === 'PAID') {
+            await prisma.order.update({
+              where: { id: order.id },
+              data: {
+                paymentStatus: 'PAID',
+                status: 'CONFIRMED',
+                notes: order.notes ? `${order.notes} [CASHFREE_AUTO_RECOVERED]` : '[CASHFREE_AUTO_RECOVERED]',
+              },
+            })
+            logger.info('payment-recovery', `Order #${order.readableId || order.id} was verified PAID on Cashfree. Rescued & confirmed instead of cancelling.`)
+            continue
+          }
+        } catch (_cfErr) {
+          // Continue to cancel if check fails and order is older than 30 mins
+        }
+
         const timeoutNotes = order.notes 
-          ? `${order.notes} [PAYMENT_TIMEOUT: Auto-cancelled after 10m]`
-          : '[PAYMENT_TIMEOUT: Auto-cancelled after 10m]'
+          ? `${order.notes} [PAYMENT_TIMEOUT: Auto-cancelled after 30m]`
+          : '[PAYMENT_TIMEOUT: Auto-cancelled after 30m]'
 
         // 1. Mark order as CANCELLED in DB
         await prisma.order.update({
