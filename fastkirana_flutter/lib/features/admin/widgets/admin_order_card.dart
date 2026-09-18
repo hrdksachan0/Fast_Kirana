@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/routes/page_transitions.dart';
 import '../../../core/theme/design_system.dart';
+import '../../../core/utils/restaurant_utils.dart';
 import '../../../data/models/order.dart';
 import '../../../providers/store_settings_provider.dart';
 import '../../orders/order_detail_screen.dart';
@@ -312,13 +313,10 @@ class AdminOrderCard extends ConsumerWidget {
                                 Builder(
                                   builder: (context) {
                                     final shop = order.shopName;
-                                    final rid = (order.readableId ?? '').toUpperCase();
-                                    final isRest = (shop != null && (shop.toLowerCase().contains('restaurant') || shop.toLowerCase().contains('wedson') || shop.toLowerCase().contains('as ') || shop.toLowerCase().contains('bal'))) ||
-                                        rid.endsWith('-R') ||
-                                        order.restaurantId != null;
-                                    final outletName = (shop != null && shop.isNotEmpty && shop != 'null') 
+                                    final isRest = order.isRestaurantOrder;
+                                    final outletName = (shop != null && shop.isNotEmpty && shop != 'null' && shop != 'FastKirana Dark Store') 
                                         ? shop 
-                                        : (isRest ? 'Wedson Restaurant' : 'FastKirana Dark Store');
+                                        : (isRest ? (RestaurantRegistry.getName(order.restaurantId) ?? 'Restaurant') : 'FastKirana Dark Store');
 
                                     return Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -470,10 +468,13 @@ class AdminOrderCard extends ConsumerWidget {
                     spacing: 8,
                     runSpacing: 6,
                     children: order.subOrders!.map((sub) {
-                      final rid = sub.readableId ?? '';
-                      final isRest = rid.toUpperCase().endsWith('-R') || sub.restaurantId != null;
+                      final isRest = sub.isRestaurantOrder;
                       final outletIcon = isRest ? '🍽️' : '🛒';
-                      final outletTitle = isRest ? (sub.shopName ?? 'Restaurant') : 'Dark Store (Grocery)';
+                      final outletTitle = isRest
+                          ? ((sub.shopName != null && sub.shopName!.isNotEmpty && sub.shopName != 'FastKirana Dark Store')
+                              ? sub.shopName!
+                              : (RestaurantRegistry.getName(sub.restaurantId) ?? 'Restaurant'))
+                          : 'Dark Store (Grocery)';
                       final isPacked = sub.status == OrderStatus.packed || sub.status == OrderStatus.shipped || sub.status == OrderStatus.delivered;
 
                       return GestureDetector(

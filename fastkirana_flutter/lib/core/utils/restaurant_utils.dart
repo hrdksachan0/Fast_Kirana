@@ -83,6 +83,48 @@ class RestaurantRegistry {
     }
   }
 
+  /// Comprehensive list of food dish keywords to identify cooked/restaurant food items
+  /// Guarded against packaged grocery items (e.g. Choco Rolls, Roll-on, Knorr, packaged soda bottles).
+  static bool isFoodDishName(String? name) {
+    if (name == null || name.trim().isEmpty) return false;
+    final n = name.toLowerCase().trim();
+
+    // Guard: exclude obvious packaged grocery items
+    if (n.contains('choco roll') ||
+        n.contains('toilet roll') ||
+        n.contains('tissue roll') ||
+        n.contains('roll-on') ||
+        n.contains('knorr') ||
+        n.contains('powder') ||
+        n.contains('biscuit') ||
+        n.contains('soap') ||
+        n.contains('shampoo') ||
+        n.contains('coke') ||
+        n.contains('cola') ||
+        n.contains('pepsi') ||
+        n.contains('sprite') ||
+        n.contains('thumsup') ||
+        n.contains('fanta') ||
+        n.contains('limca') ||
+        n.contains('frooti') ||
+        n.contains('maaza')) {
+      return false;
+    }
+
+    // Exact cooked dish keywords
+    const dishKeywords = [
+      'spring roll', 'veg roll', 'paneer roll', 'egg roll', 'kathi roll', 'frankie roll',
+      'burger', 'pizza', 'sandwich', 'sandwitch', 'chowmein', 'noodle', 'noodles',
+      'fried rice', 'manchurian', 'calzone', 'pasta', 'thali', 'biryani',
+      'pav bhaji', 'pavbhaji', 'momos', 'momo', 'garlic bread',
+      'chole bhature', 'bhature', 'kulcha', 'dosa', 'idli', 'vada', 'vadapav',
+      'chilli potato', 'crispy corn', 'paneer tikka', 'soya chaap', 'chaap',
+      'handi paneer', 'kadhai paneer', 'shahi paneer', 'dal makhani', 'tandoori roti',
+      'butter naan', 'garlic naan', 'missi roti', 'paneer paratha', 'aloo paratha'
+    ];
+    return dishKeywords.any((k) => n.contains(k));
+  }
+
   /// Register or update a list of restaurants fetched from DB/API
   static void registerAll(List<Restaurant> list) {
     _ensureInitialized();
@@ -181,7 +223,12 @@ bool isRestaurantProduct(Product product) {
     return true;
   }
 
-  // 2. Explicit restaurant category from database
+  // 2. Dish name keyword matching (e.g. Spring Roll, Matka Kulfi, Burger, Pizza, etc.)
+  if (RestaurantRegistry.isFoodDishName(product.name)) {
+    return true;
+  }
+
+  // 3. Explicit restaurant category from database
   final categorySlug = (product.category?.slug ?? product.categoryId ?? '').toLowerCase();
   if (categorySlug.contains('restaurant') ||
       categorySlug.contains('cafe') ||
@@ -190,7 +237,7 @@ bool isRestaurantProduct(Product product) {
     return true;
   }
 
-  // 3. Explicit tags
+  // 4. Explicit tags
   final tags = product.tags.map((t) => t.toLowerCase()).toList();
   if (tags.any((t) => t == 'restaurant' || t == 'cafe' || t == 'cooked' || t == 'dish')) {
     return true;
@@ -217,8 +264,8 @@ String getOutletName(Product product) {
     return registeredName;
   }
 
-  // 3. Default fallback
-  if (rId != null && rId.trim().isNotEmpty) {
+  // 3. If dish matches food keywords, return Restaurant fallback
+  if (isRestaurantProduct(product)) {
     return 'Restaurant';
   }
 
@@ -265,37 +312,59 @@ OutletLocation getOutletLocation({
   List<dynamic>? items,
   dynamic rawOrder,
 }) {
-  // 1. If order has sub-orders, check for restaurant suborder
-  if (rawOrder is Map && rawOrder['subOrders'] is List) {
-    final subOrders = rawOrder['subOrders'] as List;
-    for (final s in subOrders) {
-      if (s is Map &&
-          (s['type'] == 'RESTAURANT' ||
-              s['restaurantId'] != null ||
-              (s['readableId']?.toString().toUpperCase().endsWith('-R') ?? false))) {
-        final subRestId = s['restaurantId']?.toString();
-        final subShopName = (s['shopName'] ?? s['restaurantName'])?.toString();
-        final subItems = s['items'] as List<dynamic>?;
-        return getOutletLocation(
-          restaurantId: subRestId,
-          shopName: subShopName,
-          orderType: 'RESTAURANT',
-          items: subItems,
-          rawOrder: s,
-        );
-      }
+  // 1. Normalize rawOrder if passed (handles both Map and Order object instances)
+  Map<String, dynamic>? rawOrderMap;
+  if (rawOrder != null) {
+    if (rawOrder is Map) {
+      rawOrderMap = Map<String, dynamic>.from(rawOrder);
+    } else {
+      try {
+        final dynamic json = (rawOrder as dynamic).toJson();
+        if (json is Map) {
+          rawOrderMap = Map<String, dynamic>.from(json);
+        }
+      } catch (_) {}
     }
   }
 
-  // 2. Extract from rawOrder if passed
-  Map<String, dynamic>? rawOrderMap;
-  if (rawOrder is Map) {
-    rawOrderMap = Map<String, dynamic>.from(rawOrder);
+  if (rawOrderMap != null) {
     restaurantId ??= rawOrderMap['restaurantId']?.toString();
     shopName ??= (rawOrderMap['restaurantName'] ?? rawOrderMap['shopName'])?.toString();
     orderType ??= rawOrderMap['orderType']?.toString();
     if (items == null && rawOrderMap['items'] is List) {
       items = rawOrderMap['items'] as List<dynamic>;
+    }
+  }
+
+  // 2. If order has sub-orders, check for restaurant suborder
+  if (rawOrderMap != null && rawOrderMap['subOrders'] is List) {
+    final subOrders = rawOrderMap['subOrders'] as List;
+    for (final s in subOrders) {
+      Map<String, dynamic>? sMap;
+      if (s is Map) {
+        sMap = Map<String, dynamic>.from(s);
+      } else if (s != null) {
+        try {
+          final dynamic json = (s as dynamic).toJson();
+          if (json is Map) sMap = Map<String, dynamic>.from(json);
+        } catch (_) {}
+      }
+      if (sMap != null &&
+          (sMap['type'] == 'RESTAURANT' ||
+              sMap['orderType'] == 'RESTAURANT' ||
+              sMap['restaurantId'] != null ||
+              (sMap['readableId']?.toString().toUpperCase().endsWith('-R') ?? false))) {
+        final subRestId = sMap['restaurantId']?.toString();
+        final subShopName = (sMap['shopName'] ?? sMap['restaurantName'])?.toString();
+        final subItems = sMap['items'] as List<dynamic>?;
+        return getOutletLocation(
+          restaurantId: subRestId,
+          shopName: subShopName,
+          orderType: 'RESTAURANT',
+          items: subItems,
+          rawOrder: sMap,
+        );
+      }
     }
   }
 

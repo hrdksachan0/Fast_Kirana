@@ -8,6 +8,7 @@ import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/app_config.dart';
 import '../utils/app_toast.dart';
+import '../utils/restaurant_utils.dart';
 import 'supabase_service.dart';
 
 /// Exact 1:1 Port of Web App's KOT & POS Printing Engine (src/lib/kot-print.ts)
@@ -159,7 +160,7 @@ class KotPrintService {
     // 2. SubOrders with RESTAURANT type or restaurantId
     if (order['subOrders'] is List && (order['subOrders'] as List).isNotEmpty) {
       for (final s in (order['subOrders'] as List)) {
-        if (s is Map && (s['type'] == 'RESTAURANT' || s['restaurantId'] != null || s['shopType'] == 'RESTAURANT')) {
+        if (s is Map && (s['type'] == 'RESTAURANT' || s['restaurantId'] != null || s['shopType'] == 'RESTAURANT' || (s['readableId']?.toString().toUpperCase().endsWith('-R') ?? false))) {
           if (s['items'] is List && (s['items'] as List).isNotEmpty) {
             return (s['items'] as List).toList();
           }
@@ -174,9 +175,17 @@ class KotPrintService {
       // Check if any items have explicit restaurant flags
       final explicitRestItems = allItems.where((it) {
         if (it is! Map) return false;
+        final shop = it['shopName']?.toString();
+        final restId = (it['restaurantId'] ?? it['restaurant_id'])?.toString();
+        final isRestShop = shop != null &&
+            shop.isNotEmpty &&
+            shop != 'FastKirana Grocery' &&
+            shop != 'FastKirana Dark Store' &&
+            shop != 'FastKirana Store';
         final isRest = it['isRestaurantItem'] == true ||
-            it['restaurantId'] != null ||
+            (restId != null && restId.isNotEmpty && restId != 'null') ||
             it['type'] == 'RESTAURANT' ||
+            isRestShop ||
             (it['product'] is Map && (it['product']['isRestaurantItem'] == true || it['product']['restaurantId'] != null));
         return isRest;
       }).toList();
@@ -191,24 +200,10 @@ class KotPrintService {
           order['shopName']?.toString().contains('+') == true;
 
       if (isCombined) {
-        // Cooked food items should NEVER be excluded
-        const cookedFoodWhitelists = [
-          'dosa', 'burger', 'pizza', 'sandwich', 'roll', 'frankie', 'chowmein', 'noodles',
-          'fried rice', 'paneer', 'manchurian', 'shake', 'cold coffee', 'tea', 'chai', 'coffee',
-          'pasta', 'thali', 'roti', 'naan', 'gravy', 'curry', 'biryani', 'pav bhaji', 'fries',
-          'momos', 'samosa', 'maggi', 'soup'
-        ];
-        const pureGroceryOnlyKeywords = [
-          'atta', 'raw rice', 'dal packet', 'mustard oil', 'refined oil', 'washing powder',
-          'soap', 'shampoo', 'toothpaste', 'brush', 'detergent', 'surf excel', 'toilet cleaner'
-        ];
-
         final filteredRestItems = allItems.where((it) {
           if (it is! Map) return false;
-          final name = (it['name'] ?? (it['product'] is Map ? it['product']['name'] : '')).toString().toLowerCase();
-          if (cookedFoodWhitelists.any((cw) => name.contains(cw))) return true;
-          final isGroceryStaple = pureGroceryOnlyKeywords.any((k) => name.contains(k));
-          return !isGroceryStaple;
+          final name = (it['name'] ?? (it['product'] is Map ? it['product']['name'] : '')).toString();
+          return RestaurantRegistry.isFoodDishName(name);
         }).toList();
 
         if (filteredRestItems.isNotEmpty) {
@@ -316,25 +311,8 @@ class KotPrintService {
           .toString();
       final String? orderNotes = order['notes']?.toString();
 
-      List<dynamic> targetItems = [];
-      if (order['restaurantItems'] is List && (order['restaurantItems'] as List).isNotEmpty) {
-        targetItems = order['restaurantItems'] as List;
-      } else if (order['subOrders'] is List) {
-        final subOrders = order['subOrders'] as List;
-        dynamic restSub;
-        for (final s in subOrders) {
-          if (s is Map && (s['type'] == 'RESTAURANT' || s['restaurantId'] != null)) {
-            restSub = s;
-            break;
-          }
-        }
-        if (restSub != null && restSub is Map && restSub['items'] is List) {
-          targetItems = restSub['items'] as List;
-        }
-      }
-      if (targetItems.isEmpty && order['items'] is List) {
-        targetItems = order['items'] as List;
-      }
+      // Extract restaurant items strictly (omit grocery items on combined orders)
+      final List<dynamic> targetItems = extractRestaurantItems(order);
 
       final doc = await generateKOTPdfDocument(
         orderIdText: orderIdText,

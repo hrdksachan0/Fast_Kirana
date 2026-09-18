@@ -72,11 +72,12 @@ class WishlistButton extends ConsumerWidget {
       child: Container(
         padding: EdgeInsets.all(s * 5),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.94),
+          color: Colors.white.withValues(alpha: 0.95),
           shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFFF1F5F9), width: s * 0.8),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
+              color: const Color(0xFF0F172A).withValues(alpha: 0.08),
               blurRadius: s * 6,
               offset: Offset(0, s * 2),
             ),
@@ -295,14 +296,26 @@ class ProductBadge extends StatelessWidget {
     return ProductBadge(
       s: s,
       margin: EdgeInsets.zero,
-      padding: EdgeInsets.symmetric(horizontal: s * 5.5, vertical: s * 2),
-      gradient: const LinearGradient(colors: [Color(0xFFE11D48), Color(0xFFF97316)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-      radius: s * 5,
+      padding: EdgeInsets.symmetric(horizontal: s * 6, vertical: s * 2.5),
+      gradient: const LinearGradient(
+        colors: [Color(0xFFE11D48), Color(0xFFF97316)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      radius: s * 6,
       shadowColor: const Color(0xFFE11D48),
-      shadowAlpha: 0.3,
+      shadowAlpha: 0.28,
       shadowBlur: s * 4,
-      shadowOffset: Offset(0, s),
-      child: Text('$percent% OFF', style: GoogleFonts.inter(fontSize: s * 8.5, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3)),
+      shadowOffset: Offset(0, s * 1.5),
+      child: Text(
+        '$percent% OFF',
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: s * 8.5,
+          fontWeight: FontWeight.w900,
+          color: Colors.white,
+          letterSpacing: 0.4,
+        ),
+      ),
     );
   }
 
@@ -359,7 +372,7 @@ class ProductImage extends StatelessWidget {
         borderRadius: BorderRadius.circular(s * 13),
         child: Container(
           color: isFood ? const Color(0xFFFFF7ED) : Colors.transparent,
-          padding: isFood ? EdgeInsets.all(s * 6) : EdgeInsets.zero,
+          padding: EdgeInsets.all(s * 6),
           child: CachedNetworkImage(
             imageUrl: resolved,
             fit: BoxFit.contain,
@@ -429,10 +442,10 @@ class PriceRow extends StatelessWidget {
         Text(
           priceText,
           style: GoogleFonts.plusJakartaSans(
-            fontSize: s * 15.5,
-            fontWeight: FontWeight.w800,
+            fontSize: s * 15,
+            fontWeight: FontWeight.w900,
             color: const Color(0xFF0F172A),
-            letterSpacing: -0.4,
+            letterSpacing: -0.5,
             height: 1.1,
           ),
           maxLines: 1,
@@ -443,10 +456,11 @@ class PriceRow extends StatelessWidget {
             padding: EdgeInsets.only(top: s * 1.5),
             child: Text(
               mrpText!,
-              style: GoogleFonts.inter(
-                fontSize: s * 10,
-                fontWeight: FontWeight.w500,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: s * 10.5,
+                fontWeight: FontWeight.w600,
                 decoration: TextDecoration.lineThrough,
+                decorationColor: const Color(0xFF94A3B8),
                 color: const Color(0xFF94A3B8),
                 height: 1.1,
               ),
@@ -567,21 +581,28 @@ class AddToCartButton extends ConsumerWidget {
       },
       child: Container(
         height: s(31),
-        padding: EdgeInsets.symmetric(horizontal: s(10)),
+        padding: EdgeInsets.symmetric(horizontal: s(8)),
         decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(s(9)),
-          border: Border.all(color: const Color(0xFFE2E8F0), width: s(1)),
+          color: const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(s(8)),
+          border: Border.all(color: const Color(0xFFCBD5E1).withValues(alpha: 0.8), width: s(0.9)),
         ),
         alignment: Alignment.center,
-        child: Text(
-          'CLOSED',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: s(9),
-            fontWeight: FontWeight.w800,
-            color: const Color(0xFF94A3B8),
-            letterSpacing: 0.3,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.schedule_rounded, size: s(11), color: const Color(0xFF64748B)),
+            SizedBox(width: s(3)),
+            Text(
+              'CLOSED',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: s(9.5),
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF64748B),
+                letterSpacing: 0.4,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -687,8 +708,8 @@ class AddToCartButton extends ConsumerWidget {
         height: s(31),
         padding: EdgeInsets.symmetric(horizontal: s(12)),
         decoration: BoxDecoration(
-          color: isFood ? const Color(0xFFFFF7ED) : Colors.white,
-          borderRadius: BorderRadius.circular(s(9)),
+          color: isFood ? const Color(0xFFFFF7ED) : const Color(0xFFF0FDF4),
+          borderRadius: BorderRadius.circular(s(8)),
           border: Border.all(
             color: isFood ? const Color(0xFFEA580C) : const Color(0xFF16A34A),
             width: s(1.4),
@@ -795,8 +816,17 @@ class ProductCard extends ConsumerStatefulWidget {
   final double? width;
   final bool isCompact;
   final bool showOutlet;
+  final String? heroTag;
 
-  const ProductCard({super.key, required this.product, this.onTap, this.width, this.isCompact = false, this.showOutlet = true});
+  const ProductCard({
+    super.key,
+    required this.product,
+    this.onTap,
+    this.width,
+    this.isCompact = false,
+    this.showOutlet = true,
+    this.heroTag,
+  });
 
   @override
   ConsumerState<ProductCard> createState() => _ProductCardState();
@@ -881,8 +911,8 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     final gradientColors = isFood ? const [Color(0xFFEA580C), Color(0xFFF97316)] : const [Color(0xFF15803D), Color(0xFF16A34A)];
 
     final imageHeight = widget.isCompact
-        ? s(100)
-        : Responsive.isSmallMobile(context) ? s(95) : (isFood ? 116 : 110) * _uiScale;
+        ? s(102)
+        : Responsive.isSmallMobile(context) ? s(98) : (isFood ? 122 : 118) * _uiScale;
 
     String? bogoBadgeText;
     final restOffer = product.restaurant?.discountOffer;
@@ -943,23 +973,24 @@ class _ProductCardState extends ConsumerState<ProductCard> {
           duration: const Duration(milliseconds: 140),
           child: Container(
             width: cardWidth,
-            padding: EdgeInsets.fromLTRB(s(6), s(6), s(6), s(7)),
+            padding: EdgeInsets.fromLTRB(s(7), s(7), s(7), s(8)),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(s(18)),
               border: Border.all(
-                color: isFood ? const Color(0xFFFED7AA).withValues(alpha: 0.6) : const Color(0xFFE2E8F0).withValues(alpha: 0.7),
-                width: s(1.1),
+                color: isFood ? const Color(0xFFFFEDD5) : const Color(0xFFF1F5F9),
+                width: s(1.2),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-                  blurRadius: s(10),
-                  offset: Offset(0, s(3)),
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.045),
+                  blurRadius: s(12),
+                  offset: Offset(0, s(3.5)),
+                  spreadRadius: 0,
                 ),
                 BoxShadow(
-                  color: primaryColor.withValues(alpha: 0.03),
-                  blurRadius: s(6),
+                  color: primaryColor.withValues(alpha: 0.025),
+                  blurRadius: s(5),
                   offset: Offset(0, s(1)),
                 ),
               ],
@@ -983,6 +1014,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                   isOutOfStock: isOutOfStock,
                   showAddedCheck: false,
                   showOutlet: widget.showOutlet,
+                  heroTag: widget.heroTag,
                 ),
                 SizedBox(height: s(6)),
 
@@ -997,11 +1029,11 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                         child: Text(
                           product.name,
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: s(12.5),
-                            fontWeight: FontWeight.w800,
+                            fontSize: s(13),
+                            fontWeight: FontWeight.w700,
                             color: const Color(0xFF0F172A),
                             height: 1.25,
-                            letterSpacing: -0.3,
+                            letterSpacing: -0.2,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -1071,6 +1103,7 @@ class _ImageShowcase extends StatelessWidget {
   final bool isOutOfStock;
   final bool showAddedCheck;
   final bool showOutlet;
+  final String? heroTag;
 
   const _ImageShowcase({
     required this.product,
@@ -1086,6 +1119,7 @@ class _ImageShowcase extends StatelessWidget {
     required this.isOutOfStock,
     required this.showAddedCheck,
     this.showOutlet = true,
+    this.heroTag,
   });
 
   @override
@@ -1103,7 +1137,9 @@ class _ImageShowcase extends StatelessWidget {
         children: [
           // Product Photo
           Positioned.fill(
-            child: Hero(tag: 'product_image_${product.id}', child: ProductImage(product: product, isFood: isFood, s: s)),
+            child: heroTag != null
+                ? Hero(tag: heroTag!, child: ProductImage(product: product, isFood: isFood, s: s))
+                : ProductImage(product: product, isFood: isFood, s: s),
           ),
 
           // Badges
@@ -1209,24 +1245,46 @@ class _VariantPill extends StatelessWidget {
         onTap: () { if (!isOutOfStock) VariantSelectorSheet.show(context, product); },
         child: Container(
           margin: EdgeInsets.only(bottom: s(5)),
-          padding: EdgeInsets.symmetric(horizontal: s(6), vertical: s(2.5)),
-          decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(6)), border: Border.all(color: const Color(0xFFE2E8F0))),
+          padding: EdgeInsets.symmetric(horizontal: s(6.5), vertical: s(2.5)),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(s(6)),
+            border: Border.all(color: const Color(0xFFE2E8F0), width: s(0.8)),
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(label, style: GoogleFonts.inter(fontSize: s(9), fontWeight: FontWeight.w700, color: const Color(0xFF475569))),
+              Text(
+                label,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: s(9.5),
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF475569),
+                ),
+              ),
               SizedBox(width: s(2)),
-              Icon(Icons.keyboard_arrow_down_rounded, size: s(12), color: const Color(0xFF64748B)),
+              Icon(Icons.keyboard_arrow_down_rounded, size: s(13), color: const Color(0xFF64748B)),
             ],
           ),
         ),
       );
     }
-    return Padding(
-      padding: EdgeInsets.only(bottom: s(5)),
+    return Container(
+      margin: EdgeInsets.only(bottom: s(5)),
+      padding: EdgeInsets.symmetric(horizontal: s(6), vertical: s(2)),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(s(5)),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: s(0.8)),
+      ),
       child: Text(
         product.unit.isNotEmpty && product.unit != '1 unit' ? product.unit : (isFood ? 'Serves 1' : '1 pc'),
-        style: GoogleFonts.inter(fontSize: s(10), fontWeight: FontWeight.w500, color: const Color(0xFF64748B), letterSpacing: -0.1),
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: s(9.5),
+          fontWeight: FontWeight.w700,
+          color: const Color(0xFF64748B),
+          letterSpacing: 0.1,
+        ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),

@@ -136,11 +136,11 @@ class Product {
       availableEndTime: json['availableEndTime']?.toString(),
       barcode: json['barcode']?.toString(),
       createdAt: parsedCreated,
-      category: json['category'] is Map<String, dynamic>
-          ? CategoryInfo.fromJson(json['category'] as Map<String, dynamic>)
+      category: json['category'] is Map
+          ? CategoryInfo.fromJson(Map<String, dynamic>.from(json['category'] as Map))
           : null,
-      restaurant: json['restaurant'] is Map<String, dynamic>
-          ? RestaurantInfo.fromJson(json['restaurant'] as Map<String, dynamic>)
+      restaurant: json['restaurant'] is Map
+          ? RestaurantInfo.fromJson(Map<String, dynamic>.from(json['restaurant'] as Map))
           : null,
       menuSection: json['menuSection']?.toString() ?? json['sectionTitle']?.toString() ?? json['sectionId']?.toString(),
     );
@@ -582,9 +582,15 @@ bool isProductInGroceryCategory(Product p, dynamic category) {
     final s = category.trim();
     catId = s;
     catSlug = s.toLowerCase();
-  } else if (category is Map<String, dynamic>) {
-    catId = (category['id'] ?? '').toString().trim();
-    catSlug = (category['slug'] ?? '').toString().trim().toLowerCase();
+  } else if (category is Map) {
+    final catMap = Map<String, dynamic>.from(category);
+    catId = (catMap['id'] ?? '').toString().trim();
+    catSlug = (catMap['slug'] ?? '').toString().trim().toLowerCase();
+  } else {
+    try {
+      catId = (category.id ?? '').toString().trim();
+      catSlug = (category.slug ?? '').toString().trim().toLowerCase();
+    } catch (_) {}
   }
 
   if (catId.isEmpty && catSlug.isEmpty) return true;
@@ -631,14 +637,19 @@ bool isProductInGroceryCategory(Product p, dynamic category) {
   }
 
   // 4. Exact Database Slug Mappings (Strict zero-collision mappings)
-  if (catSlug == 'fruits-vegetables') {
-    return pSlug == 'fresh-fruits' || pSlug == 'fresh-vegetables' || pSlug == 'fruits-vegetables';
+  if (catSlug == 'fruits-vegetables' || catSlug == 'fruits-and-vegetables') {
+    return pSlug == 'fresh-fruits' ||
+        pSlug == 'fresh-vegetables' ||
+        pSlug == 'fruits-vegetables' ||
+        upperPCatId.startsWith('SUB-101-') ||
+        upperPParentId == 'CAT-101' ||
+        upperPCatId == 'CAT-101';
   }
   if (catSlug == 'fresh-fruits') {
-    return pSlug == 'fresh-fruits';
+    return pSlug == 'fresh-fruits' || upperPCatId == 'SUB-101-01';
   }
   if (catSlug == 'fresh-vegetables') {
-    return pSlug == 'fresh-vegetables';
+    return pSlug == 'fresh-vegetables' || upperPCatId == 'SUB-101-02';
   }
   if (catSlug == 'kitchen-ration' || catSlug == 'kitchen-needs') {
     return pSlug == 'atta-rice-sugar' ||
@@ -647,10 +658,17 @@ bool isProductInGroceryCategory(Product p, dynamic category) {
         pSlug == 'spices-masala' ||
         pSlug == 'tea-coffee-salt' ||
         pSlug == 'kitchen-ration' ||
-        pSlug == 'kitchen-needs';
+        pSlug == 'kitchen-needs' ||
+        upperPCatId.startsWith('SUB-113-') ||
+        upperPParentId == 'CAT-113' ||
+        upperPCatId == 'CAT-113';
   }
   if (catSlug == 'dry-fruits-super-foods' || catSlug == 'dry-fruits') {
-    return pSlug == 'dry-fruits-nuts-seeds' || pSlug == 'dry-fruits-super-foods';
+    return pSlug == 'dry-fruits-nuts-seeds' ||
+        pSlug == 'dry-fruits-super-foods' ||
+        upperPCatId.startsWith('SUB-114-') ||
+        upperPParentId == 'CAT-114' ||
+        upperPCatId == 'CAT-114';
   }
   if (catSlug == 'cakes-chocolates') {
     return pSlug == 'chocolates-sweets' ||
@@ -658,34 +676,69 @@ bool isProductInGroceryCategory(Product p, dynamic category) {
         pSlug == 'cookies-namkeen' ||
         pSlug == 'cookies' ||
         pSlug == 'namkeen' ||
-        pSlug == 'cakes-chocolates';
+        pSlug == 'cakes-chocolates' ||
+        upperPCatId.startsWith('SUB-115-') ||
+        upperPParentId == 'CAT-115' ||
+        upperPCatId == 'CAT-115';
   }
   if (catSlug == 'cookies-namkeen') {
-    return pSlug == 'cookies' || pSlug == 'namkeen' || pSlug == 'cookies-namkeen';
+    return pSlug == 'cookies' ||
+        pSlug == 'namkeen' ||
+        pSlug == 'cookies-namkeen' ||
+        upperPCatId == 'SUB-115-01' ||
+        upperPCatId.startsWith('SUB-SUB-115-01-') ||
+        upperPParentId == 'SUB-115-01';
   }
   if (catSlug == 'packaged-items' || catSlug == 'packaged-foods') {
     return pSlug == 'sauces-spreads' ||
         pSlug == 'breakfast-diet' ||
         pSlug == 'packaged-items' ||
-        pSlug == 'packaged-foods';
+        pSlug == 'packaged-foods' ||
+        upperPCatId.startsWith('SUB-104-') ||
+        upperPParentId == 'CAT-104' ||
+        upperPCatId == 'CAT-104';
   }
-  if (catSlug == 'beverages' || catSlug == 'beverages-drinks' || catSlug == 'cold-drinks') {
-    return pSlug == 'beverages' || pSlug == 'cold-drinks' || pSlug == 'juices' || pSlug == 'beverages-drinks';
+  if (catSlug == 'beverages' || catSlug == 'beverages-drinks' || catSlug == 'cold-drinks' || catSlug == 'drinks') {
+    return pSlug == 'beverages' ||
+        pSlug == 'cold-drinks' ||
+        pSlug == 'juices' ||
+        pSlug == 'beverages-drinks' ||
+        upperPCatId == 'CAT-108' ||
+        upperPParentId == 'CAT-108' ||
+        upperPCatId.startsWith('SUB-108-');
   }
   if (catSlug == 'ice-cream' || catSlug == 'desserts' || catSlug == 'ice-cream-desserts') {
-    return pSlug == 'ice-cream' || pSlug == 'desserts';
+    return pSlug == 'ice-cream' ||
+        pSlug == 'desserts' ||
+        pSlug == 'ice-cream-desserts' ||
+        upperPCatId == 'CAT-105' ||
+        upperPParentId == 'CAT-105' ||
+        upperPCatId.startsWith('SUB-105-');
   }
-  if (catSlug == 'home-needs-and-cleaning' || catSlug == 'cleaning-household') {
+  if (catSlug == 'home-needs-and-cleaning' || catSlug == 'cleaning-household' || catSlug == 'household-essentials') {
     return pSlug == 'dishwashing' ||
         pSlug == 'pest-control-utilites' ||
         pSlug == 'laundary-care' ||
-        pSlug == 'home-needs-and-cleaning';
+        pSlug == 'home-needs-and-cleaning' ||
+        upperPCatId.startsWith('SUB-107-') ||
+        upperPParentId == 'CAT-107' ||
+        upperPCatId == 'CAT-107';
   }
   if (catSlug == 'personal-care') {
-    return pSlug == 'hair-care-cosmetics' || pSlug == 'oral-care-hygeine' || pSlug == 'personal-care';
+    return pSlug == 'hair-care-cosmetics' ||
+        pSlug == 'oral-care-hygeine' ||
+        pSlug == 'personal-care' ||
+        upperPCatId.startsWith('SUB-109-') ||
+        upperPParentId == 'CAT-109' ||
+        upperPCatId == 'CAT-109';
   }
   if (catSlug == 'dairy-products' || catSlug == 'dairy-breakfast' || catSlug == 'dairy') {
-    return pSlug == 'dairy-products' || pSlug == 'dairy-breakfast' || pSlug == 'dairy';
+    return pSlug == 'dairy-products' ||
+        pSlug == 'dairy-breakfast' ||
+        pSlug == 'dairy' ||
+        upperPCatId == 'CAT-116' ||
+        upperPParentId == 'CAT-116' ||
+        upperPCatId.startsWith('SUB-116-');
   }
 
   return false;

@@ -11,7 +11,9 @@ import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:collection/collection.dart';
 import '../../core/network/api_client.dart';
+import '../../core/utils/restaurant_utils.dart';
 import '../../data/models/order.dart';
 import '../../data/repositories/order_repository.dart';
 import '../../core/services/admin_notification_service.dart';
@@ -39,7 +41,11 @@ class AdminOrdersScreen extends ConsumerStatefulWidget {
   ConsumerState<AdminOrdersScreen> createState() => _AdminOrdersScreenState();
 }
 
-class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
+class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
+    with AutomaticKeepAliveClientMixin<AdminOrdersScreen> {
+  @override
+  bool get wantKeepAlive => true;
+
   // 0 = Live Orders, 1 = Order History
   int _selectedTab = 0;
   String _liveSubFilter = 'ALL';
@@ -50,21 +56,44 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
   List<Order> _allOrders = _cachedOrders;
   bool _isLoading = _cachedOrders.isEmpty;
 
+  // Persistent previous state stats to avoid UI jumping abruptly to 0 0 0 0
+  static double _lastTodaySales = 0.0;
+  static double _lastNetSales = 0.0;
+  static int _lastTodayOrdersCount = 0;
+  static int _lastActiveOrderCount = 0;
+  static int _lastLiveCount = 0;
+  static int _lastHistoryCount = 0;
+  static int _lastPendingPaymentCount = 0;
+  static double _lastDeliveryFee = 0.0;
+  static double _lastPackagingFee = 0.0;
+
   static const String _diskAdminOrdersKey = 'cached_admin_orders_v2';
 
   Future<void> _loadDiskOrders() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      _lastTodaySales = prefs.getDouble('admin_last_today_sales') ?? _lastTodaySales;
+      _lastNetSales = prefs.getDouble('admin_last_net_sales') ?? _lastNetSales;
+      _lastTodayOrdersCount = prefs.getInt('admin_last_today_orders_count') ?? _lastTodayOrdersCount;
+      _lastActiveOrderCount = prefs.getInt('admin_last_active_orders_count') ?? _lastActiveOrderCount;
+      _lastLiveCount = prefs.getInt('admin_last_live_count') ?? _lastLiveCount;
+      _lastHistoryCount = prefs.getInt('admin_last_history_count') ?? _lastHistoryCount;
+      _lastPendingPaymentCount = prefs.getInt('admin_last_pending_payment_count') ?? _lastPendingPaymentCount;
+      _lastDeliveryFee = prefs.getDouble('admin_last_delivery_fee') ?? _lastDeliveryFee;
+      _lastPackagingFee = prefs.getDouble('admin_last_packaging_fee') ?? _lastPackagingFee;
+
       final raw = prefs.getString(_diskAdminOrdersKey);
       if (raw != null && raw.isNotEmpty && mounted) {
         final List<dynamic> decoded = jsonDecode(raw);
         final list = decoded.map((j) => Order.fromJson(j as Map<String, dynamic>)).toList();
-        if (list.isNotEmpty && _allOrders.isEmpty) {
+        if (list.isNotEmpty) {
           _cachedOrders = list;
-          setState(() {
-            _allOrders = list;
-            _isLoading = false;
-          });
+          if (_allOrders.isEmpty) {
+            setState(() {
+              _allOrders = list;
+              _isLoading = false;
+            });
+          }
         }
       }
     } catch (e) {
@@ -73,6 +102,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
   }
 
   Future<void> _saveDiskOrders(List<Order> orders) async {
+    if (orders.isEmpty) return; // Never overwrite disk cache with empty list
     try {
       final prefs = await SharedPreferences.getInstance();
       // Keep most recent 100 orders on disk
@@ -81,6 +111,41 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
     } catch (e) {
       debugPrint('[AdminOrdersList] disk save error: $e');
     }
+  }
+
+  static Future<void> _persistStats({
+    required double todaySales,
+    required double netSales,
+    required int todayOrdersCount,
+    required int activeOrderCount,
+    required int liveCount,
+    required int historyCount,
+    required int pendingPaymentCount,
+    required double deliveryFee,
+    required double packagingFee,
+  }) async {
+    _lastTodaySales = todaySales;
+    _lastNetSales = netSales;
+    _lastTodayOrdersCount = todayOrdersCount;
+    _lastActiveOrderCount = activeOrderCount;
+    _lastLiveCount = liveCount;
+    _lastHistoryCount = historyCount;
+    _lastPendingPaymentCount = pendingPaymentCount;
+    _lastDeliveryFee = deliveryFee;
+    _lastPackagingFee = packagingFee;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('admin_last_today_sales', todaySales);
+      await prefs.setDouble('admin_last_net_sales', netSales);
+      await prefs.setInt('admin_last_today_orders_count', todayOrdersCount);
+      await prefs.setInt('admin_last_active_orders_count', activeOrderCount);
+      await prefs.setInt('admin_last_live_count', liveCount);
+      await prefs.setInt('admin_last_history_count', historyCount);
+      await prefs.setInt('admin_last_pending_payment_count', pendingPaymentCount);
+      await prefs.setDouble('admin_last_delivery_fee', deliveryFee);
+      await prefs.setDouble('admin_last_packaging_fee', packagingFee);
+    } catch (_) {}
   }
   String? _error;
   Timer? _liveSyncTimer;
@@ -147,8 +212,6 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
   final Set<String> _printedKOTOrders = {};
   final Set<String> _sendingKOTOrderIds = {};
   final AudioPlayer _audioPlayer = AudioPlayer();
-  bool _isPlayingAlarm = false;
-  Timer? _pendingAlarmTimer;
 
   final List<String> _liveStatusFilters = [
     'ALL',
@@ -517,31 +580,41 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
         }(),
       ]);
 
-      final mergedOrders = _mergeCombinedOrders(loaded);
-      _cachedOrders = mergedOrders;
+      if (loaded.isNotEmpty) {
+        final mergedOrders = _mergeCombinedOrders(loaded);
+        _cachedOrders = mergedOrders;
+        _saveDiskOrders(mergedOrders);
 
-      if (mounted) {
-        // Hydrate KOT printed state from DB so button stays disabled across refreshes
-        for (final o in mergedOrders) {
-          if (o.kotPrinted) {
-            _printedKOTOrders.add(o.id);
-            if (o.readableId != null) _printedKOTOrders.add(o.readableId!);
-          }
-          // Also check sub-orders
-          if (o.subOrders != null) {
-            for (final sub in o.subOrders!) {
-              if (sub.kotPrinted) {
-                _printedKOTOrders.add(sub.id);
-                if (sub.readableId != null) _printedKOTOrders.add(sub.readableId!);
+        if (mounted) {
+          // Hydrate KOT printed state from DB so button stays disabled across refreshes
+          for (final o in mergedOrders) {
+            if (o.kotPrinted) {
+              _printedKOTOrders.add(o.id);
+              if (o.readableId != null) _printedKOTOrders.add(o.readableId!);
+            }
+            // Also check sub-orders
+            if (o.subOrders != null) {
+              for (final sub in o.subOrders!) {
+                if (sub.kotPrinted) {
+                  _printedKOTOrders.add(sub.id);
+                  if (sub.readableId != null) _printedKOTOrders.add(sub.readableId!);
+                }
               }
             }
           }
+          setState(() {
+            _allOrders = mergedOrders;
+            _isLoading = false;
+          });
+          _syncAlarmStateWithOrders(mergedOrders);
         }
-        setState(() {
-          _allOrders = mergedOrders;
-          _isLoading = false;
-        });
-        _syncAlarmStateWithOrders(mergedOrders);
+      } else {
+        // If loaded is empty (e.g. temporary API timeout/network hiccup), retain previous state
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     } catch (err) {
       if (mounted) {
@@ -590,8 +663,8 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
       for (final sub in subOrders) {
         if (sub.items != null) {
           for (final item in sub.items!) {
-            final key = (item.id != null && item.id!.isNotEmpty)
-                ? item.id!
+            final key = item.id.isNotEmpty
+                ? item.id
                 : '${item.name.toLowerCase().trim()}_${item.selectedVariant?.toLowerCase().trim() ?? ""}_${item.notes?.toLowerCase().trim() ?? ""}';
             if (seenItemKeys.add(key)) {
               allItems.add(item.copyWith(
@@ -630,11 +703,11 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
           .replaceAll(RegExp(r'-[GR]\d*$', caseSensitive: false), '');
 
       final subLabels = subOrders.map((o) {
-        final rid = o.readableId ?? '';
-        final isRest = rid.toUpperCase().endsWith('-R') || o.restaurantId != null;
-        final name = o.shopName?.trim();
-        if (name != null && name.isNotEmpty) return name;
-        return isRest ? '🍽️ Restaurant' : '🛒 Dark Store';
+        final isRest = o.isRestaurantOrder;
+        final name = (o.shopName != null && o.shopName!.trim().isNotEmpty && o.shopName != 'FastKirana Dark Store' && o.shopName != 'FastKirana Store')
+            ? o.shopName!.trim()
+            : (RestaurantRegistry.getName(o.restaurantId) ?? (isRest ? 'Restaurant' : 'Dark Store'));
+        return isRest ? '🍽️ $name' : '🛒 $name';
       }).toList();
 
       final combinedDeliveryFee = subOrders.fold<double>(
@@ -753,6 +826,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
       if (loaded.isNotEmpty) {
         final mergedOrders = _mergeCombinedOrders(loaded);
         _cachedOrders = mergedOrders;
+        _saveDiskOrders(mergedOrders);
         if (mounted) {
           // Hydrate KOT printed state from DB
           for (final o in mergedOrders) {
@@ -1431,10 +1505,10 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
             'selectedVariant': it.selectedVariant,
             'notes': it.notes,
             'restaurantId': it.restaurantId ?? (it.isRestaurantItem ? effectiveRestId : order.restaurantId),
-            'shopName': it.shopName ?? (it.isRestaurantItem ? (order.shopName ?? 'Restaurant') : 'FastKirana Grocery'),
+            'shopName': it.shopName ?? (it.isRestaurantItem ? (order.shopName ?? RestaurantRegistry.getName(effectiveRestId) ?? 'Restaurant') : 'FastKirana Grocery'),
           }).toList(),
           'restaurantId': effectiveRestId,
-          'shopName': order.shopName,
+          'shopName': order.shopName ?? RestaurantRegistry.getName(effectiveRestId),
           'user': {
             'phone': order.customerPhone,
             'name': order.customerName,
@@ -1572,9 +1646,9 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
                             ? null
                             : (val) {
                                 setModalState(() {
-                                  if (val == true && it.id != null) {
-                                    selectedItems[it.id!] = itemVal;
-                                  } else if (it.id != null) {
+                                  if (val == true && it.id.isNotEmpty) {
+                                    selectedItems[it.id] = itemVal;
+                                  } else if (it.id.isNotEmpty) {
                                     selectedItems.remove(it.id);
                                   }
                                   final totalSelected = selectedItems.values.fold<double>(0.0, (sum, v) => sum + v);
@@ -1788,18 +1862,7 @@ $formattedItems
     // 2. Combined Order: Target ONLY the Restaurant Sub-Order (Never send grocery -G)
     Order targetOrder = order;
     if (order.isCombined && order.subOrders != null && order.subOrders!.isNotEmpty) {
-      Order? restSub;
-      for (final s in order.subOrders!) {
-        final rid = (s.readableId ?? '').toUpperCase();
-        if (rid.endsWith('-R') ||
-            s.restaurantId != null ||
-            (s.shopName != null && s.shopName!.toLowerCase().contains('restaurant')) ||
-            (s.shopName != null && s.shopName!.toLowerCase().contains('wedson')) ||
-            (s.shopName != null && s.shopName!.toLowerCase().contains('as '))) {
-          restSub = s;
-          break;
-        }
-      }
+      final restSub = order.subOrders!.firstWhereOrNull((s) => s.isRestaurantOrder);
 
       if (restSub != null) {
         targetOrder = restSub;
@@ -2095,13 +2158,11 @@ $formattedItems
     if (_selectedTab == 0) {
       // Live Tab
       list = _allOrders.where(_isLiveOrder).toList();
-      if (_liveSubFilter == 'ALL') {
-        list = list.where((o) => !(o.status == OrderStatus.pending && _isUnpaidOnline(o))).toList();
-      } else if (_liveSubFilter == 'PAYMENT_PENDING') {
+      if (_liveSubFilter == 'PAYMENT_PENDING') {
         list = list.where((o) => o.status == OrderStatus.pending && _isUnpaidOnline(o)).toList();
       } else if (_liveSubFilter == 'PENDING') {
         list = list.where((o) => o.status == OrderStatus.pending && !_isUnpaidOnline(o)).toList();
-      } else {
+      } else if (_liveSubFilter != 'ALL') {
         list = list.where((o) => o.status.name.toUpperCase() == _liveSubFilter).toList();
       }
     } else {
@@ -2126,9 +2187,70 @@ $formattedItems
 
   @override
   Widget build(BuildContext context) {
-    final pendingPaymentCount = _allOrders.where((o) => _isLiveOrder(o) && o.status == OrderStatus.pending && _isUnpaidOnline(o)).length;
-    final liveCount = _allOrders.where((o) => _isLiveOrder(o) && !(o.status == OrderStatus.pending && _isUnpaidOnline(o))).length;
-    final historyCount = _allOrders.where((o) => !_isLiveOrder(o)).length;
+    super.build(context);
+    final hasOrders = _allOrders.isNotEmpty;
+    final int rawPendingPaymentCount = _allOrders.where((o) => _isLiveOrder(o) && o.status == OrderStatus.pending && _isUnpaidOnline(o)).length;
+    final int rawLiveCount = _allOrders.where((o) => _isLiveOrder(o)).length;
+    final int rawHistoryCount = _allOrders.where((o) => !_isLiveOrder(o)).length;
+
+    // Exact Indian Standard Time (IST - UTC+5:30) start of day calculation
+    final nowUtc = DateTime.now().toUtc();
+    final istNow = nowUtc.add(const Duration(hours: 5, minutes: 30));
+    final istStartOfDay = DateTime.utc(istNow.year, istNow.month, istNow.day).subtract(const Duration(hours: 5, minutes: 30));
+
+    final todayOrders = _allOrders.where((o) =>
+      o.createdAt.isAfter(istStartOfDay) &&
+      (o.deliveryMethod?.toUpperCase() != 'RETAIL')
+    ).toList();
+
+    // Today's Sales: sum of all non-cancelled orders placed today (gross — before refunds)
+    final double rawTodaySales = todayOrders
+        .where((o) => o.status != OrderStatus.cancelled)
+        .fold<double>(0.0, (sum, o) => sum + o.total);
+
+    // Today's Net Sales: sum of DELIVERED orders placed today (net — after refunds)
+    final double rawTodayNetSales = todayOrders
+        .where((o) => o.status == OrderStatus.delivered)
+        .fold<double>(0.0, (sum, o) => sum + (o.total - o.refundAmount).clamp(0.0, double.infinity));
+
+    final double rawTodayDeliveryFee = todayOrders
+        .where((o) => o.status != OrderStatus.cancelled)
+        .fold<double>(0.0, (sum, o) => sum + o.deliveryFee);
+
+    final double rawTodayPackagingFee = todayOrders
+        .where((o) => o.status != OrderStatus.cancelled)
+        .fold<double>(0.0, (sum, o) => sum + o.miscFee);
+
+    final int rawTodayOrdersCount = todayOrders.length;
+
+    final int rawActiveOrderCount = _allOrders.where((o) =>
+      o.status != OrderStatus.delivered &&
+      o.status != OrderStatus.cancelled
+    ).length;
+
+    if (hasOrders) {
+      _persistStats(
+        todaySales: rawTodaySales,
+        netSales: rawTodayNetSales,
+        todayOrdersCount: rawTodayOrdersCount,
+        activeOrderCount: rawActiveOrderCount,
+        liveCount: rawLiveCount,
+        historyCount: rawHistoryCount,
+        pendingPaymentCount: rawPendingPaymentCount,
+        deliveryFee: rawTodayDeliveryFee,
+        packagingFee: rawTodayPackagingFee,
+      );
+    }
+
+    final double displayTodaySales = hasOrders ? rawTodaySales : _lastTodaySales;
+    final double displayTodayNetSales = hasOrders ? rawTodayNetSales : _lastNetSales;
+    final int displayTodayOrdersCount = hasOrders ? rawTodayOrdersCount : _lastTodayOrdersCount;
+    final int displayActiveOrderCount = hasOrders ? rawActiveOrderCount : _lastActiveOrderCount;
+    final double displayTodayDeliveryFee = hasOrders ? rawTodayDeliveryFee : _lastDeliveryFee;
+    final double displayTodayPackagingFee = hasOrders ? rawTodayPackagingFee : _lastPackagingFee;
+    final int displayLiveCount = hasOrders ? rawLiveCount : _lastLiveCount;
+    final int displayHistoryCount = hasOrders ? rawHistoryCount : _lastHistoryCount;
+    final int displayPendingPaymentCount = hasOrders ? rawPendingPaymentCount : _lastPendingPaymentCount;
     final displayOrders = _getFilteredOrders();
 
     return Scaffold(
@@ -2213,114 +2335,73 @@ $formattedItems
               onRetry: () => _fetchAdminOrders(),
             ),
 
-          // 1. Dashboard Stats Cards (Exact 2x2 Grid Matching Web App Logic)
-          Builder(
-            builder: (context) {
-              // Exact Indian Standard Time (IST - UTC+5:30) start of day calculation
-              final nowUtc = DateTime.now().toUtc();
-              final istNow = nowUtc.add(const Duration(hours: 5, minutes: 30));
-              final istStartOfDay = DateTime.utc(istNow.year, istNow.month, istNow.day).subtract(const Duration(hours: 5, minutes: 30));
-
-              final todayOrders = _allOrders.where((o) =>
-                o.createdAt.isAfter(istStartOfDay) &&
-                (o.deliveryMethod?.toUpperCase() != 'RETAIL')
-              ).toList();
-
-              // Today's Sales: sum of all non-cancelled orders placed today (gross — before refunds)
-              final todaySales = todayOrders
-                  .where((o) => o.status != OrderStatus.cancelled)
-                  .fold<double>(0.0, (sum, o) => sum + o.total);
-
-              // Today's Net Sales: sum of DELIVERED orders placed today (net — after refunds)
-              final todayNetSales = todayOrders
-                  .where((o) => o.status == OrderStatus.delivered)
-                  .fold<double>(0.0, (sum, o) => sum + (o.total - o.refundAmount).clamp(0.0, double.infinity));
-
-              final todayDeliveryFee = todayOrders
-                  .where((o) => o.status != OrderStatus.cancelled)
-                  .fold<double>(0.0, (sum, o) => sum + o.deliveryFee);
-
-              final todayPackagingFee = todayOrders
-                  .where((o) => o.status != OrderStatus.cancelled)
-                  .fold<double>(0.0, (sum, o) => sum + o.miscFee);
-
-              // Today's Orders count
-              final todayOrdersCount = todayOrders.length;
-
-              // Active Orders count: all live queue orders (not delivered and not cancelled)
-              final activeOrderCount = _allOrders.where((o) =>
-                o.status != OrderStatus.delivered &&
-                o.status != OrderStatus.cancelled
-              ).length;
-
-              return Container(
-                color: Colors.white,
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                child: Column(
+          // 1. Dashboard Stats Cards (Exact 2x2 Grid Matching Web App Logic with Maintained Previous State)
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            child: Column(
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        // Card 1: Today's Sales
-                        Expanded(
-                          child: AdminStatCard(
-                            title: "Today's Sales",
-                            value: '₹${todaySales.toInt()}',
-                            subtitle: (todayDeliveryFee > 0 || todayPackagingFee > 0)
-                                ? 'Incl. ₹${todayDeliveryFee.toInt()} del + ₹${todayPackagingFee.toInt()} pack'
-                                : 'Gross order total',
-                            icon: Icons.currency_rupee_rounded,
-                            iconColor: AppDesignSystem.emerald600,
-                            bgColor: AppDesignSystem.green50,
-                            borderColor: AppDesignSystem.emerald200,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        // Card 2: Net Sales
-                        Expanded(
-                          child: AdminStatCard(
-                            title: "Net Sales",
-                            value: '₹${todayNetSales.toInt()}',
-                            subtitle: 'Delivered net of refunds',
-                            icon: Icons.trending_up_rounded,
-                            iconColor: AppDesignSystem.teal600,
-                            bgColor: AppDesignSystem.teal50,
-                            borderColor: AppDesignSystem.teal300,
-                          ),
-                        ),
-                      ],
+                    // Card 1: Today's Sales
+                    Expanded(
+                      child: AdminStatCard(
+                        title: "Today's Sales",
+                        value: '₹${displayTodaySales.toInt()}',
+                        subtitle: (displayTodayDeliveryFee > 0 || displayTodayPackagingFee > 0)
+                            ? 'Incl. ₹${displayTodayDeliveryFee.toInt()} del + ₹${displayTodayPackagingFee.toInt()} pack'
+                            : 'Gross order total',
+                        icon: Icons.currency_rupee_rounded,
+                        iconColor: AppDesignSystem.emerald600,
+                        bgColor: AppDesignSystem.green50,
+                        borderColor: AppDesignSystem.emerald200,
+                      ),
                     ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        // Card 3: Today's Orders
-                        Expanded(
-                          child: AdminStatCard(
-                            title: "Today's Orders",
-                            value: '$todayOrdersCount',
-                            icon: Icons.shopping_bag_outlined,
-                            iconColor: AppDesignSystem.blue600,
-                            bgColor: AppDesignSystem.blue50,
-                            borderColor: AppDesignSystem.blue200,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        // Card 4: Active Orders
-                        Expanded(
-                          child: AdminStatCard(
-                            title: 'Active Orders',
-                            value: '$activeOrderCount',
-                            icon: Icons.bolt_rounded,
-                            iconColor: AppDesignSystem.orange600,
-                            bgColor: AppDesignSystem.orange50,
-                            borderColor: AppDesignSystem.orange300,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(width: 10),
+                    // Card 2: Net Sales
+                    Expanded(
+                      child: AdminStatCard(
+                        title: "Net Sales",
+                        value: '₹${displayTodayNetSales.toInt()}',
+                        subtitle: 'Delivered net of refunds',
+                        icon: Icons.trending_up_rounded,
+                        iconColor: AppDesignSystem.teal600,
+                        bgColor: AppDesignSystem.teal50,
+                        borderColor: AppDesignSystem.teal300,
+                      ),
                     ),
                   ],
                 ),
-              );
-            },
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    // Card 3: Today's Orders
+                    Expanded(
+                      child: AdminStatCard(
+                        title: "Today's Orders",
+                        value: '$displayTodayOrdersCount',
+                        icon: Icons.shopping_bag_outlined,
+                        iconColor: AppDesignSystem.blue600,
+                        bgColor: AppDesignSystem.blue50,
+                        borderColor: AppDesignSystem.blue200,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // Card 4: Active Orders
+                    Expanded(
+                      child: AdminStatCard(
+                        title: 'Active Orders',
+                        value: '$displayActiveOrderCount',
+                        icon: Icons.bolt_rounded,
+                        iconColor: AppDesignSystem.orange600,
+                        bgColor: AppDesignSystem.orange50,
+                        borderColor: AppDesignSystem.orange300,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
 
           // 2. Primary Tab Switcher (Live vs History with modern iOS-style segmented control)
@@ -2340,7 +2421,7 @@ $formattedItems
                     child: _buildMainTabButton(
                       index: 0,
                       label: 'Live Orders',
-                      count: liveCount,
+                      count: displayLiveCount,
                       icon: Icons.bolt_rounded,
                       isSelected: _selectedTab == 0,
                     ),
@@ -2350,7 +2431,7 @@ $formattedItems
                     child: _buildMainTabButton(
                       index: 1,
                       label: 'Order History',
-                      count: historyCount,
+                      count: displayHistoryCount,
                       icon: Icons.history_rounded,
                       isSelected: _selectedTab == 1,
                     ),
@@ -2543,20 +2624,20 @@ $formattedItems
                         status == 'ALL'
                             ? (_selectedTab == 0 ? 'All Live' : 'All History')
                             : (status == 'PAYMENT_PENDING'
-                                ? '⚠️ Payment Pending' + (pendingPaymentCount > 0 ? ' ($pendingPaymentCount)' : '')
+                                ? '⚠️ Payment Pending${displayPendingPaymentCount > 0 ? ' ($displayPendingPaymentCount)' : ''}'
                                 : status),
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
                           color: isSelected
                               ? Colors.white
-                              : (status == 'PAYMENT_PENDING' && pendingPaymentCount > 0
+                              : (status == 'PAYMENT_PENDING' && displayPendingPaymentCount > 0
                                   ? const Color(0xFFE11D48)
                                   : AppDesignSystem.slate600),
                         ),
                       ),
                       selectedColor: status == 'PAYMENT_PENDING' ? const Color(0xFFE11D48) : AppDesignSystem.slate900,
-                      backgroundColor: status == 'PAYMENT_PENDING' && pendingPaymentCount > 0
+                      backgroundColor: status == 'PAYMENT_PENDING' && displayPendingPaymentCount > 0
                           ? const Color(0xFFFFF1F2)
                           : AppDesignSystem.slate100,
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
@@ -2565,7 +2646,7 @@ $formattedItems
                         side: BorderSide(
                           color: isSelected
                               ? (status == 'PAYMENT_PENDING' ? const Color(0xFFE11D48) : AppDesignSystem.slate900)
-                              : (status == 'PAYMENT_PENDING' && pendingPaymentCount > 0
+                              : (status == 'PAYMENT_PENDING' && displayPendingPaymentCount > 0
                                   ? const Color(0xFFFDA4AF)
                                   : AppDesignSystem.slate200),
                           width: 1,

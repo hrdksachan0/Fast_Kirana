@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/logger_service.dart';
@@ -18,11 +19,11 @@ class ProductRepository {
   static final Map<String, Future<List<Product>>> _inFlightFetches = {};
 
   // ─── Disk cache keys ────────────────────────────────────────
-  static const _diskProductsKey = 'cached_products';
-  static const _diskCategoriesKey = 'cached_categories';
-  static const _diskFetchTimestampKey = 'cached_products_timestamp';
-  static const _diskCategoryTimestampKey = 'cached_categories_timestamp';
-  static const _cacheTTLMinutes = 1440; // 24 hours: keep catalog available across app restarts
+  static const _diskProductsKey = 'cached_products_v4';
+  static const _diskCategoriesKey = 'cached_categories_v4';
+  static const _diskFetchTimestampKey = 'cached_products_timestamp_v4';
+  static const _diskCategoryTimestampKey = 'cached_categories_timestamp_v4';
+  static const _cacheTTLMinutes = 15; // 15 minutes TTL (with instant stale-while-revalidate)
 
   // ─── Preload disk cache into memory ──────────────────────────
   // getProducts() always awaits this first to ensure cached data
@@ -53,8 +54,8 @@ class ProductRepository {
       final diskProducts = results[0] as List<Product>?;
       final diskCategories = results[1] as List<Category>?;
 
-      // Always promote to in-memory cache on launch so screens show content with 0ms delay (stale-while-revalidate)
-      if (diskProducts != null && diskProducts.isNotEmpty) {
+      // Only promote to in-memory cache on launch if full catalog is intact (>= 50 products)
+      if (diskProducts != null && diskProducts.length >= 50) {
         _cachedProducts = diskProducts;
         _lastFetchTime = DateTime.now();
       }
@@ -101,7 +102,7 @@ class ProductRepository {
       if (raw == null || raw.isEmpty) return null;
       final List<dynamic> jsonList = jsonDecode(raw);
       return jsonList
-          .map((j) => Product.fromJson(j as Map<String, dynamic>))
+          .map((j) => Product.fromJson(Map<String, dynamic>.from(j as Map)))
           .toList();
     } catch (e) { LoggerService.error('ProductRepository: disk load failed', e);
       return null;
@@ -126,7 +127,7 @@ class ProductRepository {
       if (raw == null || raw.isEmpty) return null;
       final List<dynamic> jsonList = jsonDecode(raw);
       return jsonList
-          .map((j) => Category.fromJson(j as Map<String, dynamic>))
+          .map((j) => Category.fromJson(Map<String, dynamic>.from(j as Map)))
           .toList();
     } catch (e) { LoggerService.error('ProductRepository: disk category load failed', e);
       return null;
@@ -150,6 +151,18 @@ class ProductRepository {
     _cachedCategories = null;
     try {
       final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('cached_products');
+      await prefs.remove('cached_products_timestamp');
+      await prefs.remove('cached_categories');
+      await prefs.remove('cached_categories_timestamp');
+      await prefs.remove('cached_products_v2');
+      await prefs.remove('cached_products_timestamp_v2');
+      await prefs.remove('cached_categories_v2');
+      await prefs.remove('cached_categories_timestamp_v2');
+      await prefs.remove('cached_products_v3');
+      await prefs.remove('cached_products_timestamp_v3');
+      await prefs.remove('cached_categories_v3');
+      await prefs.remove('cached_categories_timestamp_v3');
       await prefs.remove(_diskProductsKey);
       await prefs.remove(_diskFetchTimestampKey);
       await prefs.remove(_diskCategoriesKey);
@@ -184,24 +197,26 @@ class ProductRepository {
       // 1. In-memory cache hit (fastest path: 0ms render)
       if (!forceRefresh &&
           _cachedProducts != null &&
-          _cachedProducts!.length >= 100 &&
+          _cachedProducts!.length >= 150 &&
           _lastFetchTime != null &&
           now.difference(_lastFetchTime!).inMinutes < _cacheTTLMinutes) {
+        debugPrint('[ProductRepo] in-memory cache HIT: ${_cachedProducts!.length} items');
         return _filterProducts(_cachedProducts!, category: category, search: search, restaurantId: restaurantId);
       }
 
       // 2. Disk cache hit (survives app restarts — instant render, no cold-start flash)
       if (!forceRefresh) {
         final diskProducts = await _loadProductsFromDisk();
-        if (diskProducts != null && diskProducts.isNotEmpty) {
+        // Full catalog requests (limit >= 100) must have at least 150 products to be considered a valid complete catalog
+        if (diskProducts != null && (limit < 100 ? diskProducts.isNotEmpty : diskProducts.length >= 150)) {
           _cachedProducts = diskProducts;
           final diskFresh = await _isDiskCacheFresh();
           if (diskFresh) {
             _lastFetchTime = DateTime.now();
+            debugPrint('[ProductRepo] disk cache HIT & FRESH: ${diskProducts.length} items');
             return _filterProducts(diskProducts, category: category, search: search, restaurantId: restaurantId);
           }
-          // If disk cache is older than TTL, still return it immediately so user sees products,
-          // but trigger asynchronous background refresh to update stale data without blocking UI!
+          debugPrint('[ProductRepo] disk cache HIT but stale: revalidating in background');
           _fetchLiveProducts(
             limit: limit,
             search: search,
@@ -285,7 +300,7 @@ class ProductRepository {
     }
 
     final liveProducts = productsJson
-        .map((json) => Product.fromJson(json as Map<String, dynamic>))
+        .map((json) => Product.fromJson(Map<String, dynamic>.from(json as Map)))
         .toList();
 
     // Stably place in-stock products first, then sortOrder desc, then createdAt desc (1:1 Web App parity)
@@ -326,7 +341,7 @@ class ProductRepository {
       }
 
       return productsJson
-          .map((json) => Product.fromJson(json as Map<String, dynamic>))
+          .map((json) => Product.fromJson(Map<String, dynamic>.from(json as Map)))
           .toList();
     } catch (e, st) {
       LoggerService.error('ProductRepository: getUpsellProducts failed for $cleanIds', e, st);
@@ -495,8 +510,8 @@ class ProductRepository {
     try {
       final response = await dio.get('/api/products/$id');
       final data = response.data;
-      if (data is Map<String, dynamic>) {
-        return Product.fromJson(data);
+      if (data is Map) {
+        return Product.fromJson(Map<String, dynamic>.from(data));
       }
       throw ApiException('Product not found');
     } catch (e, st) { LoggerService.error('ProductRepository: getProduct failed', e, st);
@@ -529,7 +544,7 @@ class ProductRepository {
         dio.get('/api/categories').then((response) {
           final data = response.data;
           if (data is List) {
-            final cats = data.map((json) => Category.fromJson(json as Map<String, dynamic>)).toList();
+            final cats = data.map((json) => Category.fromJson(Map<String, dynamic>.from(json as Map))).toList();
             if (cats.isNotEmpty) {
               _cachedCategories = cats;
               _saveCategoriesToDisk(cats);
@@ -545,7 +560,7 @@ class ProductRepository {
       final response = await dio.get('/api/categories');
       final data = response.data;
       if (data is List) {
-        final cats = data.map((json) => Category.fromJson(json as Map<String, dynamic>)).toList();
+        final cats = data.map((json) => Category.fromJson(Map<String, dynamic>.from(json as Map))).toList();
         if (cats.isNotEmpty) {
           _cachedCategories = cats;
           _saveCategoriesToDisk(cats);

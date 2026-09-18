@@ -632,10 +632,26 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         orElse: () => subOrders.first,
       );
 
-      // Merge items from all sub-orders
+      // Merge items from all sub-orders with restaurant context preservation
       final allItems = <dynamic>[];
       for (final sub in subOrders) {
-        allItems.addAll((sub['items'] as List<dynamic>?) ?? []);
+        final subRestId = sub['restaurantId']?.toString() ?? sub['restaurant_id']?.toString();
+        final subShopName = sub['shopName']?.toString() ?? sub['shop_name']?.toString();
+        final rawSubItems = (sub['items'] as List<dynamic>?) ?? [];
+        for (final item in rawSubItems) {
+          if (item is Map) {
+            final itemMap = Map<String, dynamic>.from(item);
+            if (subRestId != null && itemMap['restaurantId'] == null) {
+              itemMap['restaurantId'] = subRestId;
+            }
+            if (subShopName != null && itemMap['shopName'] == null) {
+              itemMap['shopName'] = subShopName;
+            }
+            allItems.add(itemMap);
+          } else {
+            allItems.add(item);
+          }
+        }
       }
 
       // Compute combined total
@@ -675,8 +691,17 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       // Build sub-order type labels for display
       final subLabels = subOrders.map((o) {
         final rid = (o['readableId'] ?? '').toString();
-        final isRest = rid.endsWith('-R') || o['orderType'] == 'RESTAURANT' || o['restaurantId'] != null;
-        return isRest ? '🍽️ Restaurant' : '🛒 Grocery';
+        final rawRestId = o['restaurantId']?.toString() ?? o['restaurant_id']?.toString();
+        final rawShopName = (o['shopName'] ?? o['shop_name'])?.toString();
+        final isRest = rid.endsWith('-R') ||
+            rid.contains('-R-') ||
+            o['orderType'] == 'RESTAURANT' ||
+            (rawRestId != null && rawRestId.isNotEmpty && rawRestId != 'null') ||
+            (rawShopName != null && RestaurantRegistry.find(rawShopName) != null);
+        final name = (rawShopName != null && rawShopName.isNotEmpty && rawShopName != 'FastKirana Dark Store' && rawShopName != 'FastKirana Store')
+            ? rawShopName
+            : (RestaurantRegistry.getName(rawRestId) ?? 'Restaurant');
+        return isRest ? '🍽️ $name' : '🛒 Grocery';
       }).toList();
 
       final merged = Map<String, dynamic>.from(primary);

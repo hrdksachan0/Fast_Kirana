@@ -8,6 +8,7 @@ import 'package:flutter_bounceable/flutter_bounceable.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/utils/app_toast.dart';
+import '../../core/utils/restaurant_utils.dart';
 import '../../core/services/admin_notification_service.dart';
 import '../../core/services/admin_authorization.dart';
 import '../../core/services/location_service.dart';
@@ -50,20 +51,51 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
   void initState() {
     super.initState();
     final rawItems = widget.order['items'];
-    final parentRestId = widget.restaurantId ?? widget.order['restaurantId']?.toString();
-    final parentShopName = widget.order['shopName']?.toString();
+    final parentRestId = widget.restaurantId ??
+        widget.order['restaurantId']?.toString() ??
+        widget.order['restaurant_id']?.toString() ??
+        (widget.order['restaurant'] is Map ? widget.order['restaurant']['id']?.toString() : null);
+    final parentShopName = widget.order['shopName']?.toString() ??
+        widget.order['shop_name']?.toString() ??
+        (widget.order['restaurant'] is Map ? widget.order['restaurant']['name']?.toString() : null) ??
+        (parentRestId != null ? RestaurantRegistry.getName(parentRestId) : null);
 
     if (rawItems is List) {
       _items = rawItems.map((e) {
         final map = Map<String, dynamic>.from(e as Map);
-        if (widget.isRestaurant) {
-          final rawPid = map['productId']?.toString();
-          final isCustom = rawPid == null || rawPid.startsWith('custom_');
-          if ((map['restaurantId'] == null || map['restaurantId'].toString().isEmpty) && isCustom) {
+        // Normalize snake_case keys if present
+        if (map['restaurantId'] == null && map['restaurant_id'] != null) {
+          map['restaurantId'] = map['restaurant_id'];
+        }
+        if (map['shopName'] == null && map['shop_name'] != null) {
+          map['shopName'] = map['shop_name'];
+        }
+
+        final rawPid = (map['productId'] ?? map['product_id'])?.toString();
+        final name = (map['name'] ?? '').toString();
+        final isFood = RestaurantRegistry.isFoodDishName(name) ||
+            (rawPid != null && (rawPid.startsWith('REST-') || rawPid.startsWith('DISH-') || rawPid.startsWith('CAFE-')));
+
+        final isCombined = widget.order['isCombined'] == true;
+        final isDedicatedRestaurant = widget.isRestaurant && !isCombined;
+        final currentShop = map['shopName']?.toString();
+        final isExplicitDarkStore = currentShop != null &&
+            (currentShop.toLowerCase().contains('dark store') ||
+             currentShop.toLowerCase().contains('darkstore') ||
+             currentShop == 'FastKirana Grocery' ||
+             currentShop == 'FastKirana Store');
+
+        if ((isDedicatedRestaurant || isFood) && !isExplicitDarkStore) {
+          if (map['restaurantId'] == null || map['restaurantId'].toString().isEmpty || map['restaurantId'] == 'null') {
             map['restaurantId'] = parentRestId;
           }
-          if (map['shopName'] == null || map['shopName'].toString().isEmpty) {
-            map['shopName'] = map['restaurantId'] != null ? (parentShopName ?? 'Restaurant') : 'FastKirana Grocery';
+          if (currentShop == null ||
+              currentShop.isEmpty ||
+              currentShop == 'FastKirana Grocery' ||
+              currentShop == 'FastKirana Store') {
+            map['shopName'] = (parentShopName != null && parentShopName.isNotEmpty && parentShopName != 'FastKirana Grocery')
+                ? parentShopName
+                : (RestaurantRegistry.getName(map['restaurantId']?.toString()) ?? (parentShopName ?? '🍽️ Kitchen'));
           }
         }
         return map;
@@ -182,7 +214,11 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
 
   void _openItemPickerSheet({int? swapIndex}) {
     HapticFeedback.selectionClick();
-    final effectiveRestId = widget.restaurantId ?? widget.order['restaurantId']?.toString();
+    final parentShopName = widget.order['shopName']?.toString() ?? widget.order['shop_name']?.toString();
+    final effectiveRestId = widget.restaurantId ??
+        widget.order['restaurantId']?.toString() ??
+        widget.order['restaurant_id']?.toString() ??
+        (parentShopName != null ? RestaurantRegistry.find(parentShopName)?.id : null);
 
     showModalBottomSheet(
       context: context,
@@ -265,8 +301,10 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                   ? rawId
                   : null);
 
-          final resolvedRestId = it['restaurantId'] ?? (widget.isRestaurant ? (widget.restaurantId ?? widget.order['restaurantId']) : null);
-          final resolvedShopName = it['shopName'] ?? (widget.isRestaurant ? (widget.order['shopName'] ?? 'Restaurant') : (resolvedRestId != null ? (widget.order['shopName'] ?? 'Restaurant') : 'FastKirana Grocery'));
+          final isCombined = widget.order['isCombined'] == true;
+          final isDedicatedRestaurant = widget.isRestaurant && !isCombined;
+          final resolvedRestId = it['restaurantId'] ?? (isDedicatedRestaurant ? (widget.restaurantId ?? widget.order['restaurantId']) : null);
+          final resolvedShopName = it['shopName'] ?? (isDedicatedRestaurant ? (widget.order['shopName'] ?? 'Restaurant') : (resolvedRestId != null ? (widget.order['shopName'] ?? 'Restaurant') : 'FastKirana Grocery'));
 
           return {
             'productId': cleanPid,
@@ -544,12 +582,36 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                           ? (it['price'] as num).toDouble()
                           : (double.tryParse(it['price']?.toString() ?? '0') ?? 0.0);
                       final qty = (it['quantity'] is num) ? (it['quantity'] as num).toInt() : 1;
-                      final itemRestId = it['restaurantId']?.toString();
-                      final itemShopName = it['shopName']?.toString();
-                      final isRestItem = widget.isRestaurant || (itemRestId != null && itemRestId.isNotEmpty);
-                      final domainLabel = isRestItem
-                          ? (itemShopName != null && itemShopName.isNotEmpty ? '🍽️ $itemShopName' : '🍽️ Kitchen')
-                          : '🛒 Grocery';
+                      final itemRestId = it['restaurantId']?.toString() ?? it['restaurant_id']?.toString();
+                      final itemShopName = it['shopName']?.toString() ?? it['shop_name']?.toString();
+                      final isDish = RestaurantRegistry.isFoodDishName(name) ||
+                          (it['productId']?.toString().toUpperCase().startsWith('REST-') ?? false) ||
+                          (it['productId']?.toString().toUpperCase().startsWith('DISH-') ?? false) ||
+                          (it['productId']?.toString().toUpperCase().startsWith('CAFE-') ?? false);
+                      final isCombined = widget.order['isCombined'] == true;
+                      final isDedicatedRestaurant = widget.isRestaurant && !isCombined;
+                      final isRestItem = isDedicatedRestaurant ||
+                          (itemRestId != null && itemRestId.isNotEmpty && itemRestId != 'null') ||
+                          isDish ||
+                          (itemShopName != null &&
+                              itemShopName.isNotEmpty &&
+                              itemShopName != 'FastKirana Grocery' &&
+                              itemShopName != 'FastKirana Store' &&
+                              itemShopName != 'FastKirana Dark Store');
+
+                      final parentShop = widget.order['shopName']?.toString() ?? widget.order['shop_name']?.toString();
+                      final resolvedShopName = (itemShopName != null &&
+                              itemShopName.isNotEmpty &&
+                              itemShopName != 'FastKirana Grocery' &&
+                              itemShopName != 'FastKirana Store' &&
+                              itemShopName != 'FastKirana Dark Store')
+                          ? itemShopName
+                          : (RestaurantRegistry.getName(itemRestId) ??
+                              (parentShop != null && parentShop.isNotEmpty && parentShop != 'FastKirana Grocery'
+                                  ? parentShop
+                                  : 'Kitchen'));
+
+                      final domainLabel = isRestItem ? '🍽️ $resolvedShopName' : '🛒 Grocery';
                       final domainColor = isRestItem
                           ? const Color(0xFFFFF7ED)
                           : const Color(0xFFF0FDF4);

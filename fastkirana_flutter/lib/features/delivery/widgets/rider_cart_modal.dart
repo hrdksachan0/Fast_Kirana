@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import '../../../core/utils/restaurant_utils.dart';
 import '../../../core/utils/validators.dart';
 
 /// Opens the high-end "Photo View" Cart Modal for riders.
@@ -318,10 +319,19 @@ class RiderCartModal extends StatelessWidget {
         if (sub is! Map) continue;
         final subMap = Map<String, dynamic>.from(sub);
         final subReadableId = (subMap['readableId'] ?? '').toString();
-        final isRest = subReadableId.endsWith('-R') || subMap['orderType'] == 'RESTAURANT' || subMap['restaurantId'] != null;
-        final shopName = (subMap['shopName']?.toString().trim().isNotEmpty == true)
-            ? subMap['shopName'].toString().trim()
-            : (isRest ? 'A.S. RESTAURANT' : 'FASTKIRANA DARK STORE');
+        final rawRestId = subMap['restaurantId']?.toString() ?? subMap['restaurant_id']?.toString();
+        final rawShopName = (subMap['shopName'] ?? subMap['shop_name'])?.toString();
+        final isRest = subReadableId.endsWith('-R') ||
+            subReadableId.contains('-R-') ||
+            subMap['orderType'] == 'RESTAURANT' ||
+            (rawRestId != null && rawRestId.isNotEmpty && rawRestId != 'null') ||
+            (rawShopName != null && RestaurantRegistry.find(rawShopName) != null);
+        final shopName = (rawShopName?.trim().isNotEmpty == true &&
+                rawShopName != 'FASTKIRANA DARK STORE' &&
+                rawShopName != 'FastKirana Dark Store' &&
+                rawShopName != 'FastKirana Store')
+            ? rawShopName!.trim()
+            : (isRest ? (RestaurantRegistry.getName(rawRestId) ?? 'RESTAURANT') : 'FASTKIRANA DARK STORE');
         final subItems = (subMap['items'] as List<dynamic>?) ?? [];
 
         groups.add(_StoreGroup(
@@ -334,10 +344,24 @@ class RiderCartModal extends StatelessWidget {
       }
     } else {
       // Single store order
-      final isFood = (order['orderType'] == 'RESTAURANT') || (order['restaurantId'] != null) || orderNum.contains('-R');
-      final shopName = (order['shopName']?.toString().trim().isNotEmpty == true)
-          ? order['shopName'].toString().trim()
-          : (isFood ? 'RESTAURANT' : 'FASTKIRANA DARK STORE');
+      final rawRestId = order['restaurantId']?.toString() ?? order['restaurant_id']?.toString();
+      final rawShopName = (order['shopName'] ?? order['shop_name'])?.toString();
+      final isFood = (order['orderType'] == 'RESTAURANT') ||
+          (rawRestId != null && rawRestId.isNotEmpty && rawRestId != 'null') ||
+          orderNum.contains('-R') ||
+          (rawShopName != null && RestaurantRegistry.find(rawShopName) != null) ||
+          items.any((it) {
+            final itName = (it is Map ? it['name'] : null)?.toString();
+            final itRestId = (it is Map ? (it['restaurantId'] ?? it['restaurant_id']) : null)?.toString();
+            return (itRestId != null && itRestId.isNotEmpty && itRestId != 'null') ||
+                RestaurantRegistry.isFoodDishName(itName);
+          });
+      final shopName = (rawShopName?.trim().isNotEmpty == true &&
+              rawShopName != 'FASTKIRANA DARK STORE' &&
+              rawShopName != 'FastKirana Dark Store' &&
+              rawShopName != 'FastKirana Store')
+          ? rawShopName!.trim()
+          : (isFood ? (RestaurantRegistry.getName(rawRestId) ?? 'RESTAURANT') : 'FASTKIRANA DARK STORE');
 
       groups.add(_StoreGroup(
         outletIcon: isFood ? '🍽️' : '🛒',

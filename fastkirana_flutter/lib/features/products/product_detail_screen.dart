@@ -14,7 +14,6 @@ import '../../data/models/product.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/store_settings_provider.dart';
 import '../../widgets/cart_conflict_dialog.dart';
-import '../../widgets/variant_selector_sheet.dart';
 import '../cart/cart_screen.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {

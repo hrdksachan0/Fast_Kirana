@@ -457,8 +457,11 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
                     final rawRestId = (p.restaurantId != null && p.restaurantId!.trim().isNotEmpty)
                         ? p.restaurantId
                         : (p.restaurant?.id != null && p.restaurant!.id.trim().isNotEmpty ? p.restaurant!.id : null);
-                    final isRestProduct = rawRestId != null && rawRestId.trim().isNotEmpty;
-                    final outletName = isRestProduct ? (p.restaurant?.name ?? getOutletName(p)) : 'FastKirana Grocery';
+                    final effectiveRestId = rawRestId ?? (isRest || widget.isRestaurant ? widget.restaurantId : null);
+                    final isRestProduct = isRest || widget.isRestaurant || (effectiveRestId != null && effectiveRestId.trim().isNotEmpty);
+                    final outletName = isRestProduct
+                        ? (p.restaurant?.name ?? RestaurantRegistry.getName(effectiveRestId) ?? (isRest ? getOutletName(p) : 'Restaurant'))
+                        : 'FastKirana Grocery';
                     widget.onProductSelected({
                       'productId': p.id,
                       'name': p.name,
@@ -466,7 +469,7 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
                       'quantity': 1,
                       'imageUrl': p.imageUrl,
                       'isCustom': false,
-                      'restaurantId': isRestProduct ? rawRestId : null,
+                      'restaurantId': isRestProduct ? (effectiveRestId ?? widget.restaurantId) : null,
                       'shopName': outletName,
                     });
                     Navigator.pop(context);
@@ -647,11 +650,20 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
               return;
             }
 
-            final customRestId = widget.isRestaurant
-                ? (widget.restaurantId ?? (RestaurantRegistry.all.isNotEmpty ? RestaurantRegistry.all.first.id : null))
+            final isFoodDish = RestaurantRegistry.isFoodDishName(name);
+            final customRestId = widget.isRestaurant || isFoodDish
+                ? (widget.restaurantId ??
+                    (_adminCatalogFilter != 'ALL' && _adminCatalogFilter != 'GROCERY'
+                        ? _adminCatalogFilter
+                        : (RestaurantRegistry.all.isNotEmpty ? RestaurantRegistry.all.first.id : null)))
                 : (_adminCatalogFilter != 'ALL' && _adminCatalogFilter != 'GROCERY'
                     ? _adminCatalogFilter
                     : null);
+
+            final isRestOutlet = widget.isRestaurant || isFoodDish || customRestId != null;
+            final outletName = isRestOutlet
+                ? (RestaurantRegistry.getName(customRestId) ?? 'Restaurant')
+                : 'FastKirana Grocery';
 
             widget.onProductSelected({
               'productId': 'custom_${DateTime.now().millisecondsSinceEpoch}',
@@ -661,7 +673,7 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
               'notes': notes.isNotEmpty ? notes : null,
               'isCustom': true,
               'restaurantId': customRestId,
-              'shopName': customRestId != null ? (RestaurantRegistry.getName(customRestId) ?? 'Restaurant') : 'FastKirana Grocery',
+              'shopName': outletName,
             });
             Navigator.pop(context);
           },

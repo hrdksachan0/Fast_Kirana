@@ -245,15 +245,6 @@ class Order {
   }
 
   factory Order.fromJson(Map<String, dynamic> json) {
-    List<OrderItem> itemsList = [];
-    final rawItems = json['items'] ?? json['order_items'];
-    if (rawItems is List) {
-      itemsList = rawItems
-          .whereType<Map<String, dynamic>>()
-          .map((itemJson) => OrderItem.fromJson(itemJson))
-          .toList();
-    }
-
     String? parseDeliveryBoyName() {
       if (json['deliveryUser'] is Map) return json['deliveryUser']['name']?.toString();
       if (json['deliveryBoy'] is Map) return json['deliveryBoy']['name']?.toString();
@@ -361,6 +352,27 @@ class Order {
       if (reg != null) {
         parsedRestId = reg.id;
       }
+    }
+    final effectiveReadableId = json['readableId']?.toString() ?? json['readable_id']?.toString() ?? '';
+    final isParentRestOrder = (parsedRestId != null && parsedRestId.isNotEmpty && parsedRestId != 'null') ||
+        (json['orderType']?.toString().toUpperCase() == 'RESTAURANT') ||
+        effectiveReadableId.toUpperCase().endsWith('-R') ||
+        effectiveReadableId.toUpperCase().contains('-R-');
+
+    List<OrderItem> itemsList = [];
+    final rawItems = json['items'] ?? json['order_items'];
+    if (rawItems is List) {
+      itemsList = rawItems.whereType<Map<String, dynamic>>().map((itemJson) {
+        final it = OrderItem.fromJson(itemJson);
+        final joinedRestId = itemJson['product'] is Map ? itemJson['product']['restaurantId']?.toString() : null;
+        final effectiveRestId = it.restaurantId ?? joinedRestId ?? (isParentRestOrder ? parsedRestId : null);
+        final effectiveShop = it.shopName ??
+            (effectiveRestId != null ? (RestaurantRegistry.getName(effectiveRestId) ?? resolvedShopName) : resolvedShopName);
+        return it.copyWith(
+          restaurantId: effectiveRestId,
+          shopName: effectiveShop,
+        );
+      }).toList();
     }
 
     return Order(

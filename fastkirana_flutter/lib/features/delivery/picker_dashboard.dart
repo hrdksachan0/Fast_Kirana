@@ -12,6 +12,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/services/supabase_service.dart';
+import '../../core/utils/restaurant_utils.dart';
 import '../../providers/auth_provider.dart';
 import '../common/order_edit_modal.dart';
 import 'widgets/add_picker_product_modal.dart';
@@ -1071,13 +1072,29 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                 if (!isPackedStatus)
                   Bounceable(
                     onTap: () {
+                      final rawRestId = order['restaurantId']?.toString() ?? order['restaurant_id']?.toString();
+                      final rawShopName = (order['shopName'] ?? order['shop_name'])?.toString();
+                      final rId = (order['readableId']?.toString() ?? '').toUpperCase();
+                      final isRestOrder = (rawRestId != null && rawRestId.isNotEmpty && rawRestId != 'null') ||
+                          rId.endsWith('-R') ||
+                          rId.contains('-R-') ||
+                          (order['orderType']?.toString().toUpperCase() == 'RESTAURANT') ||
+                          (rawShopName != null && RestaurantRegistry.find(rawShopName) != null) ||
+                          items.any((it) {
+                            final itName = (it is Map ? it['name'] : null)?.toString();
+                            final itRestId = (it is Map ? (it['restaurantId'] ?? it['restaurant_id']) : null)?.toString();
+                            return (itRestId != null && itRestId.isNotEmpty && itRestId != 'null') ||
+                                RestaurantRegistry.isFoodDishName(itName);
+                          });
+
                       showModalBottomSheet(
                         context: context,
                         isScrollControlled: true,
                         backgroundColor: Colors.transparent,
                         builder: (ctx) => OrderEditModal(
                           order: order,
-                          isRestaurant: false,
+                          isRestaurant: isRestOrder,
+                          restaurantId: rawRestId ?? (rawShopName != null ? RestaurantRegistry.find(rawShopName)?.id : null),
                           onOrderUpdated: () => _fetchPickerOrders(silent: true),
                         ),
                       );

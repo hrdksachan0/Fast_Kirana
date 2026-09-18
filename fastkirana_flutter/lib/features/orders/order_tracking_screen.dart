@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'dart:async';
 import 'dart:math' as math;
@@ -1066,19 +1067,21 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     // 3. Check for Combined Order Multi-Outlets
     if (order.isCombined && order.subOrders != null && order.subOrders!.isNotEmpty) {
       // Find Restaurant Sub-Order
-      final restSub = order.subOrders!.firstWhere(
-        (s) => s.restaurantId != null || (s.readableId != null && s.readableId!.toUpperCase().endsWith('-R')),
-        orElse: () => order.subOrders!.first,
-      );
-      _restaurantOutlet = getOutletLocation(
-        restaurantId: restSub.restaurantId,
-        shopName: restSub.shopName,
-        items: restSub.items ?? order.items,
-        rawOrder: restSub.toJson(),
-      );
-      _restaurantPosition = LatLng(_restaurantOutlet!.lat, _restaurantOutlet!.lng);
-      // Darkstore location for Grocery Sub-Order (dynamic via AppConfig)
-      _storePosition = LatLng(AppConfig.darkstoreLat, AppConfig.darkstoreLng);
+      final restSub = order.subOrders!.firstWhereOrNull((s) => s.isRestaurantOrder);
+      if (restSub != null) {
+        _restaurantOutlet = getOutletLocation(
+          restaurantId: restSub.restaurantId,
+          shopName: restSub.shopName,
+          items: restSub.items ?? order.items,
+          rawOrder: restSub.toJson(),
+        );
+        _restaurantPosition = LatLng(_restaurantOutlet!.lat, _restaurantOutlet!.lng);
+        // Darkstore location for Grocery Sub-Order (dynamic via AppConfig)
+        _storePosition = LatLng(AppConfig.darkstoreLat, AppConfig.darkstoreLng);
+      } else {
+        _restaurantPosition = null;
+        _restaurantOutlet = null;
+      }
     } else {
       _restaurantPosition = null;
       _restaurantOutlet = null;
