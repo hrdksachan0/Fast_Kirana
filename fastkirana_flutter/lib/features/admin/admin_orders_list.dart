@@ -594,7 +594,10 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
                 ? item.id!
                 : '${item.name.toLowerCase().trim()}_${item.selectedVariant?.toLowerCase().trim() ?? ""}_${item.notes?.toLowerCase().trim() ?? ""}';
             if (seenItemKeys.add(key)) {
-              allItems.add(item);
+              allItems.add(item.copyWith(
+                restaurantId: item.restaurantId ?? sub.restaurantId,
+                shopName: item.shopName ?? sub.shopName,
+              ));
             }
           }
         }
@@ -1398,6 +1401,18 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
 
   void _openSuperOrderEditModal(Order order) {
     HapticFeedback.selectionClick();
+    final isRest = order.isRestaurantOrder;
+    String? effectiveRestId = order.restaurantId;
+    if (effectiveRestId == null || effectiveRestId.isEmpty || effectiveRestId == 'null') {
+      if (order.shopName != null && order.shopName!.isNotEmpty) {
+        effectiveRestId = RestaurantRegistry.find(order.shopName)?.id;
+      }
+      if (effectiveRestId == null && order.isCombined && order.subOrders != null) {
+        final restSub = order.subOrders!.firstWhereOrNull((s) => s.isRestaurantOrder);
+        effectiveRestId = restSub?.restaurantId;
+      }
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1415,19 +1430,19 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
             'imageUrl': it.imageUrl,
             'selectedVariant': it.selectedVariant,
             'notes': it.notes,
-            'restaurantId': order.restaurantId,
-            'shopName': order.shopName,
+            'restaurantId': it.restaurantId ?? (it.isRestaurantItem ? effectiveRestId : order.restaurantId),
+            'shopName': it.shopName ?? (it.isRestaurantItem ? (order.shopName ?? 'Restaurant') : 'FastKirana Grocery'),
           }).toList(),
-          'restaurantId': order.restaurantId,
+          'restaurantId': effectiveRestId,
           'shopName': order.shopName,
           'user': {
             'phone': order.customerPhone,
             'name': order.customerName,
           },
         },
-        isRestaurant: order.restaurantId != null && order.restaurantId!.isNotEmpty,
+        isRestaurant: isRest,
         isAdmin: true,
-        restaurantId: order.restaurantId,
+        restaurantId: effectiveRestId,
         onOrderUpdated: () {
           _fetchAdminOrders();
         },
