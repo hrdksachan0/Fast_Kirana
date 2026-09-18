@@ -78,6 +78,10 @@ export function StoreHubsManager({
   const [newHubSurge, setNewHubSurge] = useState('0')
   const [seedInventory, setSeedInventory] = useState(true)
   const [newHubManagerPhone, setNewHubManagerPhone] = useState('')
+  const [newHubAddress, setNewHubAddress] = useState('')
+  const [newHubPickupAddress, setNewHubPickupAddress] = useState('')
+  const [newHubPhone, setNewHubPhone] = useState('')
+  const [newHubUpiVpa, setNewHubUpiVpa] = useState('')
   const [editingManagerStoreId, setEditingManagerStoreId] = useState<string | null>(null)
   const [editManagerPhoneInput, setEditManagerPhoneInput] = useState('')
 
@@ -133,7 +137,11 @@ export function StoreHubsManager({
           groceryOpen: true,
           isActive: true,
           seedInventory,
-          managerPhone: newHubManagerPhone.trim() || undefined
+          managerPhone: newHubManagerPhone.trim() || undefined,
+          address: newHubAddress.trim() || undefined,
+          pickupAddress: newHubPickupAddress.trim() || undefined,
+          phone: newHubPhone.trim() || undefined,
+          upiVpa: newHubUpiVpa.trim() || undefined
         })
       })
 
@@ -144,6 +152,10 @@ export function StoreHubsManager({
         setNewHubPincode('')
         setNewHubCustomId('')
         setNewHubManagerPhone('')
+        setNewHubAddress('')
+        setNewHubPickupAddress('')
+        setNewHubPhone('')
+        setNewHubUpiVpa('')
         setActiveTab('hierarchy')
         onRefresh()
       } else {
@@ -800,6 +812,71 @@ export function StoreHubsManager({
                     onChange={(e) => setNewHubSurge(e.target.value)}
                     className="w-full px-3 py-2 text-xs rounded-xl border border-border/80 bg-background text-text-primary"
                   />
+                </div>
+              </div>
+
+              {/* Isolated Hub Store Details & Address (No cross-hub overlap) */}
+              <div className="p-3.5 rounded-2xl bg-muted/40 border border-border/80 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-[#e20a22]" />
+                  <span className="text-xs font-black text-text-primary">Hub Contact & Isolation Settings (दुकान की अलग सेटिंग)</span>
+                </div>
+                <p className="text-[11px] text-text-secondary">
+                  ये विवरण इस हब के लिए पूरी तरह अलग और सुरक्षित रहेंगे। पुराने किसी भी स्टोर की जानकारी ओवरराइड नहीं होगी।
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-text-primary mb-1">
+                      Store Address (स्टोर का पूरा पता)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Near Bus Stand, Akbarpur"
+                      value={newHubAddress}
+                      onChange={(e) => setNewHubAddress(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-border/80 bg-background text-text-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-text-primary mb-1">
+                      Pickup Counter Address (पिकअप काउंटर का पता)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. FastKirana Dark Store Counter 1"
+                      value={newHubPickupAddress}
+                      onChange={(e) => setNewHubPickupAddress(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-border/80 bg-background text-text-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-text-primary mb-1">
+                      Support Phone (कस्टमर हेल्पलाइन नंबर)
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="e.g. 9696678006"
+                      value={newHubPhone}
+                      onChange={(e) => setNewHubPhone(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-border/80 bg-background text-text-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-text-primary mb-1">
+                      Store UPI VPA / QR ID (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. fastkirana@upi"
+                      value={newHubUpiVpa}
+                      onChange={(e) => setNewHubUpiVpa(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-border/80 bg-background text-text-primary"
+                    />
+                  </div>
                 </div>
               </div>
 

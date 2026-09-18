@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { RefreshCw, Home } from 'lucide-react'
 import Link from 'next/link'
 import { triggerHaptic } from '@/lib/haptic'
+import { reportClientError } from '@/lib/telemetry'
 
 export default function Error({
   error,
@@ -17,6 +18,10 @@ export default function Error({
 
   useEffect(() => {
     console.error('FastKirana App Error:', error)
+    reportClientError(error, {
+      severity: 'ERROR',
+      metadata: { digest: error?.digest },
+    })
   }, [error])
 
   const handleRetry = () => {

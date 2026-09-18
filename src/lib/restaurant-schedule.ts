@@ -55,11 +55,12 @@ export function getISTMinutes(): number {
 }
 
 export function isManuallyPausedToday(restaurant: {
-  isOpen?: boolean | null
+  isOpen?: boolean | string | number | null
   openTime?: string | null
   updatedAt?: Date | string | null
 }): boolean {
-  if (restaurant.isOpen !== false && (restaurant.isOpen as any) !== 'false' && (restaurant.isOpen as any) !== 0) {
+  const isClosed = restaurant.isOpen === false || restaurant.isOpen === 'false' || restaurant.isOpen === 0
+  if (!isClosed) {
     return false
   }
   if (!restaurant.updatedAt) {
@@ -116,7 +117,7 @@ export function isManuallyPausedToday(restaurant: {
 }
 
 export function checkStoreOperatingStatus(restaurant?: {
-  isOpen?: boolean | null
+  isOpen?: boolean | string | number | null
   openTime?: string | null
   closeTime?: string | null
   updatedAt?: Date | string | null
@@ -172,7 +173,8 @@ export function checkStoreOperatingStatus(restaurant?: {
   }
 
   // 2. Check if owner manually paused the store today during active hours
-  if (restaurant.isOpen === false || (restaurant.isOpen as any) === 'false' || (restaurant.isOpen as any) === 0) {
+  const isOwnerPaused = restaurant.isOpen === false || restaurant.isOpen === 'false' || restaurant.isOpen === 0
+  if (isOwnerPaused) {
     if (restaurant.updatedAt && isManuallyPausedToday(restaurant)) {
       return {
         isOpen: false,

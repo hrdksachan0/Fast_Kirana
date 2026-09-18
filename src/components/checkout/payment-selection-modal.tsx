@@ -50,22 +50,61 @@ export function PaymentSelectionModal({
           </button>
         </div>
 
-        {onlyCod && (
+        {grandTotal <= 0 ? (
+          <div className="border border-emerald-500/30 bg-emerald-500/10 p-3.5 rounded-2xl text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-2.5">
+            <span className="text-xl">🎉</span>
+            <div>
+              <div className="font-extrabold text-sm">100% Free Order Unlocked!</div>
+              <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 mt-0.5">
+                Your coupon covers this entire order. No payment is required!
+              </p>
+            </div>
+          </div>
+        ) : onlyCod && (
           <div className="border border-amber-500/20 bg-amber-500/5 p-3 rounded-xl text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-2">
             <span>ℹ️</span>
             <span>Online payment options are temporarily disabled by the store.</span>
           </div>
         )}
 
-        {/* 2 Big Action Buttons */}
+        {/* Action Buttons */}
         <div className="space-y-3 pt-1">
-          {/* Option 1: Cash on Delivery (DEFAULT) */}
-          <button
-            type="button"
-            disabled={isPlacingOrder}
-            onClick={onSelectCod}
-            className="group relative overflow-hidden w-full p-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-left transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-emerald-600/25 flex items-center justify-between border border-emerald-400/30 cursor-pointer"
-          >
+          {grandTotal <= 0 ? (
+            <button
+              type="button"
+              disabled={isPlacingOrder}
+              onClick={onSelectCod}
+              className="group relative overflow-hidden w-full p-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-left transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-emerald-600/25 flex items-center justify-between border border-emerald-400/30 cursor-pointer"
+            >
+              <div className="flex items-center gap-3.5 relative z-10">
+                <div className="h-11 w-11 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-2xl shrink-0">
+                  🎁
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm sm:text-base font-black tracking-wide">
+                      Confirm Free Order
+                    </span>
+                    <span className="bg-white/25 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm">
+                      FREE (₹0) ⚡
+                    </span>
+                  </div>
+                  <p className="text-xs text-emerald-100 font-medium mt-0.5">
+                    Click to place order without any payment
+                  </p>
+                </div>
+              </div>
+              <ChevronsRight className="h-5 w-5 text-white/90 relative z-10 transition-transform group-hover:translate-x-1 shrink-0" />
+            </button>
+          ) : (
+            <>
+              {/* Option 1: Cash on Delivery (DEFAULT) */}
+              <button
+                type="button"
+                disabled={isPlacingOrder}
+                onClick={onSelectCod}
+                className="group relative overflow-hidden w-full p-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-left transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-emerald-600/25 flex items-center justify-between border border-emerald-400/30 cursor-pointer"
+              >
             <div className="flex items-center gap-3.5 relative z-10">
               <div className="h-11 w-11 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-2xl shrink-0">
                 💵
@@ -116,6 +155,8 @@ export function PaymentSelectionModal({
               </div>
               <ChevronsRight className="h-5 w-5 text-text-secondary transition-transform group-hover:translate-x-1 shrink-0" />
             </button>
+          )}
+            </>
           )}
         </div>
 

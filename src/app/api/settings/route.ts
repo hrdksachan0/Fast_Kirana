@@ -43,6 +43,12 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   cafe_free_delivery_threshold: '200',
   combined_free_delivery_threshold: '200',
   delivery_fee: '25',
+  delivery_fee_tier1: '25',
+  delivery_threshold_tier1: '199',
+  delivery_fee_tier2: '35',
+  delivery_threshold_tier2: '299',
+  delivery_fee_tier3: '50',
+  delivery_threshold_tier3: '399',
   surge_mode: 'MANUAL_OFF',
   surge_rain_amount: '20',
   surge_demand_amount: '15',
@@ -127,7 +133,7 @@ export function checkIsStoreOpen(settingsMap: Record<string, string>, prefix: 'g
   return isManuallyOpen
 }
 
-async function buildSettingsMap(storeId?: string | null): Promise<Record<string, string>> {
+export async function buildSettingsMap(storeId?: string | null): Promise<Record<string, string>> {
   const [settings, activeRestaurants] = await Promise.all([
     prisma.storeSetting.findMany({
       select: { key: true, value: true },
@@ -139,10 +145,23 @@ async function buildSettingsMap(storeId?: string | null): Promise<Record<string,
   ])
 
   const settingsMap = { ...DEFAULT_SETTINGS }
-  settings.forEach((s) => { settingsMap[s.key] = s.value })
+  // 1. Populate global base settings
+  settings.forEach((s) => {
+    if (!s.key.startsWith('store:')) {
+      settingsMap[s.key] = s.value
+    }
+  })
 
-  // If a specific DarkStore hub is queried, inject its hub-specific parameters
+  // 2. If a specific DarkStore hub is queried, layer store-scoped overrides & hub properties
   if (storeId && storeId !== 'all') {
+    const storePrefix = `store:${storeId}:`
+    settings.forEach((s) => {
+      if (s.key.startsWith(storePrefix)) {
+        const subKey = s.key.slice(storePrefix.length)
+        settingsMap[subKey] = s.value
+      }
+    })
+
     try {
       const hub = await prisma.darkStore.findUnique({
         where: { id: storeId },
@@ -163,6 +182,48 @@ async function buildSettingsMap(storeId?: string | null): Promise<Record<string,
         settingsMap['store_lng'] = String(hub.longitude)
         settingsMap['delivery_radius'] = String(hub.deliveryRadiusKm || 5.0)
         settingsMap['grocery_mart_open'] = hub.groceryOpen ? 'true' : 'false'
+
+        // City & Pincode inference for clean non-leaking store defaults
+        const inferredCity = hub.name.replace(/\s+(Hub|Market|Central|Dark\s*Store|Branch).*$/i, '').trim()
+        const inferredPincode = hub.id.match(/\b\d{6}\b/)?.[0] || ''
+
+        const isAkbarpur = storeId === 'hub-224122' || inferredCity.toLowerCase().includes('akbarpur') || inferredPincode === '224122'
+        const isGhatampur = storeId === 'hub-209206' || inferredCity.toLowerCase().includes('ghatampur') || inferredPincode === '209206'
+
+        if (isAkbarpur) {
+          if (!settingsMap['store_pincode'] || settingsMap['store_pincode'] === '209206') {
+            settingsMap['store_pincode'] = '224122'
+          }
+          if (!settingsMap['store_address'] || settingsMap['store_address'].toLowerCase().includes('ghatampur')) {
+            settingsMap['store_address'] = 'Akbarpur, Ambedkar Nagar, Uttar Pradesh 224122'
+          }
+          if (!settingsMap['contact_address'] || settingsMap['contact_address'].toLowerCase().includes('ghatampur')) {
+            settingsMap['contact_address'] = 'Akbarpur, Ambedkar Nagar, Uttar Pradesh 224122'
+          }
+          if (!settingsMap['grocery_pickup_address'] || settingsMap['grocery_pickup_address'].toLowerCase().includes('ghatampur')) {
+            settingsMap['grocery_pickup_address'] = 'FastKirana Dark Store, Akbarpur, Ambedkar Nagar 224122'
+          }
+          if (!settingsMap['trusted_text'] || settingsMap['trusted_text'].toLowerCase().includes('ghatampur')) {
+            settingsMap['trusted_text'] = '✨ Trusted by families in Akbarpur'
+          }
+        } else if (!isGhatampur && inferredCity) {
+          // New store defaults - never leak Ghatampur
+          if (inferredPincode && (!settingsMap['store_pincode'] || settingsMap['store_pincode'] === '209206')) {
+            settingsMap['store_pincode'] = inferredPincode
+          }
+          if (!settingsMap['store_address'] || settingsMap['store_address'].toLowerCase().includes('ghatampur')) {
+            settingsMap['store_address'] = `${inferredCity}${inferredPincode ? `, ${inferredPincode}` : ''}`
+          }
+          if (!settingsMap['contact_address'] || settingsMap['contact_address'].toLowerCase().includes('ghatampur')) {
+            settingsMap['contact_address'] = `${inferredCity}${inferredPincode ? `, ${inferredPincode}` : ''}`
+          }
+          if (!settingsMap['grocery_pickup_address'] || settingsMap['grocery_pickup_address'].toLowerCase().includes('ghatampur')) {
+            settingsMap['grocery_pickup_address'] = `FastKirana Dark Store, ${inferredCity}`
+          }
+          if (!settingsMap['trusted_text'] || settingsMap['trusted_text'].toLowerCase().includes('ghatampur')) {
+            settingsMap['trusted_text'] = `✨ Trusted by families in ${inferredCity}`
+          }
+        }
       }
     } catch (hubErr) {
       console.warn('Failed to load specific hub in settings:', hubErr)

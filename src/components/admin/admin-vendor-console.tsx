@@ -458,11 +458,17 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
       return
     }
 
+    const storeDisplayName = storeId === 'hub-224122'
+      ? 'Akbarpur Central Hub'
+      : storeId === 'hub-209206'
+      ? 'Ghatampur Central Hub'
+      : (storeId && storeId !== 'all' ? `${storeId} Hub` : 'FastKirana Central Hub')
+
     let message = `*PURCHASE ORDER - FASTKIRANA*\n`
     message += `Vendor Code: *${vendorDetails.vendorCode || 'VND-001'}*\n`
     message += `To: ${vendorDetails.name} (${vendorDetails.companyName || 'Supplier'})\n`
     message += `Date: ${todayStr}\n`
-    message += `Store: Akbarpur Central Hub\n\n`
+    message += `Store: ${storeDisplayName}\n\n`
     message += `*Items Required Immediately:*\n`
 
     itemsToOrder.forEach((item, index) => {

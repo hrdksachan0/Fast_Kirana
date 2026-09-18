@@ -19,28 +19,33 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Invalid lat/lng values' }, { status: 400 })
     }
 
+    const storeId = searchParams.get('storeId')
+
     // Fetch store coordinates & radius settings
     let storeLat = DEFAULT_STORE_LAT
     let storeLng = DEFAULT_STORE_LNG
     let maxRadiusKm = 5.0
     let surgeFee = 0
+    let settingsMap: Record<string, string> = {}
 
     try {
-      const settings = await prisma.storeSetting.findMany({
-        where: { key: { in: ['store_lat', 'store_lng', 'delivery_radius', 'max_delivery_radius', 'surge_charge'] } },
-      })
-      for (const s of settings) {
-        if (s.key === 'store_lat' && s.value) storeLat = parseFloat(s.value)
-        if (s.key === 'store_lng' && s.value) storeLng = parseFloat(s.value)
-        if ((s.key === 'delivery_radius' || s.key === 'max_delivery_radius') && s.value) maxRadiusKm = parseFloat(s.value)
-        if (s.key === 'surge_charge' && s.value) surgeFee = parseFloat(s.value)
-      }
+      const { buildSettingsMap } = await import('@/app/api/settings/route')
+      settingsMap = await buildSettingsMap(storeId)
+      if (settingsMap['store_lat']) storeLat = parseFloat(settingsMap['store_lat'])
+      if (settingsMap['store_lng']) storeLng = parseFloat(settingsMap['store_lng'])
+      if (settingsMap['delivery_radius']) maxRadiusKm = parseFloat(settingsMap['delivery_radius'])
+      if (settingsMap['surge_fee']) surgeFee = parseFloat(settingsMap['surge_fee'])
     } catch {
       // Use defaults if DB fails
     }
 
     const distanceKm = getDistanceKm(storeLat, storeLng, customerLat, customerLng)
-    const rules = getDeliveryRules(distanceKm, { maxRadiusKm, surgeFee })
+    const rules = getDeliveryRules(distanceKm, {
+      maxRadiusKm,
+      surgeFee,
+      settings: settingsMap,
+      storeName: settingsMap['store_name']
+    })
 
     return NextResponse.json(rules)
   } catch (error) {

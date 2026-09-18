@@ -14,57 +14,151 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json()
+    const { storeId, ...settingsPayload } = body
+    const isStoreScoped = Boolean(storeId && storeId !== 'all')
 
     // 1. Fetch current settings to perform delta updates
     const currentSettings = await prisma.storeSetting.findMany()
     const currentMap = new Map(currentSettings.map(s => [s.key, s.value]))
 
-    // 2. Filter payload to only run database writes for keys that actually changed
-    const changedEntries = Object.entries(body).filter(([key, value]) => {
-      return !currentMap.has(key) || currentMap.get(key) !== String(value)
-    })
-
-    if (changedEntries.length > 0) {
-      const updates = changedEntries.map(([key, value]) => {
-        return prisma.storeSetting.upsert({
-          where: { key },
-          update: { value: String(value) },
-          create: { key, value: String(value) },
-        })
+    if (isStoreScoped) {
+      // Store-scoped updates: prefix keys with store:${storeId}:
+      const storePrefix = `store:${storeId}:`
+      const changedEntries = Object.entries(settingsPayload).filter(([key, value]) => {
+        const scopedKey = `${storePrefix}${key}`
+        return !currentMap.has(scopedKey) || currentMap.get(scopedKey) !== String(value)
       })
 
-      await Promise.all(updates)
+      if (changedEntries.length > 0) {
+        const updates: Promise<any>[] = []
 
-      // Sync dark_stores table if grocery operating state or auto timing changed
-      if (body.grocery_auto_timing !== undefined || body.grocery_mart_open !== undefined || body.grocery_open_time !== undefined || body.grocery_close_time !== undefined) {
-        const mergedSettings: Record<string, string> = { ...Object.fromEntries(currentMap.entries()), ...body }
-        const isEffectiveOpen = checkIsStoreOpen(mergedSettings, 'grocery')
-        try {
-          await prisma.darkStore.updateMany({
-            data: { groceryOpen: isEffectiveOpen }
-          })
-        } catch (syncErr) {
-          console.warn('Failed to sync dark stores status:', syncErr)
+        changedEntries.forEach(([key, value]) => {
+          const scopedKey = `${storePrefix}${key}`
+          updates.push(
+            prisma.storeSetting.upsert({
+              where: { key: scopedKey },
+              update: { value: String(value) },
+              create: { key: scopedKey, value: String(value) },
+            })
+          )
+
+          // If updating Ghatampur base hub, keep legacy un-prefixed keys in sync for backward compatibility
+          if (storeId === 'hub-209206') {
+            updates.push(
+              prisma.storeSetting.upsert({
+                where: { key },
+                update: { value: String(value) },
+                create: { key, value: String(value) },
+              })
+            )
+          }
+        })
+
+        await Promise.all(updates)
+
+        // Sync DarkStore table fields for this specific hub
+        const darkStoreUpdateData: Record<string, any> = {}
+
+        if (settingsPayload.store_lat && !isNaN(parseFloat(settingsPayload.store_lat))) {
+          darkStoreUpdateData.latitude = parseFloat(settingsPayload.store_lat)
         }
-      }
-
-      // Sync active restaurants if restaurant timings updated
-      if (body.restaurant_open_time !== undefined || body.restaurant_close_time !== undefined) {
-        try {
-          const updateData: { openTime?: string; closeTime?: string } = {}
-          if (body.restaurant_open_time) updateData.openTime = body.restaurant_open_time
-          if (body.restaurant_close_time) updateData.closeTime = body.restaurant_close_time
-          await prisma.restaurant.updateMany({
-            where: { isActive: true },
-            data: updateData,
-          })
-        } catch (rErr) {
-          console.warn('Failed to sync restaurant timings:', rErr)
+        if (settingsPayload.store_lng && !isNaN(parseFloat(settingsPayload.store_lng))) {
+          darkStoreUpdateData.longitude = parseFloat(settingsPayload.store_lng)
         }
-      }
+        if (settingsPayload.delivery_radius && !isNaN(parseFloat(settingsPayload.delivery_radius))) {
+          darkStoreUpdateData.deliveryRadiusKm = parseFloat(settingsPayload.delivery_radius)
+        }
 
-      // Clear shared in-memory settings cache for instant client sync
-      clearSettingsCache()
+        if (
+          settingsPayload.grocery_auto_timing !== undefined ||
+          settingsPayload.grocery_mart_open !== undefined ||
+          settingsPayload.grocery_open_time !== undefined ||
+          settingsPayload.grocery_close_time !== undefined
+        ) {
+          const mergedSettings: Record<string, string> = {
+            ...Object.fromEntries(
+              Array.from(currentMap.entries())
+                .filter(([k]) => k.startsWith(storePrefix))
+                .map(([k, v]) => [k.slice(storePrefix.length), v])
+            ),
+            ...settingsPayload,
+          }
+          darkStoreUpdateData.groceryOpen = checkIsStoreOpen(mergedSettings, 'grocery')
+        }
+
+        if (settingsPayload.surge_manual_amount !== undefined && !isNaN(parseFloat(settingsPayload.surge_manual_amount))) {
+          if (settingsPayload.surge_mode === 'MANUAL_ON') {
+            darkStoreUpdateData.surgeCharge = parseFloat(settingsPayload.surge_manual_amount)
+          } else if (settingsPayload.surge_mode === 'MANUAL_OFF') {
+            darkStoreUpdateData.surgeCharge = 0.0
+          }
+        }
+
+        if (Object.keys(darkStoreUpdateData).length > 0) {
+          try {
+            await prisma.darkStore.update({
+              where: { id: storeId },
+              data: darkStoreUpdateData,
+            })
+          } catch (syncErr) {
+            console.warn(`Failed to sync dark store ${storeId} data:`, syncErr)
+          }
+        }
+
+        clearSettingsCache()
+      }
+    } else {
+      // Global/Platform-wide updates (legacy or superadmin all-hubs mode)
+      const changedEntries = Object.entries(settingsPayload).filter(([key, value]) => {
+        return !currentMap.has(key) || currentMap.get(key) !== String(value)
+      })
+
+      if (changedEntries.length > 0) {
+        const updates = changedEntries.map(([key, value]) => {
+          return prisma.storeSetting.upsert({
+            where: { key },
+            update: { value: String(value) },
+            create: { key, value: String(value) },
+          })
+        })
+
+        await Promise.all(updates)
+
+        // Sync all dark_stores table if grocery operating state or auto timing changed
+        if (
+          settingsPayload.grocery_auto_timing !== undefined ||
+          settingsPayload.grocery_mart_open !== undefined ||
+          settingsPayload.grocery_open_time !== undefined ||
+          settingsPayload.grocery_close_time !== undefined
+        ) {
+          const mergedSettings: Record<string, string> = { ...Object.fromEntries(currentMap.entries()), ...settingsPayload }
+          const isEffectiveOpen = checkIsStoreOpen(mergedSettings, 'grocery')
+          try {
+            await prisma.darkStore.updateMany({
+              data: { groceryOpen: isEffectiveOpen },
+            })
+          } catch (syncErr) {
+            console.warn('Failed to sync dark stores status:', syncErr)
+          }
+        }
+
+        // Sync active restaurants if restaurant timings updated
+        if (settingsPayload.restaurant_open_time !== undefined || settingsPayload.restaurant_close_time !== undefined) {
+          try {
+            const updateData: { openTime?: string; closeTime?: string } = {}
+            if (settingsPayload.restaurant_open_time) updateData.openTime = settingsPayload.restaurant_open_time
+            if (settingsPayload.restaurant_close_time) updateData.closeTime = settingsPayload.restaurant_close_time
+            await prisma.restaurant.updateMany({
+              where: { isActive: true },
+              data: updateData,
+            })
+          } catch (rErr) {
+            console.warn('Failed to sync restaurant timings:', rErr)
+          }
+        }
+
+        clearSettingsCache()
+      }
     }
 
     // 3. Trigger storefront revalidation asynchronously without blocking the response

@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     const session = await auth()
     const userRole = session?.user?.role
-    const userAssignedRestaurantId = (session?.user as any)?.assignedRestaurantId
+    const userAssignedRestaurantId = session?.user?.assignedRestaurantId
     const isAdmin = userRole === 'ADMIN'
 
     // 1. Strict Isolation: If logged in as RESTAURANT_OWNER or CHEF, lock to their assigned restaurant!
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. Filter by storeId: If browsing by dark store hub (or store-assigned admin), only restaurants from that store's city!
-    let userAssignedStoreId = (session?.user as any)?.assignedStoreId
+    let userAssignedStoreId = session?.user?.assignedStoreId
     if (!userAssignedStoreId && session?.user?.id) {
       const dbUser = await prisma.user.findUnique({
         where: { id: session.user.id },

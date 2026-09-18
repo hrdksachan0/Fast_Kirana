@@ -29,6 +29,7 @@ import { SupabaseAuthBridge } from '@/components/auth/auth-bridge'
 import { JsonLdSchema } from '@/components/seo/json-ld'
 import { UnserviceableLocationBanner } from '@/components/layout/unserviceable-banner'
 import { PhoneEnforcementModal } from '@/components/auth/phone-enforcement-modal'
+import { NetworkLivenessBanner } from '@/components/shared/network-liveness-banner'
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -163,6 +164,7 @@ export default function RootLayout({
                 <CartConflictDialog />
                 <SwipeToBack />
                 <PhoneEnforcementModal />
+                <NetworkLivenessBanner />
 
                 </PushNotificationProvider>
               </CartSyncProvider>

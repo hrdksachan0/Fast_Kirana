@@ -29,14 +29,21 @@ class ProductRepository {
   // is available before any network call (no race condition).
   static bool _preloadStarted = false;
   static bool _preloadComplete = false;
+
+  /// Synchronous in-memory getters for immediate first-render (<50ms)
+  static List<Category> get preloadedCategories => _cachedCategories ?? [];
+  static List<Product> get preloadedProducts => _cachedProducts ?? [];
+  static bool get hasPreloadedData => (_cachedCategories?.isNotEmpty ?? false) || (_cachedProducts?.isNotEmpty ?? false);
+
   ProductRepository(this.dio) {
     if (!_preloadStarted) {
       _preloadStarted = true;
-      _preloadFromDisk();
+      preloadDiskCache();
     }
   }
 
-  static Future<void> _preloadFromDisk() async {
+  /// Public preload to warm up in-memory cache during main() initialization
+  static Future<void> preloadDiskCache() async {
     if (_preloadComplete) return;
     try {
       final results = await Future.wait([
@@ -169,7 +176,7 @@ class ProductRepository {
 
     // Wait for disk preload to finish so cached data is available before checking
     if (!_preloadComplete) {
-      await _preloadFromDisk();
+      await preloadDiskCache();
     }
 
     try {

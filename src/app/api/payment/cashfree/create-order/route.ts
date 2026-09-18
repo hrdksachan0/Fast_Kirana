@@ -71,17 +71,20 @@ export async function POST(request: NextRequest) {
 
     // Sanitize phone to strictly 10 digits as required by Cashfree API
     let cleanPhone = String(resolvedPhone || '').replace(/[^\d]/g, '')
-    if (cleanPhone.startsWith('91') && cleanPhone.length > 10) {
-      cleanPhone = cleanPhone.slice(2)
+    if (cleanPhone.length > 10) {
+      cleanPhone = cleanPhone.slice(-10)
     }
     if (cleanPhone.length !== 10) {
       cleanPhone = '9999999999'
     }
 
-    // Sanitize email
-    let cleanEmail = String(resolvedEmail || '').trim().toLowerCase()
-    if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
-      cleanEmail = 'customer@fastkirana.in'
+    // Email is optional for Cashfree PG; only pass if valid email format exists
+    let cleanEmail: string | undefined = undefined
+    if (resolvedEmail && typeof resolvedEmail === 'string') {
+      const trimmed = resolvedEmail.trim().toLowerCase()
+      if (trimmed.includes('@') && trimmed.includes('.')) {
+        cleanEmail = trimmed
+      }
     }
 
     const cleanName = String(resolvedName || 'FastKirana Customer').trim() || 'FastKirana Customer'

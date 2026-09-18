@@ -98,7 +98,7 @@ export default function RestaurantKitchenPage() {
           }
 
           const isPlatformAdmin = session?.user?.role === 'ADMIN'
-          const userAssignedId = (session?.user as any)?.assignedRestaurantId
+          const userAssignedId = session?.user?.assignedRestaurantId
           const assignedId = isPlatformAdmin 
             ? (searchParamRestId || userAssignedId) 
             : (userAssignedId || searchParamRestId)
@@ -152,7 +152,7 @@ export default function RestaurantKitchenPage() {
     } else if (status === 'authenticated') {
       const role = session?.user?.role
       const email = session?.user?.email || ''
-      const assignedRestaurantId = (session?.user as any)?.assignedRestaurantId
+      const assignedRestaurantId = session?.user?.assignedRestaurantId
       const isAllowed = role === 'ADMIN' || role === 'RESTAURANT_OWNER' || (role === 'CHEF' && email.toLowerCase().startsWith('restaurant')) || !!assignedRestaurantId
       if (!isAllowed) {
         router.push('/')
@@ -172,7 +172,7 @@ export default function RestaurantKitchenPage() {
   }
 
   const isAdmin = session?.user?.role === 'ADMIN'
-  const userAssignedId = (session?.user as any)?.assignedRestaurantId
+  const userAssignedId = session?.user?.assignedRestaurantId
   const effectiveRestId = (!isAdmin && userAssignedId)
     ? userAssignedId
     : (selectedRestaurantId || userAssignedId || (restaurants.length > 0 ? restaurants[0].id : ''))

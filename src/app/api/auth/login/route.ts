@@ -17,6 +17,11 @@ export async function POST(request: NextRequest) {
     }
 
     const trimmed = rawEmail.trim()
+
+    if (otp) {
+      const otpLimited = await otpLimiter.check(request, trimmed)
+      if (otpLimited) return otpLimited
+    }
     let email = trimmed.toLowerCase()
 
     if (email === 'superadmin') email = 'superadmin@fastkirana.com'

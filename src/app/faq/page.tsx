@@ -1,28 +1,48 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowLeft, HelpCircle, Truck, Sparkles, MapPin, ShoppingBag, ShieldCheck, ChevronRight } from 'lucide-react'
+import { buildSettingsMap } from '@/app/api/settings/route'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'Frequently Asked Questions (FAQ) & Delivery Policy | FastKirana',
   description: 'Learn about FastKirana delivery charges, free delivery tiers, minimum order policy, payment options, and delivery coverage across Ghatampur.',
 }
 
-export default function FAQPage() {
+export default async function FAQPage() {
+  let settingsMap: Record<string, string> = {}
+  try {
+    settingsMap = await buildSettingsMap()
+  } catch (_) {}
+
+  const tier1Fee = settingsMap['delivery_fee_tier1'] || '25'
+  const tier1Threshold = settingsMap['delivery_threshold_tier1'] || '199'
+  const tier2Fee = settingsMap['delivery_fee_tier2'] || '35'
+  const tier2Threshold = settingsMap['delivery_threshold_tier2'] || '299'
+  const tier3Fee = settingsMap['delivery_fee_tier3'] || '50'
+  const tier3Threshold = settingsMap['delivery_threshold_tier3'] || '399'
+  const tier4PerKm = settingsMap['delivery_fee_per_km_beyond_5km'] || '10'
+  const maxRadius = settingsMap['delivery_radius'] || '5.0'
+  const minOrder = settingsMap['min_order_value'] || '0'
+
   const faqs = [
     {
       category: '🚚 Delivery Charges & Distance Tiers',
       items: [
         {
           q: 'What are the delivery charges and free delivery thresholds on FastKirana?',
-          a: `FastKirana offers distance-based transparent delivery pricing across Ghatampur:
-• 0 to 2 km (Local Ghatampur): ₹25 delivery fee — FREE Delivery on orders above ₹199!
-• 2 to 3 km (Suburban Area): ₹35 delivery fee — FREE Delivery on orders above ₹299!
-• 3 to 5 km (Extended Area): ₹50 delivery fee — FREE Delivery on orders above ₹399!
-• Outside 5 km: Delivery is currently limited to a maximum of 5.0 km from our central hub.`,
+          a: `FastKirana offers distance-based transparent delivery pricing:
+• 0 to 2 km (Local Area): ₹${tier1Fee} delivery fee — FREE Delivery on orders above ₹${tier1Threshold}!
+• 2 to 3 km (Suburban Area): ₹${tier2Fee} delivery fee — FREE Delivery on orders above ₹${tier2Threshold}!
+• 3 to 5 km (Extended Area): ₹${tier3Fee} delivery fee — FREE Delivery on orders above ₹${tier3Threshold}!
+• Beyond 5 km (Long Distance): Base ₹${tier3Fee} + ₹${tier4PerKm} per additional km beyond 5km (up to ${maxRadius} km service radius).`,
         },
         {
           q: 'Is there any minimum order value requirement?',
-          a: 'No! There is absolutely NO minimum order value requirement. You can place an order of any amount without any minimum order block.',
+          a: Number(minOrder) > 0
+            ? `The minimum cart value to place an order is ₹${minOrder}.`
+            : 'No! There is absolutely NO minimum order value requirement. You can place an order of any amount without any minimum order block.',
         },
         {
           q: 'How do I know the delivery fee for my address?',
@@ -101,15 +121,15 @@ export default function FAQPage() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
             {/* Tier 1 */}
             <div className="rounded-2xl border border-emerald-500/30 bg-emerald-50/40 dark:bg-emerald-950/20 p-4 space-y-1.5 text-center">
               <span className="inline-block text-[9.5px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                 0 - 2 km (Local)
               </span>
-              <div className="text-lg font-black text-text-primary">₹25 <span className="text-xs font-bold text-text-muted">Fee</span></div>
+              <div className="text-lg font-black text-text-primary">₹{tier1Fee} <span className="text-xs font-bold text-text-muted">Fee</span></div>
               <p className="text-[11px] font-black text-emerald-600 dark:text-emerald-400">
-                FREE above ₹199
+                FREE above ₹{tier1Threshold}
               </p>
             </div>
 
@@ -118,26 +138,41 @@ export default function FAQPage() {
               <span className="inline-block text-[9.5px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">
                 2 - 3 km (Suburban)
               </span>
-              <div className="text-lg font-black text-text-primary">₹35 <span className="text-xs font-bold text-text-muted">Fee</span></div>
+              <div className="text-lg font-black text-text-primary">₹{tier2Fee} <span className="text-xs font-bold text-text-muted">Fee</span></div>
               <p className="text-[11px] font-black text-blue-600 dark:text-blue-400">
-                FREE above ₹299
+                FREE above ₹{tier2Threshold}
               </p>
             </div>
 
             {/* Tier 3 */}
-            <div className="rounded-2xl border border-amber-500/30 bg-amber-50/40 dark:bg-amber-950/20 p-4 space-y-1.5 text-center">
-              <span className="inline-block text-[9.5px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+            <div className="rounded-2xl border border-purple-500/30 bg-purple-50/40 dark:bg-purple-950/20 p-4 space-y-1.5 text-center">
+              <span className="inline-block text-[9.5px] font-black uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">
                 3 - 5 km (Extended)
               </span>
-              <div className="text-lg font-black text-text-primary">₹50 <span className="text-xs font-bold text-text-muted">Fee</span></div>
-              <p className="text-[11px] font-black text-amber-600 dark:text-amber-400">
-                FREE above ₹399
+              <div className="text-lg font-black text-text-primary">₹{tier3Fee} <span className="text-xs font-bold text-text-muted">Fee</span></div>
+              <p className="text-[11px] font-black text-purple-600 dark:text-purple-400">
+                FREE above ₹{tier3Threshold}
+              </p>
+            </div>
+
+            {/* Tier 4 */}
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-50/40 dark:bg-amber-950/20 p-4 space-y-1.5 text-center">
+              <span className="inline-block text-[9.5px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                &gt; 5 km (Long Distance)
+              </span>
+              <div className="text-lg font-black text-text-primary">₹{tier3Fee} + ₹{tier4PerKm}/km <span className="text-xs font-bold text-text-muted">Fee</span></div>
+              <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                Base ₹{tier3Fee} + ₹{tier4PerKm}/km beyond 5km
               </p>
             </div>
           </div>
 
           <div className="text-center pt-1 text-[11px] font-extrabold text-text-secondary">
-            ⚡ <strong>Zero Minimum Order:</strong> Order anything without minimum cart restrictions!
+            {Number(minOrder) > 0 ? (
+              <span>⚡ <strong>Minimum Order:</strong> Minimum cart value is ₹{minOrder}</span>
+            ) : (
+              <span>⚡ <strong>Zero Minimum Order:</strong> Order anything without minimum cart restrictions!</span>
+            )}
           </div>
         </div>
 

@@ -2,15 +2,20 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
-import { Sliders, Save, Loader2, Eye, Heart, Star, Package, FileText, MessageSquare, Smartphone, Download, AlertCircle, RefreshCw, CloudRain, Zap, ShieldCheck } from 'lucide-react'
+import { Sliders, Save, Loader2, Eye, Heart, Star, Package, FileText, MessageSquare, Smartphone, Download, AlertCircle, RefreshCw } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { STORE_PINCODE, STORE_ADDRESS, STORE_PHONE, GROCERY_PICKUP_ADDRESS, CAFE_PICKUP_ADDRESS, RESTAURANT_PICKUP_ADDRESS, SERVICE_AREA_NAME } from '@/lib/store-config'
+import { OpsScheduleCard } from './settings/ops-schedule-card'
+import { SurgeSettingsSection } from './settings/surge-settings-section'
+import { FinanceSettingsSection } from './settings/finance-settings-section'
 
 interface AdminSettingsProps {
+  storeId?: string
+  storeHubName?: string
   onSettingsSaved?: () => void
 }
 
-export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
+export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminSettingsProps) {
   const [settingsTab, setSettingsTab] = useState<'ops' | 'cosmetics' | 'finance' | 'greetings' | 'app' | 'surge'>('ops')
   const [surgeMode, setSurgeMode] = useState<'AUTO' | 'MANUAL_ON' | 'MANUAL_OFF'>('AUTO')
   const [surgeRainAmount, setSurgeRainAmount] = useState('20')
@@ -34,12 +39,21 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
   const [deliveriesCount, setDeliveriesCount] = useState('10,000+')
   const [ratingValue, setRatingValue] = useState('4.8')
   const [happyFamilies, setHappyFamilies] = useState('5,000+')
-  const [trustedText, setTrustedText] = useState('✨ Trusted by 5,000+ families in your town')
+  const [trustedText, setTrustedText] = useState('✨ Trusted by families in your town')
   const [groceryMartOpen, setGroceryMartOpen] = useState(true)
   const [groceryAutoTiming, setGroceryAutoTiming] = useState(false)
   const [groceryOpenTime, setGroceryOpenTime] = useState('06:00')
   const [groceryCloseTime, setGroceryCloseTime] = useState('23:59')
   const [adminAutoApproveOrders, setAdminAutoApproveOrders] = useState(false)
+
+  // Distance-based delivery fee tiers
+  const [deliveryFeeTier1, setDeliveryFeeTier1] = useState('25')
+  const [deliveryThresholdTier1, setDeliveryThresholdTier1] = useState('199')
+  const [deliveryFeeTier2, setDeliveryFeeTier2] = useState('35')
+  const [deliveryThresholdTier2, setDeliveryThresholdTier2] = useState('299')
+  const [deliveryFeeTier3, setDeliveryFeeTier3] = useState('50')
+  const [deliveryThresholdTier3, setDeliveryThresholdTier3] = useState('399')
+  const [deliveryFeePerKmBeyond5km, setDeliveryFeePerKmBeyond5km] = useState('10')
 
   const isGroceryCurrentlyOpen = useMemo(() => {
     if (!groceryAutoTiming) return groceryMartOpen
@@ -175,7 +189,8 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         const cats = await catRes.json()
         setCategories(cats)
 
-        const res = await fetch('/api/settings', { cache: 'no-store' })
+        const storeQuery = storeId && storeId !== 'all' ? `?storeId=${encodeURIComponent(storeId)}` : ''
+        const res = await fetch(`/api/settings${storeQuery}`, { cache: 'no-store' })
         if (!res.ok) throw new Error('Failed to load settings')
         const data = await res.json()
         
@@ -218,6 +233,13 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         if (data.cafe_free_delivery_threshold) setCafeFreeDeliveryThreshold(data.cafe_free_delivery_threshold)
         if (data.combined_free_delivery_threshold) setCombinedFreeDeliveryThreshold(data.combined_free_delivery_threshold)
         if (data.delivery_fee) setDeliveryFee(data.delivery_fee)
+        if (data.delivery_fee_tier1) setDeliveryFeeTier1(data.delivery_fee_tier1)
+        if (data.delivery_threshold_tier1) setDeliveryThresholdTier1(data.delivery_threshold_tier1)
+        if (data.delivery_fee_tier2) setDeliveryFeeTier2(data.delivery_fee_tier2)
+        if (data.delivery_threshold_tier2) setDeliveryThresholdTier2(data.delivery_threshold_tier2)
+        if (data.delivery_fee_tier3) setDeliveryFeeTier3(data.delivery_fee_tier3)
+        if (data.delivery_threshold_tier3) setDeliveryThresholdTier3(data.delivery_threshold_tier3)
+        if (data.delivery_fee_per_km_beyond_5km) setDeliveryFeePerKmBeyond5km(data.delivery_fee_per_km_beyond_5km)
         if (data.restaurant_commission) setRestaurantCommission(data.restaurant_commission)
         if (data.restaurant_profit_share) setRestaurantProfitShare(data.restaurant_profit_share)
         if (data.restaurant_default_margin) setRestaurantDefaultMargin(data.restaurant_default_margin)
@@ -281,7 +303,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
     }
 
     loadSettings()
-  }, [])
+  }, [storeId])
 
   // Save settings handler
   const handleSave = async (e: React.FormEvent) => {
@@ -310,6 +332,7 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          storeId: storeId && storeId !== 'all' ? storeId : undefined,
           deliveries_count: deliveriesCount.trim(),
           rating_value: ratingValue.trim(),
           happy_families: happyFamilies.trim(),
@@ -340,6 +363,13 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
           grocery_free_delivery_threshold: groceryFreeDeliveryThreshold.trim(),
           combined_free_delivery_threshold: combinedFreeDeliveryThreshold.trim(),
           delivery_fee: deliveryFee.trim(),
+          delivery_fee_tier1: deliveryFeeTier1.trim(),
+          delivery_threshold_tier1: deliveryThresholdTier1.trim(),
+          delivery_fee_tier2: deliveryFeeTier2.trim(),
+          delivery_threshold_tier2: deliveryThresholdTier2.trim(),
+          delivery_fee_tier3: deliveryFeeTier3.trim(),
+          delivery_threshold_tier3: deliveryThresholdTier3.trim(),
+          delivery_fee_per_km_beyond_5km: deliveryFeePerKmBeyond5km.trim(),
           contact_phone: contactPhone.trim(),
           contact_email: contactEmail.trim(),
           contact_timings: contactTimings.trim(),
@@ -423,28 +453,52 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
             </div>
 
             {/* Tab switch header */}
-            <div className="flex gap-1.5 bg-muted/30 p-1 rounded-xl max-w-max">
+            <div className="flex flex-wrap gap-1.5 bg-muted/40 p-1.5 rounded-2xl border border-border/60 max-w-full">
               {[
-                { id: 'ops', label: '🚚 Operations' },
-                { id: 'cosmetics', label: '🎨 Branding' },
-                { id: 'greetings', label: '👋 Greetings' },
-                { id: 'finance', label: '🔑 Financials' },
+                { id: 'ops', label: '🚚 Operations & Timings' },
+                { id: 'finance', label: '💰 Distance & Financials' },
                 { id: 'surge', label: '🌧️ Auto Surge' },
+                { id: 'cosmetics', label: '🎨 Storefront Branding' },
+                { id: 'greetings', label: '👋 Greetings' },
                 { id: 'app', label: '📲 App Updates' }
               ].map(t => (
                 <button
                   key={t.id}
                   type="button"
                   onClick={() => setSettingsTab(t.id as any)}
-                  className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 text-xs font-black rounded-xl transition-all cursor-pointer select-none ${
                     settingsTab === t.id
-                      ? 'bg-card text-primary shadow-sm border border-border/40'
-                      : 'text-text-secondary hover:text-text-primary'
+                      ? 'bg-card text-primary shadow-xs border border-border/80 scale-102'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-card/50'
                   }`}
                 >
                   {t.label}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Active Store Indicator Banner */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-2xl">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-xl bg-primary/20 text-primary flex items-center justify-center font-black text-sm shrink-0">
+                🏢
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black text-text-primary">
+                    {storeHubName || (storeId === 'hub-224122' ? 'Akbarpur' : storeId === 'hub-209206' ? 'Ghatampur Central Hub' : 'Store Settings')}
+                  </span>
+                  <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-primary text-white shadow-xs">
+                    {storeId && storeId !== 'all' ? `Store Hub: ${storeId}` : '🌐 All Hubs (Global)'}
+                  </span>
+                </div>
+                <p className="text-[10px] text-text-secondary mt-0.5 font-medium">
+                  {storeId && storeId !== 'all'
+                    ? 'Isolated Store Settings: Operational hours, pickup address, contact, and distance fees set here apply strictly to this hub.'
+                    : 'Configuring default baseline settings for the entire platform.'}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -565,525 +619,140 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
             )}
 
             {settingsTab === 'ops' && (
-              <div className="space-y-4 animate-fade-in">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Grocery Mart Automated Store Timings & Schedule Control */}
-                  <div className="space-y-3.5 bg-muted/20 p-4 sm:p-5 rounded-2xl border border-border/60 text-left">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <label className="text-xs font-black uppercase tracking-wider text-text-primary flex items-center gap-1.5">
-                          ⏰ Grocery Mart Timings & Auto-Schedule
-                        </label>
-                        <p className="text-[11px] text-text-secondary mt-0.5 font-medium">
-                          Store timings ke hisaab se rozana automatically ON/OFF hoga.
-                        </p>
-                      </div>
-                      <span className={`text-[11px] font-black px-2.5 py-1 rounded-full border shrink-0 ${
-                        isGroceryCurrentlyOpen
-                          ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                          : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
-                      }`}>
-                        {isGroceryCurrentlyOpen ? '● OPEN' : '○ CLOSED'}
-                      </span>
-                    </div>
+              <div className="space-y-6 animate-fade-in">
+                <OpsScheduleCard
+                  groceryAutoTiming={groceryAutoTiming}
+                  setGroceryAutoTiming={setGroceryAutoTiming}
+                  groceryOpenTime={groceryOpenTime}
+                  setGroceryOpenTime={setGroceryOpenTime}
+                  groceryCloseTime={groceryCloseTime}
+                  setGroceryCloseTime={setGroceryCloseTime}
+                  isGroceryCurrentlyOpen={isGroceryCurrentlyOpen}
+                  restaurantAutoTiming={restaurantAutoTiming}
+                  setRestaurantAutoTiming={setRestaurantAutoTiming}
+                  restaurantOpenTime={restaurantOpenTime}
+                  setRestaurantOpenTime={setRestaurantOpenTime}
+                  restaurantCloseTime={restaurantCloseTime}
+                  setRestaurantCloseTime={setRestaurantCloseTime}
+                  isRestaurantCurrentlyOpen={isRestaurantCurrentlyOpen}
+                  setCafeAutoTiming={setCafeAutoTiming}
+                  setCafeOpenTime={setCafeOpenTime}
+                  setCafeCloseTime={setCafeCloseTime}
+                  adminAutoApproveOrders={adminAutoApproveOrders}
+                  setAdminAutoApproveOrders={setAdminAutoApproveOrders}
+                  onlyCod={onlyCod}
+                  setOnlyCod={setOnlyCod}
+                  deliveryRadius={deliveryRadius}
+                  setDeliveryRadius={setDeliveryRadius}
+                  storeLat={storeLat}
+                  setStoreLat={setStoreLat}
+                  storeLng={storeLng}
+                  setStoreLng={setStoreLng}
+                  contactPhone={contactPhone}
+                  setContactPhone={setContactPhone}
+                  contactEmail={contactEmail}
+                  setContactEmail={setContactEmail}
+                  contactTimings={contactTimings}
+                  setContactTimings={setContactTimings}
+                  contactAddress={contactAddress}
+                  setContactAddress={setContactAddress}
+                  groceryPickupAddress={groceryPickupAddress}
+                  setGroceryPickupAddress={setGroceryPickupAddress}
+                />
 
-                    {/* Auto-Timing Status Banner */}
-                    <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 flex items-start gap-2.5">
-                      <span className="text-base leading-none">✨</span>
-                      <div className="text-xs">
-                        <p className="font-bold text-text-primary">
-                          {groceryAutoTiming ? 'Auto-Schedule Active (Roj Automatic On/Off)' : 'Manual Override Active'}
-                        </p>
-                        <p className="text-[11px] text-text-secondary mt-0.5">
-                          {groceryAutoTiming 
-                            ? `Store subah ${groceryOpenTime || '07:00'} baje apne aap khulega aur raat ${groceryCloseTime || '22:00'} baje band hoga. Roj manually ON karne ki zaroorat nahi hai.`
-                            : 'Auto-timing off hai. Store manual mode par chal raha hai.'}
-                        </p>
-                      </div>
-                    </div>
+                {/* WhatsApp Order Notifications Settings */}
+                <div className="border-t border-border/40 pt-4 space-y-2">
+                  <h4 className="text-xs font-black text-text-primary">💬 WhatsApp Order Alerts Configuration</h4>
+                  <p className="text-[10px] text-text-muted font-bold leading-relaxed">
+                    Select which admin phone numbers should receive instant WhatsApp notifications when a customer places a new order.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-5 bg-muted/20 p-4 rounded-2xl border border-border/40 w-fit">
+                    <label className="flex items-center gap-2.5 text-xs font-bold text-text-primary cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={notifyPhone1}
+                        onChange={(e) => setNotifyPhone1(e.target.checked)}
+                        className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                      />
+                      <span>Send alerts to +91 70544 70303</span>
+                    </label>
+                    <label className="flex items-center gap-2.5 text-xs font-bold text-text-primary cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={notifyPhone2}
+                        onChange={(e) => setNotifyPhone2(e.target.checked)}
+                        className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                      />
+                      <span>Send alerts to +91 81128 49854</span>
+                    </label>
+                  </div>
+                </div>
 
-                    {/* Store Timings (Opening & Closing Hours) */}
-                    <div className="pt-2 border-t border-border/40 space-y-3">
-                      <div className="flex items-center justify-between">
+                {/* Category-Wise Statuses Section */}
+                <div className="border-t border-border/40 pt-4">
+                  <h4 className="text-xs font-black text-text-primary mb-3">🏪 Category-Wise Status (Open/Closed)</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {categories.map((cat) => (
+                      <div key={cat.id} className="space-y-1.5">
                         <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                          ⏰ Operating Hours
+                          {cat.name} Status
                         </label>
-                        <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold text-text-secondary">
-                          <input
-                            type="checkbox"
-                            checked={groceryAutoTiming}
-                            onChange={(e) => {
-                              const checked = e.target.checked
-                              setGroceryAutoTiming(checked)
-                            }}
-                            className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
-                          />
-                          <span>Auto-timing apply</span>
-                        </label>
+                        <select
+                          value={categoryStatuses[cat.slug] !== false ? 'true' : 'false'}
+                          onChange={(e) => {
+                            const isOpen = e.target.value === 'true'
+                            setCategoryStatuses((prev) => ({
+                              ...prev,
+                              [cat.slug]: isOpen,
+                            }))
+                          }}
+                          className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold cursor-pointer"
+                        >
+                          <option value="true">🟢 Open (Active)</option>
+                          <option value="false">🔴 Closed (Temporarily)</option>
+                        </select>
                       </div>
-
-                      <div className="grid grid-cols-2 gap-2.5">
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-text-muted block">Open Time (Subah)</span>
-                          <input
-                            type="time"
-                            value={groceryOpenTime}
-                            onChange={(e) => setGroceryOpenTime(e.target.value)}
-                            className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold shadow-xs"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-text-muted block">Close Time (Raat)</span>
-                          <input
-                            type="time"
-                            value={groceryCloseTime}
-                            onChange={(e) => setGroceryCloseTime(e.target.value)}
-                            className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold shadow-xs"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Restaurant & Cafe Automated Outlet Timings & Schedule Control */}
-                  <div className="space-y-3.5 bg-muted/20 p-4 sm:p-5 rounded-2xl border border-border/60 text-left">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <label className="text-xs font-black uppercase tracking-wider text-text-primary flex items-center gap-1.5">
-                          🍽️ Restaurant & Cafe Timings & Auto-Schedule
-                        </label>
-                        <p className="text-[11px] text-text-secondary mt-0.5 font-medium">
-                          Restaurants & Cafes subah timely automatically ON honge aur raat ko OFF.
-                        </p>
-                      </div>
-                      <span className={`text-[11px] font-black px-2.5 py-1 rounded-full border shrink-0 ${
-                        isRestaurantCurrentlyOpen
-                          ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                          : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
-                      }`}>
-                        {isRestaurantCurrentlyOpen ? '● OPEN' : '○ CLOSED'}
-                      </span>
-                    </div>
-
-                    {/* Auto-Timing Status Banner */}
-                    <div className="bg-orange-500/5 border border-orange-500/20 rounded-xl p-3 flex items-start gap-2.5">
-                      <span className="text-base leading-none">✨</span>
-                      <div className="text-xs">
-                        <p className="font-bold text-text-primary">
-                          {restaurantAutoTiming ? 'Auto-Schedule Active (Roj Timely Automatic On/Off)' : 'Manual Override Active'}
-                        </p>
-                        <p className="text-[11px] text-text-secondary mt-0.5">
-                          {restaurantAutoTiming
-                            ? `Restaurants subah ${restaurantOpenTime || '10:00'} baje automatically open honge aur raat ${restaurantCloseTime || '22:00'} baje band honge. Roj subah manually ON karne ki zaroorat nahi hai.`
-                            : 'Auto-timing off hai. Outlets manual mode par chal rahe hain.'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Restaurant Timings (Opening & Closing Hours) */}
-                    <div className="pt-2 border-t border-border/40 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                          ⏰ Operating Hours
-                        </label>
-                        <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold text-text-secondary">
-                          <input
-                            type="checkbox"
-                            checked={restaurantAutoTiming}
-                            onChange={(e) => {
-                              const checked = e.target.checked
-                              setRestaurantAutoTiming(checked)
-                              setCafeAutoTiming(checked)
-                            }}
-                            className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
-                          />
-                          <span>Auto-timing apply</span>
-                        </label>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2.5">
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-text-muted block">Open Time (Subah)</span>
-                          <input
-                            type="time"
-                            value={restaurantOpenTime}
-                            onChange={(e) => {
-                              setRestaurantOpenTime(e.target.value)
-                              setCafeOpenTime(e.target.value)
-                            }}
-                            className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold shadow-xs"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-text-muted block">Close Time (Raat)</span>
-                          <input
-                            type="time"
-                            value={restaurantCloseTime}
-                            onChange={(e) => {
-                              setRestaurantCloseTime(e.target.value)
-                              setCafeCloseTime(e.target.value)
-                            }}
-                            className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold shadow-xs"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  {/* Admin Order Approval Mode (Manual vs Auto) */}
-                  <div className="space-y-1.5 bg-muted/20 p-4 rounded-2xl border border-border/60">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-black uppercase tracking-wider text-text-primary flex items-center gap-1.5">
-                        🛡️ Admin Order Approval Gate
-                      </label>
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${
-                        adminAutoApproveOrders
-                          ? 'bg-amber-500/10 text-amber-600 border-amber-500/30'
-                          : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
-                      }`}>
-                        {adminAutoApproveOrders ? '⚡ AUTO-APPROVE' : '🛡️ MANUAL REVIEW'}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-text-secondary font-medium">
-                      {adminAutoApproveOrders
-                        ? 'Orders direct kitchen/rider consoles pe chale jayenge bina admin approval ke.'
-                        : 'Har naya order pehle "Awaiting Approval" me aayega aur admin ke phone par loud alarm bajega. Admin ke approve karne ke baad hi kitchen/delivery ko order dikhega.'}
-                    </p>
-                    <div className="pt-2">
-                      <select
-                        value={adminAutoApproveOrders ? 'true' : 'false'}
-                        onChange={(e) => setAdminAutoApproveOrders(e.target.value === 'true')}
-                        className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold cursor-pointer shadow-xs"
-                      >
-                        <option value="false">🛡️ Manual Approval Required (Recommended — Rings Admin Alarm)</option>
-                        <option value="true">⚡ Auto-Approve Orders (Skip Approval Gate)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Only Cash on Delivery */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Only Cash on Delivery</label>
-                    <select
-                      value={onlyCod ? 'true' : 'false'}
-                      onChange={(e) => setOnlyCod(e.target.value === 'true')}
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold cursor-pointer"
-                    >
-                      <option value="false">🔴 Off (All Payments)</option>
-                      <option value="true">🟢 On (COD/COP Only)</option>
-                    </select>
-                  </div>
-
-                  {/* Delivery Radius */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Delivery Radius (km) *</label>
-                    <input
-                      type="number"
-                      required
-                      min="1"
-                      max="100"
-                      placeholder="e.g. 5"
-                      value={deliveryRadius}
-                      onChange={(e) => setDeliveryRadius(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                    />
-                  </div>
-
-                  {/* Store Latitude */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Store Latitude (GPS) *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. 26.1555"
-                      value={storeLat}
-                      onChange={(e) => setStoreLat(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                    />
-                  </div>
-
-                  {/* Store Longitude */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Store Longitude (GPS) *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. 80.1688"
-                      value={storeLng}
-                      onChange={(e) => setStoreLng(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                    />
-                  </div>
-
-                  {/* Contact Phone */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Contact Phone *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. +91 70544 70303"
-                      value={contactPhone}
-                      onChange={(e) => setContactPhone(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                    />
-                  </div>
-
-                  {/* Contact Email */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Contact Email *</label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="e.g. help@fastkirana.com"
-                      value={contactEmail}
-                      onChange={(e) => setContactEmail(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                    />
-                  </div>
-
-                  {/* Contact Timings */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Contact Timings *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. 6 AM - 12 AM"
-                      value={contactTimings}
-                      onChange={(e) => setContactTimings(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                    />
-                  </div>
-
-                  {/* Contact Address */}
-                  <div className="md:col-span-3 space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Store Pickup & Contact Address *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. NH34, Ghatampur, Kanpur Nagar"
-                      value={contactAddress}
-                      onChange={(e) => setContactAddress(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
-                    />
-                  </div>
-
-                  {/* Grocery Pickup Address */}
-                  <div className="md:col-span-3 space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Grocery Warehouse / Store Self-Pickup Address *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Vikas Medical Store, NH34, Ghatampur, Kanpur Nagar, Kanpur, 209206"
-                      value={groceryPickupAddress}
-                      onChange={(e) => setGroceryPickupAddress(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
-                    />
-                    <p className="text-[10px] text-text-muted">Note: Individual restaurant pickup addresses are configured per outlet in the <strong>Manage Outlets</strong> tab.</p>
-                  </div>
-
-                  {/* WhatsApp Order Notifications Settings */}
-                  <div className="md:col-span-3 border-t border-border/40 pt-4 mt-2 space-y-2">
-                    <h4 className="text-xs font-black text-text-primary">💬 WhatsApp Order Alerts Configuration</h4>
-                    <p className="text-[10px] text-text-muted font-bold leading-relaxed">
-                      Select which admin phone numbers should receive instant WhatsApp notifications when a customer places a new order.
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-5 bg-muted/20 p-4 rounded-2xl border border-border/40 w-fit">
-                      <label className="flex items-center gap-2.5 text-xs font-bold text-text-primary cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          checked={notifyPhone1}
-                          onChange={(e) => setNotifyPhone1(e.target.checked)}
-                          className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
-                        />
-                        <span>Send alerts to +91 70544 70303</span>
-                      </label>
-                      <label className="flex items-center gap-2.5 text-xs font-bold text-text-primary cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          checked={notifyPhone2}
-                          onChange={(e) => setNotifyPhone2(e.target.checked)}
-                          className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
-                        />
-                        <span>Send alerts to +91 81128 49854</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Category-Wise Statuses Section */}
-                  <div className="md:col-span-3 border-t border-border/40 pt-4 mt-2">
-                    <h4 className="text-xs font-black text-text-primary mb-3">🏪 Category-Wise Status (Open/Closed)</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {categories.map((cat) => (
-                        <div key={cat.id} className="space-y-1.5">
-                          <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                            {cat.name} Status
-                          </label>
-                          <select
-                            value={categoryStatuses[cat.slug] !== false ? 'true' : 'false'}
-                            onChange={(e) => {
-                              const isOpen = e.target.value === 'true'
-                              setCategoryStatuses((prev) => ({
-                                ...prev,
-                                [cat.slug]: isOpen,
-                              }))
-                            }}
-                            className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold cursor-pointer"
-                          >
-                            <option value="true">🟢 Open (Active)</option>
-                            <option value="false">🔴 Closed (Temporarily)</option>
-                          </select>
-                        </div>
-                      ))}
-                    </div>
+                    ))}
                   </div>
                 </div>
               </div>
             )}
 
             {settingsTab === 'finance' && (
-              <div className="space-y-4 animate-fade-in">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* GST/Tax Rate Hidden */}
-                  {false && (
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">GST/Tax Rate (%) *</label>
-                      <input
-                        type="number"
-                        required
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        placeholder="e.g. 5"
-                        value={taxRate}
-                        onChange={(e) => setTaxRate(e.target.value)}
-                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                      />
-                    </div>
-                  )}
-
-                  {/* Miscellaneous Fee */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Miscellaneous Fee (₹) *</label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      step="0.01"
-                      placeholder="e.g. 0"
-                      value={miscFee}
-                      onChange={(e) => setMiscFee(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                    />
-                  </div>
-
-                  {/* Miscellaneous Fee Label */}
-                  <div className="space-y-1.5 md:col-span-2">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Miscellaneous Fee Label *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Packaging Charge"
-                      value={miscFeeLabel}
-                      onChange={(e) => setMiscFeeLabel(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                    />
-                  </div>
-
-                  {/* Store UPI VPA / QR Code Handle */}
-                  <div className="space-y-1.5 md:col-span-2 border-t border-border/40 pt-4 mt-2">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                      📱 Store UPI VPA / QR Code Handle (दुकान का UPI ID) *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. 7054470303@paytm or fastkirana@upi"
-                      value={storeUpiVpa}
-                      onChange={(e) => setStoreUpiVpa(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-mono font-bold text-emerald-600 dark:text-emerald-400"
-                    />
-                    <p className="text-[10px] text-text-muted font-medium">
-                      This UPI VPA handle generates the dynamic doorstep QR scanner for riders in the Delivery Console. Change it anytime here.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Delivery Fees & Free Thresholds */}
-                <div className="border-t border-border/40 pt-4 mt-2">
-                  <h4 className="text-xs font-black text-text-primary mb-3">🚚 Delivery Fees & Free Delivery Thresholds</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Delivery Fee */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Standard Delivery Fee (₹) *</label>
-                      <input
-                        type="number"
-                        required
-                        min="0"
-                        placeholder="e.g. 25"
-                        value={deliveryFee}
-                        onChange={(e) => setDeliveryFee(e.target.value)}
-                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                      />
-                    </div>
-
-                    {/* Minimum Order Value */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Minimum Order Value (₹) *</label>
-                      <input
-                        type="number"
-                        required
-                        min="0"
-                        placeholder="e.g. 0"
-                        value={minOrderValue}
-                        onChange={(e) => setMinOrderValue(e.target.value)}
-                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                      />
-                    </div>
-
-                    {/* Combined Free Delivery Threshold */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Combined Order Free Delivery Threshold (₹) *</label>
-                      <input
-                        type="number"
-                        required
-                        min="0"
-                        placeholder="e.g. 200"
-                        value={combinedFreeDeliveryThreshold}
-                        onChange={(e) => setCombinedFreeDeliveryThreshold(e.target.value)}
-                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                      />
-                    </div>
-
-                    {/* Grocery Free Delivery Threshold */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Grocery Order Free Delivery Threshold (₹) *</label>
-                      <input
-                        type="number"
-                        required
-                        min="0"
-                        placeholder="e.g. 199"
-                        value={groceryFreeDeliveryThreshold}
-                        onChange={(e) => setGroceryFreeDeliveryThreshold(e.target.value)}
-                        className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                      />
-                    </div>
-
-                  </div>
-                </div>
-
-                {/* Image Storage Configuration */}
-                <div className="border-t border-border/40 pt-4 mt-2">
-                  <h4 className="text-xs font-black text-text-primary mb-3">📦 Image Storage (Supabase Storage)</h4>
-                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="text-xs font-bold text-emerald-600">Active — Supabase Storage</span>
-                    </div>
-                    <p className="text-[9px] text-text-secondary mt-1.5 font-semibold">
-                      All product images, delivery photos, and uploads are automatically stored in Supabase Storage. No configuration needed.
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <FinanceSettingsSection
+                deliveryFee={deliveryFee}
+                setDeliveryFee={setDeliveryFee}
+                minOrderValue={minOrderValue}
+                setMinOrderValue={setMinOrderValue}
+                combinedFreeDeliveryThreshold={combinedFreeDeliveryThreshold}
+                setCombinedFreeDeliveryThreshold={setCombinedFreeDeliveryThreshold}
+                groceryFreeDeliveryThreshold={groceryFreeDeliveryThreshold}
+                setGroceryFreeDeliveryThreshold={setGroceryFreeDeliveryThreshold}
+                deliveryRadius={deliveryRadius}
+                setDeliveryRadius={setDeliveryRadius}
+                deliveryFeeTier1={deliveryFeeTier1}
+                setDeliveryFeeTier1={setDeliveryFeeTier1}
+                deliveryThresholdTier1={deliveryThresholdTier1}
+                setDeliveryThresholdTier1={setDeliveryThresholdTier1}
+                deliveryFeeTier2={deliveryFeeTier2}
+                setDeliveryFeeTier2={setDeliveryFeeTier2}
+                deliveryThresholdTier2={deliveryThresholdTier2}
+                setDeliveryThresholdTier2={setDeliveryThresholdTier2}
+                deliveryFeeTier3={deliveryFeeTier3}
+                setDeliveryFeeTier3={setDeliveryFeeTier3}
+                deliveryThresholdTier3={deliveryThresholdTier3}
+                setDeliveryThresholdTier3={setDeliveryThresholdTier3}
+                deliveryFeePerKmBeyond5km={deliveryFeePerKmBeyond5km}
+                setDeliveryFeePerKmBeyond5km={setDeliveryFeePerKmBeyond5km}
+                miscFee={miscFee}
+                setMiscFee={setMiscFee}
+                miscFeeLabel={miscFeeLabel}
+                setMiscFeeLabel={setMiscFeeLabel}
+                storeUpiVpa={storeUpiVpa}
+                setStoreUpiVpa={setStoreUpiVpa}
+                storeHubName={storeHubName}
+                storeId={storeId}
+              />
             )}
 
             {settingsTab === 'greetings' && (
@@ -1435,214 +1104,27 @@ export function AdminSettings({ onSettingsSaved }: AdminSettingsProps) {
 
             {/* Auto Rain & Demand Surge Tab */}
             {settingsTab === 'surge' && (
-              <div className="space-y-6">
-                {/* Live Realtime Telemetry Card */}
-                <div className="bg-gradient-to-br from-card to-muted/30 border border-border/80 p-5 rounded-2xl shadow-sm space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500">
-                        <CloudRain className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-text-primary">Live Surge & Weather Telemetry</h4>
-                        <p className="text-[10px] text-text-secondary">Real-time status based on Ghatampur coordinates & active rider fleet</p>
-                      </div>
-                    </div>
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black border ${
-                      surgeActive
-                        ? 'bg-amber-500/10 text-amber-500 border-amber-500/30 animate-pulse'
-                        : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
-                    }`}>
-                      {surgeActive ? `⚡ Surge Active: +₹${surgeFee}` : '🟢 Standard Rates (₹0 Surge)'}
-                    </span>
-                  </div>
-
-                  {surgeActive && surgeReason && (
-                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs font-medium text-amber-600 flex items-center gap-2">
-                      <Zap className="h-4 w-4 shrink-0" />
-                      <span><strong>Reason:</strong> {surgeReason}</span>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                    <div className="bg-muted/40 p-3 rounded-xl border border-border/60">
-                      <span className="text-[9px] font-black uppercase tracking-wider text-text-muted">Live Weather Condition</span>
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-xs font-bold text-text-primary">{currentWeatherCondition}</span>
-                        <span className="text-xs font-black text-blue-500">{currentWeatherTemp}°C</span>
-                      </div>
-                      <p className="text-[10px] text-text-secondary mt-1">Ghatampur (26.1534° N, 80.1714° E)</p>
-                    </div>
-
-                    <div className="bg-muted/40 p-3 rounded-xl border border-border/60">
-                      <span className="text-[9px] font-black uppercase tracking-wider text-text-muted">Live Delivery Rush Load</span>
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-xs font-bold text-text-primary">{currentActiveOrders} Active Orders</span>
-                        <span className="text-xs font-black text-accent">{currentActiveRiders} Active Riders</span>
-                      </div>
-                      <p className="text-[10px] text-text-secondary mt-1">
-                        Fleet ratio: {Number(currentActiveRiders) > 0 ? (Number(currentActiveOrders) / Number(currentActiveRiders)).toFixed(1) : currentActiveOrders} orders / rider
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Master Mode Selector */}
-                <div className="space-y-3">
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
-                    <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Master Surge Control Mode
-                  </label>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setSurgeMode('AUTO')}
-                      className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
-                        surgeMode === 'AUTO'
-                          ? 'bg-primary/5 border-primary shadow-sm ring-1 ring-primary/30'
-                          : 'bg-card border-border hover:border-border/80'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-black text-text-primary">🤖 Automatic (Recommended)</span>
-                        {surgeMode === 'AUTO' && <span className="w-2 h-2 rounded-full bg-primary animate-ping" />}
-                      </div>
-                      <p className="text-[10px] text-text-secondary leading-relaxed">
-                        Evaluates live rain weather and rush ratio automatically. Capped strictly at maximum ceiling.
-                      </p>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setSurgeMode('MANUAL_ON')}
-                      className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
-                        surgeMode === 'MANUAL_ON'
-                          ? 'bg-amber-500/5 border-amber-500 shadow-sm ring-1 ring-amber-500/30'
-                          : 'bg-card border-border hover:border-border/80'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-black text-amber-500">⚡ Force ON (Manual)</span>
-                        {surgeMode === 'MANUAL_ON' && <span className="w-2 h-2 rounded-full bg-amber-500" />}
-                      </div>
-                      <p className="text-[10px] text-text-secondary leading-relaxed">
-                        Forces surge pricing on all checkouts right now, regardless of weather or rush.
-                      </p>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setSurgeMode('MANUAL_OFF')}
-                      className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
-                        surgeMode === 'MANUAL_OFF'
-                          ? 'bg-emerald-500/5 border-emerald-500 shadow-sm ring-1 ring-emerald-500/30'
-                          : 'bg-card border-border hover:border-border/80'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-black text-emerald-500">🛑 Force OFF (Strict Disabled)</span>
-                        {surgeMode === 'MANUAL_OFF' && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
-                      </div>
-                      <p className="text-[10px] text-text-secondary leading-relaxed">
-                        Strictly guarantees ₹0 surge fee. Protects customers from any extra fees.
-                      </p>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Safety Cap and Surge Parameters Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                      🌧️ Rain Surge Fee (₹)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={surgeRainAmount}
-                      onChange={(e) => setSurgeRainAmount(e.target.value)}
-                      placeholder="20"
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
-                    />
-                    <p className="text-[9px] text-text-secondary">Added automatically when rain/thunderstorm is detected in Ghatampur</p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                      🔥 Demand Rush Surge Fee (₹)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={surgeDemandAmount}
-                      onChange={(e) => setSurgeDemandAmount(e.target.value)}
-                      placeholder="15"
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
-                    />
-                    <p className="text-[9px] text-text-secondary">Added when active orders exceed active delivery boys threshold</p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                      🛡️ Strict Max Safety Cap Ceiling (₹) *
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={surgeMaxCap}
-                      onChange={(e) => setSurgeMaxCap(e.target.value)}
-                      placeholder="25"
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium font-bold text-accent"
-                    />
-                    <p className="text-[9px] text-text-secondary font-bold">Hard safety limit: Total surge fee will NEVER exceed this amount under any condition.</p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                      ⚡ Manual Mode Fixed Fee (₹)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={surgeManualAmount}
-                      onChange={(e) => setSurgeManualAmount(e.target.value)}
-                      placeholder="20"
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
-                    />
-                    <p className="text-[9px] text-text-secondary">Fee used when Master Mode is set to 'Force ON (Manual)'</p>
-                  </div>
-
-                  <div className="space-y-1.5 md:col-span-2">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                      📊 Demand Ratio Trigger (Orders per Delivery Boy)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="1.0"
-                      max="10.0"
-                      value={surgeDemandThreshold}
-                      onChange={(e) => setSurgeDemandThreshold(e.target.value)}
-                      placeholder="3.0"
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
-                    />
-                    <p className="text-[9px] text-text-secondary">Example: 3.0 means if there are more than 3 pending orders per active rider, demand surge triggers.</p>
-                  </div>
-                </div>
-
-                {/* Customer Transparency Note */}
-                <div className="p-4 bg-muted/20 border border-border/80 rounded-xl space-y-1.5">
-                  <span className="text-[10px] font-black text-text-primary flex items-center gap-1.5">
-                    💡 Customer Transparency Policy
-                  </span>
-                  <p className="text-[10px] text-text-secondary leading-relaxed">
-                    Surge charges are transparently listed in the customer bill breakdown as <strong>"🌧️ Rain Surge (Delivery Partner Safety Incentive)"</strong> or <strong>"⚡ High Demand Rush Fee"</strong>. This ensures total trust with customers while incentivizing delivery partners to braving harsh conditions.
-                  </p>
-                </div>
-              </div>
+              <SurgeSettingsSection
+                surgeActive={surgeActive}
+                surgeFee={surgeFee}
+                surgeReason={surgeReason}
+                currentWeatherCondition={currentWeatherCondition}
+                currentWeatherTemp={currentWeatherTemp}
+                currentActiveOrders={currentActiveOrders}
+                currentActiveRiders={currentActiveRiders}
+                surgeMode={surgeMode}
+                setSurgeMode={setSurgeMode}
+                surgeRainAmount={surgeRainAmount}
+                setSurgeRainAmount={setSurgeRainAmount}
+                surgeDemandAmount={surgeDemandAmount}
+                setSurgeDemandAmount={setSurgeDemandAmount}
+                surgeMaxCap={surgeMaxCap}
+                setSurgeMaxCap={setSurgeMaxCap}
+                surgeManualAmount={surgeManualAmount}
+                setSurgeManualAmount={setSurgeManualAmount}
+                surgeDemandThreshold={surgeDemandThreshold}
+                setSurgeDemandThreshold={setSurgeDemandThreshold}
+              />
             )}
 
             {/* Action buttons */}

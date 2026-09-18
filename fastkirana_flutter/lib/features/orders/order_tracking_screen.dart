@@ -54,7 +54,7 @@ class OrderTrackingScreen extends ConsumerStatefulWidget {
   ConsumerState<OrderTrackingScreen> createState() => _OrderTrackingScreenState();
 }
 
-class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with SingleTickerProviderStateMixin {
+class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with TickerProviderStateMixin {
   Order? _order;
   bool _isLoading = true;
   bool _isRealtimeConnected = false;
@@ -78,6 +78,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   BitmapDescriptor? _restaurantMarkerIcon;
   BitmapDescriptor? _riderMarkerIcon;
   BitmapDescriptor? _customerMarkerIcon;
+  BitmapDescriptor? _pulseRiderMarkerIcon;
 
   // Subscriptions & Timers
   final List<RealtimeChannel> _supabaseChannels = [];
@@ -99,6 +100,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   DateTime? _lastCameraFollowTime;
   double _startRiderHeading = 0.0;
   double _targetRiderHeading = 0.0;
+
+  // Live Pulse Animation along Polyline (OUT_FOR_DELIVERY)
+  late AnimationController _pulseAnimController;
+  LatLng? _pulseRiderPosition;
+  double _pulseRiderHeading = 0.0;
 
   // Confetti for Delivery Celebration
   late ConfettiController _confettiController;
@@ -413,7 +419,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         final paymentSessionId = cfRes.data['paymentSessionId'].toString();
         final cfOrderId = cfRes.data['orderId']?.toString() ?? widget.orderId;
 
-        final env = AppConfig.cashfreeEnv == 'SANDBOX' ? CFEnvironment.SANDBOX : CFEnvironment.PRODUCTION;
+        const env = AppConfig.cashfreeEnv == 'SANDBOX' ? CFEnvironment.SANDBOX : CFEnvironment.PRODUCTION;
         final session = CFSessionBuilder()
             .setEnvironment(env)
             .setOrderId(cfOrderId)

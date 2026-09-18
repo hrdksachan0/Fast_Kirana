@@ -102,4 +102,19 @@ class StoreSettings with _$StoreSettings {
   String get appUpdateMessage => raw['app_update_message']?.toString() ?? 'FastKirana ka naya update available hai! Faster performance, bug fixes aur smooth ordering ke liye abhi update karein.';
   bool get appForceUpdate => (raw['app_force_update']?.toString().toLowerCase() == 'true');
   String get storeUpiVpa => raw['store_upi_vpa']?.toString() ?? '7054470303-2@ibl';
+
+  static double _parseDoubleVal(dynamic val, double fallback) {
+    if (val == null) return fallback;
+    if (val is num) return val.toDouble();
+    return double.tryParse(val.toString()) ?? fallback;
+  }
+
+  double get deliveryFeeTier1 => _parseDoubleVal(raw['delivery_fee_tier1'], 25.0);
+  double get deliveryThresholdTier1 => _parseDoubleVal(raw['delivery_threshold_tier1'], 199.0);
+  double get deliveryFeeTier2 => _parseDoubleVal(raw['delivery_fee_tier2'], 35.0);
+  double get deliveryThresholdTier2 => _parseDoubleVal(raw['delivery_threshold_tier2'], 299.0);
+  double get deliveryFeeTier3 => _parseDoubleVal(raw['delivery_fee_tier3'], 50.0);
+  double get deliveryThresholdTier3 => _parseDoubleVal(raw['delivery_threshold_tier3'], 399.0);
+  double get deliveryFeePerKmBeyond5km => _parseDoubleVal(raw['delivery_fee_per_km_beyond_5km'], 10.0);
+  String get storeName => raw['store_name']?.toString() ?? raw['shop_name']?.toString() ?? '';
 }

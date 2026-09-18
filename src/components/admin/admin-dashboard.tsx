@@ -309,9 +309,11 @@ export function AdminDashboard({
   })
 
   // Fetch settings function
-  const fetchSettings = useCallback(async () => {
+  const fetchSettings = useCallback(async (targetStoreId?: string) => {
     try {
-      const res = await fetch('/api/settings', { cache: 'no-store' })
+      const activeStore = targetStoreId || selectedHubId
+      const storeParam = activeStore && activeStore !== 'all' ? `?storeId=${encodeURIComponent(activeStore)}` : ''
+      const res = await fetch(`/api/settings${storeParam}`, { cache: 'no-store' })
       if (res.ok) {
         const data = await res.json()
         setSettingsMap(data)
@@ -325,11 +327,11 @@ export function AdminDashboard({
     } catch (err) {
       console.error('Failed to load settings:', err)
     }
-  }, [])
+  }, [selectedHubId])
 
   useEffect(() => {
-    fetchSettings()
-  }, [fetchSettings])
+    fetchSettings(selectedHubId)
+  }, [fetchSettings, selectedHubId])
 
   const fetchStoresAndRestaurants = useCallback(() => {
     const storeParam =
@@ -825,6 +827,11 @@ export function AdminDashboard({
         isTogglingStore={isTogglingStore}
         onToggleGroceryMart={handleToggleGroceryMart}
         onOpenSettings={() => setActiveTab('settings')}
+        onOpenCreateOrder={() => setIsCreateOrderOpen(true)}
+        onOpenInward={() => setActiveTab('inward')}
+        isChimeMuted={isChimeMuted}
+        onToggleChime={() => setIsChimeMuted(!isChimeMuted)}
+        userAssignedStoreId={sessionAssignedStoreId}
       />
 
       <DashboardStatsCards
@@ -1195,7 +1202,13 @@ export function AdminDashboard({
             />
           )}
 
-          {activeTab === 'settings' && <SettingsTab onSettingsSaved={fetchSettings} />}
+          {activeTab === 'settings' && (
+            <SettingsTab
+              storeId={selectedHubId}
+              storeHubName={rawHubName}
+              onSettingsSaved={() => fetchSettings(selectedHubId)}
+            />
+          )}
 
           {activeTab === 'push-notifications' && <PushNotificationsTab />}
 

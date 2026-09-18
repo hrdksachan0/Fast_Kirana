@@ -39,34 +39,62 @@ export interface DeliveryRules {
   surgeFee: number
   surgeReason?: string
   maxRadiusKm: number
+  smallOrderFee?: number
+  smallOrderThreshold?: number
+  nightFee?: number
 }
 
-interface DeliveryRuleOptions {
+export interface DeliveryRuleOptions {
   maxRadiusKm?: number
   surgeFee?: number
   surgeReason?: string
   isRainMode?: boolean
+  settings?: Record<string, string | undefined>
+  storeName?: string
+  cityName?: string
+  tier1Fee?: number
+  tier2Fee?: number
+  tier3Fee?: number
+  tier1Threshold?: number
+  tier2Threshold?: number
+  tier3Threshold?: number
+  perKmFeeBeyond5km?: number
 }
 
 /**
- * Advanced distance-based delivery rules with dynamic radius & surge fee calculation.
+ * Advanced distance-based delivery rules with dynamic radius, settings-configured tier pricing & surge fee calculation.
  */
 export function getDeliveryRules(
   distanceKm: number,
   options: DeliveryRuleOptions = {}
 ): DeliveryRules {
-  const maxRadiusKm = options.maxRadiusKm ?? 5.0 // Default 5 km delivery radius
+  const maxRadiusKm = options.maxRadiusKm ?? (options.settings?.delivery_radius ? parseFloat(options.settings.delivery_radius) : 5.0)
   const surgeFee = options.surgeFee ?? 0
   const surgeReason = options.surgeReason
 
-  // Check if distance exceeds max allowed radius
+  // Configurable tier delivery fees from store settings
+  const tier1Fee = options.tier1Fee ?? (options.settings?.delivery_fee_tier1 ? parseFloat(options.settings.delivery_fee_tier1) : (options.settings?.delivery_fee ? parseFloat(options.settings.delivery_fee) : 25))
+  const tier2Fee = options.tier2Fee ?? (options.settings?.delivery_fee_tier2 ? parseFloat(options.settings.delivery_fee_tier2) : 35)
+  const tier3Fee = options.tier3Fee ?? (options.settings?.delivery_fee_tier3 ? parseFloat(options.settings.delivery_fee_tier3) : 50)
+  const perKmFeeBeyond5km = options.perKmFeeBeyond5km ?? (options.settings?.delivery_fee_per_km_beyond_5km ? parseFloat(options.settings.delivery_fee_per_km_beyond_5km) : 10)
+
+  // Configurable free delivery thresholds from store settings
+  const tier1Threshold = options.tier1Threshold ?? (options.settings?.delivery_threshold_tier1 ? parseFloat(options.settings.delivery_threshold_tier1) : (options.settings?.grocery_free_delivery_threshold ? parseFloat(options.settings.grocery_free_delivery_threshold) : 199))
+  const tier2Threshold = options.tier2Threshold ?? (options.settings?.delivery_threshold_tier2 ? parseFloat(options.settings.delivery_threshold_tier2) : 299)
+  const tier3Threshold = options.tier3Threshold ?? (options.settings?.delivery_threshold_tier3 ? parseFloat(options.settings.delivery_threshold_tier3) : 399)
+
+  // Store / City Name for localized zone labeling
+  const rawCity = options.cityName || options.storeName || (options.settings?.store_name ? options.settings.store_name.replace(/\s+(Hub|Market|Central|Dark\s*Store).*$/i, '').trim() : '') || 'Local'
+  const zoneCityLabel = rawCity ? `${rawCity} ` : ''
+
+  // 1. Check if distance strictly exceeds max allowed delivery radius
   if (distanceKm > maxRadiusKm) {
     return {
       distanceKm,
       minOrder: 20,
       deliveryFee: 0,
       baseFee: 0,
-      freeDeliveryThreshold: 499,
+      freeDeliveryThreshold: tier3Threshold + 100,
       isServiceable: false,
       zoneName: `Outside Delivery Zone (> ${maxRadiusKm.toFixed(1)} km)`,
       surgeFee,
@@ -75,16 +103,16 @@ export function getDeliveryRules(
     }
   }
 
-  // Zone 1: 0 - 2.0 km (Local Ghatampur)
+  // Zone 1: 0 - 2.0 km (Local Zone)
   if (distanceKm <= 2.0) {
     return {
       distanceKm,
       minOrder: 0,
-      deliveryFee: 25 + surgeFee,
-      baseFee: 25,
-      freeDeliveryThreshold: 199,
+      deliveryFee: tier1Fee + surgeFee,
+      baseFee: tier1Fee,
+      freeDeliveryThreshold: tier1Threshold,
       isServiceable: true,
-      zoneName: '0 - 2 km (Local Ghatampur Zone)',
+      zoneName: `0 - 2 km (${zoneCityLabel}Local Zone)`,
       surgeFee,
       surgeReason,
       maxRadiusKm,
@@ -96,9 +124,9 @@ export function getDeliveryRules(
     return {
       distanceKm,
       minOrder: 0,
-      deliveryFee: 35 + surgeFee,
-      baseFee: 35,
-      freeDeliveryThreshold: 299,
+      deliveryFee: tier2Fee + surgeFee,
+      baseFee: tier2Fee,
+      freeDeliveryThreshold: tier2Threshold,
       isServiceable: true,
       zoneName: '2 - 3 km (Suburban Zone)',
       surgeFee,
@@ -112,9 +140,9 @@ export function getDeliveryRules(
     return {
       distanceKm,
       minOrder: 0,
-      deliveryFee: 50 + surgeFee,
-      baseFee: 50,
-      freeDeliveryThreshold: 399,
+      deliveryFee: tier3Fee + surgeFee,
+      baseFee: tier3Fee,
+      freeDeliveryThreshold: tier3Threshold,
       isServiceable: true,
       zoneName: '3 - 5 km (Extended Zone)',
       surgeFee,
@@ -123,15 +151,19 @@ export function getDeliveryRules(
     }
   }
 
-  // Zone 4: > 5.0 km (Outside Service Area)
+  // Zone 4: 5.0 km up to maxRadiusKm (Long Distance Serviceable Zone)
+  const extraKm = Math.ceil(distanceKm - 5.0)
+  const longDistanceFee = tier3Fee + (extraKm * perKmFeeBeyond5km)
+  const longDistanceThreshold = tier3Threshold + (extraKm * 50)
+
   return {
     distanceKm,
     minOrder: 0,
-    deliveryFee: 70 + surgeFee,
-    baseFee: 70,
-    freeDeliveryThreshold: 499,
-    isServiceable: false,
-    zoneName: `Outside Delivery Zone (> ${maxRadiusKm.toFixed(1)} km)`,
+    deliveryFee: longDistanceFee + surgeFee,
+    baseFee: longDistanceFee,
+    freeDeliveryThreshold: longDistanceThreshold,
+    isServiceable: true,
+    zoneName: `5 - ${maxRadiusKm.toFixed(0)} km (Long Distance Zone)`,
     surgeFee,
     surgeReason,
     maxRadiusKm,
@@ -141,3 +173,4 @@ export function getDeliveryRules(
 /** Default store coordinates (Ghatampur Hub) */
 export const DEFAULT_STORE_LAT = 26.1534185
 export const DEFAULT_STORE_LNG = 80.1714024
+

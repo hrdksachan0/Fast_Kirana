@@ -17,8 +17,8 @@ export default async function SuperAdminPage() {
 
   // Super Admin check
   const userEmail = (session.user?.email || '').toLowerCase().trim()
-  const userPhone = ((session.user as any)?.phone || '').replace(/\D/g, '').slice(-10)
-  const assignedStoreId = (session.user as any)?.assignedStoreId || null
+  const userPhone = (session.user?.phone || '').replace(/\D/g, '').slice(-10)
+  const assignedStoreId = session.user?.assignedStoreId || null
 
   const isSuperAdmin =
     userEmail === 'superadmin@fastkirana.com' ||
@@ -59,7 +59,7 @@ export default async function SuperAdminPage() {
           id: session.user.id,
           name: session.user.name,
           email: session.user.email,
-          phone: (session.user as any).phone || null,
+          phone: session.user?.phone || null,
         }}
       />
     </div>

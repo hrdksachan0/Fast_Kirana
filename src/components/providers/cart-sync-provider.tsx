@@ -89,6 +89,46 @@ export function CartSyncProvider({ children }: { children: React.ReactNode }) {
     loadServerCart()
   }, [status, session, hasInitialSyncCompleted])
 
+  // Helper to push current cart state to server
+  const syncCartToServer = async () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      return // Don't attempt network sync when client is offline
+    }
+    try {
+      const currentItems = useCartStore.getState().items
+      const mappedItems = currentItems
+        .filter((item) => Boolean(item?.product?.id))
+        .map((item) => {
+          const isVariant = item.product.id.includes('_')
+          const [productId, variantName] = isVariant 
+            ? [item.product.id.split('_')[0], item.product.id.split('_').slice(1).join('_')]
+            : [item.product.id, null]
+
+          return {
+            productId,
+            quantity: item.quantity,
+            selectedVariant: variantName,
+            notes: item.notes || null
+          }
+        })
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      if (guestId && status !== 'authenticated') {
+        headers['x-guest-id'] = guestId
+      }
+
+      await fetch('/api/cart', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ items: mappedItems }),
+      }).catch(() => {})
+    } catch (_err) {
+      // Quietly ignore network failures while offline - cart remains safely stored locally
+    }
+  }
+
   // 2. Sync local cart changes back to DB (debounced for both authenticated & guest users)
   useEffect(() => {
     // Wait until initial sync check has completed
@@ -97,43 +137,22 @@ export function CartSyncProvider({ children }: { children: React.ReactNode }) {
     const delay = isInitialMount.current ? 800 : 1500
     isInitialMount.current = false
 
-    const timer = setTimeout(async () => {
-      try {
-        const mappedItems = items
-          .filter((item) => Boolean(item?.product?.id))
-          .map((item) => {
-            const isVariant = item.product.id.includes('_')
-            const [productId, variantName] = isVariant 
-              ? [item.product.id.split('_')[0], item.product.id.split('_').slice(1).join('_')]
-              : [item.product.id, null]
-
-            return {
-              productId,
-              quantity: item.quantity,
-              selectedVariant: variantName,
-              notes: item.notes || null
-            }
-          })
-
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-        }
-        if (guestId && status !== 'authenticated') {
-          headers['x-guest-id'] = guestId
-        }
-
-        await fetch('/api/cart', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ items: mappedItems }),
-        })
-      } catch (err) {
-        console.error('Failed to sync cart to DB:', err)
-      }
+    const timer = setTimeout(() => {
+      syncCartToServer()
     }, delay)
 
     return () => clearTimeout(timer)
   }, [items, session, status, hasInitialSyncCompleted, guestId])
+
+  // 3. Immediately sync cart when client reconnects to internet
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handleReconnect = () => {
+      syncCartToServer()
+    }
+    window.addEventListener('online', handleReconnect)
+    return () => window.removeEventListener('online', handleReconnect)
+  }, [guestId, status])
 
   return <>{children}</>
 }

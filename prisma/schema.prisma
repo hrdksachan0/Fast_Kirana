@@ -140,6 +140,8 @@ model User {
   @@index([role])
   @@index([phone])
   @@index([assignedRestaurantId])
+  @@index([role, assignedStoreId])
+  @@index([role, assignedRestaurantId])
   @@index([deletedAt])
   @@map("users")
 }
@@ -162,6 +164,7 @@ model Address {
   orders Order[]
 
   @@index([userId])
+  @@index([userId, isDefault])
   @@map("addresses")
 }
 
@@ -243,6 +246,7 @@ model Product {
   @@index([vendorId])
   @@index([createdAt])
   @@index([categoryId, isAvailable, sortOrder, createdAt, id])
+  @@index([restaurantId, isAvailable])
   @@map("products")
 }
 
@@ -436,6 +440,7 @@ model Review {
 
   @@unique([userId, productId])
   @@index([productId])
+  @@index([productId, rating])
   @@map("reviews")
 }
 
@@ -451,6 +456,7 @@ model RestaurantReview {
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@index([restaurantId])
+  @@index([restaurantId, rating])
   @@map("restaurant_reviews")
 }
 

@@ -69,17 +69,22 @@ export function rateLimit(options: RateLimitOptions = {}) {
     /**
      * Check if the request is rate-limited.
      * Returns null if allowed, or a 429 NextResponse if limited.
+     * @param request The incoming NextRequest
+     * @param customIdentifier Optional identifier (e.g. phone or userId) to combine with IP
      */
-    async check(request: NextRequest): Promise<NextResponse | null> {
+    async check(request: NextRequest, customIdentifier?: string): Promise<NextResponse | null> {
       const ip = getClientIp(request)
+      const idKey = customIdentifier ? `${ip}:${customIdentifier.trim().toLowerCase()}` : ip
       const now = Date.now()
+      const expirySeconds = Math.max(1, Math.ceil(interval / 1000))
 
       // 1. Try distributed Redis rate limiting if credentials exist
       if (hasRedis) {
         try {
           const cleanUrl = redisUrl!.replace(/\/$/, '')
-          const key = `rate_limit:${bucketId}:${ip}`
+          const key = `rate_limit:${bucketId}:${idKey}`
 
+          // Atomic pipeline: INCR + EXPIRE NX + TTL in a single roundtrip
           const res = await fetch(`${cleanUrl}/pipeline`, {
             method: 'POST',
             headers: {
@@ -88,26 +93,25 @@ export function rateLimit(options: RateLimitOptions = {}) {
             },
             body: JSON.stringify([
               ['INCR', key],
+              ['EXPIRE', key, expirySeconds, 'NX'],
               ['TTL', key],
             ]),
           })
 
           if (res.ok) {
             const data = await res.json()
-            const count = parseInt(data[0].result)
-            const ttl = parseInt(data[1].result)
+            const count = parseInt(data[0]?.result ?? '1', 10)
+            let ttl = parseInt(data[2]?.result ?? '-1', 10)
 
-            let resetAt = now + interval
-
-            if (count === 1) {
-              // Set expire in background asynchronously (non-blocking)
-              const expirySeconds = Math.ceil(interval / 1000)
-              fetch(`${cleanUrl}/expire/${key}/${expirySeconds}`, {
+            // If TTL was -1 (no expiry set), ensure expiry is attached
+            if (ttl <= 0) {
+              await fetch(`${cleanUrl}/expire/${key}/${expirySeconds}`, {
                 headers: { Authorization: `Bearer ${redisToken}` },
               }).catch(() => {})
-            } else if (ttl > 0) {
-              resetAt = now + (ttl * 1000)
+              ttl = expirySeconds
             }
+
+            const resetAt = now + (ttl * 1000)
 
             if (count > limit) {
               const retryAfter = Math.ceil(Math.max(0, resetAt - now) / 1000)
@@ -136,7 +140,7 @@ export function rateLimit(options: RateLimitOptions = {}) {
       }
 
       // 2. Fallback local in-memory token bucket rate limiting
-      const existing = bucket.get(ip)
+      const existing = bucket.get(idKey)
 
       if (!existing || now > existing.resetAt) {
         // New window

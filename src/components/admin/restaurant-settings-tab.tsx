@@ -15,7 +15,7 @@ export function RestaurantSettingsTab({ restaurantId }: RestaurantSettingsTabPro
   const [restaurant, setRestaurant] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
-  const assignedRestaurantId = restaurantId || (session?.user as any)?.assignedRestaurantId
+  const assignedRestaurantId = restaurantId || session?.user?.assignedRestaurantId
 
   useEffect(() => {
     const fetchDetails = async () => {

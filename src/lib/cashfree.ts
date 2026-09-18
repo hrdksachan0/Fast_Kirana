@@ -64,20 +64,27 @@ export async function createCashfreeOrder(params: CreateCashfreeOrderParams): Pr
   // Cashfree requires clean order_id (alphanumeric, underscore, hyphen, max 50 chars)
   const sanitizedOrderId = params.orderId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 45)
 
+  const customerDetails: Record<string, any> = {
+    customer_id: params.customerId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 45),
+    customer_phone: phone,
+    customer_name: (params.customerName && params.customerName.trim().length > 0)
+      ? params.customerName.trim().slice(0, 50)
+      : 'FastKirana Customer',
+  }
+
+  // Email is completely optional in Cashfree PG; only include if user provided a valid email
+  if (params.customerEmail && typeof params.customerEmail === 'string') {
+    const trimmedEmail = params.customerEmail.trim()
+    if (trimmedEmail.includes('@') && trimmedEmail.includes('.')) {
+      customerDetails.customer_email = trimmedEmail
+    }
+  }
+
   const payload: any = {
     order_id: sanitizedOrderId,
     order_amount: parseFloat(params.amount.toFixed(2)),
     order_currency: 'INR',
-    customer_details: {
-      customer_id: params.customerId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 45),
-      customer_name: (params.customerName && params.customerName.trim().length > 0)
-        ? params.customerName.trim().slice(0, 50)
-        : 'FastKirana Customer',
-      customer_email: (params.customerEmail && params.customerEmail.includes('@'))
-        ? params.customerEmail.trim()
-        : 'customer@fastkirana.in',
-      customer_phone: phone,
-    },
+    customer_details: customerDetails,
     order_meta: {
       return_url: params.returnUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'https://fastkirana.in'}/order/${params.orderId}?payment=cf_success`,
       notify_url: params.notifyUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'https://fastkirana.in'}/api/payment/cashfree/webhook`,

@@ -20,8 +20,12 @@ import { evaluateSurgeStatus } from '@/lib/surge-manager'
 import { calculateOrderDeliveryFees } from '@/lib/delivery-fee-calculator'
 import { deductOrderInventory } from '@/lib/order-inventory-manager'
 import { dispatchOrderNotifications } from '@/lib/order-notification-dispatcher'
-
-const inFlightOrderPlacements = new Set<string>()
+import {
+  generateOrderCartSignature,
+  acquireIdempotencyLock,
+  saveIdempotencyResponse,
+  releaseIdempotencyLock,
+} from '@/lib/idempotency'
 
 export async function POST(request: NextRequest) {
   const limited = await orderLimiter.check(request)
@@ -130,12 +134,27 @@ export async function POST(request: NextRequest) {
     }, { status: 403 })
   }
 
-  if (inFlightOrderPlacements.has(userId)) {
-    return NextResponse.json({
-      error: 'An order is already being processed for this account. Please wait a moment.'
-    }, { status: 429 })
+  let idempotencyKey: string | null = null
+  let orderCreatedSuccessfully = false
+
+  if (userId) {
+    idempotencyKey = request.headers.get('x-idempotency-key') ||
+      request.headers.get('idempotency-key') ||
+      generateOrderCartSignature(userId, body.items || [], body.addressId, body.paymentMethod)
+
+    const idempotency = await acquireIdempotencyLock(idempotencyKey)
+    if (idempotency.isDuplicate) {
+      if (idempotency.cachedResponse) {
+        return NextResponse.json({
+          ...idempotency.cachedResponse,
+          idempotencyReplayed: true,
+        })
+      }
+      return NextResponse.json({
+        error: 'An order with these items is already being processed. Please wait a moment.'
+      }, { status: 409 })
+    }
   }
-  inFlightOrderPlacements.add(userId)
 
   try {
     const { addressId, paymentMethod, items, couponCode, deliveryMethod = 'DELIVERY', isB2B = false, scheduledSlot = 'INSTANT', shopName = null, shopPhone = null, storeId = null, packagingOption = 'NORMAL', packagingFee = 0 } = body
@@ -284,7 +303,9 @@ export async function POST(request: NextRequest) {
     // Fetch store settings early (needed for pincode check, tax, misc fee, store status)
     const storeSettings = await prisma.storeSetting.findMany()
     const settingsMap = storeSettings.reduce((acc, s) => {
-      acc[s.key] = s.value
+      if (!s.key.startsWith('store:')) {
+        acc[s.key] = s.value
+      }
       return acc
     }, {} as Record<string, string>)
 
@@ -306,6 +327,16 @@ export async function POST(request: NextRequest) {
     const targetDarkStore = storeResolveResult.store || await prisma.darkStore.findUnique({
       where: { id: resolvedStoreId }
     })
+
+    // Layer store-scoped overrides for this resolved hub
+    if (resolvedStoreId) {
+      const storePrefix = `store:${resolvedStoreId}:`
+      storeSettings.forEach((s) => {
+        if (s.key.startsWith(storePrefix)) {
+          settingsMap[s.key.slice(storePrefix.length)] = s.value
+        }
+      })
+    }
 
     const targetStoreCity = targetDarkStore ? extractCityFromStoreName(targetDarkStore.name).toLowerCase() : ''
     const targetStorePincode = targetDarkStore ? extractPincodeFromStoreId(targetDarkStore.id) : null
@@ -378,7 +409,7 @@ export async function POST(request: NextRequest) {
 
       if (resolvedLat && resolvedLng) {
         const distanceKm = getDistanceKm(storeLat, storeLng, resolvedLat, resolvedLng)
-        deliveryRules = getDeliveryRules(distanceKm, { maxRadiusKm, surgeFee })
+        deliveryRules = getDeliveryRules(distanceKm, { maxRadiusKm, surgeFee, settings: settingsMap, storeName: storeDisplayName })
       }
     }
 
@@ -857,7 +888,7 @@ export async function POST(request: NextRequest) {
       const appliedMiscFee = (deliveryMethod !== 'PICKUP' && !hasChargedMiscFee && !isPremiumPackaging) ? serverMiscFee : 0
       if (appliedMiscFee > 0) hasChargedMiscFee = true
 
-      const groceryTotal = grocerySubtotal - groceryDiscount + groceryDeliveryFee + groceryTaxes + appliedMiscFee
+      const groceryTotal = Math.max(0, Math.round((grocerySubtotal - groceryDiscount + groceryDeliveryFee + groceryTaxes + appliedMiscFee) * 100) / 100)
 
       const gSurgeNote = (hubSurgeFee > 0 && groceryDeliveryFee > 0) ? `⚡ Surge Fee Applied: ₹${hubSurgeFee} (${hubSurgeReason})` : null
       const gPackagingNote = isPremiumPackaging ? '✨ Premium Thermal Packaging Requested (+₹15)' : null
@@ -889,7 +920,7 @@ export async function POST(request: NextRequest) {
         : ((deliveryMethod !== 'PICKUP' && !hasChargedMiscFee && !isPremiumPackaging) ? serverMiscFee : 0)
       if (appliedMiscFee > 0) hasChargedMiscFee = true
 
-      const rTotal = rData.subtotal - rDiscount + rData.deliveryFee + rTaxes + appliedMiscFee
+      const rTotal = Math.max(0, Math.round((rData.subtotal - rDiscount + rData.deliveryFee + rTaxes + appliedMiscFee) * 100) / 100)
 
       const rSurgeNote = (hubSurgeFee > 0 && rData.deliveryFee > 0) ? `⚡ Surge Fee Applied: ₹${hubSurgeFee} (${hubSurgeReason})` : null
       const rPackagingNote = isPremiumPackaging ? '✨ Premium Thermal Packaging Requested (+₹15)' : null
@@ -911,7 +942,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Build payment settings
+    const overallTotal = ordersToCreate.reduce((sum, o) => sum + (o.total || 0), 0)
+    const isFreePromo = overallTotal <= 0 && combinedDiscount > 0
+
     const isOnlinePaid = Boolean(
+      isFreePromo ||
       body.paymentStatus === 'PAID' ||
       body.paymentId ||
       body.razorpayPaymentId ||
@@ -919,7 +954,7 @@ export async function POST(request: NextRequest) {
     )
     const paymentStatus = isOnlinePaid ? PaymentStatus.PAID : PaymentStatus.PENDING
 
-    let resolvedPaymentMethod: PaymentMethod = PaymentMethod.COD
+    let resolvedPaymentMethod: PaymentMethod = isFreePromo ? PaymentMethod.UPI : PaymentMethod.COD
     const rawMethod = String(paymentMethod || '').toUpperCase()
     if (rawMethod === 'RAZORPAY' || rawMethod === 'UPI' || rawMethod === 'ONLINE') {
       resolvedPaymentMethod = PaymentMethod.UPI
@@ -1306,19 +1341,26 @@ export async function POST(request: NextRequest) {
     }
 
     const mainOrder = createdOrders.find((o) => !o.restaurantId) || createdOrders[0]
-    return NextResponse.json({
+    const responsePayload = {
       ...mainOrder,
       order: mainOrder,
       orders: createdOrders,
       readableId: mainOrder.readableId,
       id: mainOrder.id,
-    })
+    }
+
+    orderCreatedSuccessfully = true
+    if (idempotencyKey) {
+      await saveIdempotencyResponse(idempotencyKey, responsePayload)
+    }
+
+    return NextResponse.json(responsePayload)
   } catch (error: any) {
     console.error('Order creation error:', error)
     return NextResponse.json({ error: error.message || 'Failed to place order' }, { status: 500 })
   } finally {
-    if (userId) {
-      inFlightOrderPlacements.delete(userId)
+    if (!orderCreatedSuccessfully && idempotencyKey) {
+      await releaseIdempotencyLock(idempotencyKey)
     }
   }
 }
@@ -1334,7 +1376,7 @@ export async function GET(request: NextRequest) {
 
   let userId = session?.user?.id || request.headers.get('x-user-id') || queryUserId
   const headerPhone = request.headers.get('x-user-phone') || queryPhone
-  let sessionPhone = (session?.user as any)?.phone ? getLast10Digits((session.user as any).phone) : (headerPhone ? getLast10Digits(headerPhone) : '')
+  let sessionPhone = session?.user?.phone ? getLast10Digits(session.user.phone) : (headerPhone ? getLast10Digits(headerPhone) : '')
 
   if (!userId && sessionPhone) {
     const dbUser = await prisma.user.findFirst({

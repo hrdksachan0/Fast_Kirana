@@ -44,7 +44,8 @@ export async function POST(req: NextRequest) {
     if (eventType === 'PAYMENT_SUCCESS_WEBHOOK' || paymentData?.payment_status === 'SUCCESS') {
       const orderId = orderData?.order_id
       if (orderId) {
-        const cleanId = String(orderId).trim()
+        const rawId = String(orderId).trim()
+        const cleanId = rawId.replace(/_r\d+$/, '')
         const lockKey = `lock:webhook:cf:${cleanId}`
         const acquired = await cache.acquireLock(lockKey, 30)
         if (!acquired) {
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
                  u.name as "userName", u.phone as "userPhone"
           FROM orders o
           LEFT JOIN users u ON o."userId" = u.id
-          WHERE o.id = ${cleanId} OR o."readableId" = ${cleanId} LIMIT 1
+          WHERE o.id = ${cleanId} OR o."readableId" = ${cleanId} OR o.id = ${rawId} LIMIT 1
         `
 
         if (orders.length > 0) {
@@ -220,13 +221,14 @@ export async function POST(req: NextRequest) {
     ) {
       const orderId = orderData?.order_id
       if (orderId) {
-        const cleanId = String(orderId).trim()
+        const rawId = String(orderId).trim()
+        const cleanId = rawId.replace(/_r\d+$/, '')
         console.warn(`⚠️ Cashfree webhook: Payment failed/dropped for order ${cleanId}: ${paymentData?.payment_message || eventType}`)
         await prisma.$executeRaw`
           UPDATE orders
           SET "paymentStatus" = 'FAILED'::"PaymentStatus",
               "updatedAt" = NOW()
-          WHERE (id = ${cleanId} OR "readableId" = ${cleanId})
+          WHERE (id = ${cleanId} OR "readableId" = ${cleanId} OR id = ${rawId})
             AND "paymentStatus" != 'PAID'::"PaymentStatus"
             AND "paymentMethod" != 'COD'::"PaymentMethod"
         `.catch((err: any) => console.error('Error updating failed payment status:', err))

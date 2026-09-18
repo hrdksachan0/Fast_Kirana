@@ -134,7 +134,7 @@ export function calculateDeliveryFees(params: DeliveryCalculationParams): Delive
 
       if (resolvedLat && resolvedLng) {
         const groceryDistKm = getDistanceKm(storeLat, storeLng, resolvedLat, resolvedLng)
-        const groceryRules = getDeliveryRules(groceryDistKm, { maxRadiusKm, surgeFee: hubSurgeFee })
+        const groceryRules = getDeliveryRules(groceryDistKm, { maxRadiusKm, surgeFee: hubSurgeFee, settings: settingsMap, storeName: storeDisplayName })
 
         if (!groceryRules.isServiceable || groceryDistKm > maxRadiusKm) {
           return {
@@ -168,7 +168,7 @@ export function calculateDeliveryFees(params: DeliveryCalculationParams): Delive
 
       if (resolvedLat && resolvedLng && rLat && rLng) {
         const rDistKm = getDistanceKm(rLat, rLng, resolvedLat, resolvedLng)
-        const rRules = getDeliveryRules(rDistKm, { maxRadiusKm: rMaxRadius, surgeFee: hubSurgeFee })
+        const rRules = getDeliveryRules(rDistKm, { maxRadiusKm: rMaxRadius, surgeFee: hubSurgeFee, settings: settingsMap, storeName: rName })
 
         if (!rRules.isServiceable || rDistKm > rMaxRadius) {
           return {

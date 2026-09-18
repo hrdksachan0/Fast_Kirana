@@ -114,7 +114,7 @@ export function Navbar() {
 
   const fetchStatus = useCallback(() => {
     lastFetchRef.current = Date.now()
-    fetch('/api/settings')
+    fetch('/api/store-status')
       .then(res => res.json())
       .then(data => {
         const gOpen = data.grocery_mart_open !== 'false'

@@ -379,12 +379,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       }
     }
 
+    final storeSettings = ref.read(storeSettingsProvider).valueOrNull;
+    final nearestHub = ref.read(currentStoreHubProvider);
     final tier = LocationService.getTierForAddress(
       selectedAddress,
       subtotal,
       originLat: cartRestaurant?.lat,
       originLng: cartRestaurant?.lng,
       maxRadius: cartRestaurant?.deliveryRadiusKm,
+      settings: storeSettings,
+      storeName: cartRestaurant?.name ?? nearestHub.name,
     );
 
     if (_deliveryMethod == 'DELIVERY' && !tier.isServiceable) {
@@ -441,8 +445,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         final user = ref.read(authProvider).value;
         final prefs = await SharedPreferences.getInstance();
         final rawPhone = user?.phone ?? prefs.getString('user_phone') ?? '';
-        final cleanPhone = rawPhone.replaceAll(RegExp(r'[^\d]'), '').replaceAll(RegExp(r'^91'), '');
-        final email = user?.email ?? (user?.name != null && user!.name!.isNotEmpty ? '${user.name!.replaceAll(' ', '').toLowerCase()}@fastkirana.in' : 'customer@fastkirana.in');
+        final digitsOnly = rawPhone.replaceAll(RegExp(r'[^\d]'), '');
+        final cleanPhone = digitsOnly.length >= 10 ? digitsOnly.substring(digitsOnly.length - 10) : digitsOnly;
+        final userEmail = user?.email;
+        final hasValidEmail = userEmail != null && userEmail.contains('@') && userEmail.contains('.');
         final customerName = user?.name ?? 'FastKirana Customer';
 
         // 1. Primary Gateway: Cashfree PG Drop Checkout
@@ -454,8 +460,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             data: {
               'amount': grandTotal,
               if (_pendingCashfreeOrderId != null) 'orderId': _pendingCashfreeOrderId,
-              'customerPhone': cleanPhone.isNotEmpty ? cleanPhone : '9999999999',
-              'customerEmail': email,
+              'customerPhone': cleanPhone.length == 10 ? cleanPhone : '9999999999',
+              if (hasValidEmail) 'customerEmail': userEmail.trim(),
               'customerName': customerName,
             },
             options: Options(sendTimeout: const Duration(seconds: 12), receiveTimeout: const Duration(seconds: 12)),
@@ -586,9 +592,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   Future<void> _completeOrderPlacement(Cart cart, {String? paymentId}) async {
     // 🛡️ Anti-Fraud & Payment Integrity Guard:
-    // If online payment is selected, strictly require a valid paymentId from Razorpay SDK (unless 100% free promo)
+    // If online payment is selected, strictly require a valid paymentId from payment gateway SDK (unless 100% free promo)
     if (_selectedPayment == 'online') {
-      final isFreePromo = (widget.discountAmount >= cart.subtotal && cart.subtotal > 0);
+      final isFreePromo = (widget.discountAmount >= cart.subtotal && cart.subtotal > 0) || (_pendingGrandTotal != null && _pendingGrandTotal! <= 0);
       if ((paymentId == null || paymentId.trim().isEmpty) && !isFreePromo) {
         if (mounted) {
           setState(() => _isPlacingOrder = false);
@@ -622,12 +628,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       }
     }
 
+    final storeSettings = ref.read(storeSettingsProvider).valueOrNull;
+    final nearestHub = ref.read(currentStoreHubProvider);
     final tier = LocationService.getTierForAddress(
       selectedAddress,
       subtotal,
       originLat: cartRestaurant?.lat,
       originLng: cartRestaurant?.lng,
       maxRadius: cartRestaurant?.deliveryRadiusKm,
+      settings: storeSettings,
+      storeName: cartRestaurant?.name ?? nearestHub.name,
     );
 
     if (_deliveryMethod == 'DELIVERY' && !tier.isServiceable) {
@@ -949,12 +959,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       }
     }
 
+    final storeSettings = ref.watch(storeSettingsProvider).valueOrNull;
+    final nearestHub = ref.watch(currentStoreHubProvider);
     final tier = LocationService.getTierForAddress(
       selectedAddress,
       subtotal,
       originLat: cartRestaurant?.lat,
       originLng: cartRestaurant?.lng,
       maxRadius: cartRestaurant?.deliveryRadiusKm,
+      settings: storeSettings,
+      storeName: cartRestaurant?.name ?? nearestHub.name,
     );
     final deliveryFee = _deliveryMethod == 'PICKUP' ? 0.0 : tier.deliveryFee;
     final packagingFee = _selectedPackaging == 'PREMIUM' ? 15.0 : 5.0;

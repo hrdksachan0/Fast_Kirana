@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { RotateCcw, Home } from 'lucide-react'
+import { reportClientError } from '@/lib/telemetry'
 
 export default function GlobalError({
   error,
@@ -12,6 +13,10 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error('FastKirana root global error caught:', error)
+    reportClientError(error, {
+      severity: 'CRITICAL',
+      metadata: { digest: error?.digest, fatal: true },
+    })
   }, [error])
 
   return (

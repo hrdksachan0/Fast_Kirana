@@ -41,7 +41,28 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { id, name, pincode, latitude, longitude, deliveryRadiusKm, deliveryPolygon, isActive, surgeCharge, groceryOpen, seedInventory, managerPhone } = body
+    const {
+      id,
+      name,
+      pincode,
+      latitude,
+      longitude,
+      deliveryRadiusKm,
+      deliveryPolygon,
+      isActive,
+      surgeCharge,
+      groceryOpen,
+      seedInventory,
+      managerPhone,
+      address,
+      contactAddress,
+      pickupAddress,
+      groceryPickupAddress,
+      phone,
+      storePhone,
+      upiVpa,
+      storeUpiVpa
+    } = body
 
     if (!name || latitude === undefined || longitude === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -63,6 +84,48 @@ export async function POST(request: NextRequest) {
         groceryOpen: groceryOpen ?? true
       }
     })
+
+    // Automatically initialize isolated store-scoped settings for this new hub
+    try {
+      const cityName = name.replace(/\s+(Hub|Market|Central|Dark\s*Store|Branch).*$/i, '').trim()
+      const resolvedAddress = (address || contactAddress || `${cityName}${cleanPincode ? `, ${cleanPincode}` : ''}`).trim()
+      const resolvedPickup = (pickupAddress || groceryPickupAddress || `FastKirana Dark Store, ${cityName}${cleanPincode ? ` - ${cleanPincode}` : ''}`).trim()
+      const resolvedPhone = (phone || storePhone || managerPhone || '+918112849854').trim()
+      const resolvedUpi = (upiVpa || storeUpiVpa || '').trim()
+
+      const initialSettings = [
+        { key: `store:${store.id}:store_address`, value: resolvedAddress },
+        { key: `store:${store.id}:contact_address`, value: resolvedAddress },
+        { key: `store:${store.id}:grocery_pickup_address`, value: resolvedPickup },
+        { key: `store:${store.id}:contact_phone`, value: resolvedPhone },
+        { key: `store:${store.id}:store_phone`, value: resolvedPhone },
+        { key: `store:${store.id}:store_pincode`, value: cleanPincode || (store.id.match(/\b\d{6}\b/)?.[0] || '') },
+        { key: `store:${store.id}:store_lat`, value: String(store.latitude) },
+        { key: `store:${store.id}:store_lng`, value: String(store.longitude) },
+        { key: `store:${store.id}:delivery_radius`, value: String(store.deliveryRadiusKm || 5.0) },
+        { key: `store:${store.id}:grocery_mart_open`, value: store.groceryOpen ? 'true' : 'false' },
+        { key: `store:${store.id}:trusted_text`, value: `✨ Trusted by families in ${cityName}` },
+        { key: `store:${store.id}:delivery_fee_tier1`, value: '25' },
+        { key: `store:${store.id}:delivery_threshold_tier1`, value: '199' },
+        { key: `store:${store.id}:delivery_fee_tier2`, value: '35' },
+        { key: `store:${store.id}:delivery_threshold_tier2`, value: '299' },
+        { key: `store:${store.id}:delivery_fee_tier3`, value: '50' },
+        { key: `store:${store.id}:delivery_threshold_tier3`, value: '399' },
+        ...(resolvedUpi ? [{ key: `store:${store.id}:store_upi_vpa`, value: resolvedUpi }] : []),
+      ]
+
+      await Promise.all(
+        initialSettings.map(s =>
+          prisma.storeSetting.upsert({
+            where: { key: s.key },
+            update: { value: s.value },
+            create: { key: s.key, value: s.value },
+          })
+        )
+      )
+    } catch (settingErr) {
+      console.error('Failed to initialize isolated settings for new store (non-fatal):', settingErr)
+    }
 
     // Assign Hub Manager / Admin Phone Number
     if (managerPhone && typeof managerPhone === 'string') {

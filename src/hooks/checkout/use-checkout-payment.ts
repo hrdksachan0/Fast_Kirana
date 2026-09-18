@@ -290,6 +290,15 @@ export function useCheckoutPayment({
         return
       }
 
+      // 100% Free order edge case: auto-confirmed on server
+      if (orderData.paymentStatus === 'PAID' || Number(orderData.total || 0) <= 0) {
+        clearCart()
+        triggerHaptic('success')
+        toast.success('🎉 Order placed successfully! (100% Free Promo)')
+        window.location.href = `/order/${orderData.id}/success`
+        return
+      }
+
       setActivePendingOrderId(orderData.id)
 
       const rzpRes = await fetch('/api/payment/razorpay/create-order', {
@@ -489,6 +498,15 @@ export function useCheckoutPayment({
       if (!orderRes.ok) {
         toast.error(orderData.error || 'Failed to initialize order')
         setIsPlacingOrder(false)
+        return
+      }
+
+      // 100% Free order edge case: auto-confirmed on server
+      if (orderData.paymentStatus === 'PAID' || Number(orderData.total || 0) <= 0) {
+        clearCart()
+        triggerHaptic('success')
+        toast.success('🎉 Order placed successfully! (100% Free Promo)')
+        window.location.href = `/order/${orderData.id}/success`
         return
       }
 

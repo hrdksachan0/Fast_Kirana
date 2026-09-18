@@ -159,7 +159,7 @@ export function useCheckoutPricing({
       const surgeReason =
         storeSettingsMap['surge_reason'] || (surgeFee > 0 ? 'Special Delivery Surge' : '')
       distanceKm = getDistanceKm(storeLat, storeLng, selectedAddress.lat, selectedAddress.lng)
-      deliveryRules = getDeliveryRules(distanceKm, { maxRadiusKm, surgeFee, surgeReason })
+      deliveryRules = getDeliveryRules(distanceKm, { maxRadiusKm, surgeFee, surgeReason, settings: storeSettingsMap, storeName: storeSettingsMap['store_name'] })
     }
   }
 

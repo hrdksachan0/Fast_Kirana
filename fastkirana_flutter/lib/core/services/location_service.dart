@@ -7,9 +7,11 @@ import '../config/app_config.dart';
 import '../../data/models/address.dart';
 import '../../data/models/product.dart';
 import '../../data/models/store_hub.dart';
+import '../../data/models/store_settings.dart';
 import '../../providers/address_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/store_hub_provider.dart';
+import '../../providers/store_settings_provider.dart';
 import '../../widgets/location_drift_sheet.dart';
 
 class LocationDetails {
@@ -84,57 +86,94 @@ class LocationService {
   }
 
   /// Distance-tiered delivery fee & free delivery threshold calculation:
-  /// • 0 to 2 km (Local Ghatampur): ₹25 delivery fee — FREE Delivery on orders above ₹199!
-  /// • 2 to 3 km (Suburban Area): ₹35 delivery fee — FREE Delivery on orders above ₹299!
-  /// • 3 to 5 km (Extended Area): ₹50 delivery fee — FREE Delivery on orders above ₹399!
+  /// • Tier 1 (0 to 2 km): dynamic fee (default ₹25) — FREE Delivery on orders above threshold (default ₹199)
+  /// • Tier 2 (2 to 3 km): dynamic fee (default ₹35) — FREE Delivery on orders above threshold (default ₹299)
+  /// • Tier 3 (3 to max radius km): dynamic fee (default ₹50) — FREE Delivery on orders above threshold (default ₹399)
   /// • Outside hub delivery radius: Not serviceable.
-  ///
-  /// If [hub] is provided, its [deliveryRadiusKm] determines the serviceability
-  /// boundary. Otherwise falls back to [maxDeliveryRadiusKm].
-  static DeliveryTierInfo getDeliveryTier(double distanceKm, double subtotal, {double? maxRadius}) {
-    final radius = maxRadius ?? maxDeliveryRadiusKm;
+  static DeliveryTierInfo getDeliveryTier(
+    double distanceKm,
+    double subtotal, {
+    double? maxRadius,
+    StoreSettings? settings,
+    String? storeName,
+  }) {
+    final radius = maxRadius ?? settings?.deliveryRadiusKm ?? maxDeliveryRadiusKm;
+
+    final tier1Fee = settings?.deliveryFeeTier1 ?? 25.0;
+    final tier1Threshold = settings?.deliveryThresholdTier1 ?? 199.0;
+
+    final tier2Fee = settings?.deliveryFeeTier2 ?? 35.0;
+    final tier2Threshold = settings?.deliveryThresholdTier2 ?? 299.0;
+
+    final tier3Fee = settings?.deliveryFeeTier3 ?? 50.0;
+    final tier3Threshold = settings?.deliveryThresholdTier3 ?? 399.0;
+
+    final resolvedStoreName = (storeName?.isNotEmpty == true)
+        ? storeName!
+        : (settings?.storeName.isNotEmpty == true
+            ? settings!.storeName
+            : (settings?.trustCityName.isNotEmpty == true ? settings!.trustCityName : ''));
+
+    final cityLabel = resolvedStoreName.isNotEmpty ? '$resolvedStoreName ' : '';
+
     if (distanceKm <= 2.0) {
-      final isFree = subtotal >= 199.0;
+      final isFree = subtotal >= tier1Threshold;
       return DeliveryTierInfo(
         distanceKm: distanceKm,
-        deliveryFee: isFree ? 0.0 : 25.0,
-        baseFee: 25.0,
-        freeDeliveryThreshold: 199.0,
+        deliveryFee: isFree ? 0.0 : tier1Fee,
+        baseFee: tier1Fee,
+        freeDeliveryThreshold: tier1Threshold,
         isServiceable: true,
-        tierName: '0 to 2 km (Local Ghatampur)',
-        freeDeliveryLabel: 'FREE Delivery above ₹199',
-        feeDescription: '₹25 fee (FREE above ₹199)',
+        tierName: '0 to 2 km (${cityLabel}Zone)',
+        freeDeliveryLabel: 'FREE Delivery above ₹${tier1Threshold.toInt()}',
+        feeDescription: '₹${tier1Fee.toInt()} fee (FREE above ₹${tier1Threshold.toInt()})',
       );
     } else if (distanceKm <= 3.0) {
-      final isFree = subtotal >= 299.0;
+      final isFree = subtotal >= tier2Threshold;
       return DeliveryTierInfo(
         distanceKm: distanceKm,
-        deliveryFee: isFree ? 0.0 : 35.0,
-        baseFee: 35.0,
-        freeDeliveryThreshold: 299.0,
+        deliveryFee: isFree ? 0.0 : tier2Fee,
+        baseFee: tier2Fee,
+        freeDeliveryThreshold: tier2Threshold,
         isServiceable: true,
         tierName: '2 to 3 km (Suburban Area)',
-        freeDeliveryLabel: 'FREE Delivery above ₹299',
-        feeDescription: '₹35 fee (FREE above ₹299)',
+        freeDeliveryLabel: 'FREE Delivery above ₹${tier2Threshold.toInt()}',
+        feeDescription: '₹${tier2Fee.toInt()} fee (FREE above ₹${tier2Threshold.toInt()})',
       );
-    } else if (distanceKm <= radius) {
-      final isFree = subtotal >= 399.0;
+    } else if (distanceKm <= 5.0) {
+      final isFree = subtotal >= tier3Threshold;
       return DeliveryTierInfo(
         distanceKm: distanceKm,
-        deliveryFee: isFree ? 0.0 : 50.0,
-        baseFee: 50.0,
-        freeDeliveryThreshold: 399.0,
+        deliveryFee: isFree ? 0.0 : tier3Fee,
+        baseFee: tier3Fee,
+        freeDeliveryThreshold: tier3Threshold,
         isServiceable: true,
-        tierName: '3 to ${radius.toInt()} km (Extended Area)',
-        freeDeliveryLabel: 'FREE Delivery above ₹399',
-        feeDescription: '₹50 fee (FREE above ₹399)',
+        tierName: '3 to 5 km (Extended Area)',
+        freeDeliveryLabel: 'FREE Delivery above ₹${tier3Threshold.toInt()}',
+        feeDescription: '₹${tier3Fee.toInt()} fee (FREE above ₹${tier3Threshold.toInt()})',
+      );
+    } else if (distanceKm <= radius) {
+      final extraKm = (distanceKm - 5.0).ceil();
+      final perKmFee = settings?.deliveryFeePerKmBeyond5km ?? 10.0;
+      final longDistanceFee = tier3Fee + (extraKm * perKmFee);
+      final longDistanceThreshold = tier3Threshold + (extraKm * 50.0);
+      final isFree = subtotal >= longDistanceThreshold;
+      return DeliveryTierInfo(
+        distanceKm: distanceKm,
+        deliveryFee: isFree ? 0.0 : longDistanceFee,
+        baseFee: longDistanceFee,
+        freeDeliveryThreshold: longDistanceThreshold,
+        isServiceable: true,
+        tierName: '5 to ${radius.toInt()} km (Long Distance)',
+        freeDeliveryLabel: 'FREE Delivery above ₹${longDistanceThreshold.toInt()}',
+        feeDescription: '₹${longDistanceFee.toInt()} fee (FREE above ₹${longDistanceThreshold.toInt()})',
       );
     } else {
       return DeliveryTierInfo(
         distanceKm: distanceKm,
         deliveryFee: 0.0,
         baseFee: 0.0,
-        freeDeliveryThreshold: 499.0,
+        freeDeliveryThreshold: tier3Threshold + 100.0,
         isServiceable: false,
         tierName: 'Outside ${radius.toInt()} km (Out of Zone)',
         freeDeliveryLabel: 'Outside delivery zone',
@@ -150,9 +189,11 @@ class LocationService {
     double? originLat,
     double? originLng,
     double? maxRadius,
+    StoreSettings? settings,
+    String? storeName,
   }) {
     if (address == null || address.latitude == null || address.longitude == null || (address.latitude == 0.0 && address.longitude == 0.0)) {
-      return getDeliveryTier(1.0, subtotal, maxRadius: maxRadius);
+      return getDeliveryTier(1.0, subtotal, maxRadius: maxRadius, settings: settings, storeName: storeName);
     }
     final dist = getDistanceKm(
       address.latitude!,
@@ -160,7 +201,7 @@ class LocationService {
       originLat: originLat,
       originLng: originLng,
     );
-    return getDeliveryTier(dist, subtotal, maxRadius: maxRadius);
+    return getDeliveryTier(dist, subtotal, maxRadius: maxRadius, settings: settings, storeName: storeName);
   }
 
   /// Check & request location permission, then fetch current GPS location
@@ -396,6 +437,8 @@ final deliveryTierProvider = Provider<DeliveryTierInfo>((ref) {
     }
   }
 
+  final settings = ref.watch(storeSettingsProvider).valueOrNull;
+
   if (restaurant != null && restaurant.lat != null && restaurant.lng != null) {
     final selectedAddress = ref.watch(selectedAddressProvider);
     final userLat = selectedAddress?.latitude;
@@ -408,13 +451,31 @@ final deliveryTierProvider = Provider<DeliveryTierInfo>((ref) {
         originLat: restaurant.lat,
         originLng: restaurant.lng,
       );
-      return LocationService.getDeliveryTier(dist, subtotal, maxRadius: restaurant.deliveryRadiusKm);
+      return LocationService.getDeliveryTier(
+        dist,
+        subtotal,
+        maxRadius: restaurant.deliveryRadiusKm,
+        settings: settings,
+        storeName: restaurant.name,
+      );
     } else {
-      return LocationService.getDeliveryTier(1.0, subtotal, maxRadius: restaurant.deliveryRadiusKm);
+      return LocationService.getDeliveryTier(
+        1.0,
+        subtotal,
+        maxRadius: restaurant.deliveryRadiusKm,
+        settings: settings,
+        storeName: restaurant.name,
+      );
     }
   }
 
   final nearestResult = ref.watch(nearestHubResultProvider);
   final radius = nearestResult.hub.deliveryRadiusKm;
-  return LocationService.getDeliveryTier(nearestResult.distanceKm, subtotal, maxRadius: radius);
+  return LocationService.getDeliveryTier(
+    nearestResult.distanceKm,
+    subtotal,
+    maxRadius: radius,
+    settings: settings,
+    storeName: nearestResult.hub.name,
+  );
 });

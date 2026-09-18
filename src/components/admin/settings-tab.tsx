@@ -3,13 +3,15 @@
 import { AdminSettings } from '@/components/admin/admin-settings'
 
 interface SettingsTabProps {
+  storeId?: string
+  storeHubName?: string
   onSettingsSaved: () => Promise<void>
 }
 
-export function SettingsTab({ onSettingsSaved }: SettingsTabProps) {
+export function SettingsTab({ storeId, storeHubName, onSettingsSaved }: SettingsTabProps) {
   return (
     <div className="animate-fade-in">
-      <AdminSettings onSettingsSaved={onSettingsSaved} />
+      <AdminSettings storeId={storeId} storeHubName={storeHubName} onSettingsSaved={onSettingsSaved} />
     </div>
   )
 }

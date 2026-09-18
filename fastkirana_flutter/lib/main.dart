@@ -13,6 +13,7 @@ import 'core/services/notification_service.dart';
 import 'core/services/supabase_service.dart';
 import 'core/services/secure_storage_service.dart';
 import 'core/services/deep_link_service.dart';
+import 'data/repositories/product_repository.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -108,9 +109,12 @@ void main() async {
     ),
   );
 
-  // Fast warm-up for auth cache (with 150ms timeout so it never blocks UI)
+  // Fast warm-up for auth cache & local product/category disk cache (<100ms timeout so it never blocks UI)
   try {
-    await SecureStorage.loadCache().timeout(const Duration(milliseconds: 150));
+    await Future.wait([
+      SecureStorage.loadCache().timeout(const Duration(milliseconds: 100)),
+      ProductRepository.preloadDiskCache().timeout(const Duration(milliseconds: 80)),
+    ]);
   } catch (_) {}
 
   // ─── Instant UI Render (<100ms) ─────────────────────────────────

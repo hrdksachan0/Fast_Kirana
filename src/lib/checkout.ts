@@ -54,6 +54,14 @@ export interface CartItemInput {
     category?: { slug?: string } | null
     restaurantId?: string | null
     tags?: string[]
+    restaurant?: {
+      id?: string
+      name?: string
+      isOpen?: boolean | null
+      openTime?: string | null
+      closeTime?: string | null
+      updatedAt?: Date | string | null
+    } | null
   }
 }
 
@@ -91,7 +99,7 @@ export interface DeliveryMethod {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function classifyItems(items: CartItemInput[]) {
+export function classifyItems(items: CartItemInput[]) {
   let hasCafe = false
   let hasRestaurant = false
   let hasGrocery = false
@@ -116,7 +124,7 @@ function classifyItems(items: CartItemInput[]) {
   return { hasCafe, hasRestaurant, hasGrocery }
 }
 
-function validateAddress(
+export function validateAddress(
   address: Address,
   storeLat: number,
   storeLng: number,
@@ -197,8 +205,7 @@ export async function validateCheckoutEligibility(
 
   // ── Specific Restaurant / Cafe Outlet Schedule Checks ──────────────────
   for (const item of items) {
-    const p = item.product as any
-    const rest = p?.restaurant
+    const rest = item.product.restaurant
     if (rest) {
       const opStatus = checkStoreOperatingStatus(rest)
       if (!opStatus.isOpen) {

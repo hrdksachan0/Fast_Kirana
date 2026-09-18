@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fastkirana_flutter/core/services/location_service.dart';
+import 'package:fastkirana_flutter/data/models/store_settings.dart';
 
 void main() {
   group('Delivery Tier & Distance-Based Fee Tests', () {
@@ -50,6 +51,42 @@ void main() {
       expect(unserviceable.isServiceable, isFalse);
       expect(unserviceable.deliveryFee, 0.0);
       expect(unserviceable.feeDescription, contains('5.0 km'));
+    });
+
+    test('Dynamic Store Settings: custom tiers from admin console', () {
+      final customSettings = StoreSettings.fromJson({
+        'delivery_fee_tier1': '30',
+        'delivery_threshold_tier1': '249',
+        'delivery_fee_tier2': '45',
+        'delivery_threshold_tier2': '349',
+        'delivery_fee_tier3': '60',
+        'delivery_threshold_tier3': '499',
+        'delivery_radius': '6.0',
+        'store_name': 'Akbarpur Central Hub',
+      });
+
+      // Tier 1 custom fee
+      final t1Paid = LocationService.getDeliveryTier(1.5, 200.0, settings: customSettings);
+      expect(t1Paid.deliveryFee, 30.0);
+      expect(t1Paid.freeDeliveryThreshold, 249.0);
+      expect(t1Paid.tierName, contains('Akbarpur Central Hub'));
+
+      final t1Free = LocationService.getDeliveryTier(1.5, 250.0, settings: customSettings);
+      expect(t1Free.deliveryFee, 0.0);
+
+      // Tier 2 custom fee
+      final t2Paid = LocationService.getDeliveryTier(2.5, 300.0, settings: customSettings);
+      expect(t2Paid.deliveryFee, 45.0);
+      expect(t2Paid.freeDeliveryThreshold, 349.0);
+
+      // Tier 3 custom fee
+      final t3Paid = LocationService.getDeliveryTier(4.5, 400.0, settings: customSettings);
+      expect(t3Paid.deliveryFee, 60.0);
+      expect(t3Paid.freeDeliveryThreshold, 499.0);
+
+      // Outside custom delivery radius (6km)
+      final out = LocationService.getDeliveryTier(6.5, 1000.0, settings: customSettings);
+      expect(out.isServiceable, isFalse);
     });
   });
 }

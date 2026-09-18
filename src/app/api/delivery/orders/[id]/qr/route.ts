@@ -124,13 +124,14 @@ export async function GET(
         } catch (e) {
           // Cashfree order doesn't exist yet, create one
           const cleanPhone = (order.address?.phone || order.user?.phone || '9999999999').replace(/\D/g, '').slice(-10)
+          const validEmail = (order.user?.email && order.user.email.includes('@') && order.user.email.includes('.')) ? order.user.email.trim() : undefined
           cfOrder = await createCashfreeOrder({
             orderId: sanitizedOrderId,
             amount: Number(order.total),
             customerId: order.userId || `guest_${order.id.slice(0, 10)}`,
             customerName: order.user?.name || 'FastKirana Customer',
             customerPhone: cleanPhone.length === 10 ? cleanPhone : '9999999999',
-            customerEmail: order.user?.email || 'customer@fastkirana.in',
+            customerEmail: validEmail,
             note: `Doorstep Payment Order #${displayId}`,
           })
         }

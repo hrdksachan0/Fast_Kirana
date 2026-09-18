@@ -464,25 +464,36 @@ export default async function AdminPage(props: {
       {/* Title Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-border/60 pb-4 gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-black text-text-primary tracking-tight">Admin Console</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl md:text-2xl font-black text-text-primary tracking-tight">
+              Store Admin Portal
+            </h1>
+            <span className={`inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+              isSuperAdmin
+                ? 'bg-purple-500/10 text-purple-600 border-purple-500/20'
+                : 'bg-primary/10 text-primary border-primary/20'
+            }`}>
+              {isSuperAdmin ? '🏛️ HQ Master' : '🏢 Darkstore Manager'}
+            </span>
+          </div>
           <p className="text-xs text-text-secondary mt-0.5">
-            Welcome, {session.user.name || 'Admin'} ({userEmail || 'admin@fastkirana.com'}). Full zone control, live orders, catalog, and store settings.
+            Logged in as <strong className="text-text-primary">{session.user.name || 'Admin'}</strong> ({userEmail || 'admin@fastkirana.com'}). Full darkstore control, live orders, catalog, and inventory.
           </p>
         </div>
         <div className="flex items-center gap-2">
           {isSuperAdmin && (
             <a 
               href="/superadmin" 
-              className="inline-flex items-center justify-center text-xs font-black uppercase tracking-wider bg-card border-2 border-[#e20a22]/30 text-[#e20a22] h-9 px-4 rounded-xl hover:bg-[#e20a22]/5 shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+              className="inline-flex items-center justify-center text-xs font-black uppercase tracking-wider bg-card border-2 border-primary/30 text-primary h-9 px-3.5 rounded-xl hover:bg-primary/5 shadow-2xs hover:shadow-xs transition-all active:scale-[0.98]"
             >
               🏛️ HQ Dashboard
             </a>
           )}
           <a 
             href="/admin/restaurants" 
-            className="inline-flex items-center justify-center text-xs font-black uppercase tracking-wider bg-[#e20a22] text-white h-9 px-4 rounded-xl hover:bg-[#c9081e] shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+            className="inline-flex items-center justify-center text-xs font-black uppercase tracking-wider bg-primary text-primary-foreground h-9 px-3.5 rounded-xl hover:bg-primary/90 shadow-2xs hover:shadow-xs transition-all active:scale-[0.98]"
           >
-            Manage Outlets 🍽️
+            🍽️ Food Outlets
           </a>
         </div>
       </div>

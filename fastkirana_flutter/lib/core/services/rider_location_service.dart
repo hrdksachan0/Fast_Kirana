@@ -102,13 +102,13 @@ class RiderLocationService {
       debugPrint('[RiderLocation] Initial GPS acquisition error: $e');
     }
 
-    // Configure foreground service for uninterrupted tracking when screen is off or app is backgrounded
+    // Configure foreground service with battery-optimized throttling for tier-2/3 conditions
     late LocationSettings locationSettings;
     if (defaultTargetPlatform == TargetPlatform.android) {
       locationSettings = AndroidSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 1, // Trigger after 1 meter of movement
-        intervalDuration: const Duration(seconds: 1),
+        distanceFilter: 15, // Battery-efficient: Trigger only after 15 meters of movement
+        intervalDuration: const Duration(seconds: 5), // 5s interval to preserve phone battery & prevent heating
         foregroundNotificationConfig: const ForegroundNotificationConfig(
           notificationTitle: 'FastKirana Delivery Partner 🛵',
           notificationText: 'Sharing live location with customer',
@@ -126,14 +126,14 @@ class RiderLocationService {
       locationSettings = AppleSettings(
         accuracy: LocationAccuracy.bestForNavigation,
         activityType: ActivityType.automotiveNavigation,
-        distanceFilter: 1,
-        pauseLocationUpdatesAutomatically: false,
+        distanceFilter: 15,
+        pauseLocationUpdatesAutomatically: true,
         showBackgroundLocationIndicator: true,
       );
     } else {
       locationSettings = const LocationSettings(
         accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 1,
+        distanceFilter: 15,
       );
     }
 
@@ -150,11 +150,13 @@ class RiderLocationService {
     return true;
   }
 
-  /// Handle incoming GPS fix
+  /// Handle incoming GPS fix with adaptive stationary throttling to save battery
   void _handleNewPosition(Position position) {
     final now = DateTime.now();
 
-    // High-speed responsiveness: broadcast every 1 second or if moved > 1.5 meters
+    // Check if rider is virtually stationary (e.g. waiting at restaurant kitchen or traffic)
+    final isStationary = position.speed < 1.0; // < 1m/s (~3.6 km/h)
+
     if (_lastUploadTime != null && _lastPosition != null) {
       final elapsedMs = now.difference(_lastUploadTime!).inMilliseconds;
       final distanceMoved = Geolocator.distanceBetween(
@@ -164,8 +166,16 @@ class RiderLocationService {
         position.longitude,
       );
 
-      if (elapsedMs < 1000 && distanceMoved < 1.5) {
-        return;
+      // If stationary: send heartbeat only every 25s or if moved >= 15m
+      if (isStationary) {
+        if (elapsedMs < 25000 && distanceMoved < 15.0) {
+          return;
+        }
+      } else {
+        // If actively moving: broadcast every 5s or if moved >= 15m
+        if (elapsedMs < 5000 && distanceMoved < 15.0) {
+          return;
+        }
       }
     }
 
@@ -215,9 +225,11 @@ class RiderLocationService {
 
     debugPrint('[RiderLocation] Live GPS: Lat: ${position.latitude.toStringAsFixed(5)}, Lng: ${position.longitude.toStringAsFixed(5)}, Heading: ${position.heading.toStringAsFixed(1)}°, Speed: ${position.speed.toStringAsFixed(1)}m/s');
 
-    // 1. Post to /api/delivery/location (throttled to 3s to not overload API while streaming live over WS)
+    // 1. Post to /api/delivery/location (adaptively throttled: 25s when stationary, 8s when moving actively)
     final now = DateTime.now();
-    final shouldPostHttp = _lastDbInsertTime == null || now.difference(_lastDbInsertTime!).inMilliseconds >= 3000;
+    final isStationary = position.speed < 1.0;
+    final minHttpIntervalMs = isStationary ? 25000 : 8000;
+    final shouldPostHttp = _lastDbInsertTime == null || now.difference(_lastDbInsertTime!).inMilliseconds >= minHttpIntervalMs;
 
     if (shouldPostHttp && _dio != null) {
       try {

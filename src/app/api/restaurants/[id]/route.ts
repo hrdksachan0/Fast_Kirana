@@ -77,9 +77,9 @@ export async function PATCH(
 ) {
   const session = await auth()
   let role = session?.user?.role || 'USER'
-  let assignedRestaurantId = (session?.user as any)?.assignedRestaurantId
+  let assignedRestaurantId = session?.user?.assignedRestaurantId
   const userEmail = (session?.user?.email || '').toLowerCase().trim()
-  const userPhone = ((session?.user as any)?.phone || '').trim()
+  const userPhone = (session?.user?.phone || '').trim()
   const userId = session?.user?.id
 
   // Fresh user lookup from DB if needed
