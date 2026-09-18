@@ -10,6 +10,8 @@ import '../../core/theme/design_system.dart';
 import '../../core/utils/app_toast.dart';
 import '../../core/services/admin_notification_service.dart';
 import '../../core/services/admin_authorization.dart';
+import '../../core/services/location_service.dart';
+import '../../providers/store_settings_provider.dart';
 import 'order_edit/add_item_search_sheet.dart';
 
 class OrderEditModal extends ConsumerStatefulWidget {
@@ -193,6 +195,10 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
         isSwapMode: swapIndex != null,
         targetSwapItemName: swapIndex != null ? _items[swapIndex]['name'] : null,
         onProductSelected: (itemMap) {
+          final addedPid = itemMap['productId']?.toString();
+          if (addedPid != null && addedPid.isNotEmpty && !addedPid.startsWith('custom_')) {
+            _outOfStockProductIds.remove(addedPid);
+          }
           setState(() {
             if (swapIndex != null) {
               // Swap Mode: replace the item at swapIndex
@@ -219,7 +225,8 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                 final currQty = (_items[existingIndex]['quantity'] is num)
                     ? (_items[existingIndex]['quantity'] as num).toInt()
                     : 1;
-                _items[existingIndex]['quantity'] = currQty + 1;
+                final addedQty = (itemMap['quantity'] is num) ? (itemMap['quantity'] as num).toInt() : 1;
+                _items[existingIndex]['quantity'] = currQty + addedQty;
               } else {
                 _items.add(itemMap);
               }
@@ -258,6 +265,9 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                   ? rawId
                   : null);
 
+          final resolvedRestId = it['restaurantId'] ?? (widget.isRestaurant ? (widget.restaurantId ?? widget.order['restaurantId']) : null);
+          final resolvedShopName = it['shopName'] ?? (widget.isRestaurant ? (widget.order['shopName'] ?? 'Restaurant') : (resolvedRestId != null ? (widget.order['shopName'] ?? 'Restaurant') : 'FastKirana Grocery'));
+
           return {
             'productId': cleanPid,
             'name': it['name'],
@@ -268,8 +278,8 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
             'selectedVariant': it['selectedVariant'],
             'notes': it['notes'],
             'imageUrl': it['imageUrl'],
-            'restaurantId': it['restaurantId'],
-            'shopName': it['shopName'] ?? (it['restaurantId'] != null ? (widget.order['shopName'] ?? 'Restaurant') : 'FastKirana Grocery'),
+            'restaurantId': resolvedRestId,
+            'shopName': resolvedShopName,
           };
         }).toList(),
         'outOfStockProductIds': _outOfStockProductIds.toList(),
@@ -523,7 +533,7 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                 : ListView.separated(
                     shrinkWrap: true,
                     itemCount: _items.length,
-                    separatorBuilder: (_, __) => const Divider(height: 12, color: AppDesignSystem.slate100),
+                    separatorBuilder: (_, __) => const Divider(height: 14, color: AppDesignSystem.slate100),
                     itemBuilder: (context, idx) {
                       final it = _items[idx];
                       final name = (it['name'] ?? 'Item').toString();
@@ -536,9 +546,9 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                       final qty = (it['quantity'] is num) ? (it['quantity'] as num).toInt() : 1;
                       final itemRestId = it['restaurantId']?.toString();
                       final itemShopName = it['shopName']?.toString();
-                      final isRestItem = itemRestId != null && itemRestId.isNotEmpty;
+                      final isRestItem = widget.isRestaurant || (itemRestId != null && itemRestId.isNotEmpty);
                       final domainLabel = isRestItem
-                          ? '🍽️ ${itemShopName ?? 'Restaurant'}'
+                          ? (itemShopName != null && itemShopName.isNotEmpty ? '🍽️ $itemShopName' : '🍽️ Kitchen')
                           : '🛒 Grocery';
                       final domainColor = isRestItem
                           ? const Color(0xFFFFF7ED)
@@ -547,97 +557,106 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                           ? const Color(0xFFC2410C)
                           : const Color(0xFF15803D);
 
-                      return Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                      return Container(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 1. Top row: Full-width Item Name + Badges
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 6,
+                              runSpacing: 4,
                               children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        name,
-                                        style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 13),
-                                          fontWeight: FontWeight.w800,
-                                          color: slateDark,
-                                        ),
-                                      ),
-                                    ),
-                                    if (isCustom)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFEFF6FF),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          'Custom',
-                                          style: GoogleFonts.inter(
-                                            fontSize: Responsive.scaledFontSize(context, 9),
-                                            fontWeight: FontWeight.w800,
-                                            color: AppDesignSystem.blue700,
-                                          ),
-                                        ),
-                                      ),
-                                    const SizedBox(width: 4),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                      decoration: BoxDecoration(
-                                        color: domainColor,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        domainLabel,
-                                        style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 8),
-                                          fontWeight: FontWeight.w700,
-                                          color: domainTextColor,
-                                        ),
-                                      ),
-                                    ),
-                                    if ((it['productId'] != null && _outOfStockProductIds.contains(it['productId'].toString())) || it['isAvailable'] == false) ...[
-                                      const SizedBox(width: 4),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFFEE2E2),
-                                          borderRadius: BorderRadius.circular(4),
-                                          border: Border.all(color: const Color(0xFFFCA5A5)),
-                                        ),
-                                        child: Text(
-                                          'Out of Stock',
-                                          style: GoogleFonts.inter(
-                                            fontSize: Responsive.scaledFontSize(context, 8),
-                                            fontWeight: FontWeight.w900,
-                                            color: AppDesignSystem.red600,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
+                                Text(
+                                  name,
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 13.5),
+                                    fontWeight: FontWeight.w800,
+                                    color: slateDark,
+                                  ),
                                 ),
-                                if (variant != null && variant.isNotEmpty)
-                                  Text(
-                                    'Variant: $variant',
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 11),
-                                      fontWeight: FontWeight.w600,
-                                      color: brandAmber,
+                                if (isCustom)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEFF6FF),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                                    ),
+                                    child: Text(
+                                      'Custom',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 9),
+                                        fontWeight: FontWeight.w800,
+                                        color: AppDesignSystem.blue700,
+                                      ),
                                     ),
                                   ),
-                                if (notes != null && notes.isNotEmpty)
-                                  Text(
-                                    'Note: $notes',
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 11),
-                                      fontWeight: FontWeight.w500,
-                                      fontStyle: FontStyle.italic,
-                                      color: slateMuted,
+                                if (widget.isAdmin)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: domainColor,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      domainLabel,
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 8.5),
+                                        fontWeight: FontWeight.w700,
+                                        color: domainTextColor,
+                                      ),
                                     ),
                                   ),
-                                const SizedBox(height: 2),
+                                if ((it['productId'] != null && _outOfStockProductIds.contains(it['productId'].toString())) || it['isAvailable'] == false)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFEE2E2),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: const Color(0xFFFCA5A5)),
+                                    ),
+                                    child: Text(
+                                      'Out of Stock',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 8.5),
+                                        fontWeight: FontWeight.w900,
+                                        color: AppDesignSystem.red600,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            if (variant != null && variant.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                'Variant: $variant',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 11),
+                                  fontWeight: FontWeight.w600,
+                                  color: brandAmber,
+                                ),
+                              ),
+                            ],
+                            if (notes != null && notes.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                'Note: $notes',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 11),
+                                  fontWeight: FontWeight.w500,
+                                  fontStyle: FontStyle.italic,
+                                  color: slateMuted,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 6),
+
+                            // 2. Bottom row: Price info on left, Action buttons on right
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
                                 InkWell(
                                   onTap: () => _showEditItemPriceDialog(idx),
                                   borderRadius: BorderRadius.circular(4),
@@ -647,129 +666,125 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                                       Text(
                                         '₹${price.toStringAsFixed(0)} each  •  Total: ₹${(price * qty).toStringAsFixed(0)}',
                                         style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 11.5),
+                                          fontSize: Responsive.scaledFontSize(context, 12),
                                           fontWeight: FontWeight.w700,
                                           color: themeColor,
                                         ),
                                       ),
                                       const SizedBox(width: 4),
-                                      Icon(Icons.edit_outlined, size: 12, color: themeColor),
+                                      Icon(Icons.edit_outlined, size: 13, color: themeColor),
                                     ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
 
-                          // Actions Row (Swap, Stepper, Delete)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // WhatsApp Contact Customer button (for pickers)
-                              if (!widget.isRestaurant && !widget.isAdmin)
-                                IconButton(
-                                  padding: const EdgeInsets.all(4),
-                                  constraints: const BoxConstraints(),
-                                  icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18, color: AppDesignSystem.green600),
-                                  tooltip: 'Suggest substitution via WhatsApp',
-                                  onPressed: () => _sendCustomerSubstitution(it),
-                                ),
-
-                              // ⇄ Swap Button
-                              Bounceable(
-                                onTap: () => _openItemPickerSheet(swapIndex: idx),
-                                child: Container(
-                                  margin: const EdgeInsets.only(right: 6),
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                                  decoration: BoxDecoration(
-                                    color: ((it['productId'] != null && _outOfStockProductIds.contains(it['productId'].toString())) || it['isAvailable'] == false)
-                                        ? const Color(0xFFFEE2E2)
-                                        : const Color(0xFFFEF3C7),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: ((it['productId'] != null && _outOfStockProductIds.contains(it['productId'].toString())) || it['isAvailable'] == false)
-                                          ? const Color(0xFFFCA5A5)
-                                          : const Color(0xFFFDE68A),
-                                      width: 1.2,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.swap_horiz_rounded,
-                                        size: 15,
-                                        color: ((it['productId'] != null && _outOfStockProductIds.contains(it['productId'].toString())) || it['isAvailable'] == false)
-                                            ? AppDesignSystem.red700
-                                            : const Color(0xFFB45309),
-                                      ),
-                                      const SizedBox(width: 3),
-                                      Text(
-                                        'Swap',
-                                        style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 11),
-                                          fontWeight: FontWeight.w900,
-                                          color: ((it['productId'] != null && _outOfStockProductIds.contains(it['productId'].toString())) || it['isAvailable'] == false)
-                                              ? AppDesignSystem.red700
-                                              : const Color(0xFF92400E),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-
-                              // Quantity Stepper
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: AppDesignSystem.slate50,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: slateBorder),
-                                ),
-                                child: Row(
+                                // Action Controls
+                                Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    InkWell(
-                                      onTap: () => _updateQuantity(idx, -1),
-                                      borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
-                                      child: const Padding(
-                                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                        child: Icon(Icons.remove_rounded, size: 14, color: slateDark),
+                                    if (!widget.isRestaurant && !widget.isAdmin)
+                                      IconButton(
+                                        padding: const EdgeInsets.all(4),
+                                        constraints: const BoxConstraints(),
+                                        icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18, color: AppDesignSystem.green600),
+                                        tooltip: 'Suggest substitution via WhatsApp',
+                                        onPressed: () => _sendCustomerSubstitution(it),
                                       ),
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                                      child: Text(
-                                        '$qty',
-                                        style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 12),
-                                          fontWeight: FontWeight.w900,
-                                          color: slateDark,
+                                    // ⇄ Swap Button
+                                    Bounceable(
+                                      onTap: () => _openItemPickerSheet(swapIndex: idx),
+                                      child: Container(
+                                        margin: const EdgeInsets.only(right: 6),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: ((it['productId'] != null && _outOfStockProductIds.contains(it['productId'].toString())) || it['isAvailable'] == false)
+                                              ? const Color(0xFFFEE2E2)
+                                              : const Color(0xFFFEF3C7),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(
+                                            color: ((it['productId'] != null && _outOfStockProductIds.contains(it['productId'].toString())) || it['isAvailable'] == false)
+                                                ? const Color(0xFFFCA5A5)
+                                                : const Color(0xFFFDE68A),
+                                            width: 1.2,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.swap_horiz_rounded,
+                                              size: 15,
+                                              color: ((it['productId'] != null && _outOfStockProductIds.contains(it['productId'].toString())) || it['isAvailable'] == false)
+                                                  ? AppDesignSystem.red700
+                                                  : const Color(0xFFB45309),
+                                            ),
+                                            const SizedBox(width: 3),
+                                            Text(
+                                              'Swap',
+                                              style: GoogleFonts.inter(
+                                                fontSize: Responsive.scaledFontSize(context, 11),
+                                                fontWeight: FontWeight.w900,
+                                                color: ((it['productId'] != null && _outOfStockProductIds.contains(it['productId'].toString())) || it['isAvailable'] == false)
+                                                    ? AppDesignSystem.red700
+                                                    : const Color(0xFF92400E),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),
-                                    InkWell(
-                                      onTap: () => _updateQuantity(idx, 1),
-                                      borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
-                                      child: const Padding(
-                                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                        child: Icon(Icons.add_rounded, size: 14, color: slateDark),
+                                    // Quantity Stepper
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: AppDesignSystem.slate50,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: slateBorder),
                                       ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          InkWell(
+                                            onTap: () => _updateQuantity(idx, -1),
+                                            borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
+                                            child: const Padding(
+                                              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                              child: Icon(Icons.remove_rounded, size: 14, color: slateDark),
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                                            child: Text(
+                                              '$qty',
+                                              style: GoogleFonts.inter(
+                                                fontSize: Responsive.scaledFontSize(context, 12),
+                                                fontWeight: FontWeight.w900,
+                                                color: slateDark,
+                                              ),
+                                            ),
+                                          ),
+                                          InkWell(
+                                            onTap: () => _updateQuantity(idx, 1),
+                                            borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
+                                            child: const Padding(
+                                              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                              child: Icon(Icons.add_rounded, size: 14, color: slateDark),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    // Delete Item
+                                    IconButton(
+                                      padding: const EdgeInsets.all(4),
+                                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                      icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppDesignSystem.red600),
+                                      onPressed: () => _removeItem(idx),
                                     ),
                                   ],
                                 ),
-                              ),
-
-                              // Delete Item
-                              IconButton(
-                                padding: const EdgeInsets.all(4),
-                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                                icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppDesignSystem.red600),
-                                onPressed: () => _removeItem(idx),
-                              ),
-                            ],
-                          ),
-                        ],
+                              ],
+                            ),
+                          ],
+                        ),
                       );
                     },
                   ),
@@ -777,144 +792,192 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
 
           const Divider(height: 20, color: slateBorder),
 
-          // Rule 4: Delivery Fee Preview Badge
+          // Dynamic Delivery Fee & Grand Total Calculation
           () {
+            final storeSettings = ref.watch(storeSettingsProvider).valueOrNull;
             final isPickup = widget.order['deliveryMethod'] == 'PICKUP';
-            final isFreeDelivery = isPickup || subtotal >= 199.0;
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              decoration: BoxDecoration(
-                color: isFreeDelivery ? const Color(0xFFF0FDF4) : const Color(0xFFFFFBEB),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: isFreeDelivery ? const Color(0xFFBBF7D0) : const Color(0xFFFDE68A),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    isFreeDelivery ? Icons.check_circle_outline_rounded : Icons.info_outline_rounded,
-                    size: 15,
-                    color: isFreeDelivery ? brandGreen : brandAmber,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      isPickup
-                          ? 'Store Self-Pickup (Free Delivery)'
-                          : (isFreeDelivery
-                              ? 'FREE Delivery (Subtotal ≥ ₹199)'
-                              : 'Single Delivery Fee: ₹25 (Subtotal < ₹199)'),
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 11),
-                        fontWeight: FontWeight.w700,
-                        color: isFreeDelivery ? const Color(0xFF166534) : const Color(0xFF92400E),
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: isFreeDelivery ? brandGreen : brandAmber,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      isPickup ? 'PICKUP' : (isFreeDelivery ? 'FREE' : '+₹25'),
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 9.5),
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }(),
 
-          // Total & Save Button
-          () {
-            final isPickup = widget.order['deliveryMethod'] == 'PICKUP';
-            final isFreeDelivery = isPickup || subtotal >= 199.0;
-            final estDeliveryFee = isFreeDelivery ? 0.0 : 25.0;
+            double? orderDistance;
+            final rawDistance = widget.order['distanceKm'] ?? widget.order['distance'];
+            if (rawDistance != null) {
+              orderDistance = (rawDistance is num) ? rawDistance.toDouble() : double.tryParse(rawDistance.toString());
+            }
+
+            final deliveryTier = LocationService.getDeliveryTier(
+              orderDistance ?? 1.5,
+              subtotal,
+              settings: storeSettings,
+            );
+
+            final isFreeDelivery = isPickup || (deliveryTier.deliveryFee == 0.0);
+            final estDeliveryFee = isPickup ? 0.0 : deliveryTier.deliveryFee;
+            final freeThreshold = deliveryTier.freeDeliveryThreshold;
+
             final rawMisc = widget.order['miscFee'] ?? widget.order['packagingFee'] ?? 0.0;
             final miscFee = (rawMisc is num) ? rawMisc.toDouble() : (double.tryParse(rawMisc.toString()) ?? 0.0);
             final rawDiscount = widget.order['discount'] ?? 0.0;
             final discount = (rawDiscount is num) ? rawDiscount.toDouble() : (double.tryParse(rawDiscount.toString()) ?? 0.0);
             final estGrandTotal = (subtotal + estDeliveryFee + miscFee - discount).clamp(0.0, 999999.0);
 
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            return Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'SUBTOTAL: ₹${subtotal.toStringAsFixed(0)}',
+                // Delivery Fee Badge
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: isFreeDelivery ? const Color(0xFFF0FDF4) : const Color(0xFFFFFBEB),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isFreeDelivery ? const Color(0xFFBBF7D0) : const Color(0xFFFDE68A),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isFreeDelivery ? Icons.check_circle_outline_rounded : Icons.info_outline_rounded,
+                        size: 15,
+                        color: isFreeDelivery ? brandGreen : brandAmber,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          isPickup
+                              ? 'Store Self-Pickup (Free Delivery)'
+                              : (isFreeDelivery
+                                  ? 'FREE Delivery (Subtotal ≥ ₹${freeThreshold.toInt()})'
+                                  : 'Dynamic Delivery Fee: ₹${estDeliveryFee.toInt()} (Subtotal < ₹${freeThreshold.toInt()})'),
                           style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 10),
+                            fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: FontWeight.w700,
-                            color: slateMuted,
+                            color: isFreeDelivery ? const Color(0xFF166534) : const Color(0xFF92400E),
                           ),
                         ),
-                        if (estDeliveryFee > 0) ...[
-                          const SizedBox(width: 4),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isFreeDelivery ? brandGreen : brandAmber,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          isPickup ? 'PICKUP' : (isFreeDelivery ? 'FREE' : '+₹${estDeliveryFee.toInt()}'),
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 9.5),
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Grand Total & Save Button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 2,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Text(
+                                'Subtotal ₹${subtotal.toStringAsFixed(0)}',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 10.5),
+                                  fontWeight: FontWeight.w700,
+                                  color: slateMuted,
+                                ),
+                              ),
+                              if (estDeliveryFee > 0)
+                                Text(
+                                  '+ ₹${estDeliveryFee.toInt()} Delivery',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 10.5),
+                                    fontWeight: FontWeight.w800,
+                                    color: brandAmber,
+                                  ),
+                                )
+                              else
+                                Text(
+                                  '+ FREE Delivery',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 10.5),
+                                    fontWeight: FontWeight.w800,
+                                    color: brandGreen,
+                                  ),
+                                ),
+                              if (miscFee > 0)
+                                Text(
+                                  '+ ₹${miscFee.toInt()} Packaging/Handling',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 10.5),
+                                    fontWeight: FontWeight.w800,
+                                    color: slateMuted,
+                                  ),
+                                ),
+                              if (discount > 0)
+                                Text(
+                                  '- ₹${discount.toInt()} Discount',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 10.5),
+                                    fontWeight: FontWeight.w800,
+                                    color: brandGreen,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
                           Text(
-                            '+ ₹25 fee',
+                            '₹${estGrandTotal.toStringAsFixed(0)}',
                             style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 10),
-                              fontWeight: FontWeight.w800,
-                              color: brandAmber,
+                              fontSize: Responsive.scaledFontSize(context, 20),
+                              fontWeight: FontWeight.w900,
+                              color: slateDark,
+                            ),
+                          ),
+                          Text(
+                            'Est. Grand Total',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 9),
+                              fontWeight: FontWeight.w600,
+                              color: slateMuted,
                             ),
                           ),
                         ],
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '₹${estGrandTotal.toStringAsFixed(0)}',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 20),
-                        fontWeight: FontWeight.w900,
-                        color: slateDark,
                       ),
                     ),
-                    Text(
-                      'Est. Grand Total',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 9),
-                        fontWeight: FontWeight.w600,
-                        color: slateMuted,
+                    ElevatedButton.icon(
+                      onPressed: _isSaving ? null : _saveChanges,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: themeColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                      ),
+                      icon: _isSaving
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : const Icon(Icons.check_rounded, size: 18),
+                      label: Text(
+                        _isSaving ? 'Saving...' : (widget.isAdmin ? 'Save Order ⚡' : 'Save Changes'),
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 13.5),
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ),
                   ],
-                ),
-                ElevatedButton.icon(
-                  onPressed: _isSaving ? null : _saveChanges,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: themeColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
-                  ),
-                  icon: _isSaving
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : const Icon(Icons.check_rounded, size: 18),
-                  label: Text(
-                    _isSaving ? 'Saving...' : (widget.isAdmin ? 'Save Order ⚡' : 'Save Changes'),
-                    style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 13.5),
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
                 ),
               ],
             );

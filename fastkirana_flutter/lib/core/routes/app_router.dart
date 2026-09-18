@@ -25,6 +25,21 @@ class AppRouter {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
+    final routeName = settings.name ?? '';
+
+    // Handle deep links like /order/<id>/track or /order/<id>
+    final orderTrackMatch = RegExp(r'^/order/([^/]+)/track$').firstMatch(routeName);
+    if (orderTrackMatch != null) {
+      final orderId = orderTrackMatch.group(1) ?? '';
+      return FadeSlideRoute(page: OrderTrackingScreen(orderId: orderId));
+    }
+
+    final orderDetailMatch = RegExp(r'^/order/([^/]+)$').firstMatch(routeName);
+    if (orderDetailMatch != null) {
+      final orderId = orderDetailMatch.group(1) ?? '';
+      return FadeSlideRoute(page: OrderTrackingScreen(orderId: orderId));
+    }
+
     switch (settings.name) {
       case '/':
       case '/splash':

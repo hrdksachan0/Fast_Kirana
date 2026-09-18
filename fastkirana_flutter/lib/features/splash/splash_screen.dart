@@ -7,6 +7,17 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/services/notification_service.dart';
 import '../../widgets/brand_logo.dart';
+import '../../providers/product_provider.dart';
+import '../../providers/banner_provider.dart';
+
+import '../../data/models/product.dart';
+import '../../data/models/category.dart';
+import '../../data/models/banner.dart';
+import '../../data/models/store_hub.dart';
+import '../../core/services/location_service.dart';
+import '../../data/models/address.dart';
+import '../../providers/address_provider.dart';
+import '../../providers/store_hub_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -29,7 +40,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _mainController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 600),
     );
 
     _logoScale = CurvedAnimation(
@@ -52,11 +63,43 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     _mainController.forward();
     _requestAppPermissions();
 
-    // Fast, responsive splash: 450ms minimum brand presentation while resolving auth in parallel
+    // 1. Warm up GPS location & resolve nearest store hub concurrently
+    final locationFuture = LocationService.getCurrentPosition().then((pos) async {
+      if (pos != null) {
+        final details = await LocationService.getAddressFromCoordinates(pos.latitude, pos.longitude);
+        final addr = Address(
+          id: 'gps_${DateTime.now().millisecondsSinceEpoch}',
+          userId: 'current',
+          label: 'Current Location',
+          houseNo: details.houseNo,
+          street: details.street,
+          area: details.area,
+          city: details.city,
+          pincode: details.pincode,
+          latitude: details.latitude,
+          longitude: details.longitude,
+          isDefault: true,
+        );
+        ref.read(selectedAddressProvider.notifier).state = addr;
+      }
+    }).catchError((_) {});
+
+    // 2. Warm up active store hubs, categories, catalog, and banners concurrently during splash
     final prefFuture = SharedPreferences.getInstance();
+    final hubsFuture = ref.read(activeStoreHubsProvider.future).catchError((_) => <StoreHub>[]);
+    final categoriesFuture = ref.read(categoriesProvider.future).catchError((_) => <Category>[]);
+    final catalogFuture = ref.read(homeProductCatalogProvider.future).catchError((_) => <Product>[]);
+    final bannersFuture = ref.read(bannersProvider('grocery').future).catchError((_) => <Banner>[]);
+
+    // Keep splash active until essential catalog and auth are loaded (minimum 1200ms)
     Future.wait([
-      Future.delayed(const Duration(milliseconds: 450)),
+      Future.delayed(const Duration(milliseconds: 1200)),
       prefFuture,
+      locationFuture,
+      hubsFuture,
+      categoriesFuture,
+      catalogFuture,
+      bannersFuture,
     ]).then((results) {
       final prefs = results[1] as SharedPreferences;
       _safeNavigate(prefs: prefs);
@@ -64,8 +107,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       _safeNavigate();
     });
 
-    // Guaranteed watchdog timeout: App will NEVER stay stuck on splash screen for more than 1.5s
-    Future.delayed(const Duration(milliseconds: 1500), () {
+    // Guaranteed watchdog timeout: App will NEVER stay stuck on splash screen for more than 4.0s
+    Future.delayed(const Duration(milliseconds: 4000), () {
       if (!_hasNavigated && mounted) {
         _safeNavigate();
       }

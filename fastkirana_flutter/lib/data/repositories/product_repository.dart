@@ -288,14 +288,8 @@ class ProductRepository {
         .map((json) => Product.fromJson(json as Map<String, dynamic>))
         .toList();
 
-    // Stably place in-stock products first, out-of-stock products at the end (1:1 Web App parity)
-    liveProducts.sort((a, b) {
-      final aInStock = a.isAvailable && a.stock > 0;
-      final bInStock = b.isAvailable && b.stock > 0;
-      if (aInStock && !bInStock) return -1;
-      if (!aInStock && bInStock) return 1;
-      return 0;
-    });
+    // Stably place in-stock products first, then sortOrder desc, then createdAt desc (1:1 Web App parity)
+    liveProducts.sort((a, b) => compareProductsSystematic(a, b));
 
     // Cache in memory and on disk ONLY when fetching the comprehensive catalog without filters
     final isFullCatalog = (category == null || category.isEmpty) &&

@@ -600,134 +600,138 @@ bool isProductInGroceryCategory(Product p, dynamic category) {
   final pSlug = (p.category?.slug ?? '').toLowerCase().trim();
   final pCatName = (p.category?.name ?? '').toLowerCase().trim();
 
-  // 1. Direct ID matches
+  // 1. Direct Exact ID / Parent ID matches
   if (catId.isNotEmpty && (pCatId == catId || pParentId == catId)) return true;
 
-  // 2. Direct Slug matches
+  // 2. Direct Slug matches (Exact match to category slug or parent slug)
   if (catSlug.isNotEmpty && (pSlug == catSlug || pCatId == catSlug || pParentId == catSlug)) return true;
 
   // 3. Direct Name matches
-  if (catName.isNotEmpty && (pCatName == catName || pSlug == catName.replaceAll('&', 'and').replaceAll(RegExp(r'[^a-z0-9]+'), '-'))) return true;
+  if (catName.isNotEmpty && pCatName == catName) return true;
 
-  // 4. Subcategory code match: SUB-<codeId>-XX belongs to CAT-<codeId>
+  // 4. Subcategory code match: SUB-<codeId>-XX or SUB-SUB-<codeId>-XX belongs to CAT-<codeId>
   if (catId.startsWith('cat-')) {
     final catCode = catId.replaceFirst('cat-', '');
-    if (pCatId.startsWith('sub-$catCode-') || pParentId.startsWith('cat-$catCode') || pParentId.startsWith('sub-$catCode-')) {
+    if (pCatId.startsWith('sub-$catCode-') ||
+        pCatId.startsWith('sub-sub-$catCode-') ||
+        pParentId.startsWith('cat-$catCode') ||
+        pParentId.startsWith('sub-$catCode-') ||
+        pParentId.startsWith('sub-sub-$catCode-')) {
+      return true;
+    }
+  } else if (catId.startsWith('sub-')) {
+    if (pCatId.startsWith('$catId-') || pParentId == catId) {
       return true;
     }
   }
 
-  // 5. Category-specific semantic mappings & child subcategory groups (1:1 with Next.js web app)
-  final isFruitsVeg = catSlug == 'fruits-vegetables' || catSlug.contains('fruit') || catSlug.contains('veg') || catName.contains('fruit') || catName.contains('veg');
-  if (isFruitsVeg) {
-    if (pSlug == 'fruits-vegetables' || pSlug == 'fresh-fruits' || pSlug == 'fresh-vegetables' ||
-        pSlug.contains('fruit') || pSlug.contains('veg') || pSlug.contains('produce') ||
-        pCatName.contains('fruit') || pCatName.contains('veg') ||
-        p.tags.any((t) {
-          final tl = t.toLowerCase();
-          return tl == 'fruits' || tl == 'vegetables' || tl == 'fresh fruits' || tl == 'fresh vegetables' || tl == 'produce';
-        })) {
-      return true;
-    }
+  // 5. Explicit Semantic Category-to-Subcategory Mappings (Exact relations, zero false-positives)
+  if (catSlug == 'fruits-vegetables') {
+    return pCatId == 'cat-101' ||
+        pCatId == 'sub-101-01' ||
+        pCatId == 'sub-101-02' ||
+        pParentId == 'cat-101' ||
+        pSlug == 'fresh-fruits' ||
+        pSlug == 'fresh-vegetables' ||
+        pSlug == 'fruits-vegetables';
   }
 
-  final isSnacks = catSlug == 'snacks-munchies' || catSlug.contains('snack') || catSlug.contains('munch') || catName.contains('snack') || catName.contains('munch');
-  if (isSnacks) {
-    if (pSlug == 'snacks-munchies' || pSlug == 'chips-namkeen' || pSlug == 'biscuits-cookies' ||
-        pSlug.contains('snack') || pSlug.contains('munch') || pSlug.contains('chips') || pSlug.contains('namkeen') ||
-        pCatName.contains('snack') || pCatName.contains('munch') || pCatName.contains('chips') || pCatName.contains('namkeen') ||
-        p.tags.any((t) {
-          final tl = t.toLowerCase();
-          return tl == 'snacks' || tl == 'chips' || tl == 'namkeen' || tl == 'munchies';
-        })) {
-      return true;
-    }
+  if (catSlug == 'fresh-fruits') {
+    return pCatId == 'sub-101-01' || pSlug == 'fresh-fruits';
   }
 
-  final isKitchen = catSlug == 'kitchen-needs' || catSlug == 'atta-rice-dal' || catSlug == 'oils-ghee' || catSlug.contains('kitchen') || catSlug.contains('ration') || catName.contains('kitchen') || catName.contains('ration');
-  if (isKitchen) {
-    if (pSlug == 'kitchen-needs' || pSlug == 'atta-rice-dal' || pSlug == 'oils-ghee' || pSlug == 'masalas-spices' ||
-        pSlug.contains('atta') || pSlug.contains('rice') || pSlug.contains('dal') || pSlug.contains('oil') || pSlug.contains('grain') || pSlug.contains('pulse') || pSlug.contains('spice') || pSlug.contains('masala') ||
-        pCatName.contains('kitchen') || pCatName.contains('ration') || pCatName.contains('atta') || pCatName.contains('rice') || pCatName.contains('dal') || pCatName.contains('oil') ||
-        p.tags.any((t) {
-          final tl = t.toLowerCase();
-          return tl == 'kitchen' || tl == 'ration' || tl == 'atta' || tl == 'dal' || tl == 'rice' || tl == 'oil';
-        })) {
-      return true;
-    }
+  if (catSlug == 'fresh-vegetables') {
+    return pCatId == 'sub-101-02' || pSlug == 'fresh-vegetables';
   }
 
-  final isPackaged = catSlug == 'packaged-foods' || catSlug.contains('pack') || catName.contains('pack');
-  if (isPackaged) {
-    if (pSlug == 'packaged-foods' || pSlug == 'noodles-pasta' || pSlug == 'instant-food' ||
-        pSlug.contains('pack') || pSlug.contains('noodle') || pSlug.contains('pasta') || pSlug.contains('sauce') ||
-        pCatName.contains('packaged') || pCatName.contains('instant')) {
-      return true;
-    }
+  if (catSlug == 'kitchen-ration' || catSlug == 'kitchen-needs') {
+    return pCatId == 'cat-113' ||
+        pCatId.startsWith('sub-113-') ||
+        pParentId == 'cat-113' ||
+        pSlug == 'atta-rice-sugar' ||
+        pSlug == 'oils-ghee' ||
+        pSlug == 'dals-pulses' ||
+        pSlug == 'spices-masala' ||
+        pSlug == 'tea-coffee-salt';
   }
 
-  final isIceCream = catSlug == 'ice-cream' || catSlug == 'desserts' || catSlug.contains('ice') || catSlug.contains('dessert') || catName.contains('ice') || catName.contains('dessert');
-  if (isIceCream) {
-    if (pSlug == 'ice-cream' || pSlug == 'desserts' || pSlug.contains('ice-cream') || pSlug.contains('dessert') || pSlug.contains('kulfi') ||
-        pCatName.contains('ice cream') || pCatName.contains('dessert') || pCatName.contains('kulfi')) {
-      return true;
-    }
+  if (catSlug == 'dry-fruits-super-foods' || catSlug == 'dry-fruits' || catSlug == 'healthy-foods') {
+    return pCatId == 'cat-114' ||
+        pCatId.startsWith('sub-114-') ||
+        pParentId == 'cat-114' ||
+        pSlug == 'dry-fruits-nuts-seeds' ||
+        pSlug == 'dry-fruits-super-foods';
   }
 
-  final isChoco = catSlug == 'chocolates' || catSlug == 'sweets' || catSlug.contains('choco') || catSlug.contains('sweet') || catName.contains('choco') || catName.contains('sweet');
-  if (isChoco) {
-    if (pSlug == 'chocolates' || pSlug == 'sweets' || pSlug.contains('choco') || pSlug.contains('sweet') || pSlug.contains('candy') ||
-        pCatName.contains('chocolate') || pCatName.contains('sweet') || pCatName.contains('mithai')) {
-      return true;
-    }
+  if (catSlug == 'cakes-chocolates' || catSlug == 'chocolates' || catSlug == 'sweets') {
+    return pCatId == 'cat-115' ||
+        pCatId.startsWith('sub-115-') ||
+        pCatId.startsWith('sub-sub-115-') ||
+        pParentId == 'cat-115' ||
+        pParentId.startsWith('sub-115-') ||
+        pSlug == 'chocolates-sweets' ||
+        pSlug == 'cakes' ||
+        pSlug == 'cookies-namkeen' ||
+        pSlug == 'cookies' ||
+        pSlug == 'namkeen';
   }
 
-  final isBeverage = catSlug == 'beverages' || catSlug == 'cold-drinks' || catSlug.contains('beverage') || catSlug.contains('drink') || catName.contains('beverage') || catName.contains('drink');
-  if (isBeverage) {
-    if (pSlug == 'beverages' || pSlug == 'cold-drinks' || pSlug == 'juices' || pSlug.contains('drink') || pSlug.contains('beverage') || pSlug.contains('juice') || pSlug.contains('soda') ||
-        pCatName.contains('beverage') || pCatName.contains('drink') || pCatName.contains('juice') ||
-        p.tags.any((t) {
-          final tl = t.toLowerCase();
-          return tl == 'beverages' || tl == 'cold drink' || tl == 'juice' || tl == 'drink';
-        })) {
-      return true;
-    }
+  if (catSlug == 'cookies-namkeen') {
+    return pCatId == 'sub-115-01' ||
+        pCatId.startsWith('sub-sub-115-01-') ||
+        pParentId == 'sub-115-01' ||
+        pSlug == 'cookies' ||
+        pSlug == 'namkeen' ||
+        pSlug == 'cookies-namkeen';
   }
 
-  final isPersonalCare = catSlug == 'personal-care' || catSlug.contains('personal') || catSlug.contains('care') || catName.contains('personal') || catName.contains('care');
-  if (isPersonalCare) {
-    if (pSlug == 'personal-care' || pSlug == 'bath-body' || pSlug == 'hair-care' || pSlug == 'skin-care' ||
-        pSlug.contains('personal') || pSlug.contains('skin') || pSlug.contains('hair') || pSlug.contains('soap') ||
-        pCatName.contains('personal') || pCatName.contains('care') || pCatName.contains('hygiene')) {
-      return true;
-    }
+  if (catSlug == 'packaged-items' || catSlug == 'packaged-foods') {
+    return pCatId == 'cat-104' ||
+        pCatId.startsWith('sub-104-') ||
+        pParentId == 'cat-104' ||
+        pSlug == 'sauces-spreads' ||
+        pSlug == 'breakfast-diet';
   }
 
-  final isCleaning = catSlug == 'home-needs-and-cleaning' || catSlug == 'cleaning-household' || catSlug.contains('clean') || catSlug.contains('home') || catName.contains('clean') || catName.contains('home');
-  if (isCleaning) {
-    if (pSlug == 'home-needs-and-cleaning' || pSlug == 'cleaning-household' || pSlug == 'detergents' ||
-        pSlug.contains('clean') || pSlug.contains('detergent') || pSlug.contains('household') ||
-        pCatName.contains('cleaning') || pCatName.contains('household') || pCatName.contains('home needs')) {
-      return true;
-    }
+  if (catSlug == 'beverages' || catSlug == 'cold-drinks' || catSlug == 'drinks') {
+    return pCatId == 'cat-108' ||
+        pCatId.startsWith('sub-108-') ||
+        pParentId == 'cat-108' ||
+        pSlug == 'beverages' ||
+        pSlug == 'cold-drinks' ||
+        pSlug == 'juices';
   }
 
-  final isBakery = catSlug == 'bakery' || catSlug == 'bakery-biscuits' || catSlug.contains('bakery') || catSlug.contains('biscuit') || catName.contains('bakery') || catName.contains('biscuit');
-  if (isBakery) {
-    if (pSlug == 'bakery' || pSlug == 'bakery-biscuits' || pSlug == 'bread-pav' ||
-        pSlug.contains('baker') || pSlug.contains('biscuit') || pSlug.contains('bread') || pSlug.contains('rusk') ||
-        pCatName.contains('bakery') || pCatName.contains('biscuit') || pCatName.contains('bread')) {
-      return true;
-    }
+  if (catSlug == 'ice-cream' || catSlug == 'desserts') {
+    return pCatId == 'cat-105' ||
+        pCatId.startsWith('sub-105-') ||
+        pParentId == 'cat-105' ||
+        pSlug == 'ice-cream' ||
+        pSlug == 'desserts';
   }
 
-  final isHealthy = catSlug == 'healthy-foods' || catSlug.contains('health') || catName.contains('health');
-  if (isHealthy) {
-    if (pSlug == 'healthy-foods' || pSlug == 'dry-fruits' || pSlug == 'organic' ||
-        pSlug.contains('health') || pSlug.contains('dry-fruit') || pSlug.contains('oat') ||
-        pCatName.contains('health') || pCatName.contains('dry fruit')) {
-      return true;
-    }
+  if (catSlug == 'personal-care') {
+    return pCatId == 'cat-109' ||
+        pCatId.startsWith('sub-109-') ||
+        pParentId == 'cat-109' ||
+        pSlug == 'hair-care-cosmetics' ||
+        pSlug == 'oral-care-hygeine';
+  }
+
+  if (catSlug == 'home-needs-and-cleaning' || catSlug == 'cleaning-household') {
+    return pCatId == 'cat-107' ||
+        pCatId.startsWith('sub-107-') ||
+        pParentId == 'cat-107' ||
+        pSlug == 'dishwashing' ||
+        pSlug == 'pest-control-utilites' ||
+        pSlug == 'laundary-care';
+  }
+
+  if (catSlug == 'dairy-products') {
+    return pCatId == 'cat-116' ||
+        pCatId.startsWith('sub-116-') ||
+        pParentId == 'cat-116' ||
+        pSlug == 'dairy-products';
   }
 
   return false;

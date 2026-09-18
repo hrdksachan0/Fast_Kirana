@@ -15,6 +15,7 @@ import '../../core/theme/design_system.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../data/models/product.dart';
 import '../../data/models/category.dart';
+import '../../data/models/address.dart';
 import '../../data/models/order.dart';
 import '../../data/models/store_settings.dart';
 import '../../providers/cart_provider.dart';
@@ -248,16 +249,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // Infinite scroll listener for seamless product pagination (Blinkit / Zepto)
     _homeScrollController.addListener(_onHomeScroll);
 
-    // Check for app version updates and silent background location drift (Zepto / Blinkit style)
+    // Check for app version updates and background location resolve (Zepto / Blinkit style)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         AppUpdateDialog.checkAndShow(context, ref);
-        // Silent background check for location drift after smooth initial render
-        Future.delayed(const Duration(milliseconds: 1500), () {
-          if (mounted) {
-            LocationService.checkLocationDriftAndPrompt(context, ref);
-          }
-        });
+        // If no address selected yet, auto-fetch GPS location and resolve nearest dark store hub
+        if (ref.read(selectedAddressProvider) == null) {
+          LocationService.getCurrentPosition().then((pos) async {
+            if (pos != null && mounted) {
+              final details = await LocationService.getAddressFromCoordinates(pos.latitude, pos.longitude);
+              final addr = Address(
+                id: 'gps_${DateTime.now().millisecondsSinceEpoch}',
+                userId: 'current',
+                label: 'Current Location',
+                houseNo: details.houseNo,
+                street: details.street,
+                area: details.area,
+                city: details.city,
+                pincode: details.pincode,
+                latitude: details.latitude,
+                longitude: details.longitude,
+                isDefault: true,
+              );
+              ref.read(selectedAddressProvider.notifier).state = addr;
+              ref.invalidate(homeProductCatalogProvider);
+            }
+          }).catchError((_) {});
+        } else {
+          // Silent background check for location drift after smooth initial render
+          Future.delayed(const Duration(milliseconds: 1500), () {
+            if (mounted) {
+              LocationService.checkLocationDriftAndPrompt(context, ref);
+            }
+          });
+        }
       }
     });
   }
@@ -324,12 +349,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       return true;
     }).toList();
 
+    final List<Product> result;
     if (_selectedFilterIndex > 0 && _selectedFilterIndex <= groceryCategories.length) {
       final selectedCat = groceryCategories[_selectedFilterIndex - 1];
-      return groceryItems.where((p) => isProductInGroceryCategory(p, selectedCat)).toList();
+      result = groceryItems.where((p) => isProductInGroceryCategory(p, selectedCat)).toList();
+    } else {
+      result = groceryItems;
     }
-
-    return groceryItems;
+    result.sort((a, b) => compareProductsSystematic(a, b));
+    return result;
   }
 
   String _getTimeBasedTab() {
@@ -2677,6 +2705,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               .where((p) => isProductInGroceryCategory(p, cat))
               .toList();
           if (categoryProducts.isEmpty) continue;
+          categoryProducts.sort((a, b) => compareProductsSystematic(a, b));
           final catIdLower = cat.id.toLowerCase().trim();
           final catSlugLower = cat.slug.toLowerCase().trim();
           final childSubcategories = categories.where((c) {
@@ -2778,16 +2807,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         orElse: () => childSubcategories.first,
       );
       final targetId = selectedSub.id.toLowerCase().trim();
+      final targetSlug = selectedSub.slug.toLowerCase().trim();
 
       products = allCategoryProducts.where((p) {
         final pCatId = (p.categoryId ?? '').toLowerCase().trim();
         final pSubId = (p.category?.id ?? '').toLowerCase().trim();
+        final pSlug = (p.category?.slug ?? '').toLowerCase().trim();
 
-        return pCatId == targetId || pSubId == targetId;
+        return pCatId == targetId || pSubId == targetId || pSlug == targetSlug;
       }).toList();
     }
 
     final displayProducts = products.take(10).toList();
+    final bool showSeeAllCard = displayProducts.length >= 4 || totalCount > displayProducts.length;
+    final int shelfItemCount = displayProducts.length + (showSeeAllCard ? 1 : 0);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 18, 0, 4),
@@ -2962,7 +2995,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
                   padding: EdgeInsets.only(right: Responsive.horizontalPadding(context)),
-                  itemCount: displayProducts.length + 1,
+                  itemCount: shelfItemCount,
                   separatorBuilder: (_, __) => SizedBox(width: Responsive.isSmallMobile(context) ? 8 : 10),
                   itemBuilder: (context, index) {
                     if (index < displayProducts.length) {

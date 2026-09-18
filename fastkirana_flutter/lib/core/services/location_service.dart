@@ -120,6 +120,20 @@ class LocationService {
 
     final cityLabel = resolvedStoreName.isNotEmpty ? '$resolvedStoreName ' : '';
 
+    if (distanceKm > radius) {
+      return DeliveryTierInfo(
+        distanceKm: distanceKm,
+        deliveryFee: 0.0,
+        baseFee: 0.0,
+        surgeFee: 0.0,
+        freeDeliveryThreshold: tier3Threshold + 100.0,
+        isServiceable: false,
+        tierName: 'Outside ${radius.toInt()} km (Out of Zone)',
+        freeDeliveryLabel: 'Outside delivery zone',
+        feeDescription: 'Delivery is currently limited to a maximum of ${radius.toStringAsFixed(1)} km from our central hub.',
+      );
+    }
+
     if (distanceKm <= 2.0) {
       final isFree = subtotal >= tier1Threshold;
       final totalFee = isFree ? 0.0 : (tier1Fee + surgeFee);

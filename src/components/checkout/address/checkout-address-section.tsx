@@ -52,7 +52,7 @@ export function CheckoutAddressSection({
   setAddressForm,
   storeLat,
   storeLng,
-  storeSettingsMap,
+  storeSettingsMap = {},
   handleDetectLocationForCheckout,
   handleSaveAddress,
   handleEditAddressClick,
@@ -180,7 +180,7 @@ export function CheckoutAddressSection({
                     '5.0'
                 )
 
-                if (addrDist === null) return null
+                if (addrDist === null || isNaN(Number(addrDist))) return null
 
                 if (addrDist > maxRadiusKm) {
                   return (

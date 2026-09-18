@@ -29,6 +29,29 @@ async function getOrderDetails(id: string) {
     if (orders.length === 0) return null
     const order = orders[0]
 
+    // Auto-heal / Auto-sync with Cashfree if order is marked unpaid but was paid online
+    if (order && order.paymentStatus !== 'PAID' && order.paymentMethod !== 'COD') {
+      try {
+        const { getCashfreeOrder } = await import('@/lib/cashfree')
+        const cfOrder = await getCashfreeOrder(order.id)
+        if (cfOrder && cfOrder.order_status === 'PAID') {
+          order.paymentStatus = 'PAID'
+          order.paymentMethod = 'UPI'
+          if (order.combinedId) {
+            await prisma.$executeRaw`
+              UPDATE orders SET "paymentStatus" = 'PAID'::"PaymentStatus", "paymentMethod" = 'UPI'::"PaymentMethod", "updatedAt" = NOW() WHERE "combinedId" = ${order.combinedId}
+            `
+          } else {
+            await prisma.$executeRaw`
+              UPDATE orders SET "paymentStatus" = 'PAID'::"PaymentStatus", "paymentMethod" = 'UPI'::"PaymentMethod", "updatedAt" = NOW() WHERE id = ${order.id}
+            `
+          }
+        }
+      } catch (cfErr) {
+        // Fallback silently
+      }
+    }
+
     // Fetch address
     const address = await prisma.address.findUnique({
       where: { id: order.addressId },
@@ -227,13 +250,16 @@ async function getOrderDetails(id: string) {
 }
 
 export default async function OrderTrackingPage({ params }: OrderTrackingPageProps) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    redirect('/login')
-  }
-
   const { id } = await params
+  const session = await auth()
   const initialOrder = await getOrderDetails(id)
+
+  if (!initialOrder) {
+    if (!session?.user?.id) {
+      redirect('/login')
+    }
+    redirect('/')
+  }
 
   return <TrackingPageClient orderId={id} initialOrder={initialOrder} />
 }

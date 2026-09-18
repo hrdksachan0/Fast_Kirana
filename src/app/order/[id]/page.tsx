@@ -17,12 +17,8 @@ interface OrderConfirmPageProps {
 }
 
 export default async function OrderConfirmPage({ params }: OrderConfirmPageProps) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    redirect('/login')
-  }
-
   const { id } = await params
+  const session = await auth()
 
   let order: any = null
   let companionOrder = null
@@ -194,8 +190,13 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
     notFound()
   }
 
-  // Verify ownership
-  if (order.userId !== session.user.id && session.user.role !== 'ADMIN') {
+  // Verify ownership or direct secret link access
+  const isDirectSecretLink = id === order.id && typeof order.id === 'string' && order.id.length >= 20
+  if (!isDirectSecretLink && !session?.user?.id) {
+    redirect('/login')
+  }
+
+  if (session?.user?.id && !isDirectSecretLink && order.userId !== session.user.id && session.user.role !== 'ADMIN') {
     redirect('/')
   }
 

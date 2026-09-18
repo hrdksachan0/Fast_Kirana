@@ -15,7 +15,6 @@ import '../../data/repositories/auth_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/address_provider.dart';
 import '../../providers/wishlist_provider.dart';
-import '../../providers/product_provider.dart';
 import '../auth/login_screen.dart';
 import '../delivery/delivery_dashboard.dart';
 import '../delivery/picker_dashboard.dart';
