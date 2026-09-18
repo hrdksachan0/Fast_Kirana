@@ -839,6 +839,7 @@ export function OrdersTab({
                     onSyncCashfreePayment={handleSyncCashfreePayment}
                     onConvertToCOD={handleConvertToCOD}
                     onSendWhatsAppReminder={handleSendWhatsAppReminder}
+                    onStatusSelectChange={handleStatusSelectChange}
                     onCancelOrder={(order) => setCancelConfirmOrder(order)}
                     onRefundOrder={(order) => setRefundOrder(order)}
                     onSendKOT={sendRemotePrintKOT}
@@ -1416,6 +1417,7 @@ export function OrdersTab({
                   onSyncCashfreePayment={handleSyncCashfreePayment}
                   onConvertToCOD={handleConvertToCOD}
                   onSendWhatsAppReminder={handleSendWhatsAppReminder}
+                  onStatusSelectChange={handleStatusSelectChange}
                   onCancelOrder={(order) => setCancelConfirmOrder(order)}
                   onRefundOrder={(order) => setRefundOrder(order)}
                   onSendKOT={sendRemotePrintKOT}

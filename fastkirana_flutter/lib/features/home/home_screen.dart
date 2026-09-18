@@ -326,7 +326,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     if (_selectedFilterIndex > 0 && _selectedFilterIndex <= groceryCategories.length) {
       final selectedCat = groceryCategories[_selectedFilterIndex - 1];
-      return groceryItems.where((p) => _isProductInCategory(p, selectedCat)).toList();
+      return groceryItems.where((p) => isProductInGroceryCategory(p, selectedCat)).toList();
     }
 
     return groceryItems;
@@ -2674,12 +2674,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
         for (final cat in targetCategories) {
           final categoryProducts = allProducts
-              .where((p) => _isProductInCategory(p, cat))
+              .where((p) => isProductInGroceryCategory(p, cat))
               .toList();
           if (categoryProducts.isEmpty) continue;
-          final childSubcategories = categories.where((c) =>
-            c.parentId != null && c.parentId!.isNotEmpty && c.parentId!.toLowerCase().trim() == cat.id.toLowerCase().trim()
-          ).toList();
+          final catIdLower = cat.id.toLowerCase().trim();
+          final catSlugLower = cat.slug.toLowerCase().trim();
+          final childSubcategories = categories.where((c) {
+            if (c.parentId == null || c.parentId!.isEmpty) return false;
+            final pId = c.parentId!.toLowerCase().trim();
+            return pId == catIdLower || pId == catSlugLower;
+          }).toList();
 
           slivers.add(
             SliverToBoxAdapter(
@@ -2695,31 +2699,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         return slivers;
       },
     );
-  }
-
-  bool _isProductInCategory(Product p, Category cat) {
-    if (p.restaurantId != null && p.restaurantId!.isNotEmpty) return false;
-    if (p.restaurant != null) return false;
-
-    final catId = cat.id.toLowerCase().trim();
-    final pCatId = (p.category?.id ?? p.categoryId ?? '').toLowerCase().trim();
-    final pParentId = (p.category?.parentId ?? '').toLowerCase().trim();
-
-    // 0. Direct Category ID match
-    if (pCatId.isNotEmpty && pCatId == catId) return true;
-
-    // 1. Direct Parent ID match (Product's subcategory has parentId == cat.id)
-    if (pParentId.isNotEmpty && pParentId == catId) return true;
-
-    // 2. Subcategory code match: SUB-<codeId>-XX belongs to CAT-<codeId>
-    if (catId.startsWith('cat-')) {
-      final code = catId.replaceFirst('cat-', '');
-      if (pCatId.startsWith('sub-$code-') || pParentId.startsWith('cat-$code')) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
   String _getCategorySubtitle(String name) {
@@ -3442,7 +3421,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
           // Also count loaded catalog products matching this parent category
           if (catalogProducts.isNotEmpty) {
-            final liveMatches = catalogProducts.where((p) => _isProductInCategory(p, parent)).length;
+            final liveMatches = catalogProducts.where((p) => isProductInGroceryCategory(p, parent)).length;
             if (liveMatches > totalCount) {
               totalCount = liveMatches;
             }

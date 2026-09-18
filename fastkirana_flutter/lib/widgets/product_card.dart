@@ -947,8 +947,22 @@ class _ProductCardState extends ConsumerState<ProductCard> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(s(18)),
-              border: Border.all(color: isFood ? const Color(0xFFFED7AA).withValues(alpha: 0.5) : const Color(0xFFF1F5F9), width: s(1.2)),
-              boxShadow: [BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.04), blurRadius: s(8), offset: Offset(0, s(2)))],
+              border: Border.all(
+                color: isFood ? const Color(0xFFFED7AA).withValues(alpha: 0.6) : const Color(0xFFE2E8F0).withValues(alpha: 0.7),
+                width: s(1.1),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                  blurRadius: s(10),
+                  offset: Offset(0, s(3)),
+                ),
+                BoxShadow(
+                  color: primaryColor.withValues(alpha: 0.03),
+                  blurRadius: s(6),
+                  offset: Offset(0, s(1)),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -982,7 +996,13 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                       Expanded(
                         child: Text(
                           product.name,
-                          style: GoogleFonts.inter(fontSize: s(12), fontWeight: FontWeight.w700, color: const Color(0xFF0F172A), height: 1.2, letterSpacing: -0.2),
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: s(12.5),
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF0F172A),
+                            height: 1.25,
+                            letterSpacing: -0.3,
+                          ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),

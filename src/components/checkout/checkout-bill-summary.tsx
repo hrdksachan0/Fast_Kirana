@@ -100,22 +100,33 @@ export function CheckoutBillSummary({
 
         <div className="flex justify-between text-text-secondary items-center">
           <div className="flex flex-col text-left">
-            <span>Delivery Charge</span>
-            <span className="text-[9px] text-text-muted">
+            <span className="font-bold">
+              Delivery Charge
+              {distanceKm !== null && (
+                <span className="ml-1.5 text-[10px] font-mono font-bold text-primary">
+                  ({distanceKm.toFixed(1)} km)
+                </span>
+              )}
+            </span>
+            <span className="text-[9.5px] text-text-muted mt-0.5">
               {deliveryRules?.zoneName ? `${deliveryRules.zoneName} · ` : ''}
               {adjustedSubtotal >=
               (deliveryRules && deliveryRules.isServiceable
                 ? deliveryRules.freeDeliveryThreshold
                 : groceryThreshold || 200)
-                ? `Free delivery on orders ${formatPrice(
+                ? `FREE Delivery unlocked on orders ${formatPrice(
                     deliveryRules && deliveryRules.isServiceable
                       ? deliveryRules.freeDeliveryThreshold
                       : groceryThreshold || 200
-                  )}+`
-                : `Standard delivery fee`}
+                  )}+ 🎉`
+                : `Free above ${formatPrice(
+                    deliveryRules && deliveryRules.isServiceable
+                      ? deliveryRules.freeDeliveryThreshold
+                      : groceryThreshold || 200
+                  )}`}
             </span>
           </div>
-          <span className={cn(baseDeliveryFee === 0 ? 'text-accent font-black text-xs' : '')}>
+          <span className={cn(baseDeliveryFee === 0 ? 'text-accent font-black text-xs' : 'font-bold')}>
             {baseDeliveryFee === 0 ? 'FREE 🎉' : formatPrice(baseDeliveryFee)}
           </span>
         </div>

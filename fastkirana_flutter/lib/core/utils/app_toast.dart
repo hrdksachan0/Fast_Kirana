@@ -198,7 +198,7 @@ class _GenZTopToastWidgetState extends State<_GenZTopToastWidget> {
 
     final topPadding = MediaQuery.of(context).padding.top;
     final screenWidth = MediaQuery.of(context).size.width;
-    final maxWidth = (screenWidth * 0.92).clamp(280.0, 440.0);
+    final maxWidth = (screenWidth - 28).clamp(280.0, 540.0);
 
     return Positioned(
       top: topPadding + 8,
@@ -214,13 +214,13 @@ class _GenZTopToastWidgetState extends State<_GenZTopToastWidget> {
             onDismissed: (_) => widget.onDismiss(),
             child: TweenAnimationBuilder<double>(
               tween: Tween(begin: 0.0, end: _isExiting ? 0.0 : 1.0),
-              duration: const Duration(milliseconds: 320),
-              curve: Curves.easeOutBack,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
               builder: (context, value, child) {
                 return Transform.translate(
-                  offset: Offset(0, (1 - value) * -40),
+                  offset: Offset(0, (1 - value) * -36),
                   child: Transform.scale(
-                    scale: 0.9 + (value * 0.1),
+                    scale: 0.92 + (value * 0.08),
                     child: Opacity(
                       opacity: value.clamp(0.0, 1.0),
                       child: child,
@@ -232,32 +232,33 @@ class _GenZTopToastWidgetState extends State<_GenZTopToastWidget> {
                 onTap: () {
                   HapticFeedback.lightImpact();
                   setState(() => _isExiting = true);
-                  Future.delayed(const Duration(milliseconds: 200), widget.onDismiss);
+                  Future.delayed(const Duration(milliseconds: 180), widget.onDismiss);
                 },
                 child: Container(
                   width: maxWidth,
-                  padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                   decoration: BoxDecoration(
-                    color: const Color(0xF20B1120),
-                    borderRadius: BorderRadius.circular(20),
+                    color: const Color(0xF50B1120),
+                    borderRadius: BorderRadius.circular(18),
                     border: Border.all(
-                      color: accentColor.withValues(alpha: 0.45),
+                      color: accentColor.withValues(alpha: 0.5),
                       width: 1.2,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: accentColor.withValues(alpha: 0.22),
-                        blurRadius: 24,
-                        offset: const Offset(0, 8),
+                        color: accentColor.withValues(alpha: 0.25),
+                        blurRadius: 20,
+                        offset: const Offset(0, 6),
                       ),
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.4),
-                        blurRadius: 16,
+                        color: Colors.black.withValues(alpha: 0.45),
+                        blurRadius: 14,
                         offset: const Offset(0, 4),
                       ),
                     ],
                   ),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       // Vibrant Glow Icon Capsule
                       Container(
@@ -272,7 +273,7 @@ class _GenZTopToastWidgetState extends State<_GenZTopToastWidget> {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: accentColor.withValues(alpha: 0.4),
+                              color: accentColor.withValues(alpha: 0.45),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -282,56 +283,58 @@ class _GenZTopToastWidgetState extends State<_GenZTopToastWidget> {
                           child: Icon(icon, color: Colors.white, size: 20),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 11),
 
-                      // Title and Subtitle Column
+                      // Title and Subtitle Column (Multi-line, Zero Truncation)
                       Expanded(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Expanded(
                                   child: Text(
                                     widget.title,
                                     style: GoogleFonts.inter(
                                       fontSize: Responsive.scaledFontSize(context, 13),
-                                      fontWeight: FontWeight.w900,
+                                      fontWeight: FontWeight.w800,
                                       color: Colors.white,
-                                      letterSpacing: -0.3,
+                                      letterSpacing: -0.2,
+                                      height: 1.25,
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.visible,
                                   ),
                                 ),
-                                const SizedBox(width: 6),
+                                const SizedBox(width: 4),
                                 Text(badgeEmoji, style: const TextStyle(fontSize: 12)),
                               ],
                             ),
                             if (widget.subtitle != null && widget.subtitle!.trim().isNotEmpty) ...[
-                              const SizedBox(height: 2),
+                              const SizedBox(height: 3),
                               Text(
                                 widget.subtitle!.trim(),
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 11),
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w500,
                                   color: const Color(0xFF94A3B8),
-                                  height: 1.2,
+                                  height: 1.3,
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                maxLines: 3,
+                                overflow: TextOverflow.visible,
                               ),
                             ],
                           ],
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 8),
 
-                      // Subtle swipe-up pull bar
+                      // Subtle swipe-up pull indicator
                       Container(
-                        width: 3,
-                        height: 16,
+                        width: 3.5,
+                        height: 18,
                         decoration: BoxDecoration(
                           color: const Color(0xFF334155),
                           borderRadius: BorderRadius.circular(2),

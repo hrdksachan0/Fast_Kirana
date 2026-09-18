@@ -61,9 +61,27 @@ export function CartStickyBar() {
 
   if (!mounted || items.length === 0 || isCartOpen || isIgnoredPage) return null
 
+  const settings = useUIStore((s) => s.settings) || {}
+  const userDistanceKm = useUIStore((s) => s.userDistanceKm)
+
   const subtotal = getSubtotal()
-  const needsForFreeDelivery = FREE_DELIVERY_THRESHOLD - subtotal
-  const deliveryProgress = Math.min((subtotal / FREE_DELIVERY_THRESHOLD) * 100, 100)
+
+  // Dynamic Free Delivery Threshold based on live Admin Store Settings
+  const dynamicThreshold = (() => {
+    const t1 = parseFloat(settings['delivery_threshold_tier1'] || settings['grocery_free_delivery_threshold'] || '199')
+    const t2 = parseFloat(settings['delivery_threshold_tier2'] || '299')
+    const t3 = parseFloat(settings['delivery_threshold_tier3'] || '399')
+
+    if (userDistanceKm !== null && userDistanceKm !== undefined) {
+      if (userDistanceKm <= 2.0) return t1
+      if (userDistanceKm <= 3.0) return t2
+      return t3
+    }
+    return t1
+  })()
+
+  const needsForFreeDelivery = dynamicThreshold - subtotal
+  const deliveryProgress = Math.min((subtotal / dynamicThreshold) * 100, 100)
   const hasFreeDelivery = needsForFreeDelivery <= 0
 
   return (

@@ -1,5 +1,6 @@
 import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'dart:convert';
+import 'category.dart';
 
 class Product {
   final String id;
@@ -564,4 +565,170 @@ int compareProductMapsSystematic(Map<String, dynamic> a, Map<String, dynamic> b,
   final aName = (a['name'] ?? '').toString().toLowerCase();
   final bName = (b['name'] ?? '').toString().toLowerCase();
   return aName.compareTo(bName);
+}
+
+/// Robust category membership checker with 1:1 Web App and DB parity.
+/// Supports checking by Category model, category ID, slug, or name.
+bool isProductInGroceryCategory(Product p, dynamic category) {
+  if (p.restaurantId != null && p.restaurantId!.isNotEmpty) return false;
+  if (p.restaurant != null) return false;
+
+  String catId = '';
+  String catSlug = '';
+  String catName = '';
+
+  if (category is Category) {
+    catId = category.id.toLowerCase().trim();
+    catSlug = category.slug.toLowerCase().trim();
+    catName = category.name.toLowerCase().trim();
+  } else if (category is String) {
+    final s = category.toLowerCase().trim();
+    catId = s;
+    catSlug = s;
+    catName = s;
+  } else if (category is Map<String, dynamic>) {
+    catId = (category['id'] ?? '').toString().toLowerCase().trim();
+    catSlug = (category['slug'] ?? '').toString().toLowerCase().trim();
+    catName = (category['name'] ?? '').toString().toLowerCase().trim();
+  }
+
+  if (catId.isEmpty && catSlug.isEmpty && catName.isEmpty) return true;
+  if (catId == 'all' || catSlug == 'all') return true;
+
+  final pCatId = (p.category?.id ?? p.categoryId ?? '').toLowerCase().trim();
+  final pParentId = (p.category?.parentId ?? '').toLowerCase().trim();
+  final pSlug = (p.category?.slug ?? '').toLowerCase().trim();
+  final pCatName = (p.category?.name ?? '').toLowerCase().trim();
+
+  // 1. Direct ID matches
+  if (catId.isNotEmpty && (pCatId == catId || pParentId == catId)) return true;
+
+  // 2. Direct Slug matches
+  if (catSlug.isNotEmpty && (pSlug == catSlug || pCatId == catSlug || pParentId == catSlug)) return true;
+
+  // 3. Direct Name matches
+  if (catName.isNotEmpty && (pCatName == catName || pSlug == catName.replaceAll('&', 'and').replaceAll(RegExp(r'[^a-z0-9]+'), '-'))) return true;
+
+  // 4. Subcategory code match: SUB-<codeId>-XX belongs to CAT-<codeId>
+  if (catId.startsWith('cat-')) {
+    final catCode = catId.replaceFirst('cat-', '');
+    if (pCatId.startsWith('sub-$catCode-') || pParentId.startsWith('cat-$catCode') || pParentId.startsWith('sub-$catCode-')) {
+      return true;
+    }
+  }
+
+  // 5. Category-specific semantic mappings & child subcategory groups (1:1 with Next.js web app)
+  final isFruitsVeg = catSlug == 'fruits-vegetables' || catSlug.contains('fruit') || catSlug.contains('veg') || catName.contains('fruit') || catName.contains('veg');
+  if (isFruitsVeg) {
+    if (pSlug == 'fruits-vegetables' || pSlug == 'fresh-fruits' || pSlug == 'fresh-vegetables' ||
+        pSlug.contains('fruit') || pSlug.contains('veg') || pSlug.contains('produce') ||
+        pCatName.contains('fruit') || pCatName.contains('veg') ||
+        p.tags.any((t) {
+          final tl = t.toLowerCase();
+          return tl == 'fruits' || tl == 'vegetables' || tl == 'fresh fruits' || tl == 'fresh vegetables' || tl == 'produce';
+        })) {
+      return true;
+    }
+  }
+
+  final isSnacks = catSlug == 'snacks-munchies' || catSlug.contains('snack') || catSlug.contains('munch') || catName.contains('snack') || catName.contains('munch');
+  if (isSnacks) {
+    if (pSlug == 'snacks-munchies' || pSlug == 'chips-namkeen' || pSlug == 'biscuits-cookies' ||
+        pSlug.contains('snack') || pSlug.contains('munch') || pSlug.contains('chips') || pSlug.contains('namkeen') ||
+        pCatName.contains('snack') || pCatName.contains('munch') || pCatName.contains('chips') || pCatName.contains('namkeen') ||
+        p.tags.any((t) {
+          final tl = t.toLowerCase();
+          return tl == 'snacks' || tl == 'chips' || tl == 'namkeen' || tl == 'munchies';
+        })) {
+      return true;
+    }
+  }
+
+  final isKitchen = catSlug == 'kitchen-needs' || catSlug == 'atta-rice-dal' || catSlug == 'oils-ghee' || catSlug.contains('kitchen') || catSlug.contains('ration') || catName.contains('kitchen') || catName.contains('ration');
+  if (isKitchen) {
+    if (pSlug == 'kitchen-needs' || pSlug == 'atta-rice-dal' || pSlug == 'oils-ghee' || pSlug == 'masalas-spices' ||
+        pSlug.contains('atta') || pSlug.contains('rice') || pSlug.contains('dal') || pSlug.contains('oil') || pSlug.contains('grain') || pSlug.contains('pulse') || pSlug.contains('spice') || pSlug.contains('masala') ||
+        pCatName.contains('kitchen') || pCatName.contains('ration') || pCatName.contains('atta') || pCatName.contains('rice') || pCatName.contains('dal') || pCatName.contains('oil') ||
+        p.tags.any((t) {
+          final tl = t.toLowerCase();
+          return tl == 'kitchen' || tl == 'ration' || tl == 'atta' || tl == 'dal' || tl == 'rice' || tl == 'oil';
+        })) {
+      return true;
+    }
+  }
+
+  final isPackaged = catSlug == 'packaged-foods' || catSlug.contains('pack') || catName.contains('pack');
+  if (isPackaged) {
+    if (pSlug == 'packaged-foods' || pSlug == 'noodles-pasta' || pSlug == 'instant-food' ||
+        pSlug.contains('pack') || pSlug.contains('noodle') || pSlug.contains('pasta') || pSlug.contains('sauce') ||
+        pCatName.contains('packaged') || pCatName.contains('instant')) {
+      return true;
+    }
+  }
+
+  final isIceCream = catSlug == 'ice-cream' || catSlug == 'desserts' || catSlug.contains('ice') || catSlug.contains('dessert') || catName.contains('ice') || catName.contains('dessert');
+  if (isIceCream) {
+    if (pSlug == 'ice-cream' || pSlug == 'desserts' || pSlug.contains('ice-cream') || pSlug.contains('dessert') || pSlug.contains('kulfi') ||
+        pCatName.contains('ice cream') || pCatName.contains('dessert') || pCatName.contains('kulfi')) {
+      return true;
+    }
+  }
+
+  final isChoco = catSlug == 'chocolates' || catSlug == 'sweets' || catSlug.contains('choco') || catSlug.contains('sweet') || catName.contains('choco') || catName.contains('sweet');
+  if (isChoco) {
+    if (pSlug == 'chocolates' || pSlug == 'sweets' || pSlug.contains('choco') || pSlug.contains('sweet') || pSlug.contains('candy') ||
+        pCatName.contains('chocolate') || pCatName.contains('sweet') || pCatName.contains('mithai')) {
+      return true;
+    }
+  }
+
+  final isBeverage = catSlug == 'beverages' || catSlug == 'cold-drinks' || catSlug.contains('beverage') || catSlug.contains('drink') || catName.contains('beverage') || catName.contains('drink');
+  if (isBeverage) {
+    if (pSlug == 'beverages' || pSlug == 'cold-drinks' || pSlug == 'juices' || pSlug.contains('drink') || pSlug.contains('beverage') || pSlug.contains('juice') || pSlug.contains('soda') ||
+        pCatName.contains('beverage') || pCatName.contains('drink') || pCatName.contains('juice') ||
+        p.tags.any((t) {
+          final tl = t.toLowerCase();
+          return tl == 'beverages' || tl == 'cold drink' || tl == 'juice' || tl == 'drink';
+        })) {
+      return true;
+    }
+  }
+
+  final isPersonalCare = catSlug == 'personal-care' || catSlug.contains('personal') || catSlug.contains('care') || catName.contains('personal') || catName.contains('care');
+  if (isPersonalCare) {
+    if (pSlug == 'personal-care' || pSlug == 'bath-body' || pSlug == 'hair-care' || pSlug == 'skin-care' ||
+        pSlug.contains('personal') || pSlug.contains('skin') || pSlug.contains('hair') || pSlug.contains('soap') ||
+        pCatName.contains('personal') || pCatName.contains('care') || pCatName.contains('hygiene')) {
+      return true;
+    }
+  }
+
+  final isCleaning = catSlug == 'home-needs-and-cleaning' || catSlug == 'cleaning-household' || catSlug.contains('clean') || catSlug.contains('home') || catName.contains('clean') || catName.contains('home');
+  if (isCleaning) {
+    if (pSlug == 'home-needs-and-cleaning' || pSlug == 'cleaning-household' || pSlug == 'detergents' ||
+        pSlug.contains('clean') || pSlug.contains('detergent') || pSlug.contains('household') ||
+        pCatName.contains('cleaning') || pCatName.contains('household') || pCatName.contains('home needs')) {
+      return true;
+    }
+  }
+
+  final isBakery = catSlug == 'bakery' || catSlug == 'bakery-biscuits' || catSlug.contains('bakery') || catSlug.contains('biscuit') || catName.contains('bakery') || catName.contains('biscuit');
+  if (isBakery) {
+    if (pSlug == 'bakery' || pSlug == 'bakery-biscuits' || pSlug == 'bread-pav' ||
+        pSlug.contains('baker') || pSlug.contains('biscuit') || pSlug.contains('bread') || pSlug.contains('rusk') ||
+        pCatName.contains('bakery') || pCatName.contains('biscuit') || pCatName.contains('bread')) {
+      return true;
+    }
+  }
+
+  final isHealthy = catSlug == 'healthy-foods' || catSlug.contains('health') || catName.contains('health');
+  if (isHealthy) {
+    if (pSlug == 'healthy-foods' || pSlug == 'dry-fruits' || pSlug == 'organic' ||
+        pSlug.contains('health') || pSlug.contains('dry-fruit') || pSlug.contains('oat') ||
+        pCatName.contains('health') || pCatName.contains('dry fruit')) {
+      return true;
+    }
+  }
+
+  return false;
 }

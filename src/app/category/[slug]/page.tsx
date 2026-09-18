@@ -134,14 +134,15 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     normSlug.replace(/-/g, ' '),
   ]
 
-  const conditions: any[] = []
+  const conditions: any[] = [
+    { category: { slug: { in: slugVariants } } },
+    { category: { parent: { slug: { in: slugVariants } } } },
+  ]
 
   if (activeCategory && activeCategory.id && !activeCategory.id.startsWith('virtual-')) {
-    // Strictly attach by category ID: direct category products OR child subcategory products
     conditions.push({ categoryId: activeCategory.id })
+    conditions.push({ category: { id: activeCategory.id } })
     conditions.push({ category: { parentId: activeCategory.id } })
-  } else {
-    conditions.push({ category: { slug: { in: slugVariants } } })
   }
 
   const productsRaw = await prisma.product.findMany({

@@ -947,51 +947,56 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Order Header
+            // Order Header (Zero-Overflow Wrap & Price)
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isPackedStatus ? const Color(0xFF064E3B) : const Color(0xFF0F172A),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '#$readableId',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 14),
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
+                Expanded(
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 5,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                        decoration: BoxDecoration(
+                          color: isPackedStatus ? const Color(0xFF064E3B) : const Color(0xFF0F172A),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '#$readableId',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 13.5),
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: (isPackedStatus ? const Color(0xFF047857) : (allItemsPicked ? brandGreen : brandOrange)).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: (isPackedStatus ? const Color(0xFF047857) : (allItemsPicked ? brandGreen : brandOrange)).withValues(alpha: 0.3),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: (isPackedStatus ? const Color(0xFF047857) : (allItemsPicked ? brandGreen : brandOrange)).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: (isPackedStatus ? const Color(0xFF047857) : (allItemsPicked ? brandGreen : brandOrange)).withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Text(
+                          isPackedStatus
+                              ? '📦 PACKED • READY'
+                              : (allItemsPicked ? 'ALL ITEMS READY' : '${pickedSet.length}/${items.length} PICKED'),
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 9.5),
+                            fontWeight: FontWeight.w900,
+                            color: isPackedStatus ? const Color(0xFF047857) : (allItemsPicked ? brandGreen : brandOrange),
+                            letterSpacing: 0.3,
+                          ),
                         ),
                       ),
-                      child: Text(
-                        isPackedStatus
-                            ? '📦 PACKED • WAITING FOR RIDER 🛵'
-                            : (allItemsPicked ? 'ALL ITEMS READY' : '${pickedSet.length}/${items.length} PICKED'),
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 9.5),
-                          fontWeight: FontWeight.w900,
-                          color: isPackedStatus ? const Color(0xFF047857) : (allItemsPicked ? brandGreen : brandOrange),
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Text(
                   '₹${total.toInt()}',
                   style: GoogleFonts.inter(
@@ -1020,43 +1025,49 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
 
             const SizedBox(height: 10),
 
-            // Customer Info & Out of stock edit button
+            // Customer Info & Out of stock edit button (Zero-Overflow)
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Text(recipient.isOrderForSomeone ? '🎁' : '👤', style: const TextStyle(fontSize: 12)),
-                    const SizedBox(width: 4),
-                    Text(
-                      customerName,
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 12),
-                        fontWeight: FontWeight.w700,
-                        color: recipient.isOrderForSomeone ? const Color(0xFFC2410C) : slateMuted,
-                      ),
-                    ),
-                    if (recipient.isOrderForSomeone) ...[
+                Expanded(
+                  child: Row(
+                    children: [
+                      Text(recipient.isOrderForSomeone ? '🎁' : '👤', style: const TextStyle(fontSize: 12)),
                       const SizedBox(width: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFEDD5),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: const Color(0xFFFDBA74), width: 0.6),
-                        ),
+                      Expanded(
                         child: Text(
-                          'For Other',
+                          customerName,
                           style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 8.5),
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFFC2410C),
+                            fontSize: Responsive.scaledFontSize(context, 12),
+                            fontWeight: FontWeight.w700,
+                            color: recipient.isOrderForSomeone ? const Color(0xFFC2410C) : slateMuted,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (recipient.isOrderForSomeone) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEDD5),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: const Color(0xFFFDBA74), width: 0.6),
+                          ),
+                          child: Text(
+                            'For Other',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 8.5),
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFFC2410C),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
+                const SizedBox(width: 6),
                 if (!isPackedStatus)
                   Bounceable(
                     onTap: () {
@@ -1072,7 +1083,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                       );
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(6),
@@ -1084,7 +1095,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                           const Icon(Icons.edit_note_rounded, size: 14, color: AppDesignSystem.slate700),
                           const SizedBox(width: 4),
                           Text(
-                            'Edit / Out of Stock',
+                            'Edit / OOS',
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 10.5),
                               fontWeight: FontWeight.w800,
@@ -1162,7 +1173,10 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                                 fontWeight: FontWeight.w700,
                                 color: isPicked ? slateMuted : slateDark,
                                 decoration: isPicked ? TextDecoration.lineThrough : null,
+                                height: 1.25,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             if (unitPrice > 0 && qty > 1) ...[
                               const SizedBox(height: 1),
@@ -1205,7 +1219,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
 
             const SizedBox(height: 14),
 
-            // Action Button
+            // Action Button (Responsive Layout)
             SizedBox(
               width: double.infinity,
               height: 46,
@@ -1236,16 +1250,20 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                             color: Colors.white,
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            isPackedStatus
-                                ? 'Packed • Waiting for Rider Pickup 🛵'
-                                : (allItemsPicked
-                                    ? 'Complete & Notify Rider 🛵'
-                                    : 'Mark as Packed & Notify Rider 🛵'),
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 13),
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
+                          Flexible(
+                            child: Text(
+                              isPackedStatus
+                                  ? 'Packed • Waiting for Rider 🛵'
+                                  : (allItemsPicked
+                                      ? 'Complete & Notify Rider 🛵'
+                                      : 'Mark Packed & Notify Rider 🛵'),
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 12.5),
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],

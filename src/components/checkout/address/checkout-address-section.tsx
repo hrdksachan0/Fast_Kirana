@@ -168,7 +168,7 @@ export function CheckoutAddressSection({
                 </div>
               </div>
 
-              {/* Distance / zone check */}
+              {/* Dynamic Live Distance & Delivery Tier Explanation Card */}
               {(() => {
                 const addrDist =
                   selectedAddress.lat && selectedAddress.lng
@@ -179,18 +179,75 @@ export function CheckoutAddressSection({
                     storeSettingsMap['max_delivery_radius'] ||
                     '5.0'
                 )
-                if (addrDist !== null && addrDist > maxRadiusKm) {
+
+                if (addrDist === null) return null
+
+                if (addrDist > maxRadiusKm) {
                   return (
                     <div className="mt-3 text-xs font-bold text-rose-600 bg-rose-500/10 p-3 rounded-xl border border-rose-500/20 flex items-center gap-2">
                       <span>⚠️</span>
                       <span>
-                        This address is {addrDist.toFixed(1)} km away (outside our 5 km delivery
-                        zone). Please pick an address in Ghatampur.
+                        Yeh address {addrDist.toFixed(1)} km door hai (hamara delivery zone {maxRadiusKm.toFixed(0)} km tak hai). Kripya Ghatampur ke andar ka address chunein.
                       </span>
                     </div>
                   )
                 }
-                return null
+
+                // Dynamic values directly from live store settings
+                const t1Fee = storeSettingsMap['delivery_fee_tier1'] || storeSettingsMap['delivery_fee'] || '25'
+                const t2Fee = storeSettingsMap['delivery_fee_tier2'] || '35'
+                const t3Fee = storeSettingsMap['delivery_fee_tier3'] || '50'
+
+                const t1Threshold = storeSettingsMap['delivery_threshold_tier1'] || storeSettingsMap['grocery_free_delivery_threshold'] || '199'
+                const t2Threshold = storeSettingsMap['delivery_threshold_tier2'] || '299'
+                const t3Threshold = storeSettingsMap['delivery_threshold_tier3'] || '399'
+
+                let currentTier = 1
+                let currentFee = t1Fee
+                let currentThreshold = t1Threshold
+                let currentRange = '0 - 2 km (Local Zone)'
+
+                if (addrDist <= 2.0) {
+                  currentTier = 1
+                  currentFee = t1Fee
+                  currentThreshold = t1Threshold
+                  currentRange = '0 - 2 km'
+                } else if (addrDist <= 3.0) {
+                  currentTier = 2
+                  currentFee = t2Fee
+                  currentThreshold = t2Threshold
+                  currentRange = '2 - 3 km'
+                } else {
+                  currentTier = 3
+                  currentFee = t3Fee
+                  currentThreshold = t3Threshold
+                  currentRange = '3 - 5 km'
+                }
+
+                return (
+                  <div className="mt-3 rounded-xl bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-blue-500/10 border border-emerald-500/25 p-3 text-xs">
+                    <div className="flex items-center justify-between gap-2 flex-wrap mb-1.5">
+                      <div className="flex items-center gap-1.5 font-black text-text-primary text-[11.5px]">
+                        <span className="text-sm">📍</span>
+                        <span>Dark Store se doori: <strong className="text-emerald-700 dark:text-emerald-300 font-mono">{addrDist.toFixed(1)} km</strong></span>
+                        <span className="text-[10px] font-bold text-text-muted">({currentRange})</span>
+                      </div>
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                        Tier {currentTier}
+                      </span>
+                    </div>
+
+                    <div className="text-[11px] text-text-secondary leading-relaxed space-y-1">
+                      <p className="flex items-center gap-1.5 font-semibold">
+                        <span className="text-emerald-600">✓</span>
+                        <span>Delivery Fee: <strong className="text-text-primary">₹{currentFee}</strong> (Order <strong className="text-emerald-600 dark:text-emerald-400">₹{currentThreshold}+</strong> hone par <strong className="text-emerald-600 dark:text-emerald-400 font-black">FREE 🎉</strong>)</span>
+                      </p>
+                      <p className="text-[10px] text-text-muted font-medium">
+                        💡 Rate transparent hai: 0-2km: ₹{t1Fee} (Free ₹{t1Threshold}+) • 2-3km: ₹{t2Fee} (Free ₹{t2Threshold}+) • 3-5km: ₹{t3Fee} (Free ₹{t3Threshold}+)
+                      </p>
+                    </div>
+                  </div>
+                )
               })()}
             </div>
           )}

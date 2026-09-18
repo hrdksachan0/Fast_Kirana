@@ -271,7 +271,6 @@ class ProductRepository {
         if (restaurantId != null && restaurantId.isNotEmpty) 'restaurantId': restaurantId,
         if (category != null && category.isNotEmpty) ...{
           'category': category,
-          'categoryId': category,
         },
         if (effectiveStoreId != null) 'storeId': effectiveStoreId,
       },
@@ -477,28 +476,7 @@ class ProductRepository {
 
     // 2. Category matching
     if (category != null && category.isNotEmpty && category != 'all') {
-      final catLower = category.toLowerCase().trim();
-      result = result.where((p) {
-        final prodCatId = (p.category?.id ?? p.categoryId ?? '').toLowerCase().trim();
-        final prodCatParentId = (p.category?.parentId ?? '').toLowerCase().trim();
-        final pCatIdLower = (p.categoryId ?? '').toLowerCase().trim();
-
-        // 1. Direct ID match
-        if (prodCatId == catLower || (pCatIdLower.isNotEmpty && pCatIdLower == catLower)) return true;
-
-        // 2. Direct Parent ID match (Product belongs to a subcategory of this category)
-        if (prodCatParentId.isNotEmpty && prodCatParentId == catLower) return true;
-
-        // 3. Subcategory code match: SUB-<codeId>-XX belongs to CAT-<codeId>
-        if (catLower.startsWith('cat-')) {
-          final catCode = catLower.replaceFirst('cat-', '');
-          if (prodCatId.startsWith('sub-$catCode-') || pCatIdLower.startsWith('sub-$catCode-') || prodCatParentId.startsWith('cat-$catCode')) {
-            return true;
-          }
-        }
-
-        return false;
-      }).toList();
+      result = result.where((p) => isProductInGroceryCategory(p, category)).toList();
     }
 
     // 3. Search query filter

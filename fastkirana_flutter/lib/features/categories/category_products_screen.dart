@@ -86,8 +86,8 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Watch category products using ID (or slug as fallback)
-    final catKey = widget.category.id.isNotEmpty ? widget.category.id : widget.category.slug;
+    // Watch category products using slug (prefer slug matching web app /category/[slug], or id as fallback)
+    final catKey = widget.category.slug.isNotEmpty ? widget.category.slug : widget.category.id;
     final productsAsync = ref.watch(productsProvider(catKey));
     final catalogProducts = ref.watch(homeProductCatalogProvider).valueOrNull ?? [];
     final categoriesAsync = ref.watch(categoriesProvider);
@@ -100,7 +100,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
     final dbSubcats = allCats.where((c) {
       if (c.parentId == null || c.parentId!.isEmpty) return false;
       final pId = c.parentId!.toLowerCase().trim();
-      return pId == catIdLower;
+      return pId == catIdLower || pId == catSlugLower;
     }).toList();
 
     final List<_SubcatItem> subcats = [
@@ -459,17 +459,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
 
                           // Fallback to global catalog cache if direct category query returned empty
                           if (list.isEmpty && catalogProducts.isNotEmpty) {
-                            list = catalogProducts.where((p) {
-                              final pCatId = (p.categoryId ?? '').toLowerCase().trim();
-                              final pSubId = (p.category?.id ?? '').toLowerCase().trim();
-                              final pParentId = (p.category?.parentId ?? '').toLowerCase().trim();
-                              final isDirectId = pCatId == catIdLower || pSubId == catIdLower || pParentId == catIdLower;
-                              final isSubCode = catIdLower.startsWith('cat-') &&
-                                  (pCatId.startsWith('sub-${catIdLower.replaceFirst('cat-', '')}-') ||
-                                   pSubId.startsWith('sub-${catIdLower.replaceFirst('cat-', '')}-') ||
-                                   pParentId.startsWith('cat-${catIdLower.replaceFirst('cat-', '')}'));
-                              return isDirectId || isSubCode;
-                            }).toList();
+                            list = catalogProducts.where((p) => isProductInGroceryCategory(p, widget.category)).toList();
                           }
 
                           // Search filter (searches across the whole category)
@@ -485,14 +475,19 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                             final selectedSubcat = subcats[_selectedSubcatIndex];
                             if (selectedSubcat.id != 'all') {
                               final targetId = selectedSubcat.id.toLowerCase().trim();
+                              final targetSlug = selectedSubcat.slug.toLowerCase().trim();
+                              final targetName = selectedSubcat.name.toLowerCase().trim();
 
                               list = list.where((p) {
                                 final pCatId = (p.categoryId ?? '').toLowerCase().trim();
                                 final pSubId = (p.category?.id ?? '').toLowerCase().trim();
                                 final pParentId = (p.category?.parentId ?? '').toLowerCase().trim();
+                                final pSubSlug = (p.category?.slug ?? '').toLowerCase().trim();
+                                final pCatName = (p.category?.name ?? '').toLowerCase().trim();
 
-                                // Strictly match Subcategory ID only
-                                return pCatId == targetId || pSubId == targetId || pParentId == targetId;
+                                return pCatId == targetId || pSubId == targetId || pParentId == targetId ||
+                                       (targetSlug.isNotEmpty && (pSubSlug == targetSlug || pCatId == targetSlug)) ||
+                                       (targetName.isNotEmpty && pCatName == targetName);
                               }).toList();
                             }
                           }
@@ -698,33 +693,41 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
         curve: Curves.easeInOut,
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5.5),
         decoration: BoxDecoration(
-          color: isSelected ? primaryRed : Colors.white,
+          gradient: isSelected
+              ? const LinearGradient(
+                  colors: [AppDesignSystem.primary, Color(0xFFEA580C)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isSelected ? null : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? primaryRed : const Color(0xFFE2E8F0),
+            color: isSelected ? Colors.transparent : const Color(0xFFE2E8F0),
             width: 1.1,
           ),
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: primaryRed.withValues(alpha: 0.22),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
+                color: AppDesignSystem.primary.withValues(alpha: 0.28),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
               )
             else
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 3,
+                blurRadius: 4,
                 offset: const Offset(0, 1),
               ),
           ],
         ),
         child: Text(
           title,
-          style: GoogleFonts.inter(
-            fontSize: Responsive.scaledFontSize(context, 10.5),
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-            color: isSelected ? Colors.white : const Color(0xFF475569),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: Responsive.scaledFontSize(context, 11),
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+            color: isSelected ? Colors.white : const Color(0xFF334155),
+            letterSpacing: -0.1,
           ),
         ),
       ),

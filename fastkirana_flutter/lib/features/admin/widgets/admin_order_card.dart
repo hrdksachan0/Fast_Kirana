@@ -179,76 +179,80 @@ class AdminOrderCard extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
                                   Text(
                                     '#${order.readableId ?? order.id}',
-                                        style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 15),
-                                          fontWeight: FontWeight.w900,
-                                          color: AppDesignSystem.slate900,
-                                        ),
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 14.5),
+                                      fontWeight: FontWeight.w900,
+                                      color: AppDesignSystem.slate900,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: isPickup ? AppDesignSystem.statusPending : AppDesignSystem.green100,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: isPickup ? AppDesignSystem.warning : AppDesignSystem.emerald200,
+                                        width: 1.0,
                                       ),
-                                      const SizedBox(width: 6),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: isPickup ? AppDesignSystem.statusPending : AppDesignSystem.green100,
-                                          borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(
-                                            color: isPickup ? AppDesignSystem.warning : AppDesignSystem.emerald200,
-                                            width: 1.1,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(isPickup ? '🚶‍♂️' : '🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
-                                            const SizedBox(width: 3),
-                                            Text(
-                                              isPickup ? 'SELF PICKUP' : 'DELIVERY',
-                                              style: GoogleFonts.inter(
-                                                fontSize: Responsive.scaledFontSize(context, 9.5),
-                                                fontWeight: FontWeight.w900,
-                                                color: isPickup ? AppDesignSystem.amber700 : AppDesignSystem.green700,
-                                                letterSpacing: 0.3,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      if (order.isCombined) ...[
-                                        const SizedBox(width: 6),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            gradient: const LinearGradient(
-                                              colors: [AppDesignSystem.violet600, AppDesignSystem.fuchsia600],
-                                            ),
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const Icon(Icons.auto_awesome, size: 10, color: Colors.white),
-                                              const SizedBox(width: 3),
-                                              Text(
-                                                'COMBINED',
-                                                style: GoogleFonts.inter(
-                                                  fontSize: Responsive.scaledFontSize(context, 9),
-                                                  fontWeight: FontWeight.w900,
-                                                  color: Colors.white,
-                                                  letterSpacing: 0.3,
-                                                ),
-                                              ),
-                                            ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(isPickup ? '🚶‍♂️' : '🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 10))),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          isPickup ? 'SELF PICKUP' : 'DELIVERY',
+                                          style: GoogleFonts.inter(
+                                            fontSize: Responsive.scaledFontSize(context, 9.5),
+                                            fontWeight: FontWeight.w900,
+                                            color: isPickup ? AppDesignSystem.amber700 : AppDesignSystem.green700,
+                                            letterSpacing: 0.3,
                                           ),
                                         ),
                                       ],
-                                    ],
+                                    ),
                                   ),
-                              const SizedBox(height: 2),
-                              Row(
+                                  if (order.isCombined) ...[
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [AppDesignSystem.violet600, AppDesignSystem.fuchsia600],
+                                        ),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.auto_awesome, size: 10, color: Colors.white),
+                                          const SizedBox(width: 3),
+                                          Text(
+                                            'COMBINED',
+                                            style: GoogleFonts.inter(
+                                              fontSize: Responsive.scaledFontSize(context, 9),
+                                              fontWeight: FontWeight.w900,
+                                              color: Colors.white,
+                                              letterSpacing: 0.3,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
                                    Builder(
                                      builder: (context) {
@@ -293,11 +297,10 @@ class AdminOrderCard extends ConsumerWidget {
                                        );
                                      },
                                    ),
-                                  const SizedBox(width: 6),
                                   Text(
                                     formatOrderTime(order.createdAt),
                                     style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 11),
+                                      fontSize: Responsive.scaledFontSize(context, 10.5),
                                       fontWeight: FontWeight.w600,
                                       color: AppDesignSystem.slate500,
                                     ),

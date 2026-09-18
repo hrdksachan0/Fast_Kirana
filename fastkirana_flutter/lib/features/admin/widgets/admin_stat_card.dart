@@ -58,16 +58,18 @@ class AdminStatCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 17),
-                    fontWeight: FontWeight.w900,
-                    color: AppDesignSystem.slate900,
-                    letterSpacing: -0.4,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 17),
+                      fontWeight: FontWeight.w900,
+                      color: AppDesignSystem.slate900,
+                      letterSpacing: -0.4,
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 if (subtitle != null && subtitle!.isNotEmpty) ...[
                   const SizedBox(height: 2),
