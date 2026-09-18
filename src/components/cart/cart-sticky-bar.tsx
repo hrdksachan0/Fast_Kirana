@@ -26,6 +26,8 @@ export function CartStickyBar() {
   const isCartOpen = useUIStore((s) => s.isCartOpen)
   const isTabBarVisible = useUIStore((s) => s.isTabBarVisible)
   const isLocationServiceable = useUIStore((s) => s.isLocationServiceable)
+  const settings = useUIStore((s) => s.settings) || {}
+  const userDistanceKm = useUIStore((s) => s.userDistanceKm)
   const [isBouncing, setIsBouncing] = useState(false)
 
   const pathname = usePathname()
@@ -60,9 +62,6 @@ export function CartStickyBar() {
     pathname.startsWith('/delivery')
 
   if (!mounted || items.length === 0 || isCartOpen || isIgnoredPage) return null
-
-  const settings = useUIStore((s) => s.settings) || {}
-  const userDistanceKm = useUIStore((s) => s.userDistanceKm)
 
   const subtotal = getSubtotal()
 
