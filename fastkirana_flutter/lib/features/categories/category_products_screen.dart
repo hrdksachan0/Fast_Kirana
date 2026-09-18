@@ -474,21 +474,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                           } else if (_selectedSubcatIndex > 0 && _selectedSubcatIndex < subcats.length) {
                             final selectedSubcat = subcats[_selectedSubcatIndex];
                             if (selectedSubcat.id != 'all') {
-                              final targetId = selectedSubcat.id.toLowerCase().trim();
-                              final targetSlug = selectedSubcat.slug.toLowerCase().trim();
-                              final targetName = selectedSubcat.name.toLowerCase().trim();
-
-                              list = list.where((p) {
-                                final pCatId = (p.categoryId ?? '').toLowerCase().trim();
-                                final pSubId = (p.category?.id ?? '').toLowerCase().trim();
-                                final pParentId = (p.category?.parentId ?? '').toLowerCase().trim();
-                                final pSubSlug = (p.category?.slug ?? '').toLowerCase().trim();
-                                final pCatName = (p.category?.name ?? '').toLowerCase().trim();
-
-                                return pCatId == targetId || pSubId == targetId || pParentId == targetId ||
-                                       (targetSlug.isNotEmpty && (pSubSlug == targetSlug || pCatId == targetSlug)) ||
-                                       (targetName.isNotEmpty && pCatName == targetName);
-                              }).toList();
+                              list = list.where((p) => isProductInGroceryCategory(p, selectedSubcat)).toList();
                             }
                           }
 

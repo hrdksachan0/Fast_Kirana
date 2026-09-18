@@ -88,7 +88,24 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       title.toString().toLowerCase().contains('kitchen') ||
       title.toString().toLowerCase().contains('new order'));
 
-  if (notification != null && !isOrderAlert) {
+  final isOrderStatusUpdate = !isCancelledOrTerminal && (
+      orderStatus == 'OUT_FOR_DELIVERY' ||
+      orderStatus == 'DISPATCHED' ||
+      orderStatus == 'DELIVERED' ||
+      orderStatus == 'CONFIRMED' ||
+      orderStatus == 'PREPARING' ||
+      orderStatus == 'PACKED' ||
+      orderStatus == 'ON_THE_WAY' ||
+      title.toString().toLowerCase().contains('out for delivery') ||
+      title.toString().toLowerCase().contains('dispatched') ||
+      title.toString().toLowerCase().contains('delivered') ||
+      title.toString().toLowerCase().contains('on the way') ||
+      (body ?? '').toString().toLowerCase().contains('out for delivery') ||
+      (body ?? '').toString().toLowerCase().contains('dispatched') ||
+      (body ?? '').toString().toLowerCase().contains('delivered') ||
+      (body ?? '').toString().toLowerCase().contains('on the way'));
+
+  if (notification != null && !isOrderAlert && !isOrderStatusUpdate) {
     // Android OS has already displayed the standard notification. Do NOT show a 2nd notification!
     return;
   }
@@ -124,24 +141,34 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
           : (message.messageId?.hashCode ?? message.hashCode);
       final tag = (cleanOrderId != null && cleanOrderId.isNotEmpty) ? 'order_$cleanOrderId' : null;
 
+      final channelId = isOrderAlert
+          ? 'fastkirana_kitchen_alerts'
+          : (isOrderStatusUpdate ? 'fastkirana_order_status' : 'fastkirana_alerts');
+      final channelName = isOrderAlert
+          ? 'Kitchen & Order Buzz Alerts'
+          : (isOrderStatusUpdate ? 'Live Order Tracking & Delivery' : 'FastKirana Alerts');
+      final channelDesc = isOrderAlert
+          ? 'Loud alarm for kitchen, admin, and staff orders even when phone is locked.'
+          : (isOrderStatusUpdate
+              ? 'Real-time chime alerts for Dispatched, Out for Delivery, and Delivered orders.'
+              : 'Notifications for order updates and tracking.');
+
       final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-        isOrderAlert ? 'fastkirana_kitchen_alerts' : 'fastkirana_alerts',
-        isOrderAlert ? 'Kitchen & Order Buzz Alerts' : 'FastKirana Alerts',
-        channelDescription: isOrderAlert
-            ? 'Loud alarm for kitchen, admin, and staff orders even when phone is locked.'
-            : 'Notifications for order updates and tracking.',
+        channelId,
+        channelName,
+        channelDescription: channelDesc,
         icon: '@mipmap/ic_launcher',
-        importance: isOrderAlert ? Importance.max : Importance.high,
+        importance: (isOrderAlert || isOrderStatusUpdate) ? Importance.max : Importance.high,
         priority: Priority.high,
         tag: tag,
         fullScreenIntent: isOrderAlert,
         playSound: true,
-        sound: isOrderAlert ? const RawResourceAndroidNotificationSound('order_chime') : null,
+        sound: (isOrderAlert || isOrderStatusUpdate) ? const RawResourceAndroidNotificationSound('order_chime') : null,
         audioAttributesUsage: isOrderAlert ? AudioAttributesUsage.alarm : AudioAttributesUsage.notification,
         enableVibration: true,
         vibrationPattern: isOrderAlert
             ? Int64List.fromList([0, 1000, 500, 1000, 500, 1000, 500, 1000])
-            : null,
+            : (isOrderStatusUpdate ? Int64List.fromList([0, 250, 200, 250]) : null),
         showWhen: true,
         when: DateTime.now().millisecondsSinceEpoch,
       );
@@ -245,10 +272,24 @@ class NotificationService {
         showBadge: true,
       );
 
+      final AndroidNotificationChannel orderStatusChannel = AndroidNotificationChannel(
+        'fastkirana_order_status',
+        'Live Order Tracking & Delivery',
+        description: 'Real-time chime alerts for Dispatched, Out for Delivery, and Delivered orders.',
+        importance: Importance.max,
+        playSound: true,
+        sound: const RawResourceAndroidNotificationSound('order_chime'),
+        enableVibration: true,
+        vibrationPattern: Int64List.fromList([0, 250, 200, 250]),
+        audioAttributesUsage: AudioAttributesUsage.notification,
+        showBadge: true,
+      );
+
       final androidPlugin = _localNotifications
           ?.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
       await androidPlugin?.createNotificationChannel(channel);
       await androidPlugin?.createNotificationChannel(kitchenChannel);
+      await androidPlugin?.createNotificationChannel(orderStatusChannel);
 
       // 4. Initialize Local Notifications Plugin
       const AndroidInitializationSettings androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -390,6 +431,23 @@ class NotificationService {
         title.toString().toLowerCase().contains('cancel') ||
         body.toString().toLowerCase().contains('cancel');
 
+    final isOrderStatusUpdate = !isCancelledOrTerminal && (
+        orderStatus == 'OUT_FOR_DELIVERY' ||
+        orderStatus == 'DISPATCHED' ||
+        orderStatus == 'DELIVERED' ||
+        orderStatus == 'CONFIRMED' ||
+        orderStatus == 'PREPARING' ||
+        orderStatus == 'PACKED' ||
+        orderStatus == 'ON_THE_WAY' ||
+        title.toString().toLowerCase().contains('out for delivery') ||
+        title.toString().toLowerCase().contains('dispatched') ||
+        title.toString().toLowerCase().contains('delivered') ||
+        title.toString().toLowerCase().contains('on the way') ||
+        body.toString().toLowerCase().contains('out for delivery') ||
+        body.toString().toLowerCase().contains('dispatched') ||
+        body.toString().toLowerCase().contains('delivered') ||
+        body.toString().toLowerCase().contains('on the way'));
+
     final isOrderAlert = !isCancelledOrTerminal && (
         data['screen'] == 'restaurant-console' ||
         data['screen'] == 'admin-orders' ||
@@ -408,30 +466,40 @@ class NotificationService {
         : message.hashCode;
     final tag = (cleanOrderId != null && cleanOrderId.isNotEmpty) ? 'order_$cleanOrderId' : null;
 
+    final channelId = isOrderAlert
+        ? 'fastkirana_kitchen_alerts'
+        : (isOrderStatusUpdate ? 'fastkirana_order_status' : 'fastkirana_alerts');
+    final channelName = isOrderAlert
+        ? 'Kitchen & Order Buzz Alerts'
+        : (isOrderStatusUpdate ? 'Live Order Tracking & Delivery' : 'FastKirana Alerts');
+    final channelDesc = isOrderAlert
+        ? 'Loud alarm for kitchen, admin, and staff orders even when phone is locked.'
+        : (isOrderStatusUpdate
+            ? 'Real-time chime alerts for Dispatched, Out for Delivery, and Delivered orders.'
+            : 'Notifications for order updates and tracking.');
+
     _localNotifications?.show(
       notifId,
       title.toString(),
       body.toString(),
       NotificationDetails(
         android: AndroidNotificationDetails(
-          isOrderAlert ? 'fastkirana_kitchen_alerts' : 'fastkirana_alerts',
-          isOrderAlert ? 'Kitchen & Order Buzz Alerts' : 'FastKirana Alerts',
-          channelDescription: isOrderAlert
-              ? 'Loud alarm for kitchen, admin, and staff orders even when phone is locked.'
-              : 'Notifications for order updates and tracking.',
+          channelId,
+          channelName,
+          channelDescription: channelDesc,
           icon: '@mipmap/ic_launcher',
-          importance: Importance.max,
+          importance: (isOrderAlert || isOrderStatusUpdate) ? Importance.max : Importance.high,
           priority: Priority.high,
           tag: tag,
           showWhen: true,
           when: DateTime.now().millisecondsSinceEpoch,
           playSound: true,
-          sound: isOrderAlert ? const RawResourceAndroidNotificationSound('order_chime') : null,
+          sound: (isOrderAlert || isOrderStatusUpdate) ? const RawResourceAndroidNotificationSound('order_chime') : null,
           audioAttributesUsage: isOrderAlert ? AudioAttributesUsage.alarm : AudioAttributesUsage.notification,
           enableVibration: true,
           vibrationPattern: isOrderAlert
               ? Int64List.fromList([0, 1000, 500, 1000, 500, 1000, 500, 1000])
-              : null,
+              : (isOrderStatusUpdate ? Int64List.fromList([0, 250, 200, 250]) : null),
         ),
         iOS: const DarwinNotificationDetails(
           presentAlert: true,

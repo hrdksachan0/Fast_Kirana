@@ -9,6 +9,7 @@ import '../../../core/utils/restaurant_utils.dart';
 import '../../../core/services/logger_service.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'order_recipient_helper.dart';
+import 'rider_cart_modal.dart';
 
 class RiderPickupCard extends StatelessWidget {
   final Map<String, dynamic> order;
@@ -598,101 +599,11 @@ class RiderPickupCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
 
-                // Items List (Clean vertical list for delivery boy to check all products)
+                // Items Preview Strip + View Cart Button (Photo View Type)
                 if (items.isNotEmpty) ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppDesignSystem.slate50,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppDesignSystem.slate100),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.shopping_bag_outlined, size: 14, color: AppDesignSystem.indigo700),
-                                const SizedBox(width: 5),
-                                Text(
-                                  'ITEMS TO PICK UP (${items.length})',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 10),
-                                    fontWeight: FontWeight.w900,
-                                    color: AppDesignSystem.indigo900,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppDesignSystem.indigo50,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                '${items.fold<int>(0, (sum, it) => sum + ((it['quantity'] as num?)?.toInt() ?? 1))} qty',
-                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 9.5), fontWeight: FontWeight.w800, color: AppDesignSystem.indigo700),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        ...items.map((item) {
-                          final title = item['title'] ?? item['name'] ?? 'Item';
-                          final qty = item['quantity'] ?? 1;
-                          final price = (item['price'] as num?)?.toDouble();
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 3),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: AppDesignSystem.slate200),
-                                  ),
-                                  child: Text(
-                                    '${qty}x',
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 10.5),
-                                      fontWeight: FontWeight.w900,
-                                      color: slateDark,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    title,
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 11.5),
-                                      fontWeight: FontWeight.w700,
-                                      color: slateDark,
-                                    ),
-                                  ),
-                                ),
-                                if (price != null && price > 0)
-                                  Text(
-                                    '₹${(price * (qty is num ? qty : 1)).toInt()}',
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 11),
-                                      fontWeight: FontWeight.w800,
-                                      color: slateMuted,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
+                  RiderCartPreviewWidget(
+                    order: order,
+                    onViewCart: () => showRiderCartModal(context, order),
                   ),
                   const SizedBox(height: 10),
                 ],

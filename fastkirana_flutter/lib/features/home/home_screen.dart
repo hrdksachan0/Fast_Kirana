@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -422,6 +423,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
                     // 3. Top 8 Categories (2 rows) - Premium squircle tiles
                     SliverToBoxAdapter(child: _buildTopCategoriesGrid()),
+
+                    // 3.5 Buy Again Shelf (Instant 1-tap reordering from past purchases)
+                    SliverToBoxAdapter(child: _buildBuyAgainShelf()),
 
                     // 4. Product Shelves (Category title + Subcategory chips + Products with + ADD)
                     ..._buildApiProductSections(),
@@ -2650,6 +2654,159 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
+  // 3.5 Buy Again Shelf (Reorder past essentials in 1-tap)
+  Widget _buildBuyAgainShelf() {
+    final ordersAsync = ref.watch(ordersProvider(''));
+    final catalogAsync = ref.watch(homeProductCatalogProvider);
+
+    final orders = ordersAsync.valueOrNull ?? [];
+    if (orders.isEmpty) return const SizedBox.shrink();
+
+    // Extract product IDs ordered by the user, preserving recency
+    final orderedProductIds = <String>{};
+    for (final order in orders) {
+      for (final item in order.items) {
+        if (item.productId.isNotEmpty) {
+          orderedProductIds.add(item.productId);
+        }
+      }
+    }
+    if (orderedProductIds.isEmpty) return const SizedBox.shrink();
+
+    final allProducts = catalogAsync.valueOrNull ?? [];
+    if (allProducts.isEmpty) return const SizedBox.shrink();
+
+    final buyAgainProducts = <Product>[];
+    for (final id in orderedProductIds) {
+      final match = allProducts.firstWhereOrNull((p) => p.id == id && p.stock > 0);
+      if (match != null && !buyAgainProducts.any((p) => p.id == match.id)) {
+        buyAgainProducts.add(match);
+      }
+      if (buyAgainProducts.length >= 15) break;
+    }
+
+    if (buyAgainProducts.isEmpty) return const SizedBox.shrink();
+
+    final cardWidth = Responsive.isSmallMobile(context)
+        ? (context.screenWidth - Responsive.horizontalPadding(context) * 2 - 10) / 2
+        : Responsive.isTablet(context)
+            ? (context.screenWidth - Responsive.horizontalPadding(context) * 2 - 20) / 3
+            : (context.screenWidth - Responsive.horizontalPadding(context) * 2 - 10) / 2;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 16, bottom: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Shelf Header
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: Responsive.horizontalPadding(context)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFEA580C).withValues(alpha: 0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.repeat_rounded,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ),
+                    const SizedBox(width: 9),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Buy Again',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 16),
+                                fontWeight: FontWeight.w900,
+                                color: AppDesignSystem.slate900,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFEDD5),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFFED7AA), width: 0.8),
+                              ),
+                              child: Text(
+                                '${buyAgainProducts.length} ITEMS',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 9.5),
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFFC2410C),
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          'Frequently ordered essentials in 1-tap',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 11),
+                            fontWeight: FontWeight.w500,
+                            color: AppDesignSystem.slate500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Horizontal Product Track
+          SizedBox(
+            height: Responsive.isSmallMobile(context) ? 232 : 252,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.symmetric(horizontal: Responsive.horizontalPadding(context)),
+              itemCount: buyAgainProducts.length,
+              separatorBuilder: (_, __) => SizedBox(width: Responsive.isSmallMobile(context) ? 8 : 10),
+              itemBuilder: (context, index) {
+                final product = buyAgainProducts[index];
+                return SizedBox(
+                  width: cardWidth,
+                  child: ProductCard(
+                    product: product,
+                    width: cardWidth,
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // 7. Dynamic Product Sections (All Categories 10+ Products like Blinkit/Zepto)
   List<Widget> _buildApiProductSections() {
     // Use shared catalog — single fetch, filter locally per section
@@ -2808,19 +2965,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         (s) => s.id == activeSubcatId,
         orElse: () => childSubcategories.first,
       );
-      final targetId = selectedSub.id.toLowerCase().trim();
-      final targetSlug = selectedSub.slug.toLowerCase().trim();
 
       products = allCategoryProducts.where((p) {
-        final pCatId = (p.categoryId ?? '').toLowerCase().trim();
-        final pSubId = (p.category?.id ?? '').toLowerCase().trim();
-        final pSlug = (p.category?.slug ?? '').toLowerCase().trim();
-
-        return pCatId == targetId || pSubId == targetId || pSlug == targetSlug;
+        return isProductInGroceryCategory(p, selectedSub);
       }).toList();
     }
 
-    final displayProducts = products.take(10).toList();
+    final displayProducts = products.take(50).toList();
     final bool showSeeAllCard = displayProducts.length >= 4 || totalCount > displayProducts.length;
     final int shelfItemCount = displayProducts.length + (showSeeAllCard ? 1 : 0);
 

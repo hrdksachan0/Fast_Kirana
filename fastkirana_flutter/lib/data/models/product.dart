@@ -567,184 +567,125 @@ int compareProductMapsSystematic(Map<String, dynamic> a, Map<String, dynamic> b,
   return aName.compareTo(bName);
 }
 
-/// Robust category membership checker with 1:1 Web App and DB parity.
-/// Supports checking by Category model, category ID, slug, or name.
+/// Robust category membership checker with strict 1:1 Database ID hierarchy and zero false-positives.
 bool isProductInGroceryCategory(Product p, dynamic category) {
   if (p.restaurantId != null && p.restaurantId!.isNotEmpty) return false;
   if (p.restaurant != null) return false;
 
   String catId = '';
   String catSlug = '';
-  String catName = '';
 
   if (category is Category) {
-    catId = category.id.toLowerCase().trim();
-    catSlug = category.slug.toLowerCase().trim();
-    catName = category.name.toLowerCase().trim();
+    catId = category.id.trim();
+    catSlug = category.slug.trim().toLowerCase();
   } else if (category is String) {
-    final s = category.toLowerCase().trim();
+    final s = category.trim();
     catId = s;
-    catSlug = s;
-    catName = s;
+    catSlug = s.toLowerCase();
   } else if (category is Map<String, dynamic>) {
-    catId = (category['id'] ?? '').toString().toLowerCase().trim();
-    catSlug = (category['slug'] ?? '').toString().toLowerCase().trim();
-    catName = (category['name'] ?? '').toString().toLowerCase().trim();
+    catId = (category['id'] ?? '').toString().trim();
+    catSlug = (category['slug'] ?? '').toString().trim().toLowerCase();
   }
 
-  if (catId.isEmpty && catSlug.isEmpty && catName.isEmpty) return true;
-  if (catId == 'all' || catSlug == 'all') return true;
+  if (catId.isEmpty && catSlug.isEmpty) return true;
+  if (catId.toLowerCase() == 'all' || catSlug == 'all') return true;
 
-  final pCatId = (p.category?.id ?? p.categoryId ?? '').toLowerCase().trim();
-  final pParentId = (p.category?.parentId ?? '').toLowerCase().trim();
-  final pSlug = (p.category?.slug ?? '').toLowerCase().trim();
-  final pCatName = (p.category?.name ?? '').toLowerCase().trim();
+  final pCatId = (p.category?.id ?? p.categoryId ?? '').trim();
+  final pParentId = (p.category?.parentId ?? '').trim();
+  final pSlug = (p.category?.slug ?? '').trim().toLowerCase();
 
-  // 1. Direct Exact ID / Parent ID matches
-  if (catId.isNotEmpty && (pCatId == catId || pParentId == catId)) return true;
-
-  // 2. Direct Slug matches (Exact match to category slug or parent slug)
-  if (catSlug.isNotEmpty && (pSlug == catSlug || pCatId == catSlug || pParentId == catSlug)) return true;
-
-  // 3. Direct Name matches
-  if (catName.isNotEmpty && pCatName == catName) return true;
-
-  // 4. Subcategory code match: SUB-<codeId>-XX or SUB-SUB-<codeId>-XX belongs to CAT-<codeId>
-  if (catId.startsWith('cat-')) {
-    final catCode = catId.replaceFirst('cat-', '');
-    if (pCatId.startsWith('sub-$catCode-') ||
-        pCatId.startsWith('sub-sub-$catCode-') ||
-        pParentId.startsWith('cat-$catCode') ||
-        pParentId.startsWith('sub-$catCode-') ||
-        pParentId.startsWith('sub-sub-$catCode-')) {
-      return true;
-    }
-  } else if (catId.startsWith('sub-')) {
-    if (pCatId.startsWith('$catId-') || pParentId == catId) {
+  // 1. Direct ID / Parent ID exact match
+  if (catId.isNotEmpty) {
+    if (pCatId.toLowerCase() == catId.toLowerCase() ||
+        pParentId.toLowerCase() == catId.toLowerCase()) {
       return true;
     }
   }
 
-  // 5. Explicit Semantic Category-to-Subcategory Mappings (Exact relations, zero false-positives)
+  // 2. Direct Slug exact match
+  if (catSlug.isNotEmpty) {
+    if (pSlug == catSlug) return true;
+  }
+
+  // 3. Hierarchical Code Prefix matching (CAT-XXX <-> SUB-XXX-YY <-> SUB-SUB-XXX-YY-ZZ)
+  final upperCatId = catId.toUpperCase();
+  final upperPCatId = pCatId.toUpperCase();
+  final upperPParentId = pParentId.toUpperCase();
+
+  if (upperCatId.startsWith('CAT-')) {
+    final code = upperCatId.replaceFirst('CAT-', '');
+    if (upperPCatId == 'CAT-$code' ||
+        upperPCatId.startsWith('SUB-$code-') ||
+        upperPCatId.startsWith('SUB-SUB-$code-') ||
+        upperPParentId == 'CAT-$code' ||
+        upperPParentId.startsWith('SUB-$code-') ||
+        upperPParentId.startsWith('SUB-SUB-$code-')) {
+      return true;
+    }
+  } else if (upperCatId.startsWith('SUB-')) {
+    if (upperPCatId == upperCatId ||
+        upperPCatId.startsWith('$upperCatId-') ||
+        upperPParentId == upperCatId) {
+      return true;
+    }
+  }
+
+  // 4. Exact Database Slug Mappings (Strict zero-collision mappings)
   if (catSlug == 'fruits-vegetables') {
-    return pCatId == 'cat-101' ||
-        pCatId == 'sub-101-01' ||
-        pCatId == 'sub-101-02' ||
-        pParentId == 'cat-101' ||
-        pSlug == 'fresh-fruits' ||
-        pSlug == 'fresh-vegetables' ||
-        pSlug == 'fruits-vegetables';
+    return pSlug == 'fresh-fruits' || pSlug == 'fresh-vegetables' || pSlug == 'fruits-vegetables';
   }
-
   if (catSlug == 'fresh-fruits') {
-    return pCatId == 'sub-101-01' || pSlug == 'fresh-fruits';
+    return pSlug == 'fresh-fruits';
   }
-
   if (catSlug == 'fresh-vegetables') {
-    return pCatId == 'sub-101-02' || pSlug == 'fresh-vegetables';
+    return pSlug == 'fresh-vegetables';
   }
-
   if (catSlug == 'kitchen-ration' || catSlug == 'kitchen-needs') {
-    return pCatId == 'cat-113' ||
-        pCatId.startsWith('sub-113-') ||
-        pParentId == 'cat-113' ||
-        pSlug == 'atta-rice-sugar' ||
+    return pSlug == 'atta-rice-sugar' ||
         pSlug == 'oils-ghee' ||
         pSlug == 'dals-pulses' ||
         pSlug == 'spices-masala' ||
-        pSlug == 'tea-coffee-salt';
+        pSlug == 'tea-coffee-salt' ||
+        pSlug == 'kitchen-ration' ||
+        pSlug == 'kitchen-needs';
   }
-
-  if (catSlug == 'dry-fruits-super-foods' || catSlug == 'dry-fruits' || catSlug == 'healthy-foods') {
-    return pCatId == 'cat-114' ||
-        pCatId.startsWith('sub-114-') ||
-        pParentId == 'cat-114' ||
-        pSlug == 'dry-fruits-nuts-seeds' ||
-        pSlug == 'dry-fruits-super-foods';
+  if (catSlug == 'dry-fruits-super-foods' || catSlug == 'dry-fruits') {
+    return pSlug == 'dry-fruits-nuts-seeds' || pSlug == 'dry-fruits-super-foods';
   }
-
-  if (catSlug == 'cakes-chocolates' || catSlug == 'chocolates' || catSlug == 'sweets') {
-    return pCatId == 'cat-115' ||
-        pCatId.startsWith('sub-115-') ||
-        pCatId.startsWith('sub-sub-115-') ||
-        pParentId == 'cat-115' ||
-        pParentId.startsWith('sub-115-') ||
-        pSlug == 'chocolates-sweets' ||
+  if (catSlug == 'cakes-chocolates') {
+    return pSlug == 'chocolates-sweets' ||
         pSlug == 'cakes' ||
         pSlug == 'cookies-namkeen' ||
         pSlug == 'cookies' ||
-        pSlug == 'namkeen';
-  }
-
-  if (catSlug == 'cookies-namkeen') {
-    return pCatId == 'sub-115-01' ||
-        pCatId.startsWith('sub-sub-115-01-') ||
-        pParentId == 'sub-115-01' ||
-        pSlug == 'cookies' ||
         pSlug == 'namkeen' ||
-        pSlug == 'cookies-namkeen';
+        pSlug == 'cakes-chocolates';
   }
-
+  if (catSlug == 'cookies-namkeen') {
+    return pSlug == 'cookies' || pSlug == 'namkeen' || pSlug == 'cookies-namkeen';
+  }
   if (catSlug == 'packaged-items' || catSlug == 'packaged-foods') {
-    return pCatId == 'cat-104' ||
-        pCatId.startsWith('sub-104-') ||
-        pParentId == 'cat-104' ||
-        pSlug == 'sauces-spreads' ||
-        pSlug == 'breakfast-diet';
+    return pSlug == 'sauces-spreads' ||
+        pSlug == 'breakfast-diet' ||
+        pSlug == 'packaged-items' ||
+        pSlug == 'packaged-foods';
   }
-
-  if (catSlug == 'beverages' || catSlug == 'cold-drinks' || catSlug == 'drinks') {
-    return pCatId == 'cat-108' ||
-        pCatId.startsWith('sub-108-') ||
-        pParentId == 'cat-108' ||
-        pSlug == 'beverages' ||
-        pSlug == 'cold-drinks' ||
-        pSlug == 'juices';
+  if (catSlug == 'beverages' || catSlug == 'beverages-drinks' || catSlug == 'cold-drinks') {
+    return pSlug == 'beverages' || pSlug == 'cold-drinks' || pSlug == 'juices' || pSlug == 'beverages-drinks';
   }
-
-  if (catSlug == 'ice-cream' || catSlug == 'desserts') {
-    return pCatId == 'cat-105' ||
-        pCatId.startsWith('sub-105-') ||
-        pParentId == 'cat-105' ||
-        pSlug == 'ice-cream' ||
-        pSlug == 'desserts';
+  if (catSlug == 'ice-cream' || catSlug == 'desserts' || catSlug == 'ice-cream-desserts') {
+    return pSlug == 'ice-cream' || pSlug == 'desserts';
   }
-
-  if (catSlug == 'personal-care') {
-    return pCatId == 'cat-109' ||
-        pCatId.startsWith('sub-109-') ||
-        pParentId == 'cat-109' ||
-        pSlug == 'hair-care-cosmetics' ||
-        pSlug == 'oral-care-hygeine';
-  }
-
   if (catSlug == 'home-needs-and-cleaning' || catSlug == 'cleaning-household') {
-    return pCatId == 'cat-107' ||
-        pCatId.startsWith('sub-107-') ||
-        pParentId == 'cat-107' ||
-        pSlug == 'dishwashing' ||
+    return pSlug == 'dishwashing' ||
         pSlug == 'pest-control-utilites' ||
-        pSlug == 'laundary-care';
+        pSlug == 'laundary-care' ||
+        pSlug == 'home-needs-and-cleaning';
   }
-
-  if (catSlug == 'dairy-products' ||
-      catSlug == 'dairy-breakfast' ||
-      catSlug == 'dairy' ||
-      catSlug == 'dairy-bread-eggs' ||
-      catName.contains('dairy') ||
-      catName.contains('milk') ||
-      catName.contains('breakfast')) {
-    return pCatId == 'cat-116' ||
-        pCatId.startsWith('sub-116-') ||
-        pParentId == 'cat-116' ||
-        pSlug == 'dairy-products' ||
-        pSlug == 'dairy-breakfast' ||
-        pSlug == 'dairy' ||
-        pSlug == 'dairy-bread-eggs' ||
-        pSlug == 'milk' ||
-        pCatName.contains('dairy') ||
-        pCatName.contains('milk') ||
-        p.tags.any((t) => t.toLowerCase() == 'milk' || t.toLowerCase() == 'dairy' || t.toLowerCase() == 'doodh');
+  if (catSlug == 'personal-care') {
+    return pSlug == 'hair-care-cosmetics' || pSlug == 'oral-care-hygeine' || pSlug == 'personal-care';
+  }
+  if (catSlug == 'dairy-products' || catSlug == 'dairy-breakfast' || catSlug == 'dairy') {
+    return pSlug == 'dairy-products' || pSlug == 'dairy-breakfast' || pSlug == 'dairy';
   }
 
   return false;

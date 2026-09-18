@@ -42,6 +42,7 @@ import 'widgets/payment_failed_cod_sheet.dart';
 import 'widgets/checkout_delivery_address_card.dart';
 import 'widgets/checkout_bill_breakdown.dart';
 import 'widgets/checkout_packaging_selector.dart';
+import 'widgets/checkout_delivery_instructions.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   final double discountAmount;
@@ -65,6 +66,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   String _selectedPackaging = 'NORMAL'; // 'NORMAL' (FREE ₹0) | 'PREMIUM' (+₹15)
   final int _selectedAddressIndex = 0;
   String _deliveryInstruction = '🔔 Ring Bell';
+  final Set<String> _selectedDeliveryInstructions = {'ring_bell'};
+  final TextEditingController _deliveryNotesController = TextEditingController();
   bool _isPlacingOrder = false;
   String? _customReceiverName;
   String? _customReceiverPhone;
@@ -99,6 +102,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   @override
   void dispose() {
+    _deliveryNotesController.dispose();
     if (!kIsWeb) {
       _razorpay?.clear();
     }
@@ -695,7 +699,23 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ? user!.phone!
             : (buyerPhone.isNotEmpty ? buyerPhone : (selectedAddress?.phone.isNotEmpty == true ? selectedAddress!.phone : '')));
 
-    String orderNotes = _deliveryInstruction;
+    final instructionLabels = <String>[];
+    for (final preset in CheckoutDeliveryInstructions.presets) {
+      if (_selectedDeliveryInstructions.contains(preset.id)) {
+        instructionLabels.add('${preset.icon} ${preset.title}');
+      }
+    }
+    final customNote = _deliveryNotesController.text.trim();
+    if (customNote.isNotEmpty) {
+      instructionLabels.add('📍 Note: $customNote');
+    }
+    if (widget.cookingInstruction != null && widget.cookingInstruction!.trim().isNotEmpty) {
+      instructionLabels.add('🍳 Kitchen: ${widget.cookingInstruction!.trim()}');
+    }
+
+    String orderNotes = instructionLabels.isNotEmpty
+        ? instructionLabels.join(' | ')
+        : (_deliveryInstruction.isNotEmpty ? _deliveryInstruction : '🔔 Ring Bell');
     if (isOrderForSomeone) {
       final forStr = '🎁 Order for: $receiverName${receiverPhone.isNotEmpty ? ' ($receiverPhone)' : ''}';
       orderNotes = '$forStr | $orderNotes';
@@ -1229,6 +1249,22 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   CheckoutPackagingSelector(
                     selectedPackaging: _selectedPackaging,
                     onPackagingChanged: (val) => setState(() => _selectedPackaging = val),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // 5.1 🛵 Delivery Instructions (1-Tap Preferences & Rider Notes)
+                  CheckoutDeliveryInstructions(
+                    selectedInstructions: _selectedDeliveryInstructions,
+                    noteController: _deliveryNotesController,
+                    onToggleInstruction: (id) {
+                      setState(() {
+                        if (_selectedDeliveryInstructions.contains(id)) {
+                          _selectedDeliveryInstructions.remove(id);
+                        } else {
+                          _selectedDeliveryInstructions.add(id);
+                        }
+                      });
+                    },
                   ),
                   const SizedBox(height: 14),
 

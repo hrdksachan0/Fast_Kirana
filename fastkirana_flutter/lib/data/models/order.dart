@@ -304,12 +304,16 @@ class Order {
 
     String? parseShopName() {
       final explicit = json['shopName']?.toString() ??
+          json['shop_name']?.toString() ??
           json['restaurantName']?.toString() ??
+          json['restaurant_name']?.toString() ??
           (json['restaurant'] is Map ? json['restaurant']['name']?.toString() : null);
       if (explicit != null && explicit.trim().isNotEmpty && explicit != 'null') {
         return explicit.trim();
       }
-      final restId = json['restaurantId']?.toString();
+      final restId = json['restaurantId']?.toString() ??
+          json['restaurant_id']?.toString() ??
+          (json['restaurant'] is Map ? json['restaurant']['id']?.toString() : null);
       if (restId != null && restId.isNotEmpty && restId != 'null') {
         final regName = RestaurantRegistry.getName(restId);
         if (regName != null && regName.isNotEmpty) return regName;
@@ -317,12 +321,24 @@ class Order {
       return null;
     }
 
+    String? parsedRestId = json['restaurantId']?.toString() ??
+        json['restaurant_id']?.toString() ??
+        (json['restaurant'] is Map ? json['restaurant']['id']?.toString() : null);
+
+    final resolvedShopName = parseShopName();
+    if ((parsedRestId == null || parsedRestId.isEmpty || parsedRestId == 'null') && resolvedShopName != null) {
+      final reg = RestaurantRegistry.find(resolvedShopName);
+      if (reg != null) {
+        parsedRestId = reg.id;
+      }
+    }
+
     return Order(
       id: json['id']?.toString() ?? '',
-      readableId: json['readableId']?.toString(),
-      userId: json['userId']?.toString() ?? '',
-      addressId: json['addressId']?.toString() ?? '',
-      restaurantId: json['restaurantId']?.toString(),
+      readableId: json['readableId']?.toString() ?? json['readable_id']?.toString(),
+      userId: json['userId']?.toString() ?? json['user_id']?.toString() ?? '',
+      addressId: json['addressId']?.toString() ?? json['address_id']?.toString() ?? '',
+      restaurantId: parsedRestId,
       status: parseStatus(json['status']),
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0.0,
       discount: (json['discount'] as num?)?.toDouble() ?? 0.0,

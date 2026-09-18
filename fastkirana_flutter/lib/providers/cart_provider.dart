@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/cart.dart';
@@ -134,6 +135,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   }
 
   bool addProduct(Product product, [int quantity = 1, String? selectedVariant]) {
+    HapticFeedback.lightImpact();
     final cart = _cart ?? _emptyCart();
     final items = List<CartItem>.from(cart.items);
     final idx = items.indexWhere((i) => i.productId == product.id || i.product.id == product.id);
@@ -165,6 +167,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   }
 
   Future<void> increment(Product product) async {
+    HapticFeedback.selectionClick();
     final cart = _cart;
     if (cart == null) return;
     final items = List<CartItem>.from(cart.items);
@@ -192,6 +195,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   }
 
   Future<void> decrement(String productId) async {
+    HapticFeedback.selectionClick();
     final cart = _cart;
     if (cart == null) return;
     final items = List<CartItem>.from(cart.items);

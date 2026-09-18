@@ -26,6 +26,11 @@ interface CheckoutAddressSectionProps {
   storeLat: number
   storeLng: number
   storeSettingsMap: Record<string, string>
+  originName?: string
+  originLat?: number
+  originLng?: number
+  maxRadiusKm?: number
+  isRestaurantOrder?: boolean
   handleDetectLocationForCheckout: () => void
   handleSaveAddress: (e: React.FormEvent) => Promise<void>
   handleEditAddressClick: (addr: Address) => void
@@ -53,6 +58,11 @@ export function CheckoutAddressSection({
   storeLat,
   storeLng,
   storeSettingsMap = {},
+  originName,
+  originLat,
+  originLng,
+  maxRadiusKm: passedMaxRadiusKm,
+  isRestaurantOrder,
   handleDetectLocationForCheckout,
   handleSaveAddress,
   handleEditAddressClick,
@@ -170,11 +180,13 @@ export function CheckoutAddressSection({
 
               {/* Dynamic Live Distance & Delivery Tier Explanation Card */}
               {(() => {
+                const effectiveLat = originLat ?? storeLat
+                const effectiveLng = originLng ?? storeLng
                 const addrDist =
                   selectedAddress.lat && selectedAddress.lng
-                    ? getDistanceKm(storeLat, storeLng, selectedAddress.lat, selectedAddress.lng)
+                    ? getDistanceKm(effectiveLat, effectiveLng, selectedAddress.lat, selectedAddress.lng)
                     : null
-                const maxRadiusKm = parseFloat(
+                const effectiveMaxRadius = passedMaxRadiusKm ?? parseFloat(
                   storeSettingsMap['delivery_radius'] ||
                     storeSettingsMap['max_delivery_radius'] ||
                     '5.0'
@@ -182,12 +194,12 @@ export function CheckoutAddressSection({
 
                 if (addrDist === null || isNaN(Number(addrDist))) return null
 
-                if (addrDist > maxRadiusKm) {
+                if (addrDist > effectiveMaxRadius) {
                   return (
                     <div className="mt-3 text-xs font-bold text-rose-600 bg-rose-500/10 p-3 rounded-xl border border-rose-500/20 flex items-center gap-2">
                       <span>⚠️</span>
                       <span>
-                        Yeh address {addrDist.toFixed(1)} km door hai (hamara delivery zone {maxRadiusKm.toFixed(0)} km tak hai). Kripya Ghatampur ke andar ka address chunein.
+                        Yeh address {addrDist.toFixed(1)} km door hai ({originName || 'delivery zone'} {effectiveMaxRadius.toFixed(0)} km tak hai). Kripya serviceable address chunein.
                       </span>
                     </div>
                   )
@@ -229,7 +241,10 @@ export function CheckoutAddressSection({
                     <div className="flex items-center justify-between gap-2 flex-wrap mb-1.5">
                       <div className="flex items-center gap-1.5 font-black text-text-primary text-[11.5px]">
                         <span className="text-sm">📍</span>
-                        <span>Delivery Distance: <strong className="text-emerald-700 dark:text-emerald-300 font-mono">{addrDist.toFixed(1)} km</strong></span>
+                        <span>
+                          Delivery Distance: <strong className="text-emerald-700 dark:text-emerald-300 font-mono">{addrDist.toFixed(1)} km</strong>
+                          {originName && <span className="text-[10px] font-bold text-text-secondary ml-1">({originName})</span>}
+                        </span>
                         <span className="text-[10px] font-bold text-text-muted">({currentRange})</span>
                       </div>
                       <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">

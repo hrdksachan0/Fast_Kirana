@@ -1103,30 +1103,44 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
   Widget _buildBottomCheckoutBar(BuildContext context, double totalSavings, double grandTotal, double subtotal, double deliveryFee, DeliveryTierInfo tier) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
+    final remainingForFree = (tier.freeDeliveryThreshold - subtotal).clamp(0.0, tier.freeDeliveryThreshold);
+    final isFreeUnlocked = remainingForFree <= 0;
+
     return Container(
       padding: EdgeInsets.fromLTRB(14, 8, 14, 10 + bottomInset),
       color: Colors.white,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Savings / Zone Callout Pill
+          // Savings / Free Delivery Zone Callout Pill
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: !tier.isServiceable ? AppDesignSystem.statusPending : AppDesignSystem.statusDelivered,
+              color: !tier.isServiceable
+                  ? AppDesignSystem.statusPending
+                  : (isFreeUnlocked ? const Color(0xFFDCFCE7) : const Color(0xFFFFEDD5)),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: !tier.isServiceable ? AppDesignSystem.rose300 : AppDesignSystem.emerald200, width: 0.8),
+              border: Border.all(
+                color: !tier.isServiceable
+                    ? AppDesignSystem.rose300
+                    : (isFreeUnlocked ? const Color(0xFF86EFAC) : const Color(0xFFFED7AA)),
+                width: 0.8,
+              ),
             ),
             child: Center(
               child: Text(
                 !tier.isServiceable
                     ? '⚠️ Outside 5.0 km Central Hub Delivery Zone'
-                    : '🎉 You are saving ₹${totalSavings > 0 ? totalSavings.toInt() : 20} on this order!',
+                    : (isFreeUnlocked
+                        ? '🎉 FREE Delivery Unlocked! Total savings: ₹${(totalSavings + tier.baseFee).toInt()}'
+                        : '🛵 Add ₹${remainingForFree.toInt()} for FREE Delivery • Saving ₹${totalSavings > 0 ? totalSavings.toInt() : 20}'),
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 11),
                   fontWeight: FontWeight.w800,
-                  color: !tier.isServiceable ? AppDesignSystem.red600 : AppDesignSystem.emerald700,
+                  color: !tier.isServiceable
+                      ? AppDesignSystem.red600
+                      : (isFreeUnlocked ? const Color(0xFF166534) : const Color(0xFFC2410C)),
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -1602,26 +1616,56 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final isUnlocked = remaining <= 0;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       decoration: BoxDecoration(
-        color: isUnlocked ? const Color(0xFFF0FDF4) : const Color(0xFFFFF7ED),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isUnlocked ? const Color(0xFFBBF7D0) : const Color(0xFFFED7AA),
-          width: 1.1,
+        gradient: LinearGradient(
+          colors: isUnlocked
+              ? [const Color(0xFFF0FDF4), const Color(0xFFDCFCE7)]
+              : [const Color(0xFFFFFBEB), const Color(0xFFFFF7ED)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isUnlocked ? const Color(0xFF86EFAC) : const Color(0xFFFDBA74),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (isUnlocked ? const Color(0xFF22C55E) : const Color(0xFFF97316)).withValues(alpha: 0.10),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text(
-                isUnlocked ? '🎉' : '⚡',
-                style: TextStyle(fontSize: Responsive.scaledFontSize(context, 17)),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: isUnlocked ? const Color(0xFF22C55E) : const Color(0xFFEA580C),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: (isUnlocked ? const Color(0xFF22C55E) : const Color(0xFFEA580C)).withValues(alpha: 0.28),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    isUnlocked ? '🎉' : '🛵',
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 11),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1631,19 +1675,21 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           ? 'FREE Express Delivery Unlocked!'
                           : 'Add ₹${remaining.toInt()} more for FREE Delivery',
                       style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 12.5),
+                        fontSize: Responsive.scaledFontSize(context, 13),
                         fontWeight: FontWeight.w800,
-                        color: isUnlocked ? const Color(0xFF15803D) : const Color(0xFFC2410C),
+                        color: isUnlocked ? const Color(0xFF14532D) : const Color(0xFF9A3412),
                         letterSpacing: -0.2,
                       ),
                     ),
-                    const SizedBox(height: 1),
+                    const SizedBox(height: 2),
                     Text(
-                      '📍 ${tier.tierName}',
+                      isUnlocked
+                          ? 'You saved ₹${tier.baseFee.toInt()} on delivery fee • 📍 ${tier.tierName}'
+                          : 'Shop for ₹${freeDeliveryThreshold.toInt()} to avoid ₹${tier.baseFee.toInt()} delivery fee',
                       style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 10.5),
+                        fontSize: Responsive.scaledFontSize(context, 11),
                         fontWeight: FontWeight.w600,
-                        color: isUnlocked ? const Color(0xFF16A34A) : const Color(0xFFEA580C),
+                        color: isUnlocked ? const Color(0xFF15803D) : const Color(0xFFC2410C),
                       ),
                     ),
                   ],
@@ -1651,37 +1697,90 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               ),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                 decoration: BoxDecoration(
-                  color: isUnlocked ? const Color(0xFFDCFCE7) : const Color(0xFFFFEDD5),
-                  borderRadius: BorderRadius.circular(8),
+                  color: isUnlocked ? const Color(0xFFBBF7D0) : const Color(0xFFFFEDD5),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: isUnlocked ? const Color(0xFFBBF7D0) : const Color(0xFFFED7AA),
+                    color: isUnlocked ? const Color(0xFF86EFAC) : const Color(0xFFFED7AA),
                     width: 1,
                   ),
                 ),
                 child: Text(
-                  isUnlocked ? 'SAVED ₹${tier.baseFee.toInt()}' : 'Save ₹${tier.baseFee.toInt()}',
+                  isUnlocked ? 'SAVED ₹${tier.baseFee.toInt()}' : '₹${subtotal.toInt()}/₹${freeDeliveryThreshold.toInt()}',
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 10.5),
                     fontWeight: FontWeight.w800,
-                    color: isUnlocked ? const Color(0xFF15803D) : const Color(0xFFC2410C),
+                    color: isUnlocked ? const Color(0xFF166534) : const Color(0xFFC2410C),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 5,
-              backgroundColor: isUnlocked ? const Color(0xFFDCFCE7) : const Color(0xFFFFEDD5),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                isUnlocked ? const Color(0xFF16A34A) : const Color(0xFFEA580C),
-              ),
-            ),
+          const SizedBox(height: 10),
+          // Animated Milestone Bar with moving vehicle
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final barWidth = constraints.maxWidth;
+              final scooterOffset = (barWidth - 20) * progress;
+              return Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.centerLeft,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      height: 7,
+                      width: barWidth,
+                      color: isUnlocked ? const Color(0xFFBBF7D0) : const Color(0xFFFED7AA),
+                      child: FractionallySizedBox(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: progress,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: isUnlocked
+                                  ? [const Color(0xFF22C55E), const Color(0xFF16A34A)]
+                                  : [const Color(0xFFFB923C), const Color(0xFFEA580C)],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: scooterOffset.clamp(0.0, barWidth - 18),
+                    top: -6,
+                    child: Container(
+                      width: 19,
+                      height: 19,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.18),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                        border: Border.all(
+                          color: isUnlocked ? const Color(0xFF16A34A) : const Color(0xFFEA580C),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          isUnlocked ? Icons.check_rounded : Icons.delivery_dining_rounded,
+                          size: 12,
+                          color: isUnlocked ? const Color(0xFF16A34A) : const Color(0xFFEA580C),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),

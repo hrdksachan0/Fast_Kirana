@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 import { useCartStore } from '@/stores/cart-store'
 import { toast } from 'sonner'
+import { triggerHaptic } from '@/lib/haptic'
 import { BogoCartGiftCard } from '@/components/cart/bogo-cart-gift-card'
 
 export function CartDrawer() {
@@ -635,33 +636,49 @@ export function CartDrawer() {
                 setCartOpen(false)
               }
             }}
-            className="gpu-accelerated fixed bottom-0 left-0 right-0 sm:left-auto sm:right-0 sm:top-0 z-50 h-[88vh] max-h-[88dvh] sm:h-full w-full max-w-full sm:w-[420px] bg-white dark:bg-zinc-950 rounded-t-3xl sm:rounded-none shadow-2xl flex flex-col focus:outline-none border-t sm:border-t-0 sm:border-l border-zinc-100 dark:border-zinc-900/50 overflow-x-hidden"
+            className="gpu-accelerated fixed bottom-0 left-0 right-0 sm:left-auto sm:right-0 sm:top-0 z-50 h-[88vh] max-h-[88dvh] sm:h-full w-full max-w-full sm:w-[420px] bg-white dark:bg-zinc-950 rounded-t-3xl sm:rounded-none shadow-2xl flex flex-col focus:outline-none border-t sm:border-t-0 sm:border-l border-zinc-100 dark:border-zinc-900/50 overflow-visible sm:overflow-x-hidden"
           >
+            {/* Swiggy-style Floating Close Button (Mobile Top-Center above bottom sheet) */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light')
+                setCartOpen(false)
+              }}
+              className="sm:hidden absolute -top-12 left-1/2 -translate-x-1/2 w-9 h-9 rounded-full bg-zinc-900/90 dark:bg-zinc-800/95 hover:bg-black text-white flex items-center justify-center shadow-xl border border-white/20 active:scale-90 transition-transform cursor-pointer z-50 backdrop-blur-md"
+              aria-label="Close cart"
+            >
+              <X size={18} className="stroke-[2.5]" />
+            </button>
+
             {/* Drag handle for mobile */}
             <div className="flex justify-center py-2.5 sm:hidden cursor-grab active:cursor-grabbing shrink-0">
               <div className="w-12 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800" />
             </div>
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-900 px-4 sm:px-5 py-3.5 shrink-0 bg-white dark:bg-zinc-950">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <ShoppingBag size={18} className="stroke-[2.2]" />
+
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-900 px-4 sm:px-5 py-3.5 shrink-0 bg-white dark:bg-zinc-950">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <ShoppingBag size={18} className="stroke-[2.2]" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm sm:text-base font-black text-zinc-900 dark:text-zinc-100">Your Cart</h2>
+                  <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-black">
+                    {items.reduce((sum, item) => sum + item.quantity, 0)} {items.reduce((sum, item) => sum + item.quantity, 0) === 1 ? 'item' : 'items'}
+                  </span>
+                </div>
+              </div>
+              {/* Desktop Header Close Button (Hidden on Mobile, Swiggy-style top-center button used instead) */}
+              <button
+                type="button"
+                onClick={() => setCartOpen(false)}
+                className="hidden sm:flex w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-850 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 items-center justify-center transition-colors cursor-pointer"
+                aria-label="Close cart"
+              >
+                <X size={17} className="stroke-[2.5]" />
+              </button>
             </div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm sm:text-base font-black text-zinc-900 dark:text-zinc-100">Your Cart</h2>
-              <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-black">
-                {items.reduce((sum, item) => sum + item.quantity, 0)} {items.reduce((sum, item) => sum + item.quantity, 0) === 1 ? 'item' : 'items'}
-              </span>
-            </div>
-          </div>
-          <button
-            onClick={() => setCartOpen(false)}
-            className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-850 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition-colors cursor-pointer"
-            aria-label="Close cart"
-          >
-            <X size={17} className="stroke-[2.5]" />
-          </button>
-        </div>
 
         {/* Free Delivery Tracker Bar */}
         {items.length > 0 && (

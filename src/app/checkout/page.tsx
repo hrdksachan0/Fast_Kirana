@@ -138,6 +138,8 @@ export default function CheckoutPage() {
                 })
               } else if (update.type === 'MRP_UPDATE') {
                 updateCartProduct(update.productId, { mrp: update.newVal })
+              } else if (update.type === 'RESTAURANT_UPDATE') {
+                updateCartProduct(update.productId, { restaurant: update.newVal })
               }
             })
           }
@@ -264,6 +266,11 @@ export default function CheckoutPage() {
               storeLat={storeLat}
               storeLng={storeLng}
               storeSettingsMap={storeSettingsMap}
+              originName={pricing.originName}
+              originLat={pricing.originLat}
+              originLng={pricing.originLng}
+              maxRadiusKm={pricing.originMaxRadiusKm}
+              isRestaurantOrder={pricing.isPureRestaurant}
               handleDetectLocationForCheckout={handleDetectLocationForCheckout}
               handleSaveAddress={handleSaveAddress}
               handleEditAddressClick={handleEditAddressClick}
@@ -381,7 +388,7 @@ export default function CheckoutPage() {
         }}
       />
 
-      {/* 1-Minute Payment Failed / COD Fallback Modal */}
+      {/* Payment Failed / Incomplete Modal */}
       <PaymentFailedCodModal
         isOpen={!!payment.failedPaymentOrder}
         orderId={payment.failedPaymentOrder?.id || ''}
@@ -392,6 +399,14 @@ export default function CheckoutPage() {
           payment.setFailedPaymentOrder(null)
           payment.clearCart()
           window.location.href = `/order/${orderId}/success`
+        }}
+        onRetryPayment={() => {
+          payment.setFailedPaymentOrder(null)
+          payment.handleCashfreeCheckout(
+            'UPI',
+            activeCheckoutAddressRef.current?.id || selectedAddressId,
+            activeCheckoutAddressRef.current?.addresses || addresses
+          )
         }}
       />
     </div>

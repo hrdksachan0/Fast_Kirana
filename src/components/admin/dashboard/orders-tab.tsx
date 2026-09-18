@@ -575,7 +575,7 @@ export function OrdersTab({
   const filteredActiveOrders = rawActiveList.filter((o) => {
     const isUnpaidOnline = o.paymentStatus !== 'PAID' && o.paymentMethod !== 'COD'
     const matchesFilter = orderStatusFilter === 'ALL'
-      ? true
+      ? (!isUnpaidOnline || o.status !== 'PENDING')
       : orderStatusFilter === 'PAYMENT_PENDING'
       ? (o.status === 'PENDING' && isUnpaidOnline)
       : orderStatusFilter === 'PENDING'

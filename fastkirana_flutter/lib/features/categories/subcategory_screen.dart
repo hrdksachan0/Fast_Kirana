@@ -97,21 +97,7 @@ class _SubcategoryScreenState extends ConsumerState<SubcategoryScreen> {
 
                 if (_selectedSubIdx > 0 && _selectedSubIdx < subcategories.length && dbSubcats.isNotEmpty) {
                   final target = dbSubcats[_selectedSubIdx - 1];
-                  final targetId = target.id.toLowerCase().trim();
-                  final targetSlug = target.slug.toLowerCase().trim();
-                  final targetName = target.name.toLowerCase().trim();
-
-                  list = list.where((p) {
-                    final pCatId = (p.categoryId ?? '').toLowerCase().trim();
-                    final pSubId = (p.category?.id ?? '').toLowerCase().trim();
-                    final pParentId = (p.category?.parentId ?? '').toLowerCase().trim();
-                    final pSubSlug = (p.category?.slug ?? '').toLowerCase().trim();
-                    final pCatName = (p.category?.name ?? '').toLowerCase().trim();
-
-                    return pCatId == targetId || pSubId == targetId || pParentId == targetId ||
-                           (targetSlug.isNotEmpty && (pSubSlug == targetSlug || pCatId == targetSlug)) ||
-                           (targetName.isNotEmpty && pCatName == targetName);
-                  }).toList();
+                  list = list.where((p) => isProductInGroceryCategory(p, target)).toList();
                 }
 
                 // Sort products systematically

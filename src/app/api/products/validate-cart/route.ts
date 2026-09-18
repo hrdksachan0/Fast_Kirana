@@ -23,6 +23,20 @@ export async function POST(request: NextRequest) {
       select: {
         id: true, name: true, price: true, mrp: true, stock: true,
         isAvailable: true, variants: true, addons: true, category: true, tags: true,
+        restaurantId: true,
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            lat: true,
+            lng: true,
+            deliveryRadiusKm: true,
+            isOpen: true,
+            openTime: true,
+            closeTime: true,
+          }
+        }
       },
     })
 
@@ -132,6 +146,16 @@ export async function POST(request: NextRequest) {
           name: clientProduct.name,
           oldVal: clientProduct.mrp,
           newVal: dbMrp,
+        })
+      }
+
+      const clientRest = (clientProduct as any).restaurant
+      if (dbProduct.restaurant && (!clientRest?.lat || !clientRest?.deliveryRadiusKm)) {
+        updates.push({
+          type: 'RESTAURANT_UPDATE',
+          productId: clientProduct.id,
+          name: clientProduct.name,
+          newVal: dbProduct.restaurant,
         })
       }
     }

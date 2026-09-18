@@ -485,14 +485,8 @@ class ProductRepository {
       }).toList();
     }
 
-    // Stably place in-stock products first, out-of-stock products at the end (1:1 Web App parity)
-    result.sort((a, b) {
-      final aInStock = a.isAvailable && a.stock > 0;
-      final bInStock = b.isAvailable && b.stock > 0;
-      if (aInStock && !bInStock) return -1;
-      if (!aInStock && bInStock) return 1;
-      return 0;
-    });
+    // Stably place in-stock products first, then sortOrder desc, then createdAt desc (1:1 Web App parity)
+    result.sort((a, b) => compareProductsSystematic(a, b));
 
     return result;
   }

@@ -16,6 +16,8 @@ import {
   type SettingsMap,
 } from '@/lib/checkout'
 import { getDistanceKm } from '@/lib/distance'
+import { isCafeProduct } from '@/lib/utils'
+import { getRestaurantLocation } from '@/lib/restaurant-location'
 import { AddressFormData } from './use-checkout-address'
 
 export interface UseCheckoutPaymentProps {
@@ -679,6 +681,16 @@ export function useCheckoutPayment({
       }
 
       const activeAddress = effectiveAddresses.find((a) => a.id === targetId)
+
+      if (deliveryRules && !deliveryRules.isServiceable) {
+        triggerHaptic('warning')
+        toast.error(
+          deliveryRules.reason ||
+          `Your address is outside our delivery zone (${distanceKm?.toFixed(1) || ''} km away).`
+        )
+        return
+      }
+
       if (
         activeAddress &&
         activeAddress.lat &&
@@ -688,23 +700,37 @@ export function useCheckoutPayment({
       ) {
         const storeLatVal = parseFloat(storeSettingsMap.store_lat) || DEFAULT_STORE_LAT
         const storeLngVal = parseFloat(storeSettingsMap.store_lng) || DEFAULT_STORE_LNG
-        const maxDist = parseFloat(
-          storeSettingsMap.delivery_radius || String(DEFAULT_DELIVERY_RADIUS_KM)
-        )
-        const dist = getDistanceKm(storeLatVal, storeLngVal, activeAddress.lat, activeAddress.lng)
-        if (dist > maxDist) {
-          triggerHaptic('warning')
-          toast.error(
-            `Your address is outside our delivery zone (${dist.toFixed(1)} km away). We deliver only up to ${maxDist} km.`
+        const hasGrocery = items.some((i) => !isCafeProduct(i.product))
+        const hasRest = items.some((i) => isCafeProduct(i.product))
+
+        if (hasGrocery) {
+          const maxDist = parseFloat(
+            storeSettingsMap.delivery_radius || String(DEFAULT_DELIVERY_RADIUS_KM)
           )
-          return
+          const dist = getDistanceKm(storeLatVal, storeLngVal, activeAddress.lat, activeAddress.lng)
+          if (dist > maxDist) {
+            triggerHaptic('warning')
+            toast.error(
+              `Your address is outside our grocery delivery zone (${dist.toFixed(1)} km away). We deliver only up to ${maxDist} km.`
+            )
+            return
+          }
         }
-      } else if (deliveryRules && !deliveryRules.isServiceable) {
-        triggerHaptic('warning')
-        toast.error(
-          `Your address is outside our delivery zone (${distanceKm?.toFixed(1)} km away). We deliver only up to 3 km.`
-        )
-        return
+
+        if (hasRest) {
+          const firstRestItem = items.find((i) => isCafeProduct(i.product))
+          const restLoc = getRestaurantLocation(firstRestItem?.product, storeLatVal, storeLngVal)
+          if (restLoc) {
+            const rDist = getDistanceKm(restLoc.lat, restLoc.lng, activeAddress.lat, activeAddress.lng)
+            if (rDist > restLoc.deliveryRadiusKm) {
+              triggerHaptic('warning')
+              toast.error(
+                `Your address is outside ${restLoc.name}'s delivery zone (${rDist.toFixed(1)} km away). Delivery from this restaurant is limited to ${restLoc.deliveryRadiusKm.toFixed(0)} km.`
+              )
+              return
+            }
+          }
+        }
       }
     }
 

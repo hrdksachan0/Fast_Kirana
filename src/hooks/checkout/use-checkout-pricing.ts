@@ -5,6 +5,7 @@ import type { CartItem } from '@/stores/cart-store'
 import { useCartStore } from '@/stores/cart-store'
 import { isCafeProduct } from '@/lib/utils'
 import { getDistanceKm, getDeliveryRules } from '@/lib/distance'
+import { getRestaurantLocation } from '@/lib/restaurant-location'
 import { Address } from '@/types'
 import { CheckoutSettings } from './use-checkout-settings'
 
@@ -144,22 +145,91 @@ export function useCheckoutPricing({
   const cafeAdjustedSubtotal = cafeSubtotal - cafeB2BDiscount
   const cafeTaxes = cafeAdjustedSubtotal * taxRate
 
+  // Identify restaurant partner if cafe / restaurant items are present
+  const primaryRestaurantItem =
+    cafeCartItems.find((i) => i.product.restaurant || i.product.restaurantId) || cafeCartItems[0]
+  const restaurantLocation = primaryRestaurantItem
+    ? getRestaurantLocation(primaryRestaurantItem.product, storeLat, storeLng)
+    : null
+
+  const isPureRestaurant = hasCafeItems && !hasGroceryItems
+  const isCombinedOrder = hasCafeItems && hasGroceryItems
+
+  const defaultDarkStoreRadius = parseFloat(
+    storeSettingsMap['delivery_radius'] || storeSettingsMap['max_delivery_radius'] || '5.0'
+  )
+
+  const originLat = isPureRestaurant
+    ? (restaurantLocation?.lat ?? storeLat)
+    : storeLat
+  const originLng = isPureRestaurant
+    ? (restaurantLocation?.lng ?? storeLng)
+    : storeLng
+  const originName = isPureRestaurant
+    ? (restaurantLocation?.name || 'Restaurant')
+    : (storeSettingsMap['store_name'] || 'FastKirana Dark Store')
+  const originMaxRadiusKm = isPureRestaurant
+    ? (restaurantLocation?.deliveryRadiusKm ?? 5.0)
+    : defaultDarkStoreRadius
+
   // Calculate distance-based delivery rules if address has coords
   let distanceKm: number | null = null
+  let groceryDistanceKm: number | null = null
+  let restaurantDistanceKm: number | null = null
   let deliveryRules: any = null
 
   if (deliveryMethod === 'DELIVERY' && selectedAddress) {
     if (selectedAddress.lat && selectedAddress.lng) {
-      const maxRadiusKm = parseFloat(
-        storeSettingsMap['delivery_radius'] || storeSettingsMap['max_delivery_radius'] || '5.0'
-      )
       const surgeFee = parseFloat(
         storeSettingsMap['surge_charge'] || storeSettingsMap['surge_fee'] || '0'
       )
       const surgeReason =
         storeSettingsMap['surge_reason'] || (surgeFee > 0 ? 'Special Delivery Surge' : '')
-      distanceKm = getDistanceKm(storeLat, storeLng, selectedAddress.lat, selectedAddress.lng)
-      deliveryRules = getDeliveryRules(distanceKm, { maxRadiusKm, surgeFee, surgeReason, settings: storeSettingsMap, storeName: storeSettingsMap['store_name'] })
+
+      if (isPureRestaurant) {
+        distanceKm = getDistanceKm(originLat, originLng, selectedAddress.lat, selectedAddress.lng)
+        deliveryRules = getDeliveryRules(distanceKm, {
+          maxRadiusKm: originMaxRadiusKm,
+          surgeFee,
+          surgeReason,
+          settings: storeSettingsMap,
+          storeName: originName,
+        })
+      } else if (isCombinedOrder && restaurantLocation) {
+        groceryDistanceKm = getDistanceKm(storeLat, storeLng, selectedAddress.lat, selectedAddress.lng)
+        restaurantDistanceKm = getDistanceKm(restaurantLocation.lat, restaurantLocation.lng, selectedAddress.lat, selectedAddress.lng)
+        // In combined order, fee is based on the darkstore leg, but both legs must be serviceable
+        distanceKm = Math.max(groceryDistanceKm, restaurantDistanceKm)
+        const groceryRules = getDeliveryRules(groceryDistanceKm, {
+          maxRadiusKm: defaultDarkStoreRadius,
+          surgeFee,
+          surgeReason,
+          settings: storeSettingsMap,
+          storeName: storeSettingsMap['store_name'],
+        })
+        const restRules = getDeliveryRules(restaurantDistanceKm, {
+          maxRadiusKm: restaurantLocation.deliveryRadiusKm,
+          surgeFee,
+          surgeReason,
+          settings: storeSettingsMap,
+          storeName: restaurantLocation.name,
+        })
+
+        if (!restRules.isServiceable) {
+          deliveryRules = restRules
+        } else {
+          deliveryRules = groceryRules
+        }
+      } else {
+        distanceKm = getDistanceKm(storeLat, storeLng, selectedAddress.lat, selectedAddress.lng)
+        deliveryRules = getDeliveryRules(distanceKm, {
+          maxRadiusKm: originMaxRadiusKm,
+          surgeFee,
+          surgeReason,
+          settings: storeSettingsMap,
+          storeName: originName,
+        })
+      }
     }
   }
 
@@ -243,6 +313,14 @@ export function useCheckoutPricing({
     cafeTaxes,
     distanceKm,
     deliveryRules,
+    originName,
+    originLat,
+    originLng,
+    originMaxRadiusKm,
+    isPureRestaurant,
+    isCombinedOrder,
+    restaurantDistanceKm,
+    groceryDistanceKm,
     groceryDeliveryFee,
     cafeDeliveryFee,
     deliveryFee,

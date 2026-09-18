@@ -183,6 +183,18 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
+                            if (tier.isServiceable && !isFreeDelivery && tier.freeDeliveryThreshold > 0) ...[
+                              const SizedBox(height: 3),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(2),
+                                child: LinearProgressIndicator(
+                                  value: (total / tier.freeDeliveryThreshold).clamp(0.0, 1.0),
+                                  minHeight: 2.5,
+                                  backgroundColor: Colors.white.withValues(alpha: 0.25),
+                                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),

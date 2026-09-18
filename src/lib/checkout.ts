@@ -5,6 +5,7 @@
 
 import { getDistanceKm, getDeliveryRules } from './distance'
 import { getLast10Digits, isValidIndianPhone } from './phone'
+import { getRestaurantLocation } from './restaurant-location'
 
 // ── Default store configuration (overridable via StoreSetting) ──────────────
 
@@ -227,9 +228,34 @@ export async function validateCheckoutEligibility(
       const storeLng = parseFloat(settings.store_lng || '') || DEFAULT_STORE_LNG
       const maxRadiusKm = parseFloat(settings.delivery_radius || String(DEFAULT_DELIVERY_RADIUS_KM))
 
-      const addrValidation = validateAddress(selectedAddr, storeLat, storeLng, maxRadiusKm)
-      if (!addrValidation.valid) {
-        return { valid: false, error: addrValidation.error }
+      // If cart has grocery items, validate dark store radius
+      if (hasGrocery) {
+        const addrValidation = validateAddress(selectedAddr, storeLat, storeLng, maxRadiusKm)
+        if (!addrValidation.valid) {
+          return { valid: false, error: addrValidation.error }
+        }
+      }
+
+      // If cart has restaurant/cafe items, validate against the restaurant's location
+      if (hasCafe || hasRestaurant) {
+        const firstRestItem = items.find(i => i.product.restaurant || i.product.restaurantId) || items[0]
+        const restLoc = getRestaurantLocation(firstRestItem.product, storeLat, storeLng)
+
+        if (restLoc && selectedAddr.lat && selectedAddr.lng) {
+          const rDist = getDistanceKm(restLoc.lat, restLoc.lng, selectedAddr.lat, selectedAddr.lng)
+          if (rDist > restLoc.deliveryRadiusKm) {
+            return {
+              valid: false,
+              error: `Your address is outside ${restLoc.name}'s delivery zone (${rDist.toFixed(1)} km away). Delivery from this restaurant is strictly limited to ${restLoc.deliveryRadiusKm.toFixed(0)} km.`
+            }
+          }
+        } else if (!hasGrocery) {
+          // If pure restaurant and no GPS coords on address, run city/pincode basic check
+          const addrValidation = validateAddress(selectedAddr, storeLat, storeLng, restLoc?.deliveryRadiusKm || 5.0)
+          if (!addrValidation.valid) {
+            return { valid: false, error: addrValidation.error }
+          }
+        }
       }
     }
   }
