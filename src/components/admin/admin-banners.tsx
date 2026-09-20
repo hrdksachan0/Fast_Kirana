@@ -1247,1153 +1247,155 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
 
         {/* Input Form */}
         <div className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-6">
+          {/* Clean Simple Banner Form Header */}
           <div>
-            <h3 className="text-base font-bold text-text-primary flex items-center gap-1.5">
-              <ImageIcon className="h-5 w-5 text-accent" />
-              {editingId ? 'Edit Card / Promo Banner' : 'Create Card or Promo Banner'}
+            <h3 className="text-base font-bold text-text-primary flex items-center gap-2">
+              <ImageIcon className="h-5 w-5 text-primary" />
+              {editingId ? 'Edit Promo Banner' : 'Create New Promo Banner'}
             </h3>
             <p className="text-xs text-text-secondary mt-0.5">
-              Customize dynamic multi-cards (Dark Sneaker Hero, 2x2 Bento, Editorial HRX) or standard homepage slider banners.
+              Upload a banner image, enter a title & link, and click Save. That's it!
             </p>
           </div>
 
-          {/* ✨ Gemini AI Creative Assistant & Category Enhancer */}
-          <div className="relative overflow-hidden rounded-2xl border border-indigo-500/30 bg-gradient-to-r from-indigo-950/50 via-purple-950/40 to-slate-950 p-4 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-amber-400 animate-spin" style={{ animationDuration: '3s' }} />
-                  <span className="text-xs font-black uppercase tracking-wider text-amber-400">
-                    ✨ Gemini AI Make Pretty
-                  </span>
-                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                    1-Click Auto-Design & Copy
-                  </span>
-                </div>
-                <p className="text-[11px] text-zinc-300 max-w-lg">
-                  Pick any category and let Gemini AI craft appetizing headlines, rich subtitles, vibrant CTA buttons, and 4K food/grocery photography!
-                </p>
-                {/* Quick Category Suggestions */}
-                <div className="flex items-center gap-1.5 pt-1.5 flex-wrap">
-                  <span className="text-[9px] font-bold text-zinc-400">Quick AI Themes:</span>
-                  {[
-                    { label: '🍔 Burgers', name: 'Burgers & Fast Food', targetType: 'food' },
-                    { label: '🍕 Pizza', name: 'Handcrafted Pizza', targetType: 'food' },
-                    { label: '🍚 Biryani', name: 'Royal Dum Biryani', targetType: 'food' },
-                    { label: '🥗 Farm Fresh', name: 'Fresh Fruits & Vegetables', targetType: 'grocery' },
-                    { label: '🥛 Dairy', name: 'Dairy, Bread & Eggs', targetType: 'grocery' },
-                    { label: '🍿 Snacks', name: 'Snacks & Munchies', targetType: 'grocery' },
-                  ].map((quick) => (
-                    <button
-                      key={quick.name}
-                      type="button"
-                      onClick={() => {
-                        setType(quick.targetType)
-                        setSelectedCategory(quick.name)
-                        handleGeminiGenerate(quick.name)
-                      }}
-                      disabled={isGeneratingGemini}
-                      className="px-2 py-0.5 rounded-lg bg-zinc-800/90 hover:bg-zinc-700 text-zinc-200 text-[10px] font-semibold border border-zinc-700/50 transition-all cursor-pointer disabled:opacity-50"
-                    >
-                      {quick.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleGeminiGenerate()}
-                disabled={isGeneratingGemini}
-                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 hover:from-amber-600 hover:to-rose-700 text-white text-xs font-black tracking-wide shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 disabled:opacity-50"
-              >
-                {isGeneratingGemini ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin text-white" />
-                    <span>Gemini Designing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4 text-amber-200" />
-                    <span>✨ Make Pretty with Gemini</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Card Style / Format Tabs */}
-          <div className="space-y-2 border-b border-border/60 pb-4">
-            <label className="text-[11px] font-black uppercase tracking-wider text-text-secondary block">
-              Choose Card Style / Format
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <button
-                type="button"
-                onClick={() => setCardFormat('standard')}
-                className={`py-2 px-3 rounded-xl border text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  cardFormat === 'standard'
-                    ? 'bg-primary text-white border-primary shadow-sm'
-                    : 'bg-muted/20 border-border text-text-secondary hover:bg-muted/40 hover:text-text-primary'
-                }`}
-              >
-                <ImageIcon className="h-3.5 w-3.5" />
-                <span>Standard Banner</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setCardFormat('dark_showcase')
-                  if (!eyebrowTag) setEyebrowTag('🔥 CHEF SPECIAL DROP')
-                  if (!primaryBrand) setPrimaryBrand('FAST BITES')
-                  if (!ctaText) setCtaText('ORDER NOW')
-                  if (!cashbackTitle) setCashbackTitle('FLAT 40% OFF')
-                }}
-                className={`py-2 px-3 rounded-xl border text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  cardFormat === 'dark_showcase'
-                    ? 'bg-neutral-900 text-amber-400 border-amber-500/50 shadow-sm'
-                    : 'bg-muted/20 border-border text-text-secondary hover:bg-muted/40 hover:text-text-primary'
-                }`}
-              >
-                <span>🍔 Category Hero</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setCardFormat('bento_grid')
-                  if (!eyebrowTag) setEyebrowTag('🍽️ MOST ORDERED')
-                  if (!title) setTitle('BEST FOOD SPOTS')
-                  if (!ctaText) setCtaText('VIEW ALL 4 DEALS')
-                  if (!cashbackTitle) setCashbackTitle('UP TO 50% OFF')
-                }}
-                className={`py-2 px-3 rounded-xl border text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  cardFormat === 'bento_grid'
-                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                    : 'bg-muted/20 border-border text-text-secondary hover:bg-muted/40 hover:text-text-primary'
-                }`}
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-                <span>2x2 Bento Grid</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setCardFormat('editorial')
-                  if (!eyebrowTag) setEyebrowTag('✨ SPECIAL SPOTLIGHT')
-                  if (!title) setTitle('MIN. 50% OFF')
-                  if (!ctaText) setCtaText('VIEW FULL MENU')
-                  if (!cashbackTitle) setCashbackTitle('+ EXTRA ₹100 OFF')
-                }}
-                className={`py-2 px-3 rounded-xl border text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  cardFormat === 'editorial'
-                    ? 'bg-rose-600 text-white border-rose-500 shadow-sm'
-                    : 'bg-muted/20 border-border text-text-secondary hover:bg-muted/40 hover:text-text-primary'
-                }`}
-              >
-                <Layers className="h-3.5 w-3.5" />
-                <span>Editorial Spotlight</span>
-              </button>
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Simple Form */}
+          <form onSubmit={handleSubmit} className="space-y-4 bg-muted/20 border border-border p-5 rounded-2xl">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
-              {/* Card Title */}
+              {/* Banner Title */}
               <div className="space-y-1">
                 <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                  {cardFormat === 'dark_showcase' ? 'Sneaker / Product Title *' :
-                   cardFormat === 'bento_grid' ? 'Bento Grid Header Title *' :
-                   cardFormat === 'editorial' ? 'Main Discount Title (e.g. MIN. 80% OFF) *' :
-                   'Banner Title *'}
+                  Banner Title *
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder={
-                    cardFormat === 'dark_showcase' ? "e.g. AIR FORCE 1 '07" :
-                    cardFormat === 'bento_grid' ? 'e.g. TOP PICKS FOR YOU' :
-                    cardFormat === 'editorial' ? 'e.g. MIN. 80% OFF' :
-                    'e.g. Diwali Dhamaka Sale!'
-                  }
+                  placeholder="e.g. Fast Delivery in Ghatampur"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
+                  className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
                 />
               </div>
 
-              {/* Eyebrow Tag for Multi-Cards */}
-              {cardFormat !== 'standard' ? (
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                    Eyebrow Tag Badge (e.g. LIMITED DROP, PRIME ONLY)
-                  </label>
-                  <div className="relative">
-                    <Tag className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
-                    <input
-                      type="text"
-                      placeholder="e.g. LIMITED DROP, PRIME MEMBERS ONLY, SPECIAL EDITION"
-                      value={eyebrowTag}
-                      onChange={(e) => setEyebrowTag(e.target.value.toUpperCase())}
-                      className="w-full bg-muted/40 border border-border pl-9 pr-4 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold uppercase tracking-wider"
-                    />
-                  </div>
-                </div>
-              ) : (
-                /* Promo Coupon Code for Standard */
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Coupon Code (Optional)</label>
-                  <div className="relative">
-                    <Gift className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
-                    <input
-                      type="text"
-                      placeholder="e.g. DIWALI100 (Leave blank for no coupon)"
-                      value={code}
-                      onChange={(e) => setCode(e.target.value.toUpperCase())}
-                      className="w-full bg-muted/40 border border-border pl-9 pr-4 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-mono font-bold text-primary"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Card Description / Subtitle */}
-              <div className="md:col-span-2 space-y-1">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Description / Subtitle *</label>
-                <textarea
-                  rows={2}
+              {/* Subtitle / Description */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
+                  Subtitle / Offer Text *
+                </label>
+                <input
+                  type="text"
                   required
-                  placeholder="Explain the offer (e.g. Iconic Street Style • Triple White Leather or Handpicked gourmet essentials)"
+                  placeholder="e.g. Milk, Fruits, Vegetables & Snacks in minutes"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                  className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
                 />
               </div>
 
-              {/* DARK SNEAKER HERO SPECIFIC FIELDS */}
-              {cardFormat === 'dark_showcase' && (
-                <div className="md:col-span-2 p-4 bg-neutral-900/60 border border-neutral-800 rounded-xl space-y-4">
-                  <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
-                    <h4 className="text-xs font-black text-amber-400 flex items-center gap-1.5 uppercase tracking-wide">
-                      <span>👟 Sneaker Hero Card Controls</span>
-                    </h4>
-                    <label className="flex items-center gap-2 text-xs font-bold text-neutral-300 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={hasWireframeGrid}
-                        onChange={(e) => setHasWireframeGrid(e.target.checked)}
-                        className="h-3.5 w-3.5 rounded border-neutral-700 bg-neutral-800 text-amber-500"
-                      />
-                      <span>Enable 3D Perspective Grid</span>
-                    </label>
-                  </div>
+              {/* Coupon Code (Optional) */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
+                  Promo Code (Optional)
+                </label>
+                <div className="relative">
+                  <Gift className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
+                  <input
+                    type="text"
+                    placeholder="e.g. SAVE20 (Leave blank if none)"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.toUpperCase())}
+                    className="w-full bg-card border border-border pl-9 pr-4 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-mono font-bold text-primary"
+                  />
+                </div>
+              </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-neutral-400 uppercase">Primary Brand Logo / Name</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. NIKE"
-                        value={primaryBrand}
-                        onChange={(e) => setPrimaryBrand(e.target.value)}
-                        className="w-full bg-neutral-950 border border-neutral-700 px-3 py-1.5 rounded-lg text-xs text-white"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-neutral-400 uppercase">Secondary Brand / Line</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. AIR MAX / AIR FORCE"
-                        value={secondaryBrand}
-                        onChange={(e) => setSecondaryBrand(e.target.value)}
-                        className="w-full bg-neutral-950 border border-neutral-700 px-3 py-1.5 rounded-lg text-xs text-white"
-                      />
-                    </div>
-                  </div>
+              {/* Background Gradient Theme */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
+                  Card Theme / Color
+                </label>
+                <select
+                  value={gradient}
+                  onChange={(e) => setGradient(e.target.value)}
+                  className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
+                >
+                  {GRADIENT_PRESETS.map((g) => (
+                    <option key={g.name} value={g.value}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-                  {/* Hero Visual Media (Image + Video Loop) */}
-                  <div className="space-y-3 p-3.5 bg-neutral-950/80 border border-neutral-800 rounded-xl">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-                        <Video className="h-3.5 w-3.5 text-amber-400" />
-                        <span>Hero Visual Media (Image + Video Loop)</span>
-                      </label>
-                      {(imageUrl || videoUrl) && (
-                        <div className="flex items-center gap-1 bg-neutral-900 border border-neutral-800 rounded-lg p-0.5">
-                          <button
-                            type="button"
-                            onClick={() => setPreviewMediaTab('image')}
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-                              previewMediaTab === 'image'
-                                ? 'bg-amber-500 text-black shadow'
-                                : 'text-neutral-400 hover:text-white'
-                            }`}
-                          >
-                            🖼️ Image / Poster
-                          </button>
-                          {videoUrl && (
-                            <button
-                              type="button"
-                              onClick={() => setPreviewMediaTab('video')}
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-                                previewMediaTab === 'video'
-                                  ? 'bg-amber-500 text-black shadow'
-                                  : 'text-neutral-400 hover:text-white'
-                              }`}
-                            >
-                              🎬 Video Loop
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Image / Poster Input */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-center">
-                        <label className="text-[10px] font-bold text-neutral-300 uppercase">
-                          Static Image / Video Poster
-                        </label>
-                        {imageUrl && (
-                          <button
-                            type="button"
-                            onClick={() => setImageUrl('')}
-                            className="text-[9px] text-rose-400 hover:underline font-bold"
-                          >
-                            Clear Image
-                          </button>
-                        )}
+              {/* Upload Banner Image */}
+              <div className="md:col-span-2 space-y-2 border-t border-border/40 pt-3">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary block">
+                  Banner Image (Upload or Paste Link)
+                </label>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+                  <label
+                    htmlFor="banner-image-file-simple"
+                    className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-border hover:border-primary rounded-xl cursor-pointer bg-card hover:bg-primary/5 transition-all"
+                  >
+                    {isUploading ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                        <span className="text-xs font-bold text-primary">Uploading...</span>
                       </div>
-                      <div className="flex gap-2 items-center">
-                        <input
-                          type="url"
-                          placeholder="https://.../food-cutout.png"
-                          value={imageUrl}
-                          onChange={(e) => setImageUrl(e.target.value)}
-                          className="flex-1 bg-neutral-900 border border-neutral-700 px-3 py-1.5 rounded-lg text-xs text-white"
-                        />
-                        <label className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-xs font-bold cursor-pointer shrink-0">
-                          {isUploading ? 'Uploading...' : 'Upload'}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            disabled={isUploading}
-                            onChange={handleImageUpload}
-                            className="sr-only"
-                          />
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Video Loop Input */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-center">
-                        <label className="text-[10px] font-bold text-neutral-300 uppercase">
-                          Looping Micro-Video URL (Optional .mp4 / .webm)
-                        </label>
-                        {videoUrl && (
-                          <button
-                            type="button"
-                            onClick={() => setVideoUrl('')}
-                            className="text-[9px] text-rose-400 hover:underline font-bold"
-                          >
-                            Clear Video
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex gap-2 items-center">
-                        <input
-                          type="url"
-                          placeholder="e.g. https://.../burger-sizzle.mp4"
-                          value={videoUrl}
-                          onChange={(e) => {
-                            setVideoUrl(e.target.value)
-                            if (e.target.value) setPreviewMediaTab('video')
-                          }}
-                          className="flex-1 bg-neutral-900 border border-neutral-700 px-3 py-1.5 rounded-lg text-xs text-white font-mono"
-                        />
-                        <label className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-xs font-bold cursor-pointer shrink-0 flex items-center gap-1">
-                          {isVideoUploading ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Video className="h-3.5 w-3.5 text-amber-400" />
-                          )}
-                          <span>{isVideoUploading ? 'Uploading...' : 'Upload Video'}</span>
-                          <input
-                            type="file"
-                            accept="video/mp4,video/webm,video/quicktime"
-                            disabled={isVideoUploading}
-                            onChange={handleVideoUpload}
-                            className="sr-only"
-                          />
-                        </label>
-                      </div>
-                      <p className="text-[9.5px] text-neutral-400 font-medium">
-                        💡 Direct upload to Supabase Storage or paste an external .mp4 link. Plays muted & looped in mobile & web.
-                      </p>
-                    </div>
-
-                    {/* Live Admin Preview */}
-                    {(imageUrl || videoUrl) && (
-                      <div className="relative w-full h-44 rounded-xl overflow-hidden border border-neutral-800 bg-neutral-900/90 flex items-center justify-center mt-2">
-                        {previewMediaTab === 'video' && videoUrl ? (
-                          <video
-                            src={videoUrl}
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            className="w-full h-full object-cover"
-                          />
-                        ) : imageUrl ? (
-                          <img
-                            src={imageUrl}
-                            alt="Card Media Preview"
-                            className="w-full h-full object-cover"
-                          />
-                        ) : null}
-                        <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/70 backdrop-blur-sm rounded-full text-[9px] font-bold text-neutral-300 border border-white/10 flex items-center gap-1.5">
-                          <span className={`h-2 w-2 rounded-full ${previewMediaTab === 'video' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-                          <span>{previewMediaTab === 'video' ? 'LIVE MOTION LOOP' : 'POSTER PREVIEW'}</span>
-                        </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <ImageIcon className="w-5 h-5 text-primary" />
+                        <span className="text-xs font-bold text-text-primary">
+                          {imageUrl ? 'Change Image File' : 'Click to Upload Image'}
+                        </span>
                       </div>
                     )}
-                  </div>
-
-                  {/* Cashback and CTA Pill */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-neutral-400 uppercase">Cashback Title (e.g. FLAT 40% OFF)</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. FLAT 40% OFF"
-                        value={cashbackTitle}
-                        onChange={(e) => setCashbackTitle(e.target.value)}
-                        className="w-full bg-neutral-950 border border-neutral-700 px-3 py-1.5 rounded-lg text-xs text-white"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-neutral-400 uppercase">Cashback Subtitle</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. + Extra 10% on UPI"
-                        value={cashbackSubtitle}
-                        onChange={(e) => setCashbackSubtitle(e.target.value)}
-                        className="w-full bg-neutral-950 border border-neutral-700 px-3 py-1.5 rounded-lg text-xs text-white"
-                      />
-                    </div>
-                  </div>
-
-                  {/* CTA Pill Buttons & Colors */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-neutral-400 uppercase">CTA Button Text</label>
-                      <input
-                        type="text"
-                        placeholder="EXPLORE NOW"
-                        value={ctaText}
-                        onChange={(e) => setCtaText(e.target.value)}
-                        className="w-full bg-neutral-950 border border-neutral-700 px-2 py-1.5 rounded-lg text-xs text-white font-bold"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-neutral-400 uppercase">CTA Link URL</label>
-                      <input
-                        type="text"
-                        placeholder="/category/footwear"
-                        value={ctaUrl}
-                        onChange={(e) => setCtaUrl(e.target.value)}
-                        className="w-full bg-neutral-950 border border-neutral-700 px-2 py-1.5 rounded-lg text-xs text-white"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-neutral-400 uppercase">Pill Bg Color</label>
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          type="color"
-                          value={ctaBgColorHex.startsWith('#') ? ctaBgColorHex : '#FFFFFF'}
-                          onChange={(e) => setCtaBgColorHex(e.target.value)}
-                          className="h-7 w-7 rounded border border-neutral-700 cursor-pointer bg-transparent"
-                        />
-                        <input
-                          type="text"
-                          value={ctaBgColorHex}
-                          onChange={(e) => setCtaBgColorHex(e.target.value)}
-                          className="w-full bg-neutral-950 border border-neutral-700 px-2 py-1.5 rounded-lg text-xs text-white font-mono"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-neutral-400 uppercase">Pill Text Color</label>
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          type="color"
-                          value={ctaTextColorHex.startsWith('#') ? ctaTextColorHex : '#000000'}
-                          onChange={(e) => setCtaTextColorHex(e.target.value)}
-                          className="h-7 w-7 rounded border border-neutral-700 cursor-pointer bg-transparent"
-                        />
-                        <input
-                          type="text"
-                          value={ctaTextColorHex}
-                          onChange={(e) => setCtaTextColorHex(e.target.value)}
-                          className="w-full bg-neutral-950 border border-neutral-700 px-2 py-1.5 rounded-lg text-xs text-white font-mono"
-                        />
-                      </div>
-                    </div>
-                  </div>
+                    <input
+                      id="banner-image-file-simple"
+                      type="file"
+                      accept="image/*"
+                      disabled={isUploading}
+                      onChange={handleImageUpload}
+                      className="sr-only"
+                    />
+                  </label>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-neutral-400 uppercase">Disclaimer Footer</label>
                     <input
-                      type="text"
-                      placeholder="e.g. *T&C Apply. Available in select sizes."
-                      value={disclaimerText}
-                      onChange={(e) => setDisclaimerText(e.target.value)}
-                      className="w-full bg-neutral-950 border border-neutral-700 px-3 py-1.5 rounded-lg text-xs text-neutral-400"
+                      type="url"
+                      placeholder="Or paste Image URL (https://...)"
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
                     />
                   </div>
                 </div>
-              )}
 
-              {/* 2X2 BENTO GRID SPECIFIC FIELDS */}
-              {cardFormat === 'bento_grid' && (
-                <div className="md:col-span-2 p-4 bg-indigo-950/30 border border-indigo-900/50 rounded-xl space-y-4">
-                  <div className="border-b border-indigo-900/50 pb-2">
-                    <h4 className="text-xs font-black text-indigo-400 flex items-center gap-1.5 uppercase tracking-wide">
-                      <LayoutGrid className="h-4 w-4" />
-                      <span>2x2 Bento 4-Product Grid Images</span>
-                    </h4>
-                    <p className="text-[10px] text-text-muted">Enter 4 product image URLs or click upload for each quadrant.</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {/* Slot 1 */}
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-text-secondary uppercase">Slot 1 (Top-Left)</label>
-                      <div className="flex gap-1.5 items-center">
-                        <input
-                          type="url"
-                          placeholder="Image URL 1"
-                          value={gridImage1}
-                          onChange={(e) => setGridImage1(e.target.value)}
-                          className="flex-1 bg-muted/40 border border-border px-2.5 py-1.5 rounded-lg text-xs font-medium"
-                        />
-                        <label className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold cursor-pointer shrink-0">
-                          Upload
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => e.target.files?.[0] && handleBentoSlotUpload(1, e.target.files[0])}
-                            className="sr-only"
-                          />
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Slot 2 */}
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-text-secondary uppercase">Slot 2 (Top-Right)</label>
-                      <div className="flex gap-1.5 items-center">
-                        <input
-                          type="url"
-                          placeholder="Image URL 2"
-                          value={gridImage2}
-                          onChange={(e) => setGridImage2(e.target.value)}
-                          className="flex-1 bg-muted/40 border border-border px-2.5 py-1.5 rounded-lg text-xs font-medium"
-                        />
-                        <label className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold cursor-pointer shrink-0">
-                          Upload
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => e.target.files?.[0] && handleBentoSlotUpload(2, e.target.files[0])}
-                            className="sr-only"
-                          />
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Slot 3 */}
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-text-secondary uppercase">Slot 3 (Bottom-Left)</label>
-                      <div className="flex gap-1.5 items-center">
-                        <input
-                          type="url"
-                          placeholder="Image URL 3"
-                          value={gridImage3}
-                          onChange={(e) => setGridImage3(e.target.value)}
-                          className="flex-1 bg-muted/40 border border-border px-2.5 py-1.5 rounded-lg text-xs font-medium"
-                        />
-                        <label className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold cursor-pointer shrink-0">
-                          Upload
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => e.target.files?.[0] && handleBentoSlotUpload(3, e.target.files[0])}
-                            className="sr-only"
-                          />
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Slot 4 */}
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-text-secondary uppercase">Slot 4 (Bottom-Right)</label>
-                      <div className="flex gap-1.5 items-center">
-                        <input
-                          type="url"
-                          placeholder="Image URL 4"
-                          value={gridImage4}
-                          onChange={(e) => setGridImage4(e.target.value)}
-                          className="flex-1 bg-muted/40 border border-border px-2.5 py-1.5 rounded-lg text-xs font-medium"
-                        />
-                        <label className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold cursor-pointer shrink-0">
-                          Upload
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => e.target.files?.[0] && handleBentoSlotUpload(4, e.target.files[0])}
-                            className="sr-only"
-                          />
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Cashback and CTA */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-text-secondary uppercase">Cashback Title</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. UP TO 60% OFF"
-                        value={cashbackTitle}
-                        onChange={(e) => setCashbackTitle(e.target.value)}
-                        className="w-full bg-muted/40 border border-border px-3 py-1.5 rounded-lg text-xs font-bold"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-text-secondary uppercase">Cashback Subtitle</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. FastKirana Prime Exclusive Deals"
-                        value={cashbackSubtitle}
-                        onChange={(e) => setCashbackSubtitle(e.target.value)}
-                        className="w-full bg-muted/40 border border-border px-3 py-1.5 rounded-lg text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-text-secondary uppercase">CTA Text</label>
-                      <input
-                        type="text"
-                        placeholder="VIEW ALL 4 DEALS"
-                        value={ctaText}
-                        onChange={(e) => setCtaText(e.target.value)}
-                        className="w-full bg-muted/40 border border-border px-2 py-1.5 rounded-lg text-xs font-bold"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-text-secondary uppercase">CTA Link URL</label>
-                      <input
-                        type="text"
-                        placeholder="/category/deals"
-                        value={ctaUrl}
-                        onChange={(e) => setCtaUrl(e.target.value)}
-                        className="w-full bg-muted/40 border border-border px-2 py-1.5 rounded-lg text-xs"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-text-secondary uppercase">Pill Bg Color</label>
-                      <input
-                        type="color"
-                        value={ctaBgColorHex.startsWith('#') ? ctaBgColorHex : '#4F46E5'}
-                        onChange={(e) => setCtaBgColorHex(e.target.value)}
-                        className="h-8 w-full rounded border border-border cursor-pointer bg-transparent"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-text-secondary uppercase">Pill Text Color</label>
-                      <input
-                        type="color"
-                        value={ctaTextColorHex.startsWith('#') ? ctaTextColorHex : '#FFFFFF'}
-                        onChange={(e) => setCtaTextColorHex(e.target.value)}
-                        className="h-8 w-full rounded border border-border cursor-pointer bg-transparent"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-text-secondary uppercase">Disclaimer Footer</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. *Valid until midnight tonight."
-                      value={disclaimerText}
-                      onChange={(e) => setDisclaimerText(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-1.5 rounded-lg text-xs text-text-muted"
+                {/* Image Preview Box */}
+                {imageUrl && (
+                  <div className="relative aspect-[3/1] max-h-36 w-full overflow-hidden rounded-xl border border-border bg-black/5 mt-2">
+                    <img
+                      src={imageUrl}
+                      alt="Banner Preview"
+                      className="object-contain w-full h-full"
                     />
-                  </div>
-                </div>
-              )}
-
-              {/* EDITORIAL HRX SPECIFIC FIELDS */}
-              {cardFormat === 'editorial' && (
-                <div className="md:col-span-2 p-4 bg-rose-950/20 border border-rose-900/40 rounded-xl space-y-4">
-                  <div className="border-b border-rose-900/40 pb-2">
-                    <h4 className="text-xs font-black text-rose-400 flex items-center gap-1.5 uppercase tracking-wide">
-                      <Layers className="h-4 w-4" />
-                      <span>Editorial High-Contrast Card Controls</span>
-                    </h4>
-                  </div>
-
-                  {/* Editorial Visual Media (Image + Video Loop) */}
-                  <div className="space-y-3 p-3.5 bg-rose-950/40 border border-rose-900/50 rounded-xl">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-black text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
-                        <Video className="h-3.5 w-3.5 text-rose-400" />
-                        <span>Editorial Visual Media (Image + Video Loop)</span>
-                      </label>
-                      {(imageUrl || videoUrl) && (
-                        <div className="flex items-center gap-1 bg-neutral-900 border border-rose-900/40 rounded-lg p-0.5">
-                          <button
-                            type="button"
-                            onClick={() => setPreviewMediaTab('image')}
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-                              previewMediaTab === 'image'
-                                ? 'bg-rose-600 text-white shadow'
-                                : 'text-neutral-400 hover:text-white'
-                            }`}
-                          >
-                            🖼️ Image / Poster
-                          </button>
-                          {videoUrl && (
-                            <button
-                              type="button"
-                              onClick={() => setPreviewMediaTab('video')}
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-                                previewMediaTab === 'video'
-                                  ? 'bg-rose-600 text-white shadow'
-                                  : 'text-neutral-400 hover:text-white'
-                              }`}
-                            >
-                              🎬 Video Loop
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Image / Poster Input */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-center">
-                        <label className="text-[10px] font-bold text-rose-300 uppercase">
-                          Static Cutout Graphic / Video Poster
-                        </label>
-                        {imageUrl && (
-                          <button
-                            type="button"
-                            onClick={() => setImageUrl('')}
-                            className="text-[9px] text-rose-400 hover:underline font-bold"
-                          >
-                            Clear Image
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex gap-2 items-center">
-                        <input
-                          type="url"
-                          placeholder="https://.../model-cutout.png"
-                          value={imageUrl}
-                          onChange={(e) => setImageUrl(e.target.value)}
-                          className="flex-1 bg-neutral-900 border border-rose-900/60 px-3 py-1.5 rounded-lg text-xs text-white"
-                        />
-                        <label className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold cursor-pointer shrink-0">
-                          {isUploading ? 'Uploading...' : 'Upload'}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            disabled={isUploading}
-                            onChange={handleImageUpload}
-                            className="sr-only"
-                          />
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Video Loop Input */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-center">
-                        <label className="text-[10px] font-bold text-rose-300 uppercase">
-                          Looping Micro-Video URL (Optional .mp4 / .webm)
-                        </label>
-                        {videoUrl && (
-                          <button
-                            type="button"
-                            onClick={() => setVideoUrl('')}
-                            className="text-[9px] text-rose-400 hover:underline font-bold"
-                          >
-                            Clear Video
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex gap-2 items-center">
-                        <input
-                          type="url"
-                          placeholder="e.g. https://.../royal-feast.mp4"
-                          value={videoUrl}
-                          onChange={(e) => {
-                            setVideoUrl(e.target.value)
-                            if (e.target.value) setPreviewMediaTab('video')
-                          }}
-                          className="flex-1 bg-neutral-900 border border-rose-900/60 px-3 py-1.5 rounded-lg text-xs text-white font-mono"
-                        />
-                        <label className="px-3 py-1.5 bg-rose-900/80 hover:bg-rose-800 text-white rounded-lg text-xs font-bold cursor-pointer shrink-0 flex items-center gap-1 border border-rose-700/50">
-                          {isVideoUploading ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Video className="h-3.5 w-3.5 text-rose-300" />
-                          )}
-                          <span>{isVideoUploading ? 'Uploading...' : 'Upload Video'}</span>
-                          <input
-                            type="file"
-                            accept="video/mp4,video/webm,video/quicktime"
-                            disabled={isVideoUploading}
-                            onChange={handleVideoUpload}
-                            className="sr-only"
-                          />
-                        </label>
-                      </div>
-                      <p className="text-[9.5px] text-neutral-400 font-medium">
-                        💡 Direct upload to Supabase Storage or paste an external .mp4 link. Plays muted & looped in mobile & web.
-                      </p>
-                    </div>
-
-                    {/* Live Admin Preview */}
-                    {(imageUrl || videoUrl) && (
-                      <div className="relative w-full h-44 rounded-xl overflow-hidden border border-rose-900/50 bg-neutral-950/80 flex items-center justify-center mt-2">
-                        {previewMediaTab === 'video' && videoUrl ? (
-                          <video
-                            src={videoUrl}
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            className="w-full h-full object-cover"
-                          />
-                        ) : imageUrl ? (
-                          <img
-                            src={imageUrl}
-                            alt="Editorial Media Preview"
-                            className="w-full h-full object-cover"
-                          />
-                        ) : null}
-                        <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/70 backdrop-blur-sm rounded-full text-[9px] font-bold text-neutral-300 border border-white/10 flex items-center gap-1.5">
-                          <span className={`h-2 w-2 rounded-full ${previewMediaTab === 'video' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
-                          <span>{previewMediaTab === 'video' ? 'LIVE MOTION LOOP' : 'POSTER PREVIEW'}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Cashback Pill */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-text-secondary uppercase">Cashback Pill Text (e.g. + EXTRA ₹150 OFF)</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. + EXTRA ₹150 OFF"
-                        value={cashbackTitle}
-                        onChange={(e) => setCashbackTitle(e.target.value)}
-                        className="w-full bg-muted/40 border border-border px-3 py-1.5 rounded-lg text-xs font-bold text-rose-500"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-text-secondary uppercase">Cashback Subtitle / Code</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Use code HRXFIRST at checkout"
-                        value={cashbackSubtitle}
-                        onChange={(e) => setCashbackSubtitle(e.target.value)}
-                        className="w-full bg-muted/40 border border-border px-3 py-1.5 rounded-lg text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-text-secondary uppercase">CTA Text</label>
-                      <input
-                        type="text"
-                        placeholder="SHOP HRX SALE"
-                        value={ctaText}
-                        onChange={(e) => setCtaText(e.target.value)}
-                        className="w-full bg-muted/40 border border-border px-2 py-1.5 rounded-lg text-xs font-bold"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-text-secondary uppercase">CTA Link URL</label>
-                      <input
-                        type="text"
-                        placeholder="/category/fitness"
-                        value={ctaUrl}
-                        onChange={(e) => setCtaUrl(e.target.value)}
-                        className="w-full bg-muted/40 border border-border px-2 py-1.5 rounded-lg text-xs"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-text-secondary uppercase">Pill Bg Color</label>
-                      <input
-                        type="color"
-                        value={ctaBgColorHex.startsWith('#') ? ctaBgColorHex : '#EF4444'}
-                        onChange={(e) => setCtaBgColorHex(e.target.value)}
-                        className="h-8 w-full rounded border border-border cursor-pointer bg-transparent"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-text-secondary uppercase">Pill Text Color</label>
-                      <input
-                        type="color"
-                        value={ctaTextColorHex.startsWith('#') ? ctaTextColorHex : '#FFFFFF'}
-                        onChange={(e) => setCtaTextColorHex(e.target.value)}
-                        className="h-8 w-full rounded border border-border cursor-pointer bg-transparent"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-text-secondary uppercase">Disclaimer Footer</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. *Limited quantities available. Fast delivery."
-                      value={disclaimerText}
-                      onChange={(e) => setDisclaimerText(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-1.5 rounded-lg text-xs text-text-muted"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* STANDARD BANNER SPECIFIC FIELDS */}
-              {cardFormat === 'standard' && (
-                <>
-                  {/* Background Gradient */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Background Gradient Theme</label>
-                    <select
-                      value={gradient}
-                      onChange={(e) => setGradient(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
+                    <button
+                      type="button"
+                      onClick={() => setImageUrl('')}
+                      className="absolute top-2 right-2 px-2 py-1 bg-rose-600 text-white text-[10px] font-bold rounded-lg shadow cursor-pointer"
                     >
-                      {GRADIENT_PRESETS.map((g) => (
-                        <option key={g.name} value={g.value}>
-                          {g.name}
-                        </option>
-                      ))}
-                    </select>
+                      Remove Image
+                    </button>
                   </div>
+                )}
+              </div>
 
-                  {/* Visual Badge Type */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Visual Badge Icon Type</label>
-                    <select
-                      value={type}
-                      onChange={(e) => setType(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
-                    >
-                      <option value="grocery">🛒 Grocery Banner (Storefront Home)</option>
-                      <option value="cafe">🍕 Café Banner (Café Storefront)</option>
-                      <option value="festival">🌸 Festival/Holiday (Diyas / Floral)</option>
-                      <option value="first-order">🥛 Milk & Fruits Essentials</option>
-                      <option value="fresh">🥬 Farm Fresh (Leafy Greens)</option>
-                      <option value="snacks">🥤 Cold Drinks & Snacks</option>
-                      <option value="express-delivery">🚚 Ghatampur Express Layout (Light Pink)</option>
-                      <option value="custom">📦 Generic Delivery Box</option>
-                    </select>
-                  </div>
-
-                  {/* Custom Banner Image */}
-                  <div className="md:col-span-2 space-y-2 border-t border-border/40 pt-4">
-                    <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary block">
-                        Custom Banner Graphic (Optional)
-                      </label>
-                      {imageUrl && (
-                        <button
-                          type="button"
-                          onClick={() => setImageUrl('')}
-                          className="text-[10px] text-danger hover:underline font-bold"
-                        >
-                          Clear Image
-                        </button>
-                      )}
-                    </div>
-                    
-                    <div className="bg-accent/5 border border-accent/15 p-3 rounded-xl">
-                      <p className="text-[11px] text-accent font-bold leading-normal">
-                        🎨 **Design your banner:** Recommended aspect ratio is **3:1** (e.g. 1200 x 400 pixels).
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                      <div className="flex items-center justify-center w-full">
-                        <label
-                          htmlFor="banner-image-file"
-                          className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-border hover:border-accent rounded-xl cursor-pointer bg-muted/10 hover:bg-accent/5 transition-all"
-                        >
-                          <div className="flex flex-col items-center justify-center py-4">
-                            {isUploading ? (
-                              <>
-                                <Loader2 className="w-6 h-6 text-accent animate-spin mb-1" />
-                                <p className="text-[11px] text-text-secondary font-bold">Uploading...</p>
-                              </>
-                            ) : (
-                              <>
-                                <ImageIcon className="w-6 h-6 text-text-muted mb-1" />
-                                <p className="text-[11px] text-text-secondary font-semibold">
-                                  Click to upload image file
-                                </p>
-                              </>
-                            )}
-                          </div>
-                        </label>
-                        <input
-                          id="banner-image-file"
-                          type="file"
-                          accept="image/*"
-                          disabled={isUploading}
-                          onChange={handleImageUpload}
-                          className="sr-only"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-extrabold uppercase tracking-wider text-text-secondary">Or Paste Image URL</label>
-                        <input
-                          type="url"
-                          placeholder="https://..."
-                          value={imageUrl}
-                          onChange={(e) => setImageUrl(e.target.value)}
-                          className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Optional Video Loop URL */}
-                    <div className="space-y-1 pt-2 border-t border-border/30">
-                      <div className="flex justify-between items-center">
-                        <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
-                          <Video className="h-3.5 w-3.5 text-primary" />
-                          <span>Looping Video URL (Optional .mp4 for live motion cards)</span>
-                        </label>
-                        {videoUrl && (
-                          <button
-                            type="button"
-                            onClick={() => setVideoUrl('')}
-                            className="text-[9px] text-danger hover:underline font-bold"
-                          >
-                            Clear Video
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex gap-2 items-center">
-                        <input
-                          type="url"
-                          placeholder="e.g. https://.../promo-loop.mp4"
-                          value={videoUrl}
-                          onChange={(e) => {
-                            setVideoUrl(e.target.value)
-                            if (e.target.value) setPreviewMediaTab('video')
-                          }}
-                          className="flex-1 bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-mono"
-                        />
-                        <label className="px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold cursor-pointer shrink-0 flex items-center gap-1.5 transition-colors">
-                          {isVideoUploading ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Video className="h-3.5 w-3.5" />
-                          )}
-                          <span>{isVideoUploading ? 'Uploading...' : 'Upload Video'}</span>
-                          <input
-                            type="file"
-                            accept="video/mp4,video/webm,video/quicktime"
-                            disabled={isVideoUploading}
-                            onChange={handleVideoUpload}
-                            className="sr-only"
-                          />
-                        </label>
-                      </div>
-                      <p className="text-[9.5px] text-text-muted font-medium">
-                        💡 Direct upload to Supabase Storage or paste an external .mp4 link. Plays muted & looped in mobile & web.
-                      </p>
-                    </div>
-
-                    {/* Media Live Preview with Tabs */}
-                    {(imageUrl || videoUrl) && (
-                      <div className="space-y-1.5 mt-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                            Live Preview
-                          </span>
-                          <div className="flex items-center gap-1 bg-muted/50 border border-border rounded-lg p-0.5">
-                            <button
-                              type="button"
-                              onClick={() => setPreviewMediaTab('image')}
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-                                previewMediaTab === 'image'
-                                  ? 'bg-primary text-white shadow'
-                                  : 'text-text-muted hover:text-text-primary'
-                              }`}
-                            >
-                              🖼️ Image / Poster
-                            </button>
-                            {videoUrl && (
-                              <button
-                                type="button"
-                                onClick={() => setPreviewMediaTab('video')}
-                                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-                                  previewMediaTab === 'video'
-                                  ? 'bg-primary text-white shadow'
-                                  : 'text-text-muted hover:text-text-primary'
-                                }`}
-                              >
-                                🎬 Video Loop
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="relative aspect-[3/1] w-full overflow-hidden rounded-xl border border-border bg-muted/20 flex items-center justify-center">
-                          {previewMediaTab === 'video' && videoUrl ? (
-                            <video
-                              src={videoUrl}
-                              autoPlay
-                              loop
-                              muted
-                              playsInline
-                              className="object-cover w-full h-full"
-                            />
-                          ) : imageUrl ? (
-                            <img
-                              src={imageUrl}
-                              alt="Uploaded Banner Preview"
-                              className="object-cover w-full h-full"
-                            />
-                          ) : null}
-                          <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/70 backdrop-blur-sm rounded-full text-[9px] font-bold text-white border border-white/10 flex items-center gap-1.5">
-                            <span className={`h-2 w-2 rounded-full ${previewMediaTab === 'video' ? 'bg-emerald-400 animate-pulse' : 'bg-primary'}`} />
-                            <span>{previewMediaTab === 'video' ? 'LIVE MOTION LOOP' : 'POSTER PREVIEW'}</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {/* COMMON DESTINATION LINKING */}
-              <div className="space-y-1 border-t border-border/40 pt-4">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Banner Click Destination</label>
+              {/* Banner Click Target */}
+              <div className="space-y-1 border-t border-border/40 pt-3">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
+                  On Banner Click: Where to go?
+                </label>
                 <select
                   value={linkType}
                   onChange={(e) => {
@@ -2406,29 +1408,29 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                       setSelectedProduct(products[0].slug)
                     }
                   }}
-                  className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
+                  className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
                 >
-                  <option value="none">No Direct Routing (Unlinked)</option>
-                  <option value="category">Link to Store Category</option>
-                  <option value="product">Link to Specific Product</option>
-                  <option value="custom">Custom In-App Route / URL</option>
+                  <option value="none">No Link (Just Display)</option>
+                  <option value="category">Open Store Category</option>
+                  <option value="product">Open Specific Product</option>
+                  <option value="custom">Custom Link / Route</option>
                 </select>
               </div>
 
-              {/* Conditional Link Target Selector */}
-              <div className="border-t border-border/40 pt-4">
+              {/* Destination Selector */}
+              <div className="border-t border-border/40 pt-3">
                 {linkType === 'category' && (
                   <div className="space-y-1">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Select Target Category</label>
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Select Category</label>
                     <select
                       value={selectedCategory}
                       onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
+                      className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold text-primary"
                     >
                       <option value="">-- Choose Category --</option>
                       {categories.map((cat: any) => (
                         <option key={cat.id} value={cat.slug}>
-                          {cat.name} ({cat.slug})
+                          {cat.name}
                         </option>
                       ))}
                     </select>
@@ -2437,16 +1439,16 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
 
                 {linkType === 'product' && (
                   <div className="space-y-1">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Select Target Product</label>
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Select Product</label>
                     <select
                       value={selectedProduct}
                       onChange={(e) => setSelectedProduct(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
+                      className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold text-primary"
                     >
                       <option value="">-- Choose Product --</option>
                       {products.map((prod: any) => (
                         <option key={prod.id} value={prod.slug}>
-                          {prod.name} ({prod.category?.name || 'Grocery'})
+                          {prod.name}
                         </option>
                       ))}
                     </select>
@@ -2455,84 +1457,70 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
 
                 {linkType === 'custom' && (
                   <div className="space-y-1">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Custom Click URL</label>
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Paste Link URL</label>
                     <input
                       type="text"
-                      placeholder="e.g. /category/fruits-vegetables or /product/maggi"
+                      placeholder="e.g. /restaurant/as-restaurant"
                       value={customLinkUrl}
                       onChange={(e) => setCustomLinkUrl(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
+                      className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs font-semibold"
                     />
                   </div>
                 )}
 
                 {linkType === 'none' && (
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Destination Status</label>
-                    <div className="text-xs text-text-muted py-2">Card will display promotional content without automatic redirection.</div>
+                  <div className="text-[11px] text-text-muted pt-2 font-medium">
+                    Banner show hoga lekin click par kahi nahi jayega.
                   </div>
                 )}
               </div>
 
-              {/* Sorting Weight */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Ordering Weight (sortOrder)</label>
-                <input
-                  type="number"
-                  value={sortOrder}
-                  onChange={(e) => setSortOrder(e.target.value)}
-                  className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                />
-              </div>
-
-              {/* Active Toggle Option */}
-              <div className="flex items-center gap-3 pt-5">
-                <label className="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer select-none">
+              {/* Active Switch */}
+              <div className="md:col-span-2 flex items-center justify-between pt-3 border-t border-border/40">
+                <label className="flex items-center gap-2 text-xs font-black text-text-primary cursor-pointer">
                   <input
                     type="checkbox"
                     checked={isActive}
                     onChange={(e) => setIsActive(e.target.checked)}
                     className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                   />
-                  <span>Publish immediately to Storefront & Mobile App</span>
+                  <span>Show Live on App & Storefront</span>
                 </label>
+
+                <div className="flex items-center gap-2">
+                  {editingId && (
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      className="px-3 py-1.5 border border-border rounded-xl text-xs font-bold hover:bg-muted transition-all cursor-pointer"
+                    >
+                      Cancel Edit
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-black text-xs transition-all flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50 active:scale-98"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="h-4 w-4" />
+                        {editingId ? 'Save Changes' : '🚀 Save & Publish Banner'}
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
 
-            </div>
-
-            {/* Action buttons */}
-            <div className="pt-4 border-t border-border/40 flex justify-end gap-2">
-              {editingId && (
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="px-4 py-2 border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all cursor-pointer"
-                >
-                  Cancel Edit
-                </button>
-              )}
-              <button
-                type="submit"
-                disabled={submitting}
-                className="h-10 px-6 rounded-xl bg-accent hover:bg-accent-dark text-white font-black text-xs transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60 cursor-pointer shadow active:scale-98"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Saving Card to DB...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4" />
-                    {editingId ? 'Save Changes' : 'Create & Publish Card'}
-                  </>
-                )}
-              </button>
             </div>
           </form>
         </div>
 
-      </div>
 
       {/* Live Preview and Active Banners Sidebar */}
       <div className="space-y-6">
