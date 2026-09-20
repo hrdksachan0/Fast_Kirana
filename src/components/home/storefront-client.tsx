@@ -74,10 +74,10 @@ export function StorefrontClient({
       {/* Dynamic Celebration Floating Emojis */}
       <FloatingEmojis type={activeTab === 'food' ? 'food' : 'grocery'} />
 
-      {/* Top Header Mode Selector Switcher (2 Distinct Tabs: Grocery & Food) */}
-      <div className="w-full flex items-center justify-center pt-1 pb-1 relative z-20 px-2">
+      {/* Top Header Mode Selector Switcher (2 Distinct Tabs: Grocery & Food) - Sticky on Scroll */}
+      <div className="w-full flex items-center justify-center pt-1.5 pb-1.5 sticky top-14 sm:top-16 z-30 px-2 pointer-events-auto backdrop-blur-xs">
         <div 
-          className="relative flex items-center w-full max-w-[420px] h-[52px] sm:h-[60px] p-1.5 rounded-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl shadow-[0_12px_32px_-10px_rgba(0,0,0,0.1),0_2px_6px_rgba(0,0,0,0.04)] dark:shadow-[0_16px_36px_-12px_rgba(0,0,0,0.5)] border border-zinc-200/70 dark:border-zinc-800/80" 
+          className="relative flex items-center w-full max-w-[420px] h-[52px] sm:h-[60px] p-1.5 rounded-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl shadow-[0_12px_32px_-10px_rgba(0,0,0,0.12),0_4px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_16px_36px_-12px_rgba(0,0,0,0.6)] border border-zinc-200/80 dark:border-zinc-800/80" 
           role="tablist" 
           aria-label="Store mode"
         >
@@ -203,33 +203,6 @@ export function StorefrontClient({
             ) : (
               <RestaurantListing initialRestaurants={restaurants} />
             )}
-          </motion.div>
-        )}
-
-        {/* Tab 3: DEALS & OFFERS */}
-        {activeTab === 'deals' && (
-          <motion.div
-            key="deals-content"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="container mx-auto px-4 pt-2 flex flex-col gap-5 sm:gap-6 md:gap-8 max-w-7xl relative z-10 min-h-[50vh]"
-          >
-            <div className="section-lazy-render">
-              <DealsCurationHub
-                categories={categories}
-                allProducts={allGroceryProducts}
-                flashDeals={flashDeals}
-                bestSellers={bestSellers}
-                topPicks={topPicks}
-                breakfastProducts={breakfastProducts}
-                lunchProducts={lunchProducts}
-                teaProducts={teaProducts}
-                nightProducts={nightProducts}
-                sortRules={sortRules}
-              />
-            </div>
           </motion.div>
         )}
       </AnimatePresence>
