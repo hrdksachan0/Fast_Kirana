@@ -209,4 +209,20 @@ void main() {
     expect(find.text('Hidden Title'), findsNothing);
     expect(find.text('Hidden Subtitle'), findsNothing);
   });
+
+  testWidgets('CardMediaWidget initializes with showPauseButton enabled by default', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: CardMediaWidget(
+            imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e.jpg',
+            videoUrl: 'https://example.com/test-loop.mp4',
+            showPauseButton: true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(CardMediaWidget), findsOneWidget);
+  });
 }

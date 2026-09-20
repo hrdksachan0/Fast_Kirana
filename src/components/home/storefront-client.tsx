@@ -55,15 +55,15 @@ export function StorefrontClient({
   const router = useRouter()
   const searchParams = useSearchParams()
   const modeParam = searchParams.get('mode')
-  const [activeTab, setActiveTab] = useState<'grocery' | 'food' | 'deals'>('grocery')
+  const [activeTab, setActiveTab] = useState<'grocery' | 'food'>('grocery')
 
   useEffect(() => {
-    if (modeParam === 'food' || modeParam === 'deals' || modeParam === 'grocery') {
+    if (modeParam === 'food' || modeParam === 'grocery') {
       setActiveTab(modeParam as any)
     }
   }, [modeParam])
 
-  const handleTabChange = (tab: 'grocery' | 'food' | 'deals') => {
+  const handleTabChange = (tab: 'grocery' | 'food') => {
     triggerHaptic('selection')
     setActiveTab(tab)
     router.replace(`/?mode=${tab}`, { scroll: false })
@@ -74,10 +74,10 @@ export function StorefrontClient({
       {/* Dynamic Celebration Floating Emojis */}
       <FloatingEmojis type={activeTab === 'food' ? 'food' : 'grocery'} />
 
-      {/* Top Header Mode Selector Switcher (3 Distinct Tabs) */}
+      {/* Top Header Mode Selector Switcher (2 Distinct Tabs: Grocery & Food) */}
       <div className="w-full flex items-center justify-center pt-1 pb-1 relative z-20 px-2">
         <div 
-          className="relative flex items-center w-full max-w-[560px] h-[52px] sm:h-[60px] p-1.5 rounded-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl shadow-[0_12px_32px_-10px_rgba(0,0,0,0.1),0_2px_6px_rgba(0,0,0,0.04)] dark:shadow-[0_16px_36px_-12px_rgba(0,0,0,0.5)] border border-zinc-200/70 dark:border-zinc-800/80" 
+          className="relative flex items-center w-full max-w-[420px] h-[52px] sm:h-[60px] p-1.5 rounded-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl shadow-[0_12px_32px_-10px_rgba(0,0,0,0.1),0_2px_6px_rgba(0,0,0,0.04)] dark:shadow-[0_16px_36px_-12px_rgba(0,0,0,0.5)] border border-zinc-200/70 dark:border-zinc-800/80" 
           role="tablist" 
           aria-label="Store mode"
         >
@@ -103,7 +103,7 @@ export function StorefrontClient({
               <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
               <div className="flex flex-col items-start text-left">
                 <span className="text-[12px] sm:text-[14px] font-black tracking-tight leading-none">Grocery</span>
-                <span className="text-[7.5px] sm:text-[9px] font-bold uppercase tracking-wider leading-none mt-0.5 opacity-85">Mart Staples</span>
+                <span className="text-[7.5px] sm:text-[9px] font-bold uppercase tracking-wider leading-none mt-0.5 opacity-85">Fast Delivery</span>
               </div>
             </div>
           </motion.button>
@@ -130,38 +130,10 @@ export function StorefrontClient({
               <Utensils className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
               <div className="flex flex-col items-start text-left">
                 <span className="text-[12px] sm:text-[14px] font-black tracking-tight leading-none">Food</span>
-                <span className="text-[7.5px] sm:text-[9px] font-bold uppercase tracking-wider leading-none mt-0.5 opacity-85">Cafe & Eats</span>
+                <span className="text-[7.5px] sm:text-[9px] font-bold uppercase tracking-wider leading-none mt-0.5 opacity-85">Cafe & Restaurant</span>
               </div>
             </div>
           </motion.button>
-
-          {/* 3. Deals Tab */}
-          <motion.button
-            onClick={() => handleTabChange('deals')}
-            whileTap={{ scale: 0.96 }}
-            className={cn(
-              "relative z-10 flex items-center justify-center gap-1.5 sm:gap-2 rounded-full cursor-pointer outline-none transition-colors duration-300 h-full flex-1 select-none border-none bg-transparent px-1",
-              activeTab === 'deals' ? "" : "hover:text-zinc-800 dark:hover:text-zinc-200"
-            )}
-            role="tab"
-            aria-selected={activeTab === 'deals'}
-          >
-            {activeTab === 'deals' && (
-              <motion.div
-                layoutId="activePill3"
-                className="absolute inset-0 rounded-full bg-gradient-to-r from-[#10b981] via-[#059669] to-[#047857] shadow-[0_6px_20px_rgba(16,185,129,0.35),inset_0_1px_0_rgba(255,255,255,0.25)]"
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              />
-            )}
-            <div className={cn("relative z-10 flex items-center gap-1.5 sm:gap-2 transition-colors duration-300", activeTab === 'deals' ? "text-white" : "text-zinc-500 dark:text-zinc-400")}>
-              <Zap className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2] text-amber-300 fill-amber-300" />
-              <div className="flex flex-col items-start text-left">
-                <span className="text-[12px] sm:text-[14px] font-black tracking-tight leading-none">Offers</span>
-                <span className="text-[7.5px] sm:text-[9px] font-bold uppercase tracking-wider leading-none mt-0.5 opacity-85">Flash Sales</span>
-              </div>
-            </div>
-          </motion.button>
-
         </div>
       </div>
 

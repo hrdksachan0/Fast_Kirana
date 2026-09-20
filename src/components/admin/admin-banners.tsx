@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { SERVICE_AREA_NAME } from '@/lib/store-config'
 import {
@@ -25,7 +25,9 @@ import {
   Sliders,
   Sparkle,
   Video,
-  Play
+  Play,
+  Pause,
+  UploadCloud
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { compressImageClient } from '@/lib/image-compression'
@@ -399,6 +401,83 @@ export const MULTI_CARD_PRESETS = [
 
 export type CardFormat = 'standard' | 'dark_showcase' | 'bento_grid' | 'editorial'
 
+interface AdminVideoPreviewProps {
+  src: string
+  className?: string
+  showControls?: boolean
+}
+
+function AdminVideoPreview({
+  src,
+  className = 'w-full h-full object-cover',
+  showControls = true
+}: AdminVideoPreviewProps) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [isPlaying, setIsPlaying] = useState(true)
+
+  const togglePlayPause = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!videoRef.current) return
+    if (videoRef.current.paused) {
+      videoRef.current.play()
+      setIsPlaying(true)
+    } else {
+      videoRef.current.pause()
+      setIsPlaying(false)
+    }
+  }
+
+  return (
+    <div className="relative w-full h-full overflow-hidden group select-none">
+      <video
+        ref={videoRef}
+        src={src}
+        autoPlay
+        loop
+        muted
+        playsInline
+        className={className}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+      />
+      {showControls && (
+        <>
+          {/* Pause / Play Floating Pill Button */}
+          <button
+            type="button"
+            onClick={togglePlayPause}
+            className="absolute bottom-2.5 right-2.5 z-30 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md border border-white/25 text-white shadow-lg cursor-pointer hover:bg-black/90 hover:scale-105 transition-all text-[9px] font-extrabold tracking-wider"
+          >
+            {isPlaying ? (
+              <>
+                <Pause className="h-2.5 w-2.5 fill-white text-white" />
+                <span>PAUSE</span>
+              </>
+            ) : (
+              <>
+                <Play className="h-2.5 w-2.5 fill-white text-white" />
+                <span>PLAY</span>
+              </>
+            )}
+          </button>
+
+          {/* Centered Big Play Indicator when paused */}
+          {!isPlaying && (
+            <button
+              type="button"
+              onClick={togglePlayPause}
+              className="absolute inset-0 m-auto w-11 h-11 rounded-full bg-black/70 backdrop-blur-md border border-white/35 flex items-center justify-center text-white shadow-2xl cursor-pointer hover:scale-110 transition-transform"
+            >
+              <Play className="h-5 w-5 fill-white text-white ml-0.5" />
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 interface AdminBannersProps {
   categories?: any[]
   products?: any[]
@@ -499,11 +578,8 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
     fetchBanners()
   }, [])
 
-  // Handle Cloudinary direct upload
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
+  // Core Image upload function (compresses & uploads to /api/upload)
+  const uploadImageFile = async (file: File) => {
     setIsUploading(true)
     try {
       const compressedFile = await compressImageClient(file)
@@ -519,7 +595,8 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
         const data = await res.json()
         if (data.url) {
           setImageUrl(data.url)
-          toast.success('Banner image uploaded successfully!')
+          setPreviewMediaTab('image')
+          toast.success('📸 Banner image uploaded successfully!')
         }
       } else {
         if (res.status === 413) {
@@ -536,17 +613,13 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
       toast.error(`Could not upload image: ${err.message || 'Network error'}`)
     } finally {
       setIsUploading(false)
-      e.target.value = ''
     }
   }
 
-  // Handle direct video upload to Supabase Storage
-  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Video is too large (max 10MB). Please choose a shorter loop.')
+  // Core Video upload function (uploads video loop to Supabase Storage)
+  const uploadVideoFile = async (file: File) => {
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error('Video is too large (max 15MB). Please choose a shorter loop.')
       return
     }
 
@@ -565,7 +638,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
         if (data.url) {
           setVideoUrl(data.url)
           setPreviewMediaTab('video')
-          toast.success('🎬 Video loop uploaded to Supabase Storage!')
+          toast.success('🎬 Video loop uploaded successfully!')
         }
       } else {
         const errData = await res.json().catch(() => ({}))
@@ -576,7 +649,48 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
       toast.error(`Could not upload video: ${err.message || 'Network error'}`)
     } finally {
       setIsVideoUploading(false)
-      e.target.value = ''
+    }
+  }
+
+  // Handle file picker event for images
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    // If user selected a video file while on Image tab, auto-redirect to video upload
+    if (file.type.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(file.name)) {
+      await uploadVideoFile(file)
+    } else {
+      await uploadImageFile(file)
+    }
+    e.target.value = ''
+  }
+
+  // Handle file picker event for videos
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    // If user selected an image file while on Video tab, auto-redirect to image upload
+    if (file.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(file.name)) {
+      await uploadImageFile(file)
+    } else {
+      await uploadVideoFile(file)
+    }
+    e.target.value = ''
+  }
+
+  // Unified Drag and Drop Handler
+  const [isMediaDragOver, setIsMediaDragOver] = useState(false)
+  const handleMediaDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setIsMediaDragOver(false)
+    const file = e.dataTransfer.files?.[0]
+    if (!file) return
+
+    const isVideoFile = file.type.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(file.name)
+    if (isVideoFile) {
+      await uploadVideoFile(file)
+    } else {
+      await uploadImageFile(file)
     }
   }
 
@@ -1212,35 +1326,57 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
               </div>
 
               {/* Upload Banner Image / Video */}
-              <div className="md:col-span-2 space-y-2 border-t border-border/40 pt-3">
+              <div 
+                onDragOver={(e) => { e.preventDefault(); setIsMediaDragOver(true) }}
+                onDragLeave={() => setIsMediaDragOver(false)}
+                onDrop={handleMediaDrop}
+                className={`md:col-span-2 space-y-2 border-t border-border/40 pt-3 transition-all rounded-xl p-2 ${
+                  isMediaDragOver ? 'bg-primary/10 border-2 border-dashed border-primary ring-4 ring-primary/20' : ''
+                }`}
+              >
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary block">
-                    Banner Media (Image or Video Loop)
-                  </label>
+                  <div>
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary block">
+                      Banner Media (Image or Video Loop)
+                    </label>
+                    <span className="text-[9px] text-text-muted">
+                      Drag & drop any photo or MP4 video here, or select below
+                    </span>
+                  </div>
                   <div className="flex items-center gap-1 bg-muted p-0.5 rounded-lg border border-border/60">
                     <button
                       type="button"
                       onClick={() => setPreviewMediaTab('image')}
-                      className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                      className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
                         previewMediaTab === 'image'
                           ? 'bg-card text-primary shadow-xs'
                           : 'text-text-muted hover:text-text-primary'
                       }`}
                     >
-                      🖼️ Image
+                      🖼️ Photo (No Text)
                     </button>
                     <button
                       type="button"
                       onClick={() => setPreviewMediaTab('video')}
-                      className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                      className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
                         previewMediaTab === 'video'
                           ? 'bg-card text-primary shadow-xs'
                           : 'text-text-muted hover:text-text-primary'
                       }`}
                     >
-                      🎬 Video (MP4)
+                      🎬 Video Loop (MP4)
                     </button>
                   </div>
+                </div>
+
+                {/* Helpful Instruction Pill */}
+                <div className="flex items-center gap-2 p-2 bg-muted/40 border border-border/60 rounded-xl text-[10px] text-text-secondary">
+                  <span className="text-primary font-bold">✨ Pure Media:</span>
+                  <span>
+                    {previewMediaTab === 'image'
+                      ? 'Upload full-bleed photo (JPG/PNG/WebP). Brand cards render pure image without any overlay text or coupons.'
+                      : 'Upload short video loop (MP4/WebM, max 15MB). App plays it silently with interactive Pause/Play controls.'}
+                  </span>
                 </div>
                 
                 {previewMediaTab === 'image' ? (
@@ -1248,19 +1384,22 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
                       <label
                         htmlFor="banner-image-file-simple"
-                        className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-border hover:border-primary rounded-xl cursor-pointer bg-card hover:bg-primary/5 transition-all"
+                        className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-border hover:border-primary rounded-xl cursor-pointer bg-card hover:bg-primary/5 transition-all p-2 text-center"
                       >
                         {isUploading ? (
                           <div className="flex items-center gap-2">
                             <Loader2 className="w-5 h-5 text-primary animate-spin" />
-                            <span className="text-xs font-bold text-primary">Uploading Image...</span>
+                            <span className="text-xs font-bold text-primary">Compressing & Uploading Photo...</span>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2">
-                            <ImageIcon className="w-5 h-5 text-primary" />
-                            <span className="text-xs font-bold text-text-primary">
-                              {imageUrl ? 'Change Image File' : 'Click to Upload Image'}
-                            </span>
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="flex items-center gap-1.5 text-primary">
+                              <UploadCloud className="w-5 h-5" />
+                              <span className="text-xs font-bold">
+                                {imageUrl ? 'Change Photo File' : 'Click or Drop Photo Here'}
+                              </span>
+                            </div>
+                            <span className="text-[9px] text-text-muted">JPG, PNG, WebP • Auto-compressed for 10-min speed</span>
                           </div>
                         )}
                         <input
@@ -1274,9 +1413,10 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                       </label>
 
                       <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-text-muted block">Or Paste Direct Image Link:</label>
                         <input
                           type="url"
-                          placeholder="Or paste Image URL (https://...)"
+                          placeholder="https://images.unsplash.com/... or cloud URL"
                           value={imageUrl}
                           onChange={(e) => setImageUrl(e.target.value)}
                           className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
@@ -1295,7 +1435,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                         <button
                           type="button"
                           onClick={() => setImageUrl('')}
-                          className="absolute top-2 right-2 px-2 py-1 bg-rose-600 text-white text-[10px] font-bold rounded-lg shadow cursor-pointer"
+                          className="absolute top-2 right-2 px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold rounded-lg shadow cursor-pointer transition-all"
                         >
                           Remove Image
                         </button>
@@ -1307,19 +1447,22 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
                       <label
                         htmlFor="banner-video-file-simple"
-                        className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-border hover:border-primary rounded-xl cursor-pointer bg-card hover:bg-primary/5 transition-all"
+                        className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-border hover:border-primary rounded-xl cursor-pointer bg-card hover:bg-primary/5 transition-all p-2 text-center"
                       >
                         {isVideoUploading ? (
                           <div className="flex items-center gap-2">
                             <Loader2 className="w-5 h-5 text-primary animate-spin" />
-                            <span className="text-xs font-bold text-primary">Uploading Video...</span>
+                            <span className="text-xs font-bold text-primary">Uploading Video to Cloud...</span>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2">
-                            <Video className="w-5 h-5 text-primary" />
-                            <span className="text-xs font-bold text-text-primary">
-                              {videoUrl ? 'Change Video Loop File' : 'Click to Upload MP4 Video'}
-                            </span>
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="flex items-center gap-1.5 text-primary">
+                              <Video className="w-5 h-5" />
+                              <span className="text-xs font-bold">
+                                {videoUrl ? 'Change Video File' : 'Click or Drop Video (MP4) Here'}
+                              </span>
+                            </div>
+                            <span className="text-[9px] text-text-muted">MP4, WebM, QuickTime • Max 15MB</span>
                           </div>
                         )}
                         <input
@@ -1333,9 +1476,10 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                       </label>
 
                       <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-text-muted block">Or Paste Direct MP4 Video Link:</label>
                         <input
                           type="url"
-                          placeholder="Or paste Video MP4 URL (https://...)"
+                          placeholder="https://.../video-loop.mp4"
                           value={videoUrl}
                           onChange={(e) => {
                             setVideoUrl(e.target.value)
@@ -1346,21 +1490,14 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                       </div>
                     </div>
 
-                    {/* Video Preview Box */}
+                    {/* Video Preview Box with Pause/Play Button */}
                     {videoUrl && (
-                      <div className="relative aspect-[3/1] max-h-36 w-full overflow-hidden rounded-xl border border-border bg-black mt-2">
-                        <video
-                          src={videoUrl}
-                          autoPlay
-                          loop
-                          muted
-                          playsInline
-                          className="object-contain w-full h-full"
-                        />
+                      <div className="relative aspect-[3/1] max-h-40 w-full overflow-hidden rounded-xl border border-border bg-black mt-2">
+                        <AdminVideoPreview src={videoUrl} className="object-contain w-full h-full" />
                         <button
                           type="button"
                           onClick={() => setVideoUrl('')}
-                          className="absolute top-2 right-2 px-2 py-1 bg-rose-600 text-white text-[10px] font-bold rounded-lg shadow cursor-pointer"
+                          className="absolute top-2 right-2 z-40 px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold rounded-lg shadow cursor-pointer transition-all"
                         >
                           Remove Video
                         </button>
@@ -1563,14 +1700,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                 {placement === 'hero' ? (
                   <div className="relative w-full h-[125px] rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 shadow-lg">
                     {previewMediaTab === 'video' && videoUrl ? (
-                      <video
-                        src={videoUrl}
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        className="w-full h-full object-cover"
-                      />
+                      <AdminVideoPreview src={videoUrl} />
                     ) : imageUrl ? (
                       <img
                         src={imageUrl}
@@ -1603,14 +1733,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                       {/* Active Primary Brand Card (260x380 proportion) */}
                       <div className="relative w-[190px] h-[270px] rounded-[22px] overflow-hidden bg-neutral-900 border-2 border-white/15 shadow-2xl shrink-0 group">
                         {previewMediaTab === 'video' && videoUrl ? (
-                          <video
-                            src={videoUrl}
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            className="w-full h-full object-cover"
-                          />
+                          <AdminVideoPreview src={videoUrl} />
                         ) : imageUrl ? (
                           <img
                             src={imageUrl}
@@ -1664,14 +1787,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                 {placement === 'hero' ? (
                   <div className="relative w-full aspect-[3.2/1] rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 shadow-lg">
                     {previewMediaTab === 'video' && videoUrl ? (
-                      <video
-                        src={videoUrl}
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        className="w-full h-full object-cover"
-                      />
+                      <AdminVideoPreview src={videoUrl} />
                     ) : imageUrl ? (
                       <img
                         src={imageUrl}
@@ -1704,14 +1820,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                       {/* Active Pure Media Card (260x380 Proportion) */}
                       <div className="relative w-[210px] h-[290px] rounded-[24px] overflow-hidden bg-neutral-900 border-2 border-white/15 shadow-2xl shrink-0">
                         {previewMediaTab === 'video' && videoUrl ? (
-                          <video
-                            src={videoUrl}
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            className="w-full h-full object-cover"
-                          />
+                          <AdminVideoPreview src={videoUrl} />
                         ) : imageUrl ? (
                           <img
                             src={imageUrl}

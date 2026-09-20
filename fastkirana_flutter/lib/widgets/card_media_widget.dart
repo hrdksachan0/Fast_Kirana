@@ -16,6 +16,7 @@ class CardMediaWidget extends StatefulWidget {
   final double borderRadius;
   final BoxFit fit;
   final bool showLiveBadge;
+  final bool showPauseButton;
   final Widget? fallback;
 
   const CardMediaWidget({
@@ -26,6 +27,7 @@ class CardMediaWidget extends StatefulWidget {
     this.borderRadius = 18.0,
     this.fit = BoxFit.cover,
     this.showLiveBadge = true,
+    this.showPauseButton = true,
     this.fallback,
   });
 
@@ -37,6 +39,7 @@ class _CardMediaWidgetState extends State<CardMediaWidget> {
   VideoPlayerController? _videoController;
   bool _isInitialized = false;
   bool _hasError = false;
+  bool _isPlaying = true;
 
   String? get _resolvedVideoUrl {
     if (widget.videoUrl != null && widget.videoUrl!.trim().isNotEmpty) {
@@ -67,6 +70,16 @@ class _CardMediaWidgetState extends State<CardMediaWidget> {
     }
   }
 
+  void _onVideoControllerUpdate() {
+    if (!mounted || _videoController == null) return;
+    final playing = _videoController!.value.isPlaying;
+    if (playing != _isPlaying) {
+      setState(() {
+        _isPlaying = playing;
+      });
+    }
+  }
+
   void _initializeVideo() {
     final vUrl = _resolvedVideoUrl;
     if (vUrl == null) return;
@@ -79,10 +92,12 @@ class _CardMediaWidgetState extends State<CardMediaWidget> {
       ..setVolume(0.0) // Silent/Muted for frictionless browsing
       ..initialize().then((_) {
         if (!mounted) return;
+        _videoController?.addListener(_onVideoControllerUpdate);
         _videoController?.play();
         setState(() {
           _isInitialized = true;
           _hasError = false;
+          _isPlaying = true;
         });
       }).catchError((err) {
         if (!mounted) return;
@@ -94,11 +109,13 @@ class _CardMediaWidgetState extends State<CardMediaWidget> {
   }
 
   void _disposeVideo() {
+    _videoController?.removeListener(_onVideoControllerUpdate);
     _videoController?.pause();
     _videoController?.dispose();
     _videoController = null;
     _isInitialized = false;
     _hasError = false;
+    _isPlaying = false;
   }
 
   @override
@@ -200,6 +217,99 @@ class _CardMediaWidgetState extends State<CardMediaWidget> {
                 ),
               ),
             ),
+
+          // ─── 5. Pause / Play Interactive Floating Controls ───
+          if (_isInitialized && _videoController != null && !_hasError && widget.showPauseButton) ...[
+            // Center Play button indicator when paused
+            if (!_isPlaying)
+              Center(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    _videoController?.play();
+                  },
+                  child: Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black.withValues(alpha: 0.65),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.4),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          blurRadius: 18,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 34,
+                    ),
+                  ),
+                ),
+              ),
+
+            // Floating Pill in Bottom-Right Corner (always visible & easily clickable)
+            Positioned(
+              bottom: 12,
+              right: 12,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  if (_videoController == null) return;
+                  if (_videoController!.value.isPlaying) {
+                    _videoController!.pause();
+                  } else {
+                    _videoController!.play();
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.62),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.28),
+                      width: 0.8,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                        color: Colors.white,
+                        size: 14,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _isPlaying ? 'PAUSE' : 'PLAY',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
