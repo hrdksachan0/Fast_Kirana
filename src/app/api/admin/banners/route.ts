@@ -50,12 +50,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { title, description, code, gradient, type, imageUrl, linkUrl, isActive, sortOrder } = body
 
-    if (!title || !description) {
-      return NextResponse.json(
-        { error: 'Missing required fields: title, description' },
-        { status: 400 }
-      )
-    }
+    const finalTitle = (title && String(title).trim()) || 'Promo Banner'
+    const finalDescription = (description && String(description).trim()) || 'Media Banner'
 
     const isCardType = ['dark_showcase', 'bento_grid', 'editorial', 'standard', 'brand_offer'].includes(type) || body.cardType
     let serializedCode = code || ''
@@ -82,8 +78,8 @@ export async function POST(request: NextRequest) {
 
     const banner = await prisma.promoBanner.create({
       data: {
-        title,
-        description,
+        title: finalTitle,
+        description: finalDescription,
         code: serializedCode,
         gradient: gradient || 'from-primary via-rose-500 to-orange-400',
         type: type || 'custom',

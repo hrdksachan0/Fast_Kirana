@@ -887,8 +887,11 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
   // Submit banner (Create or Edit)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim() || !description.trim()) {
-      toast.error('Please fill in title and description')
+    const finalTitle = title.trim() || 'Promo Banner'
+    const finalDesc = description.trim() || 'Media banner'
+
+    if (!imageUrl.trim() && !videoUrl.trim() && !title.trim()) {
+      toast.error('Please upload a photo or video for the banner')
       return
     }
 
@@ -910,8 +913,8 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
 
       const payload = {
         id: editingId || undefined,
-        title: title.trim(),
-        description: description.trim(),
+        title: finalTitle,
+        description: finalDesc,
         code: code.trim().toUpperCase(),
         gradient,
         type: cardFormat === 'standard' ? type : cardFormat,
@@ -1563,10 +1566,10 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                 <div className="relative z-10 my-2 flex items-center justify-between gap-3">
                   <div className="space-y-1 max-w-[60%]">
                     <h4 className="text-base font-black tracking-tight leading-tight uppercase line-clamp-1 text-white">
-                      {title || "AIR FORCE 1 '07"}
+                      {title || "SPOTLIGHT DROP"}
                     </h4>
                     <p className="text-[10px] text-neutral-400 font-medium line-clamp-2 leading-tight">
-                      {description || 'Iconic Street Style • Triple White Leather'}
+                      {description || 'Exclusive curated collection'}
                     </p>
                   </div>
                   <div className="w-24 h-20 relative flex items-center justify-center shrink-0 rounded-lg overflow-hidden">

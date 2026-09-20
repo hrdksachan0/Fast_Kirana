@@ -14,7 +14,7 @@ import { RestaurantListing } from '@/components/home/restaurant-listing'
 import { DealsCurationHub } from '@/components/home/deals-curation-hub'
 import { DeliveryBanner } from '@/components/home/delivery-banner'
 import { LastOrderBanner } from '@/components/home/last-order-banner'
-import { ShoppingBag, Utensils } from 'lucide-react'
+import { ShoppingBag, Utensils, Zap, Percent } from 'lucide-react'
 import { triggerHaptic } from '@/lib/haptic'
 import { FloatingEmojis } from '@/components/shared/floating-emojis'
 
@@ -33,11 +33,9 @@ interface StorefrontClientProps {
   teaProducts: Product[]
   nightProducts: Product[]
   settingsMap: Record<string, string>
-  sortRules: Record<string, string>
   restaurants?: any[]
+  sortRules?: Record<string, string>
 }
-
-type ActiveTab = 'grocery' | 'food'
 
 export function StorefrontClient({
   categories,
@@ -51,124 +49,133 @@ export function StorefrontClient({
   teaProducts,
   nightProducts,
   settingsMap,
-  sortRules,
-  restaurants,
+  restaurants = [],
+  sortRules = {}
 }: StorefrontClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const initialTab = (searchParams.get('mode') === 'food') ? 'food' : 'grocery'
-  const [activeTab, setActiveTab] = useState<ActiveTab>(initialTab)
+  const modeParam = searchParams.get('mode')
+  const [activeTab, setActiveTab] = useState<'grocery' | 'food' | 'deals'>('grocery')
 
-  // Scroll to top on tab change to avoid footer-jump
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+    if (modeParam === 'food' || modeParam === 'deals' || modeParam === 'grocery') {
+      setActiveTab(modeParam as any)
     }
-  }, [activeTab])
+  }, [modeParam])
 
-  const handleTabChange = (tab: ActiveTab) => {
-    triggerHaptic('medium')
+  const handleTabChange = (tab: 'grocery' | 'food' | 'deals') => {
+    triggerHaptic('selection')
     setActiveTab(tab)
-    const params = new URLSearchParams(window.location.search)
-    if (tab === 'grocery') {
-      params.delete('mode')
-    } else {
-      params.set('mode', 'food')
-    }
-    const qs = params.toString()
-    router.replace(qs ? `/?${qs}` : '/', { scroll: false })
+    router.replace(`/?mode=${tab}`, { scroll: false })
   }
 
   return (
-    <div className="w-full min-h-screen bg-[#fafafa] dark:bg-[#09090b] pb-28 md:pb-12 mt-3 relative">
-      {/* Grocery ambient glow (lightweight CSS) */}
-      <AnimatePresence>
-        {activeTab === 'grocery' && (
-          <div className="absolute top-0 left-0 right-0 h-[380px] bg-gradient-to-b from-red-500/[0.06] via-rose-500/[0.02] to-transparent pointer-events-none select-none z-0" />
-        )}
-      </AnimatePresence>
+    <div className="flex flex-col gap-3 md:gap-5 relative pb-12">
+      {/* Dynamic Celebration Floating Emojis */}
+      <FloatingEmojis type={activeTab === 'food' ? 'food' : 'grocery'} />
 
-      {/* Food ambient glow (lightweight CSS) */}
-      <AnimatePresence>
-        {activeTab === 'food' && (
-          <div className="absolute top-0 left-0 right-0 h-[380px] bg-gradient-to-b from-amber-500/[0.07] via-orange-500/[0.02] to-transparent pointer-events-none select-none z-0" />
-        )}
-      </AnimatePresence>
-
-      {/* Premium Sticky Grocery / Food Slider */}
-      <div className="sticky top-[97px] min-[380px]:top-[100px] sm:top-[104px] md:top-[66px] z-40 bg-[#fafafa]/95 dark:bg-[#09090b]/95 backdrop-blur-xl py-1.5 px-4 flex justify-center transition-all duration-300 border-b border-zinc-200/40 dark:border-zinc-800/40 shadow-xs mb-3 sm:mb-4">
-        <div className="relative flex items-center w-full max-w-[420px] h-[56px] sm:h-[62px] p-1.5 rounded-full bg-white/90 dark:bg-zinc-950/90 backdrop-blur-xl shadow-[0_16px_36px_-12px_rgba(0,0,0,0.08),0_4px_8px_rgba(0,0,0,0.03)] dark:shadow-[0_16px_36px_-12px_rgba(0,0,0,0.4)] border border-zinc-200/60 dark:border-zinc-800/70" role="tablist" aria-label="Store mode">
+      {/* Top Header Mode Selector Switcher (3 Distinct Tabs) */}
+      <div className="w-full flex items-center justify-center pt-1 pb-1 relative z-20 px-2">
+        <div 
+          className="relative flex items-center w-full max-w-[560px] h-[52px] sm:h-[60px] p-1.5 rounded-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl shadow-[0_12px_32px_-10px_rgba(0,0,0,0.1),0_2px_6px_rgba(0,0,0,0.04)] dark:shadow-[0_16px_36px_-12px_rgba(0,0,0,0.5)] border border-zinc-200/70 dark:border-zinc-800/80" 
+          role="tablist" 
+          aria-label="Store mode"
+        >
+          {/* 1. Grocery Tab */}
           <motion.button
             onClick={() => handleTabChange('grocery')}
             whileTap={{ scale: 0.96 }}
-            whileHover={activeTab === 'grocery' ? {} : { scale: 1.02 }}
             className={cn(
-              "relative z-10 flex items-center justify-center gap-2.5 rounded-full cursor-pointer outline-none transition-colors duration-300 h-full flex-1 select-none border-none bg-transparent",
+              "relative z-10 flex items-center justify-center gap-1.5 sm:gap-2 rounded-full cursor-pointer outline-none transition-colors duration-300 h-full flex-1 select-none border-none bg-transparent px-1",
               activeTab === 'grocery' ? "" : "hover:text-zinc-800 dark:hover:text-zinc-200"
             )}
-            aria-label="Switch to grocery mode"
             role="tab"
             aria-selected={activeTab === 'grocery'}
           >
             {activeTab === 'grocery' && (
               <motion.div
-                layoutId="activePill"
-                className="absolute inset-0 rounded-full bg-gradient-to-r from-[#e8153a] via-[#ff2d55] to-[#ff5533] shadow-[0_8px_24px_rgba(255,26,67,0.35),0_2px_6px_rgba(255,26,67,0.15),inset_0_1px_0_rgba(255,255,255,0.25)]"
-                transition={{ type: 'spring', stiffness: 380, damping: 28, mass: 0.7 }}
+                layoutId="activePill3"
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-[#e8153a] via-[#ff2d55] to-[#ff5533] shadow-[0_6px_20px_rgba(255,26,67,0.35),inset_0_1px_0_rgba(255,255,255,0.25)]"
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
               />
             )}
-            <div className={cn("relative z-10 flex items-center gap-2.5 transition-colors duration-300", activeTab === 'grocery' ? "text-white" : "text-zinc-500 dark:text-zinc-400")}>
-              <ShoppingBag className="w-5 h-5 sm:w-[22px] sm:h-[22px] stroke-[2.2]" />
-              <div className="flex flex-col items-start">
-                <span className="text-[13px] sm:text-[14px] font-black tracking-tight leading-none">Grocery</span>
-                <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider leading-none mt-1 opacity-85">Fast Delivery</span>
+            <div className={cn("relative z-10 flex items-center gap-1.5 sm:gap-2 transition-colors duration-300", activeTab === 'grocery' ? "text-white" : "text-zinc-500 dark:text-zinc-400")}>
+              <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
+              <div className="flex flex-col items-start text-left">
+                <span className="text-[12px] sm:text-[14px] font-black tracking-tight leading-none">Grocery</span>
+                <span className="text-[7.5px] sm:text-[9px] font-bold uppercase tracking-wider leading-none mt-0.5 opacity-85">Mart Staples</span>
               </div>
             </div>
           </motion.button>
 
-          {/* Divider dot */}
-          <div className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700 shrink-0 z-20" />
-
+          {/* 2. Food Tab */}
           <motion.button
             onClick={() => handleTabChange('food')}
             whileTap={{ scale: 0.96 }}
-            whileHover={activeTab === 'food' ? {} : { scale: 1.02 }}
             className={cn(
-              "relative z-10 flex items-center justify-center gap-2.5 rounded-full cursor-pointer outline-none transition-colors duration-300 h-full flex-1 select-none border-none bg-transparent",
+              "relative z-10 flex items-center justify-center gap-1.5 sm:gap-2 rounded-full cursor-pointer outline-none transition-colors duration-300 h-full flex-1 select-none border-none bg-transparent px-1",
               activeTab === 'food' ? "" : "hover:text-zinc-800 dark:hover:text-zinc-200"
             )}
-            aria-label="Switch to food mode"
             role="tab"
             aria-selected={activeTab === 'food'}
           >
             {activeTab === 'food' && (
               <motion.div
-                layoutId="activePill"
-                className="absolute inset-0 rounded-full bg-gradient-to-r from-[#ff5500] via-[#ff7700] to-[#ffaa00] shadow-[0_8px_24px_rgba(255,102,34,0.35),0_2px_6px_rgba(255,102,34,0.15),inset_0_1px_0_rgba(255,255,255,0.25)]"
-                transition={{ type: 'spring', stiffness: 380, damping: 28, mass: 0.7 }}
+                layoutId="activePill3"
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-[#ff5500] via-[#ff7700] to-[#ffaa00] shadow-[0_6px_20px_rgba(255,102,34,0.35),inset_0_1px_0_rgba(255,255,255,0.25)]"
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
               />
             )}
-            <div className={cn("relative z-10 flex items-center gap-2.5 transition-colors duration-300", activeTab === 'food' ? "text-white" : "text-zinc-500 dark:text-zinc-400")}>
-              <Utensils className="w-5 h-5 sm:w-[22px] sm:h-[22px] stroke-[2.2]" />
-              <div className="flex flex-col items-start">
-                <span className="text-[13px] sm:text-[14px] font-black tracking-tight leading-none">Food</span>
-                <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider leading-none mt-1 opacity-85">Cafe & Restaurant</span>
+            <div className={cn("relative z-10 flex items-center gap-1.5 sm:gap-2 transition-colors duration-300", activeTab === 'food' ? "text-white" : "text-zinc-500 dark:text-zinc-400")}>
+              <Utensils className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
+              <div className="flex flex-col items-start text-left">
+                <span className="text-[12px] sm:text-[14px] font-black tracking-tight leading-none">Food</span>
+                <span className="text-[7.5px] sm:text-[9px] font-bold uppercase tracking-wider leading-none mt-0.5 opacity-85">Cafe & Eats</span>
               </div>
             </div>
           </motion.button>
+
+          {/* 3. Deals Tab */}
+          <motion.button
+            onClick={() => handleTabChange('deals')}
+            whileTap={{ scale: 0.96 }}
+            className={cn(
+              "relative z-10 flex items-center justify-center gap-1.5 sm:gap-2 rounded-full cursor-pointer outline-none transition-colors duration-300 h-full flex-1 select-none border-none bg-transparent px-1",
+              activeTab === 'deals' ? "" : "hover:text-zinc-800 dark:hover:text-zinc-200"
+            )}
+            role="tab"
+            aria-selected={activeTab === 'deals'}
+          >
+            {activeTab === 'deals' && (
+              <motion.div
+                layoutId="activePill3"
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-[#10b981] via-[#059669] to-[#047857] shadow-[0_6px_20px_rgba(16,185,129,0.35),inset_0_1px_0_rgba(255,255,255,0.25)]"
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              />
+            )}
+            <div className={cn("relative z-10 flex items-center gap-1.5 sm:gap-2 transition-colors duration-300", activeTab === 'deals' ? "text-white" : "text-zinc-500 dark:text-zinc-400")}>
+              <Zap className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2] text-amber-300 fill-amber-300" />
+              <div className="flex flex-col items-start text-left">
+                <span className="text-[12px] sm:text-[14px] font-black tracking-tight leading-none">Offers</span>
+                <span className="text-[7.5px] sm:text-[9px] font-bold uppercase tracking-wider leading-none mt-0.5 opacity-85">Flash Sales</span>
+              </div>
+            </div>
+          </motion.button>
+
         </div>
       </div>
 
-      {/* Tab content */}
+      {/* Tab Content Views */}
       <AnimatePresence mode="wait">
-        {activeTab === 'grocery' ? (
+        {/* Tab 1: GROCERY */}
+        {activeTab === 'grocery' && (
           <motion.div
             key="grocery-content"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.35, ease: 'easeInOut' }}
-            className="container mx-auto px-4 pt-1 flex flex-col gap-1.5 md:gap-8 max-w-7xl relative z-10 min-h-[50vh]"
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="container mx-auto px-4 pt-2 flex flex-col gap-5 sm:gap-6 md:gap-8 max-w-7xl relative z-10 min-h-[50vh]"
           >
             {allGroceryProducts.length === 0 ? (
               <HubComingSoon />
@@ -194,44 +201,30 @@ export function StorefrontClient({
                   />
                 </div>
 
-                {/* 4. Deals & Curations Hub */}
-                <div className="section-lazy-render">
-                  <DealsCurationHub
-                    categories={categories}
-                    allProducts={allGroceryProducts}
-                    flashDeals={flashDeals}
-                    bestSellers={bestSellers}
-                    topPicks={topPicks}
-                    breakfastProducts={breakfastProducts}
-                    lunchProducts={lunchProducts}
-                    teaProducts={teaProducts}
-                    nightProducts={nightProducts}
-                    sortRules={sortRules}
-                  />
-                </div>
-
-                {/* 5. Value Proposition Banner */}
+                {/* 4. Value Proposition Banner */}
                 <div className="section-lazy-render">
                   <DeliveryBanner />
                 </div>
 
-                {/* 6. Last Order Banner */}
+                {/* 5. Last Order Banner */}
                 <div className="section-lazy-render">
                   <LastOrderBanner />
                 </div>
               </>
             )}
           </motion.div>
-        ) : (
+        )}
+
+        {/* Tab 2: FOOD */}
+        {activeTab === 'food' && (
           <motion.div
             key="food-content"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.35, ease: 'easeInOut' }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
             className="container mx-auto px-4 pt-4 flex flex-col gap-5 max-w-7xl relative z-10 min-h-[50vh]"
           >
-            {/* Swiggy-style restaurant listing — banner + cards */}
             <FoodBanner />
             {!restaurants || restaurants.length === 0 ? (
               <HubComingSoon city="Local Restaurants & Kitchens" />
@@ -240,10 +233,39 @@ export function StorefrontClient({
             )}
           </motion.div>
         )}
+
+        {/* Tab 3: DEALS & OFFERS */}
+        {activeTab === 'deals' && (
+          <motion.div
+            key="deals-content"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="container mx-auto px-4 pt-2 flex flex-col gap-5 sm:gap-6 md:gap-8 max-w-7xl relative z-10 min-h-[50vh]"
+          >
+            <div className="section-lazy-render">
+              <DealsCurationHub
+                categories={categories}
+                allProducts={allGroceryProducts}
+                flashDeals={flashDeals}
+                bestSellers={bestSellers}
+                topPicks={topPicks}
+                breakfastProducts={breakfastProducts}
+                lunchProducts={lunchProducts}
+                teaProducts={teaProducts}
+                nightProducts={nightProducts}
+                sortRules={sortRules}
+              />
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   )
-}function FoodBanner() {
+}
+
+function FoodBanner() {
   return (
     <div className="w-full overflow-hidden rounded-[24px] border border-white/10 dark:border-white/5 bg-gradient-to-r from-amber-500 via-primary to-rose-700 text-white px-4.5 py-4 sm:px-6 sm:py-5 relative shadow-[0_12px_36px_-12px_rgba(226,10,34,0.18)] select-none">
       {/* Dynamic Glass Glow Layers */}

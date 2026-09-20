@@ -154,69 +154,65 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
     : 'border-zinc-200/50 dark:border-zinc-800/30'
 
   return (
-    <div
-      className={cn(
-        "w-full rounded-3xl p-4 md:p-6 border bg-gradient-to-br transition-all duration-1000 ease-in-out shadow-xs space-y-4 md:space-y-6 overflow-hidden relative",
-        currentGradient,
-        currentBorder
-      )}
-    >
-      {/* Decorative subtle ambient glows */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 dark:bg-white/[0.02] rounded-full blur-xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 dark:bg-white/[0.02] rounded-full blur-xl pointer-events-none" />
-
-      {/* Greeting Header */}
-      <div className="flex flex-col gap-1.5 text-left relative z-10 min-h-[64px] justify-center">
-        {isReady ? (
-          <motion.div
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
-            className="space-y-1"
-          >
-            <div className="flex items-center gap-2">
-              {/* Animated/Glowing Mode Indicator Pill */}
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] md:text-[10px] font-black tracking-wider uppercase border bg-white/60 dark:bg-black/30 backdrop-blur-xs shadow-xs",
-                  themeConfig.accentColor
-                )}
-              >
-                {themeConfig.icon}
-                {themeConfig.modeLabel}
-              </span>
-              <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            </div>
-
-            <h1 className="text-base min-[375px]:text-lg sm:text-2xl md:text-3xl font-black text-text-primary tracking-tight leading-tight select-none">
-              {themeConfig.greeting}
-            </h1>
-            <p className="text-[10px] min-[375px]:text-[11px] sm:text-xs md:text-sm text-text-secondary max-w-2xl font-bold leading-relaxed">
-              {themeConfig.subtitle}
-            </p>
-            {/* Timings row */}
-            <div className="flex flex-wrap gap-2 mt-2 pt-1">
-              <span className="inline-flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-2.5 py-0.5 rounded-md text-[9.5px] font-black uppercase tracking-wider">
-                🛒 GROCERY MART: {formatTime12h(settings.grocery_open_time || '06:00')} - {formatTime12h(settings.grocery_close_time || '23:59')}
-              </span>
-            </div>
-          </motion.div>
-
-        ) : (
-          /* Subtle skeleton to maintain height and prevent shifting / layout flicker */
-          <div className="space-y-2 animate-pulse">
-            <div className="flex items-center gap-2">
-              <div className="h-4.5 w-24 bg-zinc-200/50 dark:bg-zinc-800/40 rounded-full" />
-              <div className="h-1.5 w-1.5 bg-zinc-200/50 dark:bg-zinc-800/40 rounded-full" />
-            </div>
-            <div className="h-7 w-64 bg-zinc-200/60 dark:bg-zinc-800/50 rounded-lg" />
-            <div className="h-3 w-80 bg-zinc-200/40 dark:bg-zinc-800/30 rounded-md" />
-          </div>
+    <div className="w-full flex flex-col gap-3 sm:gap-4 my-1">
+      {/* Greeting Header Bar */}
+      <div
+        className={cn(
+          "w-full rounded-2xl p-3.5 sm:p-5 border bg-gradient-to-br transition-all duration-700 ease-in-out shadow-2xs relative overflow-hidden",
+          currentGradient,
+          currentBorder
         )}
+      >
+        {/* Subtle background glow */}
+        <div className="absolute top-0 right-0 w-28 h-28 bg-white/10 dark:bg-white/[0.02] rounded-full blur-xl pointer-events-none" />
+
+        <div className="flex flex-col gap-1 text-left relative z-10 justify-center">
+          {isReady ? (
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              className="space-y-1"
+            >
+              <div className="flex items-center gap-2">
+                {/* Mode Indicator Pill */}
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] md:text-[10px] font-black tracking-wider uppercase border bg-white/70 dark:bg-black/40 backdrop-blur-xs shadow-3xs",
+                    themeConfig.accentColor
+                  )}
+                >
+                  {themeConfig.icon}
+                  {themeConfig.modeLabel}
+                </span>
+                <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              </div>
+
+              <h1 className="text-sm min-[375px]:text-base sm:text-xl md:text-2xl font-black text-text-primary tracking-tight leading-tight select-none">
+                {themeConfig.greeting}
+              </h1>
+              <p className="text-[10px] sm:text-xs text-text-secondary max-w-xl font-bold leading-relaxed line-clamp-1">
+                {themeConfig.subtitle}
+              </p>
+
+              {/* Timings Badge */}
+              <div className="flex flex-wrap gap-2 pt-1">
+                <span className="inline-flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider">
+                  🛒 GROCERY MART: {formatTime12h(settings.grocery_open_time || '06:00')} - {formatTime12h(settings.grocery_close_time || '23:59')}
+                </span>
+              </div>
+            </motion.div>
+          ) : (
+            <div className="space-y-2 animate-pulse">
+              <div className="h-4 w-24 bg-zinc-200/50 dark:bg-zinc-800/40 rounded-full" />
+              <div className="h-6 w-56 bg-zinc-200/60 dark:bg-zinc-800/50 rounded-lg" />
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Hero Banner Component */}
-      <div className="relative z-10">
+      {/* Standalone Hero Banner Slider */}
+      <div className="w-full relative z-10">
         <HeroBanner initialBanners={initialBanners} />
       </div>
     </div>
