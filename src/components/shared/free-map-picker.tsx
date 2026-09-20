@@ -325,7 +325,7 @@ export function FreeMapPicker({
 
         {/* Center Target Pin */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full pointer-events-none z-20 flex flex-col items-center">
-          <MapPin size={32} className="text-rose-600 fill-rose-100 drop-shadow-md animate-bounce" />
+          <MapPin size={32} className="text-rose-600 fill-rose-100 drop-shadow-md transition-transform duration-200" />
           <div className="w-2.5 h-1 bg-black/30 rounded-full blur-[1px]" />
         </div>
       </div>

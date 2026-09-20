@@ -293,7 +293,7 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
           ),
 
           // Floating Cart Bar (Exact Homepage Design)
-          const FloatingCartBar(bottomOffset: 16),
+          FloatingCartBar(bottomOffset: MediaQuery.of(context).padding.bottom + 16),
         ],
       ),
     );

@@ -688,45 +688,61 @@ class RiderPickupCard extends StatelessWidget {
 
                     // Right Button
                     if (status == 'PREPARING' || status == 'CONFIRMED')
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                            decoration: BoxDecoration(
-                              color: AppDesignSystem.statusPending,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppDesignSystem.yellow200),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.access_time_rounded, size: 12, color: AppDesignSystem.amber600),
-                                const SizedBox(width: 4),
-                                Text(
-                                  isFood ? 'Cooking in Kitchen...' : 'Packing at Store...',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 10.5),
-                                    fontWeight: FontWeight.w800,
-                                    color: AppDesignSystem.amber600,
+                      Flexible(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: AppDesignSystem.statusPending,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppDesignSystem.yellow200),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.access_time_rounded, size: 12, color: AppDesignSystem.amber600),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      isFood ? 'Cooking in Kitchen...' : 'Packing at Store...',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 10),
+                                        fontWeight: FontWeight.w800,
+                                        color: AppDesignSystem.amber600,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Bounceable(
-                            onTap: () => onUpdateStatus?.call(orderId, 'SHIPPED'),
-                            child: Text(
-                              isFood ? 'Food Ready? Pick Up' : 'Items Ready? Pick Up',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 9.5),
-                                fontWeight: FontWeight.w800,
-                                color: AppDesignSystem.emerald600,
+                                ],
                               ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 4),
+                            Bounceable(
+                              onTap: () => onUpdateStatus?.call(orderId, 'SHIPPED'),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                                decoration: BoxDecoration(
+                                  color: AppDesignSystem.emerald50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppDesignSystem.emerald200, width: 0.8),
+                                ),
+                                child: Text(
+                                  isFood ? 'Food Ready? Pick Up' : 'Items Ready? Pick Up',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 9.5),
+                                    fontWeight: FontWeight.w800,
+                                    color: AppDesignSystem.emerald700,
+                                  ),
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       )
                     else
                       Bounceable(

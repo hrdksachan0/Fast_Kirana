@@ -50,13 +50,13 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: 'picker@fastkirana.com' },
-    update: { passwordHash: pickerHash },
+    update: { passwordHash: pickerHash, phone: '+918565935405' },
     create: {
       name: 'Suresh Picker',
       email: 'picker@fastkirana.com',
       passwordHash: pickerHash,
       role: 'PICKER',
-      phone: '+919800001122',
+      phone: '+918565935405',
     },
   })
 

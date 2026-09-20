@@ -315,7 +315,7 @@ export function Navbar() {
                   className="flex flex-col items-start text-left cursor-pointer group min-w-0 flex-1"
                 >
                   <span className="text-xs font-black text-zinc-900 dark:text-white tracking-tight flex items-center gap-1.5">
-                    <MapPin size={12} className="text-primary animate-bounce-subtle shrink-0" />
+                    <MapPin size={12} className="text-primary group-hover:-translate-y-0.5 transition-transform shrink-0" />
                     Fast Delivery
                   </span>
                   <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-0.5 w-full">
@@ -384,7 +384,7 @@ export function Navbar() {
                 className="flex flex-col items-start hover:opacity-85 transition-opacity text-left cursor-pointer group shrink-0 max-w-[200px]"
               >
                 <span className="text-xs font-black text-primary dark:text-rose-400 tracking-tight flex items-center gap-1.5">
-                  <MapPin size={13} className="text-primary animate-bounce-subtle shrink-0" />
+                  <MapPin size={13} className="text-primary group-hover:-translate-y-0.5 transition-transform shrink-0" />
                   Fast Delivery
                 </span>
                 <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 group-hover:text-primary transition-colors flex items-center gap-0.5 mt-0.5 w-full">

@@ -473,7 +473,7 @@ class _AddPickerProductModalState
                           ),
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
-                            value: _selectedCategoryId ?? (displayList.isNotEmpty ? displayList.first.id : null),
+                            initialValue: _selectedCategoryId ?? (displayList.isNotEmpty ? displayList.first.id : null),
                             items: displayList.map((c) {
                               return DropdownMenuItem<String>(
                                 value: c.id,

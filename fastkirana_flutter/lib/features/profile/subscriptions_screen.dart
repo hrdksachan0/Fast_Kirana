@@ -93,7 +93,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 ),
                 Switch(
                   value: item['status'],
-                  activeColor: AppDesignSystem.accent,
+                  activeThumbColor: AppDesignSystem.accent,
                   onChanged: (val) {
                     setState(() => item['status'] = val);
                   },

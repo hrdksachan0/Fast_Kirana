@@ -5,7 +5,6 @@ import '../../core/services/logger_service.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../core/theme/responsive.dart';
 
 class VoiceSearchSheet extends StatefulWidget {
   final Function(String query) onVoiceResult;

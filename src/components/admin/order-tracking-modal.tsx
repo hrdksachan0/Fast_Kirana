@@ -59,6 +59,14 @@ interface Order {
   address?: Address
   notes?: string
   deliveryInstructions?: string
+  deliveryUserId?: string
+  deliveryUser?: {
+    id?: string
+    name?: string
+    phone?: string
+  }
+  deliveryBoyName?: string
+  deliveryBoyPhone?: string
   items?: OrderItem[]
   miscFee?: number
   paymentMethod?: string
@@ -220,6 +228,9 @@ export default function OrderTrackingModal({
     (order as any).packagingOption === 'PREMIUM' ||
     (order as any).isPremiumPackaging === true
   )
+  const isPickup = order.deliveryMethod === 'RETAIL' || order.deliveryMethod === 'TAKEAWAY' || order.isSelfPickup === true
+  const riderName = order.deliveryUser?.name || order.deliveryBoyName || ((order.status === 'SHIPPED' || order.status === 'DELIVERED') && order.deliveryUserId ? 'FastKirana Delivery Partner' : null)
+  const riderPhone = order.deliveryUser?.phone || order.deliveryBoyPhone || null
   const orderTime = order.createdAt 
     ? new Date(order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
     : ''
@@ -423,6 +434,54 @@ export default function OrderTrackingModal({
               <span className="text-xs font-semibold text-violet-700 dark:text-violet-300">
                 Counter Pickup · No rider needed
               </span>
+            </div>
+          )}
+
+          {/* ── Assigned Rider / Delivery Partner Card ── */}
+          {!isPickup && (riderName || order.deliveryUserId || order.status === 'SHIPPED' || order.status === 'DELIVERED') && (
+            <div className="p-3 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="h-9 w-9 rounded-full bg-emerald-500/15 flex items-center justify-center text-lg shrink-0">
+                  🛵
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                      {order.status === 'DELIVERED' ? 'Delivered By Rider' : 'Picked Up By Rider'}
+                    </span>
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  </div>
+                  <div className="font-bold text-xs text-text-primary truncate">
+                    {riderName || 'FastKirana Delivery Partner'}
+                  </div>
+                  {riderPhone && (
+                    <div className="text-[10px] text-text-muted font-mono font-semibold">
+                      📞 {riderPhone}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {riderPhone && (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <a
+                    href={`https://wa.me/${riderPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hello ${riderName || 'Rider'}, regarding FastKirana Order #${order.readableId || order.id.slice(0, 8)}:`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="h-8 w-8 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 flex items-center justify-center text-emerald-600 transition-colors cursor-pointer"
+                    title="WhatsApp Rider"
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" strokeWidth={2.2} />
+                  </a>
+                  <a
+                    href={`tel:${riderPhone}`}
+                    className="h-8 w-8 rounded-full bg-emerald-600 hover:bg-emerald-700 flex items-center justify-center text-white transition-colors cursor-pointer shadow-xs"
+                    title={`Call Rider: ${riderPhone}`}
+                  >
+                    <Phone className="h-3.5 w-3.5" strokeWidth={2.2} />
+                  </a>
+                </div>
+              )}
             </div>
           )}
 

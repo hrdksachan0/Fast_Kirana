@@ -23,9 +23,9 @@ const CATEGORY_COLORS: Record<string, { bg: string; gradient: string }> = {
   'fruits-vegetables': { bg: 'bg-emerald-50', gradient: 'from-emerald-100 to-emerald-50' },
   'dairy-breakfast': { bg: 'bg-blue-50', gradient: 'from-blue-100 to-blue-50' },
   'snacks-munchies': { bg: 'bg-amber-50', gradient: 'from-amber-100 to-amber-50' },
-  'beverages': { bg: 'bg-purple-50', gradient: 'from-purple-100 to-purple-50' },
+  'beverages': { bg: 'bg-cyan-50', gradient: 'from-cyan-100 to-cyan-50' },
   'personal-care': { bg: 'bg-pink-50', gradient: 'from-pink-100 to-pink-50' },
-  'household': { bg: 'bg-indigo-50', gradient: 'from-indigo-100 to-indigo-50' },
+  'household': { bg: 'bg-teal-50', gradient: 'from-teal-100 to-teal-50' },
   'bakery-biscuits': { bg: 'bg-orange-50', gradient: 'from-orange-100 to-orange-50' },
   'atta-rice-dal': { bg: 'bg-yellow-50', gradient: 'from-yellow-100 to-yellow-50' },
 }

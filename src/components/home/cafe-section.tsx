@@ -663,7 +663,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
                         }
                       }}
                       className={cn(
-                        "w-full flex flex-col md:flex-row items-center gap-1 md:gap-2.5 p-1.5 md:px-2.5 md:py-2 rounded-2xl transition-all duration-200 text-center md:text-left border-l-3 outline-none group cursor-pointer",
+                        "w-full flex flex-col md:flex-row items-center gap-1 md:gap-2.5 p-1.5 md:px-2.5 md:py-2 rounded-2xl transition-all duration-200 text-center md:text-left border outline-none group cursor-pointer",
                         isActive 
                           ? activeBg 
                           : "border-transparent text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100/80 dark:hover:bg-zinc-900/60"

@@ -71,10 +71,10 @@ function getTimeConfig(hour: number): TimeConfig {
   } else {
     // Night 8 PM - 5 AM
     return {
-      icon: <Moon className="h-5 w-5 text-indigo-500 fill-indigo-500/25" />,
+      icon: <Moon className="h-5 w-5 text-amber-500 fill-amber-500/25" />,
       title: 'Late Night Cravings',
-      gradient: 'from-indigo-50 via-purple-50 to-blue-50 dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-transparent',
-      bgTint: 'bg-gradient-to-r from-indigo-50/80 via-purple-50/60 to-blue-50/40 dark:from-indigo-950/20 dark:via-purple-950/10 dark:to-zinc-900/10',
+      gradient: 'from-slate-100 via-zinc-50 to-amber-50/50 dark:from-slate-950/30 dark:via-zinc-900/20 dark:to-transparent',
+      bgTint: 'bg-gradient-to-r from-slate-100/80 via-zinc-100/60 to-amber-50/40 dark:from-slate-950/20 dark:via-zinc-900/10 dark:to-zinc-900/10',
       filterFn: (product: Product) => {
         const tags = product.tags?.map((t) => t.toLowerCase()) || []
         const categorySlug = product.category?.slug || ''

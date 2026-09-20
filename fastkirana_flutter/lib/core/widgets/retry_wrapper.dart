@@ -1,5 +1,4 @@
 import 'package:fastkirana_flutter/core/theme/design_system.dart';
-import '../../core/theme/responsive.dart';
 import 'package:flutter/material.dart';
 
 class RetryWrapper extends StatelessWidget {
@@ -42,7 +41,7 @@ class RetryWrapper extends StatelessWidget {
                   color: AppDesignSystem.statusCancelled,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.wifi_off_rounded,
                   color: AppDesignSystem.danger,
                   size: 32,

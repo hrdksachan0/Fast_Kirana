@@ -40,7 +40,7 @@ void main() {
       });
 
       test('reads user_data from SharedPreferences', () async {
-        final userJson = '{"id":"test-user","name":"Test User","email":"test@test.com","role":"USER"}';
+        const userJson = '{"id":"test-user","name":"Test User","email":"test@test.com","role":"USER"}';
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_data', userJson);
 
@@ -56,7 +56,7 @@ void main() {
       });
 
       test('returns null for key that is not a legacy key and not in secure storage', () async {
-        final prefs = await SharedPreferences.getInstance();
+        await SharedPreferences.getInstance();
         // 'random_key' is NOT in _legacyPrefsKeys, so no migration fallback
         final result = await SecureStorage.read('random_key');
         expect(result, isNull);

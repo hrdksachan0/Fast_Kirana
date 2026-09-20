@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
-import '../../core/theme/responsive.dart';
 import '../../data/models/coupon.dart';
 import '../../providers/coupon_provider.dart';
 

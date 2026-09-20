@@ -5,8 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfsession/cfsession.dart';
@@ -35,7 +33,6 @@ import '../checkout/order_success_screen.dart';
 import '../../core/services/location_service.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../../widgets/empty_state.dart';
-import '../../providers/product_provider.dart';
 import '../../providers/store_hub_provider.dart';
 import 'widgets/checkout_trust_badges.dart';
 import 'widgets/payment_failed_cod_sheet.dart';
@@ -43,6 +40,13 @@ import 'widgets/checkout_delivery_address_card.dart';
 import 'widgets/checkout_bill_breakdown.dart';
 import 'widgets/checkout_packaging_selector.dart';
 import 'widgets/checkout_delivery_instructions.dart';
+import 'widgets/checkout_savings_banner.dart';
+import 'widgets/checkout_receiver_card.dart';
+import 'widgets/checkout_complete_your_meal.dart';
+import 'widgets/checkout_placing_order_overlay.dart';
+import 'widgets/checkout_items_review_card.dart';
+import 'widgets/checkout_payment_selector_sheet.dart';
+import 'widgets/checkout_bottom_bar.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   final double discountAmount;
@@ -82,7 +86,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   static const Color primaryRed = AppDesignSystem.primary;
   static const Color slateDark = AppDesignSystem.slate900;
   static const Color slateMuted = AppDesignSystem.slate500;
-  static const Color slateBorder = AppDesignSystem.slate300;
 
   @override
   void initState() {
@@ -203,19 +206,82 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       return;
     }
 
+    if (mounted) setState(() => _isPlacingOrder = true);
     final dio = ref.read(dioProvider);
 
-    // Verify Cashfree payment with backend
-    String resolvedPaymentId = 'CF_$cfOrderId';
-    try {
-      final verifyRes = await dio.post('/api/payment/cashfree/verify', data: {
-        'orderId': cfOrderId,
-      });
-      if (verifyRes.data != null && verifyRes.data['cfPaymentId'] != null) {
-        resolvedPaymentId = verifyRes.data['cfPaymentId'].toString();
+    // Cryptographic & Server-Side Verification with Cashfree Gateway
+    bool verifiedPaid = false;
+    String? resolvedPaymentId;
+
+    for (int attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) {
+        await Future.delayed(const Duration(milliseconds: 1500));
       }
-    } catch (e) {
-      debugPrint('Cashfree verification check note: $e');
+      try {
+        final verifyRes = await dio.post(
+          '/api/payment/cashfree/verify',
+          data: {'orderId': cfOrderId, 'cfOrderId': cfOrderId},
+          options: Options(
+            sendTimeout: const Duration(seconds: 6),
+            receiveTimeout: const Duration(seconds: 6),
+          ),
+        );
+        if (verifyRes.statusCode == 200 && verifyRes.data != null) {
+          final data = verifyRes.data;
+          if (data['isPaid'] == true || data['paymentStatus'] == 'PAID') {
+            verifiedPaid = true;
+            resolvedPaymentId = data['cfPaymentId']?.toString() ?? 'CF_$cfOrderId';
+            break;
+          }
+        }
+      } catch (e) {
+        debugPrint('Cashfree verification check attempt $attempt note: $e');
+      }
+    }
+
+    if (!verifiedPaid || resolvedPaymentId == null) {
+      debugPrint('❌ Cashfree payment verification failed or user cancelled in UPI app (cfOrderId: $cfOrderId)');
+      if (mounted) setState(() => _isPlacingOrder = false);
+
+      final total = _pendingGrandTotal ?? cart.subtotal;
+      if (mounted && total > 0) {
+        await PaymentFailedCodSheet.show(
+          context: context,
+          grandTotal: total,
+          onRetryPayment: () {
+            if (mounted) {
+              _pendingCashfreeOrderId = null;
+              _handlePlaceOrder(cart);
+            }
+          },
+          onCancelOrder: () {
+            if (mounted) {
+              setState(() => _isPlacingOrder = false);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  backgroundColor: AppDesignSystem.rose600,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  content: Text(
+                    'Payment was cancelled. Order has not been placed.',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
+                  ),
+                ),
+              );
+            }
+          },
+          onConfirmCod: () async {
+            if (mounted) {
+              setState(() {
+                _selectedPayment = 'cod';
+                _isPlacingOrder = true;
+              });
+              await _completeOrderPlacement(cart);
+            }
+          },
+        );
+      }
+      return;
     }
 
     await _completeOrderPlacement(
@@ -347,11 +413,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       return;
     }
 
-    final closedRestItem = cart.items.firstWhere(
-      (it) => isRestaurantProduct(it.product) && it.product.restaurant?.isOpen == false,
-      orElse: () => cart.items.first,
-    );
-    if (hasRestaurant && closedRestItem.product.restaurant?.isOpen == false) {
+    final closedRestItem = cart.items
+        .where((it) => isRestaurantProduct(it.product) && !RestaurantScheduleHelper.isProductRestaurantOpen(it.product, storeSettings: settings))
+        .firstOrNull;
+    if (hasRestaurant && closedRestItem != null) {
       setState(() => _isPlacingOrder = false);
       final rName = closedRestItem.product.restaurant?.name ?? 'Restaurant';
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -802,6 +867,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         'paymentMethod': _selectedPayment == 'online' ? 'UPI' : 'COD',
         'paymentStatus': isOnlinePaid ? 'PAID' : 'PENDING',
         'paymentId': paymentId,
+        'cfOrderId': _pendingCashfreeOrderId,
         'deliveryMethod': _deliveryMethod,
         'notes': orderNotes,
         'couponCode': widget.couponCode,
@@ -1096,179 +1162,42 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     },
                   ),
 
-                  // 2. ✨ TOP SAVINGS BANNER (Mint Green - Swiggy Style)
+                  // 2. ✨ TOP SAVINGS BANNER
                   if (totalSavings > 0) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppDesignSystem.statusDelivered,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppDesignSystem.emerald200),
-                      ),
-                      child: Row(
-                        children: [
-                          Text('✨', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
-                          const SizedBox(width: 8),
-                          Text(
-                            '₹${totalSavings.toStringAsFixed(0)} saved! On this order',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 12.5),
-                              fontWeight: FontWeight.w800,
-                              color: AppDesignSystem.statusDeliveredText,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    CheckoutSavingsBanner(totalSavings: totalSavings),
                     const SizedBox(height: 12),
                   ],
 
-                  // 3. 🎁 RECEIVER INFO CARD (Spacious & Clean, Zero Truncation)
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: AppDesignSystem.slate200, width: 1.2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.02),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Row 1: Header (Avatar + Tag + Edit Button)
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(5),
-                              decoration: BoxDecoration(
-                                color: _customReceiverName != null
-                                    ? AppDesignSystem.statusPending
-                                    : AppDesignSystem.blue50,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                _customReceiverName != null ? '🎁' : '👤',
-                                style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13)),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _customReceiverName != null ? 'Ordering for someone else' : 'Contact Details for Order',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 11.5),
-                                fontWeight: FontWeight.w700,
-                                color: slateMuted,
-                              ),
-                            ),
-                            const Spacer(),
-                            Bounceable(
-                              onTap: () => _showEditReceiverModal(context, customerName, customerPhone),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppDesignSystem.orange50,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: AppDesignSystem.orange300, width: 1),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.edit_outlined, size: 12, color: AppDesignSystem.orange600),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      'Edit',
-                                      style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 11),
-                                        fontWeight: FontWeight.w800,
-                                        color: AppDesignSystem.orange600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-
-                        // Row 2: Customer Name & Phone Number (Responsive Wrap — Zero Overlap / Overflow)
-                        Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          spacing: 8,
-                          runSpacing: 2,
-                          children: [
-                            Text(
-                              customerName,
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 13.5),
-                                fontWeight: FontWeight.w900,
-                                color: slateDark,
-                              ),
-                            ),
-                            if (customerPhone.isNotEmpty)
-                              Text(
-                                '•   $customerPhone',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 12.5),
-                                  fontWeight: FontWeight.w700,
-                                  color: AppDesignSystem.slate600,
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Order tracking and delivery updates will be sent here',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 10.5),
-                            fontWeight: FontWeight.w500,
-                            color: AppDesignSystem.slate400,
-                          ),
-                        ),
-                      ],
-                    ),
+                  // 3. 🎁 RECEIVER INFO CARD
+                  CheckoutReceiverCard(
+                    customerName: customerName,
+                    customerPhone: customerPhone,
+                    isOrderingForSomeone: _customReceiverName != null || _customReceiverPhone != null,
+                    onReceiverDetailsSaved: (name, phone) {
+                      setState(() {
+                        _customReceiverName = name;
+                        _customReceiverPhone = phone;
+                      });
+                    },
                   ),
-
                   const SizedBox(height: 14),
 
-                  // 3. 🍱 CART ITEMS REVIEW CARD
-                  _buildCartItemsReview(items),
+                  // 4. 🍱 CART ITEMS REVIEW CARD
+                  CheckoutItemsReviewCard(items: items),
                   const SizedBox(height: 14),
 
-                  // 4. ✨ COMPLETE YOUR MEAL (Cross-Sell / Frequently Bought Together)
-                  _buildCompleteYourMealSection(items),
+                  // 5. ✨ COMPLETE YOUR MEAL (Cross-Sell / Frequently Bought Together)
+                  CheckoutCompleteYourMeal(items: items),
                   const SizedBox(height: 14),
 
-                  // 5. 🍱 Packaging Preference
+                  // 6. 🍱 Packaging Preference
                   CheckoutPackagingSelector(
                     selectedPackaging: _selectedPackaging,
                     onPackagingChanged: (val) => setState(() => _selectedPackaging = val),
                   ),
                   const SizedBox(height: 14),
 
-                  // 5.1 🛵 Delivery Instructions (1-Tap Preferences & Rider Notes)
-                  CheckoutDeliveryInstructions(
-                    selectedInstructions: _selectedDeliveryInstructions,
-                    noteController: _deliveryNotesController,
-                    onToggleInstruction: (id) {
-                      setState(() {
-                        if (_selectedDeliveryInstructions.contains(id)) {
-                          _selectedDeliveryInstructions.remove(id);
-                        } else {
-                          _selectedDeliveryInstructions.add(id);
-                        }
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 14),
-
-                  // 6. 🧾 Detailed Bill Summary
+                  // 7. 🧾 Detailed Bill Summary
                   CheckoutBillBreakdown(
                     subtotal: subtotal,
                     deliveryFee: deliveryFee,
@@ -1280,7 +1209,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   ),
                   const SizedBox(height: 14),
 
-                  // 7. 🛡️ FastKirana Buyer Protection & Trust Badges
+                  // 8. 🛡️ FastKirana Buyer Protection & Trust Badges
                   const CheckoutTrustBadges(),
                   const SizedBox(height: 24),
                 ],
@@ -1289,7 +1218,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
             // 🌟 Smooth Full-Screen Processing Overlay on Order Placement
             if (_isPlacingOrder)
-              Positioned.fill(child: _buildPlacingOrderOverlay()),
+              const Positioned.fill(child: CheckoutPlacingOrderOverlay()),
           ],
         ),
       ),
@@ -1313,940 +1242,27 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             heightFactor: 1.0,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: Responsive.defaultMaxContentWidth),
-              child: _buildBottomProceedBar(grandTotal, cart ?? Cart(id: 'c', userId: 'u', items: items, couponDiscount: 0.0, createdAt: DateTime.now(), updatedAt: DateTime.now())),
+              child: CheckoutBottomBar(
+                grandTotal: grandTotal,
+                isPlacingOrder: _isPlacingOrder,
+                onProceedToPay: () {
+                  final activeCart = cart ?? Cart(id: 'c', userId: 'u', items: items, couponDiscount: 0.0, createdAt: DateTime.now(), updatedAt: DateTime.now());
+                  CheckoutPaymentSelectorSheet.show(
+                    context: context,
+                    selectedPayment: _selectedPayment,
+                    grandTotal: grandTotal,
+                    isPlacingOrder: _isPlacingOrder,
+                    onPaymentChanged: (method) {
+                      setState(() => _selectedPayment = method);
+                    },
+                    onConfirm: () => _handlePlaceOrder(activeCart),
+                  );
+                },
+              ),
             ),
           ),
         ),
       ),
     ));
-  }
-
-  void _showEditReceiverModal(BuildContext context, String currentName, String currentPhone) {
-    final nameCtrl = TextEditingController(text: _customReceiverName ?? currentName);
-    final phoneCtrl = TextEditingController(text: _customReceiverPhone ?? currentPhone);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Edit Receiver Details',
-                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: slateDark),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.close_rounded, size: 20),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: nameCtrl,
-              textCapitalization: TextCapitalization.words,
-              decoration: InputDecoration(
-                labelText: 'Receiver Name',
-                hintText: 'e.g. Rahul / Mom / Friend',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: phoneCtrl,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                labelText: 'Receiver Phone Number',
-                hintText: '10-digit mobile number',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Bounceable(
-              onTap: () {
-                final n = nameCtrl.text.trim();
-                final p = phoneCtrl.text.trim();
-                setState(() {
-                  _customReceiverName = n.isNotEmpty ? n : null;
-                  _customReceiverPhone = p.isNotEmpty ? p : null;
-                });
-                HapticFeedback.selectionClick();
-                Navigator.pop(ctx);
-              },
-              child: Container(
-                width: double.infinity,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppDesignSystem.orange600,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Center(
-                  child: Text(
-                    'Save Details',
-                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: Colors.white),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCompleteYourMealSection(List<CartItem> items) {
-    final itemIds = items.map((i) => i.product.id).toList();
-
-    return ref.watch(cartUpsellProductsProvider(itemIds)).when(
-      data: (products) {
-        if (products.isEmpty) return const SizedBox.shrink();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'COMPLETE YOUR MEAL',
-              style: GoogleFonts.inter(
-                fontSize: Responsive.scaledFontSize(context, 11.5),
-                fontWeight: FontWeight.w800,
-                color: slateMuted,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              height: 175,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemCount: products.length,
-                itemBuilder: (context, idx) {
-                  final p = products[idx];
-                  return Container(
-                    width: 130,
-                    margin: const EdgeInsets.only(right: 12),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: slateBorder),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: CachedNetworkImage(
-                            imageUrl: p.imageUrl ?? '',
-                            width: double.infinity,
-                            height: 75,
-                            fit: BoxFit.cover,
-                            memCacheWidth: 260,
-                            memCacheHeight: 150,
-                            maxWidthDiskCache: 400,
-                            maxHeightDiskCache: 225,
-                            errorWidget: (_, __, ___) => Container(
-                              color: AppDesignSystem.slate200,
-                              child: const Icon(Icons.fastfood_rounded, color: AppDesignSystem.slate400),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          p.name,
-                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w700, color: slateDark),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const Spacer(),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '₹${p.price.toStringAsFixed(0)}',
-                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: slateDark),
-                            ),
-                            Bounceable(
-                              onTap: () {
-                                HapticFeedback.selectionClick();
-                                ref.read(cartProvider.notifier).addProduct(p);
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: AppDesignSystem.green100,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: AppDesignSystem.emerald200),
-                                ),
-                                child: Text(
-                                  '+ ADD',
-                                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w800, color: AppDesignSystem.green600),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        );
-      },
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
-    );
-  }
-
-  Widget _buildPlacingOrderOverlay() {
-    return Container(
-      color: Colors.black.withValues(alpha: 0.6),
-      child: Center(
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 32),
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 30),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.25),
-                blurRadius: 30,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 68,
-                height: 68,
-                decoration: BoxDecoration(
-                  color: AppDesignSystem.green100,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppDesignSystem.emerald200, width: 2),
-                ),
-                child: const Center(
-                  child: SizedBox(
-                    width: 34,
-                    height: 34,
-                    child: CircularProgressIndicator(
-                      color: AppDesignSystem.green600,
-                      strokeWidth: 3.5,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                'Placing Your Order...',
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 18),
-                  fontWeight: FontWeight.w900,
-                  color: AppDesignSystem.slate900,
-                  letterSpacing: -0.3,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Connecting to FastKirana Darkstore...',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 12.5),
-                  fontWeight: FontWeight.w600,
-                  color: AppDesignSystem.slate500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCartItemsReview(List<CartItem> items) {
-    final groceryItems = items.where((i) => !isRestaurantProduct(i.product)).toList();
-    final restaurantItems = items.where((i) => isRestaurantProduct(i.product)).toList();
-
-    final Map<String, List<CartItem>> restaurantGroups = {};
-    for (final item in restaurantItems) {
-      final outlet = getOutletName(item.product);
-      restaurantGroups.putIfAbsent(outlet, () => []).add(item);
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: slateBorder, width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Order Items Review',
-                    style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 13),
-                      fontWeight: FontWeight.w900,
-                      color: slateDark,
-                    ),
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppDesignSystem.slate200,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '${items.length} ${items.length == 1 ? 'item' : 'items'}',
-                  style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 10.5),
-                    fontWeight: FontWeight.w700,
-                    color: slateMuted,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // 1. Grocery Section
-          if (groceryItems.isNotEmpty) ...[
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppDesignSystem.slate50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppDesignSystem.slate300),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
-                      const SizedBox(width: 5),
-                      Text(
-                        'Grocery & Daily Essentials',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11.5),
-                          fontWeight: FontWeight.w800,
-                          color: primaryRed,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        'Darkstore',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 9.5),
-                          fontWeight: FontWeight.w600,
-                          color: slateMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 14, thickness: 0.8, color: AppDesignSystem.slate300),
-                  ...groceryItems.map((item) => _buildReviewItemRow(item)),
-                ],
-              ),
-            ),
-            if (restaurantGroups.isNotEmpty) const SizedBox(height: 10),
-          ],
-
-          // 2. Restaurant Sections
-          ...restaurantGroups.entries.map((entry) {
-            final outletName = entry.key;
-            final rItems = entry.value;
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppDesignSystem.orange50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppDesignSystem.orange200),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text('🥘', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
-                      const SizedBox(width: 5),
-                      Text(
-                        outletName,
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11.5),
-                          fontWeight: FontWeight.w800,
-                          color: AppDesignSystem.orange600,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        'Fresh Kitchen',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 9.5),
-                          fontWeight: FontWeight.w600,
-                          color: AppDesignSystem.orange600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 14, thickness: 0.8, color: AppDesignSystem.orange200),
-                  ...rItems.map((item) => _buildReviewItemRow(item)),
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReviewItemRow(CartItem item) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          if (item.product.imageUrl != null && item.product.imageUrl!.isNotEmpty)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: kIsWeb
-                  ? Image.network(
-                      item.product.imageUrl!,
-                      width: 28,
-                      height: 28,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag_outlined, size: 16, color: Colors.grey),
-                    )
-                  : CachedNetworkImage(
-                      imageUrl: item.product.imageUrl!,
-                      width: 28,
-                      height: 28,
-                      fit: BoxFit.cover,
-                      memCacheWidth: 56,
-                      memCacheHeight: 56,
-                      maxWidthDiskCache: 84,
-                      maxHeightDiskCache: 84,
-                      errorWidget: (_, __, ___) => const Icon(Icons.shopping_bag_outlined, size: 16, color: Colors.grey),
-                    ),
-            ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.product.name,
-                  style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 11.5),
-                    fontWeight: FontWeight.w700,
-                    color: slateDark,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  '${item.product.unit.isNotEmpty ? item.product.unit : "1 unit"} × ${item.quantity}',
-                  style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 10),
-                    fontWeight: FontWeight.w500,
-                    color: slateMuted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            '₹${(item.product.price * item.quantity).toInt()}',
-            style: GoogleFonts.inter(
-              fontSize: Responsive.scaledFontSize(context, 12),
-              fontWeight: FontWeight.w800,
-              color: slateDark,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomProceedBar(double grandTotal, Cart cart) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x0F000000),
-            blurRadius: 8,
-            offset: Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-              Text(
-                'TOTAL BILL',
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 9),
-                  fontWeight: FontWeight.w800,
-                  color: slateMuted,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              Text(
-                '₹${grandTotal.toInt()}',
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 19),
-                  fontWeight: FontWeight.w900,
-                  color: slateDark,
-                  letterSpacing: -0.4,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: GestureDetector(
-              onTap: _isPlacingOrder ? null : () => _showPaymentMethodBottomSheet(context, grandTotal, cart),
-              child: Container(
-                height: 44,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppDesignSystem.green700, AppDesignSystem.accentDark],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppDesignSystem.green700.withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: _isPlacingOrder
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Proceed to Pay',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 13.5),
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
-                          ],
-                        ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  ),
-);
-  }
-
-  void _showPaymentMethodBottomSheet(BuildContext context, double grandTotal, Cart cart) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (modalContext, setModalState) {
-            return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-              ),
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
-              child: SafeArea(
-                top: false,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Pull Handle
-                    Center(
-                      child: Container(
-                        width: 44,
-                        height: 4.5,
-                        decoration: BoxDecoration(
-                          color: AppDesignSystem.slate300,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-
-                    // Header Row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Select Payment Method',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 16.5),
-                                fontWeight: FontWeight.w900,
-                                color: slateDark,
-                                letterSpacing: -0.3,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Safe & Encrypted 256-bit Checkout',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 11),
-                                fontWeight: FontWeight.w600,
-                                color: slateMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                        InkWell(
-                          onTap: () => Navigator.pop(ctx),
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: const BoxDecoration(
-                              color: AppDesignSystem.slate200,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.close_rounded, color: AppDesignSystem.slate500, size: 18),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-
-                    // Option 1: Cash on Delivery (COD)
-                    GestureDetector(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        setModalState(() => _selectedPayment = 'cod');
-                        setState(() => _selectedPayment = 'cod');
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: _selectedPayment == 'cod' ? AppDesignSystem.green50 : AppDesignSystem.slate50,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: _selectedPayment == 'cod' ? AppDesignSystem.green700 : AppDesignSystem.slate300,
-                            width: _selectedPayment == 'cod' ? 1.8 : 1.1,
-                          ),
-                          boxShadow: _selectedPayment == 'cod'
-                              ? [
-                                  BoxShadow(
-                                    color: AppDesignSystem.green700.withValues(alpha: 0.08),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ]
-                              : [],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: AppDesignSystem.green100,
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Text('💵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 20))),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        'Cash on Delivery',
-                                        style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 14),
-                                          fontWeight: FontWeight.w900,
-                                          color: slateDark,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: AppDesignSystem.green100,
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          'Default',
-                                          style: GoogleFonts.inter(
-                                            fontSize: Responsive.scaledFontSize(context, 9),
-                                            fontWeight: FontWeight.w900,
-                                            color: AppDesignSystem.green700,
-                                            letterSpacing: 0.2,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    'Pay via cash or UPI QR at your doorstep',
-                                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: slateMuted, fontWeight: FontWeight.w500),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              width: 22,
-                              height: 22,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _selectedPayment == 'cod' ? AppDesignSystem.green700 : Colors.white,
-                                border: Border.all(
-                                  color: _selectedPayment == 'cod' ? AppDesignSystem.green700 : AppDesignSystem.slate500,
-                                  width: 2,
-                                ),
-                              ),
-                              child: _selectedPayment == 'cod'
-                                  ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
-                                  : null,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Option 2: Pay Online (Instant UPI, Cards & Netbanking)
-                    GestureDetector(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        setModalState(() => _selectedPayment = 'online');
-                        setState(() => _selectedPayment = 'online');
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: _selectedPayment == 'online' ? AppDesignSystem.green50 : AppDesignSystem.slate50,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: _selectedPayment == 'online' ? AppDesignSystem.green700 : AppDesignSystem.slate300,
-                            width: _selectedPayment == 'online' ? 1.8 : 1.1,
-                          ),
-                          boxShadow: _selectedPayment == 'online'
-                              ? [
-                                  BoxShadow(
-                                    color: AppDesignSystem.green700.withValues(alpha: 0.08),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ]
-                              : [],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: AppDesignSystem.blue50,
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Text('💳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 20))),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        'Pay Online',
-                                        style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 14),
-                                          fontWeight: FontWeight.w900,
-                                          color: slateDark,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: AppDesignSystem.statusDelivered,
-                                          borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(color: AppDesignSystem.emerald200),
-                                        ),
-                                        child: Text(
-                                          '⚡ INSTANT',
-                                          style: GoogleFonts.inter(
-                                            fontSize: Responsive.scaledFontSize(context, 9),
-                                            fontWeight: FontWeight.w900,
-                                            color: AppDesignSystem.statusDeliveredText,
-                                            letterSpacing: 0.2,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    'Google Pay, PhonePe, Paytm, Cards & UPI',
-                                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: slateMuted, fontWeight: FontWeight.w500),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              width: 22,
-                              height: 22,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _selectedPayment == 'online' ? AppDesignSystem.green700 : Colors.white,
-                                border: Border.all(
-                                  color: _selectedPayment == 'online' ? AppDesignSystem.green700 : AppDesignSystem.slate500,
-                                  width: 2,
-                                ),
-                              ),
-                              child: _selectedPayment == 'online'
-                                  ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
-                                  : null,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Security Trust Banner
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7.5),
-                      decoration: BoxDecoration(
-                        color: AppDesignSystem.slate50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppDesignSystem.slate200),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.verified_user_outlined, size: 14, color: AppDesignSystem.success),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              '100% Safe & Encrypted • Instant Refunds',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 11),
-                                fontWeight: FontWeight.w700,
-                                color: AppDesignSystem.slate600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-
-                    // Confirm Action Button
-                    SizedBox(
-                      height: 52,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppDesignSystem.green700,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          elevation: 2,
-                        ),
-                        onPressed: _isPlacingOrder
-                            ? null
-                            : () {
-                                Navigator.pop(ctx);
-                                _handlePlaceOrder(cart);
-                              },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              _selectedPayment == 'online'
-                                  ? 'Pay ₹${grandTotal.toInt()} Online'
-                                  : 'Place Order • Pay ₹${grandTotal.toInt()} on Delivery',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 14),
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Icon(Icons.arrow_forward_rounded, size: 18, color: Colors.white),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
   }
 }

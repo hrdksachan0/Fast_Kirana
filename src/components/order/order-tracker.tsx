@@ -590,7 +590,7 @@ export function OrderTracker({ initialOrder, companionOrder, isCafeOpen: initial
     })
 
     const riderIcon = L.divIcon({
-      html: `<div class="flex items-center justify-center h-8 w-8 bg-yellow-500 text-white rounded-full border border-white shadow text-xs animate-bounce">🚴</div>`,
+      html: `<div class="relative flex items-center justify-center h-8 w-8 bg-amber-500 text-white rounded-full border-2 border-white shadow-lg text-xs animate-pulse">🚴</div>`,
       className: '',
       iconSize: [28, 28],
       iconAnchor: [14, 14],

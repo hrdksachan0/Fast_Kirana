@@ -387,7 +387,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                                 color: slateDark,
                               ),
                             ),
-                            activeColor: primaryRed,
+                            activeThumbColor: primaryRed,
                           ),
                         ),
                       ],

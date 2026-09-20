@@ -32,7 +32,7 @@ export function BogoCartGiftCard({ giftItem, offerName = 'BOGO Offer' }: BogoCar
       {/* Header Badge */}
       <div className="flex items-center justify-between gap-2 mb-2.5">
         <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-600 text-white text-[9.5px] font-black uppercase tracking-wider shadow-xs">
-          <Gift className="w-3 h-3 animate-bounce" />
+          <Gift className="w-3 h-3 animate-pulse" />
           <span>100% Free BOGO Gift</span>
         </div>
         <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">

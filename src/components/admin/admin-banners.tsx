@@ -39,11 +39,11 @@ const GRADIENT_PRESETS = [
   { name: 'Diwali Gold (Orange/Amber)', value: 'from-amber-600 via-orange-500 to-yellow-500' },
   { name: 'Holi Colors (Pink/Purple/Yellow)', value: 'from-pink-500 via-purple-500 to-yellow-400' },
   { name: 'Eid Emerald (Green/Teal)', value: 'from-emerald-600 via-teal-500 to-cyan-500' },
-  { name: 'New Year Purple (Violet/Pink)', value: 'from-violet-600 via-fuchsia-600 to-pink-500' },
+  { name: 'New Year Party (Rose/Pink)', value: 'from-rose-600 via-fuchsia-600 to-pink-500' },
   { name: 'Store Red (Default Red/Orange)', value: 'from-primary via-rose-500 to-orange-400' },
   { name: 'Fresh Green (Mint/Emerald)', value: 'from-accent via-emerald-500 to-teal-400' },
   { name: 'Midnight Snacks (Blue/Amber)', value: 'from-discount via-orange-500 to-amber-400' },
-  { name: 'Night Neon (Dark Indigo/Blue)', value: 'from-indigo-900 via-purple-800 to-blue-600' }
+  { name: 'Night Sky (Dark Slate/Blue)', value: 'from-slate-900 via-blue-900 to-blue-600' }
 ]
 
 // Predefined Festival/Occasion Templates

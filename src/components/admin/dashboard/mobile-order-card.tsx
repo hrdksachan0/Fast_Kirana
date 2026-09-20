@@ -159,16 +159,44 @@ export function MobileOrderCard({
             ) : (
               <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full shadow-2xs">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                📱 UPI PAID ✅
+                📱 ONLINE / UPI ✅
               </span>
             )
           ) : (
-            <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-rose-700 dark:text-rose-300 bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-rose-700 dark:text-rose-300 bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 rounded-full shadow-2xs">
               ⏳ {o.paymentMethod || 'COD'} (UNPAID)
             </span>
           )}
         </button>
       </div>
+
+      {/* ── Rider Pickup Details Banner ── */}
+      {(o.deliveryUser || o.deliveryBoyName || ((o.status === 'SHIPPED' || o.status === 'DELIVERED') && o.deliveryUserId)) && (
+        <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-500/25 rounded-xl text-[10.5px]" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-xs">🛵</span>
+            <span className="font-extrabold text-emerald-800 dark:text-emerald-300 truncate">
+              {o.deliveryUser?.name || o.deliveryBoyName || 'FastKirana Rider'}
+            </span>
+            {(o.deliveryUser?.phone || o.deliveryBoyPhone) && (
+              <span className="text-[10px] text-text-muted font-mono font-semibold">
+                ({o.deliveryUser?.phone || o.deliveryBoyPhone})
+              </span>
+            )}
+          </div>
+          {(o.deliveryUser?.phone || o.deliveryBoyPhone) && (
+            <div className="flex items-center gap-1 shrink-0">
+              <a
+                href={`tel:${o.deliveryUser?.phone || o.deliveryBoyPhone}`}
+                className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-[9.5px] flex items-center gap-0.5 shadow-2xs"
+                title="Call Rider"
+              >
+                📞 Call
+              </a>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Status Selector Dropdown (Full Control Toggle) ── */}
       <div className="flex items-center gap-2 pt-0.5" onClick={(e) => e.stopPropagation()}>

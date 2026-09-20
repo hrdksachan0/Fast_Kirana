@@ -81,7 +81,9 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                   icon: const Icon(Icons.refresh_rounded, color: primaryRed),
                   onPressed: () {
                     HapticFeedback.lightImpact();
+                    // ignore: unused_result
                     ref.refresh(productsProvider(null));
+                    // ignore: unused_result
                     ref.refresh(categoriesProvider);
                   },
                 ),
@@ -305,6 +307,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                 return RefreshIndicator(
                   color: primaryRed,
                   onRefresh: () async {
+                    // ignore: unused_result
                     ref.refresh(productsProvider(null));
                   },
                   child: ListView.builder(
@@ -684,6 +687,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
       builder: (ctx) => _ProductEditBottomSheet(
         product: product,
         onUpdated: () {
+          // ignore: unused_result
           ref.refresh(productsProvider(null));
         },
       ),
@@ -979,7 +983,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                   children: [
                     Switch(
                       value: isAvailable,
-                      activeColor: AppDesignSystem.green600,
+                      activeThumbColor: AppDesignSystem.green600,
                       activeTrackColor: AppDesignSystem.green100,
                       inactiveTrackColor: AppDesignSystem.slate200,
                       onChanged: (val) async {
@@ -1440,7 +1444,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                                   ),
                                   Switch(
                                     value: _isAvailable,
-                                    activeColor: AppDesignSystem.green600,
+                                    activeThumbColor: AppDesignSystem.green600,
                                     onChanged: (val) => setState(() => _isAvailable = val),
                                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   ),
@@ -1856,7 +1860,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
         ),
         Switch(
           value: value,
-          activeColor: primaryRed,
+          activeThumbColor: primaryRed,
           onChanged: (v) {
             HapticFeedback.lightImpact();
             onChanged(v);

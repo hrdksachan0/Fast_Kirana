@@ -71,7 +71,7 @@ export async function GET(request: Request) {
           SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
                  o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
-                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
+                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId", o."deliveryUserId"
           FROM orders o
           LEFT JOIN users u ON o."userId" = u.id
           WHERE o.status::text = ${sqlStatus}
@@ -92,7 +92,7 @@ export async function GET(request: Request) {
           SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
                  o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
-                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
+                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId", o."deliveryUserId"
           FROM orders o
           LEFT JOIN users u ON o."userId" = u.id
           WHERE o.status::text = ${sqlStatus}
@@ -120,7 +120,7 @@ export async function GET(request: Request) {
           SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
                  o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
-                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
+                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId", o."deliveryUserId"
           FROM orders o
           WHERE o.status::text = ${sqlStatus}
             ${onlinePaidFilter}
@@ -133,7 +133,7 @@ export async function GET(request: Request) {
           SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
                  o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
-                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
+                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId", o."deliveryUserId"
           FROM orders o
           WHERE o.status::text = ${sqlStatus}
             ${onlinePaidFilter}
@@ -148,7 +148,7 @@ export async function GET(request: Request) {
           SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
                  o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
-                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
+                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId", o."deliveryUserId"
           FROM orders o
           LEFT JOIN users u ON o."userId" = u.id
           WHERE o."storeId" = ${effectiveStoreId}
@@ -167,7 +167,7 @@ export async function GET(request: Request) {
           SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
                  o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
-                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
+                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId", o."deliveryUserId"
           FROM orders o
           LEFT JOIN users u ON o."userId" = u.id
           WHERE o.id ILIKE ${searchLike}
@@ -185,7 +185,7 @@ export async function GET(request: Request) {
           SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
                  o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
-                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
+                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId", o."deliveryUserId"
           FROM orders o
           WHERE o."storeId" = ${effectiveStoreId}
           ORDER BY o."createdAt" DESC
@@ -196,7 +196,7 @@ export async function GET(request: Request) {
           SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
                  o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
-                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId"
+                 o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId", o."deliveryUserId"
           FROM orders o
           ORDER BY o."createdAt" DESC
           LIMIT ${limit} OFFSET ${skip}
@@ -206,6 +206,7 @@ export async function GET(request: Request) {
 
     const orderIds = ordersRaw.map(o => o.id)
     const userIds = [...new Set(ordersRaw.map(o => o.userId))]
+    const deliveryUserIds = [...new Set(ordersRaw.map(o => o.deliveryUserId))].filter(Boolean)
     const addressIds = [...new Set(ordersRaw.map(o => o.addressId))].filter(Boolean)
     const restaurantIds = [...new Set(ordersRaw.map(o => o.restaurantId))].filter(Boolean)
 
@@ -216,10 +217,15 @@ export async function GET(request: Request) {
     istDate.setUTCHours(0, 0, 0, 0)
     const startOfToday = new Date(istDate.getTime() - istOffset)
 
-    const [allUsers, allAddresses, allOrderItems, allRestaurants] = await Promise.all([
+    const [allUsers, allDeliveryUsers, allAddresses, allOrderItems, allRestaurants] = await Promise.all([
       userIds.length > 0
         ? (prisma.$queryRaw`
             SELECT id, name, email, phone FROM users WHERE id = ANY(${userIds})
+          ` as Promise<any[]>)
+        : [],
+      deliveryUserIds.length > 0
+        ? (prisma.$queryRaw`
+            SELECT id, name, email, phone FROM users WHERE id = ANY(${deliveryUserIds})
           ` as Promise<any[]>)
         : [],
       addressIds.length > 0
@@ -368,6 +374,7 @@ export async function GET(request: Request) {
       const user = allUsers.find(u => u.id === o.userId) || { name: 'Customer', email: '', phone: '' }
       const address = allAddresses.find(a => a.id === o.addressId) || null
       const restaurant = o.restaurantId ? allRestaurants.find(r => r.id === o.restaurantId) : null
+      const deliveryUser = o.deliveryUserId ? allDeliveryUsers.find(d => d.id === o.deliveryUserId) : null
       const items = allOrderItems.filter(item => item.orderId === o.id).map(item => ({
         id: item.id,
         name: item.name,
@@ -385,6 +392,14 @@ export async function GET(request: Request) {
         deliveryLat: o.deliveryLat || address?.lat || null,
         deliveryLng: o.deliveryLng || address?.lng || null,
         storeId: o.storeId || null,
+        deliveryUserId: o.deliveryUserId || null,
+        deliveryUser: deliveryUser ? {
+          id: deliveryUser.id,
+          name: deliveryUser.name,
+          phone: deliveryUser.phone,
+        } : null,
+        deliveryBoyName: deliveryUser?.name || null,
+        deliveryBoyPhone: deliveryUser?.phone || null,
         status: o.status,
         paymentStatus: o.paymentStatus || 'PENDING',
         paymentMethod: o.paymentMethod || 'COD',

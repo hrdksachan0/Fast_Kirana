@@ -354,10 +354,10 @@ export async function PATCH(
 
   try {
     const body = validation.data
-    const { status, paymentStatus, paymentMethod, deliveryPhoto, deliveryLat, deliveryLng, prepTime, isRiderCash, paymentCollectedBy, cashAmount } = body
+    const { status, paymentStatus, paymentMethod, deliveryPhoto, deliveryLat, deliveryLng, prepTime, isRiderCash, paymentCollectedBy, cashAmount, deliveryUserId } = body
 
-    if (!status && !paymentStatus && !paymentMethod) {
-      return NextResponse.json({ error: 'Either status, paymentStatus, or paymentMethod is required' }, { status: 400 })
+    if (!status && !paymentStatus && !paymentMethod && !deliveryUserId) {
+      return NextResponse.json({ error: 'Either status, paymentStatus, paymentMethod, or deliveryUserId is required' }, { status: 400 })
     }
 
     // Check order exists and ownership
@@ -426,6 +426,30 @@ export async function PATCH(
       }
       return NextResponse.json({ success: true, paymentStatus, paymentMethod: validPm })
     }
+
+    // If Admin is explicitly assigning/reassigning a delivery partner without changing status
+    if (deliveryUserId !== undefined && !status) {
+      if (!isAdmin) {
+        return NextResponse.json({ error: 'Only admins can assign delivery partners directly' }, { status: 403 })
+      }
+      if (existingOrder.combinedId) {
+        await prisma.$executeRaw`
+          UPDATE orders 
+          SET "deliveryUserId" = ${deliveryUserId},
+              "updatedAt" = NOW()
+          WHERE "combinedId" = ${existingOrder.combinedId}
+        `
+      } else {
+        await prisma.$executeRaw`
+          UPDATE orders 
+          SET "deliveryUserId" = ${deliveryUserId},
+              "updatedAt" = NOW()
+          WHERE id = ${existingOrder.id}
+        `
+      }
+      return NextResponse.json({ success: true, deliveryUserId })
+    }
+
     const isRestaurantOrder = Boolean(existingOrder.restaurantId || existingOrder.orderType === 'RESTAURANT')
 
     const isDelivery = userRole === 'DELIVERY'
@@ -658,7 +682,7 @@ export async function PATCH(
         select: { id: true }
       })
       const isDeliveryRole = userRole === 'DELIVERY'
-      const targetRiderId = isDeliveryRole ? (session?.user?.id || headerUserId || userId) : (existingOrder.deliveryUserId || defaultDeliveryRider?.id || null)
+      const targetRiderId = isDeliveryRole ? (session?.user?.id || headerUserId || userId) : (deliveryUserId || existingOrder.deliveryUserId || defaultDeliveryRider?.id || null)
 
       if (shouldUpdateAllCombined && existingOrder.combinedId) {
         if (latVal !== null && lngVal !== null) {

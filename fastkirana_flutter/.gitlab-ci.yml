@@ -1,0 +1,42 @@
+# FastKirana GitLab CI Pipeline
+# Runs scripts/verify_quality.sh on all merge requests and target branches
+
+image: ghcr.io/cirruslabs/flutter:stable
+
+stages:
+  - quality
+  - build
+
+variables:
+  PUB_CACHE: "$CI_PROJECT_DIR/.pub-cache"
+
+cache:
+  key: "${CI_COMMIT_REF_SLUG}"
+  paths:
+    - .pub-cache/
+    - .dart_tool/
+
+before_script:
+  - export PATH="$PATH:$PUB_CACHE/bin"
+  - flutter pub get
+
+quality_gate:
+  stage: quality
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "develop"'
+  script:
+    - chmod +x scripts/verify_quality.sh
+    - ./scripts/verify_quality.sh
+
+debug_build:
+  stage: build
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"'
+  script:
+    - flutter build apk --debug
+  artifacts:
+    paths:
+      - build/app/outputs/flutter-apk/app-debug.apk
+    expire_in: 7 days

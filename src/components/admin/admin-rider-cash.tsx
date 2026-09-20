@@ -247,15 +247,15 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
         </div>
 
         {/* Card 3: Counter Direct Cash */}
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/30 dark:to-purple-900/10 border border-purple-200/60 dark:border-purple-800/30 p-4 rounded-3xl space-y-2">
-          <div className="flex items-center justify-between text-purple-700 dark:text-purple-300">
+        <div className="bg-gradient-to-br from-emerald-50 to-teal-100/50 dark:from-emerald-950/30 dark:to-teal-900/10 border border-emerald-200/60 dark:border-emerald-800/30 p-4 rounded-3xl space-y-2">
+          <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-300">
             <span className="text-xs font-black uppercase tracking-wider">Counter Cash</span>
             <Store className="h-4 w-4" />
           </div>
-          <p className="text-xl sm:text-2xl font-black text-purple-900 dark:text-purple-100">
+          <p className="text-xl sm:text-2xl font-black text-emerald-900 dark:text-emerald-100">
             {formatPrice(summary?.counterCashToday || 0)}
           </p>
-          <p className="text-[10px] text-purple-700/80 dark:text-purple-400 font-bold">
+          <p className="text-[10px] text-emerald-700/80 dark:text-emerald-400 font-bold">
             Direct store pickup COD sales
           </p>
         </div>

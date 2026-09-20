@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../core/theme/responsive.dart';
 import '../core/theme/design_system.dart';
 
 class SponsoredAdCard extends StatelessWidget {

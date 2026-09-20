@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:fastkirana_flutter/core/services/secure_storage_service.dart';
 import 'package:fastkirana_flutter/data/models/user.dart';
 import 'package:fastkirana_flutter/providers/auth_provider.dart';
@@ -11,6 +12,7 @@ void main() {
   group('AuthNotifier', () {
     setUp(() {
       SharedPreferences.setMockInitialValues({});
+      FlutterSecureStorage.setMockInitialValues({});
       SecureStorage.invalidateCache();
     });
 
@@ -39,7 +41,7 @@ void main() {
         await SecureStorage.write('user_email', 'test@test.com');
         await SecureStorage.write('user_name', 'Test User');
         await SecureStorage.write('user_role', 'USER');
-        final userJson = '{"id":"user-42","name":"Test User","email":"test@test.com","role":"USER","phone":"+919876543210"}';
+        const userJson = '{"id":"user-42","name":"Test User","email":"test@test.com","role":"USER","phone":"+919876543210"}';
         await SecureStorage.write('user_data', userJson);
 
         final container = ProviderContainer();
@@ -76,7 +78,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
 
-        final user = User(
+        const user = User(
           id: 'user-99',
           name: 'Alice',
           email: 'alice@test.com',
@@ -112,7 +114,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
 
-        final user = User(
+        const user = User(
           id: 'user-100',
           name: 'Bob',
           email: 'bob@test.com',

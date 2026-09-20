@@ -414,6 +414,8 @@ class RestaurantInfo {
   final double? deliveryRadiusKm;
   final String? address;
   final String? discountOffer;
+  final String? openTime;
+  final String? closeTime;
 
   RestaurantInfo({
     required this.id,
@@ -429,6 +431,8 @@ class RestaurantInfo {
     this.deliveryRadiusKm,
     this.address,
     this.discountOffer,
+    this.openTime,
+    this.closeTime,
   });
 
   factory RestaurantInfo.fromJson(Map<String, dynamic> json) {
@@ -468,6 +472,8 @@ class RestaurantInfo {
       deliveryRadiusKm: double.tryParse(json['deliveryRadiusKm']?.toString() ?? '5.0') ?? 5.0,
       address: json['address']?.toString(),
       discountOffer: json['discountOffer']?.toString() ?? json['offer']?.toString(),
+      openTime: json['openTime']?.toString(),
+      closeTime: json['closeTime']?.toString(),
     );
   }
 
@@ -485,6 +491,8 @@ class RestaurantInfo {
         'deliveryRadiusKm': deliveryRadiusKm,
         'address': address,
         'discountOffer': discountOffer,
+        'openTime': openTime,
+        'closeTime': closeTime,
       };
 }
 

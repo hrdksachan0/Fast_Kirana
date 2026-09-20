@@ -503,44 +503,53 @@ class RiderActiveDeliveryCard extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Text(isPaid ? '💳' : (isCod ? '💵' : '⚠️'), style: const TextStyle(fontSize: 15)),
-                          const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isPaid
-                                    ? 'PAID ONLINE (PREPAID)'
-                                    : (isCod ? 'CASH ON DELIVERY' : 'PAYMENT PENDING / UNPAID (${rawPayMethod.isNotEmpty ? rawPayMethod : 'ONLINE'})'),
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 10),
-                                  fontWeight: FontWeight.w900,
-                                  color: isPaid
-                                      ? AppDesignSystem.statusDeliveredText
-                                      : (isCod ? const Color(0xFFD97706) : AppDesignSystem.red600),
-                                  letterSpacing: 0.3,
-                                ),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Text(isPaid ? '💳' : (isCod ? '💵' : '⚠️'), style: const TextStyle(fontSize: 15)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isPaid
+                                        ? 'PAID ONLINE (PREPAID)'
+                                        : (isCod ? 'CASH ON DELIVERY' : 'PAYMENT PENDING / UNPAID (${rawPayMethod.isNotEmpty ? rawPayMethod : 'ONLINE'})'),
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 10),
+                                      fontWeight: FontWeight.w900,
+                                      color: isPaid
+                                          ? AppDesignSystem.statusDeliveredText
+                                          : (isCod ? const Color(0xFFD97706) : AppDesignSystem.red600),
+                                      letterSpacing: 0.3,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    isPaid
+                                        ? '₹0 to collect • Payment already done'
+                                        : (isCod
+                                            ? 'Collect ₹${total.toInt()} cash from customer'
+                                            : '⚠️ Payment NOT received! Collect ₹${total.toInt()} via QR or Cash'),
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 10.5),
+                                      fontWeight: FontWeight.w700,
+                                      color: isPaid
+                                          ? AppDesignSystem.statusDeliveredText
+                                          : (isCod ? const Color(0xFF78350F) : AppDesignSystem.red700),
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
                               ),
-                              Text(
-                                isPaid
-                                    ? '₹0 to collect • Payment already done'
-                                    : (isCod
-                                        ? 'Collect ₹${total.toInt()} cash from customer'
-                                        : '⚠️ Payment NOT received! Collect ₹${total.toInt()} via QR or Cash'),
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 11),
-                                  fontWeight: FontWeight.w700,
-                                  color: isPaid
-                                      ? AppDesignSystem.statusDeliveredText
-                                      : (isCod ? const Color(0xFF78350F) : AppDesignSystem.red700),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         '₹${total.toInt()}',
                         style: GoogleFonts.inter(

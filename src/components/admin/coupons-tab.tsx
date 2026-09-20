@@ -636,8 +636,10 @@ export function CouponsTab({
                     type="button"
                     onClick={() => setPreviewTab('card')}
                     className={cn(
-                      "px-2 py-1 rounded-lg transition-all",
-                      previewTab === 'card' ? "bg-orange-600 text-white" : "text-zinc-400"
+                      "px-2.5 py-1 rounded-lg text-xs font-bold transition-all",
+                      previewTab === 'card' 
+                        ? "bg-orange-600 text-white shadow-xs" 
+                        : "text-zinc-500 hover:text-zinc-300"
                     )}
                   >
                     1. Home Card
@@ -646,8 +648,10 @@ export function CouponsTab({
                     type="button"
                     onClick={() => setPreviewTab('menu')}
                     className={cn(
-                      "px-2 py-1 rounded-lg transition-all",
-                      previewTab === 'menu' ? "bg-orange-600 text-white" : "text-zinc-400"
+                      "px-2.5 py-1 rounded-lg text-xs font-bold transition-all",
+                      previewTab === 'menu' 
+                        ? "bg-orange-600 text-white shadow-xs" 
+                        : "text-zinc-500 hover:text-zinc-300"
                     )}
                   >
                     2. Menu Ticket
@@ -656,8 +660,10 @@ export function CouponsTab({
                     type="button"
                     onClick={() => setPreviewTab('cart')}
                     className={cn(
-                      "px-2 py-1 rounded-lg transition-all",
-                      previewTab === 'cart' ? "bg-orange-600 text-white" : "text-zinc-400"
+                      "px-2.5 py-1 rounded-lg text-xs font-bold transition-all",
+                      previewTab === 'cart' 
+                        ? "bg-orange-600 text-white shadow-xs" 
+                        : "text-zinc-500 hover:text-zinc-300"
                     )}
                   >
                     3. Cart Gift

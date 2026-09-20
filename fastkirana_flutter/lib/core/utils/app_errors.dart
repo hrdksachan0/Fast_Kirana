@@ -1,28 +1,94 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
+import '../services/logger_service.dart';
 import '../theme/design_system.dart';
 
+/// Centralized application exception with typed classification and user-friendly error messages
 class AppException implements Exception {
   final String message;
   final String? code;
   final bool isRetryable;
-  AppException(this.message, {this.code, this.isRetryable = true});
+  final dynamic originalError;
 
-  factory AppException.network(String message) =>
-      AppException(message, code: 'NETWORK', isRetryable: true);
+  AppException(
+    this.message, {
+    this.code,
+    this.isRetryable = true,
+    this.originalError,
+  });
 
-  factory AppException.auth(String message) =>
-      AppException(message, code: 'AUTH', isRetryable: false);
+  factory AppException.network(String message, {dynamic originalError}) =>
+      AppException(message, code: 'NETWORK', isRetryable: true, originalError: originalError);
 
-  factory AppException.validation(String message) =>
-      AppException(message, code: 'VALIDATION', isRetryable: false);
+  factory AppException.auth(String message, {dynamic originalError}) =>
+      AppException(message, code: 'AUTH', isRetryable: false, originalError: originalError);
 
-  factory AppException.server(String message) =>
-      AppException(message, code: 'SERVER', isRetryable: true);
+  factory AppException.validation(String message, {dynamic originalError}) =>
+      AppException(message, code: 'VALIDATION', isRetryable: false, originalError: originalError);
+
+  factory AppException.server(String message, {dynamic originalError}) =>
+      AppException(message, code: 'SERVER', isRetryable: true, originalError: originalError);
+
+  /// Automatically parses dynamic exceptions (Dio, Socket, Timeout, Format, etc.) into a normalized AppException
+  factory AppException.fromError(dynamic error, [StackTrace? stackTrace]) {
+    if (error is AppException) {
+      return error;
+    }
+
+    if (error is DioException) {
+      switch (error.type) {
+        case DioExceptionType.connectionTimeout:
+        case DioExceptionType.sendTimeout:
+        case DioExceptionType.receiveTimeout:
+          return AppException.network('Connection timed out. Please check your network connection.', originalError: error);
+        case DioExceptionType.badResponse:
+          final statusCode = error.response?.statusCode;
+          if (statusCode == 401 || statusCode == 403) {
+            return AppException.auth('Authentication required or session expired.', originalError: error);
+          } else if (statusCode != null && statusCode >= 500) {
+            return AppException.server('Server temporarily unavailable ($statusCode).', originalError: error);
+          }
+          final resData = error.response?.data;
+          if (resData is Map && resData.containsKey('message')) {
+            return AppException.validation(resData['message'].toString(), originalError: error);
+          }
+          return AppException('Request failed with status $statusCode', code: 'API_ERROR', isRetryable: true, originalError: error);
+        case DioExceptionType.cancel:
+          return AppException('Request was cancelled', code: 'CANCELLED', isRetryable: false, originalError: error);
+        case DioExceptionType.connectionError:
+          return AppException.network('Network connection error. Please verify your internet.', originalError: error);
+        default:
+          return AppException('An unexpected network error occurred', code: 'UNKNOWN_NETWORK', isRetryable: true, originalError: error);
+      }
+    }
+
+    if (error is SocketException) {
+      return AppException.network('Unable to reach server. Please check your connection.', originalError: error);
+    }
+
+    if (error is TimeoutException) {
+      return AppException.network('Operation timed out. Please try again.', originalError: error);
+    }
+
+    if (error is FormatException) {
+      return AppException.validation('Data format error occurred.', originalError: error);
+    }
+
+    LoggerService.warning('Unclassified error converted to AppException: $error');
+    return AppException(
+      error?.toString() ?? 'An unexpected error occurred. Please try again.',
+      code: 'GENERIC',
+      isRetryable: true,
+      originalError: error,
+    );
+  }
 
   String get userMessage {
     switch (code) {
       case 'NETWORK':
-        return "Can't connect right now. Please check your internet.";
+        return "Can't connect right now. Please check your internet connection.";
       case 'AUTH':
         return "Session expired. Please log in again.";
       case 'VALIDATION':
@@ -33,12 +99,22 @@ class AppException implements Exception {
         return message;
     }
   }
+
+  @override
+  String toString() => 'AppException[$code]: $message';
 }
 
-void showAppErrorSnackBar(BuildContext context, AppException error) {
-  final color = error.code == 'NETWORK'
+/// Floating SnackBar presenter for centralized AppExceptions
+void showAppErrorSnackBar(
+  BuildContext context,
+  dynamic error, {
+  VoidCallback? onRetry,
+}) {
+  final appError = error is AppException ? error : AppException.fromError(error);
+
+  final color = appError.code == 'NETWORK'
       ? AppDesignSystem.warning
-      : error.code == 'SERVER'
+      : appError.code == 'SERVER'
           ? AppDesignSystem.danger
           : AppDesignSystem.info;
 
@@ -47,15 +123,18 @@ void showAppErrorSnackBar(BuildContext context, AppException error) {
       content: Row(
         children: [
           Icon(
-            error.code == 'NETWORK' ? Icons.wifi_off_rounded : Icons.error_outline_rounded,
+            appError.code == 'NETWORK' ? Icons.wifi_off_rounded : Icons.error_outline_rounded,
             color: Colors.white,
             size: 18,
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              error.userMessage,
-              style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w500),
+              appError.userMessage,
+              style: TextStyle(
+                fontSize: Responsive.scaledFontSize(context, 13),
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -65,11 +144,11 @@ void showAppErrorSnackBar(BuildContext context, AppException error) {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.all(12),
       duration: const Duration(seconds: 3),
-      action: error.isRetryable
+      action: (appError.isRetryable && onRetry != null)
           ? SnackBarAction(
               label: 'Retry',
               textColor: Colors.white,
-              onPressed: () {},
+              onPressed: onRetry,
             )
           : null,
     ),

@@ -138,7 +138,7 @@ export function ProductVariantSelector({ product }: ProductVariantSelectorProps)
       </div>
 
       {/* Dark Store verification banner */}
-      <div className="flex items-start gap-3 border border-accent/20 bg-accent/5 p-2.5 min-[375px]:p-3.5 rounded-xl shadow-[0_0_12px_rgba(0,177,64,0.03)] border-l-4 border-l-accent">
+      <div className="flex items-start gap-3 border border-accent/25 bg-accent/5 p-2.5 min-[375px]:p-3.5 rounded-xl shadow-xs">
         <ShieldCheck className="h-5 w-5 text-accent shrink-0 mt-0.5" />
         <div className="text-xs font-bold text-text-primary">
           <span className="text-accent">FastKirana DarkStore Fresh Verified</span>

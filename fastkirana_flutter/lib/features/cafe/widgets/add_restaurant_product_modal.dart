@@ -381,7 +381,7 @@ class _AddRestaurantProductModalState
                     ),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
-                      value: _selectedSectionId ?? _menuSections.first['id']?.toString(),
+                      initialValue: _selectedSectionId ?? _menuSections.first['id']?.toString(),
                       items: _menuSections.map((s) {
                         final emoji = s['emoji']?.toString() ?? '🍽️';
                         final title = s['title']?.toString() ?? 'Section';
@@ -439,7 +439,7 @@ class _AddRestaurantProductModalState
                           ),
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
-                            value: _selectedCategoryId ?? (displayList.isNotEmpty ? displayList.first.id : null),
+                            initialValue: _selectedCategoryId ?? (displayList.isNotEmpty ? displayList.first.id : null),
                             items: displayList.map((c) {
                               return DropdownMenuItem<String>(
                                 value: c.id,

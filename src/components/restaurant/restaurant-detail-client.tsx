@@ -312,9 +312,9 @@ export function RestaurantDetailClient({ restaurant, products }: RestaurantDetai
                     }, 800)
                   }}
                   className={cn(
-                    "w-full flex flex-col md:flex-row items-center gap-1.5 md:gap-3 p-2 md:px-3 md:py-2.5 rounded-2xl transition-all duration-200 text-center md:text-left outline-none group cursor-pointer border-l-4",
+                    "w-full flex flex-col md:flex-row items-center gap-1.5 md:gap-3 p-2 md:px-3 md:py-2.5 rounded-2xl transition-all duration-200 text-center md:text-left outline-none group cursor-pointer border",
                     isActive 
-                      ? "bg-red-500/10 dark:bg-red-500/15 border-[#e20a22] text-[#e20a22] dark:text-red-400 font-black shadow-sm" 
+                      ? "bg-red-500/10 dark:bg-red-500/15 border-red-500/30 text-[#e20a22] dark:text-red-400 font-black shadow-xs" 
                       : "border-transparent text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900"
                   )}
                 >

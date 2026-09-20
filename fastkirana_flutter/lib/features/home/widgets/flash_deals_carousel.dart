@@ -95,9 +95,9 @@ class FlashDealsCarousel extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       visualDensity: VisualDensity.compact,
                     ),
-                    child: Row(
+                    child: const Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
+                      children: [
                         Text(
                           'See All',
                           style: TextStyle(
@@ -122,18 +122,20 @@ class FlashDealsCarousel extends StatelessWidget {
 
           // Horizontal Product Rail
           SizedBox(
-            height: 250,
+            height: Responsive.productShelfHeight(context),
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: products.length,
               separatorBuilder: (_, __) => const SizedBox(width: 12),
               itemBuilder: (context, index) {
+                final cardWidth = Responsive.productCardShelfWidth(context);
                 return SizedBox(
-                  width: 154,
+                  width: cardWidth,
                   child: ProductCard(
                     product: products[index],
-                    isCompact: true,
+                    isCompact: false,
+                    width: cardWidth,
                   ),
                 );
               },

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import '../theme/design_system.dart';
-import '../theme/responsive.dart';
 
 /// Base shimmer styling wrapper matching modern Zepto / Blinkit silver-grey pulse
 class AppShimmer extends StatelessWidget {

@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../core/theme/responsive.dart';
 import '../../providers/wishlist_provider.dart';
 import '../../widgets/product_card.dart';
 

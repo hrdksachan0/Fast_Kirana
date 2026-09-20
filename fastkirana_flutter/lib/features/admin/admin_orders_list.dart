@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -16,7 +15,6 @@ import '../../core/network/api_client.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../../data/models/order.dart';
 import '../../data/repositories/order_repository.dart';
-import '../../core/services/admin_notification_service.dart';
 import '../../core/services/supabase_service.dart';
 import '../../core/services/offline_sync_service.dart';
 import '../../core/services/logger_service.dart';
@@ -25,13 +23,19 @@ import '../../core/services/admin_authorization.dart';
 import '../../core/utils/app_toast.dart';
 import '../delivery/widgets/connectivity_banner.dart';
 import '../common/order_edit_modal.dart';
-import 'widgets/admin_stat_card.dart';
 import 'widgets/admin_order_card.dart';
+import 'widgets/admin_stats_grid.dart';
+import 'widgets/admin_filter_header.dart';
+import 'widgets/admin_substitution_sheet.dart';
+import 'widgets/admin_refund_sheet.dart';
+import 'widgets/admin_share_sheet.dart';
+import 'widgets/admin_orders_empty_view.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/order_alarm_service.dart';
 import '../common/widgets/battery_optimization_dialog.dart';
 import '../../core/services/secure_storage_service.dart';
+import '../../widgets/app_confirmation_dialog.dart';
 
 class AdminOrdersScreen extends ConsumerStatefulWidget {
   final bool showAppBar;
@@ -149,7 +153,6 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   }
   String? _error;
   Timer? _liveSyncTimer;
-  Timer? _searchDebounce;
   RealtimeChannel? _realtimeOrdersChannel;
   bool _isFetchingAdmin = false;
 
@@ -492,7 +495,6 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     _audioPlayer.dispose();
     _liveSyncTimer?.cancel();
     _connectivitySubscription?.cancel();
-    _searchDebounce?.cancel();
     SupabaseService.unsubscribe(_realtimeOrdersChannel);
     super.dispose();
   }
@@ -1188,71 +1190,10 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     final total = order.total.toInt();
     final displayId = order.readableId ?? order.id;
 
-    final shouldConvert = await showDialog<bool>(
+    final shouldConvert = await AppConfirmationDialog.showCODConversion(
       context: context,
-      barrierDismissible: true,
-      builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: const BoxDecoration(
-                  color: AppDesignSystem.green100,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.local_atm_rounded, color: AppDesignSystem.green600, size: 26),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                'Convert to Cash on Delivery?',
-                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: AppDesignSystem.slate900),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Order #$displayId (₹$total) will be converted to COD, confirmed, and queued for kitchen/store packing.',
-                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate600, height: 1.35),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        side: const BorderSide(color: AppDesignSystem.slate300),
-                      ),
-                      onPressed: () => Navigator.pop(ctx, false),
-                      child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: AppDesignSystem.slate700)),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppDesignSystem.green600,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        elevation: 0,
-                      ),
-                      onPressed: () => Navigator.pop(ctx, true),
-                      child: Text('Convert & Confirm', style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: Colors.white)),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+      displayId: displayId,
+      totalAmount: total,
     );
 
     if (shouldConvert != true) return;
@@ -1335,142 +1276,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   }
 
   void _showSubstitutionModal(Order order, OrderItem item) {
-    final repController = TextEditingController();
-    final custPhone = order.customerPhone ?? '';
-    final custName = order.customerName ?? 'Customer';
-    final orderId = order.readableId ?? order.id;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(color: AppDesignSystem.slate300, borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppDesignSystem.statusCancelled,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.swap_horiz_rounded, color: AppDesignSystem.red600, size: 22),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Out-of-Stock Replacement',
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: AppDesignSystem.slate900),
-                      ),
-                      Text(
-                        'Order #$orderId • Customer: $custName',
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w600, color: AppDesignSystem.slate500),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppDesignSystem.rose50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppDesignSystem.rose200),
-              ),
-              child: Row(
-                children: [
-                  Text('❌', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Unavailable Item: ${item.name} (${item.quantity}x)',
-                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: AppDesignSystem.rose800),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'SUGGESTED REPLACEMENT:',
-              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w800, color: AppDesignSystem.slate600, letterSpacing: 0.5),
-            ),
-            const SizedBox(height: 6),
-            TextField(
-              controller: repController,
-              autofocus: true,
-              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w700),
-              decoration: InputDecoration(
-                hintText: 'e.g. Britannia Brown Bread 400g / Taaza 500ml',
-                hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: AppDesignSystem.slate400),
-                filled: true,
-                fillColor: AppDesignSystem.slate50,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppDesignSystem.slate200)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppDesignSystem.green600, width: 1.5)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              ),
-            ),
-            const SizedBox(height: 18),
-            ElevatedButton(
-              onPressed: () {
-                final replacement = repController.text.trim();
-                if (replacement.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Please enter replacement item name', style: GoogleFonts.inter(fontWeight: FontWeight.w700))),
-                  );
-                  return;
-                }
-                Navigator.pop(ctx);
-                AdminNotificationService.sendSubstitutionWhatsApp(
-                  customerPhone: custPhone,
-                  customerName: custName,
-                  orderId: orderId,
-                  unavailableItem: item.name,
-                  suggestedReplacement: replacement,
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppDesignSystem.green600,
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.chat_rounded, color: Colors.white, size: 18),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Send Substitution via WhatsApp ➔',
-                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w900, color: Colors.white),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    AdminSubstitutionSheet.show(context, order, item);
   }
 
   void _openSuperOrderEditModal(Order order) {
@@ -1526,257 +1332,11 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 
   void _showRecordRefundModal(Order order) {
     HapticFeedback.selectionClick();
-    final remainingRefundable = (order.total - order.refundAmount).clamp(0.0, double.infinity);
-    final amountController = TextEditingController();
-    final reasonController = TextEditingController();
-    final selectedItems = <String, double>{};
-    bool isSubmitting = false;
-
-    showModalBottomSheet(
+    AdminRefundSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) {
-          final items = order.items ?? [];
-          return Container(
-            padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 20),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(color: AppDesignSystem.slate300, borderRadius: BorderRadius.circular(2)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFE4E6),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.replay_rounded, color: Color(0xFFE11D48), size: 22),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Record Refund',
-                              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: AppDesignSystem.slate900),
-                            ),
-                            Text(
-                              'Order #${order.readableId ?? order.id} • Max: ₹${remainingRefundable.toInt()}',
-                              style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppDesignSystem.slate500),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close_rounded, size: 20, color: AppDesignSystem.slate500),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // Financial exclusion disclaimer
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFFBEB),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFFDE68A)),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFFD97706)),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Refunded amount is excluded from Restaurant Payouts & FastKirana Sales.',
-                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF92400E)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  if (items.isNotEmpty) ...[
-                    Text(
-                      'Select Items to Refund (Optional):',
-                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: AppDesignSystem.slate700),
-                    ),
-                    const SizedBox(height: 8),
-                    ...items.map((it) {
-                      final isSelected = selectedItems.containsKey(it.id);
-                      final isAlreadyRefunded = it.isRefunded || it.refundAmount > 0;
-                      final itemVal = (it.price * it.quantity);
-
-                      return CheckboxListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        value: isSelected,
-                        title: Text(
-                          '${it.quantity}x ${it.name} (₹${itemVal.toInt()})',
-                          style: GoogleFonts.inter(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: isAlreadyRefunded ? AppDesignSystem.slate400 : AppDesignSystem.slate800,
-                            decoration: isAlreadyRefunded ? TextDecoration.lineThrough : null,
-                          ),
-                        ),
-                        subtitle: isAlreadyRefunded
-                            ? Text('Already refunded (-₹${it.refundAmount.toInt()})', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFFE11D48)))
-                            : null,
-                        onChanged: isAlreadyRefunded
-                            ? null
-                            : (val) {
-                                setModalState(() {
-                                  if (val == true && it.id.isNotEmpty) {
-                                    selectedItems[it.id] = itemVal;
-                                  } else if (it.id.isNotEmpty) {
-                                    selectedItems.remove(it.id);
-                                  }
-                                  final totalSelected = selectedItems.values.fold<double>(0.0, (sum, v) => sum + v);
-                                  if (totalSelected > 0) {
-                                    amountController.text = totalSelected.toInt().toString();
-                                  }
-                                });
-                              },
-                      );
-                    }),
-                    const SizedBox(height: 10),
-                  ],
-
-                  Text(
-                    'Refund Amount (₹):',
-                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: AppDesignSystem.slate700),
-                  ),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: amountController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: InputDecoration(
-                      hintText: 'Enter amount (e.g. 165)',
-                      prefixText: '₹ ',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppDesignSystem.slate300)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  Text(
-                    'Refund Reason / Notes:',
-                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: AppDesignSystem.slate700),
-                  ),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: reasonController,
-                    decoration: InputDecoration(
-                      hintText: 'e.g. Item unavailable / spoilt / customer cancelled',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppDesignSystem.slate300)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFE11D48),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
-                      ),
-                      onPressed: isSubmitting
-                          ? null
-                          : () async {
-                              final amt = double.tryParse(amountController.text.trim()) ?? 0.0;
-                              if (amt <= 0) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Please enter a valid refund amount > 0')),
-                                );
-                                return;
-                              }
-                              if (amt > remainingRefundable) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Refund amount cannot exceed remaining balance (₹${remainingRefundable.toInt()})')),
-                                );
-                                return;
-                              }
-
-                              setModalState(() => isSubmitting = true);
-                              try {
-                                final dio = ref.read(dioProvider);
-                                final itemsPayload = selectedItems.entries.map((e) => {
-                                  'id': e.key,
-                                  'refundAmount': e.value,
-                                }).toList();
-
-                                await dio.post(
-                                  '/api/admin/orders/${order.id}/refund',
-                                  data: {
-                                    'amount': amt,
-                                    'reason': reasonController.text.trim(),
-                                    'items': itemsPayload,
-                                  },
-                                  options: AdminAuthorization.options(),
-                                );
-
-                                if (mounted) {
-                                  Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Refund of ₹${amt.toInt()} recorded successfully!'),
-                                      backgroundColor: const Color(0xFF059669),
-                                    ),
-                                  );
-                                  _fetchAdminOrders();
-                                }
-                              } catch (err) {
-                                setModalState(() => isSubmitting = false);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Failed to record refund: $err'),
-                                    backgroundColor: const Color(0xFFDC2626),
-                                  ),
-                                );
-                              }
-                            },
-                      child: isSubmitting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            )
-                          : Text(
-                              'Confirm & Process Refund',
-                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800),
-                            ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
+      order: order,
+      ref: ref,
+      onRefundSuccess: _fetchAdminOrders,
     );
   }
 
@@ -1945,204 +1505,7 @@ $formattedItems
   }
 
   Future<void> _sendWhatsAppKOT(Order order) async {
-    HapticFeedback.lightImpact();
-    final whatsappMessage = AdminNotificationService.formatRestaurantKOTMessage(order);
-    final cleanCustomerPhone = (order.customerPhone ?? '').replaceAll(RegExp(r'[^0-9]'), '').replaceAll(RegExp(r'^91'), '');
-    final cleanRiderPhone = (order.deliveryBoyPhone ?? '').replaceAll(RegExp(r'[^0-9]'), '').replaceAll(RegExp(r'^91'), '');
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return Container(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(24),
-              topRight: Radius.circular(24),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppDesignSystem.slate300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppDesignSystem.green100,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.share_rounded, color: AppDesignSystem.green700, size: 20),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Share Order #${order.readableId ?? order.id}',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 14.5),
-                            fontWeight: FontWeight.w900,
-                            color: AppDesignSystem.slate900,
-                          ),
-                        ),
-                        Text(
-                          'Send order details / KOT to anyone',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 11),
-                            color: AppDesignSystem.slate500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-
-              // Option 1: WhatsApp (Pick ANY Contact / Group)
-              _buildShareOptionTile(
-                icon: Icons.chat_rounded,
-                iconColor: const Color(0xFF25D366),
-                title: 'Share on WhatsApp',
-                subtitle: 'Choose any cook, rider, group, or contact',
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  final uri = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(whatsappMessage)}');
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  } else {
-                    await Share.share(whatsappMessage, subject: 'FastKirana Order #${order.readableId ?? order.id}');
-                  }
-                },
-              ),
-              const SizedBox(height: 10),
-
-              // Option 2: General Share Sheet (Any App)
-              _buildShareOptionTile(
-                icon: Icons.share_outlined,
-                iconColor: AppDesignSystem.blue600,
-                title: 'Share via Any App',
-                subtitle: 'Telegram, SMS, Email, or Other Apps',
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await Share.share(whatsappMessage, subject: 'FastKirana Order #${order.readableId ?? order.id}');
-                },
-              ),
-
-              if (cleanCustomerPhone.length >= 10) ...[
-                const SizedBox(height: 10),
-                // Option 3: Direct to Customer
-                _buildShareOptionTile(
-                  icon: Icons.person_outline_rounded,
-                  iconColor: AppDesignSystem.orange600,
-                  title: 'Send to Customer ($cleanCustomerPhone)',
-                  subtitle: 'Send order receipt directly to customer on WhatsApp',
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    final uri = Uri.parse('https://wa.me/91$cleanCustomerPhone?text=${Uri.encodeComponent(whatsappMessage)}');
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
-                    }
-                  },
-                ),
-              ],
-
-              if (cleanRiderPhone.length >= 10) ...[
-                const SizedBox(height: 10),
-                // Option 4: Direct to Rider
-                _buildShareOptionTile(
-                  icon: Icons.delivery_dining_rounded,
-                  iconColor: const Color(0xFF4F46E5),
-                  title: 'Send to Rider ($cleanRiderPhone)',
-                  subtitle: 'Send pickup & delivery details to rider on WhatsApp',
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    final uri = Uri.parse('https://wa.me/91$cleanRiderPhone?text=${Uri.encodeComponent(whatsappMessage)}');
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
-                    }
-                  },
-                ),
-              ],
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildShareOptionTile({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppDesignSystem.slate50,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppDesignSystem.slate200),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: iconColor, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: AppDesignSystem.slate900,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: AppDesignSystem.slate500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppDesignSystem.slate400),
-          ],
-        ),
-      ),
-    );
+    AdminShareSheet.show(context, order);
   }
 
   bool _isLiveOrder(Order order) {
@@ -2335,328 +1698,49 @@ $formattedItems
               onRetry: () => _fetchAdminOrders(),
             ),
 
-          // 1. Dashboard Stats Cards (Exact 2x2 Grid Matching Web App Logic with Maintained Previous State)
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    // Card 1: Today's Sales
-                    Expanded(
-                      child: AdminStatCard(
-                        title: "Today's Sales",
-                        value: '₹${displayTodaySales.toInt()}',
-                        subtitle: (displayTodayDeliveryFee > 0 || displayTodayPackagingFee > 0)
-                            ? 'Incl. ₹${displayTodayDeliveryFee.toInt()} del + ₹${displayTodayPackagingFee.toInt()} pack'
-                            : 'Gross order total',
-                        icon: Icons.currency_rupee_rounded,
-                        iconColor: AppDesignSystem.emerald600,
-                        bgColor: AppDesignSystem.green50,
-                        borderColor: AppDesignSystem.emerald200,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    // Card 2: Net Sales
-                    Expanded(
-                      child: AdminStatCard(
-                        title: "Net Sales",
-                        value: '₹${displayTodayNetSales.toInt()}',
-                        subtitle: 'Delivered net of refunds',
-                        icon: Icons.trending_up_rounded,
-                        iconColor: AppDesignSystem.teal600,
-                        bgColor: AppDesignSystem.teal50,
-                        borderColor: AppDesignSystem.teal300,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    // Card 3: Today's Orders
-                    Expanded(
-                      child: AdminStatCard(
-                        title: "Today's Orders",
-                        value: '$displayTodayOrdersCount',
-                        icon: Icons.shopping_bag_outlined,
-                        iconColor: AppDesignSystem.blue600,
-                        bgColor: AppDesignSystem.blue50,
-                        borderColor: AppDesignSystem.blue200,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    // Card 4: Active Orders
-                    Expanded(
-                      child: AdminStatCard(
-                        title: 'Active Orders',
-                        value: '$displayActiveOrderCount',
-                        icon: Icons.bolt_rounded,
-                        iconColor: AppDesignSystem.orange600,
-                        bgColor: AppDesignSystem.orange50,
-                        borderColor: AppDesignSystem.orange300,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+          // 1. Dashboard Stats Cards
+          AdminStatsGrid(
+            displayTodaySales: displayTodaySales,
+            displayTodayNetSales: displayTodayNetSales,
+            displayTodayOrdersCount: displayTodayOrdersCount,
+            displayActiveOrderCount: displayActiveOrderCount,
+            displayTodayDeliveryFee: displayTodayDeliveryFee,
+            displayTodayPackagingFee: displayTodayPackagingFee,
           ),
 
-          // 2. Primary Tab Switcher (Live vs History with modern iOS-style segmented control)
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: AppDesignSystem.slate100,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppDesignSystem.slate200, width: 1),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildMainTabButton(
-                      index: 0,
-                      label: 'Live Orders',
-                      count: displayLiveCount,
-                      icon: Icons.bolt_rounded,
-                      isSelected: _selectedTab == 0,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: _buildMainTabButton(
-                      index: 1,
-                      label: 'Order History',
-                      count: displayHistoryCount,
-                      icon: Icons.history_rounded,
-                      isSelected: _selectedTab == 1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // 3. Modern Pretty Search Field with Instant Clear
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-            child: Container(
-              height: 46,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: AppDesignSystem.slate50,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppDesignSystem.slate300, width: 1.2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.02),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.search_rounded, size: 20, color: AppDesignSystem.slate600),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      onChanged: (val) {
-                        _searchDebounce?.cancel();
-                        _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-                          if (mounted) setState(() => _searchQuery = val.toLowerCase().trim());
-                        });
-                      },
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 13.5),
-                        fontWeight: FontWeight.w600,
-                        color: AppDesignSystem.slate900,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Search by Order ID, customer, phone...',
-                        hintStyle: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 12.5),
-                          fontWeight: FontWeight.w500,
-                          color: AppDesignSystem.slate400,
-                        ),
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ),
-                  if (_searchQuery.isNotEmpty)
-                    GestureDetector(
-                      onTap: () => setState(() => _searchQuery = ''),
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: AppDesignSystem.slate200,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.close_rounded, size: 14, color: AppDesignSystem.slate600),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-
-          // 3.5 Auto-Approve Fast Switch Banner
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              decoration: BoxDecoration(
-                color: _isAutoApprove ? const Color(0xFFF0FDF4) : const Color(0xFFFFF7ED),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _isAutoApprove ? const Color(0xFFBBF7D0) : const Color(0xFFFED7AA),
-                  width: 1.2,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    _isAutoApprove ? Icons.bolt_rounded : Icons.admin_panel_settings_rounded,
-                    size: 20,
-                    color: _isAutoApprove ? AppDesignSystem.green600 : const Color(0xFFEA580C),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              _isAutoApprove ? 'AUTO-APPROVE: ON' : 'MANUAL APPROVAL: ON',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 11),
-                                fontWeight: FontWeight.w900,
-                                color: _isAutoApprove ? const Color(0xFF15803D) : const Color(0xFFC2410C),
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: _isAutoApprove ? const Color(0xFFDCFCE7) : const Color(0xFFFFEDD5),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                _isAutoApprove ? 'Direct to Kitchen' : 'Admin Call Gate',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 9),
-                                  fontWeight: FontWeight.w800,
-                                  color: _isAutoApprove ? const Color(0xFF166534) : const Color(0xFF9A3412),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Text(
-                          _isAutoApprove
-                              ? 'Incoming orders reach restaurant console immediately'
-                              : 'Orders pause for call verification before restaurant sees them',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 10),
-                            fontWeight: FontWeight.w500,
-                            color: _isAutoApprove ? const Color(0xFF166534) : const Color(0xFF9A3412),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(
-                    height: 28,
-                    child: FittedBox(
-                      child: Switch(
-                        value: _isAutoApprove,
-                        activeColor: AppDesignSystem.green600,
-                        activeTrackColor: const Color(0xFFBBF7D0),
-                        inactiveThumbColor: const Color(0xFFEA580C),
-                        inactiveTrackColor: const Color(0xFFFED7AA),
-                        onChanged: _toggleAutoApprove,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // 4. Status Sub-filter Chips
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.only(bottom: 12),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: Row(
-                children: (_selectedTab == 0 ? _liveStatusFilters : _historyStatusFilters).map((status) {
-                  final currentFilter = _selectedTab == 0 ? _liveSubFilter : _historySubFilter;
-                  final isSelected = currentFilter == status;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        if (selected) {
-                          HapticFeedback.selectionClick();
-                          setState(() {
-                            if (_selectedTab == 0) {
-                              _liveSubFilter = status;
-                            } else {
-                              _historySubFilter = status;
-                            }
-                          });
-                        }
-                      },
-                      label: Text(
-                        status == 'ALL'
-                            ? (_selectedTab == 0 ? 'All Live' : 'All History')
-                            : (status == 'PAYMENT_PENDING'
-                                ? '⚠️ Payment Pending${displayPendingPaymentCount > 0 ? ' ($displayPendingPaymentCount)' : ''}'
-                                : status),
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11.5),
-                          fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
-                          color: isSelected
-                              ? Colors.white
-                              : (status == 'PAYMENT_PENDING' && displayPendingPaymentCount > 0
-                                  ? const Color(0xFFE11D48)
-                                  : AppDesignSystem.slate600),
-                        ),
-                      ),
-                      selectedColor: status == 'PAYMENT_PENDING' ? const Color(0xFFE11D48) : AppDesignSystem.slate900,
-                      backgroundColor: status == 'PAYMENT_PENDING' && displayPendingPaymentCount > 0
-                          ? const Color(0xFFFFF1F2)
-                          : AppDesignSystem.slate100,
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color: isSelected
-                              ? (status == 'PAYMENT_PENDING' ? const Color(0xFFE11D48) : AppDesignSystem.slate900)
-                              : (status == 'PAYMENT_PENDING' && displayPendingPaymentCount > 0
-                                  ? const Color(0xFFFDA4AF)
-                                  : AppDesignSystem.slate200),
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
+          // 2. Filter & Controls Header
+          AdminFilterHeader(
+            selectedTab: _selectedTab,
+            displayLiveCount: displayLiveCount,
+            displayHistoryCount: displayHistoryCount,
+            displayPendingPaymentCount: displayPendingPaymentCount,
+            searchQuery: _searchQuery,
+            isAutoApprove: _isAutoApprove,
+            liveStatusFilters: _liveStatusFilters,
+            historyStatusFilters: _historyStatusFilters,
+            currentSubFilter: _selectedTab == 0 ? _liveSubFilter : _historySubFilter,
+            onTabChanged: (index) {
+              setState(() {
+                _selectedTab = index;
+                _searchQuery = '';
+              });
+            },
+            onSearchChanged: (q) {
+              if (mounted) setState(() => _searchQuery = q);
+            },
+            onSearchCleared: () {
+              if (mounted) setState(() => _searchQuery = '');
+            },
+            onToggleAutoApprove: _toggleAutoApprove,
+            onFilterSelected: (status) {
+              setState(() {
+                if (_selectedTab == 0) {
+                  _liveSubFilter = status;
+                } else {
+                  _historySubFilter = status;
+                }
+              });
+            },
           ),
 
           const Divider(height: 1, color: AppDesignSystem.slate200),
@@ -2683,11 +1767,15 @@ $formattedItems
                         ),
                       )
                     : displayOrders.isEmpty
-                        ? _buildEmptyState()
+                        ? AdminOrdersEmptyView(
+                            isLive: _selectedTab == 0,
+                            onRefresh: _fetchAdminOrders,
+                          )
                         : RefreshIndicator(
                             color: primaryRed,
                             onRefresh: _fetchAdminOrders,
                             child: ListView.builder(
+                              // ignore: deprecated_member_use
                               cacheExtent: 600,
                               padding: const EdgeInsets.fromLTRB(14, 12, 14, 100),
                               physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
@@ -2722,156 +1810,6 @@ $formattedItems
                           ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildMainTabButton({
-    required int index,
-    required String label,
-    required int count,
-    required IconData icon,
-    required bool isSelected,
-  }) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        setState(() {
-          _selectedTab = index;
-          _searchQuery = '';
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 15,
-              color: isSelected
-                  ? (index == 0 ? primaryRed : AppDesignSystem.slate900)
-                  : AppDesignSystem.slate500,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: Responsive.scaledFontSize(context, 12.5),
-                fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
-                color: isSelected
-                    ? (index == 0 ? primaryRed : AppDesignSystem.slate900)
-                    : AppDesignSystem.slate500,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? (index == 0 ? primaryRed.withValues(alpha: 0.12) : AppDesignSystem.slate200)
-                    : AppDesignSystem.slate200,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                '$count',
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 10),
-                  fontWeight: FontWeight.w900,
-                  color: isSelected
-                      ? (index == 0 ? primaryRed : AppDesignSystem.slate900)
-                      : AppDesignSystem.slate500,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    final isLive = _selectedTab == 0;
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 68,
-              height: 68,
-              decoration: BoxDecoration(
-                color: isLive ? AppDesignSystem.statusCancelled : AppDesignSystem.slate100,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isLive ? primaryRed.withValues(alpha: 0.2) : AppDesignSystem.slate200,
-                  width: 2,
-                ),
-              ),
-              child: Center(
-                child: Icon(
-                  isLive ? Icons.bolt_rounded : Icons.history_toggle_off_rounded,
-                  size: 34,
-                  color: isLive ? primaryRed : AppDesignSystem.slate500,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              isLive ? 'No Active Live Orders' : 'No Order History Yet',
-              style: GoogleFonts.inter(
-                fontSize: Responsive.scaledFontSize(context, 15.5),
-                fontWeight: FontWeight.w900,
-                color: AppDesignSystem.slate900,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              isLive
-                  ? 'New customer orders placed in Ghatampur will appear here automatically every 3 seconds.'
-                  : 'Delivered and past completed orders will be archived here.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                fontSize: Responsive.scaledFontSize(context, 12),
-                color: AppDesignSystem.slate500,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 18),
-            ElevatedButton.icon(
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                _fetchAdminOrders();
-              },
-              icon: const Icon(Icons.sync_rounded, size: 16, color: Colors.white),
-              label: Text(
-                'Check Database / Refresh',
-                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: Colors.white),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isLive ? primaryRed : AppDesignSystem.slate900,
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                elevation: 0,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

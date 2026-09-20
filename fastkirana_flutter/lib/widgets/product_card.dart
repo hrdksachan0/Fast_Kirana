@@ -442,10 +442,10 @@ class PriceRow extends StatelessWidget {
         Text(
           priceText,
           style: GoogleFonts.plusJakartaSans(
-            fontSize: s * 15,
+            fontSize: s * 14.0,
             fontWeight: FontWeight.w900,
             color: const Color(0xFF0F172A),
-            letterSpacing: -0.5,
+            letterSpacing: -0.4,
             height: 1.1,
           ),
           maxLines: 1,
@@ -453,11 +453,11 @@ class PriceRow extends StatelessWidget {
         ),
         if (mrpText != null)
           Padding(
-            padding: EdgeInsets.only(top: s * 1.5),
+            padding: EdgeInsets.only(top: s * 1.0),
             child: Text(
               mrpText!,
               style: GoogleFonts.plusJakartaSans(
-                fontSize: s * 10.5,
+                fontSize: s * 10.0,
                 fontWeight: FontWeight.w600,
                 decoration: TextDecoration.lineThrough,
                 decorationColor: const Color(0xFF94A3B8),
@@ -531,27 +531,25 @@ class AddToCartButton extends ConsumerWidget {
 
   Widget _soldOut() {
     return Container(
-      height: s(31),
-      padding: EdgeInsets.symmetric(horizontal: s(10)),
+      height: s(30),
+      padding: EdgeInsets.symmetric(horizontal: s(8)),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(s(9)),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: s(1)),
+        borderRadius: BorderRadius.circular(s(8)),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: s(0.9)),
       ),
       alignment: Alignment.center,
       child: Text(
         'SOLD OUT',
         style: GoogleFonts.plusJakartaSans(
-          fontSize: s(9),
+          fontSize: s(9.0),
           fontWeight: FontWeight.w800,
           color: const Color(0xFF94A3B8),
-          letterSpacing: 0.4,
+          letterSpacing: 0.3,
         ),
       ),
     );
   }
-
-
 
   Widget _storeClosed() {
     return GestureDetector(
@@ -580,26 +578,26 @@ class AddToCartButton extends ConsumerWidget {
         );
       },
       child: Container(
-        height: s(31),
-        padding: EdgeInsets.symmetric(horizontal: s(8)),
+        height: s(30),
+        padding: EdgeInsets.symmetric(horizontal: s(7)),
         decoration: BoxDecoration(
           color: const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(s(8)),
-          border: Border.all(color: const Color(0xFFCBD5E1).withValues(alpha: 0.8), width: s(0.9)),
+          border: Border.all(color: const Color(0xFFCBD5E1).withValues(alpha: 0.8), width: s(0.85)),
         ),
         alignment: Alignment.center,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.schedule_rounded, size: s(11), color: const Color(0xFF64748B)),
-            SizedBox(width: s(3)),
+            SizedBox(width: s(2.5)),
             Text(
               'CLOSED',
               style: GoogleFonts.plusJakartaSans(
-                fontSize: s(9.5),
+                fontSize: s(9.0),
                 fontWeight: FontWeight.w800,
                 color: const Color(0xFF64748B),
-                letterSpacing: 0.4,
+                letterSpacing: 0.3,
               ),
             ),
           ],
@@ -617,12 +615,12 @@ class AddToCartButton extends ConsumerWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(s(9)),
+        borderRadius: BorderRadius.circular(s(8)),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withValues(alpha: 0.35),
-            blurRadius: s(8),
-            offset: Offset(0, s(2.5)),
+            color: primaryColor.withValues(alpha: 0.30),
+            blurRadius: s(6),
+            offset: Offset(0, s(2)),
           ),
         ],
       ),
@@ -630,7 +628,7 @@ class AddToCartButton extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           InkWell(
-            borderRadius: BorderRadius.horizontal(left: Radius.circular(s(9))),
+            borderRadius: BorderRadius.horizontal(left: Radius.circular(s(8))),
             onTap: () {
               HapticFeedback.lightImpact();
               if (hasVariants) {
@@ -643,12 +641,12 @@ class AddToCartButton extends ConsumerWidget {
               width: s(26),
               height: s(31),
               child: Center(
-                child: Icon(Icons.remove_rounded, size: s(15), color: Colors.white),
+                child: Icon(Icons.remove_rounded, size: s(14), color: Colors.white),
               ),
             ),
           ),
           Container(
-            constraints: BoxConstraints(minWidth: s(20)),
+            constraints: BoxConstraints(minWidth: s(18)),
             alignment: Alignment.center,
             child: Text(
               '$inCartQty',
@@ -661,7 +659,7 @@ class AddToCartButton extends ConsumerWidget {
             ),
           ),
           InkWell(
-            borderRadius: BorderRadius.horizontal(right: Radius.circular(s(9))),
+            borderRadius: BorderRadius.horizontal(right: Radius.circular(s(8))),
             onTap: () {
               if (hasVariants) {
                 VariantSelectorSheet.show(context, product);
@@ -684,7 +682,7 @@ class AddToCartButton extends ConsumerWidget {
               width: s(26),
               height: s(31),
               child: Center(
-                child: Icon(Icons.add_rounded, size: s(15), color: Colors.white),
+                child: Icon(Icons.add_rounded, size: s(14), color: Colors.white),
               ),
             ),
           ),
@@ -712,13 +710,13 @@ class AddToCartButton extends ConsumerWidget {
           borderRadius: BorderRadius.circular(s(8)),
           border: Border.all(
             color: isFood ? const Color(0xFFEA580C) : const Color(0xFF16A34A),
-            width: s(1.4),
+            width: s(1.3),
           ),
           boxShadow: [
             BoxShadow(
-              color: primaryColor.withValues(alpha: 0.16),
-              blurRadius: s(6),
-              offset: Offset(0, s(2)),
+              color: primaryColor.withValues(alpha: 0.12),
+              blurRadius: s(5),
+              offset: Offset(0, s(1.5)),
             ),
           ],
         ),
@@ -729,13 +727,13 @@ class AddToCartButton extends ConsumerWidget {
             Text(
               'ADD',
               style: GoogleFonts.plusJakartaSans(
-                fontSize: s(11.5),
+                fontSize: s(12.0),
                 fontWeight: FontWeight.w900,
                 color: primaryColor,
                 letterSpacing: 0.5,
               ),
             ),
-            SizedBox(width: s(3)),
+            SizedBox(width: s(2.5)),
             Icon(Icons.add_rounded, size: s(15), color: primaryColor),
           ],
         ),
@@ -839,7 +837,8 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     final effectiveWidth = widget.width ?? (widget.isCompact
         ? (context.screenWidth - 74 - 24) / 2
         : (context.screenWidth - Responsive.horizontalPadding(context) * 2 - 12) / 2);
-    return (effectiveWidth / 155.0).clamp(0.85, 1.15);
+    final baseWidth = widget.isCompact ? 144.0 : 160.0;
+    return (effectiveWidth / baseWidth).clamp(0.90, 1.10);
   }
 
   double s(double v) => v * _uiScale;
@@ -896,8 +895,10 @@ class _ProductCardState extends ConsumerState<ProductCard> {
 
     final settings = ref.watch(storeSettingsProvider).valueOrNull;
     final isGroceryOpen = settings?.groceryMartOpen ?? true;
-    // Cafe off logic removed: restaurant products directly follow outlet status without intermediate cafe_open block
-    final isRestaurantOpen = product.restaurant?.isOpen != false;
+    final isRestaurantOpen = RestaurantScheduleHelper.isProductRestaurantOpen(
+      product,
+      storeSettings: settings,
+    );
     final isStoreOpen = isFood ? isRestaurantOpen : isGroceryOpen;
 
     final isOutOfStock = product.stock <= 0 || !product.isAvailable;
@@ -911,8 +912,10 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     final gradientColors = isFood ? const [Color(0xFFEA580C), Color(0xFFF97316)] : const [Color(0xFF15803D), Color(0xFF16A34A)];
 
     final imageHeight = widget.isCompact
-        ? s(102)
-        : Responsive.isSmallMobile(context) ? s(98) : (isFood ? 122 : 118) * _uiScale;
+        ? (isFood ? s(98) : s(92))
+        : Responsive.isSmallMobile(context)
+            ? (isFood ? s(96) : s(90))
+            : (isFood ? 114 : 106) * _uiScale;
 
     String? bogoBadgeText;
     final restOffer = product.restaurant?.discountOffer;
@@ -959,109 +962,116 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     final isBogoDish = bogoBadgeText != null;
     final hasBadges = isBogoDish || product.isBestsellerProduct || product.isTrending || product.isFlashDealProduct || product.isOrganic || product.isMustTry;
 
-    return RepaintBoundary(
-      child: GestureDetector(
-        onTapDown: (_) => setState(() => _isPressed = true),
-        onTapUp: (_) => setState(() => _isPressed = false),
-        onTapCancel: () => setState(() => _isPressed = false),
-        onTap: widget.onTap ?? () {
-          HapticFeedback.lightImpact();
-          Navigator.push(context, FadeSlideRoute(page: ProductDetailScreen(product: product)));
-        },
-        child: AnimatedScale(
-          scale: _isPressed ? 0.975 : 1.0,
-          duration: const Duration(milliseconds: 140),
-          child: Container(
-            width: cardWidth,
-            padding: EdgeInsets.fromLTRB(s(7), s(7), s(7), s(8)),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(s(18)),
-              border: Border.all(
-                color: isFood ? const Color(0xFFFFEDD5) : const Color(0xFFF1F5F9),
-                width: s(1.2),
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: MediaQuery.of(context).textScaler.clamp(
+          minScaleFactor: 0.85,
+          maxScaleFactor: 1.05,
+        ),
+      ),
+      child: RepaintBoundary(
+        child: GestureDetector(
+          onTapDown: (_) => setState(() => _isPressed = true),
+          onTapUp: (_) => setState(() => _isPressed = false),
+          onTapCancel: () => setState(() => _isPressed = false),
+          onTap: widget.onTap ?? () {
+            HapticFeedback.lightImpact();
+            Navigator.push(context, FadeSlideRoute(page: ProductDetailScreen(product: product)));
+          },
+          child: AnimatedScale(
+            scale: _isPressed ? 0.975 : 1.0,
+            duration: const Duration(milliseconds: 140),
+            child: Container(
+              width: cardWidth,
+              padding: EdgeInsets.fromLTRB(s(7), s(7), s(7), s(8)),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(s(14)),
+                border: Border.all(
+                  color: isFood ? const Color(0xFFFFEDD5) : const Color(0xFFF1F5F9),
+                  width: s(1.0),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                    blurRadius: s(10),
+                    offset: Offset(0, s(2.5)),
+                    spreadRadius: 0,
+                  ),
+                  BoxShadow(
+                    color: primaryColor.withValues(alpha: 0.02),
+                    blurRadius: s(4),
+                    offset: Offset(0, s(1)),
+                  ),
+                ],
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.045),
-                  blurRadius: s(12),
-                  offset: Offset(0, s(3.5)),
-                  spreadRadius: 0,
-                ),
-                BoxShadow(
-                  color: primaryColor.withValues(alpha: 0.025),
-                  blurRadius: s(5),
-                  offset: Offset(0, s(1)),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 1. IMAGE SHOWCASE
-                _ImageShowcase(
-                  product: product,
-                  isFood: isFood,
-                  isBogoDish: isBogoDish,
-                  bogoBadgeText: bogoBadgeText,
-                  uiScale: _uiScale,
-                  imageHeight: imageHeight,
-                  resolvedDiscount: resolvedDiscount,
-                  hasBadges: hasBadges,
-                  timingStatus: timingStatus,
-                  isLowStock: isLowStock,
-                  isOutOfStock: isOutOfStock,
-                  showAddedCheck: false,
-                  showOutlet: widget.showOutlet,
-                  heroTag: widget.heroTag,
-                ),
-                SizedBox(height: s(6)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 1. IMAGE SHOWCASE
+                  _ImageShowcase(
+                    product: product,
+                    isFood: isFood,
+                    isBogoDish: isBogoDish,
+                    bogoBadgeText: bogoBadgeText,
+                    uiScale: _uiScale,
+                    imageHeight: imageHeight,
+                    resolvedDiscount: resolvedDiscount,
+                    hasBadges: hasBadges,
+                    timingStatus: timingStatus,
+                    isLowStock: isLowStock,
+                    isOutOfStock: isOutOfStock,
+                    showAddedCheck: false,
+                    showOutlet: widget.showOutlet,
+                    heroTag: widget.heroTag,
+                  ),
+                  SizedBox(height: s(5)),
 
-                // 2. VEG/NON-VEG + TITLE
-                ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: s(34)),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (isFood) VegNonVegIndicator(isVeg: isVeg, s: _uiScale),
-                      Expanded(
-                        child: Text(
-                          product.name,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: s(13),
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF0F172A),
-                            height: 1.25,
-                            letterSpacing: -0.2,
+                  // 2. VEG/NON-VEG + TITLE
+                  ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: s(30)),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (isFood) VegNonVegIndicator(isVeg: isVeg, s: _uiScale),
+                        Expanded(
+                          child: Text(
+                            product.name,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: s(12.0),
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF0F172A),
+                              height: 1.24,
+                              letterSpacing: -0.2,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: s(3)),
+
+                  // 3. VARIANT PILL / UNIT
+                  _VariantPill(product: product, variants: variants, hasVariants: hasOptions, isOutOfStock: isOutOfStock, isFood: isFood, uiScale: _uiScale),
+                  SizedBox(height: s(4)),
+
+                  // 4. PRICE + ADD BUTTON
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: PriceRow(
+                          priceText: '₹${startingPrice.toInt()}',
+                          mrpText: startingMrp > startingPrice ? '₹${startingMrp.toInt()}' : null,
+                          s: _uiScale,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: s(4)),
-
-                // 3. VARIANT PILL / UNIT
-                _VariantPill(product: product, variants: variants, hasVariants: hasOptions, isOutOfStock: isOutOfStock, isFood: isFood, uiScale: _uiScale),
-
-                // 4. PRICE + ADD BUTTON
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Flexible(
-                      child: PriceRow(
-                        priceText: '₹${startingPrice.toInt()}',
-                        mrpText: startingMrp > startingPrice ? '₹${startingMrp.toInt()}' : null,
-                        s: _uiScale,
-                      ),
-                    ),
-                    SizedBox(width: s(4)),
-                    Flexible(
-                      child: AddToCartButton(
+                      SizedBox(width: s(4)),
+                      AddToCartButton(
                         scaffoldContext: context,
                         product: product,
                         inCartQty: inCartQty,
@@ -1075,10 +1085,10 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                         primaryColor: primaryColor,
                         uiScale: _uiScale,
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1244,12 +1254,12 @@ class _VariantPill extends StatelessWidget {
       return GestureDetector(
         onTap: () { if (!isOutOfStock) VariantSelectorSheet.show(context, product); },
         child: Container(
-          margin: EdgeInsets.only(bottom: s(5)),
-          padding: EdgeInsets.symmetric(horizontal: s(6.5), vertical: s(2.5)),
+          margin: EdgeInsets.only(bottom: s(4)),
+          padding: EdgeInsets.symmetric(horizontal: s(6), vertical: s(2.2)),
           decoration: BoxDecoration(
             color: const Color(0xFFF8FAFC),
             borderRadius: BorderRadius.circular(s(6)),
-            border: Border.all(color: const Color(0xFFE2E8F0), width: s(0.8)),
+            border: Border.all(color: const Color(0xFFE2E8F0), width: s(0.85)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -1257,30 +1267,30 @@ class _VariantPill extends StatelessWidget {
               Text(
                 label,
                 style: GoogleFonts.plusJakartaSans(
-                  fontSize: s(9.5),
+                  fontSize: s(9.2),
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF475569),
                 ),
               ),
               SizedBox(width: s(2)),
-              Icon(Icons.keyboard_arrow_down_rounded, size: s(13), color: const Color(0xFF64748B)),
+              Icon(Icons.keyboard_arrow_down_rounded, size: s(12), color: const Color(0xFF64748B)),
             ],
           ),
         ),
       );
     }
     return Container(
-      margin: EdgeInsets.only(bottom: s(5)),
-      padding: EdgeInsets.symmetric(horizontal: s(6), vertical: s(2)),
+      margin: EdgeInsets.only(bottom: s(4)),
+      padding: EdgeInsets.symmetric(horizontal: s(5.5), vertical: s(2)),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(s(5)),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: s(0.8)),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: s(0.85)),
       ),
       child: Text(
         product.unit.isNotEmpty && product.unit != '1 unit' ? product.unit : (isFood ? 'Serves 1' : '1 pc'),
         style: GoogleFonts.plusJakartaSans(
-          fontSize: s(9.5),
+          fontSize: s(9.2),
           fontWeight: FontWeight.w700,
           color: const Color(0xFF64748B),
           letterSpacing: 0.1,
@@ -1303,30 +1313,42 @@ class ProductCardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cardWidth = width ?? (context.screenWidth - Responsive.horizontalPadding(context) * 2 - 12) / 2;
-    final uiScale = (cardWidth / 155.0).clamp(1.0, 1.15);
+    final baseWidth = isCompact ? 144.0 : 160.0;
+    final uiScale = (cardWidth / baseWidth).clamp(0.90, 1.10);
     double s(double v) => v * uiScale;
 
     return Container(
       width: cardWidth,
-      padding: EdgeInsets.all(s(8)),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(s(18)), border: Border.all(color: const Color(0xFFF1F5F9), width: s(1.2))),
+      padding: EdgeInsets.all(s(7)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(s(14)),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: s(1.0)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(height: isCompact ? s(100) : s(118), width: double.infinity, decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(14)))),
-          SizedBox(height: s(8)),
-          Container(width: s(80), height: s(10), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
+          Container(
+            height: isCompact ? s(92) : s(106),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(s(12)),
+            ),
+          ),
           SizedBox(height: s(6)),
-          Container(width: double.infinity, height: s(14), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
+          Container(width: s(70), height: s(9), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
+          SizedBox(height: s(5)),
+          Container(width: double.infinity, height: s(12), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
+          SizedBox(height: s(5)),
+          Container(width: s(40), height: s(10), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
           SizedBox(height: s(6)),
-          Container(width: s(45), height: s(12), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
-          SizedBox(height: s(8)),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(width: s(40), height: s(14), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
-              Container(width: s(58), height: s(27), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(8)))),
+              Container(width: s(36), height: s(12), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
+              Container(width: s(52), height: s(26), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(6)))),
             ],
           ),
         ],

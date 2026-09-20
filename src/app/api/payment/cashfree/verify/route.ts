@@ -60,10 +60,19 @@ export async function POST(req: NextRequest) {
             cfPaymentId: String(successfulPayment.cf_payment_id || ''),
           })
         }
+        if (cfOrder) {
+          return NextResponse.json({
+            success: false,
+            orderId: cleanId,
+            paymentStatus: cfOrder.order_status || 'PENDING',
+            isPaid: false,
+            message: 'Payment has not been completed on Cashfree gateway.',
+          }, { status: 200 })
+        }
       } catch (cfErr) {
         console.warn('Preflight Cashfree order check note:', cfErr)
       }
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Order not found or payment not completed', isPaid: false, success: false }, { status: 404 })
     }
 
     const order = orders[0]

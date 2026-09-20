@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/config/app_config.dart';
 import '../../../core/routes/page_transitions.dart';
@@ -645,6 +646,117 @@ class AdminOrderCard extends ConsumerWidget {
               ],
             ),
           ),
+
+          // 2.5 Assigned Delivery Partner / Rider Box
+          if (!isPickup && (order.deliveryBoyName != null || order.deliveryUser != null || order.status == OrderStatus.shipped || order.status == OrderStatus.delivered)) ...[
+            const Divider(height: 1, color: AppDesignSystem.slate100),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              color: const Color(0xFFF0FDF4),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD1FAE5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Center(
+                      child: Text('🛵', style: TextStyle(fontSize: 16)),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              order.status == OrderStatus.delivered
+                                  ? 'DELIVERED BY RIDER'
+                                  : 'RIDER PICKED UP',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 9.5),
+                                fontWeight: FontWeight.w900,
+                                color: AppDesignSystem.emerald700,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            Container(
+                              width: 5,
+                              height: 5,
+                              decoration: const BoxDecoration(
+                                color: AppDesignSystem.emerald600,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          order.deliveryBoyName ?? order.deliveryUser?.name ?? 'FastKirana Delivery Partner',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 12),
+                            fontWeight: FontWeight.w800,
+                            color: AppDesignSystem.slate900,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (order.deliveryBoyPhone != null || order.deliveryUser?.phone != null) ...[
+                          const SizedBox(height: 1),
+                          Text(
+                            '📞 ${order.deliveryBoyPhone ?? order.deliveryUser?.phone}',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 10.5),
+                              fontWeight: FontWeight.w600,
+                              color: AppDesignSystem.slate600,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (order.deliveryBoyPhone != null || order.deliveryUser?.phone != null) ...[
+                    IconButton(
+                      onPressed: () {
+                        final phone = (order.deliveryBoyPhone ?? order.deliveryUser?.phone ?? '').replaceAll(RegExp(r'\D'), '');
+                        if (phone.isNotEmpty) {
+                          launchUrl(Uri.parse('https://wa.me/$phone?text=Hello%20FastKirana%20Rider,%20regarding%20Order%20%23${order.displayId}:'), mode: LaunchMode.externalApplication);
+                        }
+                      },
+                      icon: const Icon(Icons.chat_rounded, color: AppDesignSystem.green600, size: 16),
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppDesignSystem.green100,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.all(6),
+                      ),
+                      tooltip: 'WhatsApp Rider',
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      onPressed: () {
+                        final phone = order.deliveryBoyPhone ?? order.deliveryUser?.phone;
+                        if (phone != null && phone.isNotEmpty) {
+                          launchUrl(Uri.parse('tel:$phone'));
+                        }
+                      },
+                      icon: const Icon(Icons.phone, color: Colors.white, size: 16),
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppDesignSystem.emerald600,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.all(6),
+                      ),
+                      tooltip: 'Call Rider',
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
 
           // 3. Ordered Items List
           if (itemsList.isNotEmpty)

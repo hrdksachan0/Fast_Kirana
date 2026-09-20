@@ -80,7 +80,7 @@ export function HubComingSoon({ hubName, city }: HubComingSoonProps) {
           <div className="absolute inset-0 rounded-full bg-primary/15 animate-ping opacity-75" />
           <div className="absolute inset-2 rounded-full bg-primary/20 animate-pulse" />
           <div className="relative z-10 w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary via-rose-500 to-amber-500 flex items-center justify-center text-white shadow-xl shadow-primary/30">
-            <Rocket className="w-8 h-8 animate-bounce" />
+            <Rocket className="w-8 h-8 transition-transform duration-500 hover:scale-110" />
           </div>
         </div>
 

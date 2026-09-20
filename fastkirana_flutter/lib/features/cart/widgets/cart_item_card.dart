@@ -83,9 +83,9 @@ class CartItemCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 3),
-                if (product.unit != null && product.unit!.isNotEmpty)
+                if (product.unit.isNotEmpty)
                   Text(
-                    product.unit!,
+                    product.unit,
                     style: const TextStyle(
                       color: AppDesignSystem.slate500,
                       fontSize: 11.5,
@@ -104,10 +104,10 @@ class CartItemCard extends StatelessWidget {
                         fontFeatures: [FontFeature.tabularFigures()],
                       ),
                     ),
-                    if (product.mrp != null && product.mrp! > product.price) ...[
+                    if (product.mrp > product.price) ...[
                       const SizedBox(width: 6),
                       Text(
-                        '₹${product.mrp!.toInt()}',
+                        '₹${product.mrp.toInt()}',
                         style: const TextStyle(
                           decoration: TextDecoration.lineThrough,
                           color: AppDesignSystem.slate400,

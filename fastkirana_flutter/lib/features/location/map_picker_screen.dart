@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:fastkirana_flutter/core/theme/design_system.dart';
-import '../../core/theme/responsive.dart';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -557,7 +556,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                           ),
                         );
 
-                        if (savedAddress != null && mounted) {
+                        if (savedAddress != null && context.mounted) {
                           Navigator.pop(context, savedAddress);
                         }
                       },

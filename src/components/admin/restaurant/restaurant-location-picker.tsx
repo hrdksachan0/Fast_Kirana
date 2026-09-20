@@ -305,7 +305,7 @@ export function RestaurantLocationPicker({
                 />
               ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-text-secondary/50 p-6 text-center">
-                  <MapPin className="h-10 w-10 mb-2 text-rose-500/60 animate-bounce" />
+                  <MapPin className="h-10 w-10 mb-2 text-rose-500/60 animate-pulse" />
                   <p className="text-xs font-bold text-text-primary">Enter or Paste Coordinates above</p>
                   <p className="text-[10px] text-text-secondary mt-1">Google Maps preview with Satellite View will appear here</p>
                 </div>

@@ -1,5 +1,4 @@
 import 'package:fastkirana_flutter/core/theme/design_system.dart';
-import '../../core/theme/responsive.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';

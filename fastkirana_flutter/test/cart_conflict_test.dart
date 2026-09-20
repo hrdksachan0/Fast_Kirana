@@ -99,13 +99,13 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 50));
 
       // 1. Add grocery item
-      await notifier.addProduct(groceryItem, 2);
+      notifier.addProduct(groceryItem, 2);
       expect(notifier.state.value?.items.length, 1);
       expect(notifier.groceryItemsCount, 2);
 
       // 2. Add Wedson dish - No conflict because cart has only grocery items
       expect(notifier.checkRestaurantConflict(wedsonDish), isNull);
-      await notifier.addProduct(wedsonDish, 1);
+      notifier.addProduct(wedsonDish, 1);
       expect(notifier.state.value?.items.length, 2);
       expect(notifier.groceryItemsCount, 2);
       expect(notifier.restaurantItemsCount, 1);

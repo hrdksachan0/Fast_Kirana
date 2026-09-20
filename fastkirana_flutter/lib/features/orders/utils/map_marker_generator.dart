@@ -142,30 +142,32 @@ class MapMarkerGenerator {
   }
 
   static Future<Map<String, BitmapDescriptor>> initCustomMarkers(BuildContext context) async {
-    final storeMarkerIcon = await createCustomMarkerBitmap(
-      context: context,
-      label: 'STORE',
-      emoji: '🏪',
-      color: const Color(0xFF16A34A),
-    );
-    final restaurantMarkerIcon = await createCustomMarkerBitmap(
-      context: context,
-      label: 'FOOD',
-      emoji: '🍽️',
-      color: const Color(0xFF7C3AED),
-    );
-    final riderMarkerIcon = await createRiderMarkerBitmap(context);
-    final customerMarkerIcon = await createCustomMarkerBitmap(
-      context: context,
-      label: 'HOME',
-      emoji: '🏠',
-      color: const Color(0xFFDC2626),
-    );
+    final results = await Future.wait([
+      createCustomMarkerBitmap(
+        context: context,
+        label: 'STORE',
+        emoji: '🏪',
+        color: const Color(0xFF16A34A),
+      ),
+      createCustomMarkerBitmap(
+        context: context,
+        label: 'FOOD',
+        emoji: '🍽️',
+        color: const Color(0xFF7C3AED),
+      ),
+      createRiderMarkerBitmap(context),
+      createCustomMarkerBitmap(
+        context: context,
+        label: 'HOME',
+        emoji: '🏠',
+        color: const Color(0xFFDC2626),
+      ),
+    ]);
     return {
-      'store': storeMarkerIcon,
-      'restaurant': restaurantMarkerIcon,
-      'rider': riderMarkerIcon,
-      'customer': customerMarkerIcon,
+      'store': results[0],
+      'restaurant': results[1],
+      'rider': results[2],
+      'customer': results[3],
     };
   }
 }

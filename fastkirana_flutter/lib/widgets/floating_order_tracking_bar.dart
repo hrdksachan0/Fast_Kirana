@@ -1,5 +1,4 @@
 import '../core/theme/design_system.dart';
-import '../core/theme/responsive.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/services/logger_service.dart';

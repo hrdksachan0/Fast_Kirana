@@ -1279,7 +1279,7 @@ export function AdminInventoryCenter({ onInventoryUpdated, storeId }: AdminInven
                                 setShowSearchResults(false)
                               }}
                               className={`w-full text-left px-4 py-3 flex items-center justify-between gap-3 text-xs transition-colors cursor-pointer ${
-                                index === highlightedIndex ? 'bg-accent/5 text-accent border-l-4 border-accent font-bold' : 'text-text-primary hover:bg-muted/30 font-semibold'
+                                index === highlightedIndex ? 'bg-accent/10 text-accent font-bold' : 'text-text-primary hover:bg-muted/30 font-semibold'
                               }`}
                             >
                               <div className="flex items-center gap-3 min-w-0">

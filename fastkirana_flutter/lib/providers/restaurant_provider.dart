@@ -6,7 +6,9 @@ import '../data/repositories/restaurant_repository.dart';
 
 import 'package:geolocator/geolocator.dart';
 import '../core/config/app_config.dart';
+import '../core/utils/restaurant_utils.dart';
 import '../providers/address_provider.dart';
+import '../providers/store_settings_provider.dart';
 
 final restaurantRepositoryProvider = Provider<RestaurantRepository>((ref) {
   return RestaurantRepository(ref.watch(dioProvider));
@@ -36,6 +38,7 @@ double getRestaurantDistanceKm(Restaurant r, double userLat, double userLng) {
 final homeRestaurantsProvider = Provider<AsyncValue<List<Restaurant>>>((ref) {
   final restaurantsAsync = ref.watch(restaurantsProvider);
   final address = ref.watch(selectedAddressProvider);
+  final settings = ref.watch(storeSettingsProvider).valueOrNull;
 
   return restaurantsAsync.whenData((restaurants) {
     final list = List<Restaurant>.from(restaurants);
@@ -48,8 +51,10 @@ final homeRestaurantsProvider = Provider<AsyncValue<List<Restaurant>>>((ref) {
 
     list.sort((a, b) {
       // Open restaurants first
-      if (a.isOpen != b.isOpen) {
-        return a.isOpen ? -1 : 1;
+      final aOpen = RestaurantScheduleHelper.isRestaurantOpen(restaurant: a, storeSettings: settings);
+      final bOpen = RestaurantScheduleHelper.isRestaurantOpen(restaurant: b, storeSettings: settings);
+      if (aOpen != bOpen) {
+        return aOpen ? -1 : 1;
       }
       // Nearest distance first
       final distA = getRestaurantDistanceKm(a, userLat, userLng);
@@ -69,6 +74,7 @@ final filteredRestaurantsProvider = Provider<List<Restaurant>>((ref) {
   final ratingOnly = ref.watch(ratingFilterProvider);
   final search = ref.watch(restaurantSearchQueryProvider).toLowerCase().trim();
   final address = ref.watch(selectedAddressProvider);
+  final settings = ref.watch(storeSettingsProvider).valueOrNull;
 
   return restaurantsAsync.when(
     data: (restaurants) {
@@ -116,8 +122,10 @@ final filteredRestaurantsProvider = Provider<List<Restaurant>>((ref) {
           : AppConfig.darkstoreLng;
 
       filtered.sort((a, b) {
-        if (a.isOpen != b.isOpen) {
-          return a.isOpen ? -1 : 1;
+        final aOpen = RestaurantScheduleHelper.isRestaurantOpen(restaurant: a, storeSettings: settings);
+        final bOpen = RestaurantScheduleHelper.isRestaurantOpen(restaurant: b, storeSettings: settings);
+        if (aOpen != bOpen) {
+          return aOpen ? -1 : 1;
         }
         final distA = getRestaurantDistanceKm(a, userLat, userLng);
         final distB = getRestaurantDistanceKm(b, userLat, userLng);

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
 import 'package:app_links/app_links.dart';
 import 'package:fastkirana_flutter/core/routes/app_router.dart';
 import 'package:fastkirana_flutter/core/services/logger_service.dart';

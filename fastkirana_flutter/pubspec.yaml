@@ -2,7 +2,7 @@ name: fastkirana_flutter
 description: FastKirana Mobile App - Grocery & Food Delivery
 
 publish_to: 'none'
-version: 2.0.11+2011
+version: 2.0.16+2016
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

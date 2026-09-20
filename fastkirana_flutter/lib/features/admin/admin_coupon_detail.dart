@@ -60,7 +60,7 @@ class _AdminCouponsDetailScreenState extends State<AdminCouponsDetailScreen> {
                     title: Text('Active', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
                     value: _isActive,
                     onChanged: (v) => setState(() => _isActive = v),
-                    activeColor: AppDesignSystem.primary,
+                    activeThumbColor: AppDesignSystem.primary,
                   ),
                 ],
               ),

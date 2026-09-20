@@ -49,7 +49,7 @@ export function BottleneckBanner({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-start gap-3.5">
           <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500">
-            <AlertCircle className="h-5 w-5 animate-bounce-subtle" />
+            <AlertCircle className="h-5 w-5 animate-pulse" />
             <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>

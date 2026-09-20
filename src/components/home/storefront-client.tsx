@@ -263,7 +263,7 @@ export function StorefrontClient({
 
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="bg-amber-400 text-zinc-950 text-[8.5px] sm:text-[9.5px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md shadow-xs">
+              <span className="bg-amber-400 text-amber-950 text-[8.5px] sm:text-[9.5px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md shadow-xs">
                 ⚡ SPECIAL CAFE
               </span>
               <span className="text-[10px] font-bold text-orange-100 flex items-center gap-1">

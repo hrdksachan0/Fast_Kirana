@@ -20,6 +20,7 @@ import { evaluateSurgeStatus } from '@/lib/surge-manager'
 import { calculateOrderDeliveryFees } from '@/lib/delivery-fee-calculator'
 import { deductOrderInventory } from '@/lib/order-inventory-manager'
 import { dispatchOrderNotifications } from '@/lib/order-notification-dispatcher'
+import { getCashfreeOrder, getCashfreeOrderPayments } from '@/lib/cashfree'
 import {
   generateOrderCartSignature,
   acquireIdempotencyLock,
@@ -945,18 +946,52 @@ export async function POST(request: NextRequest) {
     const overallTotal = ordersToCreate.reduce((sum, o) => sum + (o.total || 0), 0)
     const isFreePromo = overallTotal <= 0 && combinedDiscount > 0
 
-    const isOnlinePaid = Boolean(
-      isFreePromo ||
-      body.paymentStatus === 'PAID' ||
-      body.paymentId ||
-      body.razorpayPaymentId ||
-      body.razorpay_payment_id
-    )
+    const rawMethod = String(paymentMethod || '').toUpperCase()
+    const isOnlineRequested = rawMethod === 'RAZORPAY' || rawMethod === 'UPI' || rawMethod === 'ONLINE'
+
+    let isOnlinePaid = false
+    if (isFreePromo) {
+      isOnlinePaid = true
+    } else if (isStaffSession && body.paymentStatus === 'PAID') {
+      isOnlinePaid = true
+    } else if (isOnlineRequested || body.paymentStatus === 'PAID' || body.paymentId) {
+      const paymentId = String(body.paymentId || body.cfPaymentId || body.razorpayPaymentId || body.razorpay_payment_id || '').trim()
+      const cfCheckId = body.cfOrderId || (paymentId.startsWith('CF_') ? paymentId.replace(/^CF_/, '') : (paymentId.startsWith('cf_') ? paymentId : null))
+
+      if (cfCheckId) {
+        try {
+          const cfOrder = await getCashfreeOrder(cfCheckId)
+          if (cfOrder && cfOrder.order_status === 'PAID') {
+            isOnlinePaid = true
+          } else {
+            const payments = await getCashfreeOrderPayments(cfCheckId)
+            const successfulPayment = payments.find(p => p.payment_status === 'SUCCESS')
+            if (successfulPayment) {
+              isOnlinePaid = true
+            }
+          }
+        } catch (cfErr) {
+          console.warn('Backend Cashfree verification during order creation note:', cfErr)
+        }
+      } else if (paymentId.startsWith('pay_')) {
+        if (body.razorpay_signature || body.razorpaySignature) {
+          isOnlinePaid = true
+        }
+      }
+    }
+
+    // 🛡️ Strict Anti-Fraud Guard:
+    // If online payment is requested for a non-free order, reject if not verified as PAID by gateway
+    if (isOnlineRequested && !isFreePromo && !isStaffSession && !isOnlinePaid) {
+      return NextResponse.json({
+        error: 'Online payment could not be verified by the payment gateway. Order was not placed. Please complete the payment or select Cash on Delivery (COD).',
+      }, { status: 400 })
+    }
+
     const paymentStatus = isOnlinePaid ? PaymentStatus.PAID : PaymentStatus.PENDING
 
     let resolvedPaymentMethod: PaymentMethod = isFreePromo ? PaymentMethod.UPI : PaymentMethod.COD
-    const rawMethod = String(paymentMethod || '').toUpperCase()
-    if (rawMethod === 'RAZORPAY' || rawMethod === 'UPI' || rawMethod === 'ONLINE') {
+    if (isOnlineRequested) {
       resolvedPaymentMethod = PaymentMethod.UPI
     } else if (rawMethod === 'CARD') {
       resolvedPaymentMethod = PaymentMethod.CARD

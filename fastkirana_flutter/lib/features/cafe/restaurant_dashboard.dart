@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -19,10 +18,10 @@ import '../../core/network/network_retry_helper.dart';
 import '../../core/services/supabase_service.dart';
 import '../../core/services/offline_sync_service.dart';
 import '../../core/services/logger_service.dart';
-import '../../core/services/kot_print_service.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../common/widgets/battery_optimization_dialog.dart';
+import '../../widgets/app_confirmation_dialog.dart';
 import '../../core/utils/app_toast.dart';
 import '../../data/models/order.dart';
 import '../../data/models/product.dart';
@@ -35,6 +34,11 @@ import 'widgets/restaurant_menu_catalog_tab.dart';
 import 'widgets/restaurant_sales_report_tab.dart';
 import 'widgets/restaurant_metrics_bar.dart';
 import 'widgets/restaurant_order_card_view.dart';
+import 'widgets/restaurant_prep_time_modal.dart';
+import 'widgets/restaurant_kot_modal.dart';
+import 'widgets/restaurant_outlet_switcher_modal.dart';
+import 'widgets/restaurant_quick86_sheet.dart';
+import 'widgets/restaurant_settings_tab.dart';
 
 class RestaurantDashboard extends ConsumerStatefulWidget {
   final String? initialRestaurantId;
@@ -1043,710 +1047,56 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
   }
 
   void _showPrepTimeModal(Map<String, dynamic> order) {
-    final orderId = order['id'].toString();
-    showModalBottomSheet(
+    RestaurantPrepTimeModal.show(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      backgroundColor: Colors.white,
-      builder: (ctx) {
-        int selectedTime = 15;
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: const EdgeInsets.all(22),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Accept Order & Cooking Time',
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 17), fontWeight: FontWeight.w900, color: slateDark),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: slateMuted),
-                        onPressed: () => Navigator.pop(ctx),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Select estimated cooking time to notify customer & rider:',
-                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), color: slateMuted),
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [15, 25, 35, 45].map((time) {
-                      final isSelected = selectedTime == time;
-                      return Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: Bounceable(
-                            onTap: () {
-                              setModalState(() => selectedTime = time);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              decoration: BoxDecoration(
-                                color: isSelected ? primaryRed : AppDesignSystem.slate100,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: isSelected ? primaryRed : slateBorder,
-                                ),
-                              ),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    '$time',
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 18),
-                                      fontWeight: FontWeight.w900,
-                                      color: isSelected ? Colors.white : slateDark,
-                                    ),
-                                  ),
-                                  Text(
-                                    'MINS',
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 9.5),
-                                      fontWeight: FontWeight.w800,
-                                      color: isSelected ? Colors.white : slateMuted,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 22),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: brandGreen,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        elevation: 0,
-                      ),
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        _updateOrderStatus(orderId, 'CONFIRMED', prepTime: selectedTime);
-                      },
-                      child: Text(
-                        'Confirm & Start Cooking ($selectedTime Mins) ➔',
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: Colors.white),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
+      order: order,
+      onConfirm: (prepMinutes) {
+        _updateOrderStatus(order['id'].toString(), 'CONFIRMED', prepTime: prepMinutes);
       },
     );
   }
 
-  String _generateKitchenWhatsAppMessage(Map<String, dynamic> order) {
-    final String orderId = (order['id'] ?? '').toString();
-    final dynamic rawReadable = order['readableId'];
-    final String readableId = (rawReadable != null && rawReadable.toString().isNotEmpty)
-        ? rawReadable.toString()
-        : (orderId.length > 4 ? orderId.substring(orderId.length - 4) : orderId);
 
-    final List items = KotPrintService.extractRestaurantItems(order);
-
-    DateTime orderDate = DateTime.now();
-    if (order['createdAt'] != null) {
-      try {
-        orderDate = DateTime.parse(order['createdAt'].toString()).toLocal();
-      } catch (e, _) { LoggerService.error('RestaurantDashboard: silent catch', e); }
-    }
-    final timeStr = DateFormat('hh:mm a').format(orderDate);
-
-    final String deliveryMethod = (order['deliveryMethod'] ?? 'DELIVERY').toString().toUpperCase();
-    final String typeStr = (deliveryMethod == 'PICKUP' || deliveryMethod == 'SELF_PICKUP')
-        ? '🚶 Self Pickup (Customer Takeaway)'
-        : '🛵 Doorstep Delivery (Rider Pickup)';
-
-    final outletName = (order['shopName'] != null && order['shopName'].toString().isNotEmpty)
-        ? order['shopName'].toString()
-        : _restaurantName;
-
-    final buffer = StringBuffer();
-    buffer.writeln('🍽️ *FASTKIRANA KITCHEN ORDER*');
-    buffer.writeln('━━━━━━━━━━━━━━━━━━━━━');
-    buffer.writeln('🆔 *Order Token:* #$readableId');
-    buffer.writeln('⏰ *Order Time:* $timeStr');
-    buffer.writeln('📦 *Type:* $typeStr');
-    buffer.writeln('🏪 *Outlet:* $outletName');
-    buffer.writeln('━━━━━━━━━━━━━━━━━━━━━');
-    buffer.writeln('📋 *ITEMS TO PREPARE:*\n');
-
-    int totalQty = 0;
-    for (int idx = 0; idx < items.length; idx++) {
-      final i = items[idx];
-      final name = (i['name'] ?? 'Food Item').toString();
-      final qty = (i['quantity'] is num) ? (i['quantity'] as num).toInt() : (int.tryParse(i['quantity']?.toString() ?? '1') ?? 1);
-      totalQty += qty;
-      final variant = (i['selectedVariant'] != null && i['selectedVariant'].toString().isNotEmpty)
-          ? ' (${i['selectedVariant']})'
-          : '';
-      final itemNote = (i['notes'] != null && i['notes'].toString().isNotEmpty)
-          ? ' [Note: ${i['notes']}]'
-          : '';
-      buffer.writeln('${idx + 1}. $name$variant$itemNote  ➜  *Qty: $qty*');
-    }
-
-    if (items.isEmpty) {
-      buffer.writeln('1. Food Items  ➜  *Qty: 1*');
-      totalQty = 1;
-    }
-
-    buffer.writeln('\n🔢 *Total Items to Pack:* $totalQty items');
-    buffer.writeln('━━━━━━━━━━━━━━━━━━━━━');
-
-    final customerNote = (order['notes'] ?? order['customerNote'] ?? '').toString().trim();
-    if (customerNote.isNotEmpty && customerNote != 'null') {
-      buffer.writeln('📝 *Customer Note:* $customerNote');
-      buffer.writeln('━━━━━━━━━━━━━━━━━━━━━');
-    }
-
-    buffer.writeln('👨‍🍳 *Chef Note:* Kripya fresh prepare karein aur safely pack karein');
-
-    return buffer.toString();
-  }
-
-  String _generateKOTText(Map<String, dynamic> order) {
-    final String orderId = (order['id'] ?? '').toString();
-    final dynamic rawReadable = order['readableId'];
-    final String readableId = (rawReadable != null && rawReadable.toString().isNotEmpty)
-        ? rawReadable.toString()
-        : (orderId.length > 4 ? orderId.substring(orderId.length - 4) : orderId);
-
-    // Extract restaurant items strictly (omit grocery items on combined orders)
-    final List items = KotPrintService.extractRestaurantItems(order);
-
-    final formattedItems = items.isNotEmpty
-        ? items.map((i) {
-            final name = (i['name'] ?? 'Food Item').toString();
-            final qty = (i['quantity'] is num) ? (i['quantity'] as num).toInt() : (int.tryParse(i['quantity']?.toString() ?? '1') ?? 1);
-            final variant = (i['selectedVariant'] != null && i['selectedVariant'].toString().isNotEmpty)
-                ? ' (${i['selectedVariant']})'
-                : '';
-            final note = (i['notes'] != null && i['notes'].toString().isNotEmpty)
-                ? '\n      * Note: ${i['notes']}'
-                : '';
-            final qtyStr = '$qty'.padRight(2);
-            return '$qtyStr x  $name$variant$note';
-          }).join('\n')
-        : '1  x  Kitchen Food';
-
-    DateTime orderDate = DateTime.now();
-    if (order['createdAt'] != null) {
-      try {
-        String s = order['createdAt'].toString().trim();
-        if (!s.endsWith('Z') && !s.contains('+') && !RegExp(r'-\d{2}:\d{2}$').hasMatch(s)) {
-          s = '${s.replaceAll(' ', 'T')}Z';
-        }
-        orderDate = DateTime.parse(s).toLocal();
-      } catch (e, _) { LoggerService.error('RestaurantDashboard: silent catch', e); }
-    }
-    final rawCustName = (order['userName'] ?? (order['user'] is Map ? order['user']['name'] : null) ?? order['customerName'])?.toString().trim();
-    final custName = rawCustName != null && rawCustName.isNotEmpty ? ' | $rawCustName' : '';
-    final printTimeStr = DateFormat('dd MMM  hh:mm a').format(DateTime.now());
-    final typeStr = (order['deliveryMethod'] ?? 'DELIVERY').toString();
-
-    return '''======================================
-            FASTKIRANA KOT
-======================================
-TOKEN : #$readableId$custName
-TYPE  : $typeStr
-ORDER : ${DateFormat('dd MMM  hh:mm a').format(orderDate)}
-PRINT : $printTimeStr
---------------------------------------
-QTY   ITEM
---------------------------------------
-$formattedItems
---------------------------------------
-      *** FASTKIRANA KITCHEN ***
-======================================''';
-  }
 
   void _showKOTPrintModal(Map<String, dynamic> order) {
-    HapticFeedback.mediumImpact();
-    final kotText = _generateKOTText(order);
-    final String orderId = (order['id'] ?? '').toString();
-    final dynamic rawReadable = order['readableId'];
-    final String readableId = (rawReadable != null && rawReadable.toString().isNotEmpty)
-        ? rawReadable.toString()
-        : (orderId.length > 4 ? orderId.substring(orderId.length - 4) : orderId);
-
     final user = ref.read(authProvider).valueOrNull;
     final isAdmin = user?.role.toUpperCase() == 'ADMIN';
-
-    showModalBottomSheet(
+    RestaurantKotModal.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(color: AppDesignSystem.slate300, borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppDesignSystem.blue50,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.print_rounded, color: AppDesignSystem.blue600, size: 20),
-                      ),
-                      const SizedBox(width: 10),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Kitchen Order Ticket (KOT)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15.5), fontWeight: FontWeight.w900, color: slateDark)),
-                          Text('Order #$readableId-R · Bluetooth / POS Print', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: slateMuted)),
-                        ],
-                      ),
-                    ],
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded, color: slateMuted),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-
-              // KOT Ticket Receipt View
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppDesignSystem.slate50,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppDesignSystem.slate200),
-                ),
-                child: Text(
-                  kotText,
-                  style: GoogleFonts.robotoMono(
-                    fontSize: Responsive.scaledFontSize(context, 11.5),
-                    fontWeight: FontWeight.w600,
-                    color: AppDesignSystem.slate800,
-                    height: 1.35,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Action Buttons
-              Row(
-                children: [
-                  // 1. Primary Print Thermal POS (For Restaurant Console)
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        HapticFeedback.heavyImpact();
-                        Navigator.pop(ctx);
-                        KotPrintService.printKOTReceipt(context, order);
-                      },
-                      icon: const Icon(Icons.print_rounded, size: 17, color: Colors.white),
-                      label: Text('Print KOT (Thermal POS)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: Colors.white)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppDesignSystem.blue600,
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
-                      ),
-                    ),
-                  ),
-                  // 2. Admin Only: Send Remote Broadcast to Web Kitchen Console
-                  if (isAdmin) ...[
-                    const SizedBox(width: 8),
-                    Bounceable(
-                      onTap: () async {
-                        HapticFeedback.heavyImpact();
-                        Navigator.pop(ctx);
-
-                        final extractedItems = KotPrintService.extractRestaurantItems(order);
-                        final custName = (order['userName'] ?? (order['user'] is Map ? order['user']['name'] : null) ?? order['customerName'])?.toString();
-
-                        KotPrintService.sendRemoteKOTToKitchen(
-                          orderId: orderId,
-                          readableId: order['readableId']?.toString() ?? orderId,
-                          restaurantId: order['restaurantId']?.toString() ?? _assignedRestaurantId,
-                          shopName: _restaurantName,
-                          customerName: custName,
-                          items: extractedItems,
-                          deliveryMethod: order['deliveryMethod']?.toString() ?? 'DELIVERY',
-                          notes: order['notes']?.toString(),
-                          kotText: kotText,
-                        );
-
-                        if (context.mounted) {
-                          AppToast.showSuccess(
-                            context,
-                            'KOT Sent to Kitchen! 👨‍🍳',
-                            subtitle: 'Order #${order['readableId'] ?? orderId} sent to kitchen',
-                          );
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: AppDesignSystem.green100,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppDesignSystem.emerald200),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15))),
-                            const SizedBox(width: 4),
-                            Text('Kitchen', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: AppDesignSystem.green700)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(width: 8),
-                  // 3. WhatsApp Kitchen Share
-                  Bounceable(
-                    onTap: () async {
-                      HapticFeedback.lightImpact();
-                      final whatsappText = _generateKitchenWhatsAppMessage(order);
-                      final uri = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(whatsappText)}');
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri, mode: LaunchMode.externalApplication);
-                      } else {
-                        await Clipboard.setData(ClipboardData(text: whatsappText));
-                        if (mounted) {
-                          AppToast.showInfo(
-                            context,
-                            'Kitchen Order Copied! 📋',
-                            subtitle: 'Ready to share on WhatsApp',
-                          );
-                        }
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: AppDesignSystem.slate100,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppDesignSystem.slate300),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('💬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15))),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
+      order: order,
+      isAdmin: isAdmin,
+      defaultOutletName: _restaurantName,
     );
   }
 
+
   void _showOutletSwitcherModal() {
-    showModalBottomSheet(
+    RestaurantOutletSwitcherModal.show(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      backgroundColor: Colors.white,
-      builder: (ctx) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(color: AppDesignSystem.slate300, borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Switch Restaurant Console',
-                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 17), fontWeight: FontWeight.w900, color: slateDark),
-              ),
-              Text(
-                'View orders and menu catalog for selected food outlet:',
-                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted),
-              ),
-              const SizedBox(height: 16),
-              ..._availableOutlets.map((outlet) {
-                final isSelected = _assignedRestaurantId == outlet['id'];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      side: BorderSide(color: isSelected ? primaryRed : slateBorder, width: isSelected ? 1.5 : 1),
-                    ),
-                    tileColor: isSelected ? AppDesignSystem.rose50 : AppDesignSystem.slate50,
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: isSelected ? primaryRed : AppDesignSystem.slate200,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text('👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 16))),
-                    ),
-                    title: Text(
-                      outlet['name'] ?? '',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 14),
-                        fontWeight: FontWeight.w800,
-                        color: isSelected ? primaryRed : slateDark,
-                      ),
-                    ),
-                    subtitle: Text(
-                      'FastKirana Food Kitchen · Live Outlet',
-                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: slateMuted),
-                    ),
-                    trailing: isSelected ? const Icon(Icons.check_circle_rounded, color: primaryRed) : null,
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      setState(() {
-                        _assignedRestaurantId = outlet['id'];
-                        _restaurantName = outlet['name'] ?? _restaurantName;
-                        _commissionRate = _getCommissionRateForOutlet(_assignedRestaurantId, _restaurantName);
-                      });
-                      _fetchOrders();
-                      _fetchMenuItems();
-                      _fetchSalesSummary();
-                      _fetchSalesOrders();
-                    },
-                  ),
-                );
-              }),
-            ],
-          ),
-        );
+      availableOutlets: _availableOutlets,
+      assignedRestaurantId: _assignedRestaurantId,
+      onOutletSelected: (outlet) {
+        setState(() {
+          _assignedRestaurantId = outlet['id'];
+          _restaurantName = outlet['name'] ?? _restaurantName;
+          _commissionRate = _getCommissionRateForOutlet(_assignedRestaurantId, _restaurantName);
+        });
+        _fetchOrders();
+        _fetchMenuItems();
+        _fetchSalesSummary();
+        _fetchSalesOrders();
       },
     );
   }
 
   void _showQuick86BottomSheet() {
-    showModalBottomSheet(
+    RestaurantQuick86Sheet.show(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      backgroundColor: Colors.white,
-      builder: (ctx) {
-        String searchQuery = '';
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            final filteredItems = _menuItems.where((p) {
-              final name = (p['name'] ?? '').toString().toLowerCase();
-              return name.contains(searchQuery.toLowerCase());
-            }).toList();
-
-            final inStockCount = _menuItems.where((p) => p['isAvailable'] == true).length;
-            final outStockCount = _menuItems.length - inStockCount;
-
-            return DraggableScrollableSheet(
-              initialChildSize: 0.85,
-              maxChildSize: 0.95,
-              minChildSize: 0.5,
-              expand: false,
-              builder: (_, scrollCtrl) {
-                return Column(
-                  children: [
-                    // Handle Bar
-                    Container(
-                      margin: const EdgeInsets.only(top: 12),
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(color: AppDesignSystem.slate300, borderRadius: BorderRadius.circular(2)),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Quick 86 / Stock Controls',
-                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 17), fontWeight: FontWeight.w900, color: slateDark),
-                              ),
-                              Text(
-                                'Toggle sold-out dishes instantly',
-                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: slateMuted),
-                              ),
-                            ],
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close, color: slateMuted),
-                            onPressed: () => Navigator.pop(ctx),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Summary Pills
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                color: AppDesignSystem.green50,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: AppDesignSystem.emerald200),
-                              ),
-                              child: Column(
-                                children: [
-                                  Text('$inStockCount', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w900, color: brandGreen)),
-                                  Text('In Stock', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w700, color: brandGreen)),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                color: AppDesignSystem.rose50,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: AppDesignSystem.rose200),
-                              ),
-                              child: Column(
-                                children: [
-                                  Text('$outStockCount', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w900, color: primaryRed)),
-                                  Text('Out of Stock (86)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w700, color: primaryRed)),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Search Bar
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppDesignSystem.slate100,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: TextField(
-                          onChanged: (v) => setModalState(() => searchQuery = v),
-                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w600),
-                          decoration: InputDecoration(
-                            hintText: 'Search menu dishes...',
-                            hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: slateMuted),
-                            prefixIcon: const Icon(Icons.search, size: 18, color: slateMuted),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const Divider(height: 1, color: slateBorder),
-                    // Items List
-                    Expanded(
-                      child: ListView.separated(
-                        controller: scrollCtrl,
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                        itemCount: filteredItems.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1, color: slateBorder),
-                        itemBuilder: (context, idx) {
-                          final item = filteredItems[idx];
-                          final isAvailable = item['isAvailable'] ?? true;
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 38,
-                                  height: 38,
-                                  decoration: BoxDecoration(
-                                    color: AppDesignSystem.slate50,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: slateBorder),
-                                  ),
-                                  child: Center(child: Text('🍲', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18)))),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        item['name'] ?? '',
-                                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w800, color: slateDark),
-                                      ),
-                                      Text(
-                                        '₹${item['price'] ?? 0}',
-                                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: slateMuted, fontWeight: FontWeight.w600),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Switch.adaptive(
-                                  value: isAvailable,
-                                  activeTrackColor: brandGreen,
-                                  onChanged: (val) {
-                                    setModalState(() {
-                                      item['isAvailable'] = val;
-                                    });
-                                    _toggleItemAvailability(item);
-                                  },
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-        );
-      },
+      menuItems: _menuItems,
+      onToggleItemAvailability: _toggleItemAvailability,
     );
   }
+
 
   void _handleBackPress() {
     HapticFeedback.lightImpact();
@@ -1909,20 +1259,12 @@ $formattedItems
             Bounceable(
               onTap: () async {
                 final nav = Navigator.of(context);
-                final confirm = await showDialog<bool>(
+                final confirm = await AppConfirmationDialog.showLogout(
                   context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Logout'),
-                    content: const Text('Are you sure you want to log out from Kitchen Console?'),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: AppDesignSystem.red600),
-                        onPressed: () => Navigator.pop(ctx, true),
-                        child: const Text('Logout', style: TextStyle(color: Colors.white)),
-                      ),
-                    ],
-                  ),
+                  title: 'Log Out of Kitchen?',
+                  subtitle: 'Are you sure you want to log out from Kitchen Console?',
+                  accountNote: 'KOT queue and kitchen preparation lists remain synchronized.',
+                  confirmLabel: 'Log Out',
                 );
                 if (confirm == true) {
                   if (!mounted) return;
@@ -2133,65 +1475,53 @@ $formattedItems
   }
 
   Widget _buildStoreSettingsTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        SwitchListTile.adaptive(
-          title: Text('Store Open Status', style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: slateDark)),
-          subtitle: Text(_isStoreOpen ? 'Accepting online orders' : 'Closed for online orders', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
-          value: _isStoreOpen,
-          activeTrackColor: brandGreen,
-          onChanged: (val) async {
-            setState(() => _isStoreOpen = val);
-            HapticFeedback.lightImpact();
-            try {
-              final prefs = await SharedPreferences.getInstance();
-              final outletKey = _assignedRestaurantId ?? 'default';
-              await prefs.setBool('store_open_$outletKey', val);
-              
-              if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty && _assignedRestaurantId != 'ALL') {
-                final dio = ref.read(dioProvider);
-                await dio.patch('/api/restaurants/$_assignedRestaurantId', data: {'isOpen': val});
-                if (val) {
-                  try {
-                    await dio.post('/api/admin/store-status', data: {
-                      'restaurantOpen': true,
-                      'cafeOpen': true,
-                    });
-                  } catch (_) {}
-                }
-              }
-            } catch (e) {
-              LoggerService.error('Store open toggle error: $e');
-            }
-          },
-        ),
-        const Divider(height: 1, color: slateBorder),
-        SwitchListTile.adaptive(
-          title: Text('Kitchen Busy / High Rush Mode', style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: slateDark)),
-          subtitle: Text('Displays "Kitchen in High Demand" notice on restaurant menu', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
-          value: _isBusyMode,
-          activeTrackColor: brandAmber,
-          onChanged: (val) async {
-            setState(() => _isBusyMode = val);
-            HapticFeedback.lightImpact();
-            try {
-              final prefs = await SharedPreferences.getInstance();
-              final outletKey = _assignedRestaurantId ?? 'default';
-              await prefs.setBool('busy_mode_$outletKey', val);
-              
-              if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty && _assignedRestaurantId != 'ALL') {
-                final dio = ref.read(dioProvider);
-                await dio.patch('/api/restaurants/$_assignedRestaurantId', data: {
-                  'discountBadge': val ? 'HIGH RUSH' : null,
-                });
-              }
-            } catch (e) {
-              LoggerService.error('Busy mode toggle error: $e');
-            }
-          },
-        ),
-      ],
+    return RestaurantSettingsTab(
+      isStoreOpen: _isStoreOpen,
+      isBusyMode: _isBusyMode,
+      onToggleStoreOpen: _handleStoreOpenToggle,
+      onToggleBusyMode: _handleBusyModeToggle,
     );
   }
-}
+
+  Future<void> _handleStoreOpenToggle(bool val) async {
+    setState(() => _isStoreOpen = val);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final outletKey = _assignedRestaurantId ?? 'default';
+      await prefs.setBool('store_open_$outletKey', val);
+      
+      if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty && _assignedRestaurantId != 'ALL') {
+        final dio = ref.read(dioProvider);
+        await dio.patch('/api/restaurants/$_assignedRestaurantId', data: {'isOpen': val});
+        if (val) {
+          try {
+            await dio.post('/api/admin/store-status', data: {
+              'restaurantOpen': true,
+              'cafeOpen': true,
+            });
+          } catch (_) {}
+        }
+      }
+    } catch (e) {
+      LoggerService.error('Store open toggle error: $e');
+    }
+  }
+
+  Future<void> _handleBusyModeToggle(bool val) async {
+    setState(() => _isBusyMode = val);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final outletKey = _assignedRestaurantId ?? 'default';
+      await prefs.setBool('busy_mode_$outletKey', val);
+      
+      if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty && _assignedRestaurantId != 'ALL') {
+        final dio = ref.read(dioProvider);
+        await dio.patch('/api/restaurants/$_assignedRestaurantId', data: {
+          'discountBadge': val ? 'HIGH RUSH' : null,
+        });
+      }
+    } catch (e) {
+      LoggerService.error('Busy mode toggle error: $e');
+    }
+  }
+}

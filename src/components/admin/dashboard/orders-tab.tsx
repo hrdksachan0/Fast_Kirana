@@ -1031,6 +1031,21 @@ export function OrdersTab({
                               📞 {o.userPhone || o.address?.phone}
                             </div>
                           )}
+                          {(o.deliveryUser || o.deliveryBoyName || ((o.status === 'SHIPPED' || o.status === 'DELIVERED') && o.deliveryUserId)) && (
+                            <div className="mt-1.5 inline-flex items-center gap-1 text-[9.5px] font-extrabold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                              <span>🛵 {o.deliveryUser?.name || o.deliveryBoyName || 'Rider Assigned'}</span>
+                              {(o.deliveryUser?.phone || o.deliveryBoyPhone) && (
+                                <a
+                                  href={`tel:${o.deliveryUser?.phone || o.deliveryBoyPhone}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-emerald-600 dark:text-emerald-400 hover:underline font-mono ml-0.5"
+                                  title="Call Rider"
+                                >
+                                  ({o.deliveryUser?.phone || o.deliveryBoyPhone})
+                                </a>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className="py-3 px-3 text-[11px]">
                           {(() => {

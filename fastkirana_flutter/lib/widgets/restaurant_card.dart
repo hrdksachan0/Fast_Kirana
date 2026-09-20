@@ -4,11 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/restaurant.dart';
 import '../core/theme/design_system.dart';
 import '../core/config/app_config.dart';
 import '../core/routes/page_transitions.dart';
 import '../providers/address_provider.dart';
+import '../providers/store_settings_provider.dart';
+import '../core/utils/restaurant_utils.dart';
 import '../features/cafe/cafe_menu_screen.dart';
 
 class RestaurantCard extends ConsumerStatefulWidget {
@@ -27,6 +30,40 @@ class RestaurantCard extends ConsumerStatefulWidget {
 
 class _RestaurantCardState extends ConsumerState<RestaurantCard> {
   bool _isFavorite = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavoriteState();
+  }
+
+  Future<void> _loadFavoriteState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final favList = prefs.getStringList('favorite_restaurants') ?? [];
+      if (mounted && favList.contains(widget.restaurant.id)) {
+        setState(() => _isFavorite = true);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _toggleFavorite() async {
+    HapticFeedback.selectionClick();
+    setState(() => _isFavorite = !_isFavorite);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final favList = prefs.getStringList('favorite_restaurants') ?? [];
+      if (_isFavorite) {
+        if (!favList.contains(widget.restaurant.id)) {
+          favList.add(widget.restaurant.id);
+          await prefs.setStringList('favorite_restaurants', favList);
+        }
+      } else {
+        favList.remove(widget.restaurant.id);
+        await prefs.setStringList('favorite_restaurants', favList);
+      }
+    } catch (_) {}
+  }
 
   static const Set<String> _bundledCategoryAssets = {
     'as_restaurant_banner.webp',
@@ -115,10 +152,35 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
     );
   }
 
+  static String _formatDisplayAddress(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return 'Ghatampur Market';
+    var cleaned = raw.trim();
+    // Strip pincodes or state patterns like ", UP 209206", ", Uttar Pradesh 209206"
+    cleaned = cleaned.replaceAll(RegExp(r',\s*(?:UP|Uttar Pradesh)?\s*\d{6}\b', caseSensitive: false), '');
+    cleaned = cleaned.replaceAll(RegExp(r'\b\d{6}\b'), '');
+    // Strip trailing ", UP" or ", Uttar Pradesh"
+    cleaned = cleaned.replaceAll(RegExp(r',\s*(?:UP|Uttar Pradesh)\s*$', caseSensitive: false), '');
+    // Clean trailing commas and spaces
+    cleaned = cleaned.replaceAll(RegExp(r'[\s,]+$'), '').trim();
+    return cleaned.isNotEmpty ? cleaned : 'Ghatampur Market';
+  }
+
+  String _getDeliveryEta(double distanceKm, String rawDeliveryTime) {
+    if (rawDeliveryTime.isNotEmpty &&
+        rawDeliveryTime != 'Hot & Fresh' &&
+        !rawDeliveryTime.toLowerCase().contains('fresh')) {
+      return rawDeliveryTime;
+    }
+    if (distanceKm <= 1.5) return '20-25 mins';
+    if (distanceKm <= 3.5) return '25-30 mins';
+    return '30-40 mins';
+  }
+
   @override
   Widget build(BuildContext context) {
     final r = widget.restaurant;
-    final isOpen = r.isOpen;
+    final settings = ref.watch(storeSettingsProvider).valueOrNull;
+    final isOpen = RestaurantScheduleHelper.isRestaurantOpen(restaurant: r, storeSettings: settings);
     final selectedAddress = ref.watch(selectedAddressProvider);
 
     // Dynamic distance calculation between user's chosen location and restaurant
@@ -134,21 +196,25 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
     final distanceMeters = Geolocator.distanceBetween(userLat, userLng, restLat, restLng);
     final distanceKm = distanceMeters / 1000.0;
 
-    final hasOffer = r.discountOffer != null && r.discountOffer!.trim().isNotEmpty;
-    final offer = hasOffer ? r.discountOffer!.trim() : '';
+    final rawOffer = (r.discountOffer != null && r.discountOffer!.trim().isNotEmpty)
+        ? r.discountOffer!.trim()
+        : (r.discountBadge != null && r.discountBadge!.trim().isNotEmpty
+            ? r.discountBadge!.trim()
+            : '');
+    final hasOffer = rawOffer.isNotEmpty;
+    final offer = rawOffer;
     final isSurgeAlert = r.activeOrdersCount >= 6;
 
-    final addressText = (r.address != null && r.address!.isNotEmpty)
-        ? r.address!
-        : 'Ghatampur Market, UP';
+    final addressText = _formatDisplayAddress(r.address);
     final ratingVal = r.rating > 0 ? r.rating : 4.8;
+    final etaText = _getDeliveryEta(distanceKm, r.deliveryTime);
 
     return RepaintBoundary(
       child: Container(
         margin: const EdgeInsets.only(bottom: 18),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: const Color(0xFFE2E8F0),
             width: 1.0,
@@ -156,15 +222,20 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
           boxShadow: [
             BoxShadow(
               color: const Color(0xFF0F172A).withValues(alpha: 0.05),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
+              blurRadius: 18,
+              offset: const Offset(0, 5),
+            ),
+            BoxShadow(
+              color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
             ),
           ],
         ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(20),
             onTap: widget.onTap ??
                 () {
                   HapticFeedback.lightImpact();
@@ -183,18 +254,18 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // 1. TOP HERO IMAGE (Full-Width, 160px height)
+                // 1. TOP HERO IMAGE (Full-Width, 168px height)
                 Stack(
                   children: [
                     Container(
                       width: double.infinity,
-                      height: 160,
+                      height: 168,
                       decoration: const BoxDecoration(
                         color: Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                       ),
                       child: ClipRRect(
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                         child: _buildRestaurantImage(r),
                       ),
                     ),
@@ -204,28 +275,28 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                       top: 0,
                       left: 0,
                       right: 0,
-                      height: 50,
+                      height: 52,
                       child: Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              Colors.black.withValues(alpha: 0.45),
+                              Colors.black.withValues(alpha: 0.50),
                               Colors.transparent,
                             ],
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                           ),
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                         ),
                       ),
                     ),
 
-                    // Bottom Gradient Shadow for offer banner
+                    // Bottom Gradient Shadow for offer & ETA banner
                     Positioned(
                       bottom: 0,
                       left: 0,
                       right: 0,
-                      height: 60,
+                      height: 65,
                       child: Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -240,11 +311,11 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                       ),
                     ),
 
-                    // Top Left Badges (Pure Veg & Surge Alert if 6+ active orders)
+                    // Top Left Badges (Pure Veg & Surge Alert)
                     Positioned(
                       top: 12,
                       left: 12,
-                      right: 50,
+                      right: 52,
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -254,6 +325,10 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: const Color(0xFFDCFCE7),
+                                  width: 0.8,
+                                ),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withValues(alpha: 0.15),
@@ -272,12 +347,12 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                                       shape: BoxShape.circle,
                                     ),
                                   ),
-                                  const SizedBox(width: 4),
+                                  const SizedBox(width: 4.5),
                                   Text(
                                     'PURE VEG',
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.plusJakartaSans(
                                       fontSize: Responsive.scaledFontSize(context, 9.5),
-                                      fontWeight: FontWeight.w900,
+                                      fontWeight: FontWeight.w800,
                                       color: const Color(0xFF15803D),
                                       letterSpacing: 0.3,
                                     ),
@@ -311,10 +386,10 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                                     const SizedBox(width: 3),
                                     Flexible(
                                       child: Text(
-                                        'HIGH DEMAND SURGE (NO EXTRA FEE)',
-                                        style: GoogleFonts.inter(
+                                        'HIGH DEMAND SURGE',
+                                        style: GoogleFonts.plusJakartaSans(
                                           fontSize: Responsive.scaledFontSize(context, 8.5),
-                                          fontWeight: FontWeight.w900,
+                                          fontWeight: FontWeight.w800,
                                           color: Colors.white,
                                           letterSpacing: 0.2,
                                         ),
@@ -330,59 +405,63 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                       ),
                     ),
 
-                    // Favorite Button (Top Right)
+                    // Favorite Button (Top Right - Dynamic Persistent Bookmark)
                     Positioned(
                       top: 10,
                       right: 12,
                       child: GestureDetector(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          setState(() => _isFavorite = !_isFavorite);
-                        },
+                        onTap: _toggleFavorite,
                         child: Container(
-                          padding: const EdgeInsets.all(7),
+                          padding: const EdgeInsets.all(7.5),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.35),
+                            color: Colors.black.withValues(alpha: 0.38),
                             shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.18),
+                              width: 0.8,
+                            ),
                           ),
                           child: Icon(
                             _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                            size: 16,
+                            size: 16.5,
                             color: _isFavorite ? const Color(0xFFEF4444) : Colors.white,
                           ),
                         ),
                       ),
                     ),
 
-                    // Offer Ribbon (Bottom Left) - Only shown if restaurant has real offer
+                    // Offer Ribbon (Bottom Left of Image - Dynamic Offer from Restaurant)
                     if (hasOffer)
                       Positioned(
                         bottom: 10,
                         left: 12,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF97316),
-                            borderRadius: BorderRadius.circular(8),
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+                            ),
+                            borderRadius: BorderRadius.circular(7),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.2),
-                                blurRadius: 4,
+                                color: const Color(0xFFEA580C).withValues(alpha: 0.40),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('🔥', style: TextStyle(fontSize: 11)),
+                              const Text('🔥', style: TextStyle(fontSize: 10.5)),
                               const SizedBox(width: 4),
                               Text(
                                 offer.toUpperCase(),
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 10),
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: Responsive.scaledFontSize(context, 9.5),
                                   fontWeight: FontWeight.w900,
                                   color: Colors.white,
-                                  letterSpacing: 0.4,
+                                  letterSpacing: 0.3,
                                 ),
                               ),
                             ],
@@ -390,13 +469,53 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                         ),
                       ),
 
+                    // Delivery ETA & Prep Pill (Bottom Right of Image - Dynamic Real-Time ETA & Distance)
+                    Positioned(
+                      bottom: 10,
+                      right: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.68),
+                          borderRadius: BorderRadius.circular(7),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.20),
+                            width: 0.7,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.25),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('⚡', style: TextStyle(fontSize: 10)),
+                            const SizedBox(width: 3.5),
+                            Text(
+                              '${etaText.toUpperCase()} • ${distanceKm.toStringAsFixed(1)} KM',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: Responsive.scaledFontSize(context, 9.5),
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
                     // Closed Overlay
                     if (!isOpen)
                       Positioned.fill(
                         child: Container(
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0F172A).withValues(alpha: 0.7),
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+                            color: const Color(0xFF0F172A).withValues(alpha: 0.72),
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                           ),
                           child: Center(
                             child: Container(
@@ -413,7 +532,7 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                               ),
                               child: Text(
                                 'CLOSED FOR ORDERS',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.plusJakartaSans(
                                   fontSize: Responsive.scaledFontSize(context, 11),
                                   fontWeight: FontWeight.w900,
                                   color: Colors.white,
@@ -427,9 +546,9 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                   ],
                 ),
 
-                // 2. BOTTOM DETAILS SECTION (Spacious, Zero-Squeeze)
+                // 2. BOTTOM DETAILS SECTION (Clean, Editorial, Truncation-Free)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 15),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -440,9 +559,9 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                           Expanded(
                             child: Text(
                               r.name,
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 17),
-                                fontWeight: FontWeight.w900,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: Responsive.scaledFontSize(context, 17.5),
+                                fontWeight: FontWeight.w800,
                                 color: const Color(0xFF0F172A),
                                 letterSpacing: -0.4,
                               ),
@@ -452,65 +571,53 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                           ),
                           const SizedBox(width: 10),
 
-                          // Rating Badge (e.g. ⭐ 4.8)
+                          // Rating Badge (e.g. 5.0 ★)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                            padding: const EdgeInsets.symmetric(horizontal: 7.5, vertical: 3.5),
                             decoration: BoxDecoration(
                               color: const Color(0xFF15803D),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(7),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
                                   ratingVal.toStringAsFixed(1),
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.plusJakartaSans(
                                     fontSize: Responsive.scaledFontSize(context, 11.5),
-                                    fontWeight: FontWeight.w900,
+                                    fontWeight: FontWeight.w800,
                                     color: Colors.white,
                                   ),
                                 ),
                                 const SizedBox(width: 3),
-                                const Icon(Icons.star_rounded, size: 13, color: Colors.white),
+                                const Icon(Icons.star_rounded, size: 12.5, color: Colors.white),
                               ],
                             ),
                           ),
                         ],
                       ),
 
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
 
-                      // Cuisines / Category Tags (Optimized layout - chips/pills without ugly truncation)
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        child: Row(
-                          children: (r.cuisineTags.isNotEmpty
-                                  ? r.cuisineTags
-                                  : ['North Indian', 'Chinese', 'Fast Food', 'Biryani'])
-                              .map((tag) => Container(
-                                    margin: const EdgeInsets.only(right: 6),
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF1F5F9),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      tag,
-                                      style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 11),
-                                        fontWeight: FontWeight.w600,
-                                        color: const Color(0xFF475569),
-                                      ),
-                                    ),
-                                  ))
-                              .toList(),
+                      // Cuisines / Category Tags (Bullet-Separated: 100% Truncation-Free)
+                      Text(
+                        (r.cuisineTags.isNotEmpty
+                                ? r.cuisineTags.take(4)
+                                : ['North Indian', 'Biryani', 'Chinese', 'Tandoori'])
+                            .join(' • '),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: Responsive.scaledFontSize(context, 12),
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF64748B),
+                          letterSpacing: -0.1,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
 
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
 
-                      // Location & Real Distance Row (No "250 for two")
+                      // Location & Distance Row (Sanitized Address: Zero "20..." Truncation)
                       Row(
                         children: [
                           const Icon(Icons.location_on_rounded, size: 14, color: Color(0xFF94A3B8)),
@@ -518,8 +625,8 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                           Expanded(
                             child: Text(
                               addressText,
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 11.5),
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: Responsive.scaledFontSize(context, 12),
                                 fontWeight: FontWeight.w500,
                                 color: const Color(0xFF64748B),
                               ),
@@ -528,6 +635,7 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                             ),
                           ),
                           const SizedBox(width: 8),
+
                           // Dynamic Distance Badge
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
@@ -539,11 +647,11 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.near_me_rounded, size: 11, color: Color(0xFF0284C7)),
+                                const Icon(Icons.near_me_rounded, size: 10.5, color: Color(0xFF0284C7)),
                                 const SizedBox(width: 3),
                                 Text(
                                   '${distanceKm.toStringAsFixed(1)} km',
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.plusJakartaSans(
                                     fontSize: Responsive.scaledFontSize(context, 10.5),
                                     fontWeight: FontWeight.w800,
                                     color: const Color(0xFF0369A1),
@@ -559,55 +667,51 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                       const Divider(height: 1, color: Color(0xFFF1F5F9)),
                       const SizedBox(height: 12),
 
-                      // Bottom Action Row: Free Delivery Tag + Clean Full Explore CTA
+                      // Bottom Action Row: Free Delivery Tag + Explore CTA
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFEFF6FF),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(7),
+                              border: Border.all(color: const Color(0xFFBFDBFE), width: 0.8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.delivery_dining_rounded, size: 14, color: Color(0xFF2563EB)),
+                                const SizedBox(width: 4.5),
+                                Text(
+                                  'FREE DELIVERY',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: Responsive.scaledFontSize(context, 9.5),
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF1D4ED8),
+                                    letterSpacing: 0.4,
+                                  ),
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.delivery_dining_rounded, size: 13, color: Color(0xFF2563EB)),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'FREE DELIVERY',
-                                      style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 9),
-                                        fontWeight: FontWeight.w900,
-                                        color: const Color(0xFF1D4ED8),
-                                        letterSpacing: 0.3,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
 
-                          // Explore Button (Fits easily with zero cut-off)
+                          // Explore Menu Button (Sleek Gradient Pill)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: isOpen
-                                    ? [const Color(0xFFF97316), const Color(0xFFEA580C)]
+                                    ? [const Color(0xFFEA580C), const Color(0xFFF97316)]
                                     : [const Color(0xFF64748B), const Color(0xFF475569)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
                               ),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(16),
                               boxShadow: isOpen
                                   ? [
                                       BoxShadow(
-                                        color: const Color(0xFFEA580C).withValues(alpha: 0.3),
+                                        color: const Color(0xFFEA580C).withValues(alpha: 0.28),
                                         blurRadius: 8,
                                         offset: const Offset(0, 3),
                                       ),
@@ -619,15 +723,15 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                               children: [
                                 Text(
                                   isOpen ? 'EXPLORE MENU' : 'VIEW MENU',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 11),
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: Responsive.scaledFontSize(context, 10.5),
                                     fontWeight: FontWeight.w900,
                                     color: Colors.white,
                                     letterSpacing: 0.4,
                                   ),
                                 ),
-                                const SizedBox(width: 5),
-                                const Icon(Icons.arrow_forward_rounded, size: 13, color: Colors.white),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.arrow_forward_rounded, size: 12.5, color: Colors.white),
                               ],
                             ),
                           ),

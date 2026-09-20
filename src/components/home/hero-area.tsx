@@ -134,13 +134,13 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
       return {
         greeting: `${welcome}${settings.hero_greeting_night || "Late night snacks & ice creams? We got you! 🌙"}`,
         subtitle: settings.hero_subtitle_night_both_open || settings.hero_subtitle_night_cafe_closed || 'Chocolates, ice creams, cold drinks, late night munchies, and instant grocery essentials.',
-        icon: <Moon className="h-4 w-4 text-indigo-500 fill-indigo-500/20 shrink-0" />,
+        icon: <Moon className="h-4 w-4 text-amber-500 fill-amber-500/20 shrink-0" />,
         modeLabel: '⚡ GROCERY MART • ONLINE',
-        gradient: 'from-indigo-100/60 via-purple-50/50 to-pink-100/30',
-        darkGradient: 'dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-zinc-900/10',
-        border: 'border-indigo-200/40',
-        darkBorder: 'dark:border-indigo-900/20',
-        accentColor: 'text-indigo-600 dark:text-indigo-400',
+        gradient: 'from-slate-100/80 via-zinc-100/60 to-amber-50/40',
+        darkGradient: 'dark:from-slate-950/50 dark:via-zinc-900/40 dark:to-zinc-950/20',
+        border: 'border-slate-200/60',
+        darkBorder: 'dark:border-slate-800/40',
+        accentColor: 'text-slate-800 dark:text-slate-200',
       }
     }
   }, [currentHour, session, groceryMartOpen, mounted, settings])

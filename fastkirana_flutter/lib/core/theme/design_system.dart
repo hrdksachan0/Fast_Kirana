@@ -30,6 +30,7 @@ class AppDesignSystem {
   static const Color warning = Color(0xFFF59E0B);
   static const Color info = Color(0xFF3B82F6); // Standard Blue 500
   static const Color success = Color(0xFF10B981);
+  static const Color emerald50 = Color(0xFFECFDF5);
 
   // Status Colors
   static const Color statusPending = Color(0xFFFEF3C7);

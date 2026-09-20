@@ -12,6 +12,7 @@ import '../../core/services/supabase_service.dart';
 import 'admin_orders_list.dart';
 import 'admin_products.dart';
 import '../../core/theme/responsive.dart';
+import '../../widgets/app_confirmation_dialog.dart';
 
 class AdminDashboard extends ConsumerStatefulWidget {
   const AdminDashboard({super.key});
@@ -32,57 +33,12 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
   ];
 
   Future<void> _handleLogout() async {
-    final shouldLogout = await showDialog<bool>(
+    final shouldLogout = await AppConfirmationDialog.showLogout(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.logout_rounded, color: primaryRed, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Logout Admin?',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w900, fontSize: Responsive.scaledFontSize(context, 17), color: const Color(0xFF0F172A)),
-            ),
-          ],
-        ),
-        content: Text(
-          'You will be signed out from the Store Operations portal.',
-          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: const Color(0xFF64748B), height: 1.4),
-        ),
-        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: const Color(0xFF64748B)),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryRed,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'Sign Out',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: Colors.white),
-            ),
-          ),
-        ],
-      ),
+      title: 'Logout Admin?',
+      subtitle: 'You will be securely signed out from the Store Operations portal.',
+      accountNote: 'Unsaved live metrics and dashboard sessions are preserved in cloud.',
+      confirmLabel: 'Sign Out',
     );
 
     if (shouldLogout == true && mounted) {
@@ -375,7 +331,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.12),
+                    color: Colors.black.withValues(alpha: 0.12),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -687,7 +643,7 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
                         ),
                         Switch(
                           value: _masterOpen,
-                          activeColor: const Color(0xFF16A34A),
+                          activeThumbColor: const Color(0xFF16A34A),
                           activeTrackColor: const Color(0xFFDCFCE7),
                           onChanged: _updateMaster,
                         ),
@@ -864,7 +820,7 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
           ),
           Switch(
             value: isOpen,
-            activeColor: const Color(0xFF16A34A),
+            activeThumbColor: const Color(0xFF16A34A),
             activeTrackColor: const Color(0xFFDCFCE7),
             inactiveThumbColor: const Color(0xFF94A3B8),
             inactiveTrackColor: const Color(0xFFE2E8F0),

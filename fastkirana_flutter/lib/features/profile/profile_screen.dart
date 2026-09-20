@@ -7,7 +7,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/design_system.dart';
-import '../../core/theme/responsive.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../core/network/api_client.dart';
 import '../../data/models/user.dart';
@@ -25,6 +24,7 @@ import '../orders/orders_screen.dart';
 import 'address_book_screen.dart';
 import 'wishlist_screen.dart';
 import 'notifications_screen.dart';
+import '../../widgets/app_confirmation_dialog.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -209,6 +209,7 @@ class ProfileScreen extends ConsumerWidget {
                     if (newPhone.isNotEmpty && newPhone != user.phone) {
                       try {
                         await authRepo.sendPhoneOtp(newPhone);
+                        if (!context.mounted) return;
                         final verified = await _promptOtpVerification(
                           context: context,
                           title: 'Verify New Phone Number',
@@ -230,6 +231,7 @@ class ProfileScreen extends ConsumerWidget {
                     if (newEmail.isNotEmpty && newEmail.toLowerCase() != (user.email.toLowerCase())) {
                       try {
                         await authRepo.sendEmailOtp(newEmail);
+                        if (!context.mounted) return;
                         final verified = await _promptOtpVerification(
                           context: context,
                           title: 'Verify New Email Address',
@@ -423,43 +425,24 @@ class ProfileScreen extends ConsumerWidget {
     return success ?? false;
   }
 
-  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
+  Future<void> _showLogoutDialog(BuildContext context, WidgetRef ref) async {
+    final confirmed = await AppConfirmationDialog.showLogout(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Log Out of FastKirana?',
-          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: AppDesignSystem.gray900),
-        ),
-        content: Text(
-          'You will need to enter your phone or email to log back in.',
-          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w600, color: AppDesignSystem.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryRed,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              elevation: 0,
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              HapticFeedback.heavyImpact();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Logged out successfully')),
-              );
-              unawaited(ref.read(authProvider.notifier).clear());
-            },
-            child: Text('Log Out', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: Colors.white)),
-          ),
-        ],
-      ),
+      title: 'Log Out of FastKirana?',
+      subtitle: 'You will need to verify your phone number or email to log back in.',
+      accountNote: 'Your cart items, saved addresses, and active orders stay secure in the cloud.',
+      confirmLabel: 'Log Out',
     );
+
+    if (confirmed == true) {
+      HapticFeedback.heavyImpact();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Logged out successfully')),
+        );
+      }
+      unawaited(ref.read(authProvider.notifier).clear());
+    }
   }
 
   void _showSupportModal(BuildContext context) {
@@ -1223,6 +1206,9 @@ class ProfileScreen extends ConsumerWidget {
                   ],
                   ),
                 ),
+              ),
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 120),
               ),
             ],
           ),

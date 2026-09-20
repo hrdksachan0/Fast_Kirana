@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../network/api_client.dart';
 import '../services/secure_storage_service.dart';
 
 /// Centralized admin/role authorization helper.

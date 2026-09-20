@@ -225,7 +225,7 @@ export function RestaurantGeneralInfo({
 
       {/* 2. IMAGES & BRANDING */}
       <div id="sec-branding" className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
-        <div className="p-4 border-b border-border/60 bg-gradient-to-r from-violet-500/10 via-violet-500/5 to-violet-500/0 flex items-center gap-3">
+        <div className="p-4 border-b border-border/60 bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent flex items-center gap-3">
           <div className="h-9 w-9 rounded-xl bg-white/80 dark:bg-white/10 backdrop-blur-sm flex items-center justify-center shadow-sm">
             <ImageIcon className="h-4.5 w-4.5 text-text-primary" />
           </div>

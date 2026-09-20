@@ -1,5 +1,4 @@
 import 'package:fastkirana_flutter/core/theme/design_system.dart';
-import '../core/theme/responsive.dart';
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';

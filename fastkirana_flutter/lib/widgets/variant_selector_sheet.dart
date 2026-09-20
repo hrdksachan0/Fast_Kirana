@@ -184,7 +184,10 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
     final isFood = isCafeProduct(widget.product) || isRestaurantProduct(widget.product);
     final settings = ref.watch(storeSettingsProvider).valueOrNull;
     final isGroceryOpen = settings?.groceryMartOpen ?? true;
-    final isRestaurantOpen = widget.product.restaurant?.isOpen != false;
+    final isRestaurantOpen = RestaurantScheduleHelper.isProductRestaurantOpen(
+      widget.product,
+      storeSettings: settings,
+    );
     final isStoreOpen = isFood ? isRestaurantOpen : isGroceryOpen;
 
     if (isFood) {

@@ -25,7 +25,7 @@ class SupabaseService {
     try {
       await Supabase.initialize(
         url: AppConfig.supabaseUrl,
-        anonKey: AppConfig.supabaseAnonKey,
+        publishableKey: AppConfig.supabaseAnonKey,
         realtimeClientOptions: const RealtimeClientOptions(
           eventsPerSecond: 10,
         ),

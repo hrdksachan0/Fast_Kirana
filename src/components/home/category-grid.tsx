@@ -92,10 +92,10 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
       ring: 'group-hover:border-yellow-500/50 group-hover:shadow-[0_0_15px_rgba(234,179,8,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(234,179,8,0.5)]' 
     },
     'beverages': { 
-      bg: 'bg-purple-50 dark:bg-purple-500/5', 
-      text: 'text-purple-500 dark:text-purple-400', 
-      gradient: 'from-purple-100/30 to-purple-50/10 dark:from-purple-500/10 dark:to-transparent', 
-      ring: 'group-hover:border-purple-500/50 group-hover:shadow-[0_0_15px_rgba(139,92,246,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(139,92,246,0.5)]' 
+      bg: 'bg-cyan-50 dark:bg-cyan-500/5', 
+      text: 'text-cyan-600 dark:text-cyan-400', 
+      gradient: 'from-cyan-100/30 to-cyan-50/10 dark:from-cyan-500/10 dark:to-transparent', 
+      ring: 'group-hover:border-cyan-500/50 group-hover:shadow-[0_0_15px_rgba(6,182,212,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(6,182,212,0.5)]' 
     },
     'personal-care': { 
       bg: 'bg-pink-50 dark:bg-pink-500/5', 
@@ -104,16 +104,16 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
       ring: 'group-hover:border-pink-500/50 group-hover:shadow-[0_0_15px_rgba(236,72,153,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(236,72,153,0.5)]' 
     },
     'household': { 
-      bg: 'bg-indigo-50 dark:bg-indigo-500/5', 
-      text: 'text-indigo-500 dark:text-indigo-400', 
-      gradient: 'from-indigo-100/30 to-indigo-50/10 dark:from-indigo-500/10 dark:to-transparent', 
-      ring: 'group-hover:border-indigo-500/50 group-hover:shadow-[0_0_15px_rgba(99,102,241,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(99,102,241,0.5)]' 
+      bg: 'bg-teal-50 dark:bg-teal-500/5', 
+      text: 'text-teal-600 dark:text-teal-400', 
+      gradient: 'from-teal-100/30 to-teal-50/10 dark:from-teal-500/10 dark:to-transparent', 
+      ring: 'group-hover:border-teal-500/50 group-hover:shadow-[0_0_15px_rgba(20,184,166,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(20,184,166,0.5)]' 
     },
     'home-needs-and-cleaning': { 
-      bg: 'bg-indigo-50 dark:bg-indigo-500/5', 
-      text: 'text-indigo-500 dark:text-indigo-400', 
-      gradient: 'from-indigo-100/30 to-indigo-50/10 dark:from-indigo-500/10 dark:to-transparent', 
-      ring: 'group-hover:border-indigo-500/50 group-hover:shadow-[0_0_15px_rgba(99,102,241,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(99,102,241,0.5)]' 
+      bg: 'bg-sky-50 dark:bg-sky-500/5', 
+      text: 'text-sky-600 dark:text-sky-400', 
+      gradient: 'from-sky-100/30 to-sky-50/10 dark:from-sky-500/10 dark:to-transparent', 
+      ring: 'group-hover:border-sky-500/50 group-hover:shadow-[0_0_15px_rgba(14,165,233,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(14,165,233,0.5)]' 
     },
     'bakery-biscuits': { 
       bg: 'bg-orange-50 dark:bg-orange-500/5', 
@@ -140,16 +140,16 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
       ring: 'group-hover:border-teal-500/50 group-hover:shadow-[0_0_15px_rgba(20,184,166,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(20,184,166,0.5)]' 
     },
     'chocolates': { 
-      bg: 'bg-purple-50 dark:bg-purple-500/5', 
-      text: 'text-purple-500 dark:text-purple-400', 
-      gradient: 'from-purple-100/30 to-purple-50/10 dark:from-purple-500/10 dark:to-transparent', 
-      ring: 'group-hover:border-purple-500/50 group-hover:shadow-[0_0_15px_rgba(139,92,246,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(139,92,246,0.5)]' 
+      bg: 'bg-rose-50 dark:bg-rose-500/5', 
+      text: 'text-rose-500 dark:text-rose-400', 
+      gradient: 'from-rose-100/30 to-rose-50/10 dark:from-rose-500/10 dark:to-transparent', 
+      ring: 'group-hover:border-rose-500/50 group-hover:shadow-[0_0_15px_rgba(244,63,94,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(244,63,94,0.5)]' 
     },
     'packaged-foods': { 
-      bg: 'bg-indigo-50 dark:bg-indigo-500/5', 
-      text: 'text-indigo-500 dark:text-indigo-400', 
-      gradient: 'from-indigo-100/30 to-indigo-50/10 dark:from-indigo-500/10 dark:to-transparent', 
-      ring: 'group-hover:border-indigo-500/50 group-hover:shadow-[0_0_15px_rgba(99,102,241,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(99,102,241,0.5)]' 
+      bg: 'bg-orange-50 dark:bg-orange-500/5', 
+      text: 'text-orange-500 dark:text-orange-400', 
+      gradient: 'from-orange-100/30 to-orange-50/10 dark:from-orange-500/10 dark:to-transparent', 
+      ring: 'group-hover:border-orange-500/50 group-hover:shadow-[0_0_15px_rgba(249,115,22,0.35)] dark:group-hover:shadow-[0_0_15px_rgba(249,115,22,0.5)]' 
     },
     'healthy-foods': { 
       bg: 'bg-emerald-50 dark:bg-emerald-500/5', 

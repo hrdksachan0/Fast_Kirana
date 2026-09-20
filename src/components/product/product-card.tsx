@@ -450,7 +450,7 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
               "absolute bottom-1.5 left-1.5 z-10 flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[7.5px] min-[375px]:text-[8px] font-black pointer-events-none select-none tracking-tight",
               isRestaurant 
                 ? "bg-red-600 text-white shadow-xs" 
-                : "bg-amber-400 text-zinc-950 shadow-xs"
+                : "bg-amber-400 text-amber-950 shadow-xs"
             )}>
               {isRestaurant ? ('👨‍🍳 ' + (((product as any).restaurant?.name || (product as any).restaurantName)?.split(' ')[0] || 'Chef') + ' Special') : '⭐ BESTSELLER'}
             </div>

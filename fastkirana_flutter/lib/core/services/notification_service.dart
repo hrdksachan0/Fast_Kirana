@@ -1,7 +1,7 @@
 import 'package:fastkirana_flutter/core/services/logger_service.dart';
+import 'package:logger/logger.dart';
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -9,6 +9,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/secure_storage_service.dart';
+
+final logger = Logger();
 
 // Top-level background message handler for when app is killed or phone screen is off
 final Map<String, int> _bgRecentMessageTimes = {};
@@ -142,7 +144,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       final tag = (cleanOrderId != null && cleanOrderId.isNotEmpty) ? 'order_$cleanOrderId' : null;
 
       final channelId = isOrderAlert
-          ? 'fastkirana_kitchen_alerts'
+          ? 'fastkirana_order_buzzer_v2'
           : (isOrderStatusUpdate ? 'fastkirana_order_status' : 'fastkirana_alerts');
       final channelName = isOrderAlert
           ? 'Kitchen & Order Buzz Alerts'
@@ -260,7 +262,7 @@ class NotificationService {
       );
 
       final AndroidNotificationChannel kitchenChannel = AndroidNotificationChannel(
-        'fastkirana_kitchen_alerts',
+        'fastkirana_order_buzzer_v2',
         'Kitchen & Order Buzz Alerts',
         description: 'Loud alarm for kitchen orders even when phone is locked.',
         importance: Importance.max,
@@ -306,7 +308,7 @@ class NotificationService {
       await _localNotifications?.initialize(
         initSettings,
         onDidReceiveNotificationResponse: (NotificationResponse details) {
-          print("Notification tapped: ${details.payload}");
+          logger.d("Notification tapped: ${details.payload}");
         },
       );
 
@@ -317,12 +319,12 @@ class NotificationService {
 
       // 6. Handle App Opened from Notification
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-        print("App opened from notification: ${message.data}");
+        logger.d("App opened from notification: ${message.data}");
       });
 
       // 7. Auto-save refreshed tokens for re-registration
       FirebaseMessaging.instance.onTokenRefresh.listen((String newToken) async {
-        print("FCM token refreshed: ${newToken.substring(0, 20)}...");
+        logger.i("FCM token refreshed: ${newToken.substring(0, 20)}...");
         await prefs.setString('pending_fcm_token', newToken);
       });
 
@@ -340,12 +342,12 @@ class NotificationService {
           await _fcm?.subscribeToTopic('user_$savedUserId');
         }
       } catch (e) {
-        print("Topic subscription error: $e");
+        logger.e("Topic subscription error: $e");
       }
 
       _initialized = true;
     } catch (e) {
-      print("Error initializing NotificationService: $e");
+      logger.e("Error initializing NotificationService: $e");
     }
   }
 
@@ -421,7 +423,7 @@ class NotificationService {
 
     final category = data['category'] as String? ?? 'order';
     if (!_shouldShowNotification(category)) {
-      print("Notification suppressed by user preference: $category");
+      logger.w("Notification suppressed by user preference: $category");
       return;
     }
 
@@ -467,7 +469,7 @@ class NotificationService {
     final tag = (cleanOrderId != null && cleanOrderId.isNotEmpty) ? 'order_$cleanOrderId' : null;
 
     final channelId = isOrderAlert
-        ? 'fastkirana_kitchen_alerts'
+        ? 'fastkirana_order_buzzer_v2'
         : (isOrderStatusUpdate ? 'fastkirana_order_status' : 'fastkirana_alerts');
     final channelName = isOrderAlert
         ? 'Kitchen & Order Buzz Alerts'
@@ -538,9 +540,9 @@ class NotificationService {
         sound: true,
         provisional: false,
       );
-      print("FCM permission status: ${settings?.authorizationStatus}");
+      logger.i("FCM permission status: ${settings?.authorizationStatus}");
     } catch (e) {
-      print("Error requesting FCM permissions: $e");
+      logger.e("Error requesting FCM permissions: $e");
     }
   }
 
@@ -549,7 +551,7 @@ class NotificationService {
     try {
       return await _fcm?.getToken();
     } catch (e) {
-      print("Error getting FCM token: $e");
+      logger.e("Error getting FCM token: $e");
       return null;
     }
   }
@@ -576,12 +578,12 @@ class NotificationService {
       );
 
       if (response.statusCode == 200) {
-        print("FCM Token refreshed successfully!");
+        logger.i("FCM Token refreshed successfully!");
         final p = await SharedPreferences.getInstance();
         await p.remove('pending_fcm_token');
       }
     } catch (e) {
-      print("Error refreshing FCM token: $e");
+      logger.e("Error refreshing FCM token: $e");
     }
   }
 
@@ -667,7 +669,7 @@ class NotificationService {
           }
         }
       } catch (e) {
-        print("Error subscribing to topics: $e");
+        logger.e("Error subscribing to topics: $e");
       }
 
       final response = await dio.post(
@@ -684,11 +686,11 @@ class NotificationService {
       );
 
       if (response.statusCode == 200) {
-        print("FCM Token registered successfully!");
+        logger.i("FCM Token registered successfully!");
         await prefs.remove('pending_fcm_token');
       }
     } catch (e) {
-      print("Error registering FCM token: $e");
+      logger.e("Error registering FCM token: $e");
     }
   }
 

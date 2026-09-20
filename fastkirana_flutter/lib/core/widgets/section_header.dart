@@ -1,5 +1,4 @@
 import 'package:fastkirana_flutter/core/theme/design_system.dart';
-import '../../core/theme/responsive.dart';
 import 'package:flutter/material.dart';
 
 class SectionHeader extends StatelessWidget {

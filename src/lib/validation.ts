@@ -236,6 +236,7 @@ export const updateOrderStatusSchema = z.object({
   isRiderCash: z.boolean().optional(),
   paymentCollectedBy: z.string().optional(),
   cashAmount: z.union([z.number(), z.string()]).nullable().optional(),
+  deliveryUserId: z.string().nullable().optional(),
   scope: z.string().optional(),
   updateCombined: z.boolean().optional(),
 })

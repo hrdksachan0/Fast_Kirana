@@ -108,7 +108,7 @@ export function CartStickyBar() {
       }}
       className={cn(
         "gpu-accelerated fixed left-3 right-3 z-40 bg-gradient-to-r from-[#e11d48] via-[#e20a22] to-[#b91c1c] backdrop-blur-xl text-white rounded-2xl shadow-[0_8px_30px_rgba(226,10,34,0.4)] border border-white/20 md:hidden animate-slide-up overflow-hidden cursor-pointer select-none flex flex-col",
-        isBouncing && "animate-bounce-subtle"
+        isBouncing && "scale-[1.03] transition-transform duration-200"
       )}
     >
       {/* Top Edge Progress Bar for Free Delivery */}

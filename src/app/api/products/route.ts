@@ -260,6 +260,8 @@ export async function GET(request: NextRequest) {
           rating: true,
           deliveryTime: true,
           isOpen: true,
+          openTime: true,
+          closeTime: true,
           lat: true,
           lng: true,
           deliveryRadiusKm: true,

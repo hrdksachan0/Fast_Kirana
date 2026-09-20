@@ -73,7 +73,7 @@ class AdminSettingsScreen extends StatelessWidget {
     return SwitchListTile(
       value: value,
       onChanged: (v) => onChanged(v),
-      activeColor: AppDesignSystem.primary,
+      activeThumbColor: AppDesignSystem.primary,
       title: Text(title, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
       subtitle: Text(subtitle, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary)),
     );

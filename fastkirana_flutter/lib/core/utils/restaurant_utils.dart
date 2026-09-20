@@ -1,5 +1,6 @@
 import '../../data/models/product.dart';
 import '../../data/models/restaurant.dart';
+import '../../data/models/store_settings.dart';
 import '../config/app_config.dart';
 
 /// Central dynamic in-memory registry of all restaurants.
@@ -27,6 +28,8 @@ class RestaurantRegistry {
         lng: 80.1714,
         isPureVeg: true,
         isOpen: true,
+        openTime: '10:00',
+        closeTime: '22:00',
       ),
       Restaurant(
         id: 'REST-102',
@@ -39,6 +42,8 @@ class RestaurantRegistry {
         lat: 26.1550,
         lng: 80.1730,
         isOpen: true,
+        openTime: '10:00',
+        closeTime: '22:30',
       ),
       Restaurant(
         id: 'REST-103',
@@ -51,6 +56,8 @@ class RestaurantRegistry {
         lat: 26.1510,
         lng: 80.1690,
         isOpen: true,
+        openTime: '10:00',
+        closeTime: '22:00',
       ),
       Restaurant(
         id: 'REST-104',
@@ -63,6 +70,8 @@ class RestaurantRegistry {
         lat: 26.1484783,
         lng: 80.1667542,
         isOpen: true,
+        openTime: '10:00',
+        closeTime: '22:00',
       ),
       Restaurant(
         id: 'REST-105',
@@ -75,6 +84,8 @@ class RestaurantRegistry {
         lat: 26.1520,
         lng: 80.1700,
         isOpen: true,
+        openTime: '08:00',
+        closeTime: '22:00',
       ),
     ];
 
@@ -212,6 +223,151 @@ class RestaurantRegistry {
       unique[r.id] = r;
     }
     return unique.values.toList();
+  }
+}
+
+/// Utility to evaluate restaurant and cafe operating hours in Indian Standard Time (IST, UTC+5:30).
+class RestaurantScheduleHelper {
+  /// Returns the current minute of the day in Indian Standard Time (IST, UTC+5:30) (0..1439).
+  static int getISTMinutes() {
+    final ist = DateTime.now().toUtc().add(const Duration(hours: 5, minutes: 30));
+    return ist.hour * 60 + ist.minute;
+  }
+
+  /// Parses diverse time string formats into minutes from midnight (0..1439).
+  /// Handles "10:00", "22:30", "10:00 AM", "10:30 PM", "10:00:00"
+  static int? parseTimeStringToMinutes(String? timeStr) {
+    if (timeStr == null || timeStr.trim().isEmpty) return null;
+    final clean = timeStr.trim().toUpperCase();
+    final isPM = clean.contains('PM');
+    final isAM = clean.contains('AM');
+
+    final timeOnly = clean.replaceAll('AM', '').replaceAll('PM', '').trim();
+    final parts = timeOnly.split(':');
+    if (parts.length < 2) return null;
+
+    int? hours = int.tryParse(parts[0].trim());
+    final int? minutes = int.tryParse(parts[1].trim());
+    if (hours == null || minutes == null) return null;
+
+    if (isPM && hours < 12) hours += 12;
+    if (isAM && hours == 12) hours = 0;
+
+    return hours * 60 + minutes;
+  }
+
+  /// Formats minutes into human-readable 12-hour format e.g. 600 -> "10:00 AM"
+  static String formatMinutesTo12h(int totalMinutes) {
+    int h = (totalMinutes ~/ 60) % 24;
+    final m = totalMinutes % 60;
+    final period = h >= 12 ? 'PM' : 'AM';
+    if (h == 0) {
+      h = 12;
+    } else if (h > 12) {
+      h -= 12;
+    }
+    final mStr = m.toString().padLeft(2, '0');
+    return '$h:$mStr $period';
+  }
+
+  /// Evaluates whether the current IST time is within the given open/close schedule.
+  static bool isWithinOperatingHours({String? openTime, String? closeTime}) {
+    final effectiveOpen = (openTime != null && openTime.trim().isNotEmpty) ? openTime.trim() : '10:00';
+    final effectiveClose = (closeTime != null && closeTime.trim().isNotEmpty) ? closeTime.trim() : '22:30';
+
+    final openMin = parseTimeStringToMinutes(effectiveOpen) ?? 600; // 10:00 AM
+    final closeMin = parseTimeStringToMinutes(effectiveClose) ?? 1350; // 10:30 PM
+
+    // 24 hour check
+    if (openMin == 0 && (closeMin >= 1439 || closeMin == 0)) {
+      return true;
+    }
+
+    final currentMin = getISTMinutes();
+
+    if (closeMin >= openMin) {
+      // Standard daytime window: e.g. 10:00 (600) to 22:30 (1350)
+      return currentMin >= openMin && currentMin < closeMin;
+    } else {
+      // Overnight window: e.g. 18:00 to 02:00
+      return currentMin >= openMin || currentMin < closeMin;
+    }
+  }
+
+  /// Returns user-friendly schedule string e.g. "Opens at 10:00 AM" or "Closes at 10:30 PM"
+  static String getScheduleDescription({String? openTime, String? closeTime}) {
+    final effectiveOpen = (openTime != null && openTime.trim().isNotEmpty) ? openTime.trim() : '10:00';
+    final effectiveClose = (closeTime != null && closeTime.trim().isNotEmpty) ? closeTime.trim() : '22:30';
+
+    final openMin = parseTimeStringToMinutes(effectiveOpen) ?? 600;
+    final closeMin = parseTimeStringToMinutes(effectiveClose) ?? 1350;
+
+    final isOpen = isWithinOperatingHours(openTime: effectiveOpen, closeTime: effectiveClose);
+    if (isOpen) {
+      return 'Open until ${formatMinutesTo12h(closeMin)}';
+    } else {
+      return 'Opens at ${formatMinutesTo12h(openMin)}';
+    }
+  }
+
+  /// Evaluates whether a restaurant is open right now considering:
+  /// 1. Global restaurant master switch from StoreSettings (`storeSettings.restaurantOpen`)
+  /// 2. Restaurant manual switch (`isOpen`)
+  /// 3. Configured or default operating hours (`openTime` to `closeTime`) in IST
+  static bool isRestaurantOpen({
+    Restaurant? restaurant,
+    RestaurantInfo? restaurantInfo,
+    String? restaurantId,
+    StoreSettings? storeSettings,
+  }) {
+    // 1. Check global master switch if storeSettings is provided
+    if (storeSettings != null && !storeSettings.restaurantOpen) {
+      return false;
+    }
+
+    // 2. Resolve canonical restaurant from registry if needed
+    final reg = restaurant ??
+        (restaurantId != null ? RestaurantRegistry.find(restaurantId) : null) ??
+        (restaurantInfo != null ? RestaurantRegistry.find(restaurantInfo.id) : null);
+
+    // 3. Check manual isOpen toggle
+    if (restaurant?.isOpen == false ||
+        restaurantInfo?.isOpen == false ||
+        reg?.isOpen == false) {
+      return false;
+    }
+
+    // 4. Resolve open & close timings
+    final openStr = restaurant?.openTime ??
+        restaurantInfo?.openTime ??
+        reg?.openTime ??
+        storeSettings?.raw['restaurant_open_time']?.toString() ??
+        '10:00';
+
+    final closeStr = restaurant?.closeTime ??
+        restaurantInfo?.closeTime ??
+        reg?.closeTime ??
+        storeSettings?.raw['restaurant_close_time']?.toString() ??
+        '22:30';
+
+    return isWithinOperatingHours(openTime: openStr, closeTime: closeStr);
+  }
+
+  /// Evaluates product availability based on whether it is a restaurant food item or grocery item
+  static bool isProductRestaurantOpen(
+    Product product, {
+    StoreSettings? storeSettings,
+  }) {
+    final isFood = isRestaurantProduct(product);
+    if (!isFood) {
+      return storeSettings?.groceryMartOpen ?? true;
+    }
+
+    return isRestaurantOpen(
+      restaurantInfo: product.restaurant,
+      restaurantId: product.restaurantId,
+      storeSettings: storeSettings,
+    );
   }
 }
 

@@ -98,7 +98,7 @@ export function buildOrderFcmPayload(
       ttl: ttlSeconds,
       ...(collapseId ? { collapseKey: collapseId } : {}),
       notification: {
-        channelId: isOrderAlert ? 'fastkirana_kitchen_alerts' : 'fastkirana_alerts',
+        channelId: isOrderAlert ? 'fastkirana_order_buzzer_v2' : 'fastkirana_alerts',
         sound: isOrderAlert ? 'order_chime' : 'default',
         defaultSound: !isOrderAlert,
         defaultVibrateTimings: !isOrderAlert,

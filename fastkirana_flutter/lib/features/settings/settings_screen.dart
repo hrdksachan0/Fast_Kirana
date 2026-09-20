@@ -147,7 +147,7 @@ class SettingsScreen extends StatelessWidget {
       subtitle: Text(subtitle, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary)),
       value: value,
       onChanged: (v) => onChanged(v),
-      activeColor: AppDesignSystem.primary,
+      activeThumbColor: AppDesignSystem.primary,
     );
   }
 

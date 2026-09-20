@@ -17,6 +17,11 @@ class Restaurant {
   final String priceForTwo;
   final bool isPureVeg;
   final bool isOpen;
+  final String? openTime;
+  final String? closeTime;
+  final bool? isClosedBySchedule;
+  final bool? isClosedByOwner;
+  final String? formattedScheduleStr;
   final String? discountOffer;
   final String? discountBadge;
   final int sortOrder;
@@ -44,6 +49,11 @@ class Restaurant {
     this.priceForTwo = '₹250 for two',
     this.isPureVeg = false,
     this.isOpen = true,
+    this.openTime,
+    this.closeTime,
+    this.isClosedBySchedule,
+    this.isClosedByOwner,
+    this.formattedScheduleStr,
     this.discountOffer,
     this.discountBadge,
     this.sortOrder = 0,
@@ -120,6 +130,11 @@ class Restaurant {
       priceForTwo: json['priceForTwo']?.toString() ?? '₹250 for two',
       isPureVeg: json['isPureVeg'] == true,
       isOpen: json['isOpen'] != false,
+      openTime: json['openTime']?.toString(),
+      closeTime: json['closeTime']?.toString(),
+      isClosedBySchedule: json['isClosedBySchedule'] == true,
+      isClosedByOwner: json['isClosedByOwner'] == true,
+      formattedScheduleStr: json['formattedScheduleStr']?.toString(),
       discountOffer: json['discountOffer']?.toString(),
       discountBadge: json['discountBadge']?.toString(),
       sortOrder: json['sortOrder'] != null ? int.tryParse(json['sortOrder'].toString()) ?? 0 : 0,
@@ -147,6 +162,11 @@ class Restaurant {
         'priceForTwo': priceForTwo,
         'isPureVeg': isPureVeg,
         'isOpen': isOpen,
+        'openTime': openTime,
+        'closeTime': closeTime,
+        'isClosedBySchedule': isClosedBySchedule,
+        'isClosedByOwner': isClosedByOwner,
+        'formattedScheduleStr': formattedScheduleStr,
         'discountOffer': discountOffer,
         'discountBadge': discountBadge,
         'sortOrder': sortOrder,

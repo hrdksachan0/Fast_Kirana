@@ -100,18 +100,37 @@ class Responsive {
   static double productCardAspectRatio(BuildContext context, {bool isCompact = false}) {
     final width = MediaQuery.of(context).size.width;
     if (isCompact) {
-      // Used in screens with side category rail (narrower column ~125-145px)
-      if (width < 360) return 0.63;
+      // Used in screens with side category rail (narrower column ~135-155px)
+      if (width < 360) return 0.64;
       if (width < 400) return 0.67;
       if (width < mobileBreakpoint) return 0.69;
-      return 0.72;
+      if (width < tabletBreakpoint) return 0.73;
+      return 0.77;
     }
-    // Full width 2-column grid (card width is ~165-195px)
-    if (width < 360) return 0.66;
-    if (width < 400) return 0.69;
-    if (width < mobileBreakpoint) return 0.72;
-    if (width < tabletBreakpoint) return 0.76;
-    return 0.80;
+    // Full width 2-column grid (Medium, comfortable proportions for Restaurant & Home grids)
+    if (width < 360) return 0.64;
+    if (width < 400) return 0.67;
+    if (width < mobileBreakpoint) return 0.69;
+    if (width < tabletBreakpoint) return 0.73;
+    return 0.77;
+  }
+
+  /// Unified Responsive Product Card Width for horizontal shelves (Medium, readable size)
+  static double productCardShelfWidth(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 360) return 138.0;
+    if (width < mobileBreakpoint) return 152.0;
+    if (width < tabletBreakpoint) return 164.0;
+    return 172.0;
+  }
+
+  /// Unified Responsive Product Shelf Height for horizontal tracks
+  static double productShelfHeight(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 360) return 224.0;
+    if (width < mobileBreakpoint) return 238.0;
+    if (width < tabletBreakpoint) return 250.0;
+    return 260.0;
   }
 
   /// Responsive scaled font size with safety clamping

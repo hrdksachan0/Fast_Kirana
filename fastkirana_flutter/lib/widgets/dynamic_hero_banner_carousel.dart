@@ -240,15 +240,17 @@ class _DynamicHeroBannerCarouselState extends ConsumerState<DynamicHeroBannerCar
 
                             return GestureDetector(
                               onTap: () => _handleBannerTap(banner),
-                              child: Transform(
-                                alignment: clampedOffset > 0 ? Alignment.centerRight : Alignment.centerLeft,
-                                transform: Matrix4.identity()
-                                  ..setEntry(3, 2, 0.0014)
-                                  ..rotateY(rotationY)
-                                  ..scale(scale),
-                                child: Opacity(
-                                  opacity: opacity,
-                                  child: _buildBannerCard(banner, clampedOffset),
+                              child: Transform.scale(
+                                scale: scale,
+                                child: Transform(
+                                  alignment: clampedOffset > 0 ? Alignment.centerRight : Alignment.centerLeft,
+                                  transform: Matrix4.identity()
+                                    ..setEntry(3, 2, 0.0014)
+                                    ..rotateY(rotationY),
+                                  child: Opacity(
+                                    opacity: opacity,
+                                    child: _buildBannerCard(banner, clampedOffset),
+                                  ),
                                 ),
                               ),
                             );

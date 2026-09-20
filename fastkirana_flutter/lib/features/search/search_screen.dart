@@ -352,7 +352,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     _query.isEmpty ? _buildDiscoveryContent() : _buildSearchResults(),
 
                     if (canPop)
-                      const FloatingCartBar(bottomOffset: 16),
+                      FloatingCartBar(bottomOffset: MediaQuery.of(context).padding.bottom + 16),
                   ],
                 ),
               ),
@@ -906,7 +906,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 }
 
                 final isGroceryOpen = storeSettings?.groceryMartOpen ?? true;
-                final isRestaurantOpen = product.restaurant?.isOpen != false;
+                final isRestaurantOpen = RestaurantScheduleHelper.isProductRestaurantOpen(
+                  product,
+                  storeSettings: storeSettings,
+                );
                 final isStoreOpen = isFood ? isRestaurantOpen : isGroceryOpen;
                 final isOutOfStock = product.stock <= 0 || !product.isAvailable;
                 final isClosed = !isStoreOpen || isOutOfStock;
@@ -1213,18 +1216,18 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         const SizedBox(width: 8),
         if (isClosed)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6.5),
             decoration: BoxDecoration(
-              color: AppDesignSystem.slate100,
+              color: const Color(0xFFFEE2E2),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppDesignSystem.slate200),
+              border: Border.all(color: const Color(0xFFFECACA)),
             ),
             child: Text(
               isOutOfStock ? 'Sold Out' : 'Closed',
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 10.5),
                 fontWeight: FontWeight.w800,
-                color: AppDesignSystem.slate400,
+                color: const Color(0xFFDC2626),
               ),
             ),
           )

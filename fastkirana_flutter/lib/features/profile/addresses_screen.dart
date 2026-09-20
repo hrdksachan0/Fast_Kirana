@@ -6,6 +6,7 @@ import '../../data/models/address.dart';
 import '../../providers/address_provider.dart';
 import '../../widgets/brand_card.dart';
 import '../../widgets/brand_button.dart';
+import '../../widgets/app_confirmation_dialog.dart';
 
 class AddressesScreen extends ConsumerWidget {
   const AddressesScreen({super.key});
@@ -155,16 +156,12 @@ class AddressesScreen extends ConsumerWidget {
               const SizedBox(width: 8),
               OutlinedButton(
                 onPressed: () async {
-                  final confirmed = await showDialog<bool>(
+                  final confirmed = await AppConfirmationDialog.showDestructive(
                     context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Delete this address?'),
-                      content: const Text('This action cannot be undone.'),
-                      actions: [
-                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
-                      ],
-                    ),
+                    title: 'Delete Address?',
+                    message: 'Are you sure you want to remove "${addr.label}"? This action cannot be undone.',
+                    confirmLabel: 'Delete',
+                    icon: Icons.delete_outline_rounded,
                   );
                   if (confirmed == true) {
                     try {

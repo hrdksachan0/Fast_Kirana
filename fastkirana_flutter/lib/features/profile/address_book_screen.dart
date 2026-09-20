@@ -3,12 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
-import '../../core/theme/responsive.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../data/models/address.dart';
 import '../../providers/address_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../location/map_picker_screen.dart';
+import '../../widgets/app_confirmation_dialog.dart';
 
 class AddressBookScreen extends ConsumerStatefulWidget {
   const AddressBookScreen({super.key});
@@ -220,7 +220,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                       ref.read(addressesProvider.notifier).loadAddresses();
                                     }
                                   } else if (val == 'delete') {
-                                    _confirmDeleteAddress(context, addr);
+                                    _confirmDeleteAddress(addr);
                                   } else if (val == 'select') {
                                     ref.read(selectedAddressProvider.notifier).state = addr;
                                   }
@@ -380,40 +380,30 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
     );
   }
 
-  void _confirmDeleteAddress(BuildContext context, Address addr) {
-    showDialog(
+  void _confirmDeleteAddress(Address addr) async {
+    final confirmed = await AppConfirmationDialog.showDestructive(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Delete Address?', style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
-        content: Text('Are you sure you want to remove "${addr.label}" from your saved addresses?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppDesignSystem.danger),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              try {
-                await ref.read(addressesProvider.notifier).deleteAddress(addr.id);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Address deleted successfully')),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
-                  );
-                }
-              }
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+      title: 'Delete Address?',
+      message: 'Are you sure you want to remove "${addr.label}" from your saved addresses?',
+      confirmLabel: 'Delete',
+      icon: Icons.delete_outline_rounded,
     );
+
+    if (confirmed == true && mounted) {
+      try {
+        await ref.read(addressesProvider.notifier).deleteAddress(addr.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Address deleted successfully')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+          );
+        }
+      }
+    }
   }
 }

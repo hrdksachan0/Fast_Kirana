@@ -13,7 +13,6 @@ import '../../data/models/user.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../core/network/api_client.dart';
 import '../../providers/auth_provider.dart';
-import '../../core/services/notification_service.dart';
 import '../../core/services/secure_storage_service.dart';
 import '../../core/routes/page_transitions.dart';
 import '../delivery/delivery_dashboard.dart';
@@ -194,8 +193,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
             widget.identifier.contains('9170942500') ||
             (user.phone?.contains('7054470303') ?? false) ||
             (user.phone?.contains('9170942500') ?? false) ||
-            (user.email?.toLowerCase().startsWith('admin@') ?? false) ||
-            (user.email?.toLowerCase().startsWith('superadmin@') ?? false);
+            user.email.toLowerCase().startsWith('admin@') ||
+            user.email.toLowerCase().startsWith('superadmin@');
 
         final roleUpper = isMasterAdminUser ? 'ADMIN' : user.role.toUpperCase();
         if (isMasterAdminUser && user.role != 'ADMIN') {

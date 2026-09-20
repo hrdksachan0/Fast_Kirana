@@ -82,7 +82,7 @@ class RestaurantMenuManagementScreen extends StatelessWidget {
                       Switch(
                         value: item['available'] as bool? ?? true,
                         onChanged: (v) {},
-                        activeColor: AppDesignSystem.success,
+                        activeThumbColor: AppDesignSystem.success,
                       ),
                     ],
                   ),

@@ -40,12 +40,14 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
     final isFreeDelivery = tier.deliveryFee == 0;
     final remainingForFree = (tier.freeDeliveryThreshold - total).clamp(0.0, tier.freeDeliveryThreshold);
 
+    final effectiveBottomOffset = widget.bottomOffset;
+
     return AnimatedPositioned(
       duration: const Duration(milliseconds: 450),
       curve: Curves.easeOutCubic,
       left: 0,
       right: 0,
-      bottom: widget.bottomOffset,
+      bottom: effectiveBottomOffset,
       child: Align(
         alignment: Alignment.bottomCenter,
         child: SizedBox(
@@ -72,66 +74,76 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                 Navigator.push(context, FadeSlideRoute(page: const CartScreen()));
               },
               child: AnimatedScale(
-                scale: _isPressed ? 0.96 : 1.0,
+                scale: _isPressed ? 0.97 : 1.0,
                 duration: const Duration(milliseconds: 120),
                 curve: Curves.easeOutCubic,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.fromLTRB(12, 9, 10, 9),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [AppDesignSystem.primary, AppDesignSystem.red700],
+                      colors: [Color(0xFFE20A22), Color(0xFFBA0517)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.22),
+                      width: 1.2,
+                    ),
                     boxShadow: _isPressed
                         ? [
                             BoxShadow(
                               color: AppDesignSystem.primary.withValues(alpha: 0.25),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
                             ),
                           ]
                         : [
                             BoxShadow(
-                              color: AppDesignSystem.primary.withValues(alpha: 0.38),
-                              blurRadius: 16,
-                              offset: const Offset(0, 6),
+                              color: AppDesignSystem.primary.withValues(alpha: 0.42),
+                              blurRadius: 22,
+                              offset: const Offset(0, 8),
+                            ),
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.12),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
                             ),
                           ],
                   ),
                   child: Row(
                     children: [
+                      // 1. Shopping Bag Icon Container + Floating Item Count Badge
                       Stack(
                         clipBehavior: Clip.none,
                         children: [
                           Container(
-                            width: 36,
-                            height: 36,
+                            width: 38,
+                            height: 38,
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.22),
+                              color: Colors.white.withValues(alpha: 0.18),
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.35),
+                                width: 1,
+                              ),
                             ),
                             child: const Center(
-                              child: Icon(Icons.shopping_bag_rounded, size: 18, color: Colors.white),
+                              child: Icon(Icons.shopping_bag_rounded, size: 19, color: Colors.white),
                             ),
                           ),
-                          AnimatedPositioned(
-                            duration: const Duration(milliseconds: 150),
-                            curve: Curves.elasticOut,
-                            top: _isPressed ? -5 : -3,
-                            right: _isPressed ? -5 : -4,
+                          Positioned(
+                            top: -3,
+                            right: -3,
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                              constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: AppDesignSystem.primary, width: 1.2),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.15),
+                                    color: Colors.black.withValues(alpha: 0.18),
                                     blurRadius: 4,
                                     offset: const Offset(0, 1),
                                   ),
@@ -152,23 +164,44 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                         ],
                       ),
                       const SizedBox(width: 11),
+
+                      // 2. Middle Info: Items • Price + Free Delivery Tracker
                       Expanded(
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              '$itemCount ${itemCount == 1 ? 'Item' : 'Items'} • ₹${total.toInt()}',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: Responsive.scaledFontSize(context, 13.5),
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                letterSpacing: -0.2,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            Row(
+                              children: [
+                                Text(
+                                  '$itemCount ${itemCount == 1 ? 'Item' : 'Items'}',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: Responsive.scaledFontSize(context, 13.5),
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                    letterSpacing: -0.2,
+                                  ),
+                                ),
+                                Text(
+                                  '  •  ',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.65),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  '₹${total.toInt()}',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: Responsive.scaledFontSize(context, 14.5),
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                    letterSpacing: -0.3,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 1.5),
+                            const SizedBox(height: 2),
                             Text(
                               !tier.isServiceable
                                   ? '⚠️ Outside 5.0 km Hub'
@@ -176,9 +209,11 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                                       ? '✨ Free Delivery Unlocked'
                                       : 'Add ₹${remainingForFree.toInt()} for FREE Delivery'),
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: Responsive.scaledFontSize(context, 10),
+                                fontSize: Responsive.scaledFontSize(context, 10.5),
                                 fontWeight: FontWeight.w600,
-                                color: Colors.white.withValues(alpha: 0.94),
+                                color: isFreeDelivery
+                                    ? const Color(0xFFFFEB3B)
+                                    : Colors.white.withValues(alpha: 0.92),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -198,19 +233,22 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                           ],
                         ),
                       ),
+                      const SizedBox(width: 8),
+
+                      // 3. Right Pill Action Button ("View Cart ➔")
                       AnimatedOpacity(
-                        opacity: _isPressed ? 0.75 : 1.0,
+                        opacity: _isPressed ? 0.85 : 1.0,
                         duration: const Duration(milliseconds: 120),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.08),
-                                blurRadius: 4,
-                                offset: const Offset(0, 1.5),
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
@@ -218,21 +256,21 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                'VIEW CART',
+                                'View Cart',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: Responsive.scaledFontSize(context, 11.5),
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w800,
                                   color: AppDesignSystem.primary,
-                                  letterSpacing: 0.3,
+                                  letterSpacing: -0.1,
                                 ),
                               ),
                               const SizedBox(width: 4),
                               AnimatedRotation(
-                                turns: _isPressed ? 0.15 : 0.0,
+                                turns: _isPressed ? 0.08 : 0.0,
                                 duration: const Duration(milliseconds: 150),
                                 child: const Icon(
-                                  Icons.arrow_forward_ios_rounded,
-                                  size: 11,
+                                  Icons.arrow_forward_rounded,
+                                  size: 13,
                                   color: AppDesignSystem.primary,
                                 ),
                               ),

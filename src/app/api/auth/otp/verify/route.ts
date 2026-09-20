@@ -95,11 +95,16 @@ export async function POST(request: NextRequest) {
       if (phoneDigits === '9696678006') {
         candidateEmails.add('admin.hub-224122@fastkirana.in')
       }
+      if (phoneDigits === '8565935405') {
+        candidateEmails.add('picker@fastkirana.com')
+      }
 
       const canonicalUser = matchingUsers.find(u =>
         (phoneDigits === '9170942500' && u.email === 'superadmin@fastkirana.com') ||
         (phoneDigits === '7054470303' && u.email === 'admin@fastkirana.com') ||
         (phoneDigits === '9696678006' && u.email === 'admin.hub-224122@fastkirana.in') ||
+        (phoneDigits === '8565935405' && u.email === 'picker@fastkirana.com') ||
+        u.role === 'PICKER' ||
         u.role === 'RESTAURANT_OWNER' ||
         u.role === 'CHEF' ||
         u.role === 'ADMIN' ||

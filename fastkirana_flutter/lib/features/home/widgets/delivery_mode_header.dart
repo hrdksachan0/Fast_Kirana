@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import '../../../core/theme/design_system.dart';
-import '../../../widgets/brand_logo.dart';
 
 /// Clean, Modular Top Header for FastKirana Home
 /// Handles: Location & Darkstore indicator, Animated Search Bar, and Grocery 🛒 vs Cafe ☕ Segmented Switcher.
@@ -269,7 +268,7 @@ class DeliveryModeHeader extends StatelessWidget {
                     onTap: onVoiceSearchTap,
                     child: Container(
                       padding: const EdgeInsets.all(5),
-                      child: Icon(
+                      child: const Icon(
                         Icons.mic_none_rounded,
                         color: AppDesignSystem.slate500,
                         size: 20,

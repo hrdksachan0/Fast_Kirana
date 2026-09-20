@@ -406,7 +406,7 @@ class _RestaurantMenuCatalogTabState extends State<RestaurantMenuCatalogTab> {
                           // Availability Switch
                           Switch.adaptive(
                             value: isAvailable,
-                            activeColor: brandGreen,
+                            activeThumbColor: brandGreen,
                             activeTrackColor: AppDesignSystem.emerald200,
                             inactiveTrackColor: AppDesignSystem.slate200,
                             onChanged: (_) => widget.onToggleAvailability(item),

@@ -38,10 +38,6 @@ class RiderCartPreviewWidget extends StatelessWidget {
       (sum, it) => sum + ((it['quantity'] as num?)?.toInt() ?? 1),
     );
 
-    const maxThumbs = 4;
-    final displayItems = items.take(maxThumbs).toList();
-    final remainingCount = items.length > maxThumbs ? items.length - maxThumbs : 0;
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -162,129 +158,144 @@ class RiderCartPreviewWidget extends StatelessWidget {
                 showRiderCartModal(context, order);
               }
             },
-            child: Row(
-              children: [
-                ...displayItems.map((item) {
-                  final rawImg = item['imageUrl'] ?? item['image'];
-                  final imgUrl = Helpers.getImageUrl(rawImg?.toString());
-                  final qty = item['quantity'] ?? 1;
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Reserve space for "Photo View >" (approx 80px)
+                final availableForThumbs = constraints.maxWidth - 82;
+                final thumbSize = constraints.maxWidth < 360 ? 44.0 : 48.0;
+                final thumbGap = constraints.maxWidth < 360 ? 6.0 : 7.0;
+                final maxPossible = math.max(2, ((availableForThumbs + thumbGap) / (thumbSize + thumbGap)).floor().clamp(2, 4));
 
-                  return Container(
-                    width: 50,
-                    height: 50,
-                    margin: const EdgeInsets.only(right: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppDesignSystem.slate200),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
+                final bool hasOverflow = items.length > maxPossible;
+                final displayCount = hasOverflow ? (maxPossible - 1) : items.length.clamp(0, maxPossible);
+                final displayItems = items.take(displayCount).toList();
+                final remainingCount = items.length - displayCount;
+
+                return Row(
+                  children: [
+                    ...displayItems.map((item) {
+                      final rawImg = item['imageUrl'] ?? item['image'];
+                      final imgUrl = Helpers.getImageUrl(rawImg?.toString());
+                      final qty = item['quantity'] ?? 1;
+
+                      return Container(
+                        width: thumbSize,
+                        height: thumbSize,
+                        margin: EdgeInsets.only(right: thumbGap),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppDesignSystem.slate200),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(11),
-                          child: Center(
-                            child: imgUrl.isNotEmpty
-                                ? CachedNetworkImage(
-                                    imageUrl: imgUrl,
-                                    width: 44,
-                                    height: 44,
-                                    fit: BoxFit.contain,
-                                    placeholder: (_, __) => const Center(
-                                      child: SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(11),
+                              child: Center(
+                                child: imgUrl.isNotEmpty
+                                    ? CachedNetworkImage(
+                                        imageUrl: imgUrl,
+                                        width: thumbSize - 6,
+                                        height: thumbSize - 6,
+                                        fit: BoxFit.contain,
+                                        placeholder: (_, __) => const Center(
+                                          child: SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(strokeWidth: 2),
+                                          ),
+                                        ),
+                                        errorWidget: (_, __, ___) => const Icon(
+                                          Icons.fastfood_outlined,
+                                          size: 20,
+                                          color: AppDesignSystem.slate400,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.fastfood_outlined,
+                                        size: 20,
+                                        color: AppDesignSystem.slate400,
                                       ),
-                                    ),
-                                    errorWidget: (_, __, ___) => const Icon(
-                                      Icons.fastfood_outlined,
-                                      size: 22,
-                                      color: AppDesignSystem.slate400,
-                                    ),
-                                  )
-                                : const Icon(
-                                    Icons.fastfood_outlined,
-                                    size: 22,
-                                    color: AppDesignSystem.slate400,
-                                  ),
-                          ),
-                        ),
-                        if (qty is num && qty > 1)
-                          Positioned(
-                            top: 2,
-                            right: 2,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: AppDesignSystem.slate900,
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                              child: Text(
-                                '${qty}x',
-                                style: GoogleFonts.inter(
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                ),
                               ),
                             ),
-                          ),
-                      ],
-                    ),
-                  );
-                }),
+                            if (qty is num && qty > 1)
+                              Positioned(
+                                top: 2,
+                                right: 2,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: AppDesignSystem.slate900,
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
+                                  child: Text(
+                                    '${qty}x',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    }),
 
-                if (remainingCount > 0)
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: AppDesignSystem.slate100,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppDesignSystem.slate300, style: BorderStyle.solid),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '+$remainingCount',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 12),
-                          fontWeight: FontWeight.w900,
-                          color: AppDesignSystem.slate700,
+                    if (remainingCount > 0)
+                      Container(
+                        width: thumbSize,
+                        height: thumbSize,
+                        decoration: BoxDecoration(
+                          color: AppDesignSystem.slate100,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppDesignSystem.slate300, style: BorderStyle.solid),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '+$remainingCount',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 11.5),
+                              fontWeight: FontWeight.w900,
+                              color: AppDesignSystem.slate700,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
 
-                const Spacer(),
+                    const Spacer(),
 
-                // Tap Prompt
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Photo View',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 10.5),
-                        fontWeight: FontWeight.w700,
-                        color: AppDesignSystem.slate500,
-                      ),
-                    ),
-                    const SizedBox(width: 2),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      size: 16,
-                      color: AppDesignSystem.slate400,
+                    // Tap Prompt
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Photo View',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 10.5),
+                            fontWeight: FontWeight.w700,
+                            color: AppDesignSystem.slate500,
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          size: 16,
+                          color: AppDesignSystem.slate400,
+                        ),
+                      ],
                     ),
                   ],
-                ),
-              ],
+                );
+              },
             ),
           ),
         ],

@@ -22,7 +22,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:confetti/confetti.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
-import '../../core/theme/responsive.dart';
+import '../../core/theme/design_system.dart';
 import '../../core/config/app_config.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/supabase_service.dart';
@@ -40,6 +40,7 @@ import 'widgets/tracking_receipt_card.dart';
 import 'widgets/tracking_preparing_card.dart';
 import 'widgets/tracking_cancel_card.dart';
 import 'widgets/tracking_review_card.dart';
+import '../../widgets/app_confirmation_dialog.dart';
 
 class OrderTrackingScreen extends ConsumerStatefulWidget {
   final String orderId;
@@ -79,7 +80,6 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   BitmapDescriptor? _restaurantMarkerIcon;
   BitmapDescriptor? _riderMarkerIcon;
   BitmapDescriptor? _customerMarkerIcon;
-  BitmapDescriptor? _pulseRiderMarkerIcon;
 
   // Subscriptions & Timers
   final List<RealtimeChannel> _supabaseChannels = [];
@@ -102,11 +102,6 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   double _startRiderHeading = 0.0;
   double _targetRiderHeading = 0.0;
 
-  // Live Pulse Animation along Polyline (OUT_FOR_DELIVERY)
-  late AnimationController _pulseAnimController;
-  LatLng? _pulseRiderPosition;
-  double _pulseRiderHeading = 0.0;
-
   // Confetti for Delivery Celebration
   late ConfettiController _confettiController;
 
@@ -118,7 +113,6 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   static const Color brandGreen = Color(0xFF00A344);
   static const Color slateDark = Color(0xFF0F172A);
   static const Color slateMuted = Color(0xFF64748B);
-  static const Color slateBorder = Color(0xFFE2E8F0);
 
   @override
   void initState() {
@@ -132,17 +126,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     _confettiController = ConfettiController(duration: const Duration(seconds: 4));
     _riderAnimController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1500),
     )..addListener(_interpolateRiderMarker);
-
-    _pulseAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 8),
-    )..addListener(_interpolatePolylinePulse);
-
-    if (widget.initialOrder?.status == OrderStatus.shipped) {
-      _pulseAnimController.repeat();
-    }
 
     _initCustomMarkers();
     _checkAndRequestLocationPermission();
@@ -150,9 +135,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     _fetchLiveOrder();
     _initSupabaseRealtime();
 
-    // Fallback polling every 25 seconds to back up Supabase Realtime WebSocket
-    _pollTimer = Timer.periodic(const Duration(seconds: 25), (_) {
-      _silentPollOrder();
+    // Zero-load fallback polling: 6s during active delivery to back up WebSockets, 25s otherwise
+    _pollTimer = Timer.periodic(const Duration(seconds: 6), (_) {
+      if (_order?.status == OrderStatus.shipped || _order?.status == OrderStatus.packed) {
+        _silentPollOrder();
+      }
     });
   }
 
@@ -171,7 +158,6 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     _etaUpdateTimer?.cancel();
     _sseLineSubscription?.cancel();
     _riderAnimController.dispose();
-    _pulseAnimController.dispose();
     _confettiController.dispose();
     _mapController?.dispose();
     _razorpay?.clear();
@@ -227,36 +213,56 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     setState(() => _isProcessingPayment = true);
     try {
       final dio = ref.read(dioProvider);
-      await dio.post('/api/payment/cashfree/verify', data: {
+      final verifyRes = await dio.post('/api/payment/cashfree/verify', data: {
         'orderId': widget.orderId,
         'cfOrderId': cfOrderId,
       });
-      await _fetchLiveOrder();
-      if (mounted) {
-        setState(() => _isProcessingPayment = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: brandGreen,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '🎉 Payment Received! Order #${_order?.readableId ?? widget.orderId} is now PAID.',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
-                  ),
+      if (verifyRes.statusCode == 200 && verifyRes.data != null) {
+        final data = verifyRes.data;
+        if (data['isPaid'] == true || data['paymentStatus'] == 'PAID') {
+          await _fetchLiveOrder();
+          if (mounted) {
+            setState(() => _isProcessingPayment = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: brandGreen,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '🎉 Payment Received! Order #${_order?.readableId ?? widget.orderId} is now PAID.',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        );
+              ),
+            );
+          }
+          return;
+        }
       }
     } catch (e) {
       debugPrint('Error updating paid status from Cashfree: $e');
-      if (mounted) setState(() => _isProcessingPayment = false);
+    }
+
+    if (mounted) {
+      setState(() => _isProcessingPayment = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppDesignSystem.warning,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          content: Text(
+            'Payment was cancelled or could not be verified. Please retry or pay Cash on Delivery.',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
+          ),
+        ),
+      );
     }
   }
 
@@ -544,13 +550,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       final ch = SupabaseService.subscribeToOrderLocation(
         orderId: key,
         onLocationUpdate: (locationData) {
-          if (!mounted) return;
-          final lat = locationData['lat'] as double?;
-          final lng = locationData['lng'] as double?;
-          final heading = (locationData['heading'] as num?)?.toDouble() ?? 0.0;
+          final lat = (locationData['lat'] ?? locationData['latitude']) as num?;
+          final lng = (locationData['lng'] ?? locationData['longitude']) as num?;
+          final heading = ((locationData['heading'] ?? locationData['bearing']) as num?)?.toDouble() ?? 0.0;
 
-          if (lat != null && lng != null) {
-            _updateRiderLocation(LatLng(lat, lng), heading);
+          if (lat != null && lng != null && lat != 0.0 && lng != 0.0) {
+            _updateRiderLocation(LatLng(lat.toDouble(), lng.toDouble()), heading);
           }
         },
         onStatusUpdate: (newStatusStr) {
@@ -663,129 +668,39 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     final displayNum = _order?.displayId ?? (_order?.readableId ?? widget.orderId);
     final cleanDisplayId = '#${displayNum.replaceAll('#', '').replaceAll('FK-', '').trim()}';
 
-    final shouldCancel = await showDialog<bool>(
+    final shouldCancel = await AppConfirmationDialog.showDestructive(
       context: context,
-      barrierDismissible: true,
-      builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        backgroundColor: Colors.white,
-        elevation: 16,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEE2E2),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFFECACA), width: 1.5),
-                ),
-                child: const Center(
-                  child: Icon(Icons.cancel_outlined, size: 28, color: primaryRed),
-                ),
+      title: 'Cancel Order?',
+      message: 'Are you sure you want to cancel $cleanDisplayId? This action cannot be undone.',
+      confirmLabel: 'Yes, Cancel',
+      icon: Icons.cancel_outlined,
+      contentWidget: isPaid
+          ? Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFBBF7D0)),
               ),
-              const SizedBox(height: 16),
-              Text(
-                'Cancel Order?',
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 18),
-                  fontWeight: FontWeight.w900,
-                  color: slateDark,
-                  letterSpacing: -0.3,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Are you sure you want to cancel $cleanDisplayId? This action cannot be undone.',
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 13),
-                  fontWeight: FontWeight.w500,
-                  color: slateMuted,
-                  height: 1.35,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              if (isPaid) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0FDF4),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFBBF7D0)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.currency_rupee_rounded, size: 18, color: brandGreen),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '₹${totalAmount.toStringAsFixed(0)} will be refunded back to your original payment method within 2-4 business days.',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 11),
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF166534),
-                            height: 1.25,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-              const SizedBox(height: 22),
-              Row(
+              child: Row(
                 children: [
+                  const Icon(Icons.currency_rupee_rounded, size: 18, color: brandGreen),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        side: const BorderSide(color: slateBorder, width: 1.2),
-                      ),
-                      onPressed: () => Navigator.of(ctx).pop(false),
-                      child: Text(
-                        'Keep Order',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 13),
-                          fontWeight: FontWeight.w700,
-                          color: slateDark,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryRed,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: () => Navigator.of(ctx).pop(true),
-                      child: Text(
-                        'Yes, Cancel',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 13),
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
+                    child: Text(
+                      '₹${totalAmount.toStringAsFixed(0)} will be refunded back to your original payment method within 2-4 business days.',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 11),
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF166534),
+                        height: 1.25,
                       ),
                     ),
                   ),
                 ],
               ),
-            ],
-          ),
-        ),
-      ),
+            )
+          : null,
     );
 
     if (shouldCancel != true) return;
@@ -857,102 +772,13 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   Future<void> _confirmAndSwitchToCOD() async {
     HapticFeedback.lightImpact();
     final grandTotal = _order?.total ?? 0.0;
+    final displayNum = _order?.displayId ?? (_order?.readableId ?? widget.orderId);
 
-    final shouldSwitch = await showDialog<bool>(
+    final shouldSwitch = await AppConfirmationDialog.showCODConversion(
       context: context,
-      barrierDismissible: true,
-      builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        backgroundColor: Colors.white,
-        elevation: 16,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDCFCE7),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFBBF7D0), width: 1.5),
-                ),
-                child: const Center(
-                  child: Icon(Icons.local_atm_rounded, size: 28, color: brandGreen),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Switch to Cash on Delivery?',
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 17),
-                  fontWeight: FontWeight.w900,
-                  color: slateDark,
-                  letterSpacing: -0.3,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'You can pay ₹${grandTotal.toInt()} in cash or via UPI to the delivery rider when your order arrives at your door.',
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 13),
-                  fontWeight: FontWeight.w500,
-                  color: slateMuted,
-                  height: 1.35,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 22),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        side: const BorderSide(color: slateBorder, width: 1.2),
-                      ),
-                      onPressed: () => Navigator.of(ctx).pop(false),
-                      child: Text(
-                        'Keep Online',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 13),
-                          fontWeight: FontWeight.w700,
-                          color: slateDark,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: brandGreen,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: () => Navigator.of(ctx).pop(true),
-                      child: Text(
-                        'Confirm COD',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 13),
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+      displayId: displayNum,
+      totalAmount: grandTotal,
+      queueMessage: 'Pay with cash or rider QR/UPI upon doorstep delivery',
     );
 
     if (shouldSwitch != true) return;
@@ -1098,19 +924,6 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
     _refreshMapElements();
     _calculateETA();
-    _checkPulseAnimationState();
-  }
-
-  void _checkPulseAnimationState() {
-    if (_order?.status == OrderStatus.shipped) {
-      if (!_pulseAnimController.isAnimating) {
-        _pulseAnimController.repeat();
-      }
-    } else {
-      if (_pulseAnimController.isAnimating) {
-        _pulseAnimController.stop();
-      }
-    }
   }
 
   /// Calculate bearing between two geographic coordinates (degrees 0-360)
@@ -1208,6 +1021,9 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
     setState(() {});
 
+    // Dynamic route truncation behind rider (100% on device, 0 API calls)
+    _trimPolylineBehindRider(_riderPosition!);
+
     // Throttle camera follow to every 1.5 seconds to avoid jank
     final now = DateTime.now();
     if (_lastCameraFollowTime == null || now.difference(_lastCameraFollowTime!).inMilliseconds > 1500) {
@@ -1221,71 +1037,51 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
   }
 
-  /// Live rider pulse movement along polyline coordinates during OUT_FOR_DELIVERY
-  void _interpolatePolylinePulse() {
-    if (!mounted || _order?.status != OrderStatus.shipped) return;
+  /// Truncates the route polyline ahead of the rider using local Haversine geometry.
+  /// Zero external API calls, pure device math like Blinkit/Swiggy.
+  void _trimPolylineBehindRider(LatLng riderPos) {
+    if (_roadPolylinePoints.length < 2) return;
 
-    final points = _roadPolylinePoints.length >= 2
-        ? _roadPolylinePoints
-        : (((_riderPosition ?? _storePosition) != null && _customerPosition != null)
-            ? [(_riderPosition ?? _storePosition)!, _customerPosition!]
-            : null);
+    // Find the closest point index on the polyline to the current rider position
+    int closestIdx = 0;
+    double minDistance = double.infinity;
 
-    if (points == null || points.length < 2) return;
-
-    // Calculate cumulative segment distances using Haversine
-    double totalDistance = 0.0;
-    final distances = <double>[];
-    for (int i = 0; i < points.length - 1; i++) {
-      final d = _getHaversineDistance(points[i], points[i + 1]);
-      distances.add(d);
-      totalDistance += d;
-    }
-
-    if (totalDistance <= 0.0001) return;
-
-    final targetDist = _pulseAnimController.value * totalDistance;
-    double accumulated = 0.0;
-    LatLng currentPos = points.first;
-    double currentHeading = 0.0;
-
-    for (int i = 0; i < distances.length; i++) {
-      final segDist = distances[i];
-      if (accumulated + segDist >= targetDist || i == distances.length - 1) {
-        final segProgress = segDist > 0 ? (targetDist - accumulated) / segDist : 0.0;
-        final p1 = points[i];
-        final p2 = points[i + 1];
-
-        final lat = p1.latitude + (p2.latitude - p1.latitude) * segProgress;
-        final lng = p1.longitude + (p2.longitude - p1.longitude) * segProgress;
-        currentPos = LatLng(lat, lng);
-        currentHeading = _calculateBearing(p1.latitude, p1.longitude, p2.latitude, p2.longitude);
-        break;
+    for (int i = 0; i < _roadPolylinePoints.length; i++) {
+      final d = _getHaversineDistance(riderPos, _roadPolylinePoints[i]);
+      if (d < minDistance) {
+        minDistance = d;
+        closestIdx = i;
       }
-      accumulated += segDist;
     }
 
-    _pulseRiderPosition = currentPos;
-    _pulseRiderHeading = currentHeading;
-
-    _markers.removeWhere((m) => m.markerId.value == 'pulse_rider');
-    final icon = _pulseRiderMarkerIcon ?? _riderMarkerIcon;
-    if (icon != null) {
-      _markers.add(Marker(
-        markerId: const MarkerId('pulse_rider'),
-        position: _pulseRiderPosition!,
-        icon: icon,
-        anchor: const Offset(0.5, 0.5),
-        rotation: _pulseRiderHeading,
-        flat: true,
-        zIndexInt: 12,
-        infoWindow: const InfoWindow(
-          title: '🛵 Out for Delivery',
-          snippet: 'Live Delivery Partner en route',
+    // Only truncate if rider is within reasonable road tolerance (< 150 meters)
+    if (minDistance < 0.15 && closestIdx < _roadPolylinePoints.length - 1) {
+      final remainingPoints = <LatLng>[riderPos, ..._roadPolylinePoints.sublist(closestIdx + 1)];
+      _polylines.removeWhere((p) => p.polylineId.value == 'delivery_route' || p.polylineId.value == 'delivery_route_shadow');
+      _polylines.add(
+        Polyline(
+          polylineId: const PolylineId('delivery_route'),
+          points: remainingPoints,
+          color: const Color(0xFF3B82F6),
+          width: 4,
+          jointType: JointType.round,
+          startCap: Cap.roundCap,
+          endCap: Cap.roundCap,
+          patterns: [PatternItem.dash(12), PatternItem.gap(8)],
         ),
-      ));
+      );
+      _polylines.add(
+        Polyline(
+          polylineId: const PolylineId('delivery_route_shadow'),
+          points: remainingPoints,
+          color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+          width: 8,
+          jointType: JointType.round,
+          startCap: Cap.roundCap,
+          endCap: Cap.roundCap,
+        ),
+      );
     }
-    setState(() {});
   }
 
   /// Calculate distance & estimated arrival time using Haversine formula (Throttled, No excess API calls)
@@ -1304,25 +1100,6 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           _hasPlayedArrivalChime = true;
           _playStatusChime();
           HapticFeedback.heavyImpact();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: brandGreen,
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 4),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              content: Row(
-                children: [
-                  const Text('🛵 ', style: TextStyle(fontSize: 18)),
-                  Expanded(
-                    child: Text(
-                      'Rider is arriving at your door!',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
         }
 
         // Distance-wise calculation: ~20 km/h average speed (3 mins per km) + exactly 1 min extra buffer
@@ -1363,7 +1140,6 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         color: const Color(0xFF7C3AED),
       );
       _riderMarkerIcon = await _createRiderMarkerBitmap();
-      _pulseRiderMarkerIcon = await _createPulseRiderMarkerBitmap();
       _customerMarkerIcon = await _createCustomMarkerBitmap(
         label: 'HOME',
         emoji: '🏠',
@@ -1377,114 +1153,54 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     } catch (e) { LoggerService.error("Bare catch", e); }
   }
 
-  /// Circular oriented rider marker optimized for smooth Google Maps rotation & heading
+  /// Circular oriented rider marker optimized for smooth Google Maps rotation & heading (Blinkit/Swiggy style)
   Future<BitmapDescriptor> _createRiderMarkerBitmap() async {
     final pictureRecorder = ui.PictureRecorder();
     final canvas = Canvas(pictureRecorder);
-    const size = 96.0;
-    const center = Offset(48, 48);
+    const size = 72.0;
+    const center = Offset(36, 36);
 
-    // 1. Soft glowing outer pulse shadow
-    final shadowPaint = Paint()
-      ..color = const Color(0xFFEA580C).withValues(alpha: 0.35)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
-    canvas.drawCircle(center, 38, shadowPaint);
+    // 1. Radiant emerald pulse glow
+    final glowPaint = Paint()
+      ..color = const Color(0xFF16A34A).withValues(alpha: 0.28)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    canvas.drawCircle(center, 30, glowPaint);
 
-    // 2. White Disc Fill
+    // 2. High-contrast White Disc Base
     final whitePaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, 34, whitePaint);
+    canvas.drawCircle(center, 24, whitePaint);
 
-    // 3. Vibrant Orange Border Ring
+    // 3. Crisp Forest/Emerald Border Ring
     final borderPaint = Paint()
-      ..color = const Color(0xFFEA580C)
-      ..strokeWidth = 3.5
+      ..color = const Color(0xFF15803D)
+      ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke;
-    canvas.drawCircle(center, 34, borderPaint);
+    canvas.drawCircle(center, 24, borderPaint);
 
-    // 4. Direction Arrow Indicator at top of circle (shows direction of travel)
+    // 4. Direction pointer chevron at top (pointing north/forward)
     final arrowPaint = Paint()
-      ..color = const Color(0xFFEA580C)
+      ..color = const Color(0xFF15803D)
       ..style = PaintingStyle.fill;
     final arrowPath = Path()
-      ..moveTo(48, 6)
-      ..lineTo(54, 16)
-      ..lineTo(42, 16)
+      ..moveTo(36, 4)
+      ..lineTo(42, 13)
+      ..lineTo(36, 10)
+      ..lineTo(30, 13)
       ..close();
     canvas.drawPath(arrowPath, arrowPaint);
 
-    // 5. Centered Bike Emoji
-    final emojiPainter = TextPainter(
-      text: TextSpan(
-        text: '🛵',
-        style: TextStyle(fontSize: Responsive.scaledFontSize(context, 26)),
-      ),
-      textDirection: TextDirection.ltr,
-      textAlign: TextAlign.center,
-    )..layout();
-    emojiPainter.paint(canvas, Offset(48 - emojiPainter.width / 2, 48 - emojiPainter.height / 2));
-
-    final picture = pictureRecorder.endRecording();
-    final img = await picture.toImage(size.toInt(), size.toInt());
-    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
-    return BitmapDescriptor.bytes(byteData!.buffer.asUint8List());
-  }
-
-  /// Concentric radiant pulse marker for active OUT_FOR_DELIVERY scooter
-  Future<BitmapDescriptor> _createPulseRiderMarkerBitmap() async {
-    final pictureRecorder = ui.PictureRecorder();
-    final canvas = Canvas(pictureRecorder);
-    const size = 110.0;
-    const center = Offset(55, 55);
-
-    // 1. Broad outer glowing pulse halo
-    final outerGlowPaint = Paint()
-      ..color = const Color(0xFF00A344).withValues(alpha: 0.28)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
-    canvas.drawCircle(center, 46, outerGlowPaint);
-
-    // 2. Secondary accent pulse ring
-    final ringPaint = Paint()
-      ..color = const Color(0xFF00A344).withValues(alpha: 0.6)
-      ..strokeWidth = 2.5
-      ..style = PaintingStyle.stroke;
-    canvas.drawCircle(center, 42, ringPaint);
-
-    // 3. Inner White Disc
-    final whitePaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, 34, whitePaint);
-
-    // 4. Primary Emerald Brand Ring
-    final borderPaint = Paint()
-      ..color = const Color(0xFF00A344)
-      ..strokeWidth = 3.5
-      ..style = PaintingStyle.stroke;
-    canvas.drawCircle(center, 34, borderPaint);
-
-    // 5. Direction pointer triangle
-    final arrowPaint = Paint()
-      ..color = const Color(0xFF00A344)
-      ..style = PaintingStyle.fill;
-    final arrowPath = Path()
-      ..moveTo(55, 12)
-      ..lineTo(62, 23)
-      ..lineTo(48, 23)
-      ..close();
-    canvas.drawPath(arrowPath, arrowPaint);
-
-    // 6. Centered Scooter Emoji
+    // 5. Centered Scooter Emoji
     final emojiPainter = TextPainter(
       text: const TextSpan(
         text: '🛵',
-        style: TextStyle(fontSize: 26),
+        style: TextStyle(fontSize: 21),
       ),
       textDirection: TextDirection.ltr,
       textAlign: TextAlign.center,
     )..layout();
-    emojiPainter.paint(canvas, Offset(55 - emojiPainter.width / 2, 55 - emojiPainter.height / 2));
+    emojiPainter.paint(canvas, Offset(36 - emojiPainter.width / 2, 36 - emojiPainter.height / 2));
 
     final picture = pictureRecorder.endRecording();
     final img = await picture.toImage(size.toInt(), size.toInt());
@@ -1499,76 +1215,50 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   }) async {
     final pictureRecorder = ui.PictureRecorder();
     final canvas = Canvas(pictureRecorder);
-    const width = 100.0;
-    const height = 110.0;
-    const center = Offset(50, 42);
+    const size = 72.0;
+    const center = Offset(36, 28);
 
     // 1. Soft Drop Shadow
     final shadowPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.22)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
-    canvas.drawCircle(center.translate(0, 4), 32, shadowPaint);
+      ..color = Colors.black.withValues(alpha: 0.18)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    canvas.drawCircle(center.translate(0, 3), 22, shadowPaint);
 
     // 2. White Disc Fill
     final whitePaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, 32, whitePaint);
+    canvas.drawCircle(center, 22, whitePaint);
 
-    // 3. Pointer Pin Triangle at bottom
+    // 3. Compact Pointer Pin at bottom
     final pinPath = Path()
-      ..moveTo(38, 64)
-      ..lineTo(62, 64)
-      ..lineTo(50, 84)
+      ..moveTo(29, 45)
+      ..lineTo(43, 45)
+      ..lineTo(36, 58)
       ..close();
     canvas.drawPath(pinPath, whitePaint);
 
-    // 4. Vibrant Colored Border Ring
+    // 4. Colored Border Ring
     final borderPaint = Paint()
       ..color = color
-      ..strokeWidth = 3.5
+      ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke;
-    canvas.drawCircle(center, 32, borderPaint);
+    canvas.drawCircle(center, 22, borderPaint);
     canvas.drawPath(pinPath, borderPaint);
 
-    // 5. Centered Large Emoji Icon
+    // 5. Centered Emoji Icon (compact)
     final emojiPainter = TextPainter(
       text: TextSpan(
         text: emoji,
-        style: TextStyle(fontSize: Responsive.scaledFontSize(context, 26)),
+        style: const TextStyle(fontSize: 20),
       ),
       textDirection: TextDirection.ltr,
       textAlign: TextAlign.center,
     )..layout();
-    emojiPainter.paint(canvas, Offset(50 - emojiPainter.width / 2, 42 - emojiPainter.height / 2));
-
-    // 6. Bottom Micro Label Pill
-    final labelBgPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-    final labelRRect = RRect.fromRectAndRadius(
-      const Rect.fromLTWH(18, 86, 64, 18),
-      const Radius.circular(9),
-    );
-    canvas.drawRRect(labelRRect, labelBgPaint);
-
-    final labelPainter = TextPainter(
-      text: TextSpan(
-        text: label,
-        style: TextStyle(
-          fontSize: Responsive.scaledFontSize(context, 9.5),
-          fontWeight: FontWeight.w900,
-          color: Colors.white,
-          letterSpacing: 0.6,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-      textAlign: TextAlign.center,
-    )..layout();
-    labelPainter.paint(canvas, Offset(50 - labelPainter.width / 2, 95 - labelPainter.height / 2));
+    emojiPainter.paint(canvas, Offset(36 - emojiPainter.width / 2, 28 - emojiPainter.height / 2));
 
     final picture = pictureRecorder.endRecording();
-    final img = await picture.toImage(width.toInt(), height.toInt());
+    final img = await picture.toImage(size.toInt(), (size + 2).toInt());
     final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
     return BitmapDescriptor.bytes(byteData!.buffer.asUint8List());
   }
@@ -1619,15 +1309,26 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                   Polyline(
                     polylineId: const PolylineId('delivery_route'),
                     points: _roadPolylinePoints,
-                    color: const Color(0xFF2563EB),
-                    width: 5,
+                    color: const Color(0xFF3B82F6),
+                    width: 4,
+                    jointType: JointType.round,
+                    startCap: Cap.roundCap,
+                    endCap: Cap.roundCap,
+                    patterns: [PatternItem.dash(12), PatternItem.gap(8)],
+                  ),
+                );
+                _polylines.add(
+                  Polyline(
+                    polylineId: const PolylineId('delivery_route_shadow'),
+                    points: _roadPolylinePoints,
+                    color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                    width: 8,
                     jointType: JointType.round,
                     startCap: Cap.roundCap,
                     endCap: Cap.roundCap,
                   ),
                 );
               });
-              _checkPulseAnimationState();
               _isFetchingRoute = false;
               return;
             }
@@ -1654,10 +1355,6 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
             position: _storePosition!,
             anchor: const Offset(0.5, 0.8),
             icon: _storeMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-            infoWindow: const InfoWindow(
-              title: '🛒 FastKirana Darkstore',
-              snippet: 'Grocery Fulfillment Hub',
-            ),
           ),
         );
       }
@@ -1668,17 +1365,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           position: _restaurantPosition!,
           anchor: const Offset(0.5, 0.8),
           icon: _restaurantMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
-          infoWindow: InfoWindow(
-            title: '🍽️ ${_restaurantOutlet?.name ?? "Restaurant Kitchen"}',
-            snippet: _restaurantOutlet?.address ?? 'Fresh Food Kitchen',
-          ),
         ),
       );
     } else if (_storePosition != null) {
       // Single Order: Darkstore OR Specific Restaurant (A.S. Restaurant, Wedson, etc.)
       final isRest = _primaryOutlet?.isRestaurant == true;
-      final outletName = _primaryOutlet?.name ?? (_order?.shopName ?? 'FastKirana Store');
-      final outletAddress = _primaryOutlet?.address ?? 'Pickup Location';
 
       markers.add(
         Marker(
@@ -1688,10 +1379,6 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           icon: isRest
               ? (_restaurantMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet))
               : (_storeMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)),
-          infoWindow: InfoWindow(
-            title: '${isRest ? "🍽️" : "🏪"} $outletName',
-            snippet: outletAddress,
-          ),
         ),
       );
     }
@@ -1704,53 +1391,31 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           position: _customerPosition!,
           anchor: const Offset(0.5, 0.8),
           icon: _customerMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-          infoWindow: InfoWindow(
-            title: 'Your Delivery Location',
-            snippet: _order?.address?.formattedAddress ?? 'Doorstep',
-          ),
         ),
       );
     }
 
-    // 3. Live Moving Rider Marker
-    if (_order?.status == OrderStatus.shipped && _pulseRiderPosition != null) {
-      markers.add(
-        Marker(
-          markerId: const MarkerId('pulse_rider'),
-          position: _pulseRiderPosition!,
-          icon: _pulseRiderMarkerIcon ?? _riderMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
-          rotation: _pulseRiderHeading,
-          flat: true,
-          anchor: const Offset(0.5, 0.5),
-          zIndexInt: 12,
-          infoWindow: const InfoWindow(
-            title: '🛵 Out for Delivery',
-            snippet: 'Live Delivery Partner en route',
-          ),
-        ),
-      );
-    } else if (_riderPosition != null && (_order?.status == OrderStatus.shipped || _order?.status == OrderStatus.packed)) {
+    // 3. Live Moving Rider Marker (Single marker, real-time GPS oriented)
+    if (_riderPosition != null && (_order?.status == OrderStatus.shipped || _order?.status == OrderStatus.packed)) {
       markers.add(
         Marker(
           markerId: const MarkerId('rider'),
           position: _riderPosition!,
-          icon: _riderMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+          icon: _riderMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
           rotation: _riderHeading,
           flat: true,
           anchor: const Offset(0.5, 0.5),
-          zIndexInt: 10,
-          infoWindow: const InfoWindow(
-            title: '🛵 Delivery Executive',
-            snippet: 'Live On the Way',
-          ),
+          zIndexInt: 15,
         ),
       );
     }
 
-    // 4. Trigger Turn-by-Turn Road-Wise Polyline Route
+    // 4. Trigger Turn-by-Turn Road-Wise Polyline Route (Zero-load: fetched once or on major deviation)
     final startPoint = _riderPosition ?? _storePosition;
     if (startPoint != null && _customerPosition != null) {
-      _fetchRoadRoute(startPoint, _customerPosition!);
+      if (_roadPolylinePoints.isEmpty) {
+        _fetchRoadRoute(startPoint, _customerPosition!);
+      }
       if (_roadPolylinePoints.length >= 2) {
         polylineCoords.addAll(_roadPolylinePoints);
       } else {
@@ -1761,12 +1426,26 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
     final polylines = <Polyline>{};
     if (polylineCoords.length >= 2) {
+      // Main route line
       polylines.add(
         Polyline(
           polylineId: const PolylineId('delivery_route'),
           points: polylineCoords,
-          color: const Color(0xFF2563EB),
-          width: 5,
+          color: const Color(0xFF3B82F6),
+          width: 4,
+          jointType: JointType.round,
+          startCap: Cap.roundCap,
+          endCap: Cap.roundCap,
+          patterns: [PatternItem.dash(12), PatternItem.gap(8)],
+        ),
+      );
+      // Subtle shadow line underneath
+      polylines.add(
+        Polyline(
+          polylineId: const PolylineId('delivery_route_shadow'),
+          points: polylineCoords,
+          color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+          width: 8,
           jointType: JointType.round,
           startCap: Cap.roundCap,
           endCap: Cap.roundCap,

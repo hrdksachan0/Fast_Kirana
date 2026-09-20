@@ -1,5 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { requireAdmin } from '@/lib/auth-guard'
 import { prisma } from '@/lib/prisma'
 import { fcmMessaging } from '@/lib/firebase-admin'
 
@@ -8,10 +7,9 @@ import { fcmMessaging } from '@/lib/firebase-admin'
  * Admin-only: broadcasts to all devices or targets a specific user/token.
  */
 export async function POST(request: NextRequest) {
-  const session = await auth()
-  if (!session?.user || session.user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized — Admin only' }, { status: 401 })
-  }
+  const adminResult = await requireAdmin(request)
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
   try {
     const body = await request.json()

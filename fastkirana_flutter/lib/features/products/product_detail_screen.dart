@@ -940,7 +940,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         final isFood = isRestaurantProduct(p);
                         final settings = ref.watch(storeSettingsProvider).valueOrNull;
                         final isGroceryOpen = settings?.groceryMartOpen ?? true;
-                        final isRestaurantOpen = p.restaurant?.isOpen != false;
+                        final isRestaurantOpen = RestaurantScheduleHelper.isProductRestaurantOpen(
+                          p,
+                          storeSettings: settings,
+                        );
                         final isStoreOpen = isFood ? isRestaurantOpen : isGroceryOpen;
 
                         final isOutOfStock = p.stock <= 0 || !p.isAvailable;

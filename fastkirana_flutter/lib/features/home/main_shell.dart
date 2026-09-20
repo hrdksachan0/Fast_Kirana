@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../core/services/logger_service.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -35,9 +34,6 @@ class MainShell extends ConsumerStatefulWidget {
 }
 
 class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserver {
-  bool _isBottomNavVisible = true;
-  Timer? _autoShowTimer;
-
   @override
   void initState() {
     super.initState();
@@ -89,38 +85,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
 
   @override
   void dispose() {
-    _autoShowTimer?.cancel();
     super.dispose();
-  }
-
-  void _onUserScroll(UserScrollNotification notification) {
-    if (notification.direction == ScrollDirection.reverse) {
-      // User scrolling DOWN -> Hide bottom nav bar
-      _autoShowTimer?.cancel();
-      if (_isBottomNavVisible) {
-        setState(() => _isBottomNavVisible = false);
-      }
-      // Re-appear automatically after 1 second of pausing/stopping
-      _autoShowTimer = Timer(const Duration(milliseconds: 1000), () {
-        if (mounted && !_isBottomNavVisible) {
-          setState(() => _isBottomNavVisible = true);
-        }
-      });
-    } else if (notification.direction == ScrollDirection.forward) {
-      // User scrolling UP -> Show bottom nav bar immediately
-      _autoShowTimer?.cancel();
-      if (!_isBottomNavVisible) {
-        setState(() => _isBottomNavVisible = true);
-      }
-    } else if (notification.direction == ScrollDirection.idle) {
-      // Idle -> Bring it back after 1 second
-      _autoShowTimer?.cancel();
-      _autoShowTimer = Timer(const Duration(milliseconds: 1000), () {
-        if (mounted && !_isBottomNavVisible) {
-          setState(() => _isBottomNavVisible = true);
-        }
-      });
-    }
   }
 
   DateTime? _lastBackPressTime;
@@ -174,13 +139,10 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
 
     final cart = ref.watch(cartProvider).valueOrNull;
     final cartCount = cart?.items.fold<int>(0, (s, item) => s + item.quantity) ?? 0;
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    final navBaseBottom = bottomPadding > 0 ? bottomPadding + 6 : 10.0;
-    const navHeight = 58.0;
-    final navTop = navBaseBottom + navHeight;
 
-    final cartBottomOffset = navTop + 6.0;
-    final trackingBottomOffset = cartCount > 0 ? (cartBottomOffset + 64.0) : cartBottomOffset;
+    final showCart = selectedIndex != 3 && cartCount > 0;
+    const cartBottomOffset = 10.0;
+    final trackingBottomOffset = showCart ? (cartBottomOffset + 76.0) : cartBottomOffset;
 
     return PopScope(
       canPop: false,
@@ -233,22 +195,13 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
               // Floating Order Tracking Pill (Stacked cleanly above Floating Cart)
               FloatingOrderTrackingBar(bottomOffset: trackingBottomOffset),
 
-              // Slim Modern Floating Sticky Cart Bar (Docked right above Bottom Navigation)
-              FloatingCartBar(bottomOffset: cartBottomOffset),
-
-              // Liquid Flow Glass Bottom Navigation (Always accessible, rock solid)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: navBaseBottom,
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: _buildLiquidBottomNav(context, ref, selectedIndex),
-                ),
-              ),
+              // Slim Modern Floating Sticky Cart Bar (Docked right above Bottom Navigation, hidden on Profile tab)
+              if (selectedIndex != 3)
+                const FloatingCartBar(bottomOffset: cartBottomOffset),
             ],
           ),
         ),
+        bottomNavigationBar: _buildLiquidBottomNav(context, ref, selectedIndex),
       ),
     );
   }
@@ -278,97 +231,101 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
     ];
 
     final screenWidth = MediaQuery.of(context).size.width;
-    final navWidth = (screenWidth * 0.92).clamp(320.0, 420.0);
-    final tabWidth = (navWidth - 12) / 4;
+    final navWidth = screenWidth.clamp(280.0, Responsive.wideMaxContentWidth);
+    final tabWidth = navWidth / 4;
 
     return Container(
-      width: navWidth,
-      height: 58,
+      width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: AppDesignSystem.slate200),
+        color: Colors.white,
+        border: const Border(
+          top: BorderSide(color: Color(0xFFF1F5F9), width: 1.2),
+        ),
         boxShadow: [
           BoxShadow(
-            color: AppDesignSystem.slate900.withValues(alpha: 0.08),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, -3),
           ),
         ],
       ),
-      child: Stack(
-            alignment: Alignment.centerLeft,
-            children: [
-              // Liquid Water Droplet Active Indicator
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOutBack,
-                left: 6 + (selectedIndex * tabWidth),
-                top: 8,
-                child: Container(
-                  width: tabWidth,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: AppDesignSystem.statusCancelled,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: AppDesignSystem.rose200),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppDesignSystem.red600.withValues(alpha: 0.06),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Interactive Tabs Row
-              Row(
-                children: List.generate(navItems.length, (index) {
-                  final isSelected = selectedIndex == index;
-                  final item = navItems[index];
-
-                  return Expanded(
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        ref.read(selectedTabProvider.notifier).state = index;
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            AnimatedScale(
-                              scale: isSelected ? 1.08 : 1.0,
-                              duration: const Duration(milliseconds: 200),
-                              child: Icon(
-                                (isSelected ? item['activeIcon'] : item['inactiveIcon']) as IconData,
-                                size: 21,
-                                color: isSelected ? AppDesignSystem.red600 : AppDesignSystem.slate400,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              item['label'] as String,
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 9.5),
-                                fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
-                                color: isSelected ? AppDesignSystem.red600 : AppDesignSystem.slate400,
-                                letterSpacing: -0.2,
-                              ),
-                            ),
-                          ],
-                        ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 56,
+          child: Center(
+            child: SizedBox(
+              width: navWidth,
+              child: Stack(
+                alignment: Alignment.centerLeft,
+                children: [
+                  // Active Tab Highlight Capsule
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 260),
+                    curve: Curves.easeOutCubic,
+                    left: (selectedIndex * tabWidth) + (tabWidth - 62) / 2,
+                    top: 6,
+                    child: Container(
+                      width: 62,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppDesignSystem.statusCancelled,
+                        borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                  );
-                }),
+                  ),
+
+                  // Interactive Tabs Row
+                  Row(
+                    children: List.generate(navItems.length, (index) {
+                      final isSelected = selectedIndex == index;
+                      final item = navItems[index];
+
+                      return Expanded(
+                        child: InkWell(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            ref.read(selectedTabProvider.notifier).state = index;
+                          },
+                          splashColor: Colors.transparent,
+                          highlightColor: Colors.transparent,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                AnimatedScale(
+                                  scale: isSelected ? 1.08 : 1.0,
+                                  duration: const Duration(milliseconds: 200),
+                                  child: Icon(
+                                    (isSelected ? item['activeIcon'] : item['inactiveIcon']) as IconData,
+                                    size: 21,
+                                    color: isSelected ? AppDesignSystem.red600 : AppDesignSystem.slate400,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  item['label'] as String,
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 9.5),
+                                    fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                                    color: isSelected ? AppDesignSystem.red600 : AppDesignSystem.slate400,
+                                    letterSpacing: -0.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
+        ),
+      ),
     );
   }
 }

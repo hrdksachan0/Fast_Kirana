@@ -1,0 +1,51 @@
+name: FastKirana Code Quality Gate (10/10)
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+  push:
+    branches:
+      - main
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gate:
+    name: Verify Code Quality & Test Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 🎯 Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+          cache-key: "flutter-:os:-:channel:-:version:-:arch:-:hash:"
+          cache-path: "${{ runner.tool_cache }}/flutter/:channel:-:version:-:arch:"
+
+      - name: 📦 Install Flutter Dependencies
+        run: flutter pub get
+
+      - name: 🛡️ Run Quality Gate Verification (Analyzer + Test Suite)
+        run: |
+          chmod +x scripts/verify_quality.sh
+          ./scripts/verify_quality.sh
+
+      - name: 🔨 Compile Debug APK Smoke Test
+        run: flutter build apk --debug

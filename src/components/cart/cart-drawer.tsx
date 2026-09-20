@@ -788,7 +788,7 @@ export function CartDrawer() {
               {/* BOGO Nudge Alert at Top */}
               {appliedCoupon?.nudgeMessage && !appliedCoupon?.freeGiftDetails && (
                 <div className="bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-2.5 shadow-xs animate-slide-down">
-                  <span className="text-xl animate-bounce shrink-0">🎁</span>
+                  <span className="text-xl animate-pulse shrink-0">🎁</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-black text-amber-700 dark:text-amber-300 leading-snug">
                       {appliedCoupon.nudgeMessage}

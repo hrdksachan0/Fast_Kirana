@@ -423,7 +423,10 @@ class RestaurantOrderCardView extends StatelessWidget {
                         border: Border.all(color: AppDesignSystem.emerald200),
                       ),
                       child: Center(
-                        child: Text('Waiting for Rider Pickup 🛵', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: brandGreen)),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('Waiting for Rider Pickup 🛵', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: brandGreen)),
+                        ),
                       ),
                     ),
                   ),
