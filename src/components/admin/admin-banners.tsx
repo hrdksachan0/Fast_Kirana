@@ -1330,66 +1330,161 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                 </select>
               </div>
 
-              {/* Upload Banner Image */}
+              {/* Upload Banner Image / Video */}
               <div className="md:col-span-2 space-y-2 border-t border-border/40 pt-3">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary block">
-                  Banner Image (Upload or Paste Link)
-                </label>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
-                  <label
-                    htmlFor="banner-image-file-simple"
-                    className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-border hover:border-primary rounded-xl cursor-pointer bg-card hover:bg-primary/5 transition-all"
-                  >
-                    {isUploading ? (
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="w-5 h-5 text-primary animate-spin" />
-                        <span className="text-xs font-bold text-primary">Uploading...</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <ImageIcon className="w-5 h-5 text-primary" />
-                        <span className="text-xs font-bold text-text-primary">
-                          {imageUrl ? 'Change Image File' : 'Click to Upload Image'}
-                        </span>
-                      </div>
-                    )}
-                    <input
-                      id="banner-image-file-simple"
-                      type="file"
-                      accept="image/*"
-                      disabled={isUploading}
-                      onChange={handleImageUpload}
-                      className="sr-only"
-                    />
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary block">
+                    Banner Media (Image or Video Loop)
                   </label>
-
-                  <div className="space-y-1">
-                    <input
-                      type="url"
-                      placeholder="Or paste Image URL (https://...)"
-                      value={imageUrl}
-                      onChange={(e) => setImageUrl(e.target.value)}
-                      className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
-                    />
-                  </div>
-                </div>
-
-                {/* Image Preview Box */}
-                {imageUrl && (
-                  <div className="relative aspect-[3/1] max-h-36 w-full overflow-hidden rounded-xl border border-border bg-black/5 mt-2">
-                    <img
-                      src={imageUrl}
-                      alt="Banner Preview"
-                      className="object-contain w-full h-full"
-                    />
+                  <div className="flex items-center gap-1 bg-muted p-0.5 rounded-lg border border-border/60">
                     <button
                       type="button"
-                      onClick={() => setImageUrl('')}
-                      className="absolute top-2 right-2 px-2 py-1 bg-rose-600 text-white text-[10px] font-bold rounded-lg shadow cursor-pointer"
+                      onClick={() => setPreviewMediaTab('image')}
+                      className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                        previewMediaTab === 'image'
+                          ? 'bg-card text-primary shadow-xs'
+                          : 'text-text-muted hover:text-text-primary'
+                      }`}
                     >
-                      Remove Image
+                      🖼️ Image
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewMediaTab('video')}
+                      className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                        previewMediaTab === 'video'
+                          ? 'bg-card text-primary shadow-xs'
+                          : 'text-text-muted hover:text-text-primary'
+                      }`}
+                    >
+                      🎬 Video (MP4)
+                    </button>
+                  </div>
+                </div>
+                
+                {previewMediaTab === 'image' ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+                      <label
+                        htmlFor="banner-image-file-simple"
+                        className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-border hover:border-primary rounded-xl cursor-pointer bg-card hover:bg-primary/5 transition-all"
+                      >
+                        {isUploading ? (
+                          <div className="flex items-center gap-2">
+                            <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                            <span className="text-xs font-bold text-primary">Uploading Image...</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <ImageIcon className="w-5 h-5 text-primary" />
+                            <span className="text-xs font-bold text-text-primary">
+                              {imageUrl ? 'Change Image File' : 'Click to Upload Image'}
+                            </span>
+                          </div>
+                        )}
+                        <input
+                          id="banner-image-file-simple"
+                          type="file"
+                          accept="image/*"
+                          disabled={isUploading}
+                          onChange={handleImageUpload}
+                          className="sr-only"
+                        />
+                      </label>
+
+                      <div className="space-y-1">
+                        <input
+                          type="url"
+                          placeholder="Or paste Image URL (https://...)"
+                          value={imageUrl}
+                          onChange={(e) => setImageUrl(e.target.value)}
+                          className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Image Preview Box */}
+                    {imageUrl && (
+                      <div className="relative aspect-[3/1] max-h-36 w-full overflow-hidden rounded-xl border border-border bg-black/5 mt-2">
+                        <img
+                          src={imageUrl}
+                          alt="Banner Preview"
+                          className="object-contain w-full h-full"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setImageUrl('')}
+                          className="absolute top-2 right-2 px-2 py-1 bg-rose-600 text-white text-[10px] font-bold rounded-lg shadow cursor-pointer"
+                        >
+                          Remove Image
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+                      <label
+                        htmlFor="banner-video-file-simple"
+                        className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-border hover:border-primary rounded-xl cursor-pointer bg-card hover:bg-primary/5 transition-all"
+                      >
+                        {isVideoUploading ? (
+                          <div className="flex items-center gap-2">
+                            <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                            <span className="text-xs font-bold text-primary">Uploading Video...</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Video className="w-5 h-5 text-primary" />
+                            <span className="text-xs font-bold text-text-primary">
+                              {videoUrl ? 'Change Video Loop File' : 'Click to Upload MP4 Video'}
+                            </span>
+                          </div>
+                        )}
+                        <input
+                          id="banner-video-file-simple"
+                          type="file"
+                          accept="video/mp4,video/webm,video/quicktime"
+                          disabled={isVideoUploading}
+                          onChange={handleVideoUpload}
+                          className="sr-only"
+                        />
+                      </label>
+
+                      <div className="space-y-1">
+                        <input
+                          type="url"
+                          placeholder="Or paste Video MP4 URL (https://...)"
+                          value={videoUrl}
+                          onChange={(e) => {
+                            setVideoUrl(e.target.value)
+                            setPreviewMediaTab('video')
+                          }}
+                          className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Video Preview Box */}
+                    {videoUrl && (
+                      <div className="relative aspect-[3/1] max-h-36 w-full overflow-hidden rounded-xl border border-border bg-black mt-2">
+                        <video
+                          src={videoUrl}
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          className="object-contain w-full h-full"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setVideoUrl('')}
+                          className="absolute top-2 right-2 px-2 py-1 bg-rose-600 text-white text-[10px] font-bold rounded-lg shadow cursor-pointer"
+                        >
+                          Remove Video
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
