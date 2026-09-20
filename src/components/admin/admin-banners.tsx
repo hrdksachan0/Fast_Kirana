@@ -1520,7 +1520,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
             </div>
           </form>
         </div>
-
+      </div>
 
       {/* Live Preview and Active Banners Sidebar */}
       <div className="space-y-6">
