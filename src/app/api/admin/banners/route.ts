@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
         ctaTextColorHex: body.ctaTextColorHex || null,
         gridImages: body.gridImages || null,
         hasWireframeGrid: body.hasWireframeGrid || false,
+        videoUrl: body.videoUrl || null,
         couponCode: code || null,
       }
       serializedCode = JSON.stringify(cardMeta)
@@ -144,6 +145,7 @@ export async function PUT(request: NextRequest) {
         ctaTextColorHex: body.ctaTextColorHex !== undefined ? body.ctaTextColorHex : null,
         gridImages: body.gridImages !== undefined ? body.gridImages : null,
         hasWireframeGrid: body.hasWireframeGrid !== undefined ? body.hasWireframeGrid : false,
+        videoUrl: body.videoUrl !== undefined ? body.videoUrl : null,
         couponCode: code || null,
       }
       serializedCode = JSON.stringify(cardMeta)

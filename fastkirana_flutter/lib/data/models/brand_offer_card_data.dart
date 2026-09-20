@@ -9,6 +9,7 @@ class CategoryCardData {
   final String? categoryName;
   final String? outletName;
   final String? imageUrl;
+  final String? videoUrl;
   final String? imageAsset;
   final String? cashbackTitle;
   final String? cashbackSubtitle;
@@ -62,6 +63,7 @@ class CategoryCardData {
     this.categoryName,
     this.outletName,
     this.imageUrl,
+    this.videoUrl,
     this.imageAsset,
     this.cashbackTitle,
     this.cashbackSubtitle,
@@ -138,6 +140,7 @@ class CategoryCardData {
       categoryName: catName,
       outletName: outName,
       imageUrl: json['imageUrl']?.toString() ?? json['image']?.toString(),
+      videoUrl: json['videoUrl']?.toString() ?? json['video']?.toString(),
       imageAsset: json['imageAsset']?.toString(),
       cashbackTitle: json['cashbackTitle']?.toString(),
       cashbackSubtitle: json['cashbackSubtitle']?.toString(),
@@ -171,6 +174,7 @@ class CategoryCardData {
       'outletName': outletName,
       'secondaryBrand': outletName,
       'imageUrl': imageUrl,
+      'videoUrl': videoUrl,
       'imageAsset': imageAsset,
       'cashbackTitle': cashbackTitle,
       'cashbackSubtitle': cashbackSubtitle,

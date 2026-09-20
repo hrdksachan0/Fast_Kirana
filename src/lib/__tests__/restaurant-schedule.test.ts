@@ -68,7 +68,7 @@ describe('Restaurant Schedule & Operating Status Utilities', () => {
       // Paused today at current time
       const result = isManuallyPausedToday({
         isOpen: false,
-        openTime: '06:00 AM',
+        openTime: '12:00 AM',
         updatedAt: todayAfterOpen.toISOString(),
       })
       assert.equal(result, true)
@@ -108,7 +108,7 @@ describe('Restaurant Schedule & Operating Status Utilities', () => {
       const now = new Date()
       const status = checkStoreOperatingStatus({
         isOpen: false,
-        openTime: '06:00 AM',
+        openTime: '12:00 AM',
         closeTime: '11:59 PM',
         updatedAt: now.toISOString(),
       })

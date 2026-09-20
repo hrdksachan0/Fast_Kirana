@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fastkirana_flutter/widgets/curated_brand_offer_card.dart';
+import 'package:fastkirana_flutter/widgets/card_media_widget.dart';
 import 'package:fastkirana_flutter/data/models/brand_offer_card_data.dart';
 import 'package:fastkirana_flutter/providers/banner_provider.dart';
 import 'package:fastkirana_flutter/widgets/dynamic_hero_banner_carousel.dart';
@@ -162,5 +163,27 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Double Cheese Burger'), findsOneWidget);
     expect(find.text('A.S. RESTAURANT'), findsOneWidget);
+  });
+
+  testWidgets('CategoryOfferCard accepts videoUrl and renders CardMediaWidget', (WidgetTester tester) async {
+    const data = CategoryCardData(
+      id: 'video-card-1',
+      cardType: 'hero',
+      title: 'SIZZLING PIZZA',
+      subtitle: 'Wood fired pizza',
+      imageUrl: 'https://images.unsplash.com/photo-pizza.jpg',
+      videoUrl: 'https://example.com/pizza-motion.mp4',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CategoryOfferCard.fromData(data),
+        ),
+      ),
+    );
+
+    expect(find.text('SIZZLING PIZZA'), findsOneWidget);
+    expect(find.byType(CardMediaWidget), findsOneWidget);
   });
 }

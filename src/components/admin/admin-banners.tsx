@@ -23,7 +23,9 @@ import {
   ExternalLink,
   Palette,
   Sliders,
-  Sparkle
+  Sparkle,
+  Video,
+  Play
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { compressImageClient } from '@/lib/image-compression'
@@ -36,6 +38,7 @@ interface PromoBanner {
   gradient: string
   type: string
   imageUrl?: string | null
+  videoUrl?: string | null
   linkUrl?: string | null
   isActive: boolean
   sortOrder: number
@@ -416,6 +419,8 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
   const [gradient, setGradient] = useState(GRADIENT_PRESETS[4].value)
   const [type, setType] = useState('festival')
   const [imageUrl, setImageUrl] = useState('')
+  const [videoUrl, setVideoUrl] = useState('')
+  const [previewMediaTab, setPreviewMediaTab] = useState<'image' | 'video'>('image')
   const [linkUrl, setLinkUrl] = useState('')
   const [linkType, setLinkType] = useState<'none' | 'category' | 'product' | 'custom'>('none')
   const [selectedCategory, setSelectedCategory] = useState('')
@@ -442,9 +447,10 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
   const [gridImage3, setGridImage3] = useState('')
   const [gridImage4, setGridImage4] = useState('')
 
-  // Cloudinary Settings and upload states
+  // Cloudinary & Supabase Storage upload states
   const [settingsMap, setSettingsMap] = useState<Record<string, string>>({})
   const [isUploading, setIsUploading] = useState(false)
+  const [isVideoUploading, setIsVideoUploading] = useState(false)
 
   // Load settings on Mount
   useEffect(() => {
@@ -523,6 +529,46 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
     }
   }
 
+  // Handle direct video upload to Supabase Storage
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Video is too large (max 10MB). Please choose a shorter loop.')
+      return
+    }
+
+    setIsVideoUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        if (data.url) {
+          setVideoUrl(data.url)
+          setPreviewMediaTab('video')
+          toast.success('🎬 Video loop uploaded to Supabase Storage!')
+        }
+      } else {
+        const errData = await res.json().catch(() => ({}))
+        toast.error(`Upload failed: ${errData.error || res.statusText || 'Server error'}`)
+      }
+    } catch (err: any) {
+      console.error(err)
+      toast.error(`Could not upload video: ${err.message || 'Network error'}`)
+    } finally {
+      setIsVideoUploading(false)
+      e.target.value = ''
+    }
+  }
+
   // Apply a Template
   const handleApplyTemplate = (tpl: any) => {
     setTitle(tpl.title || '')
@@ -531,6 +577,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
     setGradient(tpl.gradient || GRADIENT_PRESETS[4].value)
     setType(tpl.type || 'grocery')
     setImageUrl(tpl.imageUrl || '')
+    setVideoUrl(tpl.videoUrl || '')
     
     // Check if it's a multi-card template
     if (tpl.cardType) {
@@ -627,6 +674,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
           cashbackSubtitle: tpl.cashbackSubtitle || null,
           gridImages: tpl.gridImages || null,
           imageUrl: tpl.imageUrl || null,
+          videoUrl: tpl.videoUrl || null,
           linkUrl: tpl.linkUrl || tpl.ctaUrl || null,
           isActive: true,
           sortOrder: 0
@@ -712,6 +760,8 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
     setGradient(GRADIENT_PRESETS[4].value)
     setType('festival')
     setImageUrl('')
+    setVideoUrl('')
+    setPreviewMediaTab('image')
     setLinkUrl('')
     setLinkType('none')
     setSelectedCategory('')
@@ -755,6 +805,8 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
     setGradient(b.gradient || GRADIENT_PRESETS[4].value)
     setType(b.type)
     setImageUrl(b.imageUrl || '')
+    setVideoUrl(b.videoUrl || '')
+    setPreviewMediaTab(b.videoUrl ? 'video' : 'image')
     setLinkUrl(b.linkUrl || '')
     
     // Populate multi-card fields
@@ -877,6 +929,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
         cashbackSubtitle: cashbackSubtitle.trim() || null,
         gridImages: gridImages && gridImages.length > 0 ? gridImages : null,
         imageUrl: imageUrl.trim() || null,
+        videoUrl: videoUrl.trim() || null,
         linkUrl: computedLinkUrl,
         isActive,
         sortOrder: parseInt(sortOrder, 10) || 0
@@ -1457,28 +1510,153 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                     </div>
                   </div>
 
-                  {/* Hero Shoe Image */}
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-neutral-400 uppercase">Hero Sneaker Cutout Image (URL or Upload)</label>
-                    <div className="flex gap-2 items-center">
-                      <input
-                        type="url"
-                        placeholder="https://.../sneaker.png"
-                        value={imageUrl}
-                        onChange={(e) => setImageUrl(e.target.value)}
-                        className="flex-1 bg-neutral-950 border border-neutral-700 px-3 py-1.5 rounded-lg text-xs text-white"
-                      />
-                      <label className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-xs font-bold cursor-pointer shrink-0">
-                        {isUploading ? 'Uploading...' : 'Upload'}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          disabled={isUploading}
-                          onChange={handleImageUpload}
-                          className="sr-only"
-                        />
+                  {/* Hero Visual Media (Image + Video Loop) */}
+                  <div className="space-y-3 p-3.5 bg-neutral-950/80 border border-neutral-800 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Video className="h-3.5 w-3.5 text-amber-400" />
+                        <span>Hero Visual Media (Image + Video Loop)</span>
                       </label>
+                      {(imageUrl || videoUrl) && (
+                        <div className="flex items-center gap-1 bg-neutral-900 border border-neutral-800 rounded-lg p-0.5">
+                          <button
+                            type="button"
+                            onClick={() => setPreviewMediaTab('image')}
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                              previewMediaTab === 'image'
+                                ? 'bg-amber-500 text-black shadow'
+                                : 'text-neutral-400 hover:text-white'
+                            }`}
+                          >
+                            🖼️ Image / Poster
+                          </button>
+                          {videoUrl && (
+                            <button
+                              type="button"
+                              onClick={() => setPreviewMediaTab('video')}
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                                previewMediaTab === 'video'
+                                  ? 'bg-amber-500 text-black shadow'
+                                  : 'text-neutral-400 hover:text-white'
+                              }`}
+                            >
+                              🎬 Video Loop
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
+
+                    {/* Image / Poster Input */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-bold text-neutral-300 uppercase">
+                          Static Image / Video Poster
+                        </label>
+                        {imageUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setImageUrl('')}
+                            className="text-[9px] text-rose-400 hover:underline font-bold"
+                          >
+                            Clear Image
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="url"
+                          placeholder="https://.../food-cutout.png"
+                          value={imageUrl}
+                          onChange={(e) => setImageUrl(e.target.value)}
+                          className="flex-1 bg-neutral-900 border border-neutral-700 px-3 py-1.5 rounded-lg text-xs text-white"
+                        />
+                        <label className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-xs font-bold cursor-pointer shrink-0">
+                          {isUploading ? 'Uploading...' : 'Upload'}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            disabled={isUploading}
+                            onChange={handleImageUpload}
+                            className="sr-only"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Video Loop Input */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-bold text-neutral-300 uppercase">
+                          Looping Micro-Video URL (Optional .mp4 / .webm)
+                        </label>
+                        {videoUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setVideoUrl('')}
+                            className="text-[9px] text-rose-400 hover:underline font-bold"
+                          >
+                            Clear Video
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="url"
+                          placeholder="e.g. https://.../burger-sizzle.mp4"
+                          value={videoUrl}
+                          onChange={(e) => {
+                            setVideoUrl(e.target.value)
+                            if (e.target.value) setPreviewMediaTab('video')
+                          }}
+                          className="flex-1 bg-neutral-900 border border-neutral-700 px-3 py-1.5 rounded-lg text-xs text-white font-mono"
+                        />
+                        <label className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-xs font-bold cursor-pointer shrink-0 flex items-center gap-1">
+                          {isVideoUploading ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Video className="h-3.5 w-3.5 text-amber-400" />
+                          )}
+                          <span>{isVideoUploading ? 'Uploading...' : 'Upload Video'}</span>
+                          <input
+                            type="file"
+                            accept="video/mp4,video/webm,video/quicktime"
+                            disabled={isVideoUploading}
+                            onChange={handleVideoUpload}
+                            className="sr-only"
+                          />
+                        </label>
+                      </div>
+                      <p className="text-[9.5px] text-neutral-400 font-medium">
+                        💡 Direct upload to Supabase Storage or paste an external .mp4 link. Plays muted & looped in mobile & web.
+                      </p>
+                    </div>
+
+                    {/* Live Admin Preview */}
+                    {(imageUrl || videoUrl) && (
+                      <div className="relative w-full h-44 rounded-xl overflow-hidden border border-neutral-800 bg-neutral-900/90 flex items-center justify-center mt-2">
+                        {previewMediaTab === 'video' && videoUrl ? (
+                          <video
+                            src={videoUrl}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className="w-full h-full object-cover"
+                          />
+                        ) : imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            alt="Card Media Preview"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : null}
+                        <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/70 backdrop-blur-sm rounded-full text-[9px] font-bold text-neutral-300 border border-white/10 flex items-center gap-1.5">
+                          <span className={`h-2 w-2 rounded-full ${previewMediaTab === 'video' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                          <span>{previewMediaTab === 'video' ? 'LIVE MOTION LOOP' : 'POSTER PREVIEW'}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Cashback and CTA Pill */}
@@ -1769,28 +1947,153 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                     </h4>
                   </div>
 
-                  {/* Cutout Hero Image */}
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-text-secondary uppercase">Editorial Cutout Graphic (URL or Upload)</label>
-                    <div className="flex gap-2 items-center">
-                      <input
-                        type="url"
-                        placeholder="https://.../model-cutout.png"
-                        value={imageUrl}
-                        onChange={(e) => setImageUrl(e.target.value)}
-                        className="flex-1 bg-muted/40 border border-border px-3 py-1.5 rounded-lg text-xs"
-                      />
-                      <label className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold cursor-pointer shrink-0">
-                        {isUploading ? 'Uploading...' : 'Upload'}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          disabled={isUploading}
-                          onChange={handleImageUpload}
-                          className="sr-only"
-                        />
+                  {/* Editorial Visual Media (Image + Video Loop) */}
+                  <div className="space-y-3 p-3.5 bg-rose-950/40 border border-rose-900/50 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-black text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Video className="h-3.5 w-3.5 text-rose-400" />
+                        <span>Editorial Visual Media (Image + Video Loop)</span>
                       </label>
+                      {(imageUrl || videoUrl) && (
+                        <div className="flex items-center gap-1 bg-neutral-900 border border-rose-900/40 rounded-lg p-0.5">
+                          <button
+                            type="button"
+                            onClick={() => setPreviewMediaTab('image')}
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                              previewMediaTab === 'image'
+                                ? 'bg-rose-600 text-white shadow'
+                                : 'text-neutral-400 hover:text-white'
+                            }`}
+                          >
+                            🖼️ Image / Poster
+                          </button>
+                          {videoUrl && (
+                            <button
+                              type="button"
+                              onClick={() => setPreviewMediaTab('video')}
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                                previewMediaTab === 'video'
+                                  ? 'bg-rose-600 text-white shadow'
+                                  : 'text-neutral-400 hover:text-white'
+                              }`}
+                            >
+                              🎬 Video Loop
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
+
+                    {/* Image / Poster Input */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-bold text-rose-300 uppercase">
+                          Static Cutout Graphic / Video Poster
+                        </label>
+                        {imageUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setImageUrl('')}
+                            className="text-[9px] text-rose-400 hover:underline font-bold"
+                          >
+                            Clear Image
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="url"
+                          placeholder="https://.../model-cutout.png"
+                          value={imageUrl}
+                          onChange={(e) => setImageUrl(e.target.value)}
+                          className="flex-1 bg-neutral-900 border border-rose-900/60 px-3 py-1.5 rounded-lg text-xs text-white"
+                        />
+                        <label className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold cursor-pointer shrink-0">
+                          {isUploading ? 'Uploading...' : 'Upload'}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            disabled={isUploading}
+                            onChange={handleImageUpload}
+                            className="sr-only"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Video Loop Input */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-bold text-rose-300 uppercase">
+                          Looping Micro-Video URL (Optional .mp4 / .webm)
+                        </label>
+                        {videoUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setVideoUrl('')}
+                            className="text-[9px] text-rose-400 hover:underline font-bold"
+                          >
+                            Clear Video
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="url"
+                          placeholder="e.g. https://.../royal-feast.mp4"
+                          value={videoUrl}
+                          onChange={(e) => {
+                            setVideoUrl(e.target.value)
+                            if (e.target.value) setPreviewMediaTab('video')
+                          }}
+                          className="flex-1 bg-neutral-900 border border-rose-900/60 px-3 py-1.5 rounded-lg text-xs text-white font-mono"
+                        />
+                        <label className="px-3 py-1.5 bg-rose-900/80 hover:bg-rose-800 text-white rounded-lg text-xs font-bold cursor-pointer shrink-0 flex items-center gap-1 border border-rose-700/50">
+                          {isVideoUploading ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Video className="h-3.5 w-3.5 text-rose-300" />
+                          )}
+                          <span>{isVideoUploading ? 'Uploading...' : 'Upload Video'}</span>
+                          <input
+                            type="file"
+                            accept="video/mp4,video/webm,video/quicktime"
+                            disabled={isVideoUploading}
+                            onChange={handleVideoUpload}
+                            className="sr-only"
+                          />
+                        </label>
+                      </div>
+                      <p className="text-[9.5px] text-neutral-400 font-medium">
+                        💡 Direct upload to Supabase Storage or paste an external .mp4 link. Plays muted & looped in mobile & web.
+                      </p>
+                    </div>
+
+                    {/* Live Admin Preview */}
+                    {(imageUrl || videoUrl) && (
+                      <div className="relative w-full h-44 rounded-xl overflow-hidden border border-rose-900/50 bg-neutral-950/80 flex items-center justify-center mt-2">
+                        {previewMediaTab === 'video' && videoUrl ? (
+                          <video
+                            src={videoUrl}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className="w-full h-full object-cover"
+                          />
+                        ) : imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            alt="Editorial Media Preview"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : null}
+                        <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/70 backdrop-blur-sm rounded-full text-[9px] font-bold text-neutral-300 border border-white/10 flex items-center gap-1.5">
+                          <span className={`h-2 w-2 rounded-full ${previewMediaTab === 'video' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
+                          <span>{previewMediaTab === 'video' ? 'LIVE MOTION LOOP' : 'POSTER PREVIEW'}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Cashback Pill */}
@@ -1976,13 +2279,112 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                       </div>
                     </div>
 
-                    {imageUrl && (
-                      <div className="relative aspect-[3/1] w-full overflow-hidden rounded-xl border border-border bg-muted/20 mt-2">
-                        <img
-                          src={imageUrl}
-                          alt="Uploaded Banner Preview"
-                          className="object-cover w-full h-full"
+                    {/* Optional Video Loop URL */}
+                    <div className="space-y-1 pt-2 border-t border-border/30">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+                          <Video className="h-3.5 w-3.5 text-primary" />
+                          <span>Looping Video URL (Optional .mp4 for live motion cards)</span>
+                        </label>
+                        {videoUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setVideoUrl('')}
+                            className="text-[9px] text-danger hover:underline font-bold"
+                          >
+                            Clear Video
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="url"
+                          placeholder="e.g. https://.../promo-loop.mp4"
+                          value={videoUrl}
+                          onChange={(e) => {
+                            setVideoUrl(e.target.value)
+                            if (e.target.value) setPreviewMediaTab('video')
+                          }}
+                          className="flex-1 bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-mono"
                         />
+                        <label className="px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold cursor-pointer shrink-0 flex items-center gap-1.5 transition-colors">
+                          {isVideoUploading ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Video className="h-3.5 w-3.5" />
+                          )}
+                          <span>{isVideoUploading ? 'Uploading...' : 'Upload Video'}</span>
+                          <input
+                            type="file"
+                            accept="video/mp4,video/webm,video/quicktime"
+                            disabled={isVideoUploading}
+                            onChange={handleVideoUpload}
+                            className="sr-only"
+                          />
+                        </label>
+                      </div>
+                      <p className="text-[9.5px] text-text-muted font-medium">
+                        💡 Direct upload to Supabase Storage or paste an external .mp4 link. Plays muted & looped in mobile & web.
+                      </p>
+                    </div>
+
+                    {/* Media Live Preview with Tabs */}
+                    {(imageUrl || videoUrl) && (
+                      <div className="space-y-1.5 mt-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
+                            Live Preview
+                          </span>
+                          <div className="flex items-center gap-1 bg-muted/50 border border-border rounded-lg p-0.5">
+                            <button
+                              type="button"
+                              onClick={() => setPreviewMediaTab('image')}
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                                previewMediaTab === 'image'
+                                  ? 'bg-primary text-white shadow'
+                                  : 'text-text-muted hover:text-text-primary'
+                              }`}
+                            >
+                              🖼️ Image / Poster
+                            </button>
+                            {videoUrl && (
+                              <button
+                                type="button"
+                                onClick={() => setPreviewMediaTab('video')}
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                                  previewMediaTab === 'video'
+                                  ? 'bg-primary text-white shadow'
+                                  : 'text-text-muted hover:text-text-primary'
+                                }`}
+                              >
+                                🎬 Video Loop
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="relative aspect-[3/1] w-full overflow-hidden rounded-xl border border-border bg-muted/20 flex items-center justify-center">
+                          {previewMediaTab === 'video' && videoUrl ? (
+                            <video
+                              src={videoUrl}
+                              autoPlay
+                              loop
+                              muted
+                              playsInline
+                              className="object-cover w-full h-full"
+                            />
+                          ) : imageUrl ? (
+                            <img
+                              src={imageUrl}
+                              alt="Uploaded Banner Preview"
+                              className="object-cover w-full h-full"
+                            />
+                          ) : null}
+                          <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/70 backdrop-blur-sm rounded-full text-[9px] font-bold text-white border border-white/10 flex items-center gap-1.5">
+                            <span className={`h-2 w-2 rounded-full ${previewMediaTab === 'video' ? 'bg-emerald-400 animate-pulse' : 'bg-primary'}`} />
+                            <span>{previewMediaTab === 'video' ? 'LIVE MOTION LOOP' : 'POSTER PREVIEW'}</span>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -2179,12 +2581,23 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                       {description || 'Iconic Street Style • Triple White Leather'}
                     </p>
                   </div>
-                  <div className="w-24 h-20 relative flex items-center justify-center shrink-0">
-                    <img
-                      src={imageUrl || 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=400&q=80'}
-                      alt=""
-                      className="max-h-full max-w-full object-contain drop-shadow-[0_10px_10px_rgba(0,0,0,0.8)] -rotate-12"
-                    />
+                  <div className="w-24 h-20 relative flex items-center justify-center shrink-0 rounded-lg overflow-hidden">
+                    {previewMediaTab === 'video' && videoUrl ? (
+                      <video
+                        src={videoUrl}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                    ) : (
+                      <img
+                        src={imageUrl || 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=400&q=80'}
+                        alt=""
+                        className="max-h-full max-w-full object-contain drop-shadow-[0_10px_10px_rgba(0,0,0,0.8)]"
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -2278,9 +2691,20 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                     )}
                     <p className="text-[9px] text-zinc-400 line-clamp-1">{description || 'Activewear, Trainers & Athleisure'}</p>
                   </div>
-                  {imageUrl && (
+                  {(imageUrl || videoUrl) && (
                     <div className="w-20 h-20 rounded-lg overflow-hidden shrink-0 border border-rose-900/40">
-                      <img src={imageUrl} alt="" className="w-full h-full object-cover" />
+                      {previewMediaTab === 'video' && videoUrl ? (
+                        <video
+                          src={videoUrl}
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          className="w-full h-full object-cover"
+                        />
+                      ) : imageUrl ? (
+                        <img src={imageUrl} alt="" className="w-full h-full object-cover" />
+                      ) : null}
                     </div>
                   )}
                 </div>
@@ -2301,13 +2725,24 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
               </div>
             ) : (
               /* 4. STANDARD BANNER PREVIEW */
-              imageUrl ? (
+              (imageUrl || videoUrl) ? (
                 <div className="relative aspect-[16/9] w-full overflow-hidden">
-                  <img
-                    src={imageUrl}
-                    alt={title || "Custom Graphic Banner"}
-                    className="w-full h-full object-cover"
-                  />
+                  {previewMediaTab === 'video' && videoUrl ? (
+                    <video
+                      src={videoUrl}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                  ) : imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt={title || "Custom Graphic Banner"}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : null}
                 </div>
               ) : type === 'express-delivery' ? (
                 <div className="h-[140px] flex items-center justify-between p-4 bg-[#fdf0f1] text-[#2d2d2d]">
@@ -2395,6 +2830,12 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                         ) : (
                           <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-muted text-text-secondary border border-border">
                             🖼️ BANNER
+                          </span>
+                        )}
+                        {b.videoUrl && (
+                          <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            MOTION VIDEO
                           </span>
                         )}
                       </div>

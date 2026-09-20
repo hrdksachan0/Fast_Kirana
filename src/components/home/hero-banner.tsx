@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -65,18 +65,7 @@ const INTERVAL_MS = 3500
 function BannerInner({ currentBanner }: { currentBanner: BannerItem }) {
   if (currentBanner.imageUrl) {
     return (
-      <div className="relative w-full h-full overflow-hidden bg-black/5 dark:bg-white/5">
-        {/* Ambient blurred background copy to seamlessly fill non-matching aspect ratios */}
-        <div className="absolute inset-0 select-none pointer-events-none filter blur-2xl scale-110 opacity-70">
-          <Image
-            src={currentBanner.imageUrl}
-            alt=""
-            fill
-            sizes="20px"
-            className="object-cover"
-          />
-        </div>
-        
+      <div className={`relative w-full h-full overflow-hidden bg-gradient-to-r ${currentBanner.gradient || 'from-zinc-900 to-zinc-950'}`}>
         {/* Sharp main banner image centered and fully visible */}
         <Image
           src={currentBanner.imageUrl}
@@ -302,7 +291,14 @@ const cubeVariants = {
 
 export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
   const displayBanners = useMemo(() => {
-    return initialBanners && initialBanners.length > 0 ? initialBanners : DEFAULT_BANNERS
+    const raw = initialBanners && initialBanners.length > 0 ? initialBanners : DEFAULT_BANNERS
+    // Filter out brand offer multi-cards on web hero slider
+    const cleanBanners = raw.filter((b: any) => {
+      const cardType = b.cardType || b.type
+      return !['dark_showcase', 'bento_grid', 'editorial', 'brand_offer'].includes(cardType)
+    })
+    const list = cleanBanners.length > 0 ? cleanBanners : raw
+    return list.slice(0, 4)
   }, [initialBanners])
 
   const [[current, direction], setCurrentAndDirection] = useState([0, 0])
@@ -310,17 +306,17 @@ export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
   const [isDragging, setIsDragging] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (displayBanners.length <= 1) return
     setCurrentAndDirection(([prev]) => [(prev + 1) % displayBanners.length, 1])
     setProgressKey((prev) => prev + 1)
-  }
+  }, [displayBanners.length])
 
-  const handlePrev = () => {
+  const handlePrev = useCallback(() => {
     if (displayBanners.length <= 1) return
     setCurrentAndDirection(([prev]) => [(prev - 1 + displayBanners.length) % displayBanners.length, -1])
     setProgressKey((prev) => prev + 1)
-  }
+  }, [displayBanners.length])
 
   // Auto-slide effect (slows down to 5.5s on hover, never freezes)
   useEffect(() => {
@@ -331,7 +327,7 @@ export function HeroBanner({ initialBanners }: { initialBanners?: any[] }) {
     }, isHovered ? 5500 : INTERVAL_MS)
 
     return () => clearInterval(timer)
-  }, [displayBanners.length, isHovered, isDragging])
+  }, [displayBanners.length, isHovered, isDragging, handleNext])
 
   const swipePower = (offset: number, velocity: number) => {
     return Math.abs(offset) * velocity

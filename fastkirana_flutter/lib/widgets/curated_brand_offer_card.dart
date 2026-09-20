@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../core/theme/card_color_palette.dart';
 import '../data/models/brand_offer_card_data.dart';
+import 'card_media_widget.dart';
 
 /// Ultra-Premium, Agency-Grade Category & Outlet Offer Card
 /// Double-Bezel Hardware Architecture, Atmospheric Radial Glows,
@@ -16,6 +17,7 @@ class CategoryOfferCard extends StatefulWidget {
   final String? categoryName;
   final String? outletName;
   final String? imageUrl;
+  final String? videoUrl;
   final String? imageAsset;
   final String? cashbackTitle;
   final String? cashbackSubtitle;
@@ -41,6 +43,7 @@ class CategoryOfferCard extends StatefulWidget {
     this.categoryName,
     this.outletName,
     this.imageUrl,
+    this.videoUrl,
     this.imageAsset,
     this.cashbackTitle,
     this.cashbackSubtitle,
@@ -109,6 +112,7 @@ class CategoryOfferCard extends StatefulWidget {
       categoryName: data.categoryName,
       outletName: data.outletName,
       imageUrl: data.imageUrl,
+      videoUrl: data.videoUrl,
       imageAsset: data.imageAsset,
       cashbackTitle: data.cashbackTitle,
       cashbackSubtitle: data.cashbackSubtitle,
@@ -515,33 +519,15 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
   }
 
   Widget _buildHeroVisual() {
-    if (widget.imageUrl != null && widget.imageUrl!.trim().isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: CachedNetworkImage(
-          imageUrl: widget.imageUrl!.trim(),
-          fit: BoxFit.cover,
-          alignment: Alignment.center,
-          placeholder: (_, __) => const Center(
-            child: SizedBox(
-              width: 26,
-              height: 26,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black12),
-            ),
-          ),
-          errorWidget: (_, __, ___) => _buildFallbackVisual(),
-        ),
-      );
-    }
-    if (widget.imageAsset != null && widget.imageAsset!.trim().isNotEmpty) {
-      return Image.asset(
-        widget.imageAsset!.trim(),
-        fit: BoxFit.contain,
-        alignment: Alignment.center,
-        errorBuilder: (_, __, ___) => _buildFallbackVisual(),
-      );
-    }
-    return _buildFallbackVisual();
+    return CardMediaWidget(
+      imageUrl: widget.imageUrl,
+      videoUrl: widget.videoUrl,
+      imageAsset: widget.imageAsset,
+      borderRadius: 18.0,
+      fit: BoxFit.cover,
+      showLiveBadge: true,
+      fallback: _buildFallbackVisual(),
+    );
   }
 
   Widget _buildFallbackVisual() {

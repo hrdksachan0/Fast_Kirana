@@ -72,22 +72,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No image data provided' }, { status: 400 })
     }
 
-    // Auto-compress to WebP if sharp is available
-    const { buffer: optimizedBuffer, isWebP } = await optimizeImageToWebP(inputBuffer)
-    const mime = isWebP ? 'image/webp' : originalMime
-    const ext = isWebP ? 'webp' : originalExt
+    const isVideo = originalMime.startsWith('video/')
+    let finalBuffer = inputBuffer
+    let mime = originalMime
+    let ext = originalExt
+
+    if (!isVideo) {
+      // Auto-compress images to WebP if sharp is available
+      const { buffer: optimizedBuffer, isWebP } = await optimizeImageToWebP(inputBuffer)
+      finalBuffer = optimizedBuffer
+      mime = isWebP ? 'image/webp' : originalMime
+      ext = isWebP ? 'webp' : originalExt
+    }
 
     // Upload to Supabase Storage
     try {
-      const storagePath = generateStoragePath('products', ext)
-      const publicUrl = await uploadToSupabaseStorage(optimizedBuffer, storagePath, mime)
+      const folder = isVideo ? 'videos' : 'products'
+      const storagePath = generateStoragePath(folder, ext)
+      const publicUrl = await uploadToSupabaseStorage(finalBuffer, storagePath, mime)
       return NextResponse.json({ success: true, url: publicUrl })
     } catch (storageErr) {
       console.error('[Supabase Storage] Upload failed, falling back to data URL:', storageErr)
     }
 
     // Fallback: Return Data URL (works instantly everywhere)
-    const base64Data = `data:${mime};base64,${optimizedBuffer.toString('base64')}`
+    const base64Data = `data:${mime};base64,${finalBuffer.toString('base64')}`
     return NextResponse.json({ success: true, url: base64Data })
   } catch (err: any) {
     console.error('Image Upload API Error:', err)
