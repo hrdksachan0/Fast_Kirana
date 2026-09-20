@@ -999,14 +999,14 @@ export function DealsCurationHub({
                                     </Link>
                                   </div>
 
-                                  {/* Products Horizontal Slider for this Subcategory: Top 6 items followed by See All */}
+                                  {/* Products Horizontal Slider for this Subcategory: Top 16 items followed by See All */}
                                   <LazyProductSection
-                                    products={sub.products.slice(0, 6)}
+                                    products={sub.products.slice(0, 16)}
                                     renderItem={(product) => (
                                       <ProductCard product={product} />
                                     )}
                                     endCard={
-                                      sub.products.length >= 6 ? (
+                                      sub.products.length > 6 ? (
                                         <Link
                                           href={subHref}
                                           prefetch={false}
@@ -1017,7 +1017,7 @@ export function DealsCurationHub({
                                           </div>
                                           <span className="text-xs sm:text-sm font-black text-zinc-900 dark:text-white tracking-tight">See All</span>
                                           <span className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-400 mt-1 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                                            {sub.products.length > 6 ? `+${sub.products.length - 6} more` : `${sub.products.length} items`}
+                                            {sub.products.length > 16 ? `+${sub.products.length - 16} more` : `${sub.products.length} items`}
                                           </span>
                                         </Link>
                                       ) : undefined
@@ -1028,14 +1028,14 @@ export function DealsCurationHub({
                             })}
                           </div>
                         ) : (
-                          /* Direct single shelf if no subcategories exist: Top 6 items followed by See All */
+                          /* Direct single shelf if no subcategories exist: Top 16 items followed by See All */
                           <LazyProductSection
-                            products={group.products.slice(0, 6)}
+                            products={group.products.slice(0, 16)}
                             renderItem={(product) => (
                               <ProductCard product={product} />
                             )}
                             endCard={
-                              group.products.length >= 6 ? (
+                              group.products.length > 6 ? (
                                 <Link
                                   href={seeAllCategoryHref}
                                   prefetch={false}
@@ -1046,7 +1046,7 @@ export function DealsCurationHub({
                                   </div>
                                   <span className="text-xs sm:text-sm font-black text-zinc-900 dark:text-white tracking-tight">See All</span>
                                   <span className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-400 mt-1 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                                    {group.products.length > 6 ? `+${group.products.length - 6} more` : `${group.products.length} items`}
+                                    {group.products.length > 16 ? `+${group.products.length - 16} more` : `${group.products.length} items`}
                                   </span>
                                 </Link>
                               ) : undefined

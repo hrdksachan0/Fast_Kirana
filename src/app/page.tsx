@@ -126,11 +126,11 @@ const getCachedAllGroceryProducts = unstable_cache(
         { sortOrder: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 120,
+      take: 500,
       select: productSelect,
     })
   },
-  ['storefront-all-grocery-products-v4'],
+  ['storefront-all-grocery-products-v5'],
   { revalidate: 3600, tags: ['products'] }
 )
 
@@ -147,11 +147,11 @@ const getCachedFlashDeals = unstable_cache(
         { sortOrder: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 36,
+      take: 48,
       select: productSelect,
     })
   },
-  ['storefront-flash-deals-v27'],
+  ['storefront-flash-deals-v28'],
   { revalidate: 3600, tags: ['products', 'flash-deals'] }
 )
 
@@ -167,11 +167,11 @@ const getCachedBestSellers = unstable_cache(
         { sortOrder: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 36,
+      take: 48,
       select: productSelect,
     })
   },
-  ['storefront-best-sellers-v27'],
+  ['storefront-best-sellers-v28'],
   { revalidate: 3600, tags: ['products', 'best-sellers'] }
 )
 
@@ -186,11 +186,11 @@ const getCachedBreakfastDeals = unstable_cache(
           { category: { slug: { in: ['dairy-breakfast', 'beverages', 'fruits-vegetables'] } } },
         ],
       },
-      take: 24,
+      take: 36,
       select: productSelect,
     })
   },
-  ['storefront-breakfast-deals-v27'],
+  ['storefront-breakfast-deals-v28'],
   { revalidate: 3600, tags: ['products', 'breakfast-deals'] }
 )
 
@@ -205,11 +205,11 @@ const getCachedLunchDeals = unstable_cache(
           { category: { slug: { in: ['kitchen-needs', 'grocery-essential', 'beverages'] } } },
         ],
       },
-      take: 24,
+      take: 36,
       select: productSelect,
     })
   },
-  ['storefront-lunch-deals-v27'],
+  ['storefront-lunch-deals-v28'],
   { revalidate: 3600, tags: ['products', 'lunch-deals'] }
 )
 
@@ -224,11 +224,11 @@ const getCachedTeaDeals = unstable_cache(
           { category: { slug: { in: ['snacks-munchies', 'beverages', 'ice-cream', 'chocolates', 'bakery'] } } },
         ],
       },
-      take: 24,
+      take: 36,
       select: productSelect,
     })
   },
-  ['storefront-tea-deals-v27'],
+  ['storefront-tea-deals-v28'],
   { revalidate: 3600, tags: ['products', 'tea-deals'] }
 )
 
@@ -247,11 +247,11 @@ const getCachedNightCravings = unstable_cache(
         { isBestSeller: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 24,
+      take: 36,
       select: productSelect,
     })
   },
-  ['storefront-night-cravings-v27'],
+  ['storefront-night-cravings-v28'],
   { revalidate: 3600, tags: ['products', 'night-cravings'] }
 )
 
@@ -332,11 +332,11 @@ const getCachedPopularProducts = unstable_cache(
           { restaurantId: { not: null } },
         ]
       },
-      take: 12,
+      take: 24,
       select: productSelect,
     })
   },
-  ['storefront-popular-products'],
+  ['storefront-popular-products-v2'],
   { revalidate: 3600, tags: ['products', 'popular-products'] }
 )
 
