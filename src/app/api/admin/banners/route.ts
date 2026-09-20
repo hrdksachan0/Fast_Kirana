@@ -53,28 +53,28 @@ export async function POST(request: NextRequest) {
     const finalTitle = (title && String(title).trim()) || 'Promo Banner'
     const finalDescription = (description && String(description).trim()) || 'Media Banner'
 
-    const isCardType = ['dark_showcase', 'bento_grid', 'editorial', 'standard', 'brand_offer'].includes(type) || body.cardType
+    const isCardType = true
     let serializedCode = code || ''
-    if (isCardType || body.cardType) {
-      const cardMeta = {
-        cardType: body.cardType || type || 'standard',
-        eyebrowTag: body.eyebrowTag || null,
-        primaryBrand: body.primaryBrand || null,
-        secondaryBrand: body.secondaryBrand || null,
-        cashbackTitle: body.cashbackTitle || null,
-        cashbackSubtitle: body.cashbackSubtitle || null,
-        disclaimerText: body.disclaimerText || null,
-        ctaText: body.ctaText || null,
-        ctaUrl: body.ctaUrl || null,
-        ctaBgColorHex: body.ctaBgColorHex || null,
-        ctaTextColorHex: body.ctaTextColorHex || null,
-        gridImages: body.gridImages || null,
-        hasWireframeGrid: body.hasWireframeGrid || false,
-        videoUrl: body.videoUrl || null,
-        couponCode: code || null,
-      }
-      serializedCode = JSON.stringify(cardMeta)
+    const cardMeta = {
+      cardType: body.cardType || type || 'standard',
+      placement: body.placement || (['dark_showcase', 'bento_grid', 'editorial', 'brand_offer'].includes(type) ? 'brand_card' : 'hero'),
+      platform: body.platform || 'all',
+      eyebrowTag: body.eyebrowTag || null,
+      primaryBrand: body.primaryBrand || null,
+      secondaryBrand: body.secondaryBrand || null,
+      cashbackTitle: body.cashbackTitle || null,
+      cashbackSubtitle: body.cashbackSubtitle || null,
+      disclaimerText: body.disclaimerText || null,
+      ctaText: body.ctaText || null,
+      ctaUrl: body.ctaUrl || null,
+      ctaBgColorHex: body.ctaBgColorHex || null,
+      ctaTextColorHex: body.ctaTextColorHex || null,
+      gridImages: body.gridImages || null,
+      hasWireframeGrid: body.hasWireframeGrid || false,
+      videoUrl: body.videoUrl || null,
+      couponCode: code || null,
     }
+    serializedCode = JSON.stringify(cardMeta)
 
     const banner = await prisma.promoBanner.create({
       data: {
@@ -124,28 +124,31 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Banner not found' }, { status: 404 })
     }
 
-    const isCardType = ['dark_showcase', 'bento_grid', 'editorial', 'standard', 'brand_offer'].includes(type || existing.type) || body.cardType
-    let serializedCode = code !== undefined ? code : existing.code
-    if (isCardType || body.cardType) {
-      const cardMeta = {
-        cardType: body.cardType || type || existing.type || 'standard',
-        eyebrowTag: body.eyebrowTag !== undefined ? body.eyebrowTag : null,
-        primaryBrand: body.primaryBrand !== undefined ? body.primaryBrand : null,
-        secondaryBrand: body.secondaryBrand !== undefined ? body.secondaryBrand : null,
-        cashbackTitle: body.cashbackTitle !== undefined ? body.cashbackTitle : null,
-        cashbackSubtitle: body.cashbackSubtitle !== undefined ? body.cashbackSubtitle : null,
-        disclaimerText: body.disclaimerText !== undefined ? body.disclaimerText : null,
-        ctaText: body.ctaText !== undefined ? body.ctaText : null,
-        ctaUrl: body.ctaUrl !== undefined ? body.ctaUrl : null,
-        ctaBgColorHex: body.ctaBgColorHex !== undefined ? body.ctaBgColorHex : null,
-        ctaTextColorHex: body.ctaTextColorHex !== undefined ? body.ctaTextColorHex : null,
-        gridImages: body.gridImages !== undefined ? body.gridImages : null,
-        hasWireframeGrid: body.hasWireframeGrid !== undefined ? body.hasWireframeGrid : false,
-        videoUrl: body.videoUrl !== undefined ? body.videoUrl : null,
-        couponCode: code || null,
-      }
-      serializedCode = JSON.stringify(cardMeta)
+    let existingMeta: any = {}
+    if (existing.code && existing.code.startsWith('{') && existing.code.endsWith('}')) {
+      try { existingMeta = JSON.parse(existing.code) } catch (_) {}
     }
+
+    const cardMeta = {
+      cardType: body.cardType || type || existing.type || 'standard',
+      placement: body.placement !== undefined ? body.placement : (existingMeta.placement || 'hero'),
+      platform: body.platform !== undefined ? body.platform : (existingMeta.platform || 'all'),
+      eyebrowTag: body.eyebrowTag !== undefined ? body.eyebrowTag : null,
+      primaryBrand: body.primaryBrand !== undefined ? body.primaryBrand : null,
+      secondaryBrand: body.secondaryBrand !== undefined ? body.secondaryBrand : null,
+      cashbackTitle: body.cashbackTitle !== undefined ? body.cashbackTitle : null,
+      cashbackSubtitle: body.cashbackSubtitle !== undefined ? body.cashbackSubtitle : null,
+      disclaimerText: body.disclaimerText !== undefined ? body.disclaimerText : null,
+      ctaText: body.ctaText !== undefined ? body.ctaText : null,
+      ctaUrl: body.ctaUrl !== undefined ? body.ctaUrl : null,
+      ctaBgColorHex: body.ctaBgColorHex !== undefined ? body.ctaBgColorHex : null,
+      ctaTextColorHex: body.ctaTextColorHex !== undefined ? body.ctaTextColorHex : null,
+      gridImages: body.gridImages !== undefined ? body.gridImages : null,
+      hasWireframeGrid: body.hasWireframeGrid !== undefined ? body.hasWireframeGrid : false,
+      videoUrl: body.videoUrl !== undefined ? body.videoUrl : null,
+      couponCode: code || null,
+    }
+    const serializedCode = JSON.stringify(cardMeta)
 
     const updated = await prisma.promoBanner.update({
       where: { id },

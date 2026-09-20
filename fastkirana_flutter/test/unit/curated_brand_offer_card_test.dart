@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart' hide Banner;
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fastkirana_flutter/data/models/banner.dart';
 import 'package:fastkirana_flutter/widgets/curated_brand_offer_card.dart';
 import 'package:fastkirana_flutter/widgets/card_media_widget.dart';
 import 'package:fastkirana_flutter/data/models/brand_offer_card_data.dart';
@@ -134,42 +133,24 @@ void main() {
     expect(find.text('Min. 50% off'), findsOneWidget);
   });
 
-  testWidgets('DynamicHeroBannerCarousel renders pure photo/video banner without text overlays', (WidgetTester tester) async {
-    const List<Banner> mockBanners = [
-      Banner(
-        id: 'food-hero-1',
-        title: 'Food Banner',
-        type: 'food',
-        imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&q=80',
-        linkUrl: '/restaurant/as-restaurant',
-        isActive: true,
+  testWidgets('DynamicHeroBannerCarousel renders dynamic category cards seamlessly', (WidgetTester tester) async {
+    const mockCards = [
+      CategoryCardData(
+        id: 'food-hero',
+        cardType: 'hero',
+        eyebrowTag: '🔥 CHEF SPECIAL',
+        title: 'Double Cheese Burger',
+        subtitle: 'Hot & crispy',
+        categoryName: 'A.S. RESTAURANT',
+        outletName: 'GHATAMPUR',
+        ctaUrl: '/restaurant/as-restaurant',
       ),
     ];
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          bannersProvider('food').overrideWith((ref) => Future.value(mockBanners)),
-        ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: DynamicHeroBannerCarousel(type: 'food'),
-          ),
-        ),
-      ),
-    );
-
-    await tester.pump(const Duration(milliseconds: 300));
-    expect(find.byType(CardMediaWidget), findsOneWidget);
-    // Verified pure photo/video banner has ZERO text overlay
-    expect(find.text('Food Banner'), findsNothing);
-  });
-
-  testWidgets('DynamicHeroBannerCarousel renders SizedBox.shrink when no banners exist in DB', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          bannersProvider('food').overrideWith((ref) => Future.value(const [])),
+          categoryOfferCardsProvider('food').overrideWith((ref) => Future.value(mockCards)),
         ],
         child: const MaterialApp(
           home: Scaffold(
@@ -180,7 +161,8 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    expect(find.byType(CardMediaWidget), findsNothing);
+    expect(find.text('Double Cheese Burger'), findsOneWidget);
+    expect(find.text('A.S. RESTAURANT'), findsOneWidget);
   });
 
   testWidgets('CategoryOfferCard accepts videoUrl and renders CardMediaWidget', (WidgetTester tester) async {
@@ -203,5 +185,28 @@ void main() {
 
     expect(find.text('SIZZLING PIZZA'), findsOneWidget);
     expect(find.byType(CardMediaWidget), findsOneWidget);
+  });
+
+  testWidgets('CategoryOfferCard renders pure media card (no text, simple video/image)', (WidgetTester tester) async {
+    const data = CategoryCardData(
+      id: 'pure-media-card-1',
+      cardType: 'media',
+      title: 'Hidden Title',
+      subtitle: 'Hidden Subtitle',
+      imageUrl: 'https://images.unsplash.com/photo-fresh-mangoes.jpg',
+      videoUrl: 'https://example.com/mango-stream.mp4',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CategoryOfferCard.fromData(data),
+        ),
+      ),
+    );
+
+    expect(find.byType(CardMediaWidget), findsOneWidget);
+    expect(find.text('Hidden Title'), findsNothing);
+    expect(find.text('Hidden Subtitle'), findsNothing);
   });
 }

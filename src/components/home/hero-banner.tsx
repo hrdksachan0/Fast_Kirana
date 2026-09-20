@@ -19,29 +19,7 @@ interface BannerItem {
   isActive?: boolean
 }
 
-const DEFAULT_BANNERS: BannerItem[] = [
-  {
-    id: 'default-grocery-1',
-    imageUrl: '/banners/ghatampur-express-real.png',
-    linkUrl: '/category/fruits-vegetables',
-    type: 'grocery',
-    isActive: true
-  },
-  {
-    id: 'default-food-1',
-    imageUrl: '/banners/as-restaurant-real.png',
-    linkUrl: '/restaurant/as-restaurant',
-    type: 'food',
-    isActive: true
-  },
-  {
-    id: 'default-food-2',
-    imageUrl: '/banners/wedson-restaurant-real.png',
-    linkUrl: '/restaurant/wedson-restaurant',
-    type: 'food',
-    isActive: true
-  }
-]
+const DEFAULT_BANNERS: BannerItem[] = []
 
 const INTERVAL_MS = 3500
 
@@ -134,15 +112,14 @@ const cubeVariants = {
 
 export function HeroBanner({ initialBanners, mode = 'grocery' }: { initialBanners?: any[]; mode?: 'grocery' | 'food' | 'all' }) {
   const displayBanners = useMemo(() => {
-    const raw = initialBanners && initialBanners.length > 0 ? initialBanners : DEFAULT_BANNERS
+    const raw = initialBanners || DEFAULT_BANNERS
     const modeFiltered = raw.filter((b: any) => {
       const bType = (b.type || 'grocery').toLowerCase()
       if (mode === 'grocery') return bType === 'grocery' || bType === 'all' || bType === 'express-delivery'
       if (mode === 'food') return bType === 'food' || bType === 'cafe'
       return true
     })
-    const list = modeFiltered.length > 0 ? modeFiltered : raw
-    const cleanBanners = list.filter((b: any) => {
+    const cleanBanners = modeFiltered.filter((b: any) => {
       const hasMedia = (b.imageUrl && b.imageUrl.trim().length > 0) || (b.videoUrl && b.videoUrl.trim().length > 0)
       return hasMedia && b.isActive !== false
     })

@@ -146,7 +146,7 @@ class _CardMediaWidgetState extends State<CardMediaWidget> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(widget.borderRadius),
                 border: Border.all(
-                  color: Colors.black.withValues(alpha: 0.06),
+                  color: Colors.black.withOpacity(0.06),
                   width: 1.0,
                 ),
               ),
@@ -161,10 +161,10 @@ class _CardMediaWidgetState extends State<CardMediaWidget> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.52),
+                  color: Colors.black.withOpacity(0.52),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.18),
+                    color: Colors.white.withOpacity(0.18),
                     width: 0.6,
                   ),
                 ),
@@ -243,8 +243,20 @@ class _CardMediaWidgetState extends State<CardMediaWidget> {
 
   Widget _buildFallbackVisual() {
     if (widget.fallback != null) return widget.fallback!;
-    return Container(
-      color: Colors.black.withValues(alpha: 0.04),
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.03),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: Colors.black.withOpacity(0.06)),
+        ),
+        child: const Icon(
+          Icons.fastfood_rounded,
+          size: 54,
+          color: Colors.black26,
+        ),
+      ),
     );
   }
 }

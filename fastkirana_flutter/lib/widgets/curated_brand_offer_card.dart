@@ -239,7 +239,17 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
   }
 
   Widget _buildCardContent(BuildContext context, Color glowColor, CardColorPalette palette) {
+    final hasMedia = (widget.imageUrl != null && widget.imageUrl!.trim().isNotEmpty) ||
+        (widget.videoUrl != null && widget.videoUrl!.trim().isNotEmpty) ||
+        (widget.imageAsset != null && widget.imageAsset!.trim().isNotEmpty);
+
     final fmt = widget.cardType;
+
+    // Pure media card: when cardType is 'media', 'pure_media', or 'standard' with media,
+    // or when the card has media and title is empty/default.
+    if (fmt == 'media' || fmt == 'pure_media' || (fmt == 'standard' && hasMedia)) {
+      return _buildPureMediaCard(context);
+    }
     if (fmt == 'hero' || fmt == 'dark_showcase') {
       return _buildHeroCard(context, glowColor, palette);
     } else if (fmt == 'bento_grid') {
@@ -247,7 +257,24 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
     } else if (fmt == 'editorial') {
       return _buildEditorialCard(context, glowColor, palette);
     }
+    if (hasMedia) {
+      return _buildPureMediaCard(context);
+    }
     return _buildStandardCard(context, glowColor, palette);
+  }
+
+  /// ─── 0. PURE FULL-BLEED PHOTO & VIDEO CARD (Zero text, zero coupons, pure media) ───
+  Widget _buildPureMediaCard(BuildContext context) {
+    return SizedBox.expand(
+      child: CardMediaWidget(
+        imageUrl: widget.imageUrl,
+        videoUrl: widget.videoUrl,
+        imageAsset: widget.imageAsset,
+        fit: BoxFit.cover,
+        borderRadius: 26.5,
+        showLiveBadge: false, // Pure photo/video: NO BADGES, NO TEXT
+      ),
+    );
   }
 
   // ===========================================================================

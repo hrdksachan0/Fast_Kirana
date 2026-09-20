@@ -18,76 +18,47 @@ interface FestiveCard {
   icon?: string
 }
 
-// Default Blinkit & Zepto inspired high-converting festival & deal cards
-const DEFAULT_FESTIVE_CARDS: FestiveCard[] = [
-  {
-    id: 'f1',
-    title: 'Festival Sweets & Dry Fruits 🪔',
-    subtitle: 'Kaju Katli, Gulab Jamun & Almond Gift Boxes',
-    badgeText: 'FLAT ₹150 OFF',
-    gradient: 'from-amber-600 via-orange-500 to-yellow-500',
-    linkUrl: '/search?q=sweets',
-    icon: '🪔',
-  },
-  {
-    id: 'f2',
-    title: 'Cold Drinks & Ice Creams 🍦',
-    subtitle: 'Amul, Kwality Walls, Coke, Pepsi & Juices',
-    badgeText: 'UP TO 40% OFF',
-    gradient: 'from-cyan-600 via-blue-600 to-indigo-600',
-    linkUrl: '/category/beverages',
-    icon: '🥤',
-  },
-  {
-    id: 'f3',
-    title: 'Midnight Munchies 🌙',
-    subtitle: 'Chips, Instant Noodles, Chocolates & Biscuits',
-    badgeText: 'UNDER ₹49 DEALS',
-    gradient: 'from-purple-700 via-indigo-700 to-slate-900',
-    linkUrl: '/category/snacks-munchies',
-    icon: '🍿',
-  },
-  {
-    id: 'f4',
-    title: 'Fresh Farm Produce 🥬',
-    subtitle: '100% Organic Vegetables & Handpicked Fruits',
-    badgeText: 'DAILY FRESH BAZAAR',
-    gradient: 'from-emerald-600 via-teal-600 to-green-500',
-    linkUrl: '/category/fruits-vegetables',
-    icon: '🍇',
-  },
-]
+
 
 export function FestiveBrandingGrid() {
-  const [cards, setCards] = useState<FestiveCard[]>(DEFAULT_FESTIVE_CARDS)
-  const [loading, setLoading] = useState(false)
+  const [cards, setCards] = useState<FestiveCard[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function loadBanners() {
       try {
-        const res = await fetch('/api/banners?type=festive')
+        setLoading(true)
+        const res = await fetch('/api/banners?placement=brand_card')
         if (res.ok) {
           const data = await res.json()
           if (Array.isArray(data) && data.length > 0) {
             const mapped: FestiveCard[] = data.map((b: any) => ({
               id: b.id,
               title: b.title,
-              subtitle: b.description || 'Special Festival Deals',
-              badgeText: b.code ? `CODE: ${b.code}` : 'SPECIAL OFFER',
+              subtitle: b.description || 'Special Offer Card',
+              badgeText: b.code ? `CODE: ${b.code}` : (b.eyebrowTag || 'SPECIAL OFFER'),
               gradient: b.gradient || 'from-primary via-rose-500 to-orange-400',
               imageUrl: b.imageUrl,
-              linkUrl: b.linkUrl || '/search?q=deals',
+              linkUrl: b.linkUrl || b.ctaUrl || '/search?q=deals',
             }))
             setCards(mapped)
+          } else {
+            setCards([])
           }
         }
       } catch (err) {
-        console.error('Failed to load festive banners:', err)
+        console.error('Failed to load brand cards:', err)
+      } finally {
+        setLoading(false)
       }
     }
 
     loadBanners()
   }, [])
+
+  if (!loading && cards.length === 0) {
+    return null
+  }
 
   return (
     <div className="w-full space-y-3.5 my-4">

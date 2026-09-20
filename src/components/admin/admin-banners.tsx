@@ -56,6 +56,8 @@ interface PromoBanner {
   gridImages?: string[] | null
   hasWireframeGrid?: boolean
   rawCode?: string
+  placement?: 'hero' | 'brand_card'
+  platform?: 'all' | 'mobile' | 'web'
 }
 
 // Predefined Gradient Options
@@ -411,6 +413,14 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
   const [presetCategoryFilter, setPresetCategoryFilter] = useState<'all' | 'food' | 'grocery'>('all')
   const [isGeneratingGemini, setIsGeneratingGemini] = useState(false)
 
+  // Placement & Target Platform States
+  const [placement, setPlacement] = useState<'hero' | 'brand_card'>('hero')
+  const [platform, setPlatform] = useState<'all' | 'mobile' | 'web'>('all')
+
+  // Registered List Filtering Tabs
+  const [activeListTab, setActiveListTab] = useState<'hero' | 'brand_card'>('hero')
+  const [activePlatformFilter, setActivePlatformFilter] = useState<'all' | 'mobile' | 'web'>('all')
+
   // Form States
   const [editingId, setEditingId] = useState<string | null>(null)
   const [title, setTitle] = useState('')
@@ -421,6 +431,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
   const [imageUrl, setImageUrl] = useState('')
   const [videoUrl, setVideoUrl] = useState('')
   const [previewMediaTab, setPreviewMediaTab] = useState<'image' | 'video'>('image')
+  const [previewDevice, setPreviewDevice] = useState<'mobile' | 'web'>('mobile')
   const [linkUrl, setLinkUrl] = useState('')
   const [linkType, setLinkType] = useState<'none' | 'category' | 'product' | 'custom'>('none')
   const [selectedCategory, setSelectedCategory] = useState('')
@@ -754,11 +765,13 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
   const resetForm = () => {
     setEditingId(null)
     setCardFormat('standard')
+    setPlacement('hero')
+    setPlatform('all')
     setTitle('')
     setDescription('')
     setCode('')
     setGradient(GRADIENT_PRESETS[4].value)
-    setType('festival')
+    setType('grocery')
     setImageUrl('')
     setVideoUrl('')
     setPreviewMediaTab('image')
@@ -792,12 +805,15 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
   const handleEditClick = (b: PromoBanner) => {
     setEditingId(b.id)
     
-    // Infer card format
+    // Infer card format & placement
     let fmt: CardFormat = 'standard'
     if (b.cardType === 'dark_showcase' || b.type === 'dark_showcase') fmt = 'dark_showcase'
     else if (b.cardType === 'bento_grid' || b.type === 'bento_grid') fmt = 'bento_grid'
     else if (b.cardType === 'editorial' || b.type === 'editorial') fmt = 'editorial'
     setCardFormat(fmt)
+
+    setPlacement(b.placement || (['dark_showcase', 'bento_grid', 'editorial', 'brand_offer'].includes(b.type) ? 'brand_card' : 'hero'))
+    setPlatform(b.platform || 'all')
 
     setTitle(b.title)
     setDescription(b.description)
@@ -913,6 +929,8 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
 
       const payload = {
         id: editingId || undefined,
+        placement,
+        platform,
         title: finalTitle,
         description: finalDesc,
         code: code.trim().toUpperCase(),
@@ -1030,224 +1048,6 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
     >
       {/* Creation and Edit Panel */}
       <div className="lg:col-span-2 space-y-6">
-        
-        {/* Curated Multi-Card Presets (Sneaker Street, Bento Grid, Editorial) */}
-        <div className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <LayoutGrid className="h-5 w-5 text-indigo-500 animate-pulse" />
-                <h3 className="text-base font-black text-text-primary">
-                  🔥 Category-Wise Multi-Cards (Food & Grocery Storefront)
-                </h3>
-                <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
-                  Ready to Publish
-                </span>
-              </div>
-              <p className="text-[11px] text-text-secondary mt-0.5">
-                Dynamic, aesthetic cards for Food (Burgers, Cuisines, Royal Meals) & Grocery (Fresh Harvest, Essentials, Snacks).
-              </p>
-            </div>
-
-            {/* Category Filter Tabs */}
-            <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/60">
-              <button
-                type="button"
-                onClick={() => setPresetCategoryFilter('all')}
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer ${
-                  presetCategoryFilter === 'all'
-                    ? 'bg-card text-text-primary shadow-xs'
-                    : 'text-text-muted hover:text-text-primary'
-                }`}
-              >
-                All (6)
-              </button>
-              <button
-                type="button"
-                onClick={() => setPresetCategoryFilter('food')}
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 ${
-                  presetCategoryFilter === 'food'
-                    ? 'bg-rose-500 text-white shadow-xs'
-                    : 'text-text-muted hover:text-text-primary'
-                }`}
-              >
-                🍔 Food Mode
-              </button>
-              <button
-                type="button"
-                onClick={() => setPresetCategoryFilter('grocery')}
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 ${
-                  presetCategoryFilter === 'grocery'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-text-muted hover:text-text-primary'
-                }`}
-              >
-                🛍️ Grocery Mode
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1">
-            {MULTI_CARD_PRESETS.filter(
-              (tpl) => presetCategoryFilter === 'all' || (tpl as any).categoryType === presetCategoryFilter
-            ).map((tpl) => (
-              <div
-                key={tpl.id}
-                className="group relative rounded-2xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md hover:border-indigo-500/50 transition-all flex flex-col justify-between"
-              >
-                {/* Preview Graphic / Thumbnail */}
-                <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-900 flex items-center justify-center p-2">
-                  {tpl.cardType === 'bento_grid' ? (
-                    <div className="grid grid-cols-2 gap-1 w-full h-full">
-                      {tpl.gridImages?.map((img, idx) => (
-                        <div key={idx} className="relative rounded overflow-hidden bg-muted/30">
-                          <img src={img} alt="" className="w-full h-full object-cover" />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <img
-                      src={tpl.imageUrl}
-                      alt={tpl.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  )}
-                  <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-sm text-[8px] font-black text-white uppercase tracking-wider">
-                    {tpl.badge}
-                  </div>
-                  <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-indigo-600 text-[8px] font-black text-white shadow-xs">
-                    {tpl.ctaText}
-                  </div>
-                </div>
-
-                {/* Details & Actions */}
-                <div className="p-3 space-y-2 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h4 className="text-xs font-black text-text-primary line-clamp-1">
-                      {tpl.name}
-                    </h4>
-                    <p className="text-[10px] text-text-secondary line-clamp-2 mt-0.5 leading-snug">
-                      {tpl.description}
-                    </p>
-                  </div>
-
-                  <div className="pt-2 border-t border-border/40 flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handlePublishDesignDirectly(tpl)}
-                      disabled={submitting}
-                      className="flex-1 py-1.5 px-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black tracking-wide transition-all text-center cursor-pointer shadow-xs disabled:opacity-50"
-                    >
-                      ⚡ 1-Click Publish
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleApplyTemplate(tpl)}
-                      className="py-1.5 px-2.5 rounded-xl border border-border bg-muted/30 hover:bg-muted text-text-primary text-[10px] font-bold transition-all text-center cursor-pointer"
-                    >
-                      ✏️ Edit
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Instamart Pro Designs Gallery */}
-        <div className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-amber-500 animate-pulse" />
-                <h3 className="text-base font-black text-text-primary">
-                  Instamart Pro Banner Designs (2x Retina)
-                </h3>
-                <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-                  Ready to Publish
-                </span>
-              </div>
-              <p className="text-[11px] text-text-secondary mt-0.5">
-                Swiggy Instamart-grade festive banners with sunburst rays, product stages & instant 1-click publishing.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 pt-1">
-            {INSTAMART_PRO_DESIGNS.map((tpl) => (
-              <div
-                key={tpl.id}
-                className="group relative rounded-2xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md hover:border-primary/50 transition-all flex flex-col justify-between"
-              >
-                {/* Image Preview Container */}
-                <div className="relative aspect-[16/9] w-full overflow-hidden bg-muted/40">
-                  <img
-                    src={tpl.imageUrl}
-                    alt={tpl.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-sm text-[9px] font-black text-white uppercase tracking-wider">
-                    {tpl.badge}
-                  </div>
-                  <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-primary text-[9px] font-black text-white shadow-xs">
-                    Code: {tpl.code}
-                  </div>
-                </div>
-
-                {/* Info & Action Buttons */}
-                <div className="p-3 space-y-2 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h4 className="text-xs font-black text-text-primary line-clamp-1">
-                      {tpl.name}
-                    </h4>
-                    <p className="text-[10px] text-text-secondary line-clamp-2 mt-0.5 leading-snug">
-                      {tpl.description}
-                    </p>
-                  </div>
-
-                  <div className="pt-2 border-t border-border/40 flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handlePublishDesignDirectly(tpl)}
-                      disabled={submitting}
-                      className="flex-1 py-1.5 px-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-[10px] font-black tracking-wide transition-all text-center cursor-pointer shadow-xs disabled:opacity-50"
-                    >
-                      ⚡ 1-Click Publish
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleApplyTemplate(tpl)}
-                      className="py-1.5 px-2.5 rounded-xl border border-border bg-muted/30 hover:bg-muted text-text-primary text-[10px] font-bold transition-all text-center cursor-pointer"
-                    >
-                      ✏️ Edit
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Quick Festival Gradient Templates Accordion */}
-          <details className="pt-2 border-t border-border/50 group">
-            <summary className="text-xs font-bold text-text-secondary cursor-pointer hover:text-text-primary transition-colors flex items-center justify-between">
-              <span>🎨 Show Classic Gradient Templates (Diwali, Holi, Eid, Fresh...)</span>
-              <span className="text-[10px] font-bold text-text-muted group-open:rotate-180 transition-transform">▼</span>
-            </summary>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3">
-              {FESTIVAL_TEMPLATES.map((tpl) => (
-                <button
-                  key={tpl.name}
-                  type="button"
-                  onClick={() => handleApplyTemplate(tpl)}
-                  className="py-2 px-2.5 border border-border/80 text-[10px] font-bold rounded-xl bg-muted/20 hover:bg-primary/10 hover:border-primary hover:text-primary transition-all text-center leading-normal cursor-pointer"
-                >
-                  {tpl.name}
-                </button>
-              ))}
-            </div>
-          </details>
-        </div>
-
         {/* Input Form */}
         <div className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-6">
           {/* Clean Simple Banner Form Header */}
@@ -1264,6 +1064,87 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
           {/* Simple Form */}
           <form onSubmit={handleSubmit} className="space-y-4 bg-muted/20 border border-border p-5 rounded-2xl">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              {/* Type / Placement / Mode / Platform Controls */}
+              <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-card border border-border/80 rounded-xl">
+                {/* Placement Selector */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary block">
+                    1. Section Type *
+                  </label>
+                  <div className="grid grid-cols-2 gap-1 bg-muted/40 p-1 rounded-lg border border-border">
+                    <button
+                      type="button"
+                      onClick={() => setPlacement('hero')}
+                      className={`py-1.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                        placement === 'hero'
+                          ? 'bg-primary text-white shadow-xs font-black'
+                          : 'text-text-muted hover:text-text-primary'
+                      }`}
+                    >
+                      🖼️ Hero Slider
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPlacement('brand_card')}
+                      className={`py-1.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                        placement === 'brand_card'
+                          ? 'bg-primary text-white shadow-xs font-black'
+                          : 'text-text-muted hover:text-text-primary'
+                      }`}
+                    >
+                      💳 Brand Card
+                    </button>
+                  </div>
+                </div>
+
+                {/* Target Mode Selector */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary block">
+                    2. Store Mode *
+                  </label>
+                  <div className="grid grid-cols-2 gap-1 bg-muted/40 p-1 rounded-lg border border-border">
+                    <button
+                      type="button"
+                      onClick={() => setType('grocery')}
+                      className={`py-1.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                        type === 'grocery' || type === 'express-delivery'
+                          ? 'bg-emerald-600 text-white shadow-xs font-black'
+                          : 'text-text-muted hover:text-text-primary'
+                      }`}
+                    >
+                      🛍️ Grocery
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setType('food')}
+                      className={`py-1.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                        type === 'food' || type === 'cafe'
+                          ? 'bg-rose-500 text-white shadow-xs font-black'
+                          : 'text-text-muted hover:text-text-primary'
+                      }`}
+                    >
+                      🍕 Food & Cafe
+                    </button>
+                  </div>
+                </div>
+
+                {/* Target Platform Selector */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary block">
+                    3. Target Platform *
+                  </label>
+                  <select
+                    value={platform}
+                    onChange={(e) => setPlatform(e.target.value as any)}
+                    className="w-full bg-card border border-border px-3 py-2 rounded-lg text-xs font-bold text-text-primary focus:outline-none focus:border-primary"
+                  >
+                    <option value="all">🌐 All Devices (Web + Mobile App)</option>
+                    <option value="mobile">📱 Mobile App Only (Android/iOS)</option>
+                    <option value="web">💻 Web Storefront Only</option>
+                  </select>
+                </div>
+              </div>
               
               {/* Banner Title */}
               <div className="space-y-1">
@@ -1630,44 +1511,57 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
               <Eye className="h-5 w-5 text-accent" />
               <h3 className="text-sm font-bold text-text-primary">Live Storefront Preview</h3>
             </div>
-            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20">
-              {cardFormat === 'dark_showcase' ? 'Sneaker Drop' :
-               cardFormat === 'bento_grid' ? 'Bento 2x2' :
-               cardFormat === 'editorial' ? 'Editorial HRX' :
-               'Standard Banner'}
-            </span>
+
+            {/* Mobile / Web Device Frame Switch */}
+            <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/60">
+              <button
+                type="button"
+                onClick={() => setPreviewDevice('mobile')}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 ${
+                  previewDevice === 'mobile'
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                📱 Mobile App
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewDevice('web')}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 ${
+                  previewDevice === 'web'
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                💻 Web Store
+              </button>
+            </div>
           </div>
           
-          <div className="relative w-full overflow-hidden rounded-2xl shadow-lg border border-border select-none bg-muted/20">
-            {/* 1. DARK SNEAKER HERO PREVIEW */}
-            {cardFormat === 'dark_showcase' ? (
-              <div className="relative w-full min-h-[220px] p-4 bg-neutral-950 text-white flex flex-col justify-between overflow-hidden">
-                {/* Wireframe background grid simulation */}
-                {hasWireframeGrid && (
-                  <div className="absolute inset-0 opacity-20 pointer-events-none [background:radial-gradient(#404040_1px,transparent_1px)] [background-size:16px_16px]" />
-                )}
+          {/* DEVICE PREVIEW CONTAINER */}
+          <div className="w-full flex justify-center py-2 select-none">
+            {previewDevice === 'mobile' ? (
+              /* MOBILE IPHONE PREVIEW MOCKUP FRAME */
+              <div className="w-[300px] bg-black p-3.5 rounded-[36px] shadow-2xl border-4 border-neutral-800 space-y-3 relative">
+                {/* iPhone Dynamic Island notch */}
+                <div className="w-24 h-3.5 bg-neutral-900 rounded-full mx-auto" />
                 
-                {/* Top bar: Eyebrow + Brand */}
-                <div className="relative z-10 flex items-center justify-between gap-2">
-                  <span className="px-2 py-0.5 rounded-full bg-lime-400 text-black font-black text-[9px] uppercase tracking-wider shadow-sm">
-                    {eyebrowTag || 'LIMITED DROP'}
-                  </span>
-                  <span className="text-[10px] font-black tracking-widest text-neutral-400 uppercase">
-                    {primaryBrand || 'NIKE'} {secondaryBrand ? `• ${secondaryBrand}` : ''}
+                {/* App Header simulation */}
+                <div className="flex items-center justify-between text-white text-[10px] px-1 font-bold">
+                  <span>⚡ 10 Mins • Ghatampur</span>
+                  <span className={`text-[8px] px-1.5 py-0.5 rounded font-mono uppercase font-black ${
+                    type === 'food' || type === 'cafe'
+                      ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                      : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  }`}>
+                    {type === 'food' || type === 'cafe' ? '🍕 FOOD' : '🛍️ GROCERY'}
                   </span>
                 </div>
 
-                {/* Center: Floating Sneaker Image & Headline */}
-                <div className="relative z-10 my-2 flex items-center justify-between gap-3">
-                  <div className="space-y-1 max-w-[60%]">
-                    <h4 className="text-base font-black tracking-tight leading-tight uppercase line-clamp-1 text-white">
-                      {title || "SPOTLIGHT DROP"}
-                    </h4>
-                    <p className="text-[10px] text-neutral-400 font-medium line-clamp-2 leading-tight">
-                      {description || 'Exclusive curated collection'}
-                    </p>
-                  </div>
-                  <div className="w-24 h-20 relative flex items-center justify-center shrink-0 rounded-lg overflow-hidden">
+                {/* Hero Banner Slide Mockup */}
+                {placement === 'hero' ? (
+                  <div className="relative w-full h-[125px] rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 shadow-lg">
                     {previewMediaTab === 'video' && videoUrl ? (
                       <video
                         src={videoUrl}
@@ -1675,275 +1569,335 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                         loop
                         muted
                         playsInline
-                        className="w-full h-full object-cover rounded-lg"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt={title || "Banner Preview"}
+                        className="w-full h-full object-cover"
                       />
                     ) : (
-                      <img
-                        src={imageUrl || 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=400&q=80'}
-                        alt=""
-                        className="max-h-full max-w-full object-contain drop-shadow-[0_10px_10px_rgba(0,0,0,0.8)]"
-                      />
+                      <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-zinc-900 text-zinc-400">
+                        <ImageIcon className="h-6 w-6 text-zinc-600 mb-1" />
+                        <span className="text-[10px] font-bold text-zinc-300">{title || 'Your Banner Here'}</span>
+                        <span className="text-[8px] text-zinc-500">Upload Image or MP4 Video above</span>
+                      </div>
                     )}
-                  </div>
-                </div>
 
-                {/* Bottom bar: Cashback + CTA Pill */}
-                <div className="relative z-10 pt-2 border-t border-neutral-800 flex items-center justify-between gap-2">
-                  <div className="leading-none">
-                    <span className="text-[10px] font-black text-amber-400 block">{cashbackTitle || 'FLAT 40% OFF'}</span>
-                    <span className="text-[8px] text-neutral-500 font-bold">{cashbackSubtitle || '+ Extra 10% on UPI'}</span>
+                    {/* Floating Counter Pill at Bottom Right */}
+                    <div className="absolute bottom-2 right-2 z-20 flex flex-col items-center gap-0.5 bg-black/80 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/20 text-white shadow-md">
+                      <span className="text-[8px] font-black tracking-widest font-mono">1/1</span>
+                      <div className="w-6 h-[2px] bg-gradient-to-r from-amber-400 to-rose-400 rounded-full" />
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    style={{
-                      backgroundColor: ctaBgColorHex || '#FFFFFF',
-                      color: ctaTextColorHex || '#000000'
-                    }}
-                    className="px-3 py-1 rounded-full text-[10px] font-black tracking-wider shadow-sm uppercase cursor-default"
-                  >
-                    {ctaText || 'EXPLORE NOW'}
-                  </button>
-                </div>
+                ) : (
+                  /* CuratedBrandOffersCarousel Mobile Shelf Mockup (Pure Media Card, No Text) */
+                  <div className="space-y-1.5 text-left">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[10px] font-black text-white tracking-tight">Curated Brand Offers</span>
+                      <span className="text-[8px] font-bold text-rose-400 font-mono">See All</span>
+                    </div>
 
-                {disclaimerText && (
-                  <p className="text-[7px] text-neutral-600 mt-1 truncate">{disclaimerText}</p>
+                    <div className="flex items-center gap-2 overflow-hidden py-1">
+                      {/* Active Primary Brand Card (260x380 proportion) */}
+                      <div className="relative w-[190px] h-[270px] rounded-[22px] overflow-hidden bg-neutral-900 border-2 border-white/15 shadow-2xl shrink-0 group">
+                        {previewMediaTab === 'video' && videoUrl ? (
+                          <video
+                            src={videoUrl}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className="w-full h-full object-cover"
+                          />
+                        ) : imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            alt="Pure Brand Visual"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-zinc-900/90 text-zinc-400">
+                            <ImageIcon className="h-8 w-8 text-zinc-600 mb-2" />
+                            <span className="text-[11px] font-extrabold text-zinc-200">Pure Media Card</span>
+                            <span className="text-[8px] text-zinc-400 mt-1">Upload Photo or Looping Video</span>
+                            <span className="text-[7.5px] text-primary/80 font-bold mt-1 uppercase tracking-wider">No Text Overlay</span>
+                          </div>
+                        )}
+
+                        {/* Subtle Luxury Corner Glint */}
+                        <div className="absolute inset-0 rounded-[22px] border border-white/10 pointer-events-none" />
+                      </div>
+
+                      {/* Adjacent Peeking Card (Simulating Horizontal Scroll) */}
+                      <div className="w-[65px] h-[270px] rounded-[22px] bg-zinc-900/40 border border-white/5 opacity-40 shrink-0 flex flex-col items-center justify-center">
+                        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
+                          <Sparkles className="h-3 w-3 text-white/40" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
-            ) : cardFormat === 'bento_grid' ? (
-              /* 2. 2X2 BENTO GRID PREVIEW */
-              <div className="relative w-full min-h-[220px] p-4 bg-slate-900 text-white flex flex-col justify-between overflow-hidden">
-                {/* Top row */}
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <div className="space-y-0.5">
-                    <span className="px-2 py-0.5 rounded-full bg-indigo-500 text-white font-black text-[8px] uppercase tracking-wider inline-block">
-                      {eyebrowTag || 'PRIME MEMBERS ONLY'}
-                    </span>
-                    <h4 className="text-xs font-black tracking-tight text-white line-clamp-1">
-                      {title || 'TOP PICKS FOR YOU'}
-                    </h4>
+            ) : (
+              /* WEB STOREFRONT DESKTOP PREVIEW MOCKUP FRAME */
+              <div className="w-full bg-zinc-950 p-4 rounded-2xl shadow-xl border border-zinc-800 space-y-3">
+                {/* Browser top bar simulation */}
+                <div className="flex items-center justify-between border-b border-zinc-800 pb-2 text-[10px] text-zinc-400">
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-2.5 w-2.5 rounded-full bg-red-500/80" />
+                    <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/80" />
+                    <div className="h-2.5 w-2.5 rounded-full bg-green-500/80" />
+                    <span className="font-mono text-[9px] text-zinc-500 ml-2">fastkirana.com</span>
                   </div>
-                </div>
-
-                {/* 2x2 Bento Photo Quadrant */}
-                <div className="grid grid-cols-2 gap-1.5 my-1">
-                  {[
-                    gridImage1 || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300&q=80',
-                    gridImage2 || 'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=300&q=80',
-                    gridImage3 || 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=300&q=80',
-                    gridImage4 || 'https://images.unsplash.com/photo-1509722747041-616f39b57569?w=300&q=80'
-                  ].map((img, i) => (
-                    <div key={i} className="aspect-[4/3] rounded-lg overflow-hidden bg-slate-800 border border-slate-700/50">
-                      <img src={img} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  ))}
-                </div>
-
-                {/* Bottom bar: Cashback + CTA */}
-                <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
-                  <div className="leading-none">
-                    <span className="text-[10px] font-black text-indigo-400 block">{cashbackTitle || 'UP TO 60% OFF'}</span>
-                    <span className="text-[8px] text-slate-400 font-bold truncate max-w-[120px] block">{cashbackSubtitle || 'Prime Exclusive'}</span>
-                  </div>
-                  <button
-                    type="button"
-                    style={{
-                      backgroundColor: ctaBgColorHex || '#4F46E5',
-                      color: ctaTextColorHex || '#FFFFFF'
-                    }}
-                    className="px-3 py-1 rounded-full text-[9px] font-black tracking-wider shadow-sm uppercase cursor-default"
-                  >
-                    {ctaText || 'VIEW ALL 4 DEALS'}
-                  </button>
-                </div>
-              </div>
-            ) : cardFormat === 'editorial' ? (
-              /* 3. EDITORIAL HRX PREVIEW */
-              <div className="relative w-full min-h-[200px] p-4 bg-gradient-to-br from-red-950 via-zinc-950 to-black text-white flex flex-col justify-between overflow-hidden border border-red-900/30">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="px-2 py-0.5 rounded-md bg-rose-600/30 border border-rose-500/50 text-rose-300 font-black text-[8px] uppercase tracking-widest">
-                    {eyebrowTag || 'SPECIAL EDITION'}
+                  <span className={`font-bold text-[9px] uppercase px-2 py-0.5 rounded border ${
+                    type === 'food' || type === 'cafe'
+                      ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                      : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  }`}>
+                    {type === 'food' || type === 'cafe' ? '🍕 Food & Cafe Tab' : '🛍️ Grocery Tab'}
                   </span>
                 </div>
 
-                <div className="my-2 flex items-center justify-between gap-2">
-                  <div className="space-y-1">
-                    <h3 className="text-xl font-black tracking-tighter text-white uppercase leading-none">
-                      {title || 'MIN. 80% OFF'}
-                    </h3>
-                    {cashbackTitle && (
-                      <span className="inline-block px-2 py-0.5 bg-rose-600 text-white font-black text-[9px] rounded uppercase">
-                        {cashbackTitle}
-                      </span>
+                {/* Hero Banner Slide Mockup */}
+                {placement === 'hero' ? (
+                  <div className="relative w-full aspect-[3.2/1] rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 shadow-lg">
+                    {previewMediaTab === 'video' && videoUrl ? (
+                      <video
+                        src={videoUrl}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover"
+                      />
+                    ) : imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt={title || "Banner Preview"}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-zinc-900 text-zinc-400">
+                        <ImageIcon className="h-7 w-7 text-zinc-600 mb-1" />
+                        <span className="text-xs font-bold text-zinc-200">{title || 'Your Storefront Banner Preview'}</span>
+                        <span className="text-[9px] text-zinc-500">Upload Image or MP4 Video above to see live preview</span>
+                      </div>
                     )}
-                    <p className="text-[9px] text-zinc-400 line-clamp-1">{description || 'Activewear, Trainers & Athleisure'}</p>
-                  </div>
-                  {(imageUrl || videoUrl) && (
-                    <div className="w-20 h-20 rounded-lg overflow-hidden shrink-0 border border-rose-900/40">
-                      {previewMediaTab === 'video' && videoUrl ? (
-                        <video
-                          src={videoUrl}
-                          autoPlay
-                          loop
-                          muted
-                          playsInline
-                          className="w-full h-full object-cover"
-                        />
-                      ) : imageUrl ? (
-                        <img src={imageUrl} alt="" className="w-full h-full object-cover" />
-                      ) : null}
-                    </div>
-                  )}
-                </div>
 
-                <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between gap-2">
-                  <span className="text-[8px] text-zinc-400 font-mono">{cashbackSubtitle || '*Terms apply'}</span>
-                  <button
-                    type="button"
-                    style={{
-                      backgroundColor: ctaBgColorHex || '#EF4444',
-                      color: ctaTextColorHex || '#FFFFFF'
-                    }}
-                    className="px-3 py-1 rounded-full text-[9px] font-black tracking-wider shadow-sm uppercase cursor-default"
-                  >
-                    {ctaText || 'SHOP HRX SALE'}
-                  </button>
-                </div>
+                    {/* Floating Counter Pill at Bottom Right */}
+                    <div className="absolute bottom-3 right-3 z-20 flex flex-col items-center gap-1 bg-black/80 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 text-white shadow-lg">
+                      <span className="text-[10px] font-black tracking-widest font-mono">1/1</span>
+                      <div className="w-8 h-[2px] bg-gradient-to-r from-amber-400 to-rose-400 rounded-full" />
+                    </div>
+                  </div>
+                ) : (
+                  /* Brand Card Web Carousel Mockup (Pure Media Card) */
+                  <div className="space-y-2 text-left">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-xs font-black text-white tracking-tight">Curated Brand Offers</span>
+                      <span className="text-[10px] font-bold text-rose-400 font-mono">See All →</span>
+                    </div>
+
+                    <div className="flex items-center gap-3 overflow-hidden py-1">
+                      {/* Active Pure Media Card (260x380 Proportion) */}
+                      <div className="relative w-[210px] h-[290px] rounded-[24px] overflow-hidden bg-neutral-900 border-2 border-white/15 shadow-2xl shrink-0">
+                        {previewMediaTab === 'video' && videoUrl ? (
+                          <video
+                            src={videoUrl}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className="w-full h-full object-cover"
+                          />
+                        ) : imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            alt="Pure Brand Visual"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-zinc-900/90 text-zinc-400">
+                            <ImageIcon className="h-9 w-9 text-zinc-600 mb-2" />
+                            <span className="text-xs font-extrabold text-zinc-200">Pure Media Card</span>
+                            <span className="text-[9px] text-zinc-400 mt-1">Upload Photo or Looping Video</span>
+                            <span className="text-[8px] text-primary/80 font-bold mt-1 uppercase tracking-wider">No Text Overlay</span>
+                          </div>
+                        )}
+                        <div className="absolute inset-0 rounded-[24px] border border-white/10 pointer-events-none" />
+                      </div>
+
+                      {/* Adjacent Peeking Cards */}
+                      <div className="w-[120px] h-[290px] rounded-[24px] bg-zinc-900/40 border border-white/5 opacity-40 shrink-0 flex flex-col items-center justify-center">
+                        <Sparkles className="h-5 w-5 text-white/30" />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            ) : (
-              /* 4. STANDARD BANNER PREVIEW */
-              (imageUrl || videoUrl) ? (
-                <div className="relative aspect-[16/9] w-full overflow-hidden">
-                  {previewMediaTab === 'video' && videoUrl ? (
-                    <video
-                      src={videoUrl}
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      className="w-full h-full object-cover"
-                    />
-                  ) : imageUrl ? (
-                    <img
-                      src={imageUrl}
-                      alt={title || "Custom Graphic Banner"}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : null}
-                </div>
-              ) : type === 'express-delivery' ? (
-                <div className="h-[140px] flex items-center justify-between p-4 bg-[#fdf0f1] text-[#2d2d2d]">
-                  <div className="text-left space-y-0.5">
-                    <span className="text-[8px] font-black text-[#e20a22] uppercase tracking-wider block">Fast Delivery in</span>
-                    <h4 className="text-sm font-black text-[#e20a22] tracking-tight leading-tight">{title || SERVICE_AREA_NAME}</h4>
-                    <p className="text-[9px] text-[#4d4d4d] font-bold line-clamp-1">{description || 'Milk, Fruits, Vegetables, Snacks & more'}</p>
-                  </div>
-                  <div className="text-2xl pr-2">🛍️</div>
-                </div>
-              ) : (
-                <div className={`h-[140px] flex flex-col justify-center p-4 text-white bg-gradient-to-br ${gradient}`}>
-                  <div className="space-y-1">
-                    {code.trim() && (
-                      <span className="inline-flex items-center gap-1 bg-white/15 border border-white/20 px-2 py-0.5 rounded-full text-[9px] font-extrabold tracking-wide max-w-max">
-                        <Gift className="h-2.5 w-2.5" />
-                        Use Code: {code}
-                      </span>
-                    )}
-                    <h4 className="text-sm font-black tracking-tight leading-tight line-clamp-1">
-                      {title || 'Festive Sale Banner'}
-                    </h4>
-                    <p className="text-[10px] text-white/80 font-medium line-clamp-2 leading-relaxed">
-                      {description || 'Offer details will appear here as you type...'}
-                    </p>
-                  </div>
-                  <div className="absolute right-3 bottom-3 text-2xl opacity-40">
-                    {type === 'festival' && '🪔'}
-                    {type === 'first-order' && '🥛'}
-                    {type === 'fresh' && '🥬'}
-                    {type === 'snacks' && '🥤'}
-                    {type === 'custom' && '📦'}
-                  </div>
-                </div>
-              )
             )}
           </div>
         </div>
 
         {/* Database Active Banners List */}
-        <div className="bg-card border border-border p-6 rounded-2xl shadow-sm flex flex-col">
-          <div className="border-b border-border/60 pb-3 mb-4">
-            <h4 className="text-sm font-bold text-text-primary">Currently Registered Cards & Banners</h4>
-            <p className="text-[10px] text-text-muted">Edit, reorder, toggle active, or delete promotional cards.</p>
+        <div className="bg-card border border-border p-6 rounded-2xl shadow-sm flex flex-col space-y-4">
+          <div className="border-b border-border/60 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h4 className="text-sm font-bold text-text-primary">Registered Banners & Brand Cards</h4>
+              <p className="text-[10px] text-text-muted">Manage active banners, target platforms & display placement.</p>
+            </div>
+
+            {/* Platform Sub-filter */}
+            <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/60">
+              <button
+                type="button"
+                onClick={() => setActivePlatformFilter('all')}
+                className={`px-2 py-0.5 rounded-lg text-[9px] font-extrabold transition-all cursor-pointer ${
+                  activePlatformFilter === 'all'
+                    ? 'bg-card text-text-primary shadow-xs'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                🌐 All
+              </button>
+              <button
+                type="button"
+                onClick={() => setActivePlatformFilter('mobile')}
+                className={`px-2 py-0.5 rounded-lg text-[9px] font-extrabold transition-all cursor-pointer ${
+                  activePlatformFilter === 'mobile'
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                📱 Mobile
+              </button>
+              <button
+                type="button"
+                onClick={() => setActivePlatformFilter('web')}
+                className={`px-2 py-0.5 rounded-lg text-[9px] font-extrabold transition-all cursor-pointer ${
+                  activePlatformFilter === 'web'
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                💻 Web
+              </button>
+            </div>
+          </div>
+
+          {/* Placement Tabs: Hero Slider Banners vs Brand Cards */}
+          <div className="grid grid-cols-2 gap-2 bg-muted/40 p-1 rounded-xl border border-border/60">
+            <button
+              type="button"
+              onClick={() => setActiveListTab('hero')}
+              className={`py-2 px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                activeListTab === 'hero'
+                  ? 'bg-card text-primary shadow-sm border border-border'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              🖼️ Hero Slider Banners ({banners.filter(b => b.placement !== 'brand_card' && !['dark_showcase', 'bento_grid', 'editorial', 'brand_offer'].includes(b.type)).length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveListTab('brand_card')}
+              className={`py-2 px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                activeListTab === 'brand_card'
+                  ? 'bg-card text-primary shadow-sm border border-border'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              💳 Brand & Offer Cards ({banners.filter(b => b.placement === 'brand_card' || ['dark_showcase', 'bento_grid', 'editorial', 'brand_offer'].includes(b.type)).length})
+            </button>
           </div>
 
           {loading ? (
             <div className="py-12 flex items-center justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-accent" />
             </div>
-          ) : banners.length === 0 ? (
-            <div className="py-12 text-center text-xs text-text-secondary">
-              No banners or cards registered in database yet.
-            </div>
-          ) : (
-            <div className="space-y-3 max-h-[450px] overflow-y-auto pr-1">
-              <AnimatePresence initial={false}>
-                {banners.map((b) => (
-                  <motion.div
-                    key={b.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className={`p-3 border rounded-xl flex items-center justify-between gap-3 ${
-                      b.isActive ? 'bg-card border-border' : 'bg-muted/10 border-border-light opacity-60'
-                    }`}
-                  >
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`inline-block h-2 w-2 rounded-full ${b.isActive ? 'bg-accent' : 'bg-text-muted'}`} />
-                        <strong className="text-xs text-text-primary block font-black truncate">{b.title}</strong>
-                        {b.cardType === 'dark_showcase' ? (
-                          <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-neutral-900 text-amber-400 border border-amber-500/30">
-                            👟 SNEAKER HERO
+          ) : (() => {
+            const filteredBanners = banners.filter(b => {
+              const isBrandCard = b.placement === 'brand_card' || ['dark_showcase', 'bento_grid', 'editorial', 'brand_offer'].includes(b.type)
+              const matchesTab = activeListTab === 'brand_card' ? isBrandCard : !isBrandCard
+              const bPlatform = b.platform || 'all'
+              const matchesPlatform = activePlatformFilter === 'all' || bPlatform === 'all' || bPlatform === activePlatformFilter
+              return matchesTab && matchesPlatform
+            })
+
+            if (filteredBanners.length === 0) {
+              return (
+                <div className="py-12 text-center text-xs text-text-secondary bg-muted/20 border border-dashed border-border rounded-xl">
+                  No {activeListTab === 'hero' ? 'Hero Banners' : 'Brand Cards'} registered for {activePlatformFilter === 'all' ? 'All Devices' : activePlatformFilter} yet.
+                </div>
+              )
+            }
+
+            return (
+              <div className="space-y-3 max-h-[450px] overflow-y-auto pr-1">
+                <AnimatePresence initial={false}>
+                  {filteredBanners.map((b) => (
+                    <motion.div
+                      key={b.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className={`p-3 border rounded-xl flex items-center justify-between gap-3 ${
+                        b.isActive ? 'bg-card border-border' : 'bg-muted/10 border-border-light opacity-60'
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`inline-block h-2 w-2 rounded-full ${b.isActive ? 'bg-accent' : 'bg-text-muted'}`} />
+                          <strong className="text-xs text-text-primary block font-black truncate">{b.title}</strong>
+                          
+                          {/* Section Tag */}
+                          <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                            {b.placement === 'brand_card' ? '💳 BRAND CARD' : '🖼️ HERO BANNER'}
                           </span>
-                        ) : b.cardType === 'bento_grid' ? (
-                          <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                            📦 BENTO 2X2
+
+                          {/* Mode Tag */}
+                          <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded border ${
+                            b.type === 'food' || b.type === 'cafe'
+                              ? 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                              : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                          }`}>
+                            {b.type === 'food' || b.type === 'cafe' ? '🍕 FOOD' : '🛍️ GROCERY'}
                           </span>
-                        ) : b.cardType === 'editorial' ? (
-                          <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                            🕶️ EDITORIAL
-                          </span>
-                        ) : (
+
+                          {/* Platform Badge */}
                           <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-muted text-text-secondary border border-border">
-                            🖼️ BANNER
+                            {b.platform === 'mobile' ? '📱 MOBILE ONLY' : b.platform === 'web' ? '💻 WEB ONLY' : '🌐 ALL DEVICES'}
                           </span>
-                        )}
-                        {b.videoUrl && (
-                          <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                            MOTION VIDEO
-                          </span>
-                        )}
+
+                          {b.videoUrl && (
+                            <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              MOTION VIDEO
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                          {b.code && (
+                            <span className="text-[9px] font-bold text-text-secondary bg-muted/40 border px-1.5 py-0.5 rounded font-mono">
+                              Code: {b.code}
+                            </span>
+                          )}
+                          {b.ctaText && (
+                            <span className="text-[9px] font-bold text-indigo-500 bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.5 rounded font-mono">
+                              CTA: {b.ctaText}
+                            </span>
+                          )}
+                          {(b.linkUrl || b.ctaUrl) && (
+                            <span className="text-[9px] font-bold text-accent bg-accent/5 border border-accent/10 px-1.5 py-0.5 rounded font-mono">
+                              Link: {b.linkUrl || b.ctaUrl}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-text-muted block truncate">{b.description}</span>
                       </div>
-                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                        {b.code && (
-                          <span className="text-[9px] font-bold text-text-secondary bg-muted/40 border px-1.5 py-0.5 rounded font-mono">
-                            Code: {b.code}
-                          </span>
-                        )}
-                        {b.ctaText && (
-                          <span className="text-[9px] font-bold text-indigo-500 bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.5 rounded font-mono">
-                            CTA: {b.ctaText}
-                          </span>
-                        )}
-                        {(b.linkUrl || b.ctaUrl) && (
-                          <span className="text-[9px] font-bold text-accent bg-accent/5 border border-accent/10 px-1.5 py-0.5 rounded font-mono">
-                            Link: {b.linkUrl || b.ctaUrl}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[10px] text-text-muted block truncate">{b.description}</span>
-                    </div>
 
                     <div className="flex items-center gap-1 shrink-0">
                       {/* Priority change buttons */}
@@ -1999,7 +1953,8 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                 ))}
               </AnimatePresence>
             </div>
-          )}
+          )
+          })()}
         </div>
 
       </div>

@@ -33,6 +33,9 @@ export async function GET(request: Request) {
       }
     })
 
+    const placement = searchParams.get('placement') // 'hero' | 'brand_card'
+    const platform = searchParams.get('platform') // 'mobile' | 'web'
+
     const parsedBanners = banners.map(b => {
       let extra: any = {}
       if (b.code && b.code.startsWith('{') && b.code.endsWith('}')) {
@@ -47,10 +50,18 @@ export async function GET(request: Request) {
         couponCode: extra.couponCode !== undefined ? extra.couponCode : null,
         code: b.code,
         cardType: extra.cardType || b.type || 'standard',
+        placement: extra.placement || (['dark_showcase', 'bento_grid', 'editorial', 'brand_offer'].includes(b.type) ? 'brand_card' : 'hero'),
+        platform: extra.platform || 'all',
       }
     })
 
-    return NextResponse.json(parsedBanners, {
+    const filteredBanners = parsedBanners.filter(b => {
+      if (placement && b.placement !== placement) return false
+      if (platform && b.platform !== 'all' && b.platform !== platform) return false
+      return true
+    })
+
+    return NextResponse.json(filteredBanners, {
       headers: {
         'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
       }
