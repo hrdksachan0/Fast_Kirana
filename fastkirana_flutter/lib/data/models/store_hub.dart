@@ -60,4 +60,21 @@ class StoreHub {
     city: 'Ghatampur',
     surgeCharge: 0.0,
   );
+
+  static const StoreHub defaultAkbarpur = StoreHub(
+    id: 'hub-224122',
+    name: 'Akbarpur Express Hub',
+    latitude: 26.4380,
+    longitude: 82.5400,
+    deliveryRadiusKm: 5.0,
+    isActive: true,
+    groceryOpen: true,
+    city: 'Akbarpur',
+    surgeCharge: 0.0,
+  );
+
+  static const List<StoreHub> defaultHubs = [
+    defaultGhatampur,
+    defaultAkbarpur,
+  ];
 }

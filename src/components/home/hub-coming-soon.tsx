@@ -54,17 +54,13 @@ export function HubComingSoon({ hubName, city }: HubComingSoonProps) {
     }, 600)
   }
 
-  // Switch to primary active hub (e.g. Ghatampur)
+  // Switch to primary active hub
   const handleSwitchToActiveHub = () => {
-    const activeHub = availableHubs.find((h) => h.id === 'hub-209206' || h.name?.toLowerCase().includes('ghatampur')) || availableHubs[0]
+    const activeHub = availableHubs.find((h) => h.isActive) || availableHubs[0]
     if (activeHub) {
       setUserCoords({ lat: activeHub.latitude, lng: activeHub.longitude })
       setSelectedLocation(`${activeHub.city || activeHub.name} Central`)
-      toast.success(`Switched to ${activeHub.name} hub!`)
-    } else {
-      setUserCoords({ lat: 26.1534, lng: 80.1714 })
-      setSelectedLocation('Ghatampur Central Market')
-      toast.success('Switched to Ghatampur Central!')
+      toast.success(`Switched to ${activeHub.name}!`)
     }
   }
 

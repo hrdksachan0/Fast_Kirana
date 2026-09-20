@@ -190,7 +190,7 @@ export function OrdersTab({
     }
     const cleanDisplayId = `#${String(order.readableId || order.id.slice(0, 8)).replace('#', '').trim()}`
     const paymentUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://fastkirana.in'}/order/${order.id}/track`
-    const message = `Namaste ${order.userName || 'Customer'} ji, aapka FastKirana order ${cleanDisplayId} (₹${Number(order.total).toFixed(0)}) payment ke liye pending hai.\n\nAap is link se online pay kar sakte hain ya status track kar sakte hain:\n${paymentUrl}\n\nFastKirana Ghatampur se judne ke liye dhanyawad!`
+    const message = `Namaste ${order.userName || 'Customer'} ji, aapka FastKirana order ${cleanDisplayId} (₹${Number(order.total).toFixed(0)}) payment ke liye pending hai.\n\nAap is link se online pay kar sakte hain ya status track kar sakte hain:\n${paymentUrl}\n\nFastKirana se judne ke liye dhanyawad!`
     const waUrl = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(message)}`
     window.open(waUrl, '_blank')
   }

@@ -210,3 +210,32 @@ export function useCart() {
     updateItemNotes: useCartStore((s) => s.updateItemNotes),
   }
 }
+
+/**
+ * Fine-grained hook that ONLY subscribes to the quantity of a specific product / its variants.
+ * Prevents re-rendering unrelated product cards when another item in the cart changes.
+ */
+export function useProductQuantity(productId: string, hasOptions: boolean = false) {
+  return useCartStore((state) => {
+    if (!productId) return 0
+    if (!hasOptions) {
+      const item = state.items.find((i) => i?.product?.id === productId)
+      return item?.quantity || 0
+    }
+    return state.items
+      .filter((item) => {
+        const itemId = item?.product?.id
+        return Boolean(itemId) && (itemId === productId || itemId.startsWith(`${productId}_`))
+      })
+      .reduce((sum, item) => sum + (Number(item?.quantity) || 0), 0)
+  })
+}
+
+/**
+ * Fine-grained action-only hook that does NOT subscribe to the reactive items array.
+ * Safe to use in high-frequency rendered components without triggering re-renders on cart changes.
+ */
+export function useCartActions() {
+  const { addItem, updateQuantity, removeItem } = useCart()
+  return { addItem, updateQuantity, removeItem }
+}

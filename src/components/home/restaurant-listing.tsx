@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SlidersHorizontal, ChevronDown, Leaf, Tag, Star, Search, X, Loader2 } from 'lucide-react'
 import { triggerHaptic } from '@/lib/haptic'
+import { useUIStore } from '@/stores/ui-store'
+import { HubComingSoon } from '@/components/home/hub-coming-soon'
 
 // Cuisine category pills with icons
 const CUISINE_CATEGORIES = [
@@ -46,18 +48,21 @@ export function RestaurantListing({ initialRestaurants }: RestaurantListingProps
   const cuisineScrollRef = useRef<HTMLDivElement>(null)
   const sortRef = useRef<HTMLDivElement>(null)
 
+  const activeCity = useUIStore((s) => s.activeCity) || 'Ghatampur'
+  const userCoords = useUIStore((s) => s.userCoords)
+
   // Fetch restaurants from API
   useEffect(() => {
     if (initialRestaurants) return
     setIsLoading(true)
-    fetch('/api/restaurants')
+    fetch(`/api/restaurants?city=${encodeURIComponent(activeCity)}`)
       .then(res => res.json())
       .then(data => {
         setRestaurants(Array.isArray(data) ? data : data.restaurants || [])
       })
       .catch(err => console.error('Failed to load restaurants:', err))
       .finally(() => setIsLoading(false))
-  }, [initialRestaurants])
+  }, [initialRestaurants, activeCity])
 
   // Close sort dropdown on outside click
   useEffect(() => {
@@ -72,7 +77,16 @@ export function RestaurantListing({ initialRestaurants }: RestaurantListingProps
 
   // Filter & sort restaurants
   const filteredRestaurants = useMemo(() => {
-    let filtered = [...restaurants]
+    const cleanCity = activeCity.toLowerCase().trim()
+    let filtered = restaurants.filter(r => {
+      // 1. If restaurant specifies a city, match with user's active city
+      if (r.city && r.city.trim()) {
+        const rCity = r.city.toLowerCase().trim()
+        return rCity.includes(cleanCity) || cleanCity.includes(rCity)
+      }
+      // 2. Fallback: default to Ghatampur if no city specified
+      return cleanCity.includes('ghatampur')
+    })
 
     // Cuisine filter
     if (activeCuisine !== 'all') {
@@ -202,11 +216,15 @@ export function RestaurantListing({ initialRestaurants }: RestaurantListingProps
           <p className="text-[12px] font-bold text-zinc-400">Finding restaurants near you...</p>
         </div>
       ) : filteredRestaurants.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-3">
-          <span className="text-4xl">🍽️</span>
-          <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">No restaurants found</p>
-          <p className="text-[11px] text-zinc-400">Try adjusting your filters</p>
-        </div>
+        searchQuery.trim() || activeCuisine !== 'all' || pureVegOnly || offersOnly || ratingFilter ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <span className="text-4xl">🍽️</span>
+            <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">No restaurants found</p>
+            <p className="text-[11px] text-zinc-400">Try adjusting your filters</p>
+          </div>
+        ) : (
+          <HubComingSoon city={`${activeCity} Restaurants & Kitchens`} />
+        )
       ) : (
         <div className="flex flex-col gap-3">
           {filteredRestaurants.map((restaurant, idx) => (

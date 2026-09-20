@@ -149,7 +149,17 @@ export async function GET(request: Request) {
     }
 
     const products = productsRaw.map((p) => {
-      const localStock = (storeId && storeId !== 'all') ? (inventoryMap.has(p.id) ? (inventoryMap.get(p.id) ?? 0) : p.stock) : p.stock
+      let localStock = p.stock
+      if (storeId && storeId !== 'all') {
+        if (p.restaurantId) {
+          localStock = p.stock
+        } else {
+          localStock = inventoryMap.has(p.id)
+            ? (inventoryMap.get(p.id) ?? 0)
+            : (storeId === 'hub-209206' ? p.stock : 0)
+        }
+      }
+
       return {
         id: p.id,
         name: p.name,
@@ -163,7 +173,7 @@ export async function GET(request: Request) {
         discount: p.discount,
         unit: p.unit,
         stock: localStock,
-        isAvailable: (storeId && storeId !== 'all') ? (p.isAvailable && localStock > 0) : p.isAvailable,
+        isAvailable: p.isAvailable,
         tags: p.tags,
         variants: p.variants,
         costPrice: p.costPrice ?? 0,

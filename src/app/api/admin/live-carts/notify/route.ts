@@ -87,30 +87,38 @@ export async function POST(request: NextRequest) {
           where: { userId: { in: userIds } },
           select: { token: true },
           orderBy: { createdAt: 'desc' },
-          take: 1,
+          take: 5,
         })
 
         if (fcmRecords.length > 0) {
-          // Direct 1-push delivery to active device
-          await fcmMessaging.send({
-            token: fcmRecords[0].token,
-            ...fcmPayload
-          })
+          // Direct delivery to all active user device tokens
+          for (const rec of fcmRecords) {
+            await fcmMessaging.send({
+              token: rec.token,
+              ...fcmPayload
+            }).catch(() => {})
+          }
           fcmDispatched = true
-        } else if (cleanPhone.length === 10) {
-          // Fallback to topic only if no registered token in DB
+        }
+
+        // Always also trigger topic notification for reliable instant receipt
+        if (cleanPhone.length === 10) {
           await fcmMessaging.send({
             topic: `phone_${cleanPhone}`,
             ...fcmPayload
           }).catch(() => {})
           fcmDispatched = true
         }
+        await fcmMessaging.send({
+          topic: `user_${userId}`,
+          ...fcmPayload
+        }).catch(() => {})
       } catch (fcmErr) {
         console.error('FCM cart dispatch error:', fcmErr)
       }
     }
 
-    // 2. Send WebPush Notification (for Web PWA users)
+    // 2. Send WebPush Notification (for Web PWA / Browser users)
     try {
       await sendPushNotification(userId, {
         title,
@@ -121,11 +129,30 @@ export async function POST(request: NextRequest) {
           url: '/cart'
         }
       })
+
+      // Also deliver to any other web sessions for this phone number
+      if (cleanPhone.length === 10) {
+        const matchingUsers = await prisma.user.findMany({
+          where: { phone: { contains: cleanPhone } },
+          select: { id: true },
+        })
+        for (const u of matchingUsers) {
+          if (u.id !== userId) {
+            await sendPushNotification(u.id, {
+              title,
+              body: contentBody,
+              icon: '/favicon.ico',
+              badge: '/favicon.ico',
+              data: { url: '/cart' },
+            }).catch(() => {})
+          }
+        }
+      }
     } catch (_) {}
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Push notification sent successfully to customer mobile app!' 
+      message: 'Notification alert sent successfully to customer mobile app & web!' 
     })
   } catch (error: any) {
     console.error('Failed to send live cart push notification:', error)

@@ -25,6 +25,7 @@ interface UIState {
   categoryStatus: Record<string, boolean>
   deliveryRadius: number
   activeStoreId: string | null
+  activeCity: string
   availableHubs: any[]
   isLocationServiceable: boolean
   userDistanceKm: number | null
@@ -38,6 +39,8 @@ interface UIState {
   setActiveVariantProduct: (product: Product | null) => void
   setPendingConflictProduct: (product: Product | CartProduct | null) => void
   setSelectedLocation: (location: string) => void
+  setActiveCity: (city: string) => void
+  setActiveHub: (hub: any) => void
   setUserCoords: (coords: UserCoords | null) => void
   setAvailableHubs: (hubs: any[]) => void
   setIsLocationServiceable: (serviceable: boolean, distanceKm?: number | null) => void
@@ -63,9 +66,9 @@ function evaluateServiceability(
   coords: UserCoords | null,
   hubs: any[],
   settings: Record<string, string>
-): { isServiceable: boolean; distanceKm: number | null; matchedHubId: string | null } {
+): { isServiceable: boolean; distanceKm: number | null; matchedHubId: string | null; matchedCity: string } {
   if (!coords) {
-    return { isServiceable: true, distanceKm: null, matchedHubId: null }
+    return { isServiceable: true, distanceKm: null, matchedHubId: null, matchedCity: 'Ghatampur' }
   }
 
   // 1. If we have active hubs loaded, check distance against ALL active hubs
@@ -93,17 +96,21 @@ function evaluateServiceability(
     }
 
     if (closestMatchingHub) {
+      const city = closestMatchingHub.city || closestMatchingHub.name?.replace(/\s+(Hub|Market|Central|Dark\s*Store).*$/i, '').trim() || 'Ghatampur'
       return {
         isServiceable: true,
         distanceKm: closestMatchingDist,
-        matchedHubId: closestMatchingHub.id
+        matchedHubId: closestMatchingHub.id,
+        matchedCity: city,
       }
     }
 
+    const fallbackCity = closestAnyHub?.city || closestAnyHub?.name?.replace(/\s+(Hub|Market|Central|Dark\s*Store).*$/i, '').trim() || 'Ghatampur'
     return {
       isServiceable: false,
       distanceKm: minAnyDist !== Infinity ? minAnyDist : null,
-      matchedHubId: closestAnyHub?.id || null
+      matchedHubId: closestAnyHub?.id || null,
+      matchedCity: fallbackCity,
     }
   }
 
@@ -116,7 +123,8 @@ function evaluateServiceability(
   return {
     isServiceable: dist <= maxRadius,
     distanceKm: dist,
-    matchedHubId: null
+    matchedHubId: null,
+    matchedCity: 'Ghatampur',
   }
 }
 
@@ -131,6 +139,7 @@ export const useUIStore = create<UIState>((set) => ({
   selectedLocation: 'Select Location',
   userCoords: null,
   activeStoreId: null,
+  activeCity: 'Ghatampur',
   availableHubs: [],
   shopName: '',
   shopPhone: '',
@@ -157,6 +166,31 @@ export const useUIStore = create<UIState>((set) => ({
     }
     set({ selectedLocation: location })
   },
+  setActiveCity: (city) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('fk-city', city)
+    }
+    set({ activeCity: city })
+  },
+  setActiveHub: (hub) => {
+    if (!hub) return
+    const city = hub.city || hub.name?.replace(/\s+(Hub|Market|Central|Dark\s*Store).*$/i, '').trim() || 'Ghatampur'
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('fk-city', city)
+      if (hub.latitude && hub.longitude) {
+        localStorage.setItem('fk-coords', JSON.stringify({ lat: hub.latitude, lng: hub.longitude }))
+      }
+      localStorage.setItem('fk-location', `${city} Central`)
+    }
+    set({
+      activeStoreId: hub.id,
+      activeCity: city,
+      selectedLocation: `${city} Central`,
+      userCoords: (hub.latitude && hub.longitude) ? { lat: hub.latitude, lng: hub.longitude } : null,
+      isLocationServiceable: true,
+      userDistanceKm: 0.5,
+    })
+  },
   setIsLocationServiceable: (serviceable, distanceKm = null) => {
     set({ isLocationServiceable: serviceable, userDistanceKm: distanceKm })
   },
@@ -168,7 +202,8 @@ export const useUIStore = create<UIState>((set) => ({
       set({
         isLocationServiceable: evalRes.isServiceable,
         userDistanceKm: evalRes.distanceKm,
-        activeStoreId: evalRes.matchedHubId
+        activeStoreId: evalRes.matchedHubId,
+        activeCity: evalRes.matchedCity || state.activeCity,
       })
     }
   },
@@ -184,11 +219,16 @@ export const useUIStore = create<UIState>((set) => ({
     const state = useUIStore.getState()
     const evalRes = evaluateServiceability(coords, state.availableHubs, state.settings)
 
+    if (typeof window !== 'undefined' && evalRes.matchedCity) {
+      localStorage.setItem('fk-city', evalRes.matchedCity)
+    }
+
     set({
       userCoords: coords,
       isLocationServiceable: evalRes.isServiceable,
       userDistanceKm: evalRes.distanceKm,
-      activeStoreId: evalRes.matchedHubId
+      activeStoreId: evalRes.matchedHubId,
+      activeCity: evalRes.matchedCity || state.activeCity,
     })
   },
   setShopDetails: (name, phone) => {
@@ -209,7 +249,8 @@ export const useUIStore = create<UIState>((set) => ({
       set({
         isLocationServiceable: evalRes.isServiceable,
         userDistanceKm: evalRes.distanceKm,
-        activeStoreId: evalRes.matchedHubId
+        activeStoreId: evalRes.matchedHubId,
+        activeCity: evalRes.matchedCity || state.activeCity,
       })
     }
   },
@@ -217,9 +258,11 @@ export const useUIStore = create<UIState>((set) => ({
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('fk-location')
       const savedCoords = localStorage.getItem('fk-coords')
+      const savedCity = localStorage.getItem('fk-city')
       const savedShopName = localStorage.getItem('fk-shop-name')
       const savedShopPhone = localStorage.getItem('fk-shop-phone')
       if (saved) set({ selectedLocation: saved })
+      if (savedCity) set({ activeCity: savedCity })
       if (savedShopName) set({ shopName: savedShopName })
       if (savedShopPhone) set({ shopPhone: savedShopPhone })
       
@@ -243,7 +286,8 @@ export const useUIStore = create<UIState>((set) => ({
               userCoords: parsed,
               isLocationServiceable: evalRes.isServiceable,
               userDistanceKm: evalRes.distanceKm,
-              activeStoreId: evalRes.matchedHubId
+              activeStoreId: evalRes.matchedHubId,
+              activeCity: evalRes.matchedCity || state.activeCity,
             })
           }
         } catch {}

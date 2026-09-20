@@ -252,9 +252,11 @@ export async function PATCH(
       ? Math.max(0, Math.round(((finalMrp - finalPrice) / finalMrp) * 100))
       : 0
 
-    // Ensure categoryId is valid for grocery, but dishes can have null
-    if (!updateData.restaurantId && !updateData.categoryId) {
-      updateData.categoryId = product.categoryId
+    const targetStoreId = body.storeId || (session?.user as any)?.assignedStoreId || null
+    let localStockVal: number | null = null
+
+    if (targetStoreId && targetStoreId !== 'all' && targetStoreId !== 'hub-209206' && stock !== undefined) {
+      delete updateData.stock
     }
 
     const updatedProduct = await prisma.product.update({
@@ -267,10 +269,10 @@ export async function PATCH(
     })
 
     // If storeId is provided, update localized stock in store_inventories
-    const targetStoreId = body.storeId || (session?.user as any)?.assignedStoreId || null
     if (targetStoreId && targetStoreId !== 'all' && stock !== undefined) {
       const parsedLocalStock = parseInt(stock)
       const val = isNaN(parsedLocalStock) ? 0 : parsedLocalStock
+      localStockVal = val
       try {
         await prisma.storeInventory.upsert({
           where: {
@@ -297,7 +299,9 @@ export async function PATCH(
     revalidateStorefront(updatedProduct.category?.slug, updatedProduct.restaurant?.slug)
     await invalidateProductCache()
 
-    return NextResponse.json(updatedProduct)
+    return NextResponse.json(
+      localStockVal !== null ? { ...updatedProduct, stock: localStockVal } : updatedProduct
+    )
   } catch (error: any) {
     console.error('Failed to update product:', error)
     return NextResponse.json({ error: error.message || 'Failed to update product' }, { status: 500 })

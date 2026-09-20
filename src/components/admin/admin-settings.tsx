@@ -487,7 +487,7 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-black text-text-primary">
-                    {storeHubName || (storeId === 'hub-224122' ? 'Akbarpur' : storeId === 'hub-209206' ? 'Ghatampur Central Hub' : 'Store Settings')}
+                    {storeHubName || (storeId && storeId !== 'all' ? (storeId.replace(/^hub-/, '').replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) + ' Hub') : 'Store Settings')}
                   </span>
                   <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-primary text-white shadow-xs">
                     {storeId && storeId !== 'all' ? `Store Hub: ${storeId}` : '🌐 All Hubs (Global)'}

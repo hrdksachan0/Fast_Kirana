@@ -5,8 +5,11 @@ const nextConfig: NextConfig = {
   compress: true,
   reactStrictMode: true,
   output: 'standalone',
-  serverExternalPackages: ['sharp'],
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+  },
   experimental: {
+    optimizePackageImports: ['lucide-react', 'date-fns', 'framer-motion', '@base-ui/react', 'sonner', 'clsx', 'tailwind-merge'],
     staleTimes: {
       dynamic: 30,
       static: 300,

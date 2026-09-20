@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect, memo } from 'react'
 import Link from 'next/link'
 import { Plus, Minus, Check, Zap, Heart, Store } from 'lucide-react'
-import { useCart } from '@/hooks/use-cart'
+import { useProductQuantity, useCartActions } from '@/hooks/use-cart'
 import { Button } from '@/components/ui/button'
 import { Product } from '@/types'
 import { useUIStore } from '@/stores/ui-store'
@@ -24,7 +24,7 @@ import { useLiveStock } from '@/components/providers/live-stock-provider'
 import { checkDishTimeAvailability } from '@/lib/dish-timing'
 import { getOutletName } from '@/lib/constants'
 
-export function ProductCard({ product, isCompact = false }: ProductCardProps) {
+function ProductCardComponent({ product, isCompact = false }: ProductCardProps) {
   const router = useRouter()
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
@@ -105,19 +105,9 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
     return startingMrp
   }, [liveState, startingMrp])
 
-  // Cart operations
-  const { items, getItemQuantity, addItem, updateQuantity } = useCart()
-
-  // Calculate total quantity of all variants/customizations of this product in the cart
-  const totalQuantity = useMemo(() => {
-    if (!hasOptions) return getItemQuantity(product.id)
-    return items
-      .filter((item) => {
-        const itemId = item?.product?.id
-        return Boolean(itemId) && (itemId === product.id || itemId.startsWith(`${product.id}_`))
-      })
-      .reduce((sum, item) => sum + (Number(item?.quantity) || 0), 0)
-  }, [items, hasOptions, product.id, getItemQuantity])
+  // Fine-grained cart operations — only re-renders when this item's quantity changes
+  const { addItem, updateQuantity } = useCartActions()
+  const totalQuantity = useProductQuantity(product.id, hasOptions)
   const quantity = totalQuantity
   const resolvedQuantity = mounted ? quantity : 0
   const [showAdded, setShowAdded] = useState(false)
@@ -683,3 +673,6 @@ export function ProductCard({ product, isCompact = false }: ProductCardProps) {
     </div>
   )
 }
+
+export const ProductCard = memo(ProductCardComponent)
+

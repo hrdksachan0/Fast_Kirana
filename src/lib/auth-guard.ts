@@ -19,7 +19,10 @@ import { logger } from '@/lib/logger'
 export async function requireRole(allowedRoles: string[], request?: Request) {
   let session = null
   try {
-    session = await auth()
+    session = request ? await (auth as any)(request) : await auth()
+    if (!session && request) {
+      session = await auth()
+    }
   } catch (e) {
     logger.warn('auth', 'Auth check failed in requireRole', e)
   }
@@ -33,9 +36,10 @@ export async function requireRole(allowedRoles: string[], request?: Request) {
       const userRole = jwtPayload.role?.toUpperCase() || 'USER'
       const phoneDigits = (jwtPayload.phone || '').replace(/\D/g, '').slice(-10)
       const isSuper = isSuperadminPhone(phoneDigits) || 
-        (userRole === 'ADMIN' && !jwtPayload.assignedStoreId)
+        (userRole === 'ADMIN' && !jwtPayload.assignedStoreId) ||
+        isRootAdminAccount({ email: jwtPayload.email, phone: jwtPayload.phone, role: userRole })
 
-      if (isSuper || allowedRoles.includes(userRole) || userRole === 'ADMIN') {
+      if (isSuper || allowedRoles.includes(userRole) || userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') {
         return {
           error: null,
           session: {
@@ -71,7 +75,7 @@ export async function requireRole(allowedRoles: string[], request?: Request) {
     isSuperadminPhone(phoneDigits) ||
     (sessionRole === 'ADMIN' && !assignedStoreId)
 
-  if (isSuper || (sessionRole && (allowedRoles.includes(sessionRole) || sessionRole === 'ADMIN'))) {
+  if (isSuper || (sessionRole && (allowedRoles.includes(sessionRole) || sessionRole === 'ADMIN' || sessionRole === 'SUPER_ADMIN'))) {
     return { error: null, session }
   }
 
@@ -81,7 +85,7 @@ export async function requireRole(allowedRoles: string[], request?: Request) {
       const { prisma } = await import('@/lib/prisma')
       const dbUser = await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { role: true, email: true, phone: true, assignedStoreId: true, assignedRestaurantId: true }
+        select: { id: true, role: true, email: true, phone: true, assignedStoreId: true, assignedRestaurantId: true }
       })
       if (dbUser) {
         const dbRole = dbUser.role?.toUpperCase()
@@ -91,7 +95,7 @@ export async function requireRole(allowedRoles: string[], request?: Request) {
           dbEmail.startsWith('admin') || dbEmail.includes('hrdk') || isSuperadminPhone(dbPhone) ||
           (dbRole === 'ADMIN' && !dbUser.assignedStoreId)
 
-        if (isDbSuper || (dbRole && (allowedRoles.includes(dbRole) || dbRole === 'ADMIN'))) {
+        if (isDbSuper || (dbRole && (allowedRoles.includes(dbRole) || dbRole === 'ADMIN' || dbRole === 'SUPER_ADMIN'))) {
           session.user.role = dbRole as any
           if (dbUser.assignedStoreId) session.user.assignedStoreId = dbUser.assignedStoreId
           if (dbUser.assignedRestaurantId) session.user.assignedRestaurantId = dbUser.assignedRestaurantId
@@ -99,6 +103,44 @@ export async function requireRole(allowedRoles: string[], request?: Request) {
         }
       }
     } catch (_) {}
+  }
+
+  // 4. Fallback from request x-user-id header (for API / dashboard calls)
+  if (request) {
+    const rawUserId = request.headers.get('x-user-id')
+    if (rawUserId && !rawUserId.startsWith('mock-id-')) {
+      try {
+        const { prisma } = await import('@/lib/prisma')
+        const dbUser = await prisma.user.findUnique({
+          where: { id: rawUserId },
+          select: { id: true, role: true, email: true, phone: true, isBlocked: true, assignedStoreId: true, assignedRestaurantId: true }
+        })
+        if (dbUser && !dbUser.isBlocked) {
+          const dbRole = dbUser.role?.toUpperCase() || 'USER'
+          const dbEmail = (dbUser.email || '').toLowerCase()
+          const dbPhone = (dbUser.phone || '').replace(/\D/g, '').slice(-10)
+          const isDbSuper = isRootAdminAccount({ email: dbEmail, phone: dbPhone, role: dbRole }) ||
+            dbEmail.startsWith('admin') || dbEmail.includes('hrdk') || isSuperadminPhone(dbPhone) ||
+            (dbRole === 'ADMIN' && !dbUser.assignedStoreId)
+
+          if (isDbSuper || (dbRole && (allowedRoles.includes(dbRole) || dbRole === 'ADMIN' || dbRole === 'SUPER_ADMIN'))) {
+            return {
+              error: null,
+              session: {
+                user: {
+                  id: dbUser.id,
+                  role: dbRole as any,
+                  phone: dbUser.phone,
+                  email: dbUser.email,
+                  assignedStoreId: dbUser.assignedStoreId,
+                  assignedRestaurantId: dbUser.assignedRestaurantId,
+                }
+              }
+            }
+          }
+        }
+      } catch (_) {}
+    }
   }
 
   if (!session?.user) {
@@ -109,7 +151,7 @@ export async function requireRole(allowedRoles: string[], request?: Request) {
 
 /** Shortcut: require ADMIN / Staff role */
 export async function requireAdmin(request?: Request) {
-  return requireRole(['ADMIN', 'CHEF', 'RESTAURANT_OWNER', 'PICKER'], request)
+  return requireRole(['ADMIN', 'SUPER_ADMIN', 'STORE_MANAGER', 'CHEF', 'RESTAURANT_OWNER', 'PICKER', 'STAFF'], request)
 }
 
 /**

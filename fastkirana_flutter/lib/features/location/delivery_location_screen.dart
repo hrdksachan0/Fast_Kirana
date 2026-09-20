@@ -32,6 +32,58 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
   static const Color slateMuted = Color(0xFF64748B);
   static const Color slateBorder = Color(0xFFE2E8F0);
 
+  static const List<Map<String, dynamic>> popularLandmarks = [
+    {
+      'name': 'Ghatampur Chauraha',
+      'city': 'Ghatampur',
+      'pincode': '209206',
+      'lat': 26.1534,
+      'lng': 80.1714,
+    },
+    {
+      'name': 'Railway Station',
+      'city': 'Ghatampur',
+      'pincode': '209206',
+      'lat': 26.1620,
+      'lng': 80.1780,
+    },
+    {
+      'name': 'Bus Stand / Hamirpur Rd',
+      'city': 'Ghatampur',
+      'pincode': '209206',
+      'lat': 26.1480,
+      'lng': 80.1650,
+    },
+    {
+      'name': 'Degree College',
+      'city': 'Ghatampur',
+      'pincode': '209206',
+      'lat': 26.1610,
+      'lng': 80.1740,
+    },
+    {
+      'name': 'Akbarpur Tehsil',
+      'city': 'Akbarpur',
+      'pincode': '224122',
+      'lat': 26.4380,
+      'lng': 82.5400,
+    },
+    {
+      'name': 'Akbarpur Station',
+      'city': 'Akbarpur',
+      'pincode': '224122',
+      'lat': 26.4420,
+      'lng': 82.5480,
+    },
+    {
+      'name': 'Shahzadpur Market',
+      'city': 'Akbarpur',
+      'pincode': '224122',
+      'lat': 26.4310,
+      'lng': 82.5360,
+    },
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -501,6 +553,115 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                       ),
                     ),
                   ],
+                ),
+
+                const SizedBox(height: 18),
+
+                // 2.5 POPULAR LANDMARKS (1-TAP SELECT)
+                Row(
+                  children: [
+                    Text(
+                      '⚡ POPULAR LANDMARKS (1-TAP SELECT)',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 11),
+                        fontWeight: FontWeight.w800,
+                        color: slateMuted,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Row(
+                    children: popularLandmarks.map((loc) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: InkWell(
+                          onTap: () async {
+                            HapticFeedback.lightImpact();
+                            final addr = Address(
+                              id: 'chip_${DateTime.now().millisecondsSinceEpoch}',
+                              userId: 'current',
+                              label: loc['name'] as String,
+                              houseNo: '',
+                              street: loc['name'] as String,
+                              area: loc['city'] as String,
+                              city: loc['city'] as String,
+                              pincode: loc['pincode'] as String,
+                              latitude: loc['lat'] as double,
+                              longitude: loc['lng'] as double,
+                              isDefault: true,
+                            );
+
+                            ref.read(selectedAddressProvider.notifier).state = addr;
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setBool('has_chosen_location', true);
+
+                            if (!context.mounted) return;
+                            if (Navigator.of(context).canPop()) {
+                              Navigator.of(context).pop();
+                            } else {
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                FadeSlideRoute(page: const MainShell()),
+                                (route) => false,
+                              );
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: slateBorder, width: 1.1),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.02),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('📍', style: TextStyle(fontSize: 12)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  loc['name'] as String,
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 11.5),
+                                    fontWeight: FontWeight.w700,
+                                    color: slateDark,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    loc['city'] as String,
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 9),
+                                      fontWeight: FontWeight.w600,
+                                      color: slateMuted,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
                 ),
 
                 const SizedBox(height: 22),

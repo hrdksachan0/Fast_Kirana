@@ -15,10 +15,11 @@ export async function GET(request: NextRequest) {
       logger.warn('auth', 'Auth check failed in restaurant products GET', e)
     }
 
+    const storeIdParam = searchParams.get('storeId') || (session?.user as any)?.assignedStoreId
     const paramRestId = searchParams.get('restaurantId')
     const effectiveRestId = getSessionRestaurantId(session, request, paramRestId)
 
-    const data = await restaurantCatalogService.getDashboardCatalog(effectiveRestId)
+    const data = await restaurantCatalogService.getDashboardCatalog(effectiveRestId, storeIdParam)
     return NextResponse.json(data)
   } catch (error: unknown) {
     logger.error('restaurant-products', 'Restaurant dashboard products GET error', error)

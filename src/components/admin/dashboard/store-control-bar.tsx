@@ -42,7 +42,7 @@ interface StoreControlBarProps {
 }
 
 export function StoreControlBar({
-  storeHubName = 'Ghatampur Central Hub',
+  storeHubName = 'Store Hub',
   storesList = [],
   restaurantsList = [],
   selectedHubId,
@@ -61,7 +61,10 @@ export function StoreControlBar({
   userAssignedStoreId,
 }: StoreControlBarProps) {
   const currentStore = storesList.find((s) => s.id === selectedHubId)
-  const displayStoreName = currentStore?.name || storeHubName
+  const fallbackFormatted = selectedHubId && selectedHubId !== 'all'
+    ? selectedHubId.replace(/^hub-/, '').replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) + ' Hub'
+    : storeHubName
+  const displayStoreName = currentStore?.name || (storeHubName && storeHubName !== 'Ghatampur Central Hub' && storeHubName !== 'Store Hub' ? storeHubName : fallbackFormatted)
   const isBranchLocked = !isSuperAdmin && !!userAssignedStoreId
 
   return (

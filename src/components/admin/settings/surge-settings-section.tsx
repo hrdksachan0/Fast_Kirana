@@ -57,7 +57,7 @@ export function SurgeSettingsSection({
             </div>
             <div>
               <h4 className="text-xs font-bold text-text-primary">Live Surge & Weather Telemetry</h4>
-              <p className="text-[10px] text-text-secondary">Real-time status based on Ghatampur coordinates & active rider fleet</p>
+              <p className="text-[10px] text-text-secondary">Real-time status based on local store coordinates & active rider fleet</p>
             </div>
           </div>
           <span
@@ -87,7 +87,7 @@ export function SurgeSettingsSection({
               <span className="text-xs font-bold text-text-primary">{currentWeatherCondition}</span>
               <span className="text-xs font-black text-blue-500">{currentWeatherTemp}°C</span>
             </div>
-            <p className="text-[10px] text-text-secondary mt-1">Ghatampur (26.1534° N, 80.1714° E)</p>
+            <p className="text-[10px] text-text-secondary mt-1">Localized store coordinates</p>
           </div>
 
           <div className="bg-muted/40 p-3 rounded-xl border border-border/60">
@@ -184,7 +184,7 @@ export function SurgeSettingsSection({
             placeholder="20"
             className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
           />
-          <p className="text-[9px] text-text-secondary">Added automatically when rain/thunderstorm is detected in Ghatampur</p>
+          <p className="text-[9px] text-text-secondary">Added automatically when rain/thunderstorm is detected in store vicinity</p>
         </div>
 
         <div className="space-y-1.5">

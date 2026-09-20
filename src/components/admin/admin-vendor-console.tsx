@@ -458,11 +458,9 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
       return
     }
 
-    const storeDisplayName = storeId === 'hub-224122'
-      ? 'Akbarpur Central Hub'
-      : storeId === 'hub-209206'
-      ? 'Ghatampur Central Hub'
-      : (storeId && storeId !== 'all' ? `${storeId} Hub` : 'FastKirana Central Hub')
+    const storeDisplayName = storeId && storeId !== 'all'
+      ? (storeId.replace(/^hub-/, '').replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) + ' Hub')
+      : 'FastKirana Dark Store'
 
     let message = `*PURCHASE ORDER - FASTKIRANA*\n`
     message += `Vendor Code: *${vendorDetails.vendorCode || 'VND-001'}*\n`

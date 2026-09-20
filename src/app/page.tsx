@@ -20,7 +20,6 @@ const productSelect = {
   id: true,
   name: true,
   slug: true,
-  description: true,
   imageUrl: true,
   categoryId: true,
   restaurantId: true,
@@ -75,7 +74,7 @@ const getCachedBanners = unstable_cache(
       orderBy: { sortOrder: 'asc' },
     })
   },
-  ['storefront-banners-v12'],
+  ['storefront-banners-v13'],
   { revalidate: 3600, tags: ['banners'] }
 )
 
@@ -93,7 +92,7 @@ const getCachedCategories = unstable_cache(
       },
     })
   },
-  ['storefront-categories-v32'],
+  ['storefront-categories-v33'],
   { revalidate: 3600, tags: ['categories'] }
 )
 
@@ -112,7 +111,7 @@ const getCachedTrendingOrderItems = unstable_cache(
       take: 24,
     })
   },
-  ['storefront-trending-order-items-v18'],
+  ['storefront-trending-order-items-v19'],
   { revalidate: 3600, tags: ['trending'] }
 )
 
@@ -127,10 +126,11 @@ const getCachedAllGroceryProducts = unstable_cache(
         { sortOrder: 'desc' },
         { createdAt: 'desc' }
       ],
+      take: 120,
       select: productSelect,
     })
   },
-  ['storefront-all-grocery-products-v3'],
+  ['storefront-all-grocery-products-v4'],
   { revalidate: 3600, tags: ['products'] }
 )
 
@@ -147,11 +147,11 @@ const getCachedFlashDeals = unstable_cache(
         { sortOrder: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 60,
+      take: 36,
       select: productSelect,
     })
   },
-  ['storefront-flash-deals-v26'],
+  ['storefront-flash-deals-v27'],
   { revalidate: 3600, tags: ['products', 'flash-deals'] }
 )
 
@@ -167,11 +167,11 @@ const getCachedBestSellers = unstable_cache(
         { sortOrder: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 60,
+      take: 36,
       select: productSelect,
     })
   },
-  ['storefront-best-sellers-v26'],
+  ['storefront-best-sellers-v27'],
   { revalidate: 3600, tags: ['products', 'best-sellers'] }
 )
 
@@ -186,11 +186,11 @@ const getCachedBreakfastDeals = unstable_cache(
           { category: { slug: { in: ['dairy-breakfast', 'beverages', 'fruits-vegetables'] } } },
         ],
       },
-      take: 36,
+      take: 24,
       select: productSelect,
     })
   },
-  ['storefront-breakfast-deals-v26'],
+  ['storefront-breakfast-deals-v27'],
   { revalidate: 3600, tags: ['products', 'breakfast-deals'] }
 )
 
@@ -205,11 +205,11 @@ const getCachedLunchDeals = unstable_cache(
           { category: { slug: { in: ['kitchen-needs', 'grocery-essential', 'beverages'] } } },
         ],
       },
-      take: 36,
+      take: 24,
       select: productSelect,
     })
   },
-  ['storefront-lunch-deals-v26'],
+  ['storefront-lunch-deals-v27'],
   { revalidate: 3600, tags: ['products', 'lunch-deals'] }
 )
 
@@ -224,11 +224,11 @@ const getCachedTeaDeals = unstable_cache(
           { category: { slug: { in: ['snacks-munchies', 'beverages', 'ice-cream', 'chocolates', 'bakery'] } } },
         ],
       },
-      take: 36,
+      take: 24,
       select: productSelect,
     })
   },
-  ['storefront-tea-deals-v26'],
+  ['storefront-tea-deals-v27'],
   { revalidate: 3600, tags: ['products', 'tea-deals'] }
 )
 
@@ -247,11 +247,11 @@ const getCachedNightCravings = unstable_cache(
         { isBestSeller: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 48,
+      take: 24,
       select: productSelect,
     })
   },
-  ['storefront-night-cravings-v26'],
+  ['storefront-night-cravings-v27'],
   { revalidate: 3600, tags: ['products', 'night-cravings'] }
 )
 

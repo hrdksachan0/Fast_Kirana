@@ -40,7 +40,7 @@ final activeStoreHubsProvider = FutureProvider<List<StoreHub>>((ref) async {
   }
 
   // 3. Offline default fallback
-  return [StoreHub.defaultGhatampur];
+  return StoreHub.defaultHubs;
 });
 
 /// Nearest Hub and Distance Result
@@ -61,7 +61,7 @@ final nearestHubResultProvider = Provider<NearestHubResult>((ref) {
   final hubsAsync = ref.watch(activeStoreHubsProvider);
   final address = ref.watch(selectedAddressProvider);
 
-  final hubs = hubsAsync.valueOrNull ?? [StoreHub.defaultGhatampur];
+  final hubs = hubsAsync.valueOrNull ?? StoreHub.defaultHubs;
   if (hubs.isEmpty) {
     return const NearestHubResult(
       hub: StoreHub.defaultGhatampur,

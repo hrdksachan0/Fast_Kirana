@@ -9,6 +9,7 @@ import '../core/config/app_config.dart';
 import '../core/utils/restaurant_utils.dart';
 import '../providers/address_provider.dart';
 import '../providers/store_settings_provider.dart';
+import '../providers/store_hub_provider.dart';
 
 final restaurantRepositoryProvider = Provider<RestaurantRepository>((ref) {
   return RestaurantRepository(ref.watch(dioProvider));
@@ -34,20 +35,34 @@ double getRestaurantDistanceKm(Restaurant r, double userLat, double userLng) {
   return distanceMeters / 1000.0;
 }
 
-/// Dynamic restaurant list for Home Screen, sorted nearest-first based on customer's active location
+/// Dynamic restaurant list for Home Screen, scoped to active city hub & sorted nearest-first
 final homeRestaurantsProvider = Provider<AsyncValue<List<Restaurant>>>((ref) {
   final restaurantsAsync = ref.watch(restaurantsProvider);
   final address = ref.watch(selectedAddressProvider);
   final settings = ref.watch(storeSettingsProvider).valueOrNull;
+  final hub = ref.watch(currentStoreHubProvider);
 
   return restaurantsAsync.whenData((restaurants) {
-    final list = List<Restaurant>.from(restaurants);
+    final hubCity = hub.city.toLowerCase().trim();
+    // 1. City / Geo Scoped Filtering
+    final list = restaurants.where((r) {
+      if (r.city != null && r.city!.trim().isNotEmpty) {
+        final rCity = r.city!.toLowerCase().trim();
+        return rCity.contains(hubCity) || hubCity.contains(rCity);
+      }
+      if (r.lat != null && r.lng != null) {
+        final dist = Geolocator.distanceBetween(hub.latitude, hub.longitude, r.lat!, r.lng!) / 1000.0;
+        return dist <= 25.0;
+      }
+      return hubCity.contains('ghatampur');
+    }).toList();
+
     final userLat = (address?.latitude != null && address!.latitude != 0.0)
         ? address.latitude!
-        : AppConfig.darkstoreLat;
+        : hub.latitude;
     final userLng = (address?.longitude != null && address!.longitude != 0.0)
         ? address.longitude!
-        : AppConfig.darkstoreLng;
+        : hub.longitude;
 
     list.sort((a, b) {
       // Open restaurants first
@@ -75,10 +90,25 @@ final filteredRestaurantsProvider = Provider<List<Restaurant>>((ref) {
   final search = ref.watch(restaurantSearchQueryProvider).toLowerCase().trim();
   final address = ref.watch(selectedAddressProvider);
   final settings = ref.watch(storeSettingsProvider).valueOrNull;
+  final hub = ref.watch(currentStoreHubProvider);
 
   return restaurantsAsync.when(
     data: (restaurants) {
+      final hubCity = hub.city.toLowerCase().trim();
       final filtered = restaurants.where((r) {
+        // City / Geo Scoped Filtering
+        if (r.city != null && r.city!.trim().isNotEmpty) {
+          final rCity = r.city!.toLowerCase().trim();
+          if (!rCity.contains(hubCity) && !hubCity.contains(rCity)) return false;
+        } else if (!hubCity.contains('ghatampur')) {
+          if (r.lat != null && r.lng != null) {
+            final dist = Geolocator.distanceBetween(hub.latitude, hub.longitude, r.lat!, r.lng!) / 1000.0;
+            if (dist > 25.0) return false;
+          } else {
+            return false;
+          }
+        }
+
         // Cuisine filter
         if (cuisine != 'all' && cuisine != 'specials') {
           final matchesCuisine = r.cuisineTags.any(

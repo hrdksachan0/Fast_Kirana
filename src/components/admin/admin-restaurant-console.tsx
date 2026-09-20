@@ -71,6 +71,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
           setSelectedRestaurantId(list[0].id)
         } else {
           setSelectedRestaurantId('NONE')
+          setProducts([])
         }
       })
       .catch(console.error)
@@ -272,13 +273,24 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
   }
 
   const fetchRestaurantProducts = async () => {
+    if (selectedRestaurantId === 'NONE' || (restaurants.length === 0 && selectedRestaurantId !== 'ALL')) {
+      setProducts([])
+      setLoading(false)
+      return
+    }
     setLoading(true)
     try {
-      // Use restaurant-dashboard API which properly scopes by restaurantId
-      const restIdParam = selectedRestaurantId && selectedRestaurantId !== 'ALL' 
-        ? `?restaurantId=${selectedRestaurantId}` 
-        : ''
-      const res = await fetch(`/api/restaurant-dashboard/products${restIdParam}`, { cache: 'no-store' })
+      // Use restaurant-dashboard API which properly scopes by restaurantId and storeId
+      const params = new URLSearchParams()
+      if (selectedRestaurantId && selectedRestaurantId !== 'ALL') {
+        params.set('restaurantId', selectedRestaurantId)
+      } else {
+        params.set('restaurantId', 'ALL')
+        if (storeId && storeId !== 'all') {
+          params.set('storeId', storeId)
+        }
+      }
+      const res = await fetch(`/api/restaurant-dashboard/products?${params.toString()}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to fetch catalog')
       const data = await res.json()
       setProducts(data.products || [])
@@ -291,8 +303,13 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
   }
 
   useEffect(() => {
-    fetchRestaurantProducts()
-  }, [selectedRestaurantId])
+    if (selectedRestaurantId === 'NONE') {
+      setProducts([])
+      setLoading(false)
+    } else {
+      fetchRestaurantProducts()
+    }
+  }, [selectedRestaurantId, storeId])
 
   const handleToggleAvailability = async (product: Product) => {
     setUpdatingId(product.id)
@@ -423,19 +440,26 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
           <select
             value={selectedRestaurantId}
             onChange={(e) => setSelectedRestaurantId(e.target.value)}
-            className="px-3.5 py-2 text-xs font-black bg-card border border-border rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-red-500/30 cursor-pointer shadow-xs"
+            disabled={restaurants.length === 0}
+            className="px-3.5 py-2 text-xs font-black bg-card border border-border rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-red-500/30 cursor-pointer shadow-xs disabled:opacity-50"
           >
-            <option value="ALL">🍽️ All Outlets ({restaurants.length})</option>
-            {restaurants.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
+            {restaurants.length > 0 ? (
+              <>
+                <option value="ALL">🍽️ All Outlets ({restaurants.length})</option>
+                {restaurants.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </>
+            ) : (
+              <option value="NONE">No Outlets Registered</option>
+            )}
           </select>
 
           <button
             onClick={fetchRestaurantProducts}
-            disabled={loading}
+            disabled={loading || restaurants.length === 0}
             className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-black bg-card border border-border hover:bg-muted/40 text-text-primary rounded-xl transition-all cursor-pointer disabled:opacity-50 shrink-0"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -444,31 +468,54 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
         </div>
       </div>
 
-      {/* Sub-tab Navigation */}
-      <div className="flex border-b border-border/40 gap-4 pb-1">
-        <button
-          onClick={() => setActiveSubTab('catalog')}
-          className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
-            activeSubTab === 'catalog' 
-              ? 'border-red-650 text-red-600' 
-              : 'border-transparent text-text-secondary hover:text-text-primary'
-          }`}
-        >
-          <Utensils className="h-4 w-4" />
-          Menu Catalog
-        </button>
-        <button
-          onClick={() => setActiveSubTab('payouts')}
-          className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
-            activeSubTab === 'payouts' 
-              ? 'border-red-650 text-red-600' 
-              : 'border-transparent text-text-secondary hover:text-text-primary'
-          }`}
-        >
-          <IndianRupee className="h-4 w-4" />
-          Payouts Ledger
-        </button>
-      </div>
+      {restaurants.length === 0 ? (
+        <div className="bg-card border border-border/80 rounded-3xl p-8 sm:p-12 text-center space-y-4 max-w-xl mx-auto shadow-xs my-6">
+          <div className="h-16 w-16 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center mx-auto border border-amber-500/20">
+            <Utensils className="h-8 w-8" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-lg font-black text-text-primary">No Restaurant Outlets in This Hub</h3>
+            <p className="text-xs text-text-secondary leading-relaxed">
+              There are no food restaurants registered in this store hub territory yet. Add your first outlet in Restaurant Management to start serving fresh meals, pizzas, and combos.
+            </p>
+          </div>
+          <div className="pt-2">
+            <a
+              href="/admin/restaurants"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer"
+            >
+              <Plus className="h-4 w-4" />
+              Add Restaurant Outlet
+            </a>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Sub-tab Navigation */}
+          <div className="flex border-b border-border/40 gap-4 pb-1">
+            <button
+              onClick={() => setActiveSubTab('catalog')}
+              className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+                activeSubTab === 'catalog' 
+                  ? 'border-red-650 text-red-600' 
+                  : 'border-transparent text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <Utensils className="h-4 w-4" />
+              Menu Catalog
+            </button>
+            <button
+              onClick={() => setActiveSubTab('payouts')}
+              className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+                activeSubTab === 'payouts' 
+                  ? 'border-red-650 text-red-600' 
+                  : 'border-transparent text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <IndianRupee className="h-4 w-4" />
+              Payouts Ledger
+            </button>
+          </div>
 
       {activeSubTab === 'catalog' && (
         <>
@@ -705,6 +752,8 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
 
       {activeSubTab === 'payouts' && (
         <RestaurantPayoutsLedger isAdmin={isAdmin} />
+      )}
+        </>
       )}
 
       {/* Add / Edit Dish Modal */}

@@ -221,7 +221,7 @@ export function AdminAnalytics({ products, orders, categories, stats, storeId }:
             <h3 className="text-sm font-extrabold text-text-primary flex items-center gap-2">
               Business Intelligence & Valuation
               <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                {storeId === 'hub-224122' ? 'Akbarpur Hub' : storeId === 'hub-209206' ? 'Ghatampur Central Hub' : (storeId || 'All Stores')}
+                {storeId && storeId !== 'all' ? (storeId.replace(/^hub-/, '').replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) + ' Hub') : 'All Stores'}
               </span>
             </h3>
             <p className="text-[11px] text-text-muted">

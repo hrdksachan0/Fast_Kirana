@@ -25,11 +25,13 @@ export function RestaurantSettingsTab({ restaurantId }: RestaurantSettingsTabPro
 
         // If no assigned restaurant (e.g. admin logged in), fetch the first available restaurant
         if (!targetId) {
-          const listRes = await fetch('/api/restaurants')
+          const storeParam = (session?.user as any)?.assignedStoreId ? `?storeId=${encodeURIComponent((session?.user as any).assignedStoreId)}` : ''
+          const listRes = await fetch(`/api/restaurants${storeParam}`)
           if (listRes.ok) {
             const listData = await listRes.json()
-            if (listData?.restaurants && listData.restaurants.length > 0) {
-              targetId = listData.restaurants[0].id
+            const list = Array.isArray(listData) ? listData : (listData?.restaurants || [])
+            if (list.length > 0) {
+              targetId = list[0].id
             }
           }
         }

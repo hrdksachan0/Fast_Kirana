@@ -3,9 +3,9 @@ import { Suspense } from 'react'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { formatPrice, withRetry } from '@/lib/utils'
+import { formatPrice } from '@/lib/utils'
 import { AdminDashboard } from '@/components/admin/admin-dashboard'
-import { getStoreUserFilter } from '@/lib/store-resolver'
+import { getStoreUserFilter, extractCityFromStoreName } from '@/lib/store-resolver'
 import { isRootAdminAccount } from '@/lib/superadmin-config'
 import {
   IndianRupee,
@@ -79,6 +79,8 @@ export default async function AdminPage(props: {
   let couponsRaw: any[] = []
   let usersRaw: any[] = []
   let allProductsRaw: any[] = []
+  let storesRaw: any[] = []
+  let restaurantsRaw: any[] = []
   let allUsers: any[] = []
   let allAddresses: any[] = []
   let initialOrderCounts = {
@@ -115,6 +117,17 @@ export default async function AdminPage(props: {
     const storeSqlWhere = initialStoreId && initialStoreId !== 'all'
       ? Prisma.sql`AND "storeId" = ${initialStoreId}`
       : Prisma.empty
+
+    let initialStoreCity = ''
+    if (initialStoreId && initialStoreId !== 'all') {
+      const storeObj = await prisma.darkStore.findUnique({
+        where: { id: initialStoreId },
+        select: { name: true }
+      })
+      if (storeObj) {
+        initialStoreCity = extractCityFromStoreName(storeObj.name)
+      }
+    }
 
     const [todayStatsRaw, statusStatsRaw, ...results] = await Promise.all([
       prisma.$queryRaw<Array<{
@@ -233,6 +246,35 @@ export default async function AdminPage(props: {
           sortOrder: 'asc',
         },
       }),
+      prisma.darkStore.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: {
+          staffMembers: {
+            where: { role: 'ADMIN' },
+            select: { id: true, name: true, phone: true, email: true }
+          }
+        }
+      }),
+      prisma.restaurant.findMany({
+        where: {
+          isActive: true,
+          ...(initialStoreCity ? { city: { contains: initialStoreCity, mode: 'insensitive' } } : {})
+        },
+        orderBy: { sortOrder: 'asc' },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          city: true,
+          address: true,
+          rating: true,
+          isOpen: true,
+          deliveryTime: true,
+          logoUrl: true,
+          bannerUrl: true,
+          ownerPhone: true,
+        }
+      }),
     ])
 
     const todayRow = (todayStatsRaw as any[])?.[0] || { today_orders: 0, today_sales: 0, today_delivered_sales: 0, today_delivery_fee: 0, today_packaging_fee: 0 }
@@ -248,6 +290,8 @@ export default async function AdminPage(props: {
     const groupStats = (results[2] as any[]) || []
     const recentOrdersList = (results[3] as any[]) || []
     categoriesRaw = (results[4] as any[]) || []
+    storesRaw = (results[5] as any[]) || []
+    restaurantsRaw = (results[6] as any[]) || []
 
     productsRaw = []
     reviewsRaw = []
@@ -444,6 +488,32 @@ export default async function AdminPage(props: {
     } : { id: '', name: 'General', slug: 'general' },
   }))
 
+  const stores = storesRaw.map((s) => ({
+    id: s.id,
+    name: s.name,
+    latitude: s.latitude,
+    longitude: s.longitude,
+    deliveryRadiusKm: s.deliveryRadiusKm,
+    isActive: s.isActive,
+    groceryOpen: s.groceryOpen,
+    surgeCharge: s.surgeCharge,
+    manager: s.staffMembers?.[0] || null,
+  }))
+
+  const restaurants = restaurantsRaw.map((r) => ({
+    id: r.id,
+    name: r.name,
+    slug: r.slug,
+    city: r.city,
+    address: r.address,
+    rating: r.rating,
+    isOpen: r.isOpen,
+    deliveryTime: r.deliveryTime,
+    logoUrl: r.logoUrl,
+    bannerUrl: r.bannerUrl,
+    ownerPhone: r.ownerPhone,
+  }))
+
   const statsList = [
     { label: 'Active Live Orders', value: activeOrdersCount.toString(), icon: RotateCw, color: 'text-amber-500 bg-amber-500/10' },
     { label: "Today's Sales", value: formatPrice(todayRevenue), icon: IndianRupee, color: 'text-emerald-500 bg-emerald-500/10' },
@@ -507,6 +577,8 @@ export default async function AdminPage(props: {
       }>
         <AdminDashboard
           initialStoreId={initialStoreId}
+          initialStores={stores}
+          initialRestaurants={restaurants}
           serverUser={{
             id: session.user.id,
             name: dbUser?.name || session.user.name,

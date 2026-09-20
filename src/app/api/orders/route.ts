@@ -1216,6 +1216,7 @@ export async function POST(request: NextRequest) {
                 ? (orderInfo.restaurant?.name || 'Restaurant')
                 : 'FastKirana Dark Store',
               restaurantId: orderInfo.type === 'RESTAURANT' ? orderInfo.restaurantId : null,
+              storeId: resolvedStoreId || storeId || null,
               notes: body.notes || orderInfo.notes || null,
               deliveryMethod,
               deliveryLat: address.lat,
@@ -1300,7 +1301,7 @@ export async function POST(request: NextRequest) {
         results.push(newOrder)
 
         // Deduct stock via domain inventory manager
-        await deductOrderInventory(tx, orderItemsData)
+        await deductOrderInventory(tx, orderItemsData, resolvedStoreId || storeId || null)
       }
 
       // Update coupon usage

@@ -137,12 +137,8 @@ export default function RootLayout({
                 <Suspense fallback={null}>
                   <TopProgressBar />
                 </Suspense>
-                {/* Elegant glowing background gradient mesh blobs for a modern Web3/SaaS look */}
-                <div className="hidden md:block fixed inset-0 pointer-events-none z-[-1] overflow-hidden opacity-40 dark:opacity-45">
-                  <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-primary/8 blur-[130px] animate-float-slow" />
-                  <div className="absolute bottom-[20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-accent/8 blur-[120px] animate-float-reverse" />
-                  <div className="absolute top-[40%] right-[10%] w-[300px] h-[300px] rounded-full bg-rose-400/5 blur-[100px] animate-float" />
-                </div>
+                {/* Subtle static gradient mesh for depth without repaint overhead */}
+                <div className="hidden md:block fixed inset-0 pointer-events-none z-[-1] overflow-hidden opacity-30 dark:opacity-35 bg-[radial-gradient(ellipse_at_top_left,rgba(226,10,34,0.06),transparent_50%),radial-gradient(ellipse_at_bottom_right,rgba(0,177,64,0.05),transparent_50%)] transform-gpu" />
 
                 <div className="flex flex-col min-h-screen">
                   <Navbar />

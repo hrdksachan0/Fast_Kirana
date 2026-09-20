@@ -17,11 +17,13 @@ export function UnserviceableLocationBanner() {
   const setLocationPickerOpen = useUIStore((s) => s.setLocationPickerOpen)
 
   const [showModal, setShowModal] = useState(false)
+  const [hasDismissed, setHasDismissed] = useState(false)
   const [notifyPhone, setNotifyPhone] = useState('')
   const [isNotified, setIsNotified] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const availableHubs = useUIStore((s) => s.availableHubs)
+  const setActiveHub = useUIStore((s) => s.setActiveHub)
 
   // Store Hub coordinates (default: Ghatampur Store Hub)
   const hubLat = parseFloat(settings['store_lat'] || '26.1534185')
@@ -30,12 +32,13 @@ export function UnserviceableLocationBanner() {
 
   // Trigger modal display when location is detected as unserviceable
   useEffect(() => {
-    if (!isLocationServiceable && userCoords) {
+    if (!isLocationServiceable && userCoords && !hasDismissed) {
       setShowModal(true)
-    } else {
+    } else if (isLocationServiceable) {
       setShowModal(false)
+      setHasDismissed(false)
     }
-  }, [isLocationServiceable, userCoords])
+  }, [isLocationServiceable, userCoords, hasDismissed])
 
   // Switch to an active Hub in 1-click
   const handleSwitchToHub = (targetHub?: any) => {
@@ -126,7 +129,10 @@ export function UnserviceableLocationBanner() {
 
               {/* Close Button */}
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => {
+                  setShowModal(false)
+                  setHasDismissed(true)
+                }}
                 className="absolute top-4 right-4 p-2 rounded-full text-text-secondary hover:text-text-primary hover:bg-muted/60 transition-colors"
                 title="Dismiss"
               >
@@ -147,7 +153,7 @@ export function UnserviceableLocationBanner() {
                 We're Not Delivering Here Yet!
               </h3>
               <p className="text-xs text-text-secondary mt-2 leading-relaxed font-medium">
-                FastKirana & Partner Outlets currently do not deliver to this location. Please choose an address within our operational delivery zones to start ordering.
+                FastKirana currently operates local express hubs in Ghatampur and Akbarpur. Please choose an address within our delivery zones to start ordering.
               </p>
 
               {/* Distance badge */}
@@ -169,17 +175,31 @@ export function UnserviceableLocationBanner() {
                   className="w-full bg-[#e20a22] hover:bg-[#c9081e] text-white py-3 px-4 rounded-2xl font-black text-sm shadow-md hover:shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                 >
                   <MapPin className="w-4 h-4" />
-                  <span>Select Serviceable Delivery Address</span>
+                  <span>Choose Serviceable Area / Landmark</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleSwitchToHub()}
-                  className="w-full bg-muted/60 hover:bg-muted text-text-primary py-2.5 px-4 rounded-2xl font-bold text-xs border border-border/60 transition-colors flex items-center justify-center gap-2"
-                >
-                  <Navigation className="w-4 h-4 text-text-secondary" />
-                  <span>Deliver to Active Store Hub</span>
-                </button>
+                {availableHubs && availableHubs.length > 0 ? (
+                  availableHubs.map((hub) => (
+                    <button
+                      key={hub.id}
+                      type="button"
+                      onClick={() => handleSwitchToHub(hub)}
+                      className="w-full bg-muted/60 hover:bg-muted text-text-primary py-2.5 px-4 rounded-2xl font-bold text-xs border border-border/60 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Navigation className="w-4 h-4 text-text-secondary" />
+                      <span>Switch to {hub.city || hub.name} Hub</span>
+                    </button>
+                  ))
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchToHub()}
+                    className="w-full bg-muted/60 hover:bg-muted text-text-primary py-2.5 px-4 rounded-2xl font-bold text-xs border border-border/60 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Navigation className="w-4 h-4 text-text-secondary" />
+                    <span>Switch to Ghatampur Central Hub</span>
+                  </button>
+                )}
               </div>
 
               {/* Notify Me When Launched */}

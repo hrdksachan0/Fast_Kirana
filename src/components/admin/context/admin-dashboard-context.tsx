@@ -100,6 +100,32 @@ export function AdminDashboardProvider({
   const [restaurantsList, setRestaurantsList] = useState<any[]>([])
 
   useEffect(() => {
+    let isMounted = true
+    const refreshStoresAndRestaurants = async () => {
+      try {
+        const [storesRes, restRes] = await Promise.all([
+          fetch('/api/admin/stores').then((r) => (r.ok ? r.json() : [])),
+          fetch('/api/restaurants').then((r) => (r.ok ? r.json() : [])),
+        ])
+        if (isMounted) {
+          if (Array.isArray(storesRes) && storesRes.length > 0) {
+            setStoresList(storesRes)
+          }
+          if (Array.isArray(restRes) && restRes.length > 0) {
+            setRestaurantsList(restRes)
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to refresh stores/restaurants in admin context:', e)
+      }
+    }
+    refreshStoresAndRestaurants()
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  useEffect(() => {
     if (sessionAssignedStoreId) {
       setSelectedHubId(sessionAssignedStoreId)
     } else if (isSuperAdmin && urlStoreId && urlStoreId !== selectedHubId) {

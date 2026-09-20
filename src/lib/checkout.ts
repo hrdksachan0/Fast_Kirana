@@ -158,7 +158,21 @@ export function validateAddress(
   }
 
   if (address.lat && address.lng) {
-    const dist = getDistanceKm(storeLat, storeLng, address.lat, address.lng)
+    // If Akbarpur, measure against Akbarpur Hub coordinates
+    const targetStoreLat = isAkbarpur ? 26.4380 : storeLat
+    const targetStoreLng = isAkbarpur ? 82.5400 : storeLng
+    const dist = getDistanceKm(targetStoreLat, targetStoreLng, address.lat, address.lng)
+
+    // Auto-Healing:
+    // If the customer has explicitly entered a valid recognized pincode (e.g. 209206 for Ghatampur, 224122 for Akbarpur)
+    // or valid city text, but their phone/browser GPS coordinates point to a distant cell tower (> 10 km away, e.g. Kanpur tower 45 km away),
+    // DO NOT hard block them! Auto-heal or treat as valid delivery address.
+    const isExplicitLocalPincode = p === '209206' || p === '224122' || c.includes('ghatampur') || c.includes('akbarpur')
+    if (dist >= 25.0 && isExplicitLocalPincode) {
+      console.warn(`[Auto-Heal] Address ${address.id || ''} has cell-tower drift (${dist.toFixed(1)} km) for pincode ${p}. Allowing order.`);
+      return { valid: true }
+    }
+
     const rules = getDeliveryRules(dist, { maxRadiusKm })
     if (!rules.isServiceable) {
       return { valid: false, error: `Your address is outside our delivery zone (${dist.toFixed(1)} km away). We deliver only up to ${maxRadiusKm} km.` }
@@ -243,7 +257,10 @@ export async function validateCheckoutEligibility(
 
         if (restLoc && selectedAddr.lat && selectedAddr.lng) {
           const rDist = getDistanceKm(restLoc.lat, restLoc.lng, selectedAddr.lat, selectedAddr.lng)
-          if (rDist > restLoc.deliveryRadiusKm) {
+          const p = (selectedAddr.pincode || '').trim().replace(/\s+/g, '')
+          const c = (selectedAddr.city || '').trim().toLowerCase()
+          const isExplicitLocalPincode = p === '209206' || p === '224122' || c.includes('ghatampur') || c.includes('akbarpur')
+          if (rDist > restLoc.deliveryRadiusKm && !(rDist >= 25.0 && isExplicitLocalPincode)) {
             return {
               valid: false,
               error: `Your address is outside ${restLoc.name}'s delivery zone (${rDist.toFixed(1)} km away). Delivery from this restaurant is strictly limited to ${restLoc.deliveryRadiusKm.toFixed(0)} km.`

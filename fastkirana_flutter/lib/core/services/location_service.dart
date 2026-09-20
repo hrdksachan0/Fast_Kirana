@@ -275,12 +275,25 @@ class LocationService {
     double lng, {
     StoreHub? nearestHub,
   }) async {
-    final hubCity = nearestHub?.city ?? 'Ghatampur';
+    // Resolve nearest hub if not explicitly passed
+    StoreHub hub = nearestHub ?? StoreHub.defaultGhatampur;
+    if (nearestHub == null) {
+      double minD = double.infinity;
+      for (final h in StoreHub.defaultHubs) {
+        final d = Geolocator.distanceBetween(h.latitude, h.longitude, lat, lng) / 1000.0;
+        if (d < minD) {
+          minD = d;
+          hub = h;
+        }
+      }
+    }
+
+    final hubCity = hub.city;
     String houseNo = '';
     String street = '';
     String area = hubCity;
     String city = hubCity;
-    String pincode = '209206';
+    String pincode = hub.city.toLowerCase().contains('akbarpur') ? '224122' : '209206';
     String formatted = '$hubCity Market, UP';
 
     try {
@@ -292,7 +305,7 @@ class LocationService {
           street = place.thoroughfare ?? '';
           area = place.subLocality?.isNotEmpty == true ? place.subLocality! : (place.locality ?? hubCity);
           city = place.locality ?? place.administrativeArea ?? hubCity;
-          pincode = place.postalCode ?? '209206';
+          pincode = place.postalCode ?? (hub.city.toLowerCase().contains('akbarpur') ? '224122' : '209206');
 
           final parts = [
             if (houseNo.isNotEmpty) houseNo,
@@ -308,8 +321,8 @@ class LocationService {
       debugPrint('Geocoding error: $e');
     }
 
-    final distanceKm = getDistanceKm(lat, lng);
-    final isServiceable = distanceKm <= (nearestHub?.deliveryRadiusKm ?? maxDeliveryRadiusKm);
+    final distanceKm = getDistanceKm(lat, lng, originLat: hub.latitude, originLng: hub.longitude);
+    final isServiceable = distanceKm <= hub.deliveryRadiusKm;
 
     return LocationDetails(
       latitude: lat,

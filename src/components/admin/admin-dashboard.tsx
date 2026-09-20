@@ -120,6 +120,8 @@ export type TabType =
 
 interface AdminDashboardProps {
   initialStoreId?: string | null
+  initialStores?: any[]
+  initialRestaurants?: any[]
   serverUser?: {
     id?: string
     name?: string | null
@@ -154,6 +156,8 @@ interface AdminDashboardProps {
 
 export function AdminDashboard({
   initialStoreId,
+  initialStores = [],
+  initialRestaurants = [],
   serverUser,
   initialOrders,
   initialProducts,
@@ -187,8 +191,8 @@ export function AdminDashboard({
     initialStoreId ||
     (isSuperAdmin ? urlStoreId || 'hub-209206' : 'hub-209206')
 
-  const [restaurantsList, setRestaurantsList] = useState<any[]>([])
-  const [storesList, setStoresList] = useState<any[]>([])
+  const [restaurantsList, setRestaurantsList] = useState<any[]>(() => initialRestaurants || [])
+  const [storesList, setStoresList] = useState<any[]>(() => initialStores || [])
   const [selectedHubId, setSelectedHubId] = useState<string>(() => effectiveInitialHub)
   const [isStoreHubsModalOpen, setIsStoreHubsModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>('orders')
@@ -201,6 +205,33 @@ export function AdminDashboard({
   const [groceryMartOpen, setGroceryMartOpen] = useState<boolean>(true)
   const [groceryAutoTiming, setGroceryAutoTiming] = useState<boolean>(false)
   const [isTogglingStore, setIsTogglingStore] = useState<boolean>(false)
+
+  // Fetch / refresh stores and restaurants list on mount
+  useEffect(() => {
+    let isMounted = true
+    const refreshStoresAndRestaurants = async () => {
+      try {
+        const [storesRes, restRes] = await Promise.all([
+          fetch('/api/admin/stores').then((r) => (r.ok ? r.json() : [])),
+          fetch('/api/restaurants').then((r) => (r.ok ? r.json() : [])),
+        ])
+        if (isMounted) {
+          if (Array.isArray(storesRes) && storesRes.length > 0) {
+            setStoresList(storesRes)
+          }
+          if (Array.isArray(restRes) && restRes.length > 0) {
+            setRestaurantsList(restRes)
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to refresh stores/restaurants in admin dashboard:', e)
+      }
+    }
+    refreshStoresAndRestaurants()
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   // Media Library state
   const [showMediaLibrary, setShowMediaLibrary] = useState(false)
@@ -506,14 +537,17 @@ export function AdminDashboard({
   }
 
   const sendCartNotification = async (userId: string, userName: string) => {
-    const defaultMsg = `Hey ${userName}! Your items are waiting. Checkout now for instant delivery!`
+    const defaultMsg = `Hey ${userName}! Your items are waiting in your cart. Checkout now for instant delivery! 🛒`
     const message = window.prompt(`Customize push notification for ${userName}:`, defaultMsg)
     if (message === null) return
 
     try {
       const res = await fetch('/api/admin/live-carts/notify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(serverUser?.id ? { 'x-user-id': serverUser.id } : {}),
+        },
         body: JSON.stringify({
           userId,
           title: 'Cart Waiting 🛒',
@@ -523,7 +557,7 @@ export function AdminDashboard({
 
       const data = await res.json()
       if (res.ok) {
-        toast.success('Push notification sent successfully!')
+        toast.success(data.message || 'Push notification sent to customer mobile app & web!')
       } else {
         toast.error(data.error || 'Failed to send push notification')
       }
@@ -775,14 +809,18 @@ export function AdminDashboard({
 
   const activeStoreHub =
     storesList.find((s) => s.id === selectedHubId) ||
-    (selectedHubId === 'hub-224122'
-      ? { id: 'hub-224122', name: 'Akbarpur' }
-      : selectedHubId === 'hub-209206'
-      ? storesList.find((s) => s.id === 'hub-209206') || storesList[0]
-      : storesList[0])
-  const rawHubName =
-    activeStoreHub?.name ||
-    (selectedHubId === 'hub-224122' ? 'Akbarpur' : storesList[0]?.name || 'Central Hub')
+    (selectedHubId && selectedHubId !== 'all'
+      ? {
+          id: selectedHubId,
+          name:
+            selectedHubId
+              .replace(/^hub-/, '')
+              .replace(/[-_]/g, ' ')
+              .replace(/\b\w/g, (c) => c.toUpperCase()) + ' Hub',
+        }
+      : storesList[0] || { id: 'hub-209206', name: 'Store Hub' })
+
+  const rawHubName = activeStoreHub?.name || 'Store Hub'
   const hubCity = rawHubName
     ? rawHubName.replace(/\s*(central\s*hub|dark\s*store|hub|store)\s*/gi, '').trim().toLowerCase()
     : ''

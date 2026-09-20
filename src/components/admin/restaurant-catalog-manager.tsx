@@ -224,7 +224,8 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
   }, [initialRestaurantId, assignedRestaurantId])
 
   useEffect(() => {
-    fetch('/api/restaurants')
+    const storeParam = (session?.user as any)?.assignedStoreId ? `?storeId=${encodeURIComponent((session?.user as any).assignedStoreId)}` : ''
+    fetch(`/api/restaurants${storeParam}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         const list = Array.isArray(data) ? data : (data?.restaurants || [])
@@ -234,10 +235,13 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
             const defaultId = list[0]?.id || ''
             setSelectedOutletId(defaultId)
           }
+        } else {
+          setOutlets([])
+          setSelectedOutletId('')
         }
       })
       .catch(console.error)
-  }, [assignedRestaurantId, initialRestaurantId])
+  }, [assignedRestaurantId, initialRestaurantId, (session?.user as any)?.assignedStoreId])
 
   const effectiveRestId = (!isAdmin && assignedRestaurantId) 
     ? assignedRestaurantId 

@@ -24,15 +24,35 @@ export interface CreateDishInput {
   menuSectionId?: string
 }
 
+import { extractCityFromStoreName } from '@/lib/store-resolver'
+
 export class RestaurantCatalogService {
   /**
    * Fetches menu items and restaurant metadata for dashboard
    */
-  async getDashboardCatalog(restaurantId: string | null) {
+  async getDashboardCatalog(restaurantId: string | null, storeId?: string | null) {
     const where: Prisma.ProductWhereInput = {}
+    
     if (restaurantId === 'ALL') {
-      where.restaurantId = { not: null }
-    } else if (restaurantId) {
+      if (storeId && storeId !== 'all') {
+        const store = await prisma.darkStore.findUnique({
+          where: { id: storeId },
+          select: { name: true }
+        })
+        const city = store ? extractCityFromStoreName(store.name) : ''
+        const storeRestaurants = await prisma.restaurant.findMany({
+          where: city ? { city: { contains: city, mode: 'insensitive' } } : {},
+          select: { id: true }
+        })
+        const ids = storeRestaurants.map(r => r.id)
+        if (ids.length === 0) {
+          return { products: [], restaurant: null }
+        }
+        where.restaurantId = { in: ids }
+      } else {
+        where.restaurantId = { not: null }
+      }
+    } else if (restaurantId && restaurantId !== 'NONE') {
       where.restaurantId = restaurantId
     } else {
       return { products: [], restaurant: null }
@@ -44,7 +64,7 @@ export class RestaurantCatalogService {
         include: { category: true, images: true },
         orderBy: [{ sortOrder: 'desc' }, { createdAt: 'desc' }],
       }),
-      restaurantId && restaurantId !== 'ALL'
+      restaurantId && restaurantId !== 'ALL' && restaurantId !== 'NONE'
         ? prisma.restaurant.findUnique({
             where: { id: restaurantId },
             select: { id: true, name: true, slug: true, menuSections: true, cuisineTags: true },

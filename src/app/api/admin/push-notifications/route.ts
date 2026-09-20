@@ -84,13 +84,13 @@ export async function POST(request: NextRequest) {
             }).then((resp: any) => cleanupInvalidTokens(chunk, resp.responses))
               .catch(() => {})
           }
-        } else {
-          // Fallback to all_users topic broadcast only if no device tokens exist
-          await sendTopicWithRetry(fcmMessaging, {
-            topic: 'all_users',
-            ...fcmPayload,
-          }).catch((err) => console.error('FCM broadcast to all_users failed:', err))
         }
+
+        // Always also broadcast to all_users topic so all app installations receive it
+        await sendTopicWithRetry(fcmMessaging, {
+          topic: 'all_users',
+          ...fcmPayload,
+        }).catch((err) => console.error('FCM broadcast to all_users failed:', err))
       }
     } catch (fcmErr) {
       console.error('Failed to broadcast mobile FCM notifications:', fcmErr)

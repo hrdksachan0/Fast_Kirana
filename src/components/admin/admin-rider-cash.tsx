@@ -337,7 +337,7 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
                             <div className="flex items-center gap-1.5">
                               <p className="font-bold text-text-primary">{r.name}</p>
                               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-primary/10 text-primary border border-primary/20">
-                                🏢 {r.storeName || 'Ghatampur Hub'}
+                                🏢 {r.storeName || (r.assignedStoreId ? (r.assignedStoreId.replace(/^hub-/, '').replace(/[-_]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) + ' Hub') : 'Store Hub')}
                               </span>
                             </div>
                             <p className="text-[10px] text-text-muted flex items-center gap-1">

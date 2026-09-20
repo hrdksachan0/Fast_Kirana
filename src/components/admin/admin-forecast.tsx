@@ -176,7 +176,7 @@ export function AdminForecast({ onRestockCompleted, categories, storeId }: Admin
               AI-Driven Demand Forecasting
               <Sparkles className="h-4 w-4 text-amber-500 fill-amber-500/20" />
               <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                {storeId === 'hub-224122' ? 'Akbarpur Hub' : storeId === 'hub-209206' ? 'Ghatampur Central Hub' : (storeId || 'All Stores')}
+                {storeId && storeId !== 'all' ? (storeId.replace(/^hub-/, '').replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) + ' Hub') : 'All Stores'}
               </span>
             </h3>
             <p className="text-[10px] text-text-secondary leading-snug font-semibold mt-0.5">

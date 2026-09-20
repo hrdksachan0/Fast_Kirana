@@ -1111,17 +1111,7 @@ export function CartDrawer() {
 
                 {/* Checkout Button */}
                 <div className="flex-1 min-w-0">
-                  {!isLocationServiceable ? (
-                    <button
-                      onClick={() => {
-                        setCartOpen(false)
-                        setLocationPickerOpen(true)
-                      }}
-                      className="w-full h-12 rounded-2xl bg-[#e20a22] hover:bg-[#c9081e] text-[11px] sm:text-xs font-black text-white shadow-md flex items-center justify-center gap-1 cursor-pointer transition-transform active:scale-95"
-                    >
-                      <span>📍 Change Delivery Location</span>
-                    </button>
-                  ) : isCheckoutBlocked ? (
+                  {isCheckoutBlocked ? (
                     <button
                       disabled
                       className="w-full h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-850 text-[11px] sm:text-xs font-black text-zinc-400 dark:text-zinc-500 cursor-not-allowed border border-zinc-200 dark:border-zinc-800 flex items-center justify-center gap-1"

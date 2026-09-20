@@ -12,7 +12,8 @@ export interface OrderInventoryItem {
  */
 export async function deductOrderInventory(
   tx: any,
-  items: OrderInventoryItem[]
+  items: OrderInventoryItem[],
+  storeId?: string | null
 ): Promise<void> {
   for (const item of items) {
     if (!item.productId) continue
@@ -121,6 +122,36 @@ export async function deductOrderInventory(
           newStock: newTotalStock,
         },
       }).catch((logErr: any) => console.error('Failed to write batch stock log:', logErr))
+    }
+
+    // 3. Localized Store Inventory deduction (if storeId is provided)
+    if (storeId) {
+      try {
+        const existingStoreInv = await tx.storeInventory.findUnique({
+          where: {
+            productId_storeId: {
+              productId: item.productId,
+              storeId: storeId,
+            }
+          }
+        })
+
+        if (existingStoreInv) {
+          await tx.storeInventory.update({
+            where: {
+              productId_storeId: {
+                productId: item.productId,
+                storeId: storeId,
+              }
+            },
+            data: {
+              stock: { decrement: item.quantity }
+            }
+          })
+        }
+      } catch (storeInvErr) {
+        console.warn(`Could not decrement localized StoreInventory for product ${item.productId} at store ${storeId}:`, storeInvErr)
+      }
     }
   }
 }

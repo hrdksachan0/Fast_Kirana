@@ -22,7 +22,8 @@ import {
   VolumeX,
   Store,
   ChevronDown,
-  Sparkles
+  Sparkles,
+  Plus
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { RestaurantOrdersConsole } from '@/components/admin/restaurant-orders-console'
@@ -78,7 +79,8 @@ export default function RestaurantKitchenPage() {
 
   // Fetch available restaurants for selection
   useEffect(() => {
-    fetch('/api/restaurants')
+    const storeParam = (session?.user as any)?.assignedStoreId ? `?storeId=${encodeURIComponent((session?.user as any).assignedStoreId)}` : ''
+    fetch(`/api/restaurants${storeParam}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         const list = Array.isArray(data) ? data : (data?.restaurants || [])
@@ -110,6 +112,10 @@ export default function RestaurantKitchenPage() {
             setRestaurantName(`${matched.name} Console`)
             setIsCafe(matched.slug === 'fastkirana-cafe' || matched.slug?.includes('cafe'))
           }
+        } else {
+          setRestaurants([])
+          setSelectedRestaurantId('')
+          setRestaurantName('Restaurant Console')
         }
       })
       .catch(console.error)
@@ -290,134 +296,161 @@ export default function RestaurantKitchenPage() {
           </div>
         </div>
 
-        {/* Tabs Bar */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar border-b border-border/60">
-          <button
-            onClick={() => setActiveTab('orders')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
-              activeTab === 'orders'
-                ? 'bg-[#e20a22] text-white shadow-sm'
-                : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
-            }`}
-          >
-            <ChefHat className="w-3.5 h-3.5" />
-            Live Kitchen Queue
-          </button>
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
-              activeTab === 'analytics'
-                ? 'bg-[#e20a22] text-white shadow-sm'
-                : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
-            }`}
-          >
-            <BarChart3 className="w-3.5 h-3.5" />
-            Sales & Analytics
-          </button>
-          <button
-            onClick={() => setActiveTab('catalog')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
-              activeTab === 'catalog'
-                ? 'bg-[#e20a22] text-white shadow-sm'
-                : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
-            }`}
-          >
-            <Utensils className="w-3.5 h-3.5" />
-            Menu Catalog
-          </button>
-          <button
-            onClick={() => setActiveTab('sections')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
-              activeTab === 'sections'
-                ? 'bg-[#e20a22] text-white shadow-sm'
-                : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            Menu Sections & Tabs
-          </button>
-          <button
-            onClick={() => setActiveTab('payouts')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
-              activeTab === 'payouts'
-                ? 'bg-[#e20a22] text-white shadow-sm'
-                : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
-            }`}
-          >
-            <IndianRupee className="w-3.5 h-3.5" />
-            Settlements Ledger
-          </button>
-          <button
-            onClick={() => setActiveTab('reviews')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
-              activeTab === 'reviews'
-                ? 'bg-[#e20a22] text-white shadow-sm'
-                : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
-            }`}
-          >
-            <Star className="w-3.5 h-3.5" />
-            Customer Ratings
-          </button>
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
-              activeTab === 'settings'
-                ? 'bg-[#e20a22] text-white shadow-sm'
-                : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
-            }`}
-          >
-            <Settings className="w-3.5 h-3.5" />
-            Settings
-          </button>
-        </div>
+        {restaurants.length === 0 ? (
+          <div className="bg-card border border-border/70 rounded-3xl p-8 sm:p-12 text-center space-y-4 max-w-xl mx-auto shadow-xs my-8">
+            <div className="h-16 w-16 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center mx-auto border border-amber-500/20">
+              <Utensils className="h-8 w-8" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-lg font-black text-text-primary">No Restaurant Outlets in This Territory</h3>
+              <p className="text-xs text-text-secondary leading-relaxed">
+                There are currently no active restaurant outlets registered for your assigned store hub territory.
+              </p>
+            </div>
+            {isAdmin && (
+              <div className="pt-2">
+                <a
+                  href="/admin/restaurants"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Restaurant Outlet
+                </a>
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Tabs Bar */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar border-b border-border/60">
+              <button
+                onClick={() => setActiveTab('orders')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+                  activeTab === 'orders'
+                    ? 'bg-[#e20a22] text-white shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
+                }`}
+              >
+                <ChefHat className="w-3.5 h-3.5" />
+                Live Kitchen Queue
+              </button>
+              <button
+                onClick={() => setActiveTab('analytics')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+                  activeTab === 'analytics'
+                    ? 'bg-[#e20a22] text-white shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
+                }`}
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                Sales & Analytics
+              </button>
+              <button
+                onClick={() => setActiveTab('catalog')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+                  activeTab === 'catalog'
+                    ? 'bg-[#e20a22] text-white shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
+                }`}
+              >
+                <Utensils className="w-3.5 h-3.5" />
+                Menu Catalog
+              </button>
+              <button
+                onClick={() => setActiveTab('sections')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+                  activeTab === 'sections'
+                    ? 'bg-[#e20a22] text-white shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                Menu Sections & Tabs
+              </button>
+              <button
+                onClick={() => setActiveTab('payouts')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+                  activeTab === 'payouts'
+                    ? 'bg-[#e20a22] text-white shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
+                }`}
+              >
+                <IndianRupee className="w-3.5 h-3.5" />
+                Settlements Ledger
+              </button>
+              <button
+                onClick={() => setActiveTab('reviews')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+                  activeTab === 'reviews'
+                    ? 'bg-[#e20a22] text-white shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
+                }`}
+              >
+                <Star className="w-3.5 h-3.5" />
+                Customer Ratings
+              </button>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+                  activeTab === 'settings'
+                    ? 'bg-[#e20a22] text-white shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-muted/60'
+                }`}
+              >
+                <Settings className="w-3.5 h-3.5" />
+                Settings
+              </button>
+            </div>
 
-        {/* Console Container */}
-        <div className="bg-card border border-border/60 rounded-2xl sm:rounded-3xl p-3 sm:p-6 shadow-xs">
-          {activeTab === 'orders' && (
-            <RestaurantOrdersConsole 
-              key={`orders-${effectiveRestId}`}
-              restaurantId={effectiveRestId} 
-              restaurant={currentRestaurant}
-            />
-          )}
-          {activeTab === 'analytics' && (
-            <RestaurantSalesConsole 
-              key={`analytics-${effectiveRestId}`}
-              restaurantId={effectiveRestId}
-            />
-          )}
-          {activeTab === 'catalog' && (
-            <RestaurantCatalogManager 
-              key={`catalog-${effectiveRestId}`}
-              initialRestaurantId={effectiveRestId} 
-            />
-          )}
-          {activeTab === 'sections' && (
-            <RestaurantMenuSectionsEditor 
-              key={`sections-${effectiveRestId}`}
-              assignedRestaurantId={effectiveRestId} 
-              isCafe={isCafe} 
-            />
-          )}
-          {activeTab === 'payouts' && (
-            <RestaurantPayoutsLedger 
-              key={`payouts-${effectiveRestId}`}
-              isAdmin={isAdmin} 
-            />
-          )}
-          {activeTab === 'reviews' && (
-            <RestaurantReviewsTab 
-              key={`reviews-${effectiveRestId}`}
-              restaurantId={effectiveRestId} 
-            />
-          )}
-          {activeTab === 'settings' && (
-            <RestaurantSettingsTab 
-              key={`settings-${effectiveRestId}`}
-              restaurantId={effectiveRestId} 
-            />
-          )}
-        </div>
+            {/* Console Container */}
+            <div className="bg-card border border-border/60 rounded-2xl sm:rounded-3xl p-3 sm:p-6 shadow-xs">
+              {activeTab === 'orders' && (
+                <RestaurantOrdersConsole 
+                  key={`orders-${effectiveRestId}`}
+                  restaurantId={effectiveRestId} 
+                  restaurant={currentRestaurant}
+                />
+              )}
+              {activeTab === 'analytics' && (
+                <RestaurantSalesConsole 
+                  key={`analytics-${effectiveRestId}`}
+                  restaurantId={effectiveRestId}
+                />
+              )}
+              {activeTab === 'catalog' && (
+                <RestaurantCatalogManager 
+                  key={`catalog-${effectiveRestId}`}
+                  initialRestaurantId={effectiveRestId} 
+                />
+              )}
+              {activeTab === 'sections' && (
+                <RestaurantMenuSectionsEditor 
+                  key={`sections-${effectiveRestId}`}
+                  assignedRestaurantId={effectiveRestId} 
+                  isCafe={isCafe} 
+                />
+              )}
+              {activeTab === 'payouts' && (
+                <RestaurantPayoutsLedger 
+                  key={`payouts-${effectiveRestId}`}
+                  isAdmin={isAdmin} 
+                />
+              )}
+              {activeTab === 'reviews' && (
+                <RestaurantReviewsTab 
+                  key={`reviews-${effectiveRestId}`}
+                  restaurantId={effectiveRestId} 
+                />
+              )}
+              {activeTab === 'settings' && (
+                <RestaurantSettingsTab 
+                  key={`settings-${effectiveRestId}`}
+                  restaurantId={effectiveRestId} 
+                />
+              )}
+            </div>
+          </>
+        )}
 
       </div>
 

@@ -20,6 +20,19 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * c
 }
 
+export const POPULAR_LOCALITIES = [
+  // Ghatampur Hub
+  { name: 'Ghatampur Chauraha', city: 'Ghatampur', lat: 26.1534, lng: 80.1714 },
+  { name: 'Railway Station', city: 'Ghatampur', lat: 26.1620, lng: 80.1780 },
+  { name: 'Bus Stand / Hamirpur Rd', city: 'Ghatampur', lat: 26.1480, lng: 80.1650 },
+  { name: 'Degree College / Kanpur Rd', city: 'Ghatampur', lat: 26.1610, lng: 80.1740 },
+  { name: 'Block Colony', city: 'Ghatampur', lat: 26.1510, lng: 80.1750 },
+  // Akbarpur Hub
+  { name: 'Akbarpur Tehsil', city: 'Akbarpur', lat: 26.4380, lng: 82.5400 },
+  { name: 'Akbarpur Railway Station', city: 'Akbarpur', lat: 26.4420, lng: 82.5480 },
+  { name: 'Shahzadpur Market', city: 'Akbarpur', lat: 26.4310, lng: 82.5360 },
+]
+
 interface LocationPickerProps {
   open: boolean
   onClose: () => void
@@ -328,31 +341,20 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
       (error) => {
         setIsDetecting(false)
         if (error.code === 1) {
-          toast.error('Location permission denied. Please allow location access in your browser settings or search address manually.', { duration: 5000 })
+          toast.error('Location permission denied. Please select your locality below or search manually.', { duration: 4000 })
         } else {
-          toast.info('GPS signal unavailable. Trying IP location fallback...')
-          fetch('https://ipapi.co/json/')
-            .then(res => res.json())
-            .then(data => {
-              if (data.latitude && data.longitude) {
-                setCurrentLat(data.latitude)
-                setCurrentLng(data.longitude)
-                if (mapRef.current) {
-                  mapRef.current.panTo({ lat: data.latitude, lng: data.longitude })
-                  mapRef.current.setZoom(15)
-                }
-                resolveAddress(data.latitude, data.longitude)
-                toast.success(`Approximate location set to ${data.city || 'your area'}`)
-              } else {
-                toast.error('Unable to detect location. Please search manually.')
-              }
-            })
-            .catch(() => {
-              toast.error('Unable to detect location. Please search manually.')
-            })
+          toast.info('GPS signal unavailable. Set to central hub — select your exact landmark below.')
         }
+        // Safely fallback to active store hub coordinates (avoid cell tower IP drift)
+        setCurrentLat(storeLat)
+        setCurrentLng(storeLng)
+        if (mapRef.current) {
+          mapRef.current.panTo({ lat: storeLat, lng: storeLng })
+          mapRef.current.setZoom(15)
+        }
+        resolveAddress(storeLat, storeLng)
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
     )
   }, [storeLat, storeLng, resolveAddress])
 
@@ -528,7 +530,7 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
               {/* Quick Hub Switcher Chips */}
               {hubs.length > 0 && (
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase shrink-0">Active Hubs:</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase shrink-0">Hubs:</span>
                   {hubs.map((h) => {
                     const isSelected = matchedHub?.id === h.id
                     return (
@@ -543,7 +545,7 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
                             mapRef.current.panTo({ lat: h.latitude, lng: h.longitude })
                             mapRef.current.setZoom(15)
                           }
-                          toast.success(`Jumped to ${h.name} delivery zone!`)
+                          toast.success(`Jumped to ${h.name} zone!`)
                         }}
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all border flex items-center gap-1.5 ${
                           isSelected
@@ -559,6 +561,41 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
                   })}
                 </div>
               )}
+
+              {/* 1-Tap Popular Mohalla & Landmark Chips */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    ⚡ 1-Tap Quick Landmarks:
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                  {POPULAR_LOCALITIES.filter(l => {
+                    if (!matchedHub?.city) return true
+                    return l.city.toLowerCase() === matchedHub.city.toLowerCase()
+                  }).map((loc) => (
+                    <button
+                      key={loc.name}
+                      type="button"
+                      onClick={() => {
+                        setCurrentLat(loc.lat)
+                        setCurrentLng(loc.lng)
+                        setAddressName(`${loc.name}, ${loc.city}`)
+                        if (mapRef.current) {
+                          mapRef.current.panTo({ lat: loc.lat, lng: loc.lng })
+                          mapRef.current.setZoom(16)
+                        }
+                        resolveAddress(loc.lat, loc.lng)
+                        toast.success(`Location set to ${loc.name}!`)
+                      }}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition-all bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:border-orange-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/20 active:scale-95 flex items-center gap-1"
+                    >
+                      <span className="text-[10px] text-orange-500">📌</span>
+                      <span>{loc.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {/* Map Container */}
               <div className={`relative w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-800 shadow-inner bg-slate-100 dark:bg-zinc-900 transition-all ${isMapFullscreen ? 'h-80' : 'h-60 sm:h-64'}`}>

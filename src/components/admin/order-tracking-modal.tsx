@@ -225,10 +225,9 @@ export default function OrderTrackingModal({
     order.notes?.toLowerCase().includes('packaging') ||
     order.deliveryInstructions?.toLowerCase().includes('premium') ||
     (order.miscFee !== undefined && order.miscFee >= 15) ||
-    (order as any).packagingOption === 'PREMIUM' ||
-    (order as any).isPremiumPackaging === true
+    (order as any).packagingOption === 'PREMIUM'
   )
-  const isPickup = order.deliveryMethod === 'RETAIL' || order.deliveryMethod === 'TAKEAWAY' || order.isSelfPickup === true
+  const isOrderPickup = order.deliveryMethod === 'RETAIL' || order.deliveryMethod === 'TAKEAWAY' || order.isSelfPickup === true || isPickup
   const riderName = order.deliveryUser?.name || order.deliveryBoyName || ((order.status === 'SHIPPED' || order.status === 'DELIVERED') && order.deliveryUserId ? 'FastKirana Delivery Partner' : null)
   const riderPhone = order.deliveryUser?.phone || order.deliveryBoyPhone || null
   const orderTime = order.createdAt 
