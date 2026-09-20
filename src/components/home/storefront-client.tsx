@@ -173,12 +173,28 @@ export function StorefrontClient({
                   />
                 </div>
 
-                {/* 4. Value Proposition Banner */}
+                {/* 4. Deals & Curations Hub (Products & Curated For You) */}
+                <div className="section-lazy-render">
+                  <DealsCurationHub
+                    categories={categories}
+                    allProducts={allGroceryProducts}
+                    flashDeals={flashDeals}
+                    bestSellers={bestSellers}
+                    topPicks={topPicks}
+                    breakfastProducts={breakfastProducts}
+                    lunchProducts={lunchProducts}
+                    teaProducts={teaProducts}
+                    nightProducts={nightProducts}
+                    sortRules={sortRules}
+                  />
+                </div>
+
+                {/* 5. Value Proposition Banner */}
                 <div className="section-lazy-render">
                   <DeliveryBanner />
                 </div>
 
-                {/* 5. Last Order Banner */}
+                {/* 6. Last Order Banner */}
                 <div className="section-lazy-render">
                   <LastOrderBanner />
                 </div>
