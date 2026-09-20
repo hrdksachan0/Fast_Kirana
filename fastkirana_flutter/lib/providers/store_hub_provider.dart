@@ -75,8 +75,11 @@ final nearestHubResultProvider = Provider<NearestHubResult>((ref) {
 
   StoreHub nearest = hubs.first;
   double minDistanceKm = double.infinity;
+  StoreHub? polygonMatchedHub;
 
   for (final hub in hubs) {
+    if (!hub.isActive) continue;
+
     final distMeters = Geolocator.distanceBetween(
       hub.latitude,
       hub.longitude,
@@ -84,28 +87,46 @@ final nearestHubResultProvider = Provider<NearestHubResult>((ref) {
       customerLng,
     );
     final distKm = distMeters / 1000.0;
+
+    // 1. Check exact polygon geofence match (ray-casting PIP)
+    if (polygonMatchedHub == null &&
+        hub.polygonGeoJson != null &&
+        hub.polygonGeoJson!.isNotEmpty &&
+        hub.isPointInsideGeofence(customerLat, customerLng)) {
+      polygonMatchedHub = hub;
+    }
+
     if (distKm < minDistanceKm) {
       minDistanceKm = distKm;
       nearest = hub;
     }
   }
 
-  final isServiceable = minDistanceKm <= nearest.deliveryRadiusKm;
+  // If customer is within an active hub's delivery polygon, bind to that hub
+  final resolvedHub = polygonMatchedHub ?? nearest;
+  final resolvedDistanceKm = (resolvedHub == nearest)
+      ? minDistanceKm
+      : (Geolocator.distanceBetween(
+            resolvedHub.latitude,
+            resolvedHub.longitude,
+            customerLat,
+            customerLng,
+          ) /
+          1000.0);
+
+  final isServiceable = resolvedHub.isPointInsideGeofence(customerLat, customerLng);
 
   // Sync AppConfig so all non-provider call sites read the live hub coords.
-  // This runs on every rebuild: initial build uses StoreHub.defaultGhatampur
-  // (same coords as current defaults), then updates to the real hub once
-  // activeStoreHubsProvider resolves from the API.
   AppConfig.updateDarkstore(
-    lat: nearest.latitude,
-    lng: nearest.longitude,
-    address: '${nearest.name}, ${nearest.city}',
-    id: nearest.id,
+    lat: resolvedHub.latitude,
+    lng: resolvedHub.longitude,
+    address: '${resolvedHub.name}, ${resolvedHub.city}',
+    id: resolvedHub.id,
   );
 
   return NearestHubResult(
-    hub: nearest,
-    distanceKm: minDistanceKm,
+    hub: resolvedHub,
+    distanceKm: resolvedDistanceKm,
     isServiceable: isServiceable,
   );
 });

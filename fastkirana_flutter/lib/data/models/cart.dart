@@ -1,9 +1,5 @@
-import 'package:json_annotation/json_annotation.dart';
 import 'product.dart';
 
-part 'cart.g.dart';
-
-@JsonSerializable()
 class CartItem {
   final String id;
   final String cartId;
@@ -23,14 +19,29 @@ class CartItem {
     this.notes,
   });
 
-  factory CartItem.fromJson(Map<String, dynamic> json) =>
-      _$CartItemFromJson(json);
-  Map<String, dynamic> toJson() => _$CartItemToJson(this);
+  factory CartItem.fromJson(Map<String, dynamic> json) => CartItem(
+        id: json['id'] as String? ?? '',
+        cartId: json['cartId'] as String? ?? '',
+        productId: json['productId'] as String? ?? '',
+        product: Product.fromJson(Map<String, dynamic>.from(json['product'] as Map)),
+        quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+        selectedVariant: json['selectedVariant'] as String?,
+        notes: json['notes'] as String?,
+      );
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'id': id,
+        'cartId': cartId,
+        'productId': productId,
+        'product': product.toJson(),
+        'quantity': quantity,
+        'selectedVariant': selectedVariant,
+        'notes': notes,
+      };
 
   double get lineTotal => product.price * quantity;
 }
 
-@JsonSerializable()
 class Cart {
   final String id;
   final String userId;
@@ -39,6 +50,7 @@ class Cart {
   final double couponDiscount;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? hubId; // 🏬 Bound store hub fulfillment ID
 
   Cart({
     required this.id,
@@ -48,11 +60,61 @@ class Cart {
     required this.couponDiscount,
     required this.createdAt,
     required this.updatedAt,
+    this.hubId,
   });
 
-  factory Cart.fromJson(Map<String, dynamic> json) =>
-      _$CartFromJson(json);
-  Map<String, dynamic> toJson() => _$CartToJson(this);
+  factory Cart.fromJson(Map<String, dynamic> json) => Cart(
+        id: json['id'] as String? ?? 'cart_active',
+        userId: json['userId'] as String? ?? 'user_active',
+        items: json['items'] != null
+            ? (json['items'] as List<dynamic>)
+                .map((e) => CartItem.fromJson(Map<String, dynamic>.from(e as Map)))
+                .toList()
+            : [],
+        appliedCouponCode: json['appliedCouponCode'] as String?,
+        couponDiscount: (json['couponDiscount'] as num?)?.toDouble() ?? 0.0,
+        createdAt: json['createdAt'] != null
+            ? DateTime.parse(json['createdAt'] as String)
+            : DateTime.now(),
+        updatedAt: json['updatedAt'] != null
+            ? DateTime.parse(json['updatedAt'] as String)
+            : DateTime.now(),
+        hubId: json['hubId']?.toString() ?? json['storeId']?.toString(),
+      );
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'id': id,
+        'userId': userId,
+        'items': items.map((i) => i.toJson()).toList(),
+        if (appliedCouponCode != null) 'appliedCouponCode': appliedCouponCode,
+        'couponDiscount': couponDiscount,
+        'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt.toIso8601String(),
+        if (hubId != null) 'hubId': hubId,
+      };
+
+  Cart copyWith({
+    String? id,
+    String? userId,
+    List<CartItem>? items,
+    String? appliedCouponCode,
+    double? couponDiscount,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? hubId,
+    bool clearCoupon = false,
+  }) {
+    return Cart(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      items: items ?? this.items,
+      appliedCouponCode: clearCoupon ? null : (appliedCouponCode ?? this.appliedCouponCode),
+      couponDiscount: clearCoupon ? 0.0 : (couponDiscount ?? this.couponDiscount),
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      hubId: hubId ?? this.hubId,
+    );
+  }
 
   double get subtotal =>
       items.fold(0, (sum, item) => sum + item.lineTotal);

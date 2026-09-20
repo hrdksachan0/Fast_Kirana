@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +6,7 @@ import '../data/models/cart.dart';
 import '../data/models/product.dart';
 import '../data/repositories/cart_repository.dart';
 import '../core/network/api_client.dart';
+import '../core/config/app_config.dart';
 import '../core/utils/restaurant_utils.dart';
 import '../core/utils/app_connectivity.dart';
 
@@ -19,13 +21,19 @@ final cartRepoProvider = Provider<CartRepository>((ref) {
 class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   final CartRepository repository;
 
+  int _cartVersion = 0;
+  Timer? _debounceSyncTimer;
+
+  int get cartVersion => _cartVersion;
+
   CartNotifier(this.repository) : super(const AsyncValue.loading()) {
     loadCart();
   }
 
   Cart? get _cart => state.value;
 
-  Cart _buildCart(List<CartItem> items, {String? couponCode, double discount = 0.0}) {
+  Cart _buildCart(List<CartItem> items, {String? couponCode, double discount = 0.0, String? hubId}) {
+    final effectiveHub = hubId ?? _cart?.hubId ?? (AppConfig.darkstoreId.isNotEmpty ? AppConfig.darkstoreId : null);
     return Cart(
       id: 'cart_active',
       userId: 'user_active',
@@ -34,17 +42,19 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
       couponDiscount: discount,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
+      hubId: effectiveHub,
     );
   }
 
-  Cart _emptyCart() => _buildCart([]);
+  Cart _emptyCart({String? hubId}) => _buildCart([], hubId: hubId);
 
-  void _setState(List<CartItem> items, Cart? oldCart) {
+  void _setState(List<CartItem> items, Cart? oldCart, {String? hubId}) {
     state = AsyncValue.data(
       _buildCart(
         items,
         couponCode: oldCart?.appliedCouponCode,
         discount: oldCart?.couponDiscount ?? 0.0,
+        hubId: hubId ?? oldCart?.hubId,
       ),
     );
   }
@@ -58,6 +68,51 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
       quantity: quantity,
       selectedVariant: selectedVariant,
     );
+  }
+
+  /// Monotonic sequence sync queue:
+  /// Immediately increments local cart version and debounces server sync by 300ms.
+  /// Prevents race conditions and server state overwrites from rapid button tapping (+ + + -).
+  void _scheduleDebouncedSync(List<CartItem> items) {
+    _cartVersion++;
+    final currentVersion = _cartVersion;
+    _debounceSyncTimer?.cancel();
+    _debounceSyncTimer = Timer(const Duration(milliseconds: 300), () async {
+      try {
+        await repository.syncCart(items);
+      } catch (e, st) {
+        LoggerService.error('CartProvider: debounced sync failed for version $currentVersion', e, st);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounceSyncTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Checks if the cart is bound to a different darkstore hub than the target hubId.
+  String? checkHubConflict(String newHubId) {
+    final cart = _cart;
+    if (cart == null || cart.items.isEmpty) return null;
+    final existingHub = cart.hubId;
+    if (existingHub != null && existingHub.isNotEmpty && existingHub != newHubId) {
+      final hasGrocery = cart.items.any((i) => !isCafeProduct(i.product));
+      if (hasGrocery) return existingHub;
+    }
+    return null;
+  }
+
+  /// Revalidates cart items when switching to a new store hub.
+  Future<void> revalidateCartForHub(String newHubId) async {
+    final cart = _cart;
+    if (cart == null || cart.items.isEmpty) return;
+
+    state = AsyncValue.data(
+      cart.copyWith(hubId: newHubId),
+    );
+    await repository.saveLocalCart(cart.items);
   }
 
   // ─── Queries ───────────────────────────────────────────────────────────────
@@ -162,7 +217,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
 
     _setState(items, cart);
     repository.saveLocalCart(items);
-    repository.syncCart(items);
+    _scheduleDebouncedSync(items);
     return true;
   }
 
@@ -185,12 +240,12 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
       );
       _setState(items, cart);
       await repository.saveLocalCart(items);
-      repository.syncCart(items);
+      _scheduleDebouncedSync(items);
     } else {
       items.add(_newCartItem(product, 1, null));
       _setState(items, cart);
       await repository.saveLocalCart(items);
-      repository.syncCart(items);
+      _scheduleDebouncedSync(items);
     }
   }
 
@@ -217,7 +272,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
       }
       _setState(items, cart);
       await repository.saveLocalCart(items);
-      repository.syncCart(items);
+      _scheduleDebouncedSync(items);
     }
   }
 
@@ -244,7 +299,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
       );
       _setState(items, cart);
       repository.saveLocalCart(items);
-      repository.syncCart(items);
+      _scheduleDebouncedSync(items);
       return true;
     }
     return false;
@@ -256,10 +311,12 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
     final items = cart.items.where((i) => i.productId != productId && i.id != productId && i.product.id != productId).toList();
     _setState(items, cart);
     await repository.saveLocalCart(items);
-    repository.syncCart(items);
+    _scheduleDebouncedSync(items);
   }
 
   Future<void> clearCart() async {
+    _debounceSyncTimer?.cancel();
+    _cartVersion++;
     state = AsyncValue.data(_emptyCart());
     await repository.saveLocalCart([]);
     repository.clearCart();
@@ -271,7 +328,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
     final groceryItems = cart.items.where((i) => !isCafeProduct(i.product)).toList();
     _setState(groceryItems, cart);
     await repository.saveLocalCart(groceryItems);
-    repository.syncCart(groceryItems);
+    _scheduleDebouncedSync(groceryItems);
   }
 
   Future<void> replaceRestaurantItemsWith(Product product, [int quantity = 1, String? selectedVariant]) async {
@@ -280,7 +337,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
     items.add(_newCartItem(product, quantity, selectedVariant));
     _setState(items, cart);
     await repository.saveLocalCart(items);
-    repository.syncCart(items);
+    _scheduleDebouncedSync(items);
   }
 
   Future<void> syncPending([CartRepository? repo]) async {

@@ -36,7 +36,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isGrocerySelected = false; // Food mode default (Food first, then Grocery)
-  final int _selectedFilterIndex = 0;
+  int _selectedFilterIndex = 0;
   Timer? _orderSyncTimer;
 
   // Infinite Product Feed Scroll & Pagination State (Zepto/Blinkit architecture)
@@ -162,58 +162,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ref.invalidate(cartProvider);
                 ref.invalidate(categoriesProvider);
                 ref.invalidate(bannersProvider('grocery'));
+                ref.invalidate(bannersProvider('food'));
+                ref.invalidate(brandOfferCardsProvider('grocery'));
+                ref.invalidate(brandOfferCardsProvider('food'));
                 ref.invalidate(trendingProductsProvider);
                 ref.invalidate(ordersProvider(''));
                 for (final slug in _sectionCategorySlugs.values) {
                   ref.invalidate(productsProvider(slug));
                 }
-                ref.invalidate(homeProductCatalogProvider);
-                ref.invalidate(homeRestaurantsProvider);
-                await Future.wait([
-                  ref.refresh(homeProductCatalogProvider.future).catchError((_) => <Product>[]),
-                  ref.refresh(categoriesProvider.future).catchError((_) => <Category>[]),
-                ]);
-                if (mounted) {
-                  setState(() {
-                    _visibleGridCount = 20;
-                    _isLoadingMoreGrid = false;
-                  });
-                }
               },
               child: CustomScrollView(
                 controller: _homeScrollController,
-                physics: const BouncingScrollPhysics(),
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
                 slivers: [
-                  // 1. Pinned Header & Search
                   const SliverToBoxAdapter(child: HomeTopHeader()),
-
-                  // 1b. Location Unserviceable Warning Banner (Swiggy / Zepto Style)
                   const SliverToBoxAdapter(child: UnserviceableLocationBanner()),
-
-                  // 2. Mode Switcher (Grocery vs Food) - Placed directly above banner
                   SliverToBoxAdapter(
                     child: HomeCategoryToggle(
                       isGrocerySelected: _isGrocerySelected,
                       onModeChanged: (val) {
-                        setState(() => _isGrocerySelected = val);
+                        HapticFeedback.selectionClick();
+                        setState(() {
+                          _isGrocerySelected = val;
+                        });
                       },
                     ),
                   ),
-
+                  SliverToBoxAdapter(
+                    child: DynamicHeroBannerCarousel(
+                      key: ValueKey('hero_carousel_${_isGrocerySelected ? "grocery" : "food"}'),
+                      type: _isGrocerySelected ? 'grocery' : 'food',
+                    ),
+                  ),
                   if (_isGrocerySelected) ...[
-                    // 2.5 Dynamic Hero Promotional Banner Carousel (Matching Web 1:1, Auto-Slide, Zero Coupons)
-                    const SliverToBoxAdapter(child: DynamicHeroBannerCarousel(type: 'grocery')),
-
-                    // 3. Top 8 Categories (2 rows) - Premium squircle tiles
                     const SliverToBoxAdapter(child: HomeTopCategoriesGrid()),
-
-                    // 3.5 Buy Again Shelf (Instant 1-tap reordering from past purchases)
-                    SliverToBoxAdapter(child: HomeBuyAgainShelf(isGrocerySelected: _isGrocerySelected)),
-
-                    // 4. Product Shelves (Category title + Subcategory chips + Products with + ADD)
-                    SliverToBoxAdapter(child: HomeProductSections(selectedFilterIndex: _selectedFilterIndex)),
-
-                    // 5. Infinite Scroll Product Feed (Batch-loaded 20 items at a time, Blinkit/Zepto style)
+                    SliverToBoxAdapter(
+                      child: HomeBuyAgainShelf(isGrocerySelected: _isGrocerySelected),
+                    ),
+                    const SliverToBoxAdapter(child: HomeProductSections()),
                     ...HomeInfiniteFeed.buildSlivers(
                       context: context,
                       ref: ref,
@@ -221,15 +209,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       visibleGridCount: _visibleGridCount,
                       selectedFilterIndex: _selectedFilterIndex,
                     ),
-
-                    // Footer
                     const SliverToBoxAdapter(child: HomeFooter()),
                   ] else ...[
-                    // Food & Cafe Mode — directly show restaurants
                     const SliverToBoxAdapter(child: HomeFoodStorefront()),
                     const SliverToBoxAdapter(child: HomeFooter()),
                   ],
-
                   const SliverToBoxAdapter(child: SizedBox(height: 80)),
                 ],
               ),

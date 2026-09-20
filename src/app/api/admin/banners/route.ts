@@ -17,14 +17,30 @@ export async function GET() {
       }
     })
 
-    return NextResponse.json(banners)
+    const parsedBanners = banners.map(b => {
+      let extra: any = {}
+      if (b.code && b.code.startsWith('{') && b.code.endsWith('}')) {
+        try {
+          extra = JSON.parse(b.code)
+        } catch (_) {}
+      }
+      return {
+        ...b,
+        ...extra,
+        rawCode: b.code,
+        code: extra.couponCode !== undefined ? extra.couponCode : b.code,
+        cardType: extra.cardType || b.type || 'standard',
+      }
+    })
+
+    return NextResponse.json(parsedBanners)
   } catch (error: any) {
     console.error('Error fetching admin banners:', error)
     return NextResponse.json({ error: 'Failed to fetch banners' }, { status: 500 })
   }
 }
 
-// POST: Create a new promo banner
+// POST: Create a new promo banner / curated card
 export async function POST(request: NextRequest) {
   try {
     const adminResult = await requireAdmin()
@@ -41,11 +57,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const isCardType = ['dark_showcase', 'bento_grid', 'editorial', 'standard', 'brand_offer'].includes(type) || body.cardType
+    let serializedCode = code || ''
+    if (isCardType || body.cardType) {
+      const cardMeta = {
+        cardType: body.cardType || type || 'standard',
+        eyebrowTag: body.eyebrowTag || null,
+        primaryBrand: body.primaryBrand || null,
+        secondaryBrand: body.secondaryBrand || null,
+        cashbackTitle: body.cashbackTitle || null,
+        cashbackSubtitle: body.cashbackSubtitle || null,
+        disclaimerText: body.disclaimerText || null,
+        ctaText: body.ctaText || null,
+        ctaUrl: body.ctaUrl || null,
+        ctaBgColorHex: body.ctaBgColorHex || null,
+        ctaTextColorHex: body.ctaTextColorHex || null,
+        gridImages: body.gridImages || null,
+        hasWireframeGrid: body.hasWireframeGrid || false,
+        couponCode: code || null,
+      }
+      serializedCode = JSON.stringify(cardMeta)
+    }
+
     const banner = await prisma.promoBanner.create({
       data: {
         title,
         description,
-        code: code || '',
+        code: serializedCode,
         gradient: gradient || 'from-primary via-rose-500 to-orange-400',
         type: type || 'custom',
         imageUrl: imageUrl || null,
@@ -66,7 +104,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT: Update an existing promo banner
+// PUT: Update an existing promo banner / curated card
 export async function PUT(request: NextRequest) {
   try {
     const adminResult = await requireAdmin()
@@ -89,12 +127,34 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Banner not found' }, { status: 404 })
     }
 
+    const isCardType = ['dark_showcase', 'bento_grid', 'editorial', 'standard', 'brand_offer'].includes(type || existing.type) || body.cardType
+    let serializedCode = code !== undefined ? code : existing.code
+    if (isCardType || body.cardType) {
+      const cardMeta = {
+        cardType: body.cardType || type || existing.type || 'standard',
+        eyebrowTag: body.eyebrowTag !== undefined ? body.eyebrowTag : null,
+        primaryBrand: body.primaryBrand !== undefined ? body.primaryBrand : null,
+        secondaryBrand: body.secondaryBrand !== undefined ? body.secondaryBrand : null,
+        cashbackTitle: body.cashbackTitle !== undefined ? body.cashbackTitle : null,
+        cashbackSubtitle: body.cashbackSubtitle !== undefined ? body.cashbackSubtitle : null,
+        disclaimerText: body.disclaimerText !== undefined ? body.disclaimerText : null,
+        ctaText: body.ctaText !== undefined ? body.ctaText : null,
+        ctaUrl: body.ctaUrl !== undefined ? body.ctaUrl : null,
+        ctaBgColorHex: body.ctaBgColorHex !== undefined ? body.ctaBgColorHex : null,
+        ctaTextColorHex: body.ctaTextColorHex !== undefined ? body.ctaTextColorHex : null,
+        gridImages: body.gridImages !== undefined ? body.gridImages : null,
+        hasWireframeGrid: body.hasWireframeGrid !== undefined ? body.hasWireframeGrid : false,
+        couponCode: code || null,
+      }
+      serializedCode = JSON.stringify(cardMeta)
+    }
+
     const updated = await prisma.promoBanner.update({
       where: { id },
       data: {
         title: title !== undefined ? title : existing.title,
         description: description !== undefined ? description : existing.description,
-        code: code !== undefined ? code : existing.code,
+        code: serializedCode,
         gradient: gradient !== undefined ? gradient : existing.gradient,
         type: type !== undefined ? type : existing.type,
         imageUrl: imageUrl !== undefined ? imageUrl : existing.imageUrl,

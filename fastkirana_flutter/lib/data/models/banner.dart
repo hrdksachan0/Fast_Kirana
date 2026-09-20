@@ -10,6 +10,8 @@ class Banner {
   final int sortOrder;
   final bool isActive;
 
+  final Map<String, dynamic>? extraData;
+
   // Backwards-compatibility getters
   String? get subtitle => description.isNotEmpty ? description : null;
   String? get link => linkUrl;
@@ -25,6 +27,7 @@ class Banner {
     this.linkUrl,
     this.sortOrder = 0,
     this.isActive = true,
+    this.extraData,
   });
 
   factory Banner.fromJson(Map<String, dynamic> json) {
@@ -32,18 +35,20 @@ class Banner {
       id: json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? '',
       description: (json['description'] ?? json['subtitle'])?.toString() ?? '',
-      code: json['code']?.toString() ?? '',
+      code: (json['rawCode'] ?? json['code'])?.toString() ?? '',
       gradient: json['gradient']?.toString() ?? 'from-primary via-rose-500 to-orange-400',
       type: json['type']?.toString() ?? 'custom',
       imageUrl: json['imageUrl']?.toString(),
       linkUrl: (json['linkUrl'] ?? json['link'])?.toString(),
       sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
       isActive: json['isActive'] as bool? ?? true,
+      extraData: Map<String, dynamic>.from(json),
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    final map = <String, dynamic>{
+      if (extraData != null) ...extraData!,
       'id': id,
       'title': title,
       'description': description,
@@ -55,5 +60,6 @@ class Banner {
       'sortOrder': sortOrder,
       'isActive': isActive,
     };
+    return map;
   }
 }

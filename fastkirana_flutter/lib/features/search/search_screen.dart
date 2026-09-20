@@ -14,6 +14,7 @@ import '../../providers/restaurant_provider.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../../widgets/floating_cart_bar.dart';
 import '../../widgets/voice_search_sheet.dart';
+import '../../core/utils/fuzzy_matcher.dart';
 import '../../data/models/product.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/restaurant_card.dart';
@@ -636,7 +637,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 if (w == 'as' || w == 'a.s' || w == 'a.s.') {
                   return r.id == 'REST-101' || rSlug.contains('as');
                 }
-                return w.length >= 2 && (rName.contains(w) || rSlug.contains(w) || rCuisines.contains(w));
+                if (w.length >= 2 && (rName.contains(w) || rSlug.contains(w) || rCuisines.contains(w))) {
+                  return true;
+                }
+                // Fuzzy tolerance for restaurant names
+                return w.length >= 3 && (FuzzyMatcher.bestTokenFuzzyDistance(w, rName, maxDistance: 2) != null ||
+                    FuzzyMatcher.bestTokenFuzzyDistance(w, rSlug, maxDistance: 2) != null);
               });
         }).toList();
 
@@ -732,6 +738,40 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             final nameWords = pName.split(RegExp(r'\s+'));
             if (nameWords.any((nw) => nw.startsWith(term))) {
               score += 30;
+            }
+          }
+
+          // Damerau-Levenshtein Typo-Tolerance Algorithm for mistyped searches (e.g. "magi" -> "maggi", "layz" -> "lays", "choclate" -> "chocolate")
+          for (final word in effectiveQueryWords) {
+            if (word.length <= 2 || stopWords.contains(word)) continue;
+
+            final nameDist = FuzzyMatcher.bestTokenFuzzyDistance(word, pName, maxDistance: 2);
+            if (nameDist != null) {
+              if (nameDist == 0) {
+                // Exact token already handled in exact/substring loops
+              } else if (nameDist == 1) {
+                score += 85; // Distance 1 typo (e.g. "magi" -> "maggi", "layz" -> "lays")
+              } else if (nameDist == 2) {
+                score += 60; // Distance 2 typo (e.g. "choclate" -> "chocolate", "aashirvad" -> "aashirvaad")
+              }
+            } else {
+              // Check variant names for fuzzy match
+              final variantDist = variantNames
+                  .map((vn) => FuzzyMatcher.bestTokenFuzzyDistance(word, vn, maxDistance: 2))
+                  .whereType<int>()
+                  .fold<int?>(null, (minD, d) => minD == null || d < minD ? d : minD);
+              if (variantDist != null && variantDist > 0) {
+                score += variantDist == 1 ? 65 : 45;
+              } else {
+                // Check tags for fuzzy match
+                final tagDist = tags
+                    .map((t) => FuzzyMatcher.bestTokenFuzzyDistance(word, t, maxDistance: 1))
+                    .whereType<int>()
+                    .fold<int?>(null, (minD, d) => minD == null || d < minD ? d : minD);
+                if (tagDist != null && tagDist > 0) {
+                  score += 40;
+                }
+              }
             }
           }
 

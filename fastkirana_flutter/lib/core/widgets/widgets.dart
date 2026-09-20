@@ -13,4 +13,6 @@ export '../../widgets/floating_cart_bar.dart';
 export '../../widgets/cart_conflict_dialog.dart';
 export '../../widgets/live_gps_route_card.dart';
 export '../../widgets/voice_search_sheet.dart';
+export '../../widgets/curated_brand_offer_card.dart';
+export '../../data/models/brand_offer_card_data.dart';
 export '../../widgets/shimmer_box.dart' hide ProductCardSkeleton;

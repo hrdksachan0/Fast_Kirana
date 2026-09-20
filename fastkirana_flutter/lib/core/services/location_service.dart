@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
@@ -40,6 +41,25 @@ class LocationDetails {
   });
 }
 
+/// Real-Time Dynamic Delivery ETA & Surge Metadata
+class DynamicEtaInfo {
+  final int minMinutes;
+  final int maxMinutes;
+  final String displayLabel;
+  final bool isRushHour;
+  final bool isHighDemand;
+  final double surgeMultiplier;
+
+  const DynamicEtaInfo({
+    required this.minMinutes,
+    required this.maxMinutes,
+    required this.displayLabel,
+    this.isRushHour = false,
+    this.isHighDemand = false,
+    this.surgeMultiplier = 1.0,
+  });
+}
+
 class DeliveryTierInfo {
   final double distanceKm;
   final double deliveryFee;
@@ -50,6 +70,7 @@ class DeliveryTierInfo {
   final String tierName;
   final String freeDeliveryLabel;
   final String feeDescription;
+  final DynamicEtaInfo eta;
 
   const DeliveryTierInfo({
     required this.distanceKm,
@@ -61,6 +82,7 @@ class DeliveryTierInfo {
     required this.tierName,
     required this.freeDeliveryLabel,
     required this.feeDescription,
+    this.eta = const DynamicEtaInfo(minMinutes: 10, maxMinutes: 15, displayLabel: '10-15 mins'),
   });
 }
 
@@ -88,6 +110,66 @@ class LocationService {
     return distanceMeters / 1000.0;
   }
 
+  /// Real-Time Dynamic ETA & Elastic Surge Pricing Algorithm
+  /// Combines:
+  /// - Base prep time: 5 mins (Grocery) or 15 mins (Restaurant/Cafe)
+  /// - Real-time darkstore queue factor: (pendingOrders / activePickers) * 1.2 mins
+  /// - Urban transit velocity: 18 km/h with lunch/dinner traffic coefficient (1.0x to 1.35x)
+  static DynamicEtaInfo calculateDynamicEta({
+    required double distanceKm,
+    int pendingOrders = 0,
+    int activePickers = 2,
+    bool isRestaurant = false,
+    DateTime? now,
+  }) {
+    final currentTime = now ?? DateTime.now();
+    final hour = currentTime.hour;
+
+    // Peak rush periods in Indian cities: Lunch (12:30 - 14:30) & Dinner (19:30 - 22:30)
+    final isLunchRush = hour >= 12 && hour <= 14;
+    final isDinnerRush = hour >= 19 && hour <= 22;
+    final isRushHour = isLunchRush || isDinnerRush;
+
+    final trafficMultiplier = isDinnerRush ? 1.35 : (isLunchRush ? 1.20 : 1.0);
+
+    // 1. Preparation Time
+    final basePrepMinutes = isRestaurant ? 15 : 5;
+
+    // 2. Queue Waiting Delay
+    final pickers = activePickers > 0 ? activePickers : 2;
+    final queueDelayMinutes = ((pendingOrders / pickers) * 1.2).ceil();
+
+    // 3. Transit Travel Time (Average 18 km/h two-wheeler speed in urban traffic)
+    final rawTransitMinutes = (distanceKm / 18.0) * 60.0 * trafficMultiplier;
+    final transitMinutes = max(3, rawTransitMinutes.ceil());
+
+    // 4. Total ETA calculation
+    final totalExpectedMinutes = basePrepMinutes + queueDelayMinutes + transitMinutes;
+    final minMinutes = max(8, (totalExpectedMinutes * 0.85).round());
+    final maxMinutes = max(minMinutes + 4, (totalExpectedMinutes * 1.15).round());
+
+    final isHighDemand = pendingOrders > 15 || isDinnerRush;
+    final surgeMultiplier = isHighDemand ? 1.25 : 1.0;
+
+    String label;
+    if (minMinutes <= 10) {
+      label = '8-12 mins';
+    } else if (isHighDemand) {
+      label = '$minMinutes-$maxMinutes mins (High Demand)';
+    } else {
+      label = '$minMinutes-$maxMinutes mins';
+    }
+
+    return DynamicEtaInfo(
+      minMinutes: minMinutes,
+      maxMinutes: maxMinutes,
+      displayLabel: label,
+      isRushHour: isRushHour,
+      isHighDemand: isHighDemand,
+      surgeMultiplier: surgeMultiplier,
+    );
+  }
+
   /// Distance-tiered delivery fee & free delivery threshold calculation:
   /// • Tier 1 (0 to 2 km): dynamic fee (default ₹25) + dynamic surge fee — FREE Delivery on orders above threshold (default ₹199)
   /// • Tier 2 (2 to 3 km): dynamic fee (default ₹35) + dynamic surge fee — FREE Delivery on orders above threshold (default ₹299)
@@ -99,9 +181,18 @@ class LocationService {
     double? maxRadius,
     StoreSettings? settings,
     String? storeName,
+    int pendingOrders = 0,
+    bool isRestaurant = false,
   }) {
+    final dynamicEta = calculateDynamicEta(
+      distanceKm: distanceKm,
+      pendingOrders: pendingOrders,
+      isRestaurant: isRestaurant,
+    );
+
     final radius = maxRadius ?? settings?.deliveryRadiusKm ?? maxDeliveryRadiusKm;
-    final surgeFee = settings?.surgeCharge ?? 0.0;
+    final baseSurgeFee = settings?.surgeCharge ?? 0.0;
+    final surgeFee = (baseSurgeFee * dynamicEta.surgeMultiplier).roundToDouble();
 
     final tier1Fee = settings?.deliveryFeeTier1 ?? 25.0;
     final tier1Threshold = settings?.deliveryThresholdTier1 ?? 199.0;
@@ -131,6 +222,7 @@ class LocationService {
         tierName: 'Outside ${radius.toInt()} km (Out of Zone)',
         freeDeliveryLabel: 'Outside delivery zone',
         feeDescription: 'Delivery is currently limited to a maximum of ${radius.toStringAsFixed(1)} km from our central hub.',
+        eta: dynamicEta,
       );
     }
 
@@ -149,6 +241,7 @@ class LocationService {
         feeDescription: surgeFee > 0
             ? '₹${totalFee.toInt()} fee (₹${tier1Fee.toInt()} + ₹${surgeFee.toInt()} surge, FREE above ₹${tier1Threshold.toInt()})'
             : '₹${tier1Fee.toInt()} fee (FREE above ₹${tier1Threshold.toInt()})',
+        eta: dynamicEta,
       );
     } else if (distanceKm <= 3.0) {
       final isFree = subtotal >= tier2Threshold;
@@ -165,6 +258,7 @@ class LocationService {
         feeDescription: surgeFee > 0
             ? '₹${totalFee.toInt()} fee (₹${tier2Fee.toInt()} + ₹${surgeFee.toInt()} surge, FREE above ₹${tier2Threshold.toInt()})'
             : '₹${tier2Fee.toInt()} fee (FREE above ₹${tier2Threshold.toInt()})',
+        eta: dynamicEta,
       );
     } else if (distanceKm <= 5.0) {
       final isFree = subtotal >= tier3Threshold;
@@ -181,6 +275,7 @@ class LocationService {
         feeDescription: surgeFee > 0
             ? '₹${totalFee.toInt()} fee (₹${tier3Fee.toInt()} + ₹${surgeFee.toInt()} surge, FREE above ₹${tier3Threshold.toInt()})'
             : '₹${tier3Fee.toInt()} fee (FREE above ₹${tier3Threshold.toInt()})',
+        eta: dynamicEta,
       );
     } else if (distanceKm <= radius) {
       final extraKm = (distanceKm - 5.0).ceil();
@@ -201,6 +296,7 @@ class LocationService {
         feeDescription: surgeFee > 0
             ? '₹${totalFee.toInt()} fee (₹${longDistanceFee.toInt()} + ₹${surgeFee.toInt()} surge, FREE above ₹${longDistanceThreshold.toInt()})'
             : '₹${longDistanceFee.toInt()} fee (FREE above ₹${longDistanceThreshold.toInt()})',
+        eta: dynamicEta,
       );
     } else {
       return DeliveryTierInfo(
@@ -213,6 +309,7 @@ class LocationService {
         tierName: 'Outside ${radius.toInt()} km (Out of Zone)',
         freeDeliveryLabel: 'Outside delivery zone',
         feeDescription: 'Delivery is currently limited to a maximum of ${radius.toStringAsFixed(1)} km from our central hub.',
+        eta: dynamicEta,
       );
     }
   }
@@ -226,9 +323,11 @@ class LocationService {
     double? maxRadius,
     StoreSettings? settings,
     String? storeName,
+    int pendingOrders = 0,
+    bool isRestaurant = false,
   }) {
     if (address == null || address.latitude == null || address.longitude == null || (address.latitude == 0.0 && address.longitude == 0.0)) {
-      return getDeliveryTier(1.0, subtotal, maxRadius: maxRadius, settings: settings, storeName: storeName);
+      return getDeliveryTier(1.0, subtotal, maxRadius: maxRadius, settings: settings, storeName: storeName, pendingOrders: pendingOrders, isRestaurant: isRestaurant);
     }
     final dist = getDistanceKm(
       address.latitude!,
@@ -236,7 +335,7 @@ class LocationService {
       originLat: originLat,
       originLng: originLng,
     );
-    return getDeliveryTier(dist, subtotal, maxRadius: maxRadius, settings: settings, storeName: storeName);
+    return getDeliveryTier(dist, subtotal, maxRadius: maxRadius, settings: settings, storeName: storeName, pendingOrders: pendingOrders, isRestaurant: isRestaurant);
   }
 
   /// Check & request location permission, then fetch current GPS location

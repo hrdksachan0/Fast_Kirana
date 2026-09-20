@@ -2,8 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/design_system.dart';
+import '../../../../core/routes/page_transitions.dart';
+import '../../../../data/models/brand_offer_card_data.dart';
+import '../../../../data/models/restaurant.dart';
+import '../../../../providers/banner_provider.dart';
 import '../../../../providers/restaurant_provider.dart';
+import '../../../../widgets/curated_brand_offer_card.dart';
 import '../../../../widgets/restaurant_card.dart';
+import '../../cafe/cafe_menu_screen.dart';
 
 class HomeFoodStorefront extends ConsumerWidget {
   const HomeFoodStorefront({super.key});
@@ -15,147 +21,6 @@ class HomeFoodStorefront extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Web 1:1 Parity Food Mode Hero Banner
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
-          child: Container(
-            height: 148,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.06),
-                  blurRadius: 14,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // Banner Image
-                  Image.asset(
-                    'assets/categories/food_banner_bg.webp',
-                    fit: BoxFit.cover,
-                    alignment: Alignment.centerRight,
-                    errorBuilder: (_, __, ___) => Image.asset(
-                      'assets/categories/food_promo_banner_premium.webp',
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-
-                  // Gradient overlay for text contrast
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFFFDF8F4).withValues(alpha: 0.96),
-                          const Color(0xFFFDF8F4).withValues(alpha: 0.82),
-                          const Color(0xFFFDF8F4).withValues(alpha: 0.35),
-                          Colors.transparent,
-                        ],
-                        stops: const [0.0, 0.45, 0.70, 1.0],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
-                    ),
-                  ),
-
-                  // Overlay Content
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Status Strip
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFDCFCE7),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFFBBF7D0)),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 6,
-                                    height: 6,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF16A34A),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'KITCHEN OPEN',
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 8.5),
-                                      fontWeight: FontWeight.w900,
-                                      color: const Color(0xFF15803D),
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFEF3C7),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                '✨ Good Food • Mood',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 8.5),
-                                  fontWeight: FontWeight.w800,
-                                  color: const Color(0xFFB45309),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-
-                        // Title
-                        Text(
-                          'Craving Delicious Food?',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 17),
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFFDC2626),
-                            letterSpacing: -0.5,
-                            height: 1.1,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-
-                        // Subtitle
-                        Text(
-                          'Hot burgers, gravies & rolls from top spots',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 10.5),
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF475569),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
 
         // Top Restaurants & Cafes Simple Header
         Padding(

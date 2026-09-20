@@ -11,17 +11,17 @@ import '../../core/config/app_config.dart';
 class ProductRepository {
   final Dio dio;
 
-  // ─── In-memory cache ────────────────────────────────────────
-  static List<Product>? _cachedProducts;
-  static DateTime? _lastFetchTime;
+  // ─── In-memory cache partitioned by hubId ───────────────────
+  static final Map<String, List<Product>> _hubCachedProducts = {};
+  static final Map<String, DateTime> _hubLastFetchTime = {};
   static List<Category>? _cachedCategories;
   // Keyed in-flight fetch map to prevent cross-contamination between different query types
   static final Map<String, Future<List<Product>>> _inFlightFetches = {};
 
   // ─── Disk cache keys ────────────────────────────────────────
-  static const _diskProductsKey = 'cached_products_v4';
+  static String _diskProductsKey(String hubId) => 'cached_products_${hubId}_v5';
+  static String _diskFetchTimestampKey(String hubId) => 'cached_products_ts_${hubId}_v5';
   static const _diskCategoriesKey = 'cached_categories_v4';
-  static const _diskFetchTimestampKey = 'cached_products_timestamp_v4';
   static const _diskCategoryTimestampKey = 'cached_categories_timestamp_v4';
   static const _cacheTTLMinutes = 15; // 15 minutes TTL (with instant stale-while-revalidate)
 
@@ -33,8 +33,13 @@ class ProductRepository {
 
   /// Synchronous in-memory getters for immediate first-render (<50ms)
   static List<Category> get preloadedCategories => _cachedCategories ?? [];
-  static List<Product> get preloadedProducts => _cachedProducts ?? [];
-  static bool get hasPreloadedData => (_cachedCategories?.isNotEmpty ?? false) || (_cachedProducts?.isNotEmpty ?? false);
+  static List<Product> get preloadedProducts {
+    final defaultId = AppConfig.darkstoreId.isNotEmpty ? AppConfig.darkstoreId : 'hub-209206';
+    return _hubCachedProducts[defaultId] ??
+        (_hubCachedProducts.isNotEmpty ? _hubCachedProducts.values.first : []);
+  }
+  static bool get hasPreloadedData =>
+      (_cachedCategories?.isNotEmpty ?? false) || (_hubCachedProducts.isNotEmpty);
 
   ProductRepository(this.dio) {
     if (!_preloadStarted) {
@@ -44,11 +49,15 @@ class ProductRepository {
   }
 
   /// Public preload to warm up in-memory cache during main() initialization
-  static Future<void> preloadDiskCache() async {
+  static Future<void> preloadDiskCache([String? hubId]) async {
     if (_preloadComplete) return;
     try {
+      final effectiveHub = (hubId != null && hubId.isNotEmpty)
+          ? hubId
+          : (AppConfig.darkstoreId.isNotEmpty ? AppConfig.darkstoreId : 'hub-209206');
+
       final results = await Future.wait([
-        _loadProductsFromDisk(),
+        _loadProductsFromDisk(effectiveHub),
         _loadCategoriesFromDisk(),
       ]);
       final diskProducts = results[0] as List<Product>?;
@@ -56,8 +65,8 @@ class ProductRepository {
 
       // Only promote to in-memory cache on launch if full catalog is intact (>= 50 products)
       if (diskProducts != null && diskProducts.length >= 50) {
-        _cachedProducts = diskProducts;
-        _lastFetchTime = DateTime.now();
+        _hubCachedProducts[effectiveHub] = diskProducts;
+        _hubLastFetchTime[effectiveHub] = DateTime.now();
       }
 
       if (diskCategories != null && diskCategories.isNotEmpty) {
@@ -68,11 +77,12 @@ class ProductRepository {
     } catch (e) { LoggerService.error('ProductRepository: disk preload failed', e); }
   }
 
-  /// Returns true if the on-disk product cache is still fresh (within TTL).
-  static Future<bool> _isDiskCacheFresh() async {
+  /// Returns true if the on-disk product cache is still fresh for the hub.
+  static Future<bool> _isDiskCacheFresh([String? hubId]) async {
     try {
+      final effectiveHub = (hubId != null && hubId.isNotEmpty) ? hubId : AppConfig.darkstoreId;
       final prefs = await SharedPreferences.getInstance();
-      final ts = prefs.getInt(_diskFetchTimestampKey);
+      final ts = prefs.getInt(_diskFetchTimestampKey(effectiveHub));
       if (ts == null) return false;
       final age = DateTime.now().millisecondsSinceEpoch - ts;
       return age < _cacheTTLMinutes * 60 * 1000;
@@ -94,29 +104,31 @@ class ProductRepository {
     }
   }
 
-  /// Load products from disk (SharedPreferences).
-  static Future<List<Product>?> _loadProductsFromDisk() async {
+  /// Load products for a specific hub from disk (SharedPreferences).
+  static Future<List<Product>?> _loadProductsFromDisk([String? hubId]) async {
     try {
+      final effectiveHub = (hubId != null && hubId.isNotEmpty) ? hubId : AppConfig.darkstoreId;
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_diskProductsKey);
+      final raw = prefs.getString(_diskProductsKey(effectiveHub)) ?? prefs.getString('cached_products_v4');
       if (raw == null || raw.isEmpty) return null;
       final List<dynamic> jsonList = jsonDecode(raw);
       return jsonList
           .map((j) => Product.fromJson(Map<String, dynamic>.from(j as Map)))
           .toList();
-    } catch (e) { LoggerService.error('ProductRepository: disk load failed', e);
+    } catch (e) { LoggerService.error('ProductRepository: disk load failed for hub $hubId', e);
       return null;
     }
   }
 
-  /// Save products to disk (SharedPreferences).
-  static Future<void> _saveProductsToDisk(List<Product> products) async {
+  /// Save products for a specific hub to disk.
+  static Future<void> _saveProductsToDisk(List<Product> products, [String? hubId]) async {
     try {
+      final effectiveHub = (hubId != null && hubId.isNotEmpty) ? hubId : AppConfig.darkstoreId;
       final prefs = await SharedPreferences.getInstance();
       final jsonList = products.map((p) => p.toJson()).toList();
-      await prefs.setString(_diskProductsKey, jsonEncode(jsonList));
-      await prefs.setInt(_diskFetchTimestampKey, DateTime.now().millisecondsSinceEpoch);
-    } catch (e) { LoggerService.error('ProductRepository: disk save failed', e); }
+      await prefs.setString(_diskProductsKey(effectiveHub), jsonEncode(jsonList));
+      await prefs.setInt(_diskFetchTimestampKey(effectiveHub), DateTime.now().millisecondsSinceEpoch);
+    } catch (e) { LoggerService.error('ProductRepository: disk save failed for hub $hubId', e); }
   }
 
   /// Load categories from disk.
@@ -146,8 +158,8 @@ class ProductRepository {
 
   /// Invalidate all cached data (call on pull-to-refresh or force refresh).
   static Future<void> invalidateAllCache() async {
-    _cachedProducts = null;
-    _lastFetchTime = null;
+    _hubCachedProducts.clear();
+    _hubLastFetchTime.clear();
     _cachedCategories = null;
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -163,11 +175,22 @@ class ProductRepository {
       await prefs.remove('cached_products_timestamp_v3');
       await prefs.remove('cached_categories_v3');
       await prefs.remove('cached_categories_timestamp_v3');
-      await prefs.remove(_diskProductsKey);
-      await prefs.remove(_diskFetchTimestampKey);
+      await prefs.remove('cached_products_v4');
+      await prefs.remove('cached_products_timestamp_v4');
       await prefs.remove(_diskCategoriesKey);
       await prefs.remove(_diskCategoryTimestampKey);
     } catch (e) { LoggerService.error('ProductRepository: cache invalidation failed', e); }
+  }
+
+  /// Invalidate cached products for a specific hub (e.g. when changing address/hub)
+  static Future<void> invalidateHubCache(String hubId) async {
+    _hubCachedProducts.remove(hubId);
+    _hubLastFetchTime.remove(hubId);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_diskProductsKey(hubId));
+      await prefs.remove(_diskFetchTimestampKey(hubId));
+    } catch (e) { LoggerService.error('ProductRepository: hub cache invalidation failed ($hubId)', e); }
   }
 
   /// Build a stable cache key from query parameters including limit
@@ -185,38 +208,40 @@ class ProductRepository {
   }) async {
     final effectiveStoreId = (storeId != null && storeId.isNotEmpty)
         ? storeId
-        : (AppConfig.darkstoreId.isNotEmpty ? AppConfig.darkstoreId : null);
+        : (AppConfig.darkstoreId.isNotEmpty ? AppConfig.darkstoreId : 'hub-209206');
 
     // Wait for disk preload to finish so cached data is available before checking
     if (!_preloadComplete) {
-      await preloadDiskCache();
+      await preloadDiskCache(effectiveStoreId);
     }
 
     try {
       final now = DateTime.now();
-      // 1. In-memory cache hit (fastest path: 0ms render)
+      final cached = _hubCachedProducts[effectiveStoreId];
+      final lastTime = _hubLastFetchTime[effectiveStoreId];
+
+      // 1. In-memory cache hit for this specific hub (fastest path: 0ms render)
       if (!forceRefresh &&
-          _cachedProducts != null &&
-          _cachedProducts!.length >= 150 &&
-          _lastFetchTime != null &&
-          now.difference(_lastFetchTime!).inMinutes < _cacheTTLMinutes) {
-        debugPrint('[ProductRepo] in-memory cache HIT: ${_cachedProducts!.length} items');
-        return _filterProducts(_cachedProducts!, category: category, search: search, restaurantId: restaurantId);
+          cached != null &&
+          cached.length >= 150 &&
+          lastTime != null &&
+          now.difference(lastTime).inMinutes < _cacheTTLMinutes) {
+        debugPrint('[ProductRepo] in-memory cache HIT for hub $effectiveStoreId: ${cached.length} items');
+        return _filterProducts(cached, category: category, search: search, restaurantId: restaurantId);
       }
 
-      // 2. Disk cache hit (survives app restarts — instant render, no cold-start flash)
+      // 2. Disk cache hit for this specific hub (survives app restarts)
       if (!forceRefresh) {
-        final diskProducts = await _loadProductsFromDisk();
-        // Full catalog requests (limit >= 100) must have at least 150 products to be considered a valid complete catalog
+        final diskProducts = await _loadProductsFromDisk(effectiveStoreId);
         if (diskProducts != null && (limit < 100 ? diskProducts.isNotEmpty : diskProducts.length >= 150)) {
-          _cachedProducts = diskProducts;
-          final diskFresh = await _isDiskCacheFresh();
+          _hubCachedProducts[effectiveStoreId] = diskProducts;
+          final diskFresh = await _isDiskCacheFresh(effectiveStoreId);
           if (diskFresh) {
-            _lastFetchTime = DateTime.now();
-            debugPrint('[ProductRepo] disk cache HIT & FRESH: ${diskProducts.length} items');
+            _hubLastFetchTime[effectiveStoreId] = DateTime.now();
+            debugPrint('[ProductRepo] disk cache HIT & FRESH for hub $effectiveStoreId: ${diskProducts.length} items');
             return _filterProducts(diskProducts, category: category, search: search, restaurantId: restaurantId);
           }
-          debugPrint('[ProductRepo] disk cache HIT but stale: revalidating in background');
+          debugPrint('[ProductRepo] disk cache HIT but stale for hub $effectiveStoreId: revalidating in background');
           _fetchLiveProducts(
             limit: limit,
             search: search,
@@ -251,14 +276,15 @@ class ProductRepository {
     } catch (e, st) {
       LoggerService.error('ProductRepository: fetchProducts failed ($search, cat=$category, rid=$restaurantId, store=$effectiveStoreId)', e, st);
       _inFlightFetches.remove(_cacheKey(search: search, restaurantId: restaurantId, category: category, storeId: effectiveStoreId, limit: limit));
-      // 5. Fallback chain: in-memory → disk → hardcoded static
-      if (_cachedProducts != null && _cachedProducts!.isNotEmpty) {
-        return _filterProducts(_cachedProducts!, category: category, search: search, restaurantId: restaurantId);
+      // 5. Fallback chain: hub in-memory → hub disk → hardcoded static
+      final memFallback = _hubCachedProducts[effectiveStoreId];
+      if (memFallback != null && memFallback.isNotEmpty) {
+        return _filterProducts(memFallback, category: category, search: search, restaurantId: restaurantId);
       }
-      final diskProducts = await _loadProductsFromDisk();
+      final diskProducts = await _loadProductsFromDisk(effectiveStoreId);
       if (diskProducts != null && diskProducts.isNotEmpty) {
-        _cachedProducts = diskProducts;
-        _lastFetchTime = DateTime.now();
+        _hubCachedProducts[effectiveStoreId] = diskProducts;
+        _hubLastFetchTime[effectiveStoreId] = DateTime.now();
         return _filterProducts(diskProducts, category: category, search: search, restaurantId: restaurantId);
       }
       // Absolute last resort — hardcoded products
@@ -313,9 +339,10 @@ class ProductRepository {
         limit >= 100 &&
         liveProducts.length >= 20;
     if (isFullCatalog) {
-      _cachedProducts = liveProducts;
-      _lastFetchTime = DateTime.now();
-      _saveProductsToDisk(liveProducts);
+      final targetHub = effectiveStoreId ?? (AppConfig.darkstoreId.isNotEmpty ? AppConfig.darkstoreId : 'hub-209206');
+      _hubCachedProducts[targetHub] = liveProducts;
+      _hubLastFetchTime[targetHub] = DateTime.now();
+      _saveProductsToDisk(liveProducts, targetHub);
     }
     return liveProducts;
   }
@@ -515,11 +542,9 @@ class ProductRepository {
       }
       throw ApiException('Product not found');
     } catch (e, st) { LoggerService.error('ProductRepository: getProduct failed', e, st);
-      if (_cachedProducts != null) {
-        return _cachedProducts!.firstWhere(
-          (p) => p.id == id,
-          orElse: () => throw ApiException('Product not found'),
-        );
+      for (final hubProducts in _hubCachedProducts.values) {
+        final match = hubProducts.cast<Product?>().firstWhere((p) => p?.id == id, orElse: () => null);
+        if (match != null) return match;
       }
       rethrow;
     }

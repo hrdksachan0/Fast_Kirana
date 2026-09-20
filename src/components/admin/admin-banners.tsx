@@ -16,7 +16,14 @@ import {
   Loader2,
   ArrowUp,
   ArrowDown,
-  Power
+  Power,
+  LayoutGrid,
+  Layers,
+  Tag,
+  ExternalLink,
+  Palette,
+  Sliders,
+  Sparkle
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { compressImageClient } from '@/lib/image-compression'
@@ -32,6 +39,20 @@ interface PromoBanner {
   linkUrl?: string | null
   isActive: boolean
   sortOrder: number
+  cardType?: string
+  eyebrowTag?: string | null
+  primaryBrand?: string | null
+  secondaryBrand?: string | null
+  cashbackTitle?: string | null
+  cashbackSubtitle?: string | null
+  disclaimerText?: string | null
+  ctaText?: string | null
+  ctaUrl?: string | null
+  ctaBgColorHex?: string | null
+  ctaTextColorHex?: string | null
+  gridImages?: string[] | null
+  hasWireframeGrid?: boolean
+  rawCode?: string
 }
 
 // Predefined Gradient Options
@@ -226,6 +247,153 @@ export const INSTAMART_PRO_DESIGNS = [
   }
 ]
 
+// Multi-Card Hero, Bento & Editorial Category-Wise Presets (Food & Grocery)
+export const MULTI_CARD_PRESETS = [
+  // --- FOOD CATEGORY CARDS ---
+  {
+    id: 'food-burger-dark-hero',
+    name: '🍔 Sizzling Burgers Hero Drop',
+    badge: 'FOOD HERO',
+    categoryType: 'food',
+    targetCategory: 'burgers',
+    cardType: 'dark_showcase',
+    title: 'DOUBLE CHEESE BURGER',
+    description: 'Crispy Patty • Melted Cheddar • Secret Garlic Dip',
+    eyebrowTag: '🔥 CHEF SPECIAL DROP',
+    primaryBrand: 'A.S. RESTAURANT',
+    secondaryBrand: 'FAST BITES',
+    imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&q=80',
+    hasWireframeGrid: true,
+    cashbackTitle: 'FLAT 40% OFF',
+    cashbackSubtitle: '+ Extra ₹50 on UPI Payment',
+    ctaText: 'ORDER BURGERS',
+    ctaUrl: '/restaurant/as-restaurant',
+    ctaBgColorHex: '#EF4444',
+    ctaTextColorHex: '#FFFFFF',
+    disclaimerText: '*Hot & crispy delivery in 15 mins across Ghatampur.',
+    gradient: 'from-neutral-950 via-neutral-900 to-black',
+  },
+  {
+    id: 'food-cuisines-bento-grid',
+    name: '🍱 4-in-1 Food Cuisines Bento',
+    badge: 'CUISINES COLLAGE',
+    categoryType: 'food',
+    targetCategory: 'fast-food',
+    cardType: 'bento_grid',
+    title: 'BEST FOOD SPOTS',
+    description: 'Pizzas, Dum Biryani, Frankie Rolls & Thick Shakes',
+    eyebrowTag: '🍽️ MOST ORDERED IN GHATAMPUR',
+    gridImages: [
+      'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&q=80',
+      'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400&q=80',
+      'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=400&q=80',
+      'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=400&q=80',
+    ],
+    cashbackTitle: 'UP TO 50% OFF',
+    cashbackSubtitle: 'FastKirana Food Pass Exclusive Deals',
+    ctaText: 'EXPLORE CUISINES',
+    ctaUrl: '/category/fast-food',
+    ctaBgColorHex: '#EA580C',
+    ctaTextColorHex: '#FFFFFF',
+    disclaimerText: '*Delivered fresh from top verified kitchens.',
+    gradient: 'from-slate-900 via-orange-950 to-slate-900',
+  },
+  {
+    id: 'food-wedson-editorial',
+    name: '🍛 Wedson Royal Kitchens Editorial',
+    badge: 'ROYAL FEAST',
+    categoryType: 'food',
+    targetCategory: 'main-course',
+    cardType: 'editorial',
+    title: 'MIN. 50% OFF',
+    description: 'Shahi Paneer, Dal Makhani & Butter Naan Feasts',
+    eyebrowTag: '✨ ROYAL MUGHALAI FEAST',
+    primaryBrand: 'WEDSON',
+    imageUrl: 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=800&q=80',
+    cashbackTitle: '+ EXTRA ₹100 OFF',
+    cashbackSubtitle: 'Use code WEDSON100 at checkout',
+    ctaText: 'VIEW FULL MENU',
+    ctaUrl: '/restaurant/wedson-restaurant',
+    ctaBgColorHex: '#B91C1C',
+    ctaTextColorHex: '#FFFFFF',
+    disclaimerText: '*Special family thalis & party packs.',
+    gradient: 'from-amber-950 via-zinc-950 to-black',
+  },
+
+  // --- GROCERY CATEGORY CARDS ---
+  {
+    id: 'grocery-farm-fresh-hero',
+    name: '🍎 Farm Fresh Harvest Hero Drop',
+    badge: '100% ORGANIC',
+    categoryType: 'grocery',
+    targetCategory: 'fruits-vegetables',
+    cardType: 'dark_showcase',
+    title: 'FARM FRESH GREENS',
+    description: 'Crisp Apples, Ripe Avocados & Hydroponic Veggies',
+    eyebrowTag: '🌿 MORNING HARVEST',
+    primaryBrand: 'FASTKIRANA',
+    secondaryBrand: 'ORGANIC',
+    imageUrl: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=800&q=80',
+    hasWireframeGrid: true,
+    cashbackTitle: 'FLAT 35% OFF',
+    cashbackSubtitle: '+ 10-Min Morning Delivery in Ghatampur',
+    ctaText: 'SHOP FRESH',
+    ctaUrl: '/category/fruits-vegetables',
+    ctaBgColorHex: '#10B981',
+    ctaTextColorHex: '#FFFFFF',
+    disclaimerText: '*Handpicked daily from verified local farms.',
+    gradient: 'from-emerald-950 via-neutral-900 to-black',
+  },
+  {
+    id: 'grocery-essentials-bento-grid',
+    name: '📦 Daily Essentials 4-in-1 Bento',
+    badge: 'PANTRY 4-IN-1',
+    categoryType: 'grocery',
+    targetCategory: 'dairy-bread-eggs',
+    cardType: 'bento_grid',
+    title: 'HOUSEHOLD STAPLES',
+    description: 'Dairy Milk, Farm Eggs, Atta & Cooking Oils',
+    eyebrowTag: '⚡ 10-MIN EXPRESS PANTRY',
+    gridImages: [
+      'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400&q=80',
+      'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&q=80',
+      'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&q=80',
+      'https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=400&q=80',
+    ],
+    cashbackTitle: 'UP TO 60% OFF',
+    cashbackSubtitle: 'Zero Minimum Order Value Required',
+    ctaText: 'STOCK UP PANTRY',
+    ctaUrl: '/category/dairy-bread-eggs',
+    ctaBgColorHex: '#3B82F6',
+    ctaTextColorHex: '#FFFFFF',
+    disclaimerText: '*Guaranteed fresh batch or instant refund.',
+    gradient: 'from-slate-900 via-blue-950 to-slate-900',
+  },
+  {
+    id: 'grocery-snacks-editorial',
+    name: '🍫 Snacks & Cravings Editorial',
+    badge: 'CRAVINGS DEALS',
+    categoryType: 'grocery',
+    targetCategory: 'snacks-munchies',
+    cardType: 'editorial',
+    title: 'BUY 1 GET 1 FREE',
+    description: 'Cadbury Silk, Lays Maxx, Ice Creams & Sodas',
+    eyebrowTag: '🎉 CRAVINGS UNLOCKED',
+    primaryBrand: 'SNACKMANIA',
+    imageUrl: 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=800&q=80',
+    cashbackTitle: '+ EXTRA 20% OFF',
+    cashbackSubtitle: 'Use code SNACK20 at checkout',
+    ctaText: 'GRAB SWEET DEALS',
+    ctaUrl: '/category/snacks-munchies',
+    ctaBgColorHex: '#6366F1',
+    ctaTextColorHex: '#FFFFFF',
+    disclaimerText: '*Delivered cold & chilled in thermal bags.',
+    gradient: 'from-indigo-950 via-zinc-950 to-black',
+  },
+]
+
+export type CardFormat = 'standard' | 'dark_showcase' | 'bento_grid' | 'editorial'
+
 interface AdminBannersProps {
   categories?: any[]
   products?: any[]
@@ -235,6 +403,11 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
   const [banners, setBanners] = useState<PromoBanner[]>([])
   const [loading, setLoading] = useState(true)
   
+  // Card Format Type
+  const [cardFormat, setCardFormat] = useState<CardFormat>('standard')
+  const [presetCategoryFilter, setPresetCategoryFilter] = useState<'all' | 'food' | 'grocery'>('all')
+  const [isGeneratingGemini, setIsGeneratingGemini] = useState(false)
+
   // Form States
   const [editingId, setEditingId] = useState<string | null>(null)
   const [title, setTitle] = useState('')
@@ -251,6 +424,23 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
   const [isActive, setIsActive] = useState(true)
   const [sortOrder, setSortOrder] = useState('0')
   const [submitting, setSubmitting] = useState(false)
+
+  // Multi-Card Specific Fields
+  const [eyebrowTag, setEyebrowTag] = useState('')
+  const [primaryBrand, setPrimaryBrand] = useState('')
+  const [secondaryBrand, setSecondaryBrand] = useState('')
+  const [hasWireframeGrid, setHasWireframeGrid] = useState(true)
+  const [disclaimerText, setDisclaimerText] = useState('')
+  const [ctaText, setCtaText] = useState('')
+  const [ctaUrl, setCtaUrl] = useState('')
+  const [ctaBgColorHex, setCtaBgColorHex] = useState('#FFFFFF')
+  const [ctaTextColorHex, setCtaTextColorHex] = useState('#000000')
+  const [cashbackTitle, setCashbackTitle] = useState('')
+  const [cashbackSubtitle, setCashbackSubtitle] = useState('')
+  const [gridImage1, setGridImage1] = useState('')
+  const [gridImage2, setGridImage2] = useState('')
+  const [gridImage3, setGridImage3] = useState('')
+  const [gridImage4, setGridImage4] = useState('')
 
   // Cloudinary Settings and upload states
   const [settingsMap, setSettingsMap] = useState<Record<string, string>>({})
@@ -335,14 +525,53 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
 
   // Apply a Template
   const handleApplyTemplate = (tpl: any) => {
-    setTitle(tpl.title)
-    setDescription(tpl.description)
+    setTitle(tpl.title || '')
+    setDescription(tpl.description || '')
     setCode(tpl.code || '')
     setGradient(tpl.gradient || GRADIENT_PRESETS[4].value)
     setType(tpl.type || 'grocery')
     setImageUrl(tpl.imageUrl || '')
     
-    const link = tpl.linkUrl || ''
+    // Check if it's a multi-card template
+    if (tpl.cardType) {
+      setCardFormat(tpl.cardType)
+      setEyebrowTag(tpl.eyebrowTag || '')
+      setPrimaryBrand(tpl.primaryBrand || '')
+      setSecondaryBrand(tpl.secondaryBrand || '')
+      setHasWireframeGrid(tpl.hasWireframeGrid ?? true)
+      setDisclaimerText(tpl.disclaimerText || '')
+      setCtaText(tpl.ctaText || '')
+      setCtaUrl(tpl.ctaUrl || '')
+      setCtaBgColorHex(tpl.ctaBgColorHex || '#FFFFFF')
+      setCtaTextColorHex(tpl.ctaTextColorHex || '#000000')
+      setCashbackTitle(tpl.cashbackTitle || '')
+      setCashbackSubtitle(tpl.cashbackSubtitle || '')
+      if (tpl.gridImages && Array.isArray(tpl.gridImages)) {
+        setGridImage1(tpl.gridImages[0] || '')
+        setGridImage2(tpl.gridImages[1] || '')
+        setGridImage3(tpl.gridImages[2] || '')
+        setGridImage4(tpl.gridImages[3] || '')
+      }
+    } else {
+      setCardFormat('standard')
+      setEyebrowTag('')
+      setPrimaryBrand('')
+      setSecondaryBrand('')
+      setHasWireframeGrid(false)
+      setDisclaimerText('')
+      setCtaText('')
+      setCtaUrl('')
+      setCtaBgColorHex('#FFFFFF')
+      setCtaTextColorHex('#000000')
+      setCashbackTitle('')
+      setCashbackSubtitle('')
+      setGridImage1('')
+      setGridImage2('')
+      setGridImage3('')
+      setGridImage4('')
+    }
+
+    const link = tpl.linkUrl || tpl.ctaUrl || ''
     setLinkUrl(link)
     if (!link) {
       setLinkType('none')
@@ -383,9 +612,22 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
           description: tpl.description,
           code: tpl.code || '',
           gradient: tpl.gradient || GRADIENT_PRESETS[4].value,
-          type: tpl.type || 'grocery',
+          type: tpl.cardType ? tpl.cardType : (tpl.type || 'grocery'),
+          cardType: tpl.cardType || 'standard',
+          eyebrowTag: tpl.eyebrowTag || null,
+          primaryBrand: tpl.primaryBrand || null,
+          secondaryBrand: tpl.secondaryBrand || null,
+          hasWireframeGrid: tpl.hasWireframeGrid ?? false,
+          disclaimerText: tpl.disclaimerText || null,
+          ctaText: tpl.ctaText || null,
+          ctaUrl: tpl.ctaUrl || tpl.linkUrl || null,
+          ctaBgColorHex: tpl.ctaBgColorHex || null,
+          ctaTextColorHex: tpl.ctaTextColorHex || null,
+          cashbackTitle: tpl.cashbackTitle || null,
+          cashbackSubtitle: tpl.cashbackSubtitle || null,
+          gridImages: tpl.gridImages || null,
           imageUrl: tpl.imageUrl || null,
-          linkUrl: tpl.linkUrl || null,
+          linkUrl: tpl.linkUrl || tpl.ctaUrl || null,
           isActive: true,
           sortOrder: 0
         })
@@ -405,9 +647,65 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
     }
   }
 
+  // Generate Aesthetic Card Content with Google Gemini AI
+  const handleGeminiGenerate = async (customCategory?: string) => {
+    try {
+      setIsGeneratingGemini(true)
+      const targetCat = customCategory || selectedCategory || title || (type === 'food' ? 'Burgers & Fast Food' : 'Fresh Fruits & Vegetables')
+      const targetType = type === 'food' ? 'food' : 'grocery'
+
+      const res = await fetch('/api/admin/gemini-cards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categoryName: targetCat,
+          categoryType: targetType,
+          cardFormat: cardFormat === 'standard' ? 'dark_showcase' : cardFormat,
+          outletName: primaryBrand || '',
+        })
+      })
+
+      const data = await res.json()
+      if (data.success && data.card) {
+        const c = data.card
+        if (cardFormat === 'standard') setCardFormat(c.cardType || 'dark_showcase')
+        setTitle(c.discountTitle || title)
+        setDescription(c.subtitle || description)
+        setEyebrowTag(c.eyebrowTag || eyebrowTag)
+        setPrimaryBrand(c.primaryBrand || primaryBrand)
+        setSecondaryBrand(c.secondaryBrand || secondaryBrand)
+        setDisclaimerText(c.disclaimerText || disclaimerText)
+        setCtaText(c.ctaText || ctaText)
+        setCtaBgColorHex(c.ctaBgColorHex || ctaBgColorHex)
+        setCtaTextColorHex(c.ctaTextColorHex || ctaTextColorHex)
+        setCashbackTitle(c.cashbackTitle || cashbackTitle)
+        setCashbackSubtitle(c.cashbackSubtitle || cashbackSubtitle)
+        if (c.imageUrl) setImageUrl(c.imageUrl)
+        if (c.gridImages && c.gridImages.length >= 4) {
+          setGridImage1(c.gridImages[0])
+          setGridImage2(c.gridImages[1])
+          setGridImage3(c.gridImages[2])
+          setGridImage4(c.gridImages[3])
+        }
+        if (c.ctaUrl) {
+          setCtaUrl(c.ctaUrl)
+          setLinkUrl(c.ctaUrl)
+        }
+        toast.success(`✨ Gemini AI crafted aesthetic styling for "${c.discountTitle}"!`)
+      } else {
+        throw new Error(data.error || 'Failed to generate card')
+      }
+    } catch (err: any) {
+      toast.error('Gemini AI error: ' + (err.message || 'Could not generate'))
+    } finally {
+      setIsGeneratingGemini(false)
+    }
+  }
+
   // Clear Form
   const resetForm = () => {
     setEditingId(null)
+    setCardFormat('standard')
     setTitle('')
     setDescription('')
     setCode('')
@@ -421,20 +719,64 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
     setCustomLinkUrl('')
     setIsActive(true)
     setSortOrder('0')
+
+    // Reset multi-card fields
+    setEyebrowTag('')
+    setPrimaryBrand('')
+    setSecondaryBrand('')
+    setHasWireframeGrid(true)
+    setDisclaimerText('')
+    setCtaText('')
+    setCtaUrl('')
+    setCtaBgColorHex('#FFFFFF')
+    setCtaTextColorHex('#000000')
+    setCashbackTitle('')
+    setCashbackSubtitle('')
+    setGridImage1('')
+    setGridImage2('')
+    setGridImage3('')
+    setGridImage4('')
   }
 
   // Populate Edit Fields
   const handleEditClick = (b: PromoBanner) => {
     setEditingId(b.id)
+    
+    // Infer card format
+    let fmt: CardFormat = 'standard'
+    if (b.cardType === 'dark_showcase' || b.type === 'dark_showcase') fmt = 'dark_showcase'
+    else if (b.cardType === 'bento_grid' || b.type === 'bento_grid') fmt = 'bento_grid'
+    else if (b.cardType === 'editorial' || b.type === 'editorial') fmt = 'editorial'
+    setCardFormat(fmt)
+
     setTitle(b.title)
     setDescription(b.description)
     setCode(b.code || '')
-    setGradient(b.gradient)
+    setGradient(b.gradient || GRADIENT_PRESETS[4].value)
     setType(b.type)
     setImageUrl(b.imageUrl || '')
     setLinkUrl(b.linkUrl || '')
     
-    const link = b.linkUrl || ''
+    // Populate multi-card fields
+    setEyebrowTag(b.eyebrowTag || '')
+    setPrimaryBrand(b.primaryBrand || '')
+    setSecondaryBrand(b.secondaryBrand || '')
+    setHasWireframeGrid(b.hasWireframeGrid ?? true)
+    setDisclaimerText(b.disclaimerText || '')
+    setCtaText(b.ctaText || '')
+    setCtaUrl(b.ctaUrl || '')
+    setCtaBgColorHex(b.ctaBgColorHex || '#FFFFFF')
+    setCtaTextColorHex(b.ctaTextColorHex || '#000000')
+    setCashbackTitle(b.cashbackTitle || '')
+    setCashbackSubtitle(b.cashbackSubtitle || '')
+
+    const gImages = Array.isArray(b.gridImages) ? b.gridImages : []
+    setGridImage1(gImages[0] || '')
+    setGridImage2(gImages[1] || '')
+    setGridImage3(gImages[2] || '')
+    setGridImage4(gImages[3] || '')
+
+    const link = b.linkUrl || b.ctaUrl || ''
     if (!link) {
       setLinkType('none')
       setSelectedCategory('')
@@ -466,6 +808,30 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  // Handle Bento Slot upload
+  const handleBentoSlotUpload = async (slotIndex: 1 | 2 | 3 | 4, file: File) => {
+    try {
+      const compressedFile = await compressImageClient(file)
+      const formData = new FormData()
+      formData.append('file', compressedFile)
+      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.url) {
+          if (slotIndex === 1) setGridImage1(data.url)
+          if (slotIndex === 2) setGridImage2(data.url)
+          if (slotIndex === 3) setGridImage3(data.url)
+          if (slotIndex === 4) setGridImage4(data.url)
+          toast.success(`Slot ${slotIndex} image uploaded!`)
+        }
+      } else {
+        toast.error('Upload failed')
+      }
+    } catch (err: any) {
+      toast.error('Upload failed: ' + err.message)
+    }
+  }
+
   // Submit banner (Create or Edit)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -486,13 +852,30 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
         computedLinkUrl = customLinkUrl.trim() || null
       }
 
+      const gridImages = cardFormat === 'bento_grid'
+        ? [gridImage1.trim(), gridImage2.trim(), gridImage3.trim(), gridImage4.trim()].filter(Boolean)
+        : undefined
+
       const payload = {
         id: editingId || undefined,
         title: title.trim(),
         description: description.trim(),
         code: code.trim().toUpperCase(),
         gradient,
-        type,
+        type: cardFormat === 'standard' ? type : cardFormat,
+        cardType: cardFormat,
+        eyebrowTag: eyebrowTag.trim() || null,
+        primaryBrand: primaryBrand.trim() || null,
+        secondaryBrand: secondaryBrand.trim() || null,
+        hasWireframeGrid,
+        disclaimerText: disclaimerText.trim() || null,
+        ctaText: ctaText.trim() || null,
+        ctaUrl: ctaUrl.trim() || computedLinkUrl || null,
+        ctaBgColorHex: ctaBgColorHex.trim() || null,
+        ctaTextColorHex: ctaTextColorHex.trim() || null,
+        cashbackTitle: cashbackTitle.trim() || null,
+        cashbackSubtitle: cashbackSubtitle.trim() || null,
+        gridImages: gridImages && gridImages.length > 0 ? gridImages : null,
         imageUrl: imageUrl.trim() || null,
         linkUrl: computedLinkUrl,
         isActive,
@@ -592,6 +975,129 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
       {/* Creation and Edit Panel */}
       <div className="lg:col-span-2 space-y-6">
         
+        {/* Curated Multi-Card Presets (Sneaker Street, Bento Grid, Editorial) */}
+        <div className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <LayoutGrid className="h-5 w-5 text-indigo-500 animate-pulse" />
+                <h3 className="text-base font-black text-text-primary">
+                  🔥 Category-Wise Multi-Cards (Food & Grocery Storefront)
+                </h3>
+                <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+                  Ready to Publish
+                </span>
+              </div>
+              <p className="text-[11px] text-text-secondary mt-0.5">
+                Dynamic, aesthetic cards for Food (Burgers, Cuisines, Royal Meals) & Grocery (Fresh Harvest, Essentials, Snacks).
+              </p>
+            </div>
+
+            {/* Category Filter Tabs */}
+            <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/60">
+              <button
+                type="button"
+                onClick={() => setPresetCategoryFilter('all')}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer ${
+                  presetCategoryFilter === 'all'
+                    ? 'bg-card text-text-primary shadow-xs'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                All (6)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPresetCategoryFilter('food')}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 ${
+                  presetCategoryFilter === 'food'
+                    ? 'bg-rose-500 text-white shadow-xs'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                🍔 Food Mode
+              </button>
+              <button
+                type="button"
+                onClick={() => setPresetCategoryFilter('grocery')}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 ${
+                  presetCategoryFilter === 'grocery'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                🛍️ Grocery Mode
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1">
+            {MULTI_CARD_PRESETS.filter(
+              (tpl) => presetCategoryFilter === 'all' || (tpl as any).categoryType === presetCategoryFilter
+            ).map((tpl) => (
+              <div
+                key={tpl.id}
+                className="group relative rounded-2xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md hover:border-indigo-500/50 transition-all flex flex-col justify-between"
+              >
+                {/* Preview Graphic / Thumbnail */}
+                <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-900 flex items-center justify-center p-2">
+                  {tpl.cardType === 'bento_grid' ? (
+                    <div className="grid grid-cols-2 gap-1 w-full h-full">
+                      {tpl.gridImages?.map((img, idx) => (
+                        <div key={idx} className="relative rounded overflow-hidden bg-muted/30">
+                          <img src={img} alt="" className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <img
+                      src={tpl.imageUrl}
+                      alt={tpl.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  )}
+                  <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-sm text-[8px] font-black text-white uppercase tracking-wider">
+                    {tpl.badge}
+                  </div>
+                  <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-indigo-600 text-[8px] font-black text-white shadow-xs">
+                    {tpl.ctaText}
+                  </div>
+                </div>
+
+                {/* Details & Actions */}
+                <div className="p-3 space-y-2 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h4 className="text-xs font-black text-text-primary line-clamp-1">
+                      {tpl.name}
+                    </h4>
+                    <p className="text-[10px] text-text-secondary line-clamp-2 mt-0.5 leading-snug">
+                      {tpl.description}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-border/40 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handlePublishDesignDirectly(tpl)}
+                      disabled={submitting}
+                      className="flex-1 py-1.5 px-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black tracking-wide transition-all text-center cursor-pointer shadow-xs disabled:opacity-50"
+                    >
+                      ⚡ 1-Click Publish
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyTemplate(tpl)}
+                      className="py-1.5 px-2.5 rounded-xl border border-border bg-muted/30 hover:bg-muted text-text-primary text-[10px] font-bold transition-all text-center cursor-pointer"
+                    >
+                      ✏️ Edit
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Instamart Pro Designs Gallery */}
         <div className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-3">
@@ -691,95 +1197,801 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
           <div>
             <h3 className="text-base font-bold text-text-primary flex items-center gap-1.5">
               <ImageIcon className="h-5 w-5 text-accent" />
-              {editingId ? 'Edit Promo Banner' : 'Create Custom Banner'}
+              {editingId ? 'Edit Card / Promo Banner' : 'Create Card or Promo Banner'}
             </h3>
             <p className="text-xs text-text-secondary mt-0.5">
-              Configure banners shown in the top slider on the FastKirana homepage.
+              Customize dynamic multi-cards (Dark Sneaker Hero, 2x2 Bento, Editorial HRX) or standard homepage slider banners.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* ✨ Gemini AI Creative Assistant & Category Enhancer */}
+          <div className="relative overflow-hidden rounded-2xl border border-indigo-500/30 bg-gradient-to-r from-indigo-950/50 via-purple-950/40 to-slate-950 p-4 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-amber-400 animate-spin" style={{ animationDuration: '3s' }} />
+                  <span className="text-xs font-black uppercase tracking-wider text-amber-400">
+                    ✨ Gemini AI Make Pretty
+                  </span>
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                    1-Click Auto-Design & Copy
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-300 max-w-lg">
+                  Pick any category and let Gemini AI craft appetizing headlines, rich subtitles, vibrant CTA buttons, and 4K food/grocery photography!
+                </p>
+                {/* Quick Category Suggestions */}
+                <div className="flex items-center gap-1.5 pt-1.5 flex-wrap">
+                  <span className="text-[9px] font-bold text-zinc-400">Quick AI Themes:</span>
+                  {[
+                    { label: '🍔 Burgers', name: 'Burgers & Fast Food', targetType: 'food' },
+                    { label: '🍕 Pizza', name: 'Handcrafted Pizza', targetType: 'food' },
+                    { label: '🍚 Biryani', name: 'Royal Dum Biryani', targetType: 'food' },
+                    { label: '🥗 Farm Fresh', name: 'Fresh Fruits & Vegetables', targetType: 'grocery' },
+                    { label: '🥛 Dairy', name: 'Dairy, Bread & Eggs', targetType: 'grocery' },
+                    { label: '🍿 Snacks', name: 'Snacks & Munchies', targetType: 'grocery' },
+                  ].map((quick) => (
+                    <button
+                      key={quick.name}
+                      type="button"
+                      onClick={() => {
+                        setType(quick.targetType)
+                        setSelectedCategory(quick.name)
+                        handleGeminiGenerate(quick.name)
+                      }}
+                      disabled={isGeneratingGemini}
+                      className="px-2 py-0.5 rounded-lg bg-zinc-800/90 hover:bg-zinc-700 text-zinc-200 text-[10px] font-semibold border border-zinc-700/50 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {quick.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleGeminiGenerate()}
+                disabled={isGeneratingGemini}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 hover:from-amber-600 hover:to-rose-700 text-white text-xs font-black tracking-wide shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 disabled:opacity-50"
+              >
+                {isGeneratingGemini ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin text-white" />
+                    <span>Gemini Designing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 text-amber-200" />
+                    <span>✨ Make Pretty with Gemini</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Card Style / Format Tabs */}
+          <div className="space-y-2 border-b border-border/60 pb-4">
+            <label className="text-[11px] font-black uppercase tracking-wider text-text-secondary block">
+              Choose Card Style / Format
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <button
+                type="button"
+                onClick={() => setCardFormat('standard')}
+                className={`py-2 px-3 rounded-xl border text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  cardFormat === 'standard'
+                    ? 'bg-primary text-white border-primary shadow-sm'
+                    : 'bg-muted/20 border-border text-text-secondary hover:bg-muted/40 hover:text-text-primary'
+                }`}
+              >
+                <ImageIcon className="h-3.5 w-3.5" />
+                <span>Standard Banner</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCardFormat('dark_showcase')
+                  if (!eyebrowTag) setEyebrowTag('🔥 CHEF SPECIAL DROP')
+                  if (!primaryBrand) setPrimaryBrand('FAST BITES')
+                  if (!ctaText) setCtaText('ORDER NOW')
+                  if (!cashbackTitle) setCashbackTitle('FLAT 40% OFF')
+                }}
+                className={`py-2 px-3 rounded-xl border text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  cardFormat === 'dark_showcase'
+                    ? 'bg-neutral-900 text-amber-400 border-amber-500/50 shadow-sm'
+                    : 'bg-muted/20 border-border text-text-secondary hover:bg-muted/40 hover:text-text-primary'
+                }`}
+              >
+                <span>🍔 Category Hero</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCardFormat('bento_grid')
+                  if (!eyebrowTag) setEyebrowTag('🍽️ MOST ORDERED')
+                  if (!title) setTitle('BEST FOOD SPOTS')
+                  if (!ctaText) setCtaText('VIEW ALL 4 DEALS')
+                  if (!cashbackTitle) setCashbackTitle('UP TO 50% OFF')
+                }}
+                className={`py-2 px-3 rounded-xl border text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  cardFormat === 'bento_grid'
+                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                    : 'bg-muted/20 border-border text-text-secondary hover:bg-muted/40 hover:text-text-primary'
+                }`}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                <span>2x2 Bento Grid</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCardFormat('editorial')
+                  if (!eyebrowTag) setEyebrowTag('✨ SPECIAL SPOTLIGHT')
+                  if (!title) setTitle('MIN. 50% OFF')
+                  if (!ctaText) setCtaText('VIEW FULL MENU')
+                  if (!cashbackTitle) setCashbackTitle('+ EXTRA ₹100 OFF')
+                }}
+                className={`py-2 px-3 rounded-xl border text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  cardFormat === 'editorial'
+                    ? 'bg-rose-600 text-white border-rose-500 shadow-sm'
+                    : 'bg-muted/20 border-border text-text-secondary hover:bg-muted/40 hover:text-text-primary'
+                }`}
+              >
+                <Layers className="h-3.5 w-3.5" />
+                <span>Editorial Spotlight</span>
+              </button>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
-              {/* Banner Title */}
+              {/* Card Title */}
               <div className="space-y-1">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Banner Title *</label>
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
+                  {cardFormat === 'dark_showcase' ? 'Sneaker / Product Title *' :
+                   cardFormat === 'bento_grid' ? 'Bento Grid Header Title *' :
+                   cardFormat === 'editorial' ? 'Main Discount Title (e.g. MIN. 80% OFF) *' :
+                   'Banner Title *'}
+                </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Diwali Dhamaka Sale!"
+                  placeholder={
+                    cardFormat === 'dark_showcase' ? "e.g. AIR FORCE 1 '07" :
+                    cardFormat === 'bento_grid' ? 'e.g. TOP PICKS FOR YOU' :
+                    cardFormat === 'editorial' ? 'e.g. MIN. 80% OFF' :
+                    'e.g. Diwali Dhamaka Sale!'
+                  }
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
                 />
               </div>
 
-              {/* Promo Coupon Code */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Coupon Code (Optional)</label>
-                <div className="relative">
-                  <Gift className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
-                  <input
-                    type="text"
-                    placeholder="e.g. DIWALI100 (Leave blank for no coupon)"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value.toUpperCase())}
-                    className="w-full bg-muted/40 border border-border pl-9 pr-4 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-mono font-bold text-primary"
-                  />
+              {/* Eyebrow Tag for Multi-Cards */}
+              {cardFormat !== 'standard' ? (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
+                    Eyebrow Tag Badge (e.g. LIMITED DROP, PRIME ONLY)
+                  </label>
+                  <div className="relative">
+                    <Tag className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
+                    <input
+                      type="text"
+                      placeholder="e.g. LIMITED DROP, PRIME MEMBERS ONLY, SPECIAL EDITION"
+                      value={eyebrowTag}
+                      onChange={(e) => setEyebrowTag(e.target.value.toUpperCase())}
+                      className="w-full bg-muted/40 border border-border pl-9 pr-4 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold uppercase tracking-wider"
+                    />
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* Promo Coupon Code for Standard */
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Coupon Code (Optional)</label>
+                  <div className="relative">
+                    <Gift className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
+                    <input
+                      type="text"
+                      placeholder="e.g. DIWALI100 (Leave blank for no coupon)"
+                      value={code}
+                      onChange={(e) => setCode(e.target.value.toUpperCase())}
+                      className="w-full bg-muted/40 border border-border pl-9 pr-4 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-mono font-bold text-primary"
+                    />
+                  </div>
+                </div>
+              )}
 
-              {/* Banner Description */}
+              {/* Card Description / Subtitle */}
               <div className="md:col-span-2 space-y-1">
                 <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Description / Subtitle *</label>
                 <textarea
                   rows={2}
                   required
-                  placeholder="Explain the offer (e.g. Get up to 40% discount on sweets, colors and diyas.)"
+                  placeholder="Explain the offer (e.g. Iconic Street Style • Triple White Leather or Handpicked gourmet essentials)"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
                 />
               </div>
 
-              {/* Background Gradient */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Background Gradient Theme</label>
-                <select
-                  value={gradient}
-                  onChange={(e) => setGradient(e.target.value)}
-                  className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
-                >
-                  {GRADIENT_PRESETS.map((g) => (
-                    <option key={g.name} value={g.value}>
-                      {g.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* DARK SNEAKER HERO SPECIFIC FIELDS */}
+              {cardFormat === 'dark_showcase' && (
+                <div className="md:col-span-2 p-4 bg-neutral-900/60 border border-neutral-800 rounded-xl space-y-4">
+                  <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+                    <h4 className="text-xs font-black text-amber-400 flex items-center gap-1.5 uppercase tracking-wide">
+                      <span>👟 Sneaker Hero Card Controls</span>
+                    </h4>
+                    <label className="flex items-center gap-2 text-xs font-bold text-neutral-300 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={hasWireframeGrid}
+                        onChange={(e) => setHasWireframeGrid(e.target.checked)}
+                        className="h-3.5 w-3.5 rounded border-neutral-700 bg-neutral-800 text-amber-500"
+                      />
+                      <span>Enable 3D Perspective Grid</span>
+                    </label>
+                  </div>
 
-              {/* Visual Badge Type */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Visual Badge Icon Type</label>
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
-                >
-                  <option value="grocery">🛒 Grocery Banner (Storefront Home)</option>
-                  <option value="cafe">🍕 Café Banner (Café Storefront)</option>
-                  <option value="festival">🌸 Festival/Holiday (Diyas / Floral)</option>
-                  <option value="first-order">🥛 Milk & Fruits Essentials</option>
-                  <option value="fresh">🥬 Farm Fresh (Leafy Greens)</option>
-                  <option value="snacks">🥤 Cold Drinks & Snacks</option>
-                  <option value="express-delivery">🚚 Ghatampur Express Layout (Light Pink)</option>
-                  <option value="custom">📦 Generic Delivery Box</option>
-                </select>
-              </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-neutral-400 uppercase">Primary Brand Logo / Name</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. NIKE"
+                        value={primaryBrand}
+                        onChange={(e) => setPrimaryBrand(e.target.value)}
+                        className="w-full bg-neutral-950 border border-neutral-700 px-3 py-1.5 rounded-lg text-xs text-white"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-neutral-400 uppercase">Secondary Brand / Line</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. AIR MAX / AIR FORCE"
+                        value={secondaryBrand}
+                        onChange={(e) => setSecondaryBrand(e.target.value)}
+                        className="w-full bg-neutral-950 border border-neutral-700 px-3 py-1.5 rounded-lg text-xs text-white"
+                      />
+                    </div>
+                  </div>
 
-              {/* Link Type Selector */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Banner Click Link Type</label>
+                  {/* Hero Shoe Image */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase">Hero Sneaker Cutout Image (URL or Upload)</label>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="url"
+                        placeholder="https://.../sneaker.png"
+                        value={imageUrl}
+                        onChange={(e) => setImageUrl(e.target.value)}
+                        className="flex-1 bg-neutral-950 border border-neutral-700 px-3 py-1.5 rounded-lg text-xs text-white"
+                      />
+                      <label className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-xs font-bold cursor-pointer shrink-0">
+                        {isUploading ? 'Uploading...' : 'Upload'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={isUploading}
+                          onChange={handleImageUpload}
+                          className="sr-only"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Cashback and CTA Pill */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-neutral-400 uppercase">Cashback Title (e.g. FLAT 40% OFF)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. FLAT 40% OFF"
+                        value={cashbackTitle}
+                        onChange={(e) => setCashbackTitle(e.target.value)}
+                        className="w-full bg-neutral-950 border border-neutral-700 px-3 py-1.5 rounded-lg text-xs text-white"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-neutral-400 uppercase">Cashback Subtitle</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. + Extra 10% on UPI"
+                        value={cashbackSubtitle}
+                        onChange={(e) => setCashbackSubtitle(e.target.value)}
+                        className="w-full bg-neutral-950 border border-neutral-700 px-3 py-1.5 rounded-lg text-xs text-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* CTA Pill Buttons & Colors */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-neutral-400 uppercase">CTA Button Text</label>
+                      <input
+                        type="text"
+                        placeholder="EXPLORE NOW"
+                        value={ctaText}
+                        onChange={(e) => setCtaText(e.target.value)}
+                        className="w-full bg-neutral-950 border border-neutral-700 px-2 py-1.5 rounded-lg text-xs text-white font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-neutral-400 uppercase">CTA Link URL</label>
+                      <input
+                        type="text"
+                        placeholder="/category/footwear"
+                        value={ctaUrl}
+                        onChange={(e) => setCtaUrl(e.target.value)}
+                        className="w-full bg-neutral-950 border border-neutral-700 px-2 py-1.5 rounded-lg text-xs text-white"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-neutral-400 uppercase">Pill Bg Color</label>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="color"
+                          value={ctaBgColorHex.startsWith('#') ? ctaBgColorHex : '#FFFFFF'}
+                          onChange={(e) => setCtaBgColorHex(e.target.value)}
+                          className="h-7 w-7 rounded border border-neutral-700 cursor-pointer bg-transparent"
+                        />
+                        <input
+                          type="text"
+                          value={ctaBgColorHex}
+                          onChange={(e) => setCtaBgColorHex(e.target.value)}
+                          className="w-full bg-neutral-950 border border-neutral-700 px-2 py-1.5 rounded-lg text-xs text-white font-mono"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-neutral-400 uppercase">Pill Text Color</label>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="color"
+                          value={ctaTextColorHex.startsWith('#') ? ctaTextColorHex : '#000000'}
+                          onChange={(e) => setCtaTextColorHex(e.target.value)}
+                          className="h-7 w-7 rounded border border-neutral-700 cursor-pointer bg-transparent"
+                        />
+                        <input
+                          type="text"
+                          value={ctaTextColorHex}
+                          onChange={(e) => setCtaTextColorHex(e.target.value)}
+                          className="w-full bg-neutral-950 border border-neutral-700 px-2 py-1.5 rounded-lg text-xs text-white font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase">Disclaimer Footer</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. *T&C Apply. Available in select sizes."
+                      value={disclaimerText}
+                      onChange={(e) => setDisclaimerText(e.target.value)}
+                      className="w-full bg-neutral-950 border border-neutral-700 px-3 py-1.5 rounded-lg text-xs text-neutral-400"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* 2X2 BENTO GRID SPECIFIC FIELDS */}
+              {cardFormat === 'bento_grid' && (
+                <div className="md:col-span-2 p-4 bg-indigo-950/30 border border-indigo-900/50 rounded-xl space-y-4">
+                  <div className="border-b border-indigo-900/50 pb-2">
+                    <h4 className="text-xs font-black text-indigo-400 flex items-center gap-1.5 uppercase tracking-wide">
+                      <LayoutGrid className="h-4 w-4" />
+                      <span>2x2 Bento 4-Product Grid Images</span>
+                    </h4>
+                    <p className="text-[10px] text-text-muted">Enter 4 product image URLs or click upload for each quadrant.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Slot 1 */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-text-secondary uppercase">Slot 1 (Top-Left)</label>
+                      <div className="flex gap-1.5 items-center">
+                        <input
+                          type="url"
+                          placeholder="Image URL 1"
+                          value={gridImage1}
+                          onChange={(e) => setGridImage1(e.target.value)}
+                          className="flex-1 bg-muted/40 border border-border px-2.5 py-1.5 rounded-lg text-xs font-medium"
+                        />
+                        <label className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold cursor-pointer shrink-0">
+                          Upload
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => e.target.files?.[0] && handleBentoSlotUpload(1, e.target.files[0])}
+                            className="sr-only"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Slot 2 */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-text-secondary uppercase">Slot 2 (Top-Right)</label>
+                      <div className="flex gap-1.5 items-center">
+                        <input
+                          type="url"
+                          placeholder="Image URL 2"
+                          value={gridImage2}
+                          onChange={(e) => setGridImage2(e.target.value)}
+                          className="flex-1 bg-muted/40 border border-border px-2.5 py-1.5 rounded-lg text-xs font-medium"
+                        />
+                        <label className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold cursor-pointer shrink-0">
+                          Upload
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => e.target.files?.[0] && handleBentoSlotUpload(2, e.target.files[0])}
+                            className="sr-only"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Slot 3 */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-text-secondary uppercase">Slot 3 (Bottom-Left)</label>
+                      <div className="flex gap-1.5 items-center">
+                        <input
+                          type="url"
+                          placeholder="Image URL 3"
+                          value={gridImage3}
+                          onChange={(e) => setGridImage3(e.target.value)}
+                          className="flex-1 bg-muted/40 border border-border px-2.5 py-1.5 rounded-lg text-xs font-medium"
+                        />
+                        <label className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold cursor-pointer shrink-0">
+                          Upload
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => e.target.files?.[0] && handleBentoSlotUpload(3, e.target.files[0])}
+                            className="sr-only"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Slot 4 */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-text-secondary uppercase">Slot 4 (Bottom-Right)</label>
+                      <div className="flex gap-1.5 items-center">
+                        <input
+                          type="url"
+                          placeholder="Image URL 4"
+                          value={gridImage4}
+                          onChange={(e) => setGridImage4(e.target.value)}
+                          className="flex-1 bg-muted/40 border border-border px-2.5 py-1.5 rounded-lg text-xs font-medium"
+                        />
+                        <label className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold cursor-pointer shrink-0">
+                          Upload
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => e.target.files?.[0] && handleBentoSlotUpload(4, e.target.files[0])}
+                            className="sr-only"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Cashback and CTA */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-text-secondary uppercase">Cashback Title</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. UP TO 60% OFF"
+                        value={cashbackTitle}
+                        onChange={(e) => setCashbackTitle(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-1.5 rounded-lg text-xs font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-text-secondary uppercase">Cashback Subtitle</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. FastKirana Prime Exclusive Deals"
+                        value={cashbackSubtitle}
+                        onChange={(e) => setCashbackSubtitle(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-1.5 rounded-lg text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-text-secondary uppercase">CTA Text</label>
+                      <input
+                        type="text"
+                        placeholder="VIEW ALL 4 DEALS"
+                        value={ctaText}
+                        onChange={(e) => setCtaText(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-2 py-1.5 rounded-lg text-xs font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-text-secondary uppercase">CTA Link URL</label>
+                      <input
+                        type="text"
+                        placeholder="/category/deals"
+                        value={ctaUrl}
+                        onChange={(e) => setCtaUrl(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-2 py-1.5 rounded-lg text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-text-secondary uppercase">Pill Bg Color</label>
+                      <input
+                        type="color"
+                        value={ctaBgColorHex.startsWith('#') ? ctaBgColorHex : '#4F46E5'}
+                        onChange={(e) => setCtaBgColorHex(e.target.value)}
+                        className="h-8 w-full rounded border border-border cursor-pointer bg-transparent"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-text-secondary uppercase">Pill Text Color</label>
+                      <input
+                        type="color"
+                        value={ctaTextColorHex.startsWith('#') ? ctaTextColorHex : '#FFFFFF'}
+                        onChange={(e) => setCtaTextColorHex(e.target.value)}
+                        className="h-8 w-full rounded border border-border cursor-pointer bg-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-text-secondary uppercase">Disclaimer Footer</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. *Valid until midnight tonight."
+                      value={disclaimerText}
+                      onChange={(e) => setDisclaimerText(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-1.5 rounded-lg text-xs text-text-muted"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* EDITORIAL HRX SPECIFIC FIELDS */}
+              {cardFormat === 'editorial' && (
+                <div className="md:col-span-2 p-4 bg-rose-950/20 border border-rose-900/40 rounded-xl space-y-4">
+                  <div className="border-b border-rose-900/40 pb-2">
+                    <h4 className="text-xs font-black text-rose-400 flex items-center gap-1.5 uppercase tracking-wide">
+                      <Layers className="h-4 w-4" />
+                      <span>Editorial High-Contrast Card Controls</span>
+                    </h4>
+                  </div>
+
+                  {/* Cutout Hero Image */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-text-secondary uppercase">Editorial Cutout Graphic (URL or Upload)</label>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="url"
+                        placeholder="https://.../model-cutout.png"
+                        value={imageUrl}
+                        onChange={(e) => setImageUrl(e.target.value)}
+                        className="flex-1 bg-muted/40 border border-border px-3 py-1.5 rounded-lg text-xs"
+                      />
+                      <label className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold cursor-pointer shrink-0">
+                        {isUploading ? 'Uploading...' : 'Upload'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={isUploading}
+                          onChange={handleImageUpload}
+                          className="sr-only"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Cashback Pill */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-text-secondary uppercase">Cashback Pill Text (e.g. + EXTRA ₹150 OFF)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. + EXTRA ₹150 OFF"
+                        value={cashbackTitle}
+                        onChange={(e) => setCashbackTitle(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-1.5 rounded-lg text-xs font-bold text-rose-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-text-secondary uppercase">Cashback Subtitle / Code</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Use code HRXFIRST at checkout"
+                        value={cashbackSubtitle}
+                        onChange={(e) => setCashbackSubtitle(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-3 py-1.5 rounded-lg text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-text-secondary uppercase">CTA Text</label>
+                      <input
+                        type="text"
+                        placeholder="SHOP HRX SALE"
+                        value={ctaText}
+                        onChange={(e) => setCtaText(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-2 py-1.5 rounded-lg text-xs font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-text-secondary uppercase">CTA Link URL</label>
+                      <input
+                        type="text"
+                        placeholder="/category/fitness"
+                        value={ctaUrl}
+                        onChange={(e) => setCtaUrl(e.target.value)}
+                        className="w-full bg-muted/40 border border-border px-2 py-1.5 rounded-lg text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-text-secondary uppercase">Pill Bg Color</label>
+                      <input
+                        type="color"
+                        value={ctaBgColorHex.startsWith('#') ? ctaBgColorHex : '#EF4444'}
+                        onChange={(e) => setCtaBgColorHex(e.target.value)}
+                        className="h-8 w-full rounded border border-border cursor-pointer bg-transparent"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-text-secondary uppercase">Pill Text Color</label>
+                      <input
+                        type="color"
+                        value={ctaTextColorHex.startsWith('#') ? ctaTextColorHex : '#FFFFFF'}
+                        onChange={(e) => setCtaTextColorHex(e.target.value)}
+                        className="h-8 w-full rounded border border-border cursor-pointer bg-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-text-secondary uppercase">Disclaimer Footer</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. *Limited quantities available. Fast delivery."
+                      value={disclaimerText}
+                      onChange={(e) => setDisclaimerText(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-1.5 rounded-lg text-xs text-text-muted"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* STANDARD BANNER SPECIFIC FIELDS */}
+              {cardFormat === 'standard' && (
+                <>
+                  {/* Background Gradient */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Background Gradient Theme</label>
+                    <select
+                      value={gradient}
+                      onChange={(e) => setGradient(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
+                    >
+                      {GRADIENT_PRESETS.map((g) => (
+                        <option key={g.name} value={g.value}>
+                          {g.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Visual Badge Type */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Visual Badge Icon Type</label>
+                    <select
+                      value={type}
+                      onChange={(e) => setType(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
+                    >
+                      <option value="grocery">🛒 Grocery Banner (Storefront Home)</option>
+                      <option value="cafe">🍕 Café Banner (Café Storefront)</option>
+                      <option value="festival">🌸 Festival/Holiday (Diyas / Floral)</option>
+                      <option value="first-order">🥛 Milk & Fruits Essentials</option>
+                      <option value="fresh">🥬 Farm Fresh (Leafy Greens)</option>
+                      <option value="snacks">🥤 Cold Drinks & Snacks</option>
+                      <option value="express-delivery">🚚 Ghatampur Express Layout (Light Pink)</option>
+                      <option value="custom">📦 Generic Delivery Box</option>
+                    </select>
+                  </div>
+
+                  {/* Custom Banner Image */}
+                  <div className="md:col-span-2 space-y-2 border-t border-border/40 pt-4">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary block">
+                        Custom Banner Graphic (Optional)
+                      </label>
+                      {imageUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setImageUrl('')}
+                          className="text-[10px] text-danger hover:underline font-bold"
+                        >
+                          Clear Image
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="bg-accent/5 border border-accent/15 p-3 rounded-xl">
+                      <p className="text-[11px] text-accent font-bold leading-normal">
+                        🎨 **Design your banner:** Recommended aspect ratio is **3:1** (e.g. 1200 x 400 pixels).
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                      <div className="flex items-center justify-center w-full">
+                        <label
+                          htmlFor="banner-image-file"
+                          className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-border hover:border-accent rounded-xl cursor-pointer bg-muted/10 hover:bg-accent/5 transition-all"
+                        >
+                          <div className="flex flex-col items-center justify-center py-4">
+                            {isUploading ? (
+                              <>
+                                <Loader2 className="w-6 h-6 text-accent animate-spin mb-1" />
+                                <p className="text-[11px] text-text-secondary font-bold">Uploading...</p>
+                              </>
+                            ) : (
+                              <>
+                                <ImageIcon className="w-6 h-6 text-text-muted mb-1" />
+                                <p className="text-[11px] text-text-secondary font-semibold">
+                                  Click to upload image file
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        </label>
+                        <input
+                          id="banner-image-file"
+                          type="file"
+                          accept="image/*"
+                          disabled={isUploading}
+                          onChange={handleImageUpload}
+                          className="sr-only"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-extrabold uppercase tracking-wider text-text-secondary">Or Paste Image URL</label>
+                        <input
+                          type="url"
+                          placeholder="https://..."
+                          value={imageUrl}
+                          onChange={(e) => setImageUrl(e.target.value)}
+                          className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    {imageUrl && (
+                      <div className="relative aspect-[3/1] w-full overflow-hidden rounded-xl border border-border bg-muted/20 mt-2">
+                        <img
+                          src={imageUrl}
+                          alt="Uploaded Banner Preview"
+                          className="object-cover w-full h-full"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* COMMON DESTINATION LINKING */}
+              <div className="space-y-1 border-t border-border/40 pt-4">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Banner Click Destination</label>
                 <select
                   value={linkType}
                   onChange={(e) => {
@@ -794,62 +2006,71 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                   }}
                   className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
                 >
-                  <option value="none">No Link (Unlinked)</option>
-                  <option value="category">Link to Category</option>
-                  <option value="product">Link to Product</option>
-                  <option value="custom">Custom Redirect URL</option>
+                  <option value="none">No Direct Routing (Unlinked)</option>
+                  <option value="category">Link to Store Category</option>
+                  <option value="product">Link to Specific Product</option>
+                  <option value="custom">Custom In-App Route / URL</option>
                 </select>
               </div>
 
               {/* Conditional Link Target Selector */}
-              {linkType === 'category' && (
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Select Target Category</label>
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
-                  >
-                    <option value="">-- Choose Category --</option>
-                    {categories.map((cat: any) => (
-                      <option key={cat.id} value={cat.slug}>
-                        {cat.name} ({cat.slug})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              <div className="border-t border-border/40 pt-4">
+                {linkType === 'category' && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Select Target Category</label>
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
+                    >
+                      <option value="">-- Choose Category --</option>
+                      {categories.map((cat: any) => (
+                        <option key={cat.id} value={cat.slug}>
+                          {cat.name} ({cat.slug})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-              {linkType === 'product' && (
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Select Target Product</label>
-                  <select
-                    value={selectedProduct}
-                    onChange={(e) => setSelectedProduct(e.target.value)}
-                    className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
-                  >
-                    <option value="">-- Choose Product --</option>
-                    {products.map((prod: any) => (
-                      <option key={prod.id} value={prod.slug}>
-                        {prod.name} ({prod.category?.name || 'Grocery'})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+                {linkType === 'product' && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Select Target Product</label>
+                    <select
+                      value={selectedProduct}
+                      onChange={(e) => setSelectedProduct(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
+                    >
+                      <option value="">-- Choose Product --</option>
+                      {products.map((prod: any) => (
+                        <option key={prod.id} value={prod.slug}>
+                          {prod.name} ({prod.category?.name || 'Grocery'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-              {linkType === 'custom' && (
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Custom Click URL</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. /category/fruits-vegetables or /product/maggi"
-                    value={customLinkUrl}
-                    onChange={(e) => setCustomLinkUrl(e.target.value)}
-                    className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-              )}
+                {linkType === 'custom' && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Custom Click URL</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. /category/fruits-vegetables or /product/maggi"
+                      value={customLinkUrl}
+                      onChange={(e) => setCustomLinkUrl(e.target.value)}
+                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
+                    />
+                  </div>
+                )}
+
+                {linkType === 'none' && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Destination Status</label>
+                    <div className="text-xs text-text-muted py-2">Card will display promotional content without automatic redirection.</div>
+                  </div>
+                )}
+              </div>
 
               {/* Sorting Weight */}
               <div className="space-y-1">
@@ -861,85 +2082,6 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                   className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
                 />
               </div>
-              {/* Custom Banner Image */}
-              <div className="md:col-span-2 space-y-2 border-t border-border/40 pt-4">
-                <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary block">
-                    Custom Banner Graphic (Optional)
-                  </label>
-                  {imageUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setImageUrl('')}
-                      className="text-[10px] text-danger hover:underline font-bold"
-                    >
-                      Clear Image
-                    </button>
-                  )}
-                </div>
-                
-                <div className="bg-accent/5 border border-accent/15 p-3 rounded-xl">
-                  <p className="text-[11px] text-accent font-bold leading-normal">
-                    🎨 **Design your banner:** You can design a banner graphic (the optimal size for the storefront slider is **1200 x 400 pixels** or a **3:1 aspect ratio**). Please upload a file matching these dimensions.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                  {/* File Upload option */}
-                  <div className="flex items-center justify-center w-full">
-                    <label
-                      htmlFor="banner-image-file"
-                      className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-border hover:border-accent rounded-xl cursor-pointer bg-muted/10 hover:bg-accent/5 transition-all"
-                    >
-                      <div className="flex flex-col items-center justify-center py-4">
-                        {isUploading ? (
-                          <>
-                            <Loader2 className="w-6 h-6 text-accent animate-spin mb-1" />
-                            <p className="text-[11px] text-text-secondary font-bold">Uploading...</p>
-                          </>
-                        ) : (
-                          <>
-                            <ImageIcon className="w-6 h-6 text-text-muted mb-1" />
-                            <p className="text-[11px] text-text-secondary font-semibold">
-                              Click to upload image file
-                            </p>
-                          </>
-                        )}
-                      </div>
-                    </label>
-                    <input
-                      id="banner-image-file"
-                      type="file"
-                      accept="image/*"
-                      disabled={isUploading}
-                      onChange={handleImageUpload}
-                      className="sr-only"
-                    />
-                  </div>
-
-                  {/* Paste URL option */}
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-extrabold uppercase tracking-wider text-text-secondary">Or Paste Image URL</label>
-                    <input
-                      type="url"
-                      placeholder="https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/..."
-                      value={imageUrl}
-                      onChange={(e) => setImageUrl(e.target.value)}
-                      className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
-                    />
-                  </div>
-                </div>
-
-                {imageUrl && (
-                  <div className="relative aspect-[3/1] w-full overflow-hidden rounded-xl border border-border bg-muted/20 mt-2">
-                    <img
-                      src={imageUrl}
-                      alt="Uploaded Banner Preview"
-                      className="object-cover w-full h-full"
-                    />
-                  </div>
-                )}
-              </div>
 
               {/* Active Toggle Option */}
               <div className="flex items-center gap-3 pt-5">
@@ -950,7 +2092,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                     onChange={(e) => setIsActive(e.target.checked)}
                     className="h-4 w-4 text-primary focus:ring-primary border-border rounded cursor-pointer"
                   />
-                  <span>Publish immediately (Active)</span>
+                  <span>Publish immediately to Storefront & Mobile App</span>
                 </label>
               </div>
 
@@ -975,12 +2117,12 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                 {submitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Saving Banner to DB...
+                    Saving Card to DB...
                   </>
                 ) : (
                   <>
                     <Plus className="h-4 w-4" />
-                    {editingId ? 'Save Changes' : 'Create Homepage Banner'}
+                    {editingId ? 'Save Changes' : 'Create & Publish Card'}
                   </>
                 )}
               </button>
@@ -995,53 +2137,212 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
         
         {/* Dynamic Visual Live Preview Card */}
         <div className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-4">
-          <div className="flex items-center gap-1.5">
-            <Eye className="h-5 w-5 text-accent" />
-            <h3 className="text-sm font-bold text-text-primary">Live Storefront Preview</h3>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Eye className="h-5 w-5 text-accent" />
+              <h3 className="text-sm font-bold text-text-primary">Live Storefront Preview</h3>
+            </div>
+            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20">
+              {cardFormat === 'dark_showcase' ? 'Sneaker Drop' :
+               cardFormat === 'bento_grid' ? 'Bento 2x2' :
+               cardFormat === 'editorial' ? 'Editorial HRX' :
+               'Standard Banner'}
+            </span>
           </div>
           
-          <div className="relative w-full overflow-hidden rounded-2xl shadow-md border border-border/80 select-none bg-muted/20">
-            {imageUrl ? (
-              <div className="relative aspect-[16/9] w-full overflow-hidden">
-                <img
-                  src={imageUrl}
-                  alt={title || "Custom Graphic Banner"}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ) : type === 'express-delivery' ? (
-              <div className="h-[140px] flex items-center justify-between p-4 bg-[#fdf0f1] text-[#2d2d2d]">
-                <div className="text-left space-y-0.5">
-                  <span className="text-[8px] font-black text-[#e20a22] uppercase tracking-wider block">Fast Delivery in</span>
-                  <h4 className="text-sm font-black text-[#e20a22] tracking-tight leading-tight">{title || SERVICE_AREA_NAME}</h4>
-                  <p className="text-[9px] text-[#4d4d4d] font-bold line-clamp-1">{description || 'Milk, Fruits, Vegetables, Snacks & more'}</p>
+          <div className="relative w-full overflow-hidden rounded-2xl shadow-lg border border-border select-none bg-muted/20">
+            {/* 1. DARK SNEAKER HERO PREVIEW */}
+            {cardFormat === 'dark_showcase' ? (
+              <div className="relative w-full min-h-[220px] p-4 bg-neutral-950 text-white flex flex-col justify-between overflow-hidden">
+                {/* Wireframe background grid simulation */}
+                {hasWireframeGrid && (
+                  <div className="absolute inset-0 opacity-20 pointer-events-none [background:radial-gradient(#404040_1px,transparent_1px)] [background-size:16px_16px]" />
+                )}
+                
+                {/* Top bar: Eyebrow + Brand */}
+                <div className="relative z-10 flex items-center justify-between gap-2">
+                  <span className="px-2 py-0.5 rounded-full bg-lime-400 text-black font-black text-[9px] uppercase tracking-wider shadow-sm">
+                    {eyebrowTag || 'LIMITED DROP'}
+                  </span>
+                  <span className="text-[10px] font-black tracking-widest text-neutral-400 uppercase">
+                    {primaryBrand || 'NIKE'} {secondaryBrand ? `• ${secondaryBrand}` : ''}
+                  </span>
                 </div>
-                <div className="text-2xl pr-2">🛍️</div>
+
+                {/* Center: Floating Sneaker Image & Headline */}
+                <div className="relative z-10 my-2 flex items-center justify-between gap-3">
+                  <div className="space-y-1 max-w-[60%]">
+                    <h4 className="text-base font-black tracking-tight leading-tight uppercase line-clamp-1 text-white">
+                      {title || "AIR FORCE 1 '07"}
+                    </h4>
+                    <p className="text-[10px] text-neutral-400 font-medium line-clamp-2 leading-tight">
+                      {description || 'Iconic Street Style • Triple White Leather'}
+                    </p>
+                  </div>
+                  <div className="w-24 h-20 relative flex items-center justify-center shrink-0">
+                    <img
+                      src={imageUrl || 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=400&q=80'}
+                      alt=""
+                      className="max-h-full max-w-full object-contain drop-shadow-[0_10px_10px_rgba(0,0,0,0.8)] -rotate-12"
+                    />
+                  </div>
+                </div>
+
+                {/* Bottom bar: Cashback + CTA Pill */}
+                <div className="relative z-10 pt-2 border-t border-neutral-800 flex items-center justify-between gap-2">
+                  <div className="leading-none">
+                    <span className="text-[10px] font-black text-amber-400 block">{cashbackTitle || 'FLAT 40% OFF'}</span>
+                    <span className="text-[8px] text-neutral-500 font-bold">{cashbackSubtitle || '+ Extra 10% on UPI'}</span>
+                  </div>
+                  <button
+                    type="button"
+                    style={{
+                      backgroundColor: ctaBgColorHex || '#FFFFFF',
+                      color: ctaTextColorHex || '#000000'
+                    }}
+                    className="px-3 py-1 rounded-full text-[10px] font-black tracking-wider shadow-sm uppercase cursor-default"
+                  >
+                    {ctaText || 'EXPLORE NOW'}
+                  </button>
+                </div>
+
+                {disclaimerText && (
+                  <p className="text-[7px] text-neutral-600 mt-1 truncate">{disclaimerText}</p>
+                )}
+              </div>
+            ) : cardFormat === 'bento_grid' ? (
+              /* 2. 2X2 BENTO GRID PREVIEW */
+              <div className="relative w-full min-h-[220px] p-4 bg-slate-900 text-white flex flex-col justify-between overflow-hidden">
+                {/* Top row */}
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="space-y-0.5">
+                    <span className="px-2 py-0.5 rounded-full bg-indigo-500 text-white font-black text-[8px] uppercase tracking-wider inline-block">
+                      {eyebrowTag || 'PRIME MEMBERS ONLY'}
+                    </span>
+                    <h4 className="text-xs font-black tracking-tight text-white line-clamp-1">
+                      {title || 'TOP PICKS FOR YOU'}
+                    </h4>
+                  </div>
+                </div>
+
+                {/* 2x2 Bento Photo Quadrant */}
+                <div className="grid grid-cols-2 gap-1.5 my-1">
+                  {[
+                    gridImage1 || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300&q=80',
+                    gridImage2 || 'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=300&q=80',
+                    gridImage3 || 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=300&q=80',
+                    gridImage4 || 'https://images.unsplash.com/photo-1509722747041-616f39b57569?w=300&q=80'
+                  ].map((img, i) => (
+                    <div key={i} className="aspect-[4/3] rounded-lg overflow-hidden bg-slate-800 border border-slate-700/50">
+                      <img src={img} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Bottom bar: Cashback + CTA */}
+                <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
+                  <div className="leading-none">
+                    <span className="text-[10px] font-black text-indigo-400 block">{cashbackTitle || 'UP TO 60% OFF'}</span>
+                    <span className="text-[8px] text-slate-400 font-bold truncate max-w-[120px] block">{cashbackSubtitle || 'Prime Exclusive'}</span>
+                  </div>
+                  <button
+                    type="button"
+                    style={{
+                      backgroundColor: ctaBgColorHex || '#4F46E5',
+                      color: ctaTextColorHex || '#FFFFFF'
+                    }}
+                    className="px-3 py-1 rounded-full text-[9px] font-black tracking-wider shadow-sm uppercase cursor-default"
+                  >
+                    {ctaText || 'VIEW ALL 4 DEALS'}
+                  </button>
+                </div>
+              </div>
+            ) : cardFormat === 'editorial' ? (
+              /* 3. EDITORIAL HRX PREVIEW */
+              <div className="relative w-full min-h-[200px] p-4 bg-gradient-to-br from-red-950 via-zinc-950 to-black text-white flex flex-col justify-between overflow-hidden border border-red-900/30">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="px-2 py-0.5 rounded-md bg-rose-600/30 border border-rose-500/50 text-rose-300 font-black text-[8px] uppercase tracking-widest">
+                    {eyebrowTag || 'SPECIAL EDITION'}
+                  </span>
+                </div>
+
+                <div className="my-2 flex items-center justify-between gap-2">
+                  <div className="space-y-1">
+                    <h3 className="text-xl font-black tracking-tighter text-white uppercase leading-none">
+                      {title || 'MIN. 80% OFF'}
+                    </h3>
+                    {cashbackTitle && (
+                      <span className="inline-block px-2 py-0.5 bg-rose-600 text-white font-black text-[9px] rounded uppercase">
+                        {cashbackTitle}
+                      </span>
+                    )}
+                    <p className="text-[9px] text-zinc-400 line-clamp-1">{description || 'Activewear, Trainers & Athleisure'}</p>
+                  </div>
+                  {imageUrl && (
+                    <div className="w-20 h-20 rounded-lg overflow-hidden shrink-0 border border-rose-900/40">
+                      <img src={imageUrl} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between gap-2">
+                  <span className="text-[8px] text-zinc-400 font-mono">{cashbackSubtitle || '*Terms apply'}</span>
+                  <button
+                    type="button"
+                    style={{
+                      backgroundColor: ctaBgColorHex || '#EF4444',
+                      color: ctaTextColorHex || '#FFFFFF'
+                    }}
+                    className="px-3 py-1 rounded-full text-[9px] font-black tracking-wider shadow-sm uppercase cursor-default"
+                  >
+                    {ctaText || 'SHOP HRX SALE'}
+                  </button>
+                </div>
               </div>
             ) : (
-              <div className={`h-[140px] flex flex-col justify-center p-4 text-white bg-gradient-to-br ${gradient}`}>
-                <div className="space-y-1">
-                  {code.trim() && (
-                    <span className="inline-flex items-center gap-1 bg-white/15 border border-white/20 px-2 py-0.5 rounded-full text-[9px] font-extrabold tracking-wide max-w-max">
-                      <Gift className="h-2.5 w-2.5" />
-                      Use Code: {code}
-                    </span>
-                  )}
-                  <h4 className="text-sm font-black tracking-tight leading-tight line-clamp-1">
-                    {title || 'Festive Sale Banner'}
-                  </h4>
-                  <p className="text-[10px] text-white/80 font-medium line-clamp-2 leading-relaxed">
-                    {description || 'Offer details will appear here as you type...'}
-                  </p>
+              /* 4. STANDARD BANNER PREVIEW */
+              imageUrl ? (
+                <div className="relative aspect-[16/9] w-full overflow-hidden">
+                  <img
+                    src={imageUrl}
+                    alt={title || "Custom Graphic Banner"}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-                <div className="absolute right-3 bottom-3 text-2xl opacity-40">
-                  {type === 'festival' && '🪔'}
-                  {type === 'first-order' && '🥛'}
-                  {type === 'fresh' && '🥬'}
-                  {type === 'snacks' && '🥤'}
-                  {type === 'custom' && '📦'}
+              ) : type === 'express-delivery' ? (
+                <div className="h-[140px] flex items-center justify-between p-4 bg-[#fdf0f1] text-[#2d2d2d]">
+                  <div className="text-left space-y-0.5">
+                    <span className="text-[8px] font-black text-[#e20a22] uppercase tracking-wider block">Fast Delivery in</span>
+                    <h4 className="text-sm font-black text-[#e20a22] tracking-tight leading-tight">{title || SERVICE_AREA_NAME}</h4>
+                    <p className="text-[9px] text-[#4d4d4d] font-bold line-clamp-1">{description || 'Milk, Fruits, Vegetables, Snacks & more'}</p>
+                  </div>
+                  <div className="text-2xl pr-2">🛍️</div>
                 </div>
-              </div>
+              ) : (
+                <div className={`h-[140px] flex flex-col justify-center p-4 text-white bg-gradient-to-br ${gradient}`}>
+                  <div className="space-y-1">
+                    {code.trim() && (
+                      <span className="inline-flex items-center gap-1 bg-white/15 border border-white/20 px-2 py-0.5 rounded-full text-[9px] font-extrabold tracking-wide max-w-max">
+                        <Gift className="h-2.5 w-2.5" />
+                        Use Code: {code}
+                      </span>
+                    )}
+                    <h4 className="text-sm font-black tracking-tight leading-tight line-clamp-1">
+                      {title || 'Festive Sale Banner'}
+                    </h4>
+                    <p className="text-[10px] text-white/80 font-medium line-clamp-2 leading-relaxed">
+                      {description || 'Offer details will appear here as you type...'}
+                    </p>
+                  </div>
+                  <div className="absolute right-3 bottom-3 text-2xl opacity-40">
+                    {type === 'festival' && '🪔'}
+                    {type === 'first-order' && '🥛'}
+                    {type === 'fresh' && '🥬'}
+                    {type === 'snacks' && '🥤'}
+                    {type === 'custom' && '📦'}
+                  </div>
+                </div>
+              )
             )}
           </div>
         </div>
@@ -1049,8 +2350,8 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
         {/* Database Active Banners List */}
         <div className="bg-card border border-border p-6 rounded-2xl shadow-sm flex flex-col">
           <div className="border-b border-border/60 pb-3 mb-4">
-            <h4 className="text-sm font-bold text-text-primary">Currently Registered Banners</h4>
-            <p className="text-[10px] text-text-muted">Admins can toggle active state or delete.</p>
+            <h4 className="text-sm font-bold text-text-primary">Currently Registered Cards & Banners</h4>
+            <p className="text-[10px] text-text-muted">Edit, reorder, toggle active, or delete promotional cards.</p>
           </div>
 
           {loading ? (
@@ -1059,10 +2360,10 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
             </div>
           ) : banners.length === 0 ? (
             <div className="py-12 text-center text-xs text-text-secondary">
-              No banners registered in database yet.
+              No banners or cards registered in database yet.
             </div>
           ) : (
-            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-[450px] overflow-y-auto pr-1">
               <AnimatePresence initial={false}>
                 {banners.map((b) => (
                   <motion.div
@@ -1076,9 +2377,26 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                     }`}
                   >
                     <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className={`inline-block h-2 w-2 rounded-full ${b.isActive ? 'bg-accent' : 'bg-text-muted'}`} />
                         <strong className="text-xs text-text-primary block font-black truncate">{b.title}</strong>
+                        {b.cardType === 'dark_showcase' ? (
+                          <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-neutral-900 text-amber-400 border border-amber-500/30">
+                            👟 SNEAKER HERO
+                          </span>
+                        ) : b.cardType === 'bento_grid' ? (
+                          <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                            📦 BENTO 2X2
+                          </span>
+                        ) : b.cardType === 'editorial' ? (
+                          <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                            🕶️ EDITORIAL
+                          </span>
+                        ) : (
+                          <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-muted text-text-secondary border border-border">
+                            🖼️ BANNER
+                          </span>
+                        )}
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                         {b.code && (
@@ -1086,9 +2404,14 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                             Code: {b.code}
                           </span>
                         )}
-                        {b.linkUrl && (
+                        {b.ctaText && (
+                          <span className="text-[9px] font-bold text-indigo-500 bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.5 rounded font-mono">
+                            CTA: {b.ctaText}
+                          </span>
+                        )}
+                        {(b.linkUrl || b.ctaUrl) && (
                           <span className="text-[9px] font-bold text-accent bg-accent/5 border border-accent/10 px-1.5 py-0.5 rounded font-mono">
-                            Link: {b.linkUrl}
+                            Link: {b.linkUrl || b.ctaUrl}
                           </span>
                         )}
                       </div>
@@ -1131,7 +2454,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                       <button
                         onClick={() => handleEditClick(b)}
                         className="p-1.5 border border-border hover:bg-muted text-text-secondary hover:text-text-primary rounded-lg transition-colors cursor-pointer"
-                        title="Edit Banner"
+                        title="Edit Card Details"
                       >
                         <Edit2 className="h-3.5 w-3.5" />
                       </button>
@@ -1140,7 +2463,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                       <button
                         onClick={() => handleDelete(b.id)}
                         className="p-1.5 border border-danger/20 bg-danger/5 hover:bg-danger/10 text-danger rounded-lg transition-colors cursor-pointer"
-                        title="Delete Banner"
+                        title="Delete Card"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>

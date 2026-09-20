@@ -611,15 +611,38 @@ model DarkStore {
 }
 
 model StoreInventory {
-  productId String
-  storeId   String
-  stock     Int    @default(0)
+  productId      String
+  storeId        String
+  stock          Int       @default(0)
+  reservedStock  Int       @default(0)  // In-flight active checkout holds
+  priceOverride  Float?    // Optional hub-specific price override
+  aisleLocation  String?   // Aisle/bin coordinates (e.g. "A1-R2-B3") for pickers
+  minStockAlert  Int       @default(5)
+  isAvailable    Boolean   @default(true)
+  updatedAt      DateTime  @default(now()) @updatedAt
 
   product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   store     DarkStore @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@id([productId, storeId])
+  @@index([storeId, isAvailable])
+  @@index([storeId, stock])
   @@map("store_inventories")
+}
+
+model StockHold {
+  id         String   @id @default(cuid())
+  storeId    String
+  productId  String
+  cartId     String
+  quantity   Int
+  expiresAt  DateTime // Automatic TTL (e.g. 10 minutes) during checkout
+  createdAt  DateTime @default(now())
+
+  @@unique([storeId, productId, cartId])
+  @@index([storeId, productId])
+  @@index([expiresAt])
+  @@map("stock_holds")
 }
 
 model Restaurant {

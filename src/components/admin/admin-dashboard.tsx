@@ -12,26 +12,17 @@ import { DashboardHubNav } from '@/components/admin/dashboard/hub-nav'
 import { DashboardStatsCards } from '@/components/admin/dashboard/stats-cards'
 import { BottleneckBanner } from '@/components/admin/dashboard/bottleneck-banner'
 import { StoreControlBar } from '@/components/admin/dashboard/store-control-bar'
-import { OrdersTab } from '@/components/admin/dashboard/orders-tab'
-import { CategoriesTab } from '@/components/admin/categories-tab'
+import { AdminLiveOrdersTab } from '@/components/admin/dashboard/AdminLiveOrdersTab'
+import { AdminInventoryHubTab } from '@/components/admin/dashboard/AdminInventoryHubTab'
+import { AdminRidersFleetTab } from '@/components/admin/dashboard/AdminRidersFleetTab'
+import { AdminReportsTab } from '@/components/admin/dashboard/AdminReportsTab'
+import { AdminDarkStoresTab } from '@/components/admin/dashboard/AdminDarkStoresTab'
 import { UsersTab } from '@/components/admin/users-tab'
 import { CouponsTab } from '@/components/admin/coupons-tab'
-import { ProductsTab } from '@/components/admin/products-tab'
-import { LiveOpsTab } from '@/components/admin/live-ops-tab'
-import { AnalyticsTab } from '@/components/admin/analytics-tab'
-import { ForecastTab } from '@/components/admin/forecast-tab'
-import { AlertsTab } from '@/components/admin/alerts-tab'
-import { InwardTab } from '@/components/admin/inward-tab'
-import { BulkUpdateTab } from '@/components/admin/bulk-update-tab'
 import { ReviewsTab } from '@/components/admin/reviews-tab'
-import { ReportsTab } from '@/components/admin/reports-tab'
-import { RestaurantReportTab } from '@/components/admin/restaurant-report-tab'
 import { BannersTab } from '@/components/admin/banners-tab'
-import { SettingsTab } from '@/components/admin/settings-tab'
 import { PushNotificationsTab } from '@/components/admin/push-notifications-tab'
 import { FlashDealsTab } from '@/components/admin/flash-deals-tab'
-import { RiderCashTab } from '@/components/admin/rider-cash-tab'
-import { CsvImportTab } from '@/components/admin/csv-import-tab'
 import { RestaurantConsoleTab } from '@/components/admin/restaurant-console-tab'
 import { VendorConsoleTab } from '@/components/admin/vendor-console-tab'
 import { WhatsAppAlertModal } from '@/components/admin/dashboard/whatsapp-alert-modal'
@@ -906,8 +897,9 @@ export function AdminDashboard({
           transition={{ duration: 0.25, ease: 'easeInOut' }}
           className="w-full"
         >
-          {activeTab === 'orders' && (
-            <OrdersTab
+          {(activeTab === 'orders' || activeTab === 'liveops') && (
+            <AdminLiveOrdersTab
+              activeTab={activeTab}
               orders={orderHook.orders}
               orderCounts={orderHook.orderCounts}
               orderStatusFilter={orderHook.orderStatusFilter}
@@ -926,103 +918,137 @@ export function AdminDashboard({
               onOpenCreateOrderModal={() => setIsCreateOrderOpen(true)}
               onNavigateToUsersTab={() => setActiveTab('users')}
               livePendingOrders={livePendingOrders}
+              liveOrders={liveOrders}
+              delayedOrders={delayedOrders}
+              activeCarts={activeCarts}
+              isLoadingCarts={isLoadingCarts}
+              cartsRefreshKey={cartsRefreshKey}
+              setCartsRefreshKey={setCartsRefreshKey}
+              sendCartNotification={sendCartNotification}
+              openWhatsAppModal={openWhatsAppModal}
             />
           )}
 
-          {activeTab === 'products' && (
-            <ProductsTab
-              products={productHook.products}
-              categories={categoryHook.categories}
-              restaurantsList={hubRestaurants}
-              settingsMap={settingsMap}
-              filteredProducts={filteredProducts}
-              searchQuery={productHook.searchQuery}
-              selectedTypeFilter={productHook.selectedTypeFilter}
-              selectedCategoryFilter={productHook.selectedCategoryFilter}
-              showAddProduct={productHook.showAddProduct}
-              showSortManager={productHook.showSortManager}
-              showCsvImport={productHook.showCsvImport}
-              showExportModal={productHook.showExportModal}
-              isExporting={productHook.isExporting}
-              isCreatingProduct={productHook.isCreatingProduct}
-              newProduct={productHook.newProduct}
-              newProductType={productHook.newProductType}
-              editProductType={productHook.editProductType}
-              newProductVariants={productHook.newProductVariants}
-              editProductVariants={productHook.editProductVariants}
-              hasVariantsNew={productHook.hasVariantsNew}
-              hasVariantsEdit={productHook.hasVariantsEdit}
-              newCustomTag={productHook.newCustomTag}
-              editCustomTag={productHook.editCustomTag}
-              isUploading={isUploading}
-              productPage={productHook.productPage}
-              productTotal={productHook.productTotal}
-              editingProduct={productHook.editingProduct}
-              savingProductId={productHook.savingProductId}
-              setShowAddProduct={productHook.setShowAddProduct}
-              setShowSortManager={productHook.setShowSortManager}
-              setShowCsvImport={productHook.setShowCsvImport}
-              setShowExportModal={productHook.setShowExportModal}
-              setNewProduct={productHook.setNewProduct}
-              setNewProductType={productHook.setNewProductType}
-              setEditProductType={productHook.setEditProductType}
-              setNewProductVariants={productHook.setNewProductVariants}
-              setEditProductVariants={productHook.setEditProductVariants}
-              setHasVariantsNew={productHook.setHasVariantsNew}
-              setHasVariantsEdit={productHook.setHasVariantsEdit}
-              setNewCustomTag={productHook.setNewCustomTag}
-              setEditingProduct={productHook.setEditingProduct}
-              setProductPage={productHook.setProductPage}
-              setMediaTarget={setMediaTarget}
-              setShowMediaLibrary={setShowMediaLibrary}
-              setSearchQuery={productHook.setSearchQuery}
-              setSelectedTypeFilter={productHook.setSelectedTypeFilter}
-              setSelectedCategoryFilter={productHook.setSelectedCategoryFilter}
-              setProducts={productHook.setProducts}
-              setAllProducts={productHook.setAllProducts}
-              handleNewProductTypeChange={productHook.handleNewProductTypeChange}
-              handleEditProductTypeChange={productHook.handleEditProductTypeChange}
-              applyProductTemplate={productHook.applyProductTemplate}
-              toggleTag={productHook.toggleTag}
-              handleCreateCustomTag={productHook.handleCreateCustomTag}
-              handleCreateProduct={productHook.handleCreateProduct}
-              handleToggleProductAvailability={productHook.handleToggleProductAvailability}
-              handleDeleteProduct={productHook.handleDeleteProduct}
-              startEditingProduct={productHook.startEditingProduct}
-              handleDuplicateProduct={productHook.handleDuplicateProduct}
-              handleCloudinaryUpload={handleCloudinaryUpload}
-              handleExportCsv={productHook.handleExportCsv}
-              handleReplenishCsv={productHook.handleReplenishCsv}
-              renderPagination={renderPagination}
-            />
-          )}
-
-          {activeTab === 'categories' && (
-            <CategoriesTab
-              categories={categoryHook.categories}
-              newCategory={categoryHook.newCategory}
-              showAddCategory={categoryHook.showAddCategory}
-              editingCategory={categoryHook.editingCategory}
-              savingCategoryId={categoryHook.savingCategoryId}
-              deletingCategoryId={categoryHook.deletingCategoryId}
-              categoryEditForm={categoryHook.categoryEditForm}
-              isCreatingCategory={categoryHook.isCreatingCategory}
-              showMediaLibrary={showMediaLibrary}
-              mediaTarget={mediaTarget}
-              mediaSearchQuery={mediaSearchQuery}
-              setNewCategory={categoryHook.setNewCategory}
-              setShowAddCategory={categoryHook.setShowAddCategory}
-              setEditingCategory={categoryHook.setEditingCategory}
-              setCategoryEditForm={categoryHook.setCategoryEditForm}
-              setSavingCategoryId={categoryHook.setSavingCategoryId}
-              setDeletingCategoryId={categoryHook.setDeletingCategoryId}
-              setMediaTarget={setMediaTarget}
-              setShowMediaLibrary={setShowMediaLibrary}
-              handleCreateCategory={categoryHook.handleCreateCategory}
-              handleDeleteCategory={categoryHook.handleDeleteCategory}
-              saveCategoryChanges={categoryHook.saveCategoryChanges}
-              startEditingCategory={categoryHook.startEditingCategory}
-              handleImageFileChange={handleImageFileChange}
+          {(activeTab === 'products' ||
+            activeTab === 'categories' ||
+            activeTab === 'alerts' ||
+            activeTab === 'inward' ||
+            activeTab === 'bulk-update' ||
+            activeTab === 'csv-import') && (
+            <AdminInventoryHubTab
+              activeTab={activeTab}
+              selectedHubId={selectedHubId}
+              onRefreshProducts={async () => {
+                try {
+                  const storeQuery =
+                    selectedHubId && selectedHubId !== 'all'
+                      ? `&storeId=${encodeURIComponent(selectedHubId)}`
+                      : ''
+                  const res = await fetch(
+                    `/api/products?limit=1000${storeQuery}&t=${Date.now()}`
+                  )
+                  if (res.ok) {
+                    const data = await res.json()
+                    if (data.products) {
+                      productHook.setProducts(data.products)
+                      productHook.setAllProducts(data.products)
+                    }
+                  }
+                } catch (err) {
+                  console.error(err)
+                }
+              }}
+              productProps={{
+                products: productHook.products,
+                categories: categoryHook.categories,
+                restaurantsList: hubRestaurants,
+                settingsMap: settingsMap,
+                filteredProducts: filteredProducts,
+                searchQuery: productHook.searchQuery,
+                selectedTypeFilter: productHook.selectedTypeFilter,
+                selectedCategoryFilter: productHook.selectedCategoryFilter,
+                showAddProduct: productHook.showAddProduct,
+                showSortManager: productHook.showSortManager,
+                showCsvImport: productHook.showCsvImport,
+                showExportModal: productHook.showExportModal,
+                isExporting: productHook.isExporting,
+                isCreatingProduct: productHook.isCreatingProduct,
+                newProduct: productHook.newProduct,
+                newProductType: productHook.newProductType,
+                editProductType: productHook.editProductType,
+                newProductVariants: productHook.newProductVariants,
+                editProductVariants: productHook.editProductVariants,
+                hasVariantsNew: productHook.hasVariantsNew,
+                hasVariantsEdit: productHook.hasVariantsEdit,
+                newCustomTag: productHook.newCustomTag,
+                editCustomTag: productHook.editCustomTag,
+                isUploading: isUploading,
+                productPage: productHook.productPage,
+                productTotal: productHook.productTotal,
+                editingProduct: productHook.editingProduct,
+                savingProductId: productHook.savingProductId,
+                setShowAddProduct: productHook.setShowAddProduct,
+                setShowSortManager: productHook.setShowSortManager,
+                setShowCsvImport: productHook.setShowCsvImport,
+                setShowExportModal: productHook.setShowExportModal,
+                setNewProduct: productHook.setNewProduct,
+                setNewProductType: productHook.setNewProductType,
+                setEditProductType: productHook.setEditProductType,
+                setNewProductVariants: productHook.setNewProductVariants,
+                setEditProductVariants: productHook.setEditProductVariants,
+                setHasVariantsNew: productHook.setHasVariantsNew,
+                setHasVariantsEdit: productHook.setHasVariantsEdit,
+                setNewCustomTag: productHook.setNewCustomTag,
+                setEditingProduct: productHook.setEditingProduct,
+                setProductPage: productHook.setProductPage,
+                setMediaTarget: setMediaTarget,
+                setShowMediaLibrary: setShowMediaLibrary,
+                setSearchQuery: productHook.setSearchQuery,
+                setSelectedTypeFilter: productHook.setSelectedTypeFilter,
+                setSelectedCategoryFilter: productHook.setSelectedCategoryFilter,
+                setProducts: productHook.setProducts,
+                setAllProducts: productHook.setAllProducts,
+                handleNewProductTypeChange: productHook.handleNewProductTypeChange,
+                handleEditProductTypeChange: productHook.handleEditProductTypeChange,
+                applyProductTemplate: productHook.applyProductTemplate,
+                toggleTag: productHook.toggleTag,
+                handleCreateCustomTag: productHook.handleCreateCustomTag,
+                handleCreateProduct: productHook.handleCreateProduct,
+                handleToggleProductAvailability: productHook.handleToggleProductAvailability,
+                handleDeleteProduct: productHook.handleDeleteProduct,
+                startEditingProduct: productHook.startEditingProduct,
+                handleDuplicateProduct: productHook.handleDuplicateProduct,
+                handleCloudinaryUpload: handleCloudinaryUpload,
+                handleExportCsv: productHook.handleExportCsv,
+                handleReplenishCsv: productHook.handleReplenishCsv,
+                renderPagination: renderPagination,
+              }}
+              categoryProps={{
+                categories: categoryHook.categories,
+                newCategory: categoryHook.newCategory,
+                showAddCategory: categoryHook.showAddCategory,
+                editingCategory: categoryHook.editingCategory,
+                savingCategoryId: categoryHook.savingCategoryId,
+                deletingCategoryId: categoryHook.deletingCategoryId,
+                categoryEditForm: categoryHook.categoryEditForm,
+                isCreatingCategory: categoryHook.isCreatingCategory,
+                showMediaLibrary: showMediaLibrary,
+                mediaTarget: mediaTarget,
+                mediaSearchQuery: mediaSearchQuery,
+                setNewCategory: categoryHook.setNewCategory,
+                setShowAddCategory: categoryHook.setShowAddCategory,
+                setEditingCategory: categoryHook.setEditingCategory,
+                setCategoryEditForm: categoryHook.setCategoryEditForm,
+                setSavingCategoryId: categoryHook.setSavingCategoryId,
+                setDeletingCategoryId: categoryHook.setDeletingCategoryId,
+                setMediaTarget: setMediaTarget,
+                setShowMediaLibrary: setShowMediaLibrary,
+                handleCreateCategory: categoryHook.handleCreateCategory,
+                handleDeleteCategory: categoryHook.handleDeleteCategory,
+                saveCategoryChanges: categoryHook.saveCategoryChanges,
+                startEditingCategory: categoryHook.startEditingCategory,
+                handleImageFileChange: handleImageFileChange,
+              }}
             />
           )}
 
@@ -1098,22 +1124,12 @@ export function AdminDashboard({
             />
           )}
 
-          {activeTab === 'liveops' && (
-            <LiveOpsTab
-              liveOrders={liveOrders}
-              livePendingOrders={livePendingOrders}
-              delayedOrders={delayedOrders}
-              activeCarts={activeCarts}
-              isLoadingCarts={isLoadingCarts}
-              cartsRefreshKey={cartsRefreshKey}
-              setCartsRefreshKey={setCartsRefreshKey}
-              sendCartNotification={sendCartNotification}
-              openWhatsAppModal={openWhatsAppModal}
-            />
-          )}
-
-          {activeTab === 'analytics' && (
-            <AnalyticsTab
+          {(activeTab === 'reports' ||
+            activeTab === 'restaurant-report' ||
+            activeTab === 'analytics' ||
+            activeTab === 'forecast') && (
+            <AdminReportsTab
+              activeTab={activeTab}
               storeId={selectedHubId}
               products={productHook.allProducts || []}
               orders={liveOrders || []}
@@ -1131,13 +1147,6 @@ export function AdminDashboard({
                     : (orderHook.orders || []).length) ?? 0,
                 lowStockCount: stats?.lowStockCount ?? 0,
               }}
-            />
-          )}
-
-          {activeTab === 'forecast' && (
-            <ForecastTab
-              storeId={selectedHubId}
-              categories={categoryHook.categories}
               onRestockCompleted={async () => {
                 try {
                   const storeQuery =
@@ -1161,78 +1170,6 @@ export function AdminDashboard({
             />
           )}
 
-          {activeTab === 'alerts' && (
-            <AlertsTab
-              storeId={selectedHubId}
-              onProductUpdated={async () => {
-                try {
-                  const storeQuery =
-                    selectedHubId && selectedHubId !== 'all'
-                      ? `&storeId=${encodeURIComponent(selectedHubId)}`
-                      : ''
-                  const res = await fetch(
-                    `/api/products?limit=1000${storeQuery}&t=${Date.now()}`
-                  )
-                  if (res.ok) {
-                    const data = await res.json()
-                    if (data.products) {
-                      productHook.setProducts(data.products)
-                      productHook.setAllProducts(data.products)
-                    }
-                  }
-                } catch (err) {
-                  console.error(err)
-                }
-              }}
-            />
-          )}
-
-          {activeTab === 'inward' && (
-            <InwardTab
-              storeId={selectedHubId}
-              onInventoryUpdated={async () => {
-                try {
-                  const res = await fetch(`/api/products?limit=1000&t=${Date.now()}`)
-                  if (res.ok) {
-                    const data = await res.json()
-                    if (data.products) {
-                      productHook.setProducts(data.products)
-                      productHook.setAllProducts(data.products)
-                    }
-                  }
-                } catch (err) {
-                  console.error(err)
-                }
-              }}
-            />
-          )}
-
-          {activeTab === 'bulk-update' && (
-            <BulkUpdateTab
-              categories={categoryHook.categories}
-              onUpdateCompleted={async () => {
-                try {
-                  const res = await fetch(`/api/products?limit=1000&t=${Date.now()}`)
-                  if (res.ok) {
-                    const data = await res.json()
-                    if (data.products) {
-                      productHook.setProducts(data.products)
-                      productHook.setAllProducts(data.products)
-                    }
-                  }
-                } catch (err) {
-                  console.error(err)
-                }
-              }}
-            />
-          )}
-
-          {activeTab === 'reports' && <ReportsTab storeId={selectedHubId} />}
-
-          {activeTab === 'restaurant-report' && (
-            <RestaurantReportTab storeId={selectedHubId} />
-          )}
-
           {activeTab === 'banners' && (
             <BannersTab
               categories={categoryHook.categories}
@@ -1241,7 +1178,7 @@ export function AdminDashboard({
           )}
 
           {activeTab === 'settings' && (
-            <SettingsTab
+            <AdminDarkStoresTab
               storeId={selectedHubId}
               storeHubName={rawHubName}
               onSettingsSaved={() => fetchSettings(selectedHubId)}
@@ -1252,27 +1189,7 @@ export function AdminDashboard({
 
           {activeTab === 'flash-deals' && <FlashDealsTab />}
 
-          {activeTab === 'rider-cash' && <RiderCashTab storeId={selectedHubId} />}
-
-          {activeTab === 'csv-import' && (
-            <CsvImportTab
-              categories={categoryHook.categories}
-              onImportSuccess={async () => {
-                try {
-                  const res = await fetch(`/api/products?limit=1000&t=${Date.now()}`)
-                  if (res.ok) {
-                    const data = await res.json()
-                    if (data.products) {
-                      productHook.setProducts(data.products)
-                      productHook.setAllProducts(data.products)
-                    }
-                  }
-                } catch (err) {
-                  console.error(err)
-                }
-              }}
-            />
-          )}
+          {activeTab === 'rider-cash' && <AdminRidersFleetTab storeId={selectedHubId} />}
 
           {activeTab === 'restaurant-console' && (
             <RestaurantConsoleTab storeId={selectedHubId} />

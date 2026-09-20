@@ -128,11 +128,41 @@ final dioProvider = Provider<Dio>((ref) {
         }
       }
 
-      // ─── 2. Connection Fallback to secondary URL ─────────────────────
-      // NEVER auto-retry KOT broadcast or order mutations to prevent duplicate prints/actions
-      final isKOTRequest = error.requestOptions.path.contains('kot-broadcast') ||
-          error.requestOptions.path.contains('broadcast');
-      if (isKOTRequest) {
+      // ─── 2. Safe Transient Network Retry (Exponential Backoff for Idempotent/GET calls) ──
+      // NEVER auto-retry KOT broadcast, order mutations, or payments to prevent duplicates
+      final isNonRetryable = error.requestOptions.path.contains('kot-broadcast') ||
+          error.requestOptions.path.contains('broadcast') ||
+          error.requestOptions.path.contains('/api/orders') ||
+          error.requestOptions.path.contains('/api/payment');
+
+      final isTransientError = error.type == DioExceptionType.connectionError ||
+          error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.sendTimeout ||
+          error.type == DioExceptionType.receiveTimeout;
+
+      final isIdempotent = error.requestOptions.method == 'GET' ||
+          error.requestOptions.extra['idempotent'] == true;
+
+      final retryCount = (error.requestOptions.extra['retry_count'] as int?) ?? 0;
+
+      if (isTransientError && !isNonRetryable && isIdempotent && retryCount < 2) {
+        try {
+          final nextRetry = retryCount + 1;
+          final delayMs = nextRetry * 600; // 600ms, 1200ms backoff
+          await Future.delayed(Duration(milliseconds: delayMs));
+
+          final newOptions = error.requestOptions;
+          newOptions.extra['retry_count'] = nextRetry;
+
+          final retryResponse = await dio.fetch(newOptions);
+          return handler.resolve(retryResponse);
+        } catch (retryErr, _) {
+          LoggerService.error('ApiClient: transient retry failed (attempt $retryCount)', retryErr);
+        }
+      }
+
+      // ─── 3. Connection Fallback to secondary URL ─────────────────────
+      if (isNonRetryable) {
         return handler.next(error);
       }
 
