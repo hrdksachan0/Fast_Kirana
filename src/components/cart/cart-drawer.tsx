@@ -320,8 +320,22 @@ export function CartDrawer() {
 
   const hasClosedGroceryItems = groceryItems.some(item => isItemClosed(item.product))
   const hasClosedCafeItems = cafeItems.some(item => isItemClosed(item.product))
-  const isBelowMinOrder = false
-  const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems || hasInventoryIssues || !isLocationServiceable
+  const minOrderValue = settings.min_order_value ? parseFloat(settings.min_order_value) : 20
+  const isBelowMinOrder = minOrderValue > 0 && subtotal < minOrderValue
+  const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems || hasInventoryIssues || isBelowMinOrder
+
+  const handleRemoveClosedItems = () => {
+    let count = 0
+    items.forEach((item) => {
+      if (isItemClosed(item.product)) {
+        removeItem(item.product.id, item.product.name)
+        count++
+      }
+    })
+    if (count > 0) {
+      toast.success(`${count} closed item(s) removed`)
+    }
+  }
 
   const handleAutoAdjust = () => {
     let adjustedCount = 0
@@ -1111,34 +1125,41 @@ export function CartDrawer() {
 
                 {/* Checkout Button */}
                 <div className="flex-1 min-w-0">
-                  {isCheckoutBlocked ? (
+                  {hasClosedGroceryItems || hasClosedCafeItems ? (
                     <button
+                      type="button"
+                      onClick={handleRemoveClosedItems}
+                      className="w-full h-12 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white text-[11px] sm:text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-[0.98] cursor-pointer"
+                    >
+                      <span>Remove Closed Items &amp; Order</span>
+                      <ArrowRight size={14} />
+                    </button>
+                  ) : hasInventoryIssues ? (
+                    <button
+                      type="button"
+                      onClick={handleAutoAdjust}
+                      className="w-full h-12 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white text-[11px] sm:text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-[0.98] cursor-pointer"
+                    >
+                      <span>Adjust Stock to Available</span>
+                      <ArrowRight size={14} />
+                    </button>
+                  ) : isBelowMinOrder ? (
+                    <button
+                      type="button"
                       disabled
                       className="w-full h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-850 text-[11px] sm:text-xs font-black text-zinc-400 dark:text-zinc-500 cursor-not-allowed border border-zinc-200 dark:border-zinc-800 flex items-center justify-center gap-1"
                     >
-                      {hasClosedGroceryItems || hasClosedCafeItems ? (
-                        <>Closed Items in Cart <ArrowRight size={14} /></>
-                      ) : hasInventoryIssues ? (
-                        <>Fix Stock Issues <ArrowRight size={14} /></>
-                      ) : (
-                        <>Min. Order ₹20 Required <ArrowRight size={14} /></>
-                      )}
+                      <span>Min. Order ₹{minOrderValue} (Add {formatPrice(minOrderValue - subtotal)})</span>
                     </button>
                   ) : (
                     <Link
                       href="/checkout"
                       prefetch={false}
                       onClick={() => setCartOpen(false)}
-                      className="group relative overflow-hidden w-full h-12 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 text-white hover:text-white transition-all duration-300 active:scale-[0.97] shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-600/40 flex items-center justify-between px-4 cursor-pointer hover:scale-[1.01]"
+                      className="group relative overflow-hidden w-full h-12 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 text-white hover:text-white transition-all duration-300 active:scale-[0.98] shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-600/40 flex items-center justify-center gap-2 px-5 cursor-pointer hover:scale-[1.01] font-black text-xs sm:text-sm tracking-wide uppercase"
                     >
-                      <div className="flex flex-col text-left leading-none">
-                        <span className="text-[9px] uppercase tracking-wider font-extrabold text-emerald-100/90">PAY TOTAL</span>
-                        <span className="text-sm sm:text-base font-black text-white mt-0.5">{formatPrice(total)}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs sm:text-sm font-black uppercase tracking-wide">
-                        <span>Checkout</span>
-                        <ArrowRight size={16} className="transition-transform duration-300 ease-out group-hover:translate-x-1" />
-                      </div>
+                      <span>Proceed to Checkout</span>
+                      <ArrowRight size={16} className="transition-transform duration-300 ease-out group-hover:translate-x-1" />
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
                     </Link>
                   )}

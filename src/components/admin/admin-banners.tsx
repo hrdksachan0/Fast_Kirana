@@ -27,7 +27,8 @@ import {
   Video,
   Play,
   Pause,
-  UploadCloud
+  UploadCloud,
+  Link as LinkIcon
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { compressImageClient } from '@/lib/image-compression'
@@ -492,12 +493,12 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
   const [presetCategoryFilter, setPresetCategoryFilter] = useState<'all' | 'food' | 'grocery'>('all')
   const [isGeneratingGemini, setIsGeneratingGemini] = useState(false)
 
-  // Placement & Target Platform States
-  const [placement, setPlacement] = useState<'hero' | 'brand_card'>('hero')
+  // Placement & Target Platform States (Defaults to Brand Card for Curated Carousel)
+  const [placement, setPlacement] = useState<'hero' | 'brand_card'>('brand_card')
   const [platform, setPlatform] = useState<'all' | 'mobile' | 'web'>('all')
 
   // Registered List Filtering Tabs
-  const [activeListTab, setActiveListTab] = useState<'hero' | 'brand_card'>('hero')
+  const [activeListTab, setActiveListTab] = useState<'hero' | 'brand_card'>('brand_card')
   const [activePlatformFilter, setActivePlatformFilter] = useState<'all' | 'mobile' | 'web'>('all')
 
   // Form States
@@ -506,19 +507,23 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
   const [description, setDescription] = useState('')
   const [code, setCode] = useState('')
   const [gradient, setGradient] = useState(GRADIENT_PRESETS[4].value)
-  const [type, setType] = useState('festival')
+  const [type, setType] = useState('grocery')
   const [imageUrl, setImageUrl] = useState('')
   const [videoUrl, setVideoUrl] = useState('')
   const [previewMediaTab, setPreviewMediaTab] = useState<'image' | 'video'>('image')
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'web'>('mobile')
   const [linkUrl, setLinkUrl] = useState('')
-  const [linkType, setLinkType] = useState<'none' | 'category' | 'product' | 'custom'>('none')
+  const [linkType, setLinkType] = useState<'none' | 'category' | 'product' | 'restaurant' | 'custom'>('none')
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedProduct, setSelectedProduct] = useState('')
+  const [selectedRestaurant, setSelectedRestaurant] = useState('')
   const [customLinkUrl, setCustomLinkUrl] = useState('')
   const [isActive, setIsActive] = useState(true)
   const [sortOrder, setSortOrder] = useState('0')
   const [submitting, setSubmitting] = useState(false)
+
+  // Restaurants list for Food & Cafe mode
+  const [restaurants, setRestaurants] = useState<any[]>([])
 
   // Multi-Card Specific Fields
   const [eyebrowTag, setEyebrowTag] = useState('')
@@ -542,7 +547,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
   const [isUploading, setIsUploading] = useState(false)
   const [isVideoUploading, setIsVideoUploading] = useState(false)
 
-  // Load settings on Mount
+  // Load settings & restaurants on Mount
   useEffect(() => {
     async function fetchSettings() {
       try {
@@ -555,7 +560,19 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
         console.error('Failed to load settings:', err)
       }
     }
+    async function fetchRestaurants() {
+      try {
+        const res = await fetch('/api/restaurants')
+        if (res.ok) {
+          const data = await res.json()
+          setRestaurants(Array.isArray(data) ? data : [])
+        }
+      } catch (err) {
+        console.error('Failed to load restaurants:', err)
+      }
+    }
     fetchSettings()
+    fetchRestaurants()
   }, [])
 
   // Load Banners on Mount
@@ -893,6 +910,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
     setLinkType('none')
     setSelectedCategory('')
     setSelectedProduct('')
+    setSelectedRestaurant('')
     setCustomLinkUrl('')
     setIsActive(true)
     setSortOrder('0')
@@ -926,7 +944,9 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
     else if (b.cardType === 'editorial' || b.type === 'editorial') fmt = 'editorial'
     setCardFormat(fmt)
 
-    setPlacement(b.placement || (['dark_showcase', 'bento_grid', 'editorial', 'brand_offer'].includes(b.type) ? 'brand_card' : 'hero'))
+    const isBrandCard = b.placement === 'brand_card' || ['dark_showcase', 'bento_grid', 'editorial', 'brand_offer'].includes(b.type)
+    setPlacement(isBrandCard ? 'brand_card' : 'hero')
+    setActiveListTab(isBrandCard ? 'brand_card' : 'hero')
     setPlatform(b.platform || 'all')
 
     setTitle(b.title)
@@ -963,23 +983,34 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
       setLinkType('none')
       setSelectedCategory('')
       setSelectedProduct('')
+      setSelectedRestaurant('')
+      setCustomLinkUrl('')
+    } else if (link.startsWith('/restaurant/')) {
+      setLinkType('restaurant')
+      const slug = link.replace('/restaurant/', '')
+      setSelectedCategory('')
+      setSelectedProduct('')
+      setSelectedRestaurant(slug)
       setCustomLinkUrl('')
     } else if (link.startsWith('/category/')) {
       setLinkType('category')
       const slug = link.replace('/category/', '')
       setSelectedCategory(slug)
       setSelectedProduct('')
+      setSelectedRestaurant('')
       setCustomLinkUrl('')
     } else if (link.startsWith('/product/')) {
       setLinkType('product')
       const slug = link.replace('/product/', '')
       setSelectedCategory('')
       setSelectedProduct(slug)
+      setSelectedRestaurant('')
       setCustomLinkUrl('')
     } else {
       setLinkType('custom')
       setSelectedCategory('')
       setSelectedProduct('')
+      setSelectedRestaurant('')
       setCustomLinkUrl(link)
     }
 
@@ -1017,11 +1048,11 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
   // Submit banner (Create or Edit)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const finalTitle = title.trim() || 'Promo Banner'
-    const finalDesc = description.trim() || 'Media banner'
+    const finalTitle = title.trim() || (placement === 'brand_card' ? 'Curated Brand Offer' : 'Promo Banner')
+    const finalDesc = description.trim() || (placement === 'brand_card' ? 'Curated Brand Media Card' : 'Media banner')
 
     if (!imageUrl.trim() && !videoUrl.trim() && !title.trim()) {
-      toast.error('Please upload a photo or video for the banner')
+      toast.error(placement === 'brand_card' ? 'Please upload a photo or looping video for the Brand Card' : 'Please upload a photo or video for the banner')
       return
     }
 
@@ -1033,6 +1064,8 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
         computedLinkUrl = selectedCategory ? `/category/${selectedCategory}` : null
       } else if (linkType === 'product') {
         computedLinkUrl = selectedProduct ? `/product/${selectedProduct}` : null
+      } else if (linkType === 'restaurant') {
+        computedLinkUrl = selectedRestaurant ? `/restaurant/${selectedRestaurant}` : null
       } else if (linkType === 'custom') {
         computedLinkUrl = customLinkUrl.trim() || null
       }
@@ -1165,241 +1198,258 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
         {/* Input Form */}
         <div className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-6">
           {/* Clean Simple Banner Form Header */}
-          <div>
-            <h3 className="text-base font-bold text-text-primary flex items-center gap-2">
-              <ImageIcon className="h-5 w-5 text-primary" />
-              {editingId ? 'Edit Promo Banner' : 'Create New Promo Banner'}
-            </h3>
-            <p className="text-xs text-text-secondary mt-0.5">
-              Upload a banner image, enter a title & link, and click Save. That's it!
-            </p>
-          </div>
+          <h3 className="text-base font-bold text-text-primary flex items-center gap-2">
+            <ImageIcon className="h-5 w-5 text-primary" />
+            {editingId ? 'Edit Banner' : 'New Banner'}
+          </h3>
 
           {/* Simple Form */}
           <form onSubmit={handleSubmit} className="space-y-4 bg-muted/20 border border-border p-5 rounded-2xl">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
-              {/* Type / Placement / Mode / Platform Controls */}
-              <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-card border border-border/80 rounded-xl">
-                {/* Placement Selector */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary block">
+              {/* Placement / Mode / Platform Selectors */}
+              <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-card border border-border/60 rounded-2xl">
+                {/* 1. Placement Selector */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-text-secondary block">
                     1. Section Type *
                   </label>
-                  <div className="grid grid-cols-2 gap-1 bg-muted/40 p-1 rounded-lg border border-border">
+                  <div className="grid grid-cols-2 gap-1 bg-muted/50 p-1 rounded-xl border border-border">
                     <button
                       type="button"
                       onClick={() => setPlacement('hero')}
-                      className={`py-1.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                      className={`py-2 text-[11px] font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
                         placement === 'hero'
                           ? 'bg-primary text-white shadow-xs font-black'
-                          : 'text-text-muted hover:text-text-primary'
+                          : 'text-text-muted hover:text-text-primary hover:bg-card/60'
                       }`}
                     >
-                      🖼️ Hero Slider
+                      <span>🖼️</span>
+                      <span>Hero Slider</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setPlacement('brand_card')}
-                      className={`py-1.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                      className={`py-2 text-[11px] font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
                         placement === 'brand_card'
                           ? 'bg-primary text-white shadow-xs font-black'
-                          : 'text-text-muted hover:text-text-primary'
+                          : 'text-text-muted hover:text-text-primary hover:bg-card/60'
                       }`}
                     >
-                      💳 Brand Card
+                      <span>💳</span>
+                      <span>Brand Card</span>
                     </button>
                   </div>
                 </div>
 
-                {/* Target Mode Selector */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary block">
+                {/* 2. Target Mode Selector */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-text-secondary block">
                     2. Store Mode *
                   </label>
-                  <div className="grid grid-cols-2 gap-1 bg-muted/40 p-1 rounded-lg border border-border">
+                  <div className="grid grid-cols-2 gap-1 bg-muted/50 p-1 rounded-xl border border-border">
                     <button
                       type="button"
                       onClick={() => setType('grocery')}
-                      className={`py-1.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                      className={`py-2 text-[11px] font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
                         type === 'grocery' || type === 'express-delivery'
                           ? 'bg-emerald-600 text-white shadow-xs font-black'
-                          : 'text-text-muted hover:text-text-primary'
+                          : 'text-text-muted hover:text-text-primary hover:bg-card/60'
                       }`}
                     >
-                      🛍️ Grocery
+                      <span>🛍️</span>
+                      <span>Grocery</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setType('food')}
-                      className={`py-1.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                      className={`py-2 text-[11px] font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
                         type === 'food' || type === 'cafe'
                           ? 'bg-rose-500 text-white shadow-xs font-black'
-                          : 'text-text-muted hover:text-text-primary'
+                          : 'text-text-muted hover:text-text-primary hover:bg-card/60'
                       }`}
                     >
-                      🍕 Food & Cafe
+                      <span>🍕</span>
+                      <span>Food & Cafe</span>
                     </button>
                   </div>
                 </div>
 
-                {/* Target Platform Selector */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary block">
+                {/* 3. Target Platform Selector */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-text-secondary block">
                     3. Target Platform *
                   </label>
-                  <select
-                    value={platform}
-                    onChange={(e) => setPlatform(e.target.value as any)}
-                    className="w-full bg-card border border-border px-3 py-2 rounded-lg text-xs font-bold text-text-primary focus:outline-none focus:border-primary"
-                  >
-                    <option value="all">🌐 All Devices (Web + Mobile App)</option>
-                    <option value="mobile">📱 Mobile App Only (Android/iOS)</option>
-                    <option value="web">💻 Web Storefront Only</option>
-                  </select>
+                  <div className="grid grid-cols-3 gap-1 bg-muted/50 p-1 rounded-xl border border-border">
+                    <button
+                      type="button"
+                      onClick={() => setPlatform('all')}
+                      className={`py-2 text-[11px] font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                        platform === 'all'
+                          ? 'bg-blue-600 text-white shadow-xs font-black'
+                          : 'text-text-muted hover:text-text-primary hover:bg-card/60'
+                      }`}
+                    >
+                      <span>🌐</span>
+                      <span>All</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPlatform('mobile')}
+                      className={`py-2 text-[11px] font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                        platform === 'mobile'
+                          ? 'bg-blue-600 text-white shadow-xs font-black'
+                          : 'text-text-muted hover:text-text-primary hover:bg-card/60'
+                      }`}
+                    >
+                      <span>📱</span>
+                      <span>App</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPlatform('web')}
+                      className={`py-2 text-[11px] font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                        platform === 'web'
+                          ? 'bg-blue-600 text-white shadow-xs font-black'
+                          : 'text-text-muted hover:text-text-primary hover:bg-card/60'
+                      }`}
+                    >
+                      <span>💻</span>
+                      <span>Web</span>
+                    </button>
+                  </div>
                 </div>
               </div>
+
+
               
-              {/* Banner Title */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                  Banner Title *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Fast Delivery in Ghatampur"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
-                />
-              </div>
-
-              {/* Subtitle / Description */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                  Subtitle / Offer Text *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Milk, Fruits, Vegetables & Snacks in minutes"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
-                />
-              </div>
-
-              {/* Coupon Code (Optional) */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                  Promo Code (Optional)
-                </label>
-                <div className="relative">
-                  <Gift className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
+              {placement === 'brand_card' ? (
+                /* BRAND CARD MODE: CLEAN, INTENTIONAL, PURE MEDIA ONLY */
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-xs font-bold text-text-primary flex items-center justify-between">
+                    <span>Card / Brand Name *</span>
+                    <span className="text-[11px] text-text-muted font-normal">
+                      (e.g., A.S. Restaurant Burger, Amul Milk, Fresh Veggies)
+                    </span>
+                  </label>
                   <input
                     type="text"
-                    placeholder="e.g. SAVE20 (Leave blank if none)"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value.toUpperCase())}
-                    className="w-full bg-card border border-border pl-9 pr-4 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-mono font-bold text-primary"
+                    required
+                    placeholder="Enter brand or card title..."
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full bg-card border border-border px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-bold shadow-2xs"
                   />
                 </div>
-              </div>
+              ) : (
+                /* HERO SLIDER MODE: FULL CONTROLS WITH SUBTITLE & PROMO CODE */
+                <>
+                  {/* Banner Title */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-text-primary">
+                      Banner Title *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Fast Delivery in Ghatampur"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      className="w-full bg-card border border-border px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
+                    />
+                  </div>
 
-              {/* Background Gradient Theme */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                  Card Theme / Color
-                </label>
-                <select
-                  value={gradient}
-                  onChange={(e) => setGradient(e.target.value)}
-                  className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
-                >
-                  {GRADIENT_PRESETS.map((g) => (
-                    <option key={g.name} value={g.value}>
-                      {g.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  {/* Subtitle / Description */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-text-primary">
+                      Subtitle *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Milk, Fruits, Vegetables & Snacks in minutes"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      className="w-full bg-card border border-border px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                    />
+                  </div>
+
+                  {/* Coupon Code (Optional) */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-text-primary">
+                      Promo Code
+                    </label>
+                    <div className="relative">
+                      <Gift className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
+                      <input
+                        type="text"
+                        placeholder="e.g. SAVE20"
+                        value={code}
+                        onChange={(e) => setCode(e.target.value.toUpperCase())}
+                        className="w-full bg-card border border-border pl-9 pr-4 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-mono font-bold text-primary"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Upload Banner Image / Video */}
               <div 
                 onDragOver={(e) => { e.preventDefault(); setIsMediaDragOver(true) }}
                 onDragLeave={() => setIsMediaDragOver(false)}
                 onDrop={handleMediaDrop}
-                className={`md:col-span-2 space-y-2 border-t border-border/40 pt-3 transition-all rounded-xl p-2 ${
+                className={`md:col-span-2 space-y-3 border border-border/80 bg-card p-4 rounded-2xl shadow-2xs transition-all ${
                   isMediaDragOver ? 'bg-primary/10 border-2 border-dashed border-primary ring-4 ring-primary/20' : ''
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary block">
-                      Banner Media (Image or Video Loop)
-                    </label>
-                    <span className="text-[9px] text-text-muted">
-                      Drag & drop any photo or MP4 video here, or select below
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 bg-muted p-0.5 rounded-lg border border-border/60">
+                  <label className="text-xs font-bold text-text-primary">
+                    Banner Media *
+                  </label>
+                  <div className="flex items-center gap-1 bg-muted p-1 rounded-xl border border-border">
                     <button
                       type="button"
                       onClick={() => setPreviewMediaTab('image')}
-                      className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                         previewMediaTab === 'image'
-                          ? 'bg-card text-primary shadow-xs'
+                          ? 'bg-card text-primary shadow-xs font-black'
                           : 'text-text-muted hover:text-text-primary'
                       }`}
                     >
-                      🖼️ Photo (No Text)
+                      🖼️ Photo
                     </button>
                     <button
                       type="button"
                       onClick={() => setPreviewMediaTab('video')}
-                      className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                         previewMediaTab === 'video'
-                          ? 'bg-card text-primary shadow-xs'
+                          ? 'bg-card text-primary shadow-xs font-black'
                           : 'text-text-muted hover:text-text-primary'
                       }`}
                     >
-                      🎬 Video Loop (MP4)
+                      🎬 Video
                     </button>
                   </div>
                 </div>
 
-                {/* Helpful Instruction Pill */}
-                <div className="flex items-center gap-2 p-2 bg-muted/40 border border-border/60 rounded-xl text-[10px] text-text-secondary">
-                  <span className="text-primary font-bold">✨ Pure Media:</span>
-                  <span>
-                    {previewMediaTab === 'image'
-                      ? 'Upload full-bleed photo (JPG/PNG/WebP). Brand cards render pure image without any overlay text or coupons.'
-                      : 'Upload short video loop (MP4/WebM, max 15MB). App plays it silently with interactive Pause/Play controls.'}
-                  </span>
-                </div>
-                
                 {previewMediaTab === 'image' ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
                       <label
                         htmlFor="banner-image-file-simple"
-                        className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-border hover:border-primary rounded-xl cursor-pointer bg-card hover:bg-primary/5 transition-all p-2 text-center"
+                        className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-border hover:border-primary rounded-xl cursor-pointer bg-muted/20 hover:bg-primary/5 transition-all p-3 text-center"
                       >
                         {isUploading ? (
                           <div className="flex items-center gap-2">
                             <Loader2 className="w-5 h-5 text-primary animate-spin" />
-                            <span className="text-xs font-bold text-primary">Compressing & Uploading Photo...</span>
+                            <span className="text-xs font-bold text-primary">Uploading...</span>
                           </div>
                         ) : (
-                          <div className="flex flex-col items-center gap-1">
-                            <div className="flex items-center gap-1.5 text-primary">
-                              <UploadCloud className="w-5 h-5" />
-                              <span className="text-xs font-bold">
-                                {imageUrl ? 'Change Photo File' : 'Click or Drop Photo Here'}
-                              </span>
-                            </div>
-                            <span className="text-[9px] text-text-muted">JPG, PNG, WebP • Auto-compressed for 10-min speed</span>
+                          <div className="flex items-center gap-1.5 text-primary">
+                            <UploadCloud className="w-5 h-5" />
+                            <span className="text-xs font-bold">
+                              {imageUrl ? 'Replace Photo' : 'Drop or Click to Upload'}
+                            </span>
                           </div>
                         )}
                         <input
@@ -1413,20 +1463,20 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                       </label>
 
                       <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-text-muted block">Or Paste Direct Image Link:</label>
+                        <label className="text-[11px] font-bold text-text-secondary block">Or paste image URL:</label>
                         <input
                           type="url"
-                          placeholder="https://images.unsplash.com/... or cloud URL"
+                          placeholder="https://images.unsplash.com/..."
                           value={imageUrl}
                           onChange={(e) => setImageUrl(e.target.value)}
-                          className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                          className="w-full bg-card border border-border px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
                         />
                       </div>
                     </div>
 
                     {/* Image Preview Box */}
                     {imageUrl && (
-                      <div className="relative aspect-[3/1] max-h-36 w-full overflow-hidden rounded-xl border border-border bg-black/5 mt-2">
+                      <div className="relative aspect-[3/1] max-h-40 w-full overflow-hidden rounded-xl border border-border bg-black/5 mt-2">
                         <img
                           src={imageUrl}
                           alt="Banner Preview"
@@ -1435,34 +1485,31 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                         <button
                           type="button"
                           onClick={() => setImageUrl('')}
-                          className="absolute top-2 right-2 px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold rounded-lg shadow cursor-pointer transition-all"
+                          className="absolute top-2 right-2 px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold rounded-lg shadow cursor-pointer transition-all"
                         >
-                          Remove Image
+                          Remove Photo
                         </button>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
                       <label
                         htmlFor="banner-video-file-simple"
-                        className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-border hover:border-primary rounded-xl cursor-pointer bg-card hover:bg-primary/5 transition-all p-2 text-center"
+                        className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-border hover:border-primary rounded-xl cursor-pointer bg-muted/20 hover:bg-primary/5 transition-all p-3 text-center"
                       >
                         {isVideoUploading ? (
                           <div className="flex items-center gap-2">
                             <Loader2 className="w-5 h-5 text-primary animate-spin" />
-                            <span className="text-xs font-bold text-primary">Uploading Video to Cloud...</span>
+                            <span className="text-xs font-bold text-primary">Uploading...</span>
                           </div>
                         ) : (
-                          <div className="flex flex-col items-center gap-1">
-                            <div className="flex items-center gap-1.5 text-primary">
-                              <Video className="w-5 h-5" />
-                              <span className="text-xs font-bold">
-                                {videoUrl ? 'Change Video File' : 'Click or Drop Video (MP4) Here'}
-                              </span>
-                            </div>
-                            <span className="text-[9px] text-text-muted">MP4, WebM, QuickTime • Max 15MB</span>
+                          <div className="flex items-center gap-1.5 text-primary">
+                            <Video className="w-5 h-5" />
+                            <span className="text-xs font-bold">
+                              {videoUrl ? 'Replace Video' : 'Drop or Click to Upload'}
+                            </span>
                           </div>
                         )}
                         <input
@@ -1476,7 +1523,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                       </label>
 
                       <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-text-muted block">Or Paste Direct MP4 Video Link:</label>
+                        <label className="text-[11px] font-bold text-text-secondary block">Or paste video URL:</label>
                         <input
                           type="url"
                           placeholder="https://.../video-loop.mp4"
@@ -1485,19 +1532,19 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                             setVideoUrl(e.target.value)
                             setPreviewMediaTab('video')
                           }}
-                          className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
+                          className="w-full bg-card border border-border px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
                         />
                       </div>
                     </div>
 
                     {/* Video Preview Box with Pause/Play Button */}
                     {videoUrl && (
-                      <div className="relative aspect-[3/1] max-h-40 w-full overflow-hidden rounded-xl border border-border bg-black mt-2">
+                      <div className="relative aspect-[3/1] max-h-44 w-full overflow-hidden rounded-xl border border-border bg-black mt-2">
                         <AdminVideoPreview src={videoUrl} className="object-contain w-full h-full" />
                         <button
                           type="button"
                           onClick={() => setVideoUrl('')}
-                          className="absolute top-2 right-2 z-40 px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold rounded-lg shadow cursor-pointer transition-all"
+                          className="absolute top-2 right-2 z-40 px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold rounded-lg shadow cursor-pointer transition-all"
                         >
                           Remove Video
                         </button>
@@ -1507,41 +1554,126 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                 )}
               </div>
 
-              {/* Banner Click Target */}
-              <div className="space-y-1 border-t border-border/40 pt-3">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                  On Banner Click: Where to go?
-                </label>
-                <select
-                  value={linkType}
-                  onChange={(e) => {
-                    const val = e.target.value as any
-                    setLinkType(val)
-                    if (val === 'category' && !selectedCategory && categories.length > 0) {
-                      setSelectedCategory(categories[0].slug)
-                    }
-                    if (val === 'product' && !selectedProduct && products.length > 0) {
-                      setSelectedProduct(products[0].slug)
-                    }
-                  }}
-                  className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-semibold"
-                >
-                  <option value="none">No Link (Just Display)</option>
-                  <option value="category">Open Store Category</option>
-                  <option value="product">Open Specific Product</option>
-                  <option value="custom">Custom Link / Route</option>
-                </select>
-              </div>
+              {/* Click Destination Box */}
+              <div className="md:col-span-2 space-y-3 p-4 bg-card border border-border rounded-2xl shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-text-primary flex items-center gap-1.5">
+                    <LinkIcon className="h-3.5 w-3.5 text-primary" />
+                    <span>Click Destination</span>
+                  </label>
+                  {linkType !== 'none' && (
+                    <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
+                      {linkType === 'restaurant' && selectedRestaurant && `🔗 /restaurant/${selectedRestaurant}`}
+                      {linkType === 'category' && selectedCategory && `🔗 /category/${selectedCategory}`}
+                      {linkType === 'product' && selectedProduct && `🔗 /product/${selectedProduct}`}
+                      {linkType === 'custom' && customLinkUrl && `🔗 ${customLinkUrl}`}
+                      {(!selectedRestaurant && !selectedCategory && !selectedProduct && !customLinkUrl) && 'Select an option below'}
+                    </span>
+                  )}
+                </div>
 
-              {/* Destination Selector */}
-              <div className="border-t border-border/40 pt-3">
+                {/* Modern Pill Buttons */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 bg-muted/40 p-1.5 rounded-xl border border-border">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLinkType('restaurant')
+                      if (!selectedRestaurant && restaurants.length > 0) setSelectedRestaurant(restaurants[0].slug)
+                    }}
+                    className={`py-2 px-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      linkType === 'restaurant'
+                        ? 'bg-rose-500 text-white shadow-xs font-black'
+                        : 'text-text-muted hover:text-text-primary hover:bg-card/60'
+                    }`}
+                  >
+                    🍽️ Restaurant
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLinkType('category')
+                      if (!selectedCategory && categories.length > 0) setSelectedCategory(categories[0].slug)
+                    }}
+                    className={`py-2 px-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      linkType === 'category'
+                        ? 'bg-emerald-600 text-white shadow-xs font-black'
+                        : 'text-text-muted hover:text-text-primary hover:bg-card/60'
+                    }`}
+                  >
+                    🏪 Category
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLinkType('product')
+                      if (!selectedProduct && products.length > 0) setSelectedProduct(products[0].slug)
+                    }}
+                    className={`py-2 px-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      linkType === 'product'
+                        ? 'bg-blue-600 text-white shadow-xs font-black'
+                        : 'text-text-muted hover:text-text-primary hover:bg-card/60'
+                    }`}
+                  >
+                    📦 Product
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setLinkType('custom')}
+                    className={`py-2 px-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      linkType === 'custom'
+                        ? 'bg-primary text-white shadow-xs font-black'
+                        : 'text-text-muted hover:text-text-primary hover:bg-card/60'
+                    }`}
+                  >
+                    🔗 Custom Link
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setLinkType('none')}
+                    className={`py-2 px-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      linkType === 'none'
+                        ? 'bg-zinc-700 text-white shadow-xs font-black'
+                        : 'text-text-muted hover:text-text-primary hover:bg-card/60'
+                    }`}
+                  >
+                    🚫 No Link
+                  </button>
+                </div>
+
+                {/* Sub-Selector based on linkType */}
+                {linkType === 'restaurant' && (
+                  <div className="space-y-1 pt-1">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
+                      Choose Partner Restaurant
+                    </label>
+                    <select
+                      value={selectedRestaurant}
+                      onChange={(e) => setSelectedRestaurant(e.target.value)}
+                      className="w-full bg-card border border-border px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-rose-500 font-bold text-text-primary"
+                    >
+                      <option value="">-- Choose Restaurant --</option>
+                      {restaurants.map((rest: any) => (
+                        <option key={rest.id} value={rest.slug}>
+                          {rest.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 {linkType === 'category' && (
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Select Category</label>
+                  <div className="space-y-1 pt-1">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
+                      Choose Grocery Category
+                    </label>
                     <select
                       value={selectedCategory}
                       onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold text-primary"
+                      className="w-full bg-card border border-border px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-emerald-500 font-bold text-text-primary"
                     >
                       <option value="">-- Choose Category --</option>
                       {categories.map((cat: any) => (
@@ -1554,12 +1686,14 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                 )}
 
                 {linkType === 'product' && (
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Select Product</label>
+                  <div className="space-y-1 pt-1">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
+                      Choose Specific Product
+                    </label>
                     <select
                       value={selectedProduct}
                       onChange={(e) => setSelectedProduct(e.target.value)}
-                      className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold text-primary"
+                      className="w-full bg-card border border-border px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500 font-bold text-text-primary"
                     >
                       <option value="">-- Choose Product --</option>
                       {products.map((prod: any) => (
@@ -1572,28 +1706,30 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                 )}
 
                 {linkType === 'custom' && (
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">Paste Link URL</label>
+                  <div className="space-y-1 pt-1">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
+                      Enter Custom Link or Search URL
+                    </label>
                     <input
                       type="text"
-                      placeholder="e.g. /restaurant/as-restaurant"
+                      placeholder="e.g. /search?q=icecream or https://..."
                       value={customLinkUrl}
                       onChange={(e) => setCustomLinkUrl(e.target.value)}
-                      className="w-full bg-card border border-border px-3 py-2 rounded-xl text-xs font-semibold"
+                      className="w-full bg-card border border-border px-3.5 py-2.5 rounded-xl text-xs font-semibold focus:outline-none focus:border-primary"
                     />
                   </div>
                 )}
 
                 {linkType === 'none' && (
-                  <div className="text-[11px] text-text-muted pt-2 font-medium">
-                    Banner show hoga lekin click par kahi nahi jayega.
-                  </div>
+                  <p className="text-[11px] text-text-muted font-medium italic pt-1">
+                    Banner will show without any tap action.
+                  </p>
                 )}
               </div>
 
-              {/* Active Switch */}
-              <div className="md:col-span-2 flex items-center justify-between pt-3 border-t border-border/40">
-                <label className="flex items-center gap-2 text-xs font-black text-text-primary cursor-pointer">
+              {/* Bottom Action Bar */}
+              <div className="md:col-span-2 flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border/40">
+                <label className="flex items-center gap-2 text-xs font-black text-text-primary cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={isActive}
@@ -1604,29 +1740,29 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                 </label>
 
                 <div className="flex items-center gap-2">
-                  {editingId && (
+                  {(editingId || title || imageUrl || videoUrl) && (
                     <button
                       type="button"
                       onClick={resetForm}
-                      className="px-3 py-1.5 border border-border rounded-xl text-xs font-bold hover:bg-muted transition-all cursor-pointer"
+                      className="px-3.5 py-2 border border-border rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary hover:bg-muted transition-all cursor-pointer"
                     >
-                      Cancel Edit
+                      {editingId ? 'Cancel Edit' : 'Clear Form'}
                     </button>
                   )}
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-black text-xs transition-all flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50 active:scale-98"
+                    className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-black text-xs transition-all flex items-center gap-2 shadow-md hover:shadow-lg cursor-pointer disabled:opacity-50 active:scale-98"
                   >
                     {submitting ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Saving...
+                        <span>Saving...</span>
                       </>
                     ) : (
                       <>
                         <Check className="h-4 w-4" />
-                        {editingId ? 'Save Changes' : '🚀 Save & Publish Banner'}
+                        <span>{editingId ? 'Save Changes' : (placement === 'brand_card' ? '🚀 Save & Publish Brand Card' : '🚀 Save & Publish Banner')}</span>
                       </>
                     )}
                   </button>

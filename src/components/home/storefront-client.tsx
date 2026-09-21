@@ -20,6 +20,7 @@ import { FloatingEmojis } from '@/components/shared/floating-emojis'
 
 import { FoodEditorialCuration } from '@/components/home/food-editorial-curation'
 import { HubComingSoon } from '@/components/home/hub-coming-soon'
+import { CuratedBrandOffersCarousel } from '@/components/home/curated-brand-offers-carousel'
 
 interface StorefrontClientProps {
   categories: Category[]
@@ -213,7 +214,7 @@ export function StorefrontClient({
             transition={{ duration: 0.3, ease: 'easeInOut' }}
             className="container mx-auto px-4 pt-4 flex flex-col gap-5 max-w-7xl relative z-10 min-h-[50vh]"
           >
-            <FoodBanner />
+            <CuratedBrandOffersCarousel initialBanners={promoBanners} mode="food" sectionTitle="Trending Restaurant & Cafe Specials" />
             {!restaurants || restaurants.length === 0 ? (
               <HubComingSoon city="Local Restaurants & Kitchens" />
             ) : (

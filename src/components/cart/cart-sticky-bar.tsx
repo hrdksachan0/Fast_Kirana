@@ -190,14 +190,9 @@ export function CartStickyBar() {
           }}
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.95 }}
-          className={cn(
-            "font-black text-[10px] tracking-wide px-3 py-1.5 rounded-full flex items-center gap-1 shadow-md transition-all cursor-pointer shrink-0 uppercase",
-            !isLocationServiceable
-              ? "bg-amber-400 text-black hover:bg-amber-300"
-              : "bg-white text-[#e20a22] hover:bg-red-50"
-          )}
+          className="font-black text-[10px] tracking-wide px-3.5 py-1.5 rounded-full flex items-center gap-1 shadow-md transition-all cursor-pointer shrink-0 uppercase bg-white text-[#e20a22] hover:bg-red-50"
         >
-          <span>{!isLocationServiceable ? "CHECK" : "VIEW CART"}</span>
+          <span>VIEW CART</span>
           <ChevronRight className="h-3 w-3 stroke-[3]" />
         </motion.button>
       </div>

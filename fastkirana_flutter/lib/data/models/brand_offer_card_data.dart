@@ -50,6 +50,9 @@ class CategoryCardData {
   /// Multi-stop gradient colors for backdrops
   final List<String>? gradientColorsHex;
 
+  /// Placement target: 'hero' | 'brand_card'
+  final String? placement;
+
   // Backward compatibility getters
   String get discountTitle => title;
   String? get primaryBrand => categoryName;
@@ -83,6 +86,7 @@ class CategoryCardData {
     this.gridImages,
     this.gridTitles,
     this.gradientColorsHex,
+    this.placement,
   });
 
   factory CategoryCardData.fromJson(Map<String, dynamic> rawJson) {
@@ -160,12 +164,14 @@ class CategoryCardData {
       gridImages: parseStringList(json['gridImages']),
       gridTitles: parseStringList(json['gridTitles']),
       gradientColorsHex: parseStringList(json['gradientColorsHex'] ?? json['gradientColors']),
+      placement: json['placement']?.toString(),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'placement': placement,
       'title': title,
       'discountTitle': title,
       'subtitle': subtitle,

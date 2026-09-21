@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { Sun, Utensils, Cookie, Moon, Coffee, ShieldAlert } from 'lucide-react'
-import { HeroBanner } from './hero-banner'
+import { CuratedBrandOffersCarousel } from './curated-brand-offers-carousel'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
 import { motion } from 'framer-motion'
@@ -37,15 +37,12 @@ function formatTime12h(timeStr?: string): string {
 }
 
 export function HeroArea({ initialBanners }: HeroAreaProps) {
-
   const { data: session, status } = useSession()
   const [mounted, setMounted] = useState(false)
   const [currentHour, setCurrentHour] = useState<number>(8) // Default to 8 AM (Morning) for SSR fallback
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
-  const cafeOpen = useUIStore((s) => s.cafeOpen)
   const settings = useUIStore((s) => s.settings) || {}
   const isReady = mounted && status !== 'loading' && Object.keys(settings).length > 0
-
 
   useEffect(() => {
     setMounted(true)
@@ -90,8 +87,8 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
     // 6 AM - 11 AM: Morning Mode
     if (currentHour >= 6 && currentHour < 11) {
       return {
-        greeting: `${welcome}${settings.hero_greeting_morning || "Good morning, fresh groceries ready! 🌅"}`,
-        subtitle: settings.hero_subtitle_morning_both_open || settings.hero_subtitle_morning_cafe_closed || 'Fresh milk, fruits, vegetables, and breakfast grocery essentials delivered to your doorstep in minutes.',
+        greeting: `${welcome}${settings.hero_greeting_morning || "Good morning, let's get breakfast! 🌅"}`,
+        subtitle: settings.hero_subtitle_morning_both_open || settings.hero_subtitle_morning_cafe_closed || 'Fresh milk, fruits, vegetables, and breakfast essentials delivered in minutes.',
         icon: <Sun className="h-4 w-4 text-amber-500 fill-amber-500/20 shrink-0" />,
         modeLabel: '⚡ GROCERY MART • ONLINE',
         gradient: 'from-amber-100/50 via-yellow-50/40 to-orange-100/30',
@@ -211,10 +208,8 @@ export function HeroArea({ initialBanners }: HeroAreaProps) {
         </div>
       </div>
 
-      {/* Standalone Hero Banner Slider */}
-      <div className="w-full relative z-10">
-        <HeroBanner initialBanners={initialBanners} />
-      </div>
+      {/* Curated Brand Offers Carousel (Collapses completely to 0 height when empty) */}
+      <CuratedBrandOffersCarousel initialBanners={initialBanners} mode="grocery" />
     </div>
   )
 }

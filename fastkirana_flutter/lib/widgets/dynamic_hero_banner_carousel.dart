@@ -84,6 +84,16 @@ class DynamicHeroBannerCarousel extends ConsumerWidget {
       );
       return;
     }
+
+    // 4. Product Link (/product/{slug})
+    if (link.startsWith('/product/')) {
+      final slug = link.replaceFirst('/product/', '').trim();
+      Navigator.push(
+        context,
+        FadeScaleRoute(page: SearchScreen(initialQuery: slug.replaceAll('-', ' '))),
+      );
+      return;
+    }
   }
 
   @override
@@ -92,54 +102,23 @@ class DynamicHeroBannerCarousel extends ConsumerWidget {
 
     return offersAsync.when(
       data: (cards) {
-        final activeCards = cards.isNotEmpty
-            ? cards
-            : ((type == 'food' || type == 'cafe')
-                    ? BannerRepository.defaultFoodBanners
-                    : BannerRepository.defaultGroceryBanners)
-                .map((b) => CategoryCardData.fromJson(b.toJson()))
-                .toList();
+        // Zero screen collapse: If zero banners, completely collapse to 0 height
+        if (cards.isEmpty) {
+          return const SizedBox.shrink();
+        }
 
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: CuratedBrandOffersCarousel(
-            items: activeCards,
+            items: cards,
             cardWidth: 260,
             cardHeight: 380,
             onCardTap: (card) => _handleCardTap(context, ref, card),
           ),
         );
       },
-      loading: () => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Container(
-          height: 180,
-          decoration: BoxDecoration(
-            color: const Color(0xFF18181B),
-            borderRadius: BorderRadius.circular(22),
-          ),
-          child: const Center(
-            child: CircularProgressIndicator(strokeWidth: 2, color: AppDesignSystem.primary),
-          ),
-        ),
-      ),
-      error: (_, __) {
-        final fallbackBanners = (type == 'food' || type == 'cafe')
-            ? BannerRepository.defaultFoodBanners
-            : BannerRepository.defaultGroceryBanners;
-        final fallbackCards = fallbackBanners
-            .map((b) => CategoryCardData.fromJson(b.toJson()))
-            .toList();
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: CuratedBrandOffersCarousel(
-            items: fallbackCards,
-            cardWidth: 260,
-            cardHeight: 380,
-            onCardTap: (card) => _handleCardTap(context, ref, card),
-          ),
-        );
-      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 }

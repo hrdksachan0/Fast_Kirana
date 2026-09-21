@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Star, Heart, MoreVertical, Leaf } from 'lucide-react'
+import { Star, Heart, Clock, MapPin, Bike, Sparkles, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Restaurant } from '@/types'
 import { motion } from 'framer-motion'
@@ -26,13 +26,30 @@ export function RestaurantCard({ restaurant, index = 0 }: RestaurantCardProps) {
   }
 
   const operatingStatus = checkStoreOperatingStatus(restaurant)
-  const offerText = restaurant.discountOffer || restaurant.discountBadge || 'FLAT 5% OFF'
+  const offerText = restaurant.discountOffer || restaurant.discountBadge || '50% OFF UPTO ₹100'
+  const ratingVal = restaurant.rating > 0 ? restaurant.rating : 4.3
+
+  // Resolve cuisines
+  const cuisinesList = restaurant.cuisineTags && restaurant.cuisineTags.length > 0
+    ? restaurant.cuisineTags.slice(0, 3).join(', ')
+    : 'North Indian, Fast Food, Biryani'
+
+  // Approximate cost
+  const costForOne = '₹200 for one'
+
+  // Image resolution
+  const effectiveImage = restaurant.bannerUrl || 
+    (restaurant.slug?.includes('as-') || restaurant.name?.toLowerCase().includes('a.s') 
+      ? '/as_restaurant_banner.webp' 
+      : restaurant.slug?.includes('wedson') 
+        ? '/wedson_restaurant_banner.webp' 
+        : restaurant.logoUrl || 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=800&q=80')
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, delay: index * 0.03, ease: 'easeOut' }}
+      transition={{ duration: 0.28, delay: index * 0.04, ease: 'easeOut' }}
     >
       <Link
         href={`/food/${restaurant.slug}`}
@@ -40,125 +57,121 @@ export function RestaurantCard({ restaurant, index = 0 }: RestaurantCardProps) {
         className="block group"
       >
         <div className={cn(
-          "relative bg-white dark:bg-zinc-900/90 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80",
-          "shadow-2xs hover:shadow-md dark:shadow-none",
-          "transition-all duration-300 overflow-hidden",
-          !operatingStatus.isOpen && "opacity-60"
+          "relative bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80",
+          "shadow-xs hover:shadow-xl hover:border-zinc-300 dark:hover:border-zinc-700",
+          "transition-all duration-300 overflow-hidden flex flex-col -translate-y-0 hover:-translate-y-1",
+          !operatingStatus.isOpen && "opacity-75"
         )}>
-          <div className="flex gap-3 p-3">
-            {/* Left: Restaurant Image with Offer Overlay */}
-            <div className="relative w-[110px] h-[130px] sm:w-[140px] sm:h-[145px] flex-shrink-0 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800">
-              {(() => {
-                const effectiveImage = restaurant.bannerUrl || 
-                  (restaurant.slug?.includes('as-') || restaurant.name?.toLowerCase().includes('a.s') 
-                    ? '/as_restaurant_banner.webp' 
-                    : restaurant.slug?.includes('wedson') 
-                      ? '/wedson_restaurant_banner.webp' 
-                      : restaurant.logoUrl || '');
+          {/* 1. TOP HERO IMAGE BANNER (Full Width, 16:9 ~ 200px) */}
+          <div className="relative w-full h-48 sm:h-52 overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+            <Image
+              src={effectiveImage}
+              alt={restaurant.name}
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            />
 
-                return effectiveImage ? (
-                  <Image
-                    src={effectiveImage}
-                    alt={restaurant.name}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    sizes="140px"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-4xl bg-gradient-to-br from-orange-50 to-amber-100 dark:from-zinc-800 dark:to-zinc-700">
-                    🍽️
-                  </div>
-                )
-              })()}
+            {/* Gradient Overlays for Readability */}
+            <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/85 via-black/40 to-transparent pointer-events-none" />
+            <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-black/40 to-transparent pointer-events-none" />
 
-              {/* Favourite Heart */}
-              <button
-                onClick={handleFavourite}
-                className="absolute top-1.5 right-1.5 z-10"
-              >
-                <Heart
-                  size={19}
-                  className={cn(
-                    "drop-shadow-md transition-all duration-200",
-                    isFavourite
-                      ? "fill-red-500 text-red-500 scale-110"
-                      : "fill-black/40 text-white stroke-[2]"
-                  )}
-                />
-              </button>
-
-              {/* Closed Badge with Schedule */}
-              {!operatingStatus.isOpen && (
-                <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-2 text-center">
-                  <span className="bg-rose-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow-md">
-                    {operatingStatus.formattedScheduleStr || 'Closed'}
-                  </span>
-                </div>
+            {/* Top-Left Badges: Pure Veg / Top Rated */}
+            <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 flex-wrap">
+              {restaurant.isPureVeg && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xs text-[10px] font-extrabold text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 shadow-xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                  Pure Veg
+                </span>
+              )}
+              {ratingVal >= 4.5 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500 text-white text-[9px] font-black uppercase tracking-wider shadow-xs">
+                  🏆 Top Rated
+                </span>
               )}
             </div>
 
-            {/* Right: Restaurant Info */}
-            <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-              <div className="space-y-1.5">
-                
-                {/* Full Width Restaurant Name */}
-                <div className="pr-5">
-                  <h3 className="text-sm sm:text-base font-black text-text-primary leading-tight group-hover:text-orange-600 transition-colors line-clamp-1">
-                    {restaurant.name}
-                  </h3>
-                </div>
+            {/* Top-Right: Favorite Heart Button */}
+            <button
+              onClick={handleFavourite}
+              aria-label="Add to favorites"
+              className="absolute top-2.5 right-2.5 z-10 w-8 h-8 rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-md flex items-center justify-center transition-all cursor-pointer shadow-sm"
+            >
+              <Heart
+                size={17}
+                className={cn(
+                  "drop-shadow transition-all duration-200",
+                  isFavourite
+                    ? "fill-red-500 text-red-500 scale-110"
+                    : "fill-black/30 text-white stroke-[2]"
+                )}
+              />
+            </button>
 
-                {/* Badges Row: Top Rated & Pure Veg */}
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/25 rounded-lg text-[9px] font-black uppercase tracking-wider shrink-0">
-                    🏆 TOP RATED
-                  </span>
-                  {restaurant.isPureVeg && (
-                    <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-lg uppercase tracking-wide shrink-0">
-                      <Leaf size={10} /> Pure Veg
-                    </span>
-                  )}
-                </div>
 
-                {/* ONLY Location (Cuisine text removed per request) */}
-                <div className="flex items-center gap-1 text-[11px] font-semibold text-text-secondary dark:text-zinc-400 line-clamp-1">
-                  <span>📍</span>
-                  <span className="truncate">{restaurant.address || restaurant.city || 'Ghatampur Market'}</span>
-                </div>
 
-                {/* Offer Banner Badge */}
-                <div className="pt-0.5">
-                  <span className="inline-block text-[10px] font-black text-orange-600 dark:text-orange-400 bg-orange-500/10 px-2.5 py-0.5 rounded-lg border border-orange-500/25 leading-tight line-clamp-1">
-                    🔥 {offerText}
-                  </span>
-                </div>
-
-              </div>
-
-              {/* Bottom Row: Fresh Prep + Explore Menu Button */}
-              <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-border/40 mt-1.5">
-                <span className="text-[10px] font-bold text-text-muted flex items-center gap-1 shrink-0">
-                  ⚡ 30m Prep
+            {/* Closed Overlay */}
+            {!operatingStatus.isOpen && (
+              <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px] flex flex-col items-center justify-center p-3 text-center z-20">
+                <span className="bg-rose-600 text-white text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-lg">
+                  Closed Now
                 </span>
+                <span className="text-[11px] text-zinc-200 mt-1 font-semibold">
+                  Opens {operatingStatus.formattedScheduleStr || 'Tomorrow'}
+                </span>
+              </div>
+            )}
+          </div>
 
-                <div className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-xs group-hover:scale-105 shrink-0 cursor-pointer">
-                  <span>Explore</span>
-                  <span>→</span>
+          {/* 2. CARD CONTENT DETAILS (Zomato Hierarchy) */}
+          <div className="p-3.5 sm:p-4 flex flex-col flex-1 justify-between gap-1.5">
+            <div>
+              {/* Row 1: Restaurant Name + Signature Green Rating Pill */}
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-base sm:text-[17px] font-black text-zinc-900 dark:text-zinc-100 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors truncate tracking-tight">
+                  {restaurant.name}
+                </h3>
+                
+                {/* Zomato Green Rating Badge */}
+                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#24963F] text-white font-black text-xs shadow-xs shrink-0 tracking-wide">
+                  <span>{ratingVal.toFixed(1)}</span>
+                  <Star size={10} className="fill-white stroke-none" />
                 </div>
               </div>
 
+              {/* Row 2: Cuisines + Price for One */}
+              <div className="flex items-center justify-between text-xs sm:text-[13px] text-zinc-500 dark:text-zinc-400 font-medium mt-1">
+                <span className="truncate pr-2">{cuisinesList}</span>
+                <span className="shrink-0 text-zinc-600 dark:text-zinc-300 font-semibold">{costForOne}</span>
+              </div>
+
+              {/* Row 3: Location / Area */}
+              <div className="flex items-center gap-1 text-[11px] sm:text-xs text-zinc-400 dark:text-zinc-500 font-medium truncate mt-1">
+                <MapPin size={12} className="text-zinc-400 shrink-0" />
+                <span className="truncate">{restaurant.address || restaurant.city || 'Ghatampur Market'}</span>
+              </div>
             </div>
 
-            {/* 3-dot Menu */}
-            <button
-              onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
-              className="absolute top-2 right-2 p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-            >
-              <MoreVertical size={14} />
-            </button>
+            {/* Dashed Separator */}
+            <div className="border-t border-dashed border-zinc-200 dark:border-zinc-800 my-1" />
+
+            {/* Row 4: Zomato Footer Strip (Safety / Free Delivery & Menu CTA) */}
+            <div className="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">
+              <div className="flex items-center gap-1.5 truncate">
+                <Bike size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="truncate font-semibold text-zinc-700 dark:text-zinc-300">
+                  Free Delivery above ₹149
+                </span>
+              </div>
+
+              <span className="font-bold text-red-600 dark:text-red-400 group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5 shrink-0 pl-2">
+                Menu →
+              </span>
+            </div>
           </div>
         </div>
       </Link>
     </motion.div>
   )
 }
+
