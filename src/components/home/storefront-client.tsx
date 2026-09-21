@@ -117,9 +117,9 @@ export function StorefrontClient({
       <FloatingEmojis type={activeTab === 'food' ? 'food' : 'grocery'} />
 
       {/* Clean & Spacious Top Store Mode Switcher (Scrolls away naturally so middle screen stays 100% open) */}
-      <div className="w-full flex items-center justify-center py-1.5 sm:py-2.5 px-3 pointer-events-auto">
+      <div className="w-full flex items-center justify-center pt-3 sm:pt-4 pb-2 mt-1 sm:mt-2 px-4 pointer-events-auto">
         <div 
-          className="relative flex items-center w-full max-w-[380px] h-[52px] sm:h-[58px] p-1.5 rounded-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl shadow-[0_12px_36px_-8px_rgba(0,0,0,0.16),0_4px_16px_rgba(0,0,0,0.08)] dark:shadow-[0_16px_40px_-10px_rgba(0,0,0,0.85)] border-2 border-zinc-200/90 dark:border-zinc-800/90" 
+          className="relative flex items-center w-full max-w-[420px] h-[58px] sm:h-[64px] p-2 rounded-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl shadow-[0_14px_38px_-8px_rgba(0,0,0,0.18),0_4px_16px_rgba(0,0,0,0.08)] dark:shadow-[0_16px_40px_-10px_rgba(0,0,0,0.85)] border-2 border-zinc-200/90 dark:border-zinc-800/90" 
           role="tablist" 
           aria-label="Store mode"
         >
@@ -128,7 +128,7 @@ export function StorefrontClient({
             onClick={() => handleTabChange('grocery')}
             whileTap={{ scale: 0.96 }}
             className={cn(
-              "relative z-10 flex items-center justify-center rounded-full cursor-pointer outline-none transition-all duration-300 h-full flex-1 select-none border-none bg-transparent px-3 group",
+              "relative z-10 flex items-center justify-center rounded-full cursor-pointer outline-none transition-all duration-300 h-full flex-1 select-none border-none bg-transparent px-3.5 group",
               activeTab === 'grocery' ? "" : "hover:text-zinc-900 dark:hover:text-white"
             )}
             role="tab"
@@ -144,12 +144,12 @@ export function StorefrontClient({
             <div className={cn("relative z-10 flex items-center gap-2.5 transition-colors duration-300", activeTab === 'grocery' ? "text-white" : "text-zinc-600 dark:text-zinc-400")}>
               {/* High-Contrast White Circle for Active Icon */}
               <div className={cn(
-                "w-8.5 h-8.5 sm:w-9.5 sm:h-9.5 rounded-full flex items-center justify-center shrink-0 shadow-xs transition-all duration-300 text-lg sm:text-xl select-none",
+                "w-9.5 h-9.5 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 shadow-xs transition-all duration-300 text-xl sm:text-2xl select-none",
                 activeTab === 'grocery' ? "bg-white text-rose-600 shadow-md scale-105" : "bg-zinc-100 dark:bg-zinc-900"
               )}>
                 🛍️
               </div>
-              <span className="text-[16px] sm:text-[18px] font-black tracking-tight leading-none">Grocery</span>
+              <span className="text-[17px] sm:text-[19px] font-black tracking-tight leading-none">Grocery</span>
             </div>
           </motion.button>
 
@@ -158,7 +158,7 @@ export function StorefrontClient({
             onClick={() => handleTabChange('food')}
             whileTap={{ scale: 0.96 }}
             className={cn(
-              "relative z-10 flex items-center justify-center rounded-full cursor-pointer outline-none transition-all duration-300 h-full flex-1 select-none border-none bg-transparent px-3 group",
+              "relative z-10 flex items-center justify-center rounded-full cursor-pointer outline-none transition-all duration-300 h-full flex-1 select-none border-none bg-transparent px-3.5 group",
               activeTab === 'food' ? "" : "hover:text-zinc-900 dark:hover:text-white"
             )}
             role="tab"
@@ -174,12 +174,12 @@ export function StorefrontClient({
             <div className={cn("relative z-10 flex items-center gap-2.5 transition-colors duration-300", activeTab === 'food' ? "text-white" : "text-zinc-600 dark:text-zinc-400")}>
               {/* High-Contrast White Circle for Active Icon */}
               <div className={cn(
-                "w-8.5 h-8.5 sm:w-9.5 sm:h-9.5 rounded-full flex items-center justify-center shrink-0 shadow-xs transition-all duration-300 text-lg sm:text-xl select-none",
+                "w-9.5 h-9.5 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 shadow-xs transition-all duration-300 text-xl sm:text-2xl select-none",
                 activeTab === 'food' ? "bg-white text-orange-600 shadow-md scale-105" : "bg-zinc-100 dark:bg-zinc-900"
               )}>
                 🍔
               </div>
-              <span className="text-[16px] sm:text-[18px] font-black tracking-tight leading-none">Food</span>
+              <span className="text-[17px] sm:text-[19px] font-black tracking-tight leading-none">Food</span>
             </div>
           </motion.button>
         </div>
