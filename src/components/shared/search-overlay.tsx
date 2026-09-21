@@ -496,7 +496,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                                   </span>
                                   <button
                                     onClick={() => updateQuantity(product.id, product.name, quantity + 1)}
-                                    disabled={quantity >= product.stock || quantity >= getProductLimit(product)}
+                                    disabled={product.stock > 0 && quantity >= product.stock}
                                     className="flex-1 flex h-full items-center justify-center hover:bg-black/10 active:scale-90 transition-all disabled:opacity-50 cursor-pointer"
                                     aria-label="Increase quantity"
                                   >

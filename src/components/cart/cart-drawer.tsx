@@ -306,8 +306,7 @@ export function CartDrawer() {
   const total = activeSubtotal + deliveryFee + miscFee
 
   const hasInventoryIssues = items.some((item) => {
-    const limit = getProductLimit(item.product)
-    return item.quantity > item.product.stock || item.product.stock <= 0 || item.product.isAvailable === false || item.quantity > limit
+    return (item.product.stock > 0 && item.quantity > item.product.stock) || item.product.stock <= 0 || item.product.isAvailable === false
   })
   
   const isItemClosed = (product: any) => {
@@ -340,15 +339,11 @@ export function CartDrawer() {
   const handleAutoAdjust = () => {
     let adjustedCount = 0
     items.forEach((item) => {
-      const limit = getProductLimit(item.product)
       if (item.product.isAvailable === false || item.product.stock <= 0) {
         removeItem(item.product.id, item.product.name)
         adjustedCount++
-      } else if (item.quantity > limit) {
-        updateQuantity(item.product.id, item.product.name, Math.min(item.product.stock, limit))
-        adjustedCount++
-      } else if (item.quantity > item.product.stock) {
-        updateQuantity(item.product.id, item.product.name, Math.min(item.product.stock, limit))
+      } else if (item.product.stock > 0 && item.quantity > item.product.stock) {
+        updateQuantity(item.product.id, item.product.name, item.product.stock)
         adjustedCount++
       }
     })
@@ -533,11 +528,7 @@ export function CartDrawer() {
                 <p className="text-[9px] font-black text-red-550 mt-1.5 flex items-center gap-1">
                   <span>❌</span> Out of Stock
                 </p>
-              ) : item.quantity > getProductLimit(item.product) ? (
-                <p className="text-[9px] font-black text-red-550 mt-1.5 flex items-center gap-1">
-                  <span>⚠️</span> Max limit is {getProductLimit(item.product)} units
-                </p>
-              ) : item.quantity > item.product.stock ? (
+              ) : item.product.stock > 0 && item.quantity > item.product.stock ? (
                 <p className="text-[9px] font-black text-amber-600 dark:text-amber-400 mt-1.5 flex items-center gap-1">
                   <span>⚠️</span> Only {item.product.stock} available
                 </p>
@@ -563,22 +554,17 @@ export function CartDrawer() {
                 {item.quantity}
               </span>
               <button
-                disabled={item.quantity >= item.product.stock || item.quantity >= getProductLimit(item.product) || isStoreClosed}
+                disabled={(item.product.stock > 0 && item.quantity >= item.product.stock) || isStoreClosed}
                 onClick={() => {
-                  const limit = getProductLimit(item.product)
-                  if (item.quantity >= limit) {
-                    toast.error(`Maximum order limit for ${item.product.name} is ${limit} units`)
+                  if (item.product.stock > 0 && item.quantity >= item.product.stock) {
+                    toast.error(`Only ${item.product.stock} units available in stock!`)
                     return
                   }
-                  if (item.quantity < item.product.stock) {
-                    updateQuantity(item.product.id, item.product.name, item.quantity + 1)
-                  } else {
-                    toast.error(`Only ${item.product.stock} units available in stock!`)
-                  }
+                  updateQuantity(item.product.id, item.product.name, item.quantity + 1)
                 }}
                 className={cn(
                   "flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-white hover:bg-primary/95 transition-colors cursor-pointer active:scale-90 shadow-2xs",
-                  (item.quantity >= item.product.stock || item.quantity >= getProductLimit(item.product) || isStoreClosed) && "opacity-50 cursor-not-allowed bg-zinc-200 dark:bg-zinc-700 text-zinc-400"
+                  ((item.product.stock > 0 && item.quantity >= item.product.stock) || isStoreClosed) && "opacity-50 cursor-not-allowed bg-zinc-200 dark:bg-zinc-700 text-zinc-400"
                 )}
                 aria-label="Increase quantity"
               >

@@ -599,7 +599,7 @@ function ProductCardComponent({ product, isCompact = false }: ProductCardProps) 
                     whileTap={{ scale: 0.85 }}
                     transition={{ type: 'spring', stiffness: 400, damping: 15 }}
                     onClick={handleIncrement}
-                    disabled={quantity >= resolvedStock || quantity >= getProductLimit(product) || isStoreClosed}
+                    disabled={(resolvedStock > 0 && quantity >= resolvedStock) || isStoreClosed}
                     className="flex-1 flex h-full items-center justify-center hover:bg-black/15 transition-all disabled:opacity-50 cursor-pointer"
                   >
                     <Plus className="h-2.5 w-2.5 stroke-[3]" />

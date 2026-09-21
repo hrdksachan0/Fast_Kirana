@@ -100,12 +100,11 @@ export function useCart() {
       return
     }
 
-    const limit = getProductLimit(product)
     const currentQty = storeState.getItemQuantity(product.id)
-    if (currentQty >= limit) {
+    if (product.stock > 0 && currentQty >= product.stock) {
       triggerHaptic('warning')
-      toast.error(`Maximum limit of ${limit} units reached for ${product.name}`, {
-        id: `cart-max-limit-${product.id}`,
+      toast.error(`Only ${product.stock} units available in stock for ${product.name}`, {
+        id: `cart-max-stock-${product.id}`,
       })
       return
     }
@@ -128,15 +127,7 @@ export function useCart() {
       const { groceryMartOpen, cafeOpen, restaurantOpen, categoryStatus } = useUIStore.getState()
       const item = storeState.items.find((i) => i?.product?.id === productId)
       if (item && item.product) {
-        const limit = getProductLimit(item.product)
-        if (quantity > limit) {
-          triggerHaptic('warning')
-          toast.error(`Maximum limit of ${limit} units reached for ${name}`, {
-            id: `cart-max-limit-${productId}`,
-          })
-          return
-        }
-        if (quantity > item.product.stock) {
+        if (item.product.stock > 0 && quantity > item.product.stock) {
           triggerHaptic('warning')
           toast.error(`Cannot add more. Only ${item.product.stock} units available in stock.`)
           return

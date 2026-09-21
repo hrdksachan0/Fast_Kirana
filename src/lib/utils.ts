@@ -239,10 +239,7 @@ export function getProductType(p: any): 'RESTAURANT' | 'CAFE' | 'BYPASS' | 'GROC
 }
 
 export function getProductLimit(p: any): number {
-  const type = getProductType(p)
-  if (type === 'RESTAURANT') return 20
-  if (type === 'CAFE') return 10
-  return 10 // GROCERY / BYPASS
+  return 9999 // Unlimited — no artificial quantity caps
 }
 
 import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'

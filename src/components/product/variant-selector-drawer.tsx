@@ -250,7 +250,7 @@ function GroceryVariantCard({
             </span>
             <button
               onClick={handleIncrement}
-              disabled={quantity >= resolvedStock || quantity >= getProductLimit(product)}
+              disabled={resolvedStock > 0 && quantity >= resolvedStock}
               className="flex-1 flex h-full items-center justify-center hover:bg-black/10 active:scale-90 transition-all disabled:opacity-50 cursor-pointer"
               aria-label="Increase quantity"
             >

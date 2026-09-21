@@ -117,15 +117,13 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      const limit = getProductLimit(dbProduct)
-      const maxAllowed = Math.min(dbStock, limit)
-      if (clientQty > maxAllowed) {
+      if (dbStock > 0 && clientQty > dbStock) {
         updates.push({
           type: 'QUANTITY_CAP',
           productId: clientProduct.id,
           name: clientProduct.name,
           oldVal: clientQty,
-          newVal: maxAllowed,
+          newVal: dbStock,
         })
       }
 

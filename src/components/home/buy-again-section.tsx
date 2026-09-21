@@ -300,7 +300,7 @@ export function BuyAgainSection() {
                             <motion.button
                               whileTap={{ scale: 0.82 }}
                               onClick={(e) => handleIncrement(e, item, quantity)}
-                              disabled={quantity >= stock || quantity >= getProductLimit(item) || isStoreClosed}
+                              disabled={(stock > 0 && quantity >= stock) || isStoreClosed}
                               className="flex-1 flex h-full items-center justify-center hover:bg-black/10 transition-all disabled:opacity-50 cursor-pointer"
                               aria-label="Increase quantity"
                             >

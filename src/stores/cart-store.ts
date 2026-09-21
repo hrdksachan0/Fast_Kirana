@@ -68,14 +68,14 @@ export const useCartStore = create<CartState>()(
 
       addItem: (product: CartProduct) => {
         if (!product || product.stock <= 0 || product.isAvailable === false) return
-        const limit = getProductLimit(product)
         set((state) => {
           const existing = state.items.find((item) => item?.product?.id === product.id)
           if (existing) {
+            const maxAllowed = product.stock > 0 ? product.stock : 9999
             return {
               items: state.items.map((item) =>
                 item?.product?.id === product.id
-                  ? { ...item, quantity: Math.min(item.quantity + 1, item.product.stock, limit) }
+                  ? { ...item, quantity: Math.min(item.quantity + 1, maxAllowed) }
                   : item
               ),
             }
@@ -98,8 +98,8 @@ export const useCartStore = create<CartState>()(
           return {
             items: state.items.map((item) => {
               if (item?.product?.id === productId) {
-                const limit = getProductLimit(item.product)
-                return { ...item, quantity: Math.min(quantity, item.product.stock, limit) }
+                const maxAllowed = item.product.stock > 0 ? item.product.stock : 9999
+                return { ...item, quantity: Math.min(quantity, maxAllowed) }
               }
               return item
             }),
@@ -148,13 +148,9 @@ export const useCartStore = create<CartState>()(
             .map((item) => {
               if (item.product.id !== productId) return item
               const newProduct = { ...item.product, ...updates }
-              const limit = isCafeProduct(newProduct) ? 10 : 5
               let newQty = item.quantity
-              if (updates.stock !== undefined && newQty > updates.stock) {
+              if (updates.stock !== undefined && updates.stock > 0 && newQty > updates.stock) {
                 newQty = updates.stock
-              }
-              if (newQty > limit) {
-                newQty = limit
               }
               return {
                 product: newProduct,

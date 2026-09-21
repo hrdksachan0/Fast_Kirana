@@ -165,7 +165,7 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
             <span className="text-base select-none">{quantity}</span>
             <button
               onClick={() => updateQuantity(product.id, product.name, quantity + 1)}
-              disabled={quantity >= resolvedStock || quantity >= getProductLimit(product) || isStoreClosed}
+              disabled={(resolvedStock > 0 && quantity >= resolvedStock) || isStoreClosed}
               className="flex-grow h-full flex items-center justify-center rounded-r-xl hover:bg-accent-dark active:scale-90 transition-colors disabled:opacity-50 cursor-pointer"
               aria-label="Increase quantity"
             >
