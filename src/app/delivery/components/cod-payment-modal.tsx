@@ -33,10 +33,8 @@ export default function CodPaymentModal({
   const [hasSplitOnline, setHasSplitOnline] = useState(false)
   const [cashPortionInput, setCashPortionInput] = useState('')
 
-  if (!order) return null
-
-  const orderTotal = (order.total || 0) + (order.companionOrder ? (order.companionOrder.total || 0) : 0)
-  const displayId = order.readableId || order.id.slice(0, 8)
+  const orderTotal = (order?.total || 0) + (order?.companionOrder ? (order.companionOrder.total || 0) : 0)
+  const displayId = order?.readableId || order?.id?.slice(0, 8) || ''
 
   // ── Cash Calculator Logic ──
   const cashReceived = parseFloat(cashReceivedInput) || 0
@@ -50,6 +48,7 @@ export default function CodPaymentModal({
 
   // ── Smart Quick-select Denominations ──
   const quickPresets = useMemo(() => {
+    if (!order) return []
     const presets: { label: string; value: number; color: string }[] = []
     // Exact amount
     presets.push({ label: `₹${orderTotal} exact`, value: orderTotal, color: 'amber' })
@@ -72,10 +71,11 @@ export default function CodPaymentModal({
       }
     }
     return presets.slice(0, 6)
-  }, [orderTotal])
+  }, [order, orderTotal])
 
   // ── Split Quick Presets ──
   const splitPresets = useMemo(() => {
+    if (!order) return []
     const presets: { label: string; value: number }[] = []
     const steps = [100, 200, 300, 500]
     for (const s of steps) {
@@ -84,7 +84,7 @@ export default function CodPaymentModal({
       }
     }
     return presets.slice(0, 4)
-  }, [orderTotal])
+  }, [order, orderTotal])
 
   // ── Wallet Limit Check ──
   const wouldExceedLimit = walletInfo
@@ -93,6 +93,8 @@ export default function CodPaymentModal({
   const afterCashInHand = walletInfo
     ? walletInfo.cashInHand + netCashInHand
     : null
+
+  if (!order) return null
 
   // ── Confirm Handler ──
   const handleConfirm = () => {

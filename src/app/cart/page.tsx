@@ -314,59 +314,6 @@ export default function CartPage() {
     }
   }
 
-  if (items.length === 0) {
-    return (
-      <div className="container mx-auto px-4 py-16 text-center max-w-md space-y-6">
-        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary/5 text-primary shadow-inner mx-auto">
-          <ShoppingBag size={48} className="stroke-[1.5]" />
-        </div>
-        <div>
-          <h1 className="text-xl font-extrabold text-text-primary">Your cart is empty</h1>
-          <p className="text-xs text-text-secondary mt-1">
-            Fill it with fresh fruits, dairy, snacks, and daily essentials from our local stores.
-          </p>
-        </div>
-        <Link href="/" className="inline-block bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-primary-dark transition-all">
-          Explore Products
-        </Link>
-      </div>
-    )
-  }
-
-  const hasInventoryIssues = items.some(
-    (item) => item.quantity > item.product.stock || item.product.stock <= 0 || item.product.isAvailable === false
-  )
-  const isItemClosed = (product: any) => {
-    return isProductStoreClosed(
-      product,
-      { groceryMartOpen, cafeOpen, restaurantOpen, ...settings },
-      categoryStatus
-    )
-  }
-
-  const hasClosedGroceryItems = groceryItems.some(item => isItemClosed(item.product))
-  const hasClosedCafeItems = cafeItems.some(item => isItemClosed(item.product))
-  const isBelowMinOrder = false
-  const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems || hasInventoryIssues
-
-  const handleAutoAdjust = () => {
-    let adjustedCount = 0
-    items.forEach((item) => {
-      if (item.product.isAvailable === false || item.product.stock <= 0) {
-        removeItem(item.product.id, item.product.name)
-        adjustedCount++
-      } else if (item.quantity > item.product.stock) {
-        updateQuantity(item.product.id, item.product.name, item.product.stock)
-        adjustedCount++
-      }
-    })
-    if (adjustedCount > 0) {
-      toast.success(`Automatically adjusted ${adjustedCount} item(s) to match available stock!`, {
-        id: 'cart-auto-adjust-success',
-      })
-    }
-  }
-
   // Resolve free items from coupon
   const freeItemsMap = useMemo(() => {
     const map = new Map<string, { freeQty: number; badgeText?: string }>()
@@ -424,6 +371,59 @@ export default function CartPage() {
 
     return map
   }, [appliedCoupon, items, cafeItems])
+
+  if (items.length === 0) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center max-w-md space-y-6">
+        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary/5 text-primary shadow-inner mx-auto">
+          <ShoppingBag size={48} className="stroke-[1.5]" />
+        </div>
+        <div>
+          <h1 className="text-xl font-extrabold text-text-primary">Your cart is empty</h1>
+          <p className="text-xs text-text-secondary mt-1">
+            Fill it with fresh fruits, dairy, snacks, and daily essentials from our local stores.
+          </p>
+        </div>
+        <Link href="/" className="inline-block bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-primary-dark transition-all">
+          Explore Products
+        </Link>
+      </div>
+    )
+  }
+
+  const hasInventoryIssues = items.some(
+    (item) => item.quantity > item.product.stock || item.product.stock <= 0 || item.product.isAvailable === false
+  )
+  const isItemClosed = (product: any) => {
+    return isProductStoreClosed(
+      product,
+      { groceryMartOpen, cafeOpen, restaurantOpen, ...settings },
+      categoryStatus
+    )
+  }
+
+  const hasClosedGroceryItems = groceryItems.some(item => isItemClosed(item.product))
+  const hasClosedCafeItems = cafeItems.some(item => isItemClosed(item.product))
+  const isBelowMinOrder = false
+  const isCheckoutBlocked = hasClosedGroceryItems || hasClosedCafeItems || hasInventoryIssues
+
+  const handleAutoAdjust = () => {
+    let adjustedCount = 0
+    items.forEach((item) => {
+      if (item.product.isAvailable === false || item.product.stock <= 0) {
+        removeItem(item.product.id, item.product.name)
+        adjustedCount++
+      } else if (item.quantity > item.product.stock) {
+        updateQuantity(item.product.id, item.product.name, item.product.stock)
+        adjustedCount++
+      }
+    })
+    if (adjustedCount > 0) {
+      toast.success(`Automatically adjusted ${adjustedCount} item(s) to match available stock!`, {
+        id: 'cart-auto-adjust-success',
+      })
+    }
+  }
 
   const renderItemRow = (item: typeof items[0]) => {
     const isStoreClosed = isItemClosed(item.product)

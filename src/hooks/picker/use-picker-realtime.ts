@@ -43,22 +43,26 @@ export function usePickerRealtime({
     return () => clearInterval(t)
   }, [])
 
-  // Audio alert and repeating chime when pending orders are in the queue
+  // Audio alert and repeating chime when pending/unpacked orders are in the queue
   useEffect(() => {
     if (status !== 'authenticated') return
 
-    const pendingOrders = orders.filter((o) => o.status === 'PENDING')
+    const pendingOrders = orders.filter(
+      (o) => o.status === 'PENDING' || o.status === 'CONFIRMED' || o.status === 'PREPARING'
+    )
     if (pendingOrders.length === 0) return
 
     playNotificationChime()
     triggerHaptic('success')
-    toast.info('New pending order(s) in queue!', {
+    toast.info('New order(s) waiting to be picked!', {
       id: 'new-order-alert',
-      icon: '🛎️',
+      icon: '📦',
     })
 
     const intervalId = setInterval(() => {
-      const currentPending = orders.filter((o) => o.status === 'PENDING')
+      const currentPending = orders.filter(
+        (o) => o.status === 'PENDING' || o.status === 'CONFIRMED' || o.status === 'PREPARING'
+      )
       if (currentPending.length > 0) {
         playNotificationChime()
       } else {

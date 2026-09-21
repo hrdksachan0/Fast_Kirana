@@ -16,6 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 async function CategoriesLoader() {
+  let categories: Category[] = []
   try {
     // Fetch all grocery root categories from database with their nested subcategories
     const categoriesRaw = await prisma.category.findMany({
@@ -40,7 +41,7 @@ async function CategoriesLoader() {
     })
 
     // Map to standard Category schema
-    const categories: Category[] = categoriesRaw.map((c) => ({
+    categories = categoriesRaw.map((c) => ({
       id: c.id,
       name: c.name,
       slug: c.slug,
@@ -58,12 +59,12 @@ async function CategoriesLoader() {
         _count: sub._count,
       })),
     }))
-
-    return <CategoriesDirectoryClient categories={categories} />
   } catch (error) {
     console.error('Failed to load categories in CategoriesLoader:', error)
-    return <CategoriesDirectoryClient categories={[]} />
+    categories = []
   }
+
+  return <CategoriesDirectoryClient categories={categories} />
 }
 
 export default function CategoriesPage() {

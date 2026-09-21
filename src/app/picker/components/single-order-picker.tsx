@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft,
@@ -14,9 +15,11 @@ import {
   RotateCcw,
   Package,
   Loader2,
+  Tag,
 } from 'lucide-react'
 import { ProductImage } from '@/components/product/product-image'
 import { Order, getAisleNumber } from '@/hooks/picker/use-picker-types'
+import { EditProductPriceModal, EditableGroceryProduct } from './edit-product-price-modal'
 
 interface CircularProgressProps {
   picked: number
@@ -107,6 +110,25 @@ export function SingleOrderPicker({
   const isAllPicked = activeOrder.items.every(
     (item) => pickedItemIds[item.id] === item.quantity
   )
+
+  const [editingProduct, setEditingProduct] = useState<EditableGroceryProduct | null>(null)
+  const [isPriceModalOpen, setIsPriceModalOpen] = useState(false)
+
+  const handleOpenPriceEdit = (item: any) => {
+    setEditingProduct({
+      id: item.product?.id || item.productId || item.id,
+      name: item.name,
+      mrp: item.product?.mrp || item.mrp || item.price,
+      price: item.product?.price || item.price,
+      stock: item.product?.stock ?? 20,
+      unit: item.product?.unit || item.unit || '1 pc',
+      imageUrl: item.imageUrl || item.product?.imageUrl,
+      barcode: item.product?.barcode,
+      location: item.product?.location,
+      isAvailable: item.product?.isAvailable ?? true,
+    })
+    setIsPriceModalOpen(true)
+  }
 
   const handleScanSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -395,6 +417,15 @@ export function SingleOrderPicker({
                       <div className="flex gap-1.5 shrink-0">
                         <motion.button
                           whileTap={{ scale: 0.85 }}
+                          onClick={() => handleOpenPriceEdit(item)}
+                          className="bg-orange-50 hover:bg-orange-100 text-orange-600 text-[10px] sm:text-xs font-black min-h-[44px] px-2.5 rounded-xl border border-orange-200/60 cursor-pointer transition-colors flex items-center gap-1"
+                          title="Edit Grocery Price"
+                        >
+                          <Tag className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">₹ Price</span>
+                        </motion.button>
+                        <motion.button
+                          whileTap={{ scale: 0.85 }}
                           onClick={() => handleManualPickOne(item.id, item.quantity)}
                           className="bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] sm:text-xs font-bold min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl border border-gray-200 cursor-pointer transition-colors"
                         >
@@ -507,6 +538,13 @@ export function SingleOrderPicker({
           )}
         </motion.button>
       </motion.div>
+
+      {/* Edit Product Price Modal */}
+      <EditProductPriceModal
+        isOpen={isPriceModalOpen}
+        onClose={() => setIsPriceModalOpen(false)}
+        product={editingProduct}
+      />
     </div>
   )
 }

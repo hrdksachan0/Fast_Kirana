@@ -164,28 +164,65 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         if (!isAdminPending) {
           // Direct FCM push to Delivery & Picker staff for grocery orders
           if (!isRestaurant) {
+            const pickerPayload = buildOrderFcmPayload(
+              isOnlinePaid ? '💳 New PAID Order to Pick!' : '📦 New Grocery Order to Pick!',
+              `New order #${displayId} of ₹${order.total} (${order.items?.length || 1} items). Tap to pack.`,
+              {
+                title: isOnlinePaid ? '💳 New PAID Order to Pick!' : '📦 New Grocery Order to Pick!',
+                body: `New order #${displayId} of ₹${order.total} (${order.items?.length || 1} items). Tap to pack.`,
+                orderId: order.id,
+                readableId: displayId,
+                status: order.status,
+                screen: 'picker',
+                type: 'NEW_ORDER',
+                role: 'PICKER',
+                timestamp: Date.now().toString(),
+              }
+            )
+
             const riderPayload = buildOrderFcmPayload(
-              isOnlinePaid ? '💳 New PAID Order!' : '🛵 New Order to Deliver / Pick!',
+              isOnlinePaid ? '💳 New PAID Order!' : '🛵 New Order to Deliver!',
               `New order #${displayId} of ₹${order.total} is ready for processing.`,
               {
-                title: isOnlinePaid ? '💳 New PAID Order!' : '🛵 New Order to Deliver / Pick!',
+                title: isOnlinePaid ? '💳 New PAID Order!' : '🛵 New Order to Deliver!',
                 body: `New order #${displayId} of ₹${order.total} is ready for processing.`,
                 orderId: order.id,
                 readableId: displayId,
                 status: order.status,
                 screen: 'delivery',
+                type: 'NEW_ORDER',
+                role: 'DELIVERY',
                 timestamp: Date.now().toString(),
               }
             )
-            const staffTokens = await prisma.fcmToken.findMany({
+
+            // Direct tokens to Pickers
+            const pickerTokens = await prisma.fcmToken.findMany({
               where: {
-                user: { role: { in: [Role.DELIVERY, Role.PICKER] } },
+                user: { role: Role.PICKER },
               },
               select: { token: true },
             })
-            for (const sToken of staffTokens) {
-              fcmMessaging.send({ token: sToken.token, ...riderPayload }).catch(() => {})
+            for (const pToken of pickerTokens) {
+              fcmMessaging.send({ token: pToken.token, ...pickerPayload }).catch(() => {})
             }
+
+            // Direct tokens to Delivery Riders
+            const riderTokens = await prisma.fcmToken.findMany({
+              where: {
+                user: { role: Role.DELIVERY },
+              },
+              select: { token: true },
+            })
+            for (const rToken of riderTokens) {
+              fcmMessaging.send({ token: rToken.token, ...riderPayload }).catch(() => {})
+            }
+
+            // Broadcast to Picker Topics
+            if (order.storeId) {
+              sendTopicWithRetry(fcmMessaging, { topic: `picker_orders_${order.storeId}`, ...pickerPayload }).catch(() => {})
+            }
+            sendTopicWithRetry(fcmMessaging, { topic: 'picker_orders', ...pickerPayload }).catch(() => {})
           }
 
           // Restaurant owner direct push

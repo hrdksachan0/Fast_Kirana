@@ -137,6 +137,14 @@ export async function PATCH(
       return NextResponse.json({ error: 'You can only edit products for your assigned restaurant' }, { status: 403 })
     }
 
+    // Strict isolation: Pickers can only edit darkstore grocery products (not restaurant dishes)
+    if (role === 'PICKER' && product.restaurantId) {
+      return NextResponse.json(
+        { error: 'Pickers can only edit grocery products. Restaurant items cannot be edited by pickers.' },
+        { status: 403 }
+      )
+    }
+
     const { name, description, imageUrl, categoryId, restaurantId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode, vendor, vendorId, addons } = body
 
     const updateData: any = {}

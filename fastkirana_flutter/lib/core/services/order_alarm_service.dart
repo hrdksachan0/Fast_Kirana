@@ -351,4 +351,270 @@ class OrderAlarmService {
       },
     );
   }
+
+  /// Start continuous alarm loop and popup dialog specifically for darkstore pickers
+  Future<void> startPickerAlarm({
+    required Map<String, dynamic> orderMap,
+    BuildContext? context,
+    VoidCallback? onStartPicking,
+  }) async {
+    if (_isMuted) return;
+
+    final String orderId = (orderMap['id'] ?? '').toString();
+    _activeOrderId = orderId;
+    _isPlaying = true;
+
+    // Play initial chime & vibration
+    await _playChime();
+
+    // Loop alarm every 3.5 seconds until picked, packed, or dismissed
+    _alarmLoopTimer?.cancel();
+    _alarmLoopTimer = Timer.periodic(const Duration(milliseconds: 3500), (_) async {
+      if (!_isPlaying || _isMuted) {
+        _alarmLoopTimer?.cancel();
+        return;
+      }
+      await _playChime();
+    });
+
+    if (context != null && context.mounted) {
+      _showPickerOrderModal(
+        context: context,
+        orderMap: orderMap,
+        onStartPicking: onStartPicking,
+      );
+    }
+  }
+
+  void _showPickerOrderModal({
+    required BuildContext context,
+    required Map<String, dynamic> orderMap,
+    VoidCallback? onStartPicking,
+  }) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        final orderToken = (orderMap['readableId'] ?? orderMap['id'] ?? '').toString();
+        final displayToken = orderToken.length > 6 ? orderToken.substring(orderToken.length - 6).toUpperCase() : orderToken;
+        final rawItems = orderMap['items'];
+        final int itemsCount = (rawItems is List) ? rawItems.length : 0;
+        final num total = (orderMap['total'] is num)
+            ? (orderMap['total'] as num)
+            : (num.tryParse(orderMap['total']?.toString() ?? '0') ?? 0);
+
+        return PopScope(
+          canPop: false,
+          child: Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFEA580C).withValues(alpha: 0.35),
+                    blurRadius: 30,
+                    spreadRadius: 4,
+                  ),
+                ],
+                border: Border.all(
+                  color: const Color(0xFFEA580C),
+                  width: 2.5,
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header Alert Bar
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFEA580C),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(21),
+                        topRight: Radius.circular(21),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.notifications_active_rounded, color: Colors.white, size: 22),
+                        const SizedBox(width: 8),
+                        Text(
+                          '🚨 NEW ORDER TO PICK!',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'PICKING TOKEN',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppDesignSystem.slate500,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                Text(
+                                  '#$displayToken',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900,
+                                    color: AppDesignSystem.slate900,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFEDD5),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFFED7AA)),
+                              ),
+                              child: Text(
+                                '₹${total.toInt()}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFFC2410C),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Store Info
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppDesignSystem.slate50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppDesignSystem.slate200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.shopping_basket_rounded, size: 16, color: Color(0xFFEA580C)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Dark Store Grocery Order',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppDesignSystem.slate800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '$itemsCount Items to gather from shelves & pack',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: AppDesignSystem.slate600,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Action Buttons: Dismiss & Start Picking
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  stopAlarm();
+                                  Navigator.pop(ctx);
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  side: const BorderSide(color: AppDesignSystem.slate300),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: Text(
+                                  'Mute',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppDesignSystem.slate600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              flex: 3,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  stopAlarm();
+                                  Navigator.pop(ctx);
+                                  onStartPicking?.call();
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFEA580C),
+                                  foregroundColor: Colors.white,
+                                  elevation: 4,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.shopping_cart_checkout_rounded, size: 18),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Start Picking',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
+

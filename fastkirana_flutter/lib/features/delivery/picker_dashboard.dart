@@ -20,7 +20,10 @@ import '../common/order_edit_modal.dart';
 import 'widgets/add_picker_product_modal.dart';
 import 'widgets/order_recipient_helper.dart';
 import '../../core/services/notification_service.dart';
+import '../../core/services/order_alarm_service.dart';
 import '../../widgets/app_confirmation_dialog.dart';
+import 'widgets/edit_picker_product_modal.dart';
+import 'widgets/picker_catalog_browser_modal.dart';
 
 class PickerDashboard extends ConsumerStatefulWidget {
   const PickerDashboard({super.key});
@@ -111,6 +114,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
   }
 
   final Map<String, Set<String>> _pickedItemIds = {}; // orderId -> Set of picked itemIds
+  final Set<String> _knownOrderIds = {};
   String? _updatingOrderId;
   Timer? _autoRefreshTimer;
 
@@ -139,6 +143,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
+    OrderAlarmService.instance.stopAlarm();
     super.dispose();
   }
 
@@ -187,6 +192,27 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
               .toList();
           _cachedPickerOrders = filtered;
           _saveDiskPickerOrders(filtered);
+
+          final activePending = filtered.where((o) {
+            final s = (o['status'] ?? '').toString().toUpperCase();
+            return s == 'PENDING' || s == 'CONFIRMED' || s == 'PREPARING';
+          }).toList();
+
+          final bool hasNewOrder = _knownOrderIds.isNotEmpty &&
+              activePending.any((o) => !_knownOrderIds.contains((o['id'] ?? '').toString()));
+
+          _knownOrderIds.addAll(filtered.map((o) => (o['id'] ?? '').toString()));
+
+          if (hasNewOrder && activePending.isNotEmpty) {
+            final newest = activePending.first;
+            OrderAlarmService.instance.startPickerAlarm(
+              orderMap: newest,
+              context: context,
+            );
+          } else if (activePending.isEmpty) {
+            OrderAlarmService.instance.stopAlarm();
+          }
+
           setState(() {
             _orders = filtered;
           });
@@ -206,6 +232,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
   }
 
   Future<void> _markOrderAsPacked(String orderId) async {
+    OrderAlarmService.instance.stopAlarm();
     setState(() => _updatingOrderId = orderId);
     HapticFeedback.mediumImpact();
 
@@ -378,6 +405,41 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
           ],
         ),
         actions: [
+          // Pricing Catalog & Inventory Action Pill
+          Bounceable(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              PickerCatalogBrowserModal.show(
+                context: context,
+                onProductUpdated: () => _fetchPickerOrders(silent: true),
+              );
+            },
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7ED),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFFED7AA)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.sell_rounded, size: 13, color: brandOrange),
+                  const SizedBox(width: 3),
+                  Text(
+                    'Pricing',
+                    style: GoogleFonts.inter(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      color: brandOrange,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
           // Refresh & Sync Action Pill
           Bounceable(
             onTap: () {
@@ -415,6 +477,24 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
               ),
             ),
           ),
+
+          // Mute / Unmute Order Alarm Alert
+          IconButton(
+            icon: Icon(
+              OrderAlarmService.instance.isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+              size: 19,
+              color: OrderAlarmService.instance.isMuted ? slateMuted : brandOrange,
+            ),
+            tooltip: OrderAlarmService.instance.isMuted ? 'Unmute Order Alert' : 'Mute Order Alert',
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            onPressed: () {
+              setState(() {
+                OrderAlarmService.instance.toggleMute();
+              });
+            },
+          ),
+
           IconButton(
             icon: const Icon(Icons.logout_rounded, size: 19, color: slateMuted),
             tooltip: 'Logout',
@@ -1304,8 +1384,8 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                       ),
                       const SizedBox(width: 6),
 
-                      // 5. Total Price Pill
-                      if (lineTotal > 0 || unitPrice > 0)
+                      // 5. Total Price Pill & Quick Price Edit Action
+                      if (lineTotal > 0 || unitPrice > 0) ...[
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                           decoration: BoxDecoration(
@@ -1323,6 +1403,38 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                             ),
                           ),
                         ),
+                        const SizedBox(width: 4),
+                        Bounceable(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            EditPickerProductModal.show(
+                              context: context,
+                              product: {
+                                'id': item['productId'] ?? item['id'],
+                                'productId': item['productId'] ?? item['id'],
+                                'name': name,
+                                'price': unitPrice,
+                                'mrp': item['mrp'] ?? unitPrice,
+                                'stock': item['stock'] ?? 20,
+                                'unit': variant ?? '1 pc',
+                                'imageUrl': imgUrl,
+                                'barcode': item['barcode'],
+                                'variants': item['variants'] ?? item['product']?['variants'],
+                              },
+                              onProductUpdated: () => _fetchPickerOrders(silent: true),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF7ED),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFFED7AA)),
+                            ),
+                            child: const Icon(Icons.edit_note_rounded, size: 14, color: brandOrange),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

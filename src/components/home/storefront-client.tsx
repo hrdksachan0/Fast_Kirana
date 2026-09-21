@@ -38,6 +38,47 @@ interface StorefrontClientProps {
   sortRules?: Record<string, string>
 }
 
+// ─── Cute High-Definition Premium SVGs for Grocery & Food ───
+function CuteGroceryIcon({ className }: { className?: string }) {
+  return (
+    <svg className={cn("w-7 h-7 sm:w-9 sm:h-9 drop-shadow-md shrink-0 transition-transform duration-300 group-hover:scale-110", className)} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M14 24C14 20.6863 16.6863 18 20 18H44C47.3137 18 50 20.6863 50 24V52C50 56.4183 46.4183 60 42 60H22C17.5817 60 14 56.4183 14 52V24Z" fill="url(#bagGradMain)" />
+      <path d="M22 20V13C22 8.58172 25.5817 5 30 5H34C38.4183 5 42 8.58172 42 13V20" stroke="#FFFFFF" strokeWidth="4" strokeLinecap="round" />
+      <circle cx="27" cy="14" r="5" fill="#EF4444" />
+      <path d="M27 9C27 9 28 6.5 30 6.5" stroke="#15803D" strokeWidth="2" strokeLinecap="round" />
+      <rect x="36" y="8" width="8" height="12" rx="2.5" fill="#38BDF8" stroke="#FFFFFF" strokeWidth="1.5" />
+      <path d="M14 28H50" stroke="rgba(255,255,255,0.25)" strokeWidth="2" />
+      <defs>
+        <linearGradient id="bagGradMain" x1="14" y1="18" x2="50" y2="60" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#F97316" />
+          <stop offset="1" stopColor="#EA580C" />
+        </linearGradient>
+      </defs>
+    </svg>
+  )
+}
+
+function CuteBurgerIcon({ className }: { className?: string }) {
+  return (
+    <svg className={cn("w-7 h-7 sm:w-9 sm:h-9 drop-shadow-md shrink-0 transition-transform duration-300 group-hover:scale-110", className)} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 26C12 16.0589 20.0589 8 30 8H34C43.9411 8 52 16.0589 52 26V28H12V26Z" fill="url(#bunTopGradMain)" />
+      <ellipse cx="22" cy="17" rx="1.8" ry="2.8" transform="rotate(-20 22 17)" fill="#FEF08A" />
+      <ellipse cx="32" cy="14" rx="1.8" ry="2.8" fill="#FEF08A" />
+      <ellipse cx="42" cy="18" rx="1.8" ry="2.8" transform="rotate(20 42 18)" fill="#FEF08A" />
+      <path d="M10 29H54L50 35H44L41 32L36 36H28L24 32L19 36H14L10 29Z" fill="#FACC15" />
+      <rect x="10" y="35" width="44" height="8" rx="4" fill="#78350F" />
+      <path d="M8 43C10 43 11 45 13 45C15 45 16 43 18 43C20 43 21 45 23 45C25 45 26 43 28 43C30 43 31 45 33 45C35 45 36 43 38 43C40 43 41 45 43 45C45 45 46 43 48 43C50 43 52 45 54 43" stroke="#22C55E" strokeWidth="4" strokeLinecap="round" />
+      <path d="M12 47H52V51C52 54.3137 49.3137 57 46 57H18C14.6863 57 12 54.3137 12 51V47Z" fill="#EAB308" />
+      <defs>
+        <linearGradient id="bunTopGradMain" x1="12" y1="8" x2="52" y2="28" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#F59E0B" />
+          <stop offset="1" stopColor="#D97706" />
+        </linearGradient>
+      </defs>
+    </svg>
+  )
+}
+
 export function StorefrontClient({
   categories,
   promoBanners,
@@ -75,19 +116,19 @@ export function StorefrontClient({
       {/* Dynamic Celebration Floating Emojis */}
       <FloatingEmojis type={activeTab === 'food' ? 'food' : 'grocery'} />
 
-      {/* Ultra-Catchy Top Store Mode Switcher (Grocery vs Food) - Permanently Sticky Under Navbar (top-[82px] md:top-[66px]) */}
-      <div className="w-full flex items-center justify-center py-2 sticky top-[82px] md:top-[66px] z-40 px-3 pointer-events-auto backdrop-blur-md transition-[top] duration-200">
+      {/* Clean & Spacious Top Store Mode Switcher (Scrolls away naturally so middle screen stays 100% open) */}
+      <div className="w-full flex items-center justify-center py-1.5 sm:py-2.5 px-3 pointer-events-auto">
         <div 
-          className="relative flex items-center w-full max-w-[440px] h-[56px] sm:h-[62px] p-1.5 rounded-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl shadow-[0_12px_36px_-8px_rgba(0,0,0,0.16),0_4px_16px_rgba(0,0,0,0.08)] dark:shadow-[0_16px_40px_-10px_rgba(0,0,0,0.8)] border-2 border-zinc-200/90 dark:border-zinc-800/90" 
+          className="relative flex items-center w-full max-w-[380px] h-[52px] sm:h-[58px] p-1.5 rounded-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl shadow-[0_12px_36px_-8px_rgba(0,0,0,0.16),0_4px_16px_rgba(0,0,0,0.08)] dark:shadow-[0_16px_40px_-10px_rgba(0,0,0,0.85)] border-2 border-zinc-200/90 dark:border-zinc-800/90" 
           role="tablist" 
           aria-label="Store mode"
         >
-          {/* 1. Grocery Tab (Fast Delivery) */}
+          {/* 1. Grocery Tab */}
           <motion.button
             onClick={() => handleTabChange('grocery')}
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.96 }}
             className={cn(
-              "relative z-10 flex items-center justify-center rounded-full cursor-pointer outline-none transition-all duration-300 h-full flex-1 select-none border-none bg-transparent px-2",
+              "relative z-10 flex items-center justify-center rounded-full cursor-pointer outline-none transition-all duration-300 h-full flex-1 select-none border-none bg-transparent px-3 group",
               activeTab === 'grocery' ? "" : "hover:text-zinc-900 dark:hover:text-white"
             )}
             role="tab"
@@ -95,40 +136,29 @@ export function StorefrontClient({
           >
             {activeTab === 'grocery' && (
               <motion.div
-                layoutId="activePillCatchy"
-                className="absolute inset-0 rounded-full bg-gradient-to-r from-[#e8153a] via-[#ff2d55] to-[#ff5533] shadow-[0_6px_24px_rgba(232,21,58,0.45),inset_0_1px_1px_rgba(255,255,255,0.4)]"
+                layoutId="activePillClean"
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-[#e8153a] via-[#ff2d55] to-[#ff4533] shadow-[0_6px_22px_rgba(232,21,58,0.45),inset_0_1px_1px_rgba(255,255,255,0.3)]"
                 transition={{ type: 'spring', stiffness: 450, damping: 28 }}
               />
             )}
             <div className={cn("relative z-10 flex items-center gap-2.5 transition-colors duration-300", activeTab === 'grocery' ? "text-white" : "text-zinc-600 dark:text-zinc-400")}>
+              {/* High-Contrast White Circle for Active Icon */}
               <div className={cn(
-                "w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 transition-transform duration-300",
-                activeTab === 'grocery' ? "bg-white/20 backdrop-blur-md border border-white/30 scale-105" : "bg-zinc-100 dark:bg-zinc-900"
+                "w-8.5 h-8.5 sm:w-9.5 sm:h-9.5 rounded-full flex items-center justify-center shrink-0 shadow-xs transition-all duration-300 text-lg sm:text-xl select-none",
+                activeTab === 'grocery' ? "bg-white text-rose-600 shadow-md scale-105" : "bg-zinc-100 dark:bg-zinc-900"
               )}>
-                <ShoppingBag className="w-4.5 h-4.5 sm:w-5 sm:h-5 stroke-[2.4]" />
+                🛍️
               </div>
-              <div className="flex flex-col items-start text-left">
-                <div className="flex items-center gap-1">
-                  <span className="text-[13px] sm:text-[15px] font-black tracking-tight leading-none">Grocery</span>
-                  {activeTab === 'grocery' && (
-                    <span className="bg-white/25 border border-white/30 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full leading-none">
-                      10-MIN
-                    </span>
-                  )}
-                </div>
-                <span className="text-[8px] sm:text-[9.5px] font-extrabold uppercase tracking-wider leading-none mt-1 opacity-90">
-                  ⚡ Fast Delivery
-                </span>
-              </div>
+              <span className="text-[16px] sm:text-[18px] font-black tracking-tight leading-none">Grocery</span>
             </div>
           </motion.button>
 
-          {/* 2. Food Tab (Cafe & Restaurant) */}
+          {/* 2. Food Tab */}
           <motion.button
             onClick={() => handleTabChange('food')}
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.96 }}
             className={cn(
-              "relative z-10 flex items-center justify-center rounded-full cursor-pointer outline-none transition-all duration-300 h-full flex-1 select-none border-none bg-transparent px-2",
+              "relative z-10 flex items-center justify-center rounded-full cursor-pointer outline-none transition-all duration-300 h-full flex-1 select-none border-none bg-transparent px-3 group",
               activeTab === 'food' ? "" : "hover:text-zinc-900 dark:hover:text-white"
             )}
             role="tab"
@@ -136,31 +166,20 @@ export function StorefrontClient({
           >
             {activeTab === 'food' && (
               <motion.div
-                layoutId="activePillCatchy"
-                className="absolute inset-0 rounded-full bg-gradient-to-r from-[#ff4500] via-[#ff6600] to-[#ffa500] shadow-[0_6px_24px_rgba(255,69,0,0.45),inset_0_1px_1px_rgba(255,255,255,0.4)]"
+                layoutId="activePillClean"
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-[#ff4500] via-[#ff6600] to-[#ffa500] shadow-[0_6px_22px_rgba(255,69,0,0.45),inset_0_1px_1px_rgba(255,255,255,0.3)]"
                 transition={{ type: 'spring', stiffness: 450, damping: 28 }}
               />
             )}
             <div className={cn("relative z-10 flex items-center gap-2.5 transition-colors duration-300", activeTab === 'food' ? "text-white" : "text-zinc-600 dark:text-zinc-400")}>
+              {/* High-Contrast White Circle for Active Icon */}
               <div className={cn(
-                "w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 transition-transform duration-300",
-                activeTab === 'food' ? "bg-white/20 backdrop-blur-md border border-white/30 scale-105" : "bg-zinc-100 dark:bg-zinc-900"
+                "w-8.5 h-8.5 sm:w-9.5 sm:h-9.5 rounded-full flex items-center justify-center shrink-0 shadow-xs transition-all duration-300 text-lg sm:text-xl select-none",
+                activeTab === 'food' ? "bg-white text-orange-600 shadow-md scale-105" : "bg-zinc-100 dark:bg-zinc-900"
               )}>
-                <Utensils className="w-4.5 h-4.5 sm:w-5 sm:h-5 stroke-[2.4]" />
+                🍔
               </div>
-              <div className="flex flex-col items-start text-left">
-                <div className="flex items-center gap-1">
-                  <span className="text-[13px] sm:text-[15px] font-black tracking-tight leading-none">Food</span>
-                  {activeTab === 'food' && (
-                    <span className="bg-white/25 border border-white/30 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full leading-none">
-                      HOT CAFES
-                    </span>
-                  )}
-                </div>
-                <span className="text-[8px] sm:text-[9.5px] font-extrabold uppercase tracking-wider leading-none mt-1 opacity-90">
-                  🍳 Cafe & Dining
-                </span>
-              </div>
+              <span className="text-[16px] sm:text-[18px] font-black tracking-tight leading-none">Food</span>
             </div>
           </motion.button>
         </div>

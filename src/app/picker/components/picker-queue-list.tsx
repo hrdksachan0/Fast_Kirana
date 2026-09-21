@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Smartphone,
@@ -10,11 +11,13 @@ import {
   User,
   Zap,
   ChevronRight,
+  Tag,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatOrderTime } from '@/lib/date-helpers'
 import { PickerStatsCards } from '@/components/picker/picker-stats-cards'
 import { Order, getSlaClass, timeAgo } from '@/hooks/picker/use-picker-types'
+import { PickerPriceManagerModal } from './picker-price-manager-modal'
 
 interface PickerQueueListProps {
   orders: Order[]
@@ -49,6 +52,7 @@ export function PickerQueueList({
   setPickedItemIds,
   updatingId,
 }: PickerQueueListProps) {
+  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false)
   const totalItemsToPick = orders.reduce((sum, ord) => {
     return sum + ord.items.reduce((s, itm) => s + itm.quantity, 0)
   }, 0)
@@ -77,6 +81,14 @@ export function PickerQueueList({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsPricingModalOpen(true)}
+              className="h-10 px-3 sm:h-9 flex items-center gap-1.5 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/25 text-white text-xs font-black transition-all cursor-pointer shadow-sm"
+              title="Edit Grocery Pricing & Catalog"
+            >
+              <Tag className="h-4 w-4" />
+              <span className="hidden xs:inline">Pricing</span>
+            </button>
             <div className="hidden sm:flex items-center gap-1 bg-white/10 backdrop-blur-sm rounded-lg px-2.5 py-1.5 border border-white/10">
               <Clock className="h-3 w-3 text-white/70" />
               <span className="text-[10px] font-mono font-bold text-white/90">
@@ -292,6 +304,12 @@ export function PickerQueueList({
           )}
         </AnimatePresence>
       </div>
+
+      {/* Dark Store Catalog & Price Manager Modal */}
+      <PickerPriceManagerModal
+        isOpen={isPricingModalOpen}
+        onClose={() => setIsPricingModalOpen(false)}
+      />
     </div>
   )
 }

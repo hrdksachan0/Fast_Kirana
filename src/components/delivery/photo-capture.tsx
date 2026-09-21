@@ -159,7 +159,6 @@ export default function PhotoCapture({
             /* Photo Preview */
             <div className="space-y-3">
               <div className="relative rounded-2xl overflow-hidden border-2 border-accent/40 shadow-lg">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={preview}
                   alt="Delivery proof"
