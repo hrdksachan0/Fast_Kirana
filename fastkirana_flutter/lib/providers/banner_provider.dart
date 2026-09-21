@@ -39,14 +39,7 @@ final categoryOfferCardsProvider = FutureProvider.family<List<CategoryCardData>,
       final platform = rawJson['platform']?.toString().toLowerCase();
       if (platform == 'web') return false;
 
-      // 2. Strict placement filter: ONLY items created as 'brand_card'
-      final placement = c.placement ??
-          (['dark_showcase', 'bento_grid', 'editorial', 'brand_offer'].contains(c.cardType)
-              ? 'brand_card'
-              : 'hero');
-      if (placement != 'brand_card') return false;
-
-      // 3. Strict mode isolation: food cards never show on grocery, and vice versa
+      // 2. Strict mode isolation: food cards never show on grocery, and vice versa
       final isFood = c.type == 'food' ||
           c.type == 'cafe' ||
           (c.redirectUrl?.startsWith('/restaurant') ?? false) ||
@@ -57,7 +50,7 @@ final categoryOfferCardsProvider = FutureProvider.family<List<CategoryCardData>,
         if (isFood) return false;
       }
 
-      // 4. Media validation: Must have a valid image or video
+      // 3. Media validation: Must have a valid image or video
       final hasMedia = (c.imageUrl != null && c.imageUrl!.trim().isNotEmpty) ||
           (c.videoUrl != null && c.videoUrl!.trim().isNotEmpty) ||
           (c.imageAsset != null && c.imageAsset!.trim().isNotEmpty);
