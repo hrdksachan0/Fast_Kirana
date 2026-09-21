@@ -75,8 +75,8 @@ export function StorefrontClient({
       {/* Dynamic Celebration Floating Emojis */}
       <FloatingEmojis type={activeTab === 'food' ? 'food' : 'grocery'} />
 
-      {/* Ultra-Catchy Top Store Mode Switcher (Grocery vs Food) - Sticky under fixed Navbar (top-[96px] md:top-[68px]) */}
-      <div className="w-full flex items-center justify-center py-2 sticky top-[96px] md:top-[68px] z-40 px-3 pointer-events-auto backdrop-blur-md">
+      {/* Ultra-Catchy Top Store Mode Switcher (Grocery vs Food) - Permanently Sticky Under Navbar (top-[82px] md:top-[66px]) */}
+      <div className="w-full flex items-center justify-center py-2 sticky top-[82px] md:top-[66px] z-40 px-3 pointer-events-auto backdrop-blur-md transition-[top] duration-200">
         <div 
           className="relative flex items-center w-full max-w-[440px] h-[56px] sm:h-[62px] p-1.5 rounded-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl shadow-[0_12px_36px_-8px_rgba(0,0,0,0.16),0_4px_16px_rgba(0,0,0,0.08)] dark:shadow-[0_16px_40px_-10px_rgba(0,0,0,0.8)] border-2 border-zinc-200/90 dark:border-zinc-800/90" 
           role="tablist" 
