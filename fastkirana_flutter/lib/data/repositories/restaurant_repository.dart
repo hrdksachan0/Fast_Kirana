@@ -65,70 +65,7 @@ class RestaurantRepository {
   }
 
   List<Restaurant> _getStaticFallbackRestaurants() {
-    return [
-      Restaurant(
-        id: 'REST-101',
-        name: 'A.S. Restaurant & Cafe',
-        slug: 'as-restaurant',
-        description: 'Authentic Burgers, Shakes, Pizzas & Rolls in Ghatampur',
-        address: 'Main Market, Ghatampur',
-        isPureVeg: true,
-        rating: 4.8,
-        totalRatings: 120,
-        deliveryTime: '15-20 mins',
-        cuisineTags: ['CHINESE', 'BURGERS', 'SHAKES', 'PIZZA', 'FAST FOOD'],
-        isOpen: true,
-        logoUrl: '/cafe_all_menu_category.webp',
-        bannerUrl: '/as_restaurant_banner.webp',
-      ),
-      Restaurant(
-        id: 'REST-102',
-        name: 'Wedson Restaurant',
-        slug: 'wedson-restaurant',
-        description: 'Premium North Indian, Curries & Family Dining',
-        address: 'Hamirpur Road, Ghatampur',
-        isPureVeg: true,
-        rating: 4.7,
-        totalRatings: 95,
-        deliveryTime: '20-25 mins',
-        cuisineTags: ['NORTH INDIAN', 'PANEER', 'TANDOORI', 'DAL MAKHANI'],
-        isOpen: true,
-        logoUrl: '/wedson_restaurant_bg.webp',
-        bannerUrl: '/wedson_restaurant_banner.webp',
-      ),
-      Restaurant(
-        id: 'REST-103',
-        name: 'Bal Udyan Restaurant',
-        slug: 'bal-udyan-restaurant',
-        description: 'Authentic Indian Food, Chinese & Quick Bites',
-        address: 'Near Bal Udyan, Ghatampur',
-        isPureVeg: true,
-        rating: 4.6,
-        totalRatings: 80,
-        deliveryTime: '20-25 mins',
-        cuisineTags: ['NORTH INDIAN', 'CHINESE', 'SNACKS'],
-        isOpen: true,
-        logoUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-103-logo.webp',
-        bannerUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-103-banner.webp',
-      ),
-      Restaurant(
-        id: 'REST-104',
-        name: 'Hot Pizza Lovers',
-        slug: 'hot-pizza-lovers',
-        description: 'Fresh Pizzas, Burgers, Sandwiches & Fast Food',
-        address: 'Station Road, Ghatampur',
-        isPureVeg: true,
-        rating: 4.8,
-        totalRatings: 52,
-        deliveryTime: '20-25 mins',
-        cuisineTags: ['PIZZA', 'BURGER', 'SANDWICH', 'FAST FOOD'],
-        isOpen: true,
-        lat: 26.1530,
-        lng: 80.1710,
-        logoUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-104-logo.webp',
-        bannerUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/restaurants/REST-104-banner.webp',
-      ),
-    ];
+    return [];
   }
 
   Future<List<Product>> getRestaurantMenu(String restaurantId, {bool forceRefresh = false}) async {
