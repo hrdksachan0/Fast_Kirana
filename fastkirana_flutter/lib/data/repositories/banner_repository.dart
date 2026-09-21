@@ -6,7 +6,7 @@ import '../models/banner.dart';
 
 class BannerRepository {
   final Dio dio;
-  static const _diskBannersPrefix = 'cached_promo_banners_v10_';
+  static const _diskBannersPrefix = 'cached_promo_banners_v12_';
   static final Map<String, List<Banner>> _inMemoryBanners = {};
 
   BannerRepository(this.dio);
