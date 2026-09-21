@@ -75,63 +75,91 @@ export function StorefrontClient({
       {/* Dynamic Celebration Floating Emojis */}
       <FloatingEmojis type={activeTab === 'food' ? 'food' : 'grocery'} />
 
-      {/* Top Header Mode Selector Switcher (2 Distinct Tabs: Grocery & Food) - Sticky on Scroll */}
-      <div className="w-full flex items-center justify-center pt-1.5 pb-1.5 sticky top-14 sm:top-16 z-30 px-2 pointer-events-auto backdrop-blur-xs">
+      {/* Ultra-Catchy Top Store Mode Switcher (Grocery vs Food) - Sticky under fixed Navbar (top-[96px] md:top-[68px]) */}
+      <div className="w-full flex items-center justify-center py-2 sticky top-[96px] md:top-[68px] z-40 px-3 pointer-events-auto backdrop-blur-md">
         <div 
-          className="relative flex items-center w-full max-w-[420px] h-[52px] sm:h-[60px] p-1.5 rounded-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl shadow-[0_12px_32px_-10px_rgba(0,0,0,0.12),0_4px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_16px_36px_-12px_rgba(0,0,0,0.6)] border border-zinc-200/80 dark:border-zinc-800/80" 
+          className="relative flex items-center w-full max-w-[440px] h-[56px] sm:h-[62px] p-1.5 rounded-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl shadow-[0_12px_36px_-8px_rgba(0,0,0,0.16),0_4px_16px_rgba(0,0,0,0.08)] dark:shadow-[0_16px_40px_-10px_rgba(0,0,0,0.8)] border-2 border-zinc-200/90 dark:border-zinc-800/90" 
           role="tablist" 
           aria-label="Store mode"
         >
-          {/* 1. Grocery Tab */}
+          {/* 1. Grocery Tab (Fast Delivery) */}
           <motion.button
             onClick={() => handleTabChange('grocery')}
-            whileTap={{ scale: 0.96 }}
+            whileTap={{ scale: 0.95 }}
             className={cn(
-              "relative z-10 flex items-center justify-center gap-1.5 sm:gap-2 rounded-full cursor-pointer outline-none transition-colors duration-300 h-full flex-1 select-none border-none bg-transparent px-1",
-              activeTab === 'grocery' ? "" : "hover:text-zinc-800 dark:hover:text-zinc-200"
+              "relative z-10 flex items-center justify-center rounded-full cursor-pointer outline-none transition-all duration-300 h-full flex-1 select-none border-none bg-transparent px-2",
+              activeTab === 'grocery' ? "" : "hover:text-zinc-900 dark:hover:text-white"
             )}
             role="tab"
             aria-selected={activeTab === 'grocery'}
           >
             {activeTab === 'grocery' && (
               <motion.div
-                layoutId="activePill3"
-                className="absolute inset-0 rounded-full bg-gradient-to-r from-[#e8153a] via-[#ff2d55] to-[#ff5533] shadow-[0_6px_20px_rgba(255,26,67,0.35),inset_0_1px_0_rgba(255,255,255,0.25)]"
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                layoutId="activePillCatchy"
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-[#e8153a] via-[#ff2d55] to-[#ff5533] shadow-[0_6px_24px_rgba(232,21,58,0.45),inset_0_1px_1px_rgba(255,255,255,0.4)]"
+                transition={{ type: 'spring', stiffness: 450, damping: 28 }}
               />
             )}
-            <div className={cn("relative z-10 flex items-center gap-1.5 sm:gap-2 transition-colors duration-300", activeTab === 'grocery' ? "text-white" : "text-zinc-500 dark:text-zinc-400")}>
-              <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
+            <div className={cn("relative z-10 flex items-center gap-2.5 transition-colors duration-300", activeTab === 'grocery' ? "text-white" : "text-zinc-600 dark:text-zinc-400")}>
+              <div className={cn(
+                "w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 transition-transform duration-300",
+                activeTab === 'grocery' ? "bg-white/20 backdrop-blur-md border border-white/30 scale-105" : "bg-zinc-100 dark:bg-zinc-900"
+              )}>
+                <ShoppingBag className="w-4.5 h-4.5 sm:w-5 sm:h-5 stroke-[2.4]" />
+              </div>
               <div className="flex flex-col items-start text-left">
-                <span className="text-[12px] sm:text-[14px] font-black tracking-tight leading-none">Grocery</span>
-                <span className="text-[7.5px] sm:text-[9px] font-bold uppercase tracking-wider leading-none mt-0.5 opacity-85">Fast Delivery</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-[13px] sm:text-[15px] font-black tracking-tight leading-none">Grocery</span>
+                  {activeTab === 'grocery' && (
+                    <span className="bg-white/25 border border-white/30 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full leading-none">
+                      10-MIN
+                    </span>
+                  )}
+                </div>
+                <span className="text-[8px] sm:text-[9.5px] font-extrabold uppercase tracking-wider leading-none mt-1 opacity-90">
+                  ⚡ Fast Delivery
+                </span>
               </div>
             </div>
           </motion.button>
 
-          {/* 2. Food Tab */}
+          {/* 2. Food Tab (Cafe & Restaurant) */}
           <motion.button
             onClick={() => handleTabChange('food')}
-            whileTap={{ scale: 0.96 }}
+            whileTap={{ scale: 0.95 }}
             className={cn(
-              "relative z-10 flex items-center justify-center gap-1.5 sm:gap-2 rounded-full cursor-pointer outline-none transition-colors duration-300 h-full flex-1 select-none border-none bg-transparent px-1",
-              activeTab === 'food' ? "" : "hover:text-zinc-800 dark:hover:text-zinc-200"
+              "relative z-10 flex items-center justify-center rounded-full cursor-pointer outline-none transition-all duration-300 h-full flex-1 select-none border-none bg-transparent px-2",
+              activeTab === 'food' ? "" : "hover:text-zinc-900 dark:hover:text-white"
             )}
             role="tab"
             aria-selected={activeTab === 'food'}
           >
             {activeTab === 'food' && (
               <motion.div
-                layoutId="activePill3"
-                className="absolute inset-0 rounded-full bg-gradient-to-r from-[#ff5500] via-[#ff7700] to-[#ffaa00] shadow-[0_6px_20px_rgba(255,102,34,0.35),inset_0_1px_0_rgba(255,255,255,0.25)]"
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                layoutId="activePillCatchy"
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-[#ff4500] via-[#ff6600] to-[#ffa500] shadow-[0_6px_24px_rgba(255,69,0,0.45),inset_0_1px_1px_rgba(255,255,255,0.4)]"
+                transition={{ type: 'spring', stiffness: 450, damping: 28 }}
               />
             )}
-            <div className={cn("relative z-10 flex items-center gap-1.5 sm:gap-2 transition-colors duration-300", activeTab === 'food' ? "text-white" : "text-zinc-500 dark:text-zinc-400")}>
-              <Utensils className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
+            <div className={cn("relative z-10 flex items-center gap-2.5 transition-colors duration-300", activeTab === 'food' ? "text-white" : "text-zinc-600 dark:text-zinc-400")}>
+              <div className={cn(
+                "w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 transition-transform duration-300",
+                activeTab === 'food' ? "bg-white/20 backdrop-blur-md border border-white/30 scale-105" : "bg-zinc-100 dark:bg-zinc-900"
+              )}>
+                <Utensils className="w-4.5 h-4.5 sm:w-5 sm:h-5 stroke-[2.4]" />
+              </div>
               <div className="flex flex-col items-start text-left">
-                <span className="text-[12px] sm:text-[14px] font-black tracking-tight leading-none">Food</span>
-                <span className="text-[7.5px] sm:text-[9px] font-bold uppercase tracking-wider leading-none mt-0.5 opacity-85">Cafe & Restaurant</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-[13px] sm:text-[15px] font-black tracking-tight leading-none">Food</span>
+                  {activeTab === 'food' && (
+                    <span className="bg-white/25 border border-white/30 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full leading-none">
+                      HOT CAFES
+                    </span>
+                  )}
+                </div>
+                <span className="text-[8px] sm:text-[9.5px] font-extrabold uppercase tracking-wider leading-none mt-1 opacity-90">
+                  🍳 Cafe & Dining
+                </span>
               </div>
             </div>
           </motion.button>
