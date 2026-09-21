@@ -69,13 +69,30 @@ const productSelect = {
 
 const getCachedBanners = unstable_cache(
   async () => {
-    return prisma.promoBanner.findMany({
+    const banners = await prisma.promoBanner.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: 'asc' },
     })
+    return banners.map((b) => {
+      let extra: any = {}
+      if (b.code && b.code.startsWith('{') && b.code.endsWith('}')) {
+        try {
+          extra = JSON.parse(b.code)
+        } catch (_) {}
+      }
+      return {
+        ...b,
+        ...extra,
+        rawCode: b.code,
+        couponCode: extra.couponCode !== undefined ? extra.couponCode : null,
+        cardType: extra.cardType || b.type || 'standard',
+        placement: extra.placement || (['dark_showcase', 'bento_grid', 'editorial', 'brand_offer'].includes(b.type) ? 'brand_card' : 'hero'),
+        platform: extra.platform || 'all',
+      }
+    })
   },
-  ['storefront-banners-v13'],
-  { revalidate: 3600, tags: ['banners'] }
+  ['storefront-banners-v15'],
+  { revalidate: 60, tags: ['banners'] }
 )
 
 const getCachedCategories = unstable_cache(

@@ -245,20 +245,18 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
 
     final fmt = widget.cardType;
 
-    // Pure media card: when cardType is 'media', 'pure_media', or 'standard' with media,
-    // or when the card has media and title is empty/default.
-    if (fmt == 'media' || fmt == 'pure_media' || (fmt == 'standard' && hasMedia)) {
+    // Pure full-bleed photo & video card: When image or video is present,
+    // display edge-to-edge full media (zero placeholder icons, zero text overlays).
+    if (hasMedia && fmt != 'bento_grid') {
       return _buildPureMediaCard(context);
     }
+
     if (fmt == 'hero' || fmt == 'dark_showcase') {
       return _buildHeroCard(context, glowColor, palette);
     } else if (fmt == 'bento_grid') {
       return _buildBentoGridCard(context, glowColor, palette);
     } else if (fmt == 'editorial') {
       return _buildEditorialCard(context, glowColor, palette);
-    }
-    if (hasMedia) {
-      return _buildPureMediaCard(context);
     }
     return _buildStandardCard(context, glowColor, palette);
   }

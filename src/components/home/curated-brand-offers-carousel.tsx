@@ -148,8 +148,9 @@ export function CuratedBrandOffersCarousel({
     const raw = initialBanners && initialBanners.length > 0 ? initialBanners : []
     const modeFiltered = raw.filter((b: any) => {
       const bType = (b.type || 'grocery').toLowerCase()
-      if (mode === 'grocery') return bType === 'grocery' || bType === 'all' || bType === 'express-delivery'
-      if (mode === 'food') return bType === 'food' || bType === 'cafe'
+      const isFood = bType === 'food' || bType === 'cafe' || (b.linkUrl && b.linkUrl.startsWith('/restaurant')) || (b.ctaUrl && b.ctaUrl.startsWith('/restaurant'))
+      if (mode === 'food') return isFood
+      if (mode === 'grocery') return !isFood
       return true
     })
     const cleanBanners = modeFiltered.filter((b: any) => {
@@ -157,9 +158,9 @@ export function CuratedBrandOffersCarousel({
       if (!hasMedia || b.isActive === false) return false
       if (b.platform && b.platform !== 'all' && b.platform !== 'web') return false
 
-      // Strict placement check: Only show items created as 'brand_card'
-      const bPlacement = b.placement || (['dark_showcase', 'bento_grid', 'editorial', 'brand_offer'].includes(b.type) ? 'brand_card' : 'hero')
-      if (bPlacement !== 'brand_card') return false
+      // Placement check: Show items explicitly created as brand_card or default brand cards
+      const bPlacement = b.placement || (['dark_showcase', 'bento_grid', 'editorial', 'brand_offer', 'brand_card'].includes(b.type) ? 'brand_card' : 'brand_card')
+      if (bPlacement !== 'brand_card' && b.placement) return false
 
       return true
     })
