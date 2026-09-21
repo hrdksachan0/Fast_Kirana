@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:video_player/video_player.dart';
+import '../core/config/app_config.dart';
 
 /// Ultra-Aesthetic Hybrid Media Widget for Category & Spotlight Offer Cards
 /// Supports:
@@ -43,13 +44,13 @@ class _CardMediaWidgetState extends State<CardMediaWidget> {
 
   String? get _resolvedVideoUrl {
     if (widget.videoUrl != null && widget.videoUrl!.trim().isNotEmpty) {
-      return widget.videoUrl!.trim();
+      return _resolveUrl(widget.videoUrl!);
     }
     // Auto-detect if imageUrl is actually a video file
     if (widget.imageUrl != null) {
       final lower = widget.imageUrl!.toLowerCase().split('?').first;
       if (lower.endsWith('.mp4') || lower.endsWith('.webm') || lower.endsWith('.mov')) {
-        return widget.imageUrl!.trim();
+        return _resolveUrl(widget.imageUrl!);
       }
     }
     return null;
@@ -315,21 +316,28 @@ class _CardMediaWidgetState extends State<CardMediaWidget> {
     );
   }
 
+  static String _resolveUrl(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    final base = AppConfig.apiBaseUrl.endsWith('/')
+        ? AppConfig.apiBaseUrl.substring(0, AppConfig.apiBaseUrl.length - 1)
+        : AppConfig.apiBaseUrl;
+    final path = trimmed.startsWith('/') ? trimmed : '/$trimmed';
+    return '$base$path';
+  }
+
   Widget _buildPosterLayer() {
     if (widget.imageUrl != null &&
         widget.imageUrl!.trim().isNotEmpty &&
         !_isDirectVideoFile(widget.imageUrl!)) {
+      final resolvedUrl = _resolveUrl(widget.imageUrl!);
       return CachedNetworkImage(
-        imageUrl: widget.imageUrl!.trim(),
+        imageUrl: resolvedUrl,
         fit: widget.fit,
         alignment: Alignment.center,
-        placeholder: (_, __) => const Center(
-          child: SizedBox(
-            width: 24,
-            height: 24,
-            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black12),
-          ),
-        ),
+        placeholder: (_, __) => const SizedBox.shrink(),
         errorWidget: (_, __, ___) => _buildFallbackVisual(),
       );
     }
@@ -353,20 +361,6 @@ class _CardMediaWidgetState extends State<CardMediaWidget> {
 
   Widget _buildFallbackVisual() {
     if (widget.fallback != null) return widget.fallback!;
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.03),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: Colors.black.withOpacity(0.06)),
-        ),
-        child: const Icon(
-          Icons.fastfood_rounded,
-          size: 54,
-          color: Colors.black26,
-        ),
-      ),
-    );
+    return const SizedBox.shrink();
   }
 }

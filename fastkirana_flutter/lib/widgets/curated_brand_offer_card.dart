@@ -558,21 +558,7 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
   }
 
   Widget _buildFallbackVisual() {
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.04),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
-        ),
-        child: const Icon(
-          Icons.fastfood_rounded,
-          size: 64,
-          color: Colors.white24,
-        ),
-      ),
-    );
+    return const SizedBox.shrink();
   }
 
   /// Nested "Button-in-Button" Island Architecture (Elite Agency Spec)

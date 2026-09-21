@@ -28,9 +28,25 @@ final categoryOfferCardsProvider = FutureProvider.family<List<CategoryCardData>,
       parsedCards.add(CategoryCardData.fromJson(json));
     }
     
-    // Strict isolation: food cards never show on grocery, and vice versa
+    // Strict isolation & user control:
+    // Only banners explicitly created as 'brand_card' by the user in Admin are shown.
+    // Zero auto-injection, zero hero banner bleed-in, zero hardcoding.
     final filteredCards = parsedCards.where((c) {
       if (!c.isActive) return false;
+
+      // 1. Target platform filter: if banner is set to web-only, skip on mobile
+      final rawJson = c.toJson();
+      final platform = rawJson['platform']?.toString().toLowerCase();
+      if (platform == 'web') return false;
+
+      // 2. Strict placement filter: ONLY items created as 'brand_card'
+      final placement = c.placement ??
+          (['dark_showcase', 'bento_grid', 'editorial', 'brand_offer'].contains(c.cardType)
+              ? 'brand_card'
+              : 'hero');
+      if (placement != 'brand_card') return false;
+
+      // 3. Strict mode isolation: food cards never show on grocery, and vice versa
       final isFood = c.type == 'food' ||
           c.type == 'cafe' ||
           (c.redirectUrl?.startsWith('/restaurant') ?? false) ||
@@ -41,8 +57,11 @@ final categoryOfferCardsProvider = FutureProvider.family<List<CategoryCardData>,
         if (isFood) return false;
       }
 
-      // Mobile platform filter: if banner is set to web-only, ignore
-      // Note: Both 'hero' and 'brand_card' placements are fully supported on mobile carousel
+      // 4. Media validation: Must have a valid image or video
+      final hasMedia = (c.imageUrl != null && c.imageUrl!.trim().isNotEmpty) ||
+          (c.videoUrl != null && c.videoUrl!.trim().isNotEmpty) ||
+          (c.imageAsset != null && c.imageAsset!.trim().isNotEmpty);
+      if (!hasMedia) return false;
 
       return true;
     }).toList();
