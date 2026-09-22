@@ -23,12 +23,32 @@ try:
 except ImportError:
     sentry_sdk = None
 
+from contextlib import asynccontextmanager
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.inmemory import InMemoryBackend
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Initialize high-performance caching (Redis if configured, otherwise fast in-memory)
+    if settings.REDIS_URL:
+        try:
+            from redis import asyncio as aioredis
+            from fastapi_cache.backends.redis import RedisBackend
+            redis = aioredis.from_url(settings.REDIS_URL)
+            FastAPICache.init(RedisBackend(redis), prefix="fastkirana-cache")
+        except Exception:
+            FastAPICache.init(InMemoryBackend(), prefix="fastkirana-cache")
+    else:
+        FastAPICache.init(InMemoryBackend(), prefix="fastkirana-cache")
+    yield
+
 app = FastAPI(
     title=settings.APP_NAME,
     description="High-Performance Python FastAPI Microservice for FastKirana E-Commerce, AI Demand Forecasting, Real-Time WebSockets, & Rider Wallet Ledger.",
     version="2.0.0",
     docs_url="/docs" if settings.APP_ENV != "production" else "/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 import uuid
@@ -94,8 +114,11 @@ app.include_router(paytm.router)
 app.include_router(fcm.router, prefix="/api")
 app.include_router(categories.router, prefix="/api")
 
-from routers import razorpay_router
+from routers import razorpay_router, cashfree_router, kot
 app.include_router(razorpay_router.router, prefix="/api")
+app.include_router(cashfree_router.router, prefix="/api")
+app.include_router(cashfree_router.router)
+app.include_router(kot.router)
 app.include_router(upload.router, prefix="/api")
 app.include_router(health.health_router)
 

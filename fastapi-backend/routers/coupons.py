@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func, and_, not_
+from sqlalchemy import func, and_, or_, not_
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 
@@ -143,3 +143,45 @@ async def validate_coupon(
             "discountAmount": round(discount_amount, 2)
         }
     }
+
+
+@router.get("")
+async def get_active_coupons(
+    restaurantId: Optional[str] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    List all active, unexpired coupons for storefront / checkout display.
+    """
+    now = datetime.utcnow()
+    conditions = [
+        Coupon.isActive == True,
+        or_(Coupon.expiresAt == None, Coupon.expiresAt > now)
+    ]
+    if restaurantId:
+        conditions.append(
+            or_(
+                Coupon.restaurantId == restaurantId,
+                and_(Coupon.restaurantId == None, Coupon.categoryId == None)
+            )
+        )
+
+    stmt = select(Coupon).where(and_(*conditions)).order_by(Coupon.value.desc())
+    res = await db.execute(stmt)
+    coupons = res.scalars().all()
+
+    return [
+        {
+            "id": c.id,
+            "code": c.code,
+            "discountType": c.discountType,
+            "value": float(c.value),
+            "minOrder": float(c.minOrder or 0.0),
+            "maxDiscount": float(c.maxDiscount) if c.maxDiscount else None,
+            "categoryId": c.categoryId,
+            "restaurantId": c.restaurantId,
+            "isActive": c.isActive,
+            "expiresAt": c.expiresAt.isoformat() if c.expiresAt else None,
+        }
+        for c in coupons
+    ]

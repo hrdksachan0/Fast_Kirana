@@ -27,11 +27,25 @@ class Settings(BaseSettings):
     DEFAULT_RIDER_CASH_LIMIT: float = 2000.0
 
     # Razorpay Payment Gateway Credentials
-    RAZORPAY_KEY_ID: str = os.getenv("RAZORPAY_KEY_ID", "rzp_live_TRvyzlqHiRGWbr")
-    RAZORPAY_KEY_SECRET: str = os.getenv("RAZORPAY_KEY_SECRET", "4C54O0N5q841qdmQ8N1MTTiU")
+    RAZORPAY_KEY_ID: str = os.getenv("RAZORPAY_KEY_ID", "")
+    RAZORPAY_KEY_SECRET: str = os.getenv("RAZORPAY_KEY_SECRET", "")
 
     # Google Maps API Key
-    GOOGLE_MAPS_API_KEY: str = os.getenv("GOOGLE_MAPS_API_KEY", "AIzaSyBA-OzFRbcw89zAZeELDWOiRl_Ce0uQYrc")
+    GOOGLE_MAPS_API_KEY: str = os.getenv("GOOGLE_MAPS_API_KEY", "")
+
+    # Cashfree Payment Gateway Credentials
+    CASHFREE_APP_ID: str = os.getenv("CASHFREE_APP_ID", "")
+    CASHFREE_SECRET_KEY: str = os.getenv("CASHFREE_SECRET_KEY", "")
+    CASHFREE_ENV: str = os.getenv("CASHFREE_ENV", "PRODUCTION")
+    CASHFREE_API_VERSION: str = os.getenv("CASHFREE_API_VERSION", "2023-08-01")
+
+    # App & Frontend URL
+    NEXT_PUBLIC_APP_URL: str = os.getenv("NEXT_PUBLIC_APP_URL", "https://fastkirana.in")
+
+    # Supabase Configuration
+    NEXT_PUBLIC_SUPABASE_URL: str = os.getenv("NEXT_PUBLIC_SUPABASE_URL", "https://bberzasmxwioxjynbuaf.supabase.co")
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: str = os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "sb_publishable_txJDOmH1qWQuOLCKrnV69A_RQ1XS4o-")
+    SUPABASE_SERVICE_ROLE_KEY: Optional[str] = os.getenv("SUPABASE_SERVICE_ROLE_KEY", None)
 
     model_config = SettingsConfigDict(case_sensitive=True)
 

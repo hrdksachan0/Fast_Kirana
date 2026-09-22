@@ -18,6 +18,11 @@ sentry-sdk[fastapi]>=2.0.0
 # Authentication & password hashing
 passlib[bcrypt]>=1.7.4
 bcrypt>=4.0.0
+pwdlib[argon2,bcrypt]>=0.3.0
+
+# Caching & DB Migrations
+fastapi-cache2>=0.2.2
+alembic>=1.13.0
 
 # Utilities
 python-jose[cryptography]>=3.3.0
