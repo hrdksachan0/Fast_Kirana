@@ -8,16 +8,18 @@ interface UseAdminUsersProps {
   initialUsers?: any[]
   initialUserCount?: number
   selectedHubId: string
+  activeTab?: string
 }
 
 export function useAdminUsers({
   initialUsers,
   initialUserCount,
   selectedHubId,
+  activeTab,
 }: UseAdminUsersProps) {
-  const [users, setUsers] = useState(initialUsers || [])
+  const [users, setUsers] = useState<any[]>(Array.isArray(initialUsers) ? initialUsers : [])
   const [userPage, setUserPage] = useState(1)
-  const [userTotal, setUserTotal] = useState(initialUserCount || (initialUsers || []).length)
+  const [userTotal, setUserTotal] = useState(initialUserCount || (Array.isArray(initialUsers) ? initialUsers.length : 0))
   const [isLoadingUsers, setIsLoadingUsers] = useState(false)
   const [userSearch, setUserSearch] = useState('')
   const [userRoleFilter, setUserRoleFilter] = useState('ALL')
@@ -54,8 +56,13 @@ export function useAdminUsers({
       )
       if (res.ok) {
         const data = await res.json()
-        setUsers(data.users)
-        setUserTotal(data.total)
+        const fetchedUsers = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.users)
+          ? data.users
+          : []
+        setUsers(fetchedUsers)
+        setUserTotal(typeof data?.total === 'number' ? data.total : fetchedUsers.length)
       }
     } catch (err) {
       console.error('Failed to fetch users:', err)
@@ -65,8 +72,10 @@ export function useAdminUsers({
   }, [userPage, userSearch, userRoleFilter, userStatusFilter, selectedHubId])
 
   useEffect(() => {
-    fetchUsers()
-  }, [fetchUsers])
+    if (activeTab === 'users') {
+      fetchUsers()
+    }
+  }, [fetchUsers, activeTab])
 
   const handleToggleBlock = async (userToBlock: any, isBlocked: boolean, reason?: string) => {
     setIsUpdatingBlockStatus(true)

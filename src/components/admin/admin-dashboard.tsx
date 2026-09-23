@@ -309,6 +309,7 @@ export function AdminDashboard({
     selectedHubId,
     sessionUserId,
     sessionUserRole,
+    activeTab,
   })
 
   // Orders Hook
@@ -324,6 +325,7 @@ export function AdminDashboard({
     initialUsers,
     initialUserCount: stats?.userCount,
     selectedHubId,
+    activeTab,
   })
 
   // Reviews & Coupons Hook
@@ -712,7 +714,7 @@ export function AdminDashboard({
 
   // Filtered Products
   const filteredProducts = useMemo(() => {
-    return productHook.products.filter((p) => {
+    return (Array.isArray(productHook.products) ? productHook.products : []).filter((p) => {
       const matchesSearch =
         p.name.toLowerCase().includes(productHook.searchQuery.toLowerCase()) ||
         (p.description &&
@@ -818,7 +820,7 @@ export function AdminDashboard({
   const hubCity = rawHubName
     ? rawHubName.replace(/\s*(central\s*hub|dark\s*store|hub|store)\s*/gi, '').trim().toLowerCase()
     : ''
-  const hubRestaurants = restaurantsList.filter((r) => {
+  const hubRestaurants = (Array.isArray(restaurantsList) ? restaurantsList : []).filter((r) => {
     if (!hubCity) return false
     return r.city && r.city.toLowerCase().trim().includes(hubCity)
   })

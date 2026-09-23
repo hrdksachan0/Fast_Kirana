@@ -15,10 +15,10 @@ export function useAdminOrders({
   selectedHubId,
   orderRefreshKey,
 }: UseAdminOrdersProps) {
-  const [orders, setOrders] = useState(initialOrders || [])
+  const [orders, setOrders] = useState<any[]>(Array.isArray(initialOrders) ? initialOrders : [])
   const [orderCounts, setOrderCounts] = useState<Record<string, number>>(() => {
     if (initialOrderCounts) return initialOrderCounts
-    const list = initialOrders || []
+    const list = Array.isArray(initialOrders) ? initialOrders : []
     return {
       ALL: list.length,
       ADMIN_PENDING: list.filter((o: any) => o.status === 'ADMIN_PENDING').length,
@@ -33,7 +33,7 @@ export function useAdminOrders({
   })
 
   const [orderPage, setOrderPage] = useState(1)
-  const [orderTotal, setOrderTotal] = useState((initialOrders || []).length)
+  const [orderTotal, setOrderTotal] = useState(Array.isArray(initialOrders) ? initialOrders.length : 0)
   const [isLoadingOrders, setIsLoadingOrders] = useState(false)
   const [orderStatusFilter, setOrderStatusFilter] = useState('ALL')
   const [orderSearchQuery, setOrderSearchQuery] = useState('')
@@ -71,8 +71,13 @@ export function useAdminOrders({
       )
       if (res.ok) {
         const data = await res.json()
-        setOrders(data.orders)
-        setOrderTotal(data.total)
+        const fetchedOrders = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.orders)
+          ? data.orders
+          : []
+        setOrders(fetchedOrders)
+        setOrderTotal(typeof data?.total === 'number' ? data.total : fetchedOrders.length)
         if (typeof data.todaySales === 'number') setApiTodaySales(data.todaySales)
         if (typeof data.todayNetSales === 'number') setApiTodayNetSales(data.todayNetSales)
         if (typeof data.todayOrdersCount === 'number') setApiTodayOrdersCount(data.todayOrdersCount)

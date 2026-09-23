@@ -12,6 +12,7 @@ interface UseAdminProductsProps {
   selectedHubId: string
   sessionUserId?: string
   sessionUserRole?: string
+  activeTab?: string
 }
 
 export function useAdminProducts({
@@ -21,11 +22,12 @@ export function useAdminProducts({
   selectedHubId,
   sessionUserId,
   sessionUserRole,
+  activeTab,
 }: UseAdminProductsProps) {
-  const [products, setProducts] = useState(initialProducts || [])
-  const [allProducts, setAllProducts] = useState(initialAllProducts || [])
+  const [products, setProducts] = useState<any[]>(Array.isArray(initialProducts) ? initialProducts : [])
+  const [allProducts, setAllProducts] = useState<any[]>(Array.isArray(initialAllProducts) ? initialAllProducts : [])
   const [productPage, setProductPage] = useState(1)
-  const [productTotal, setProductTotal] = useState((initialProducts || []).length)
+  const [productTotal, setProductTotal] = useState(Array.isArray(initialProducts) ? initialProducts.length : 0)
   const [isLoadingProducts, setIsLoadingProducts] = useState(false)
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -124,8 +126,13 @@ export function useAdminProducts({
       )
       if (res.ok) {
         const data = await res.json()
-        setProducts(data.products)
-        setProductTotal(data.total)
+        const fetchedProducts = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.products)
+          ? data.products
+          : []
+        setProducts(fetchedProducts)
+        setProductTotal(typeof data?.total === 'number' ? data.total : fetchedProducts.length)
       }
     } catch (err) {
       console.error('Failed to fetch products:', err)
@@ -139,6 +146,12 @@ export function useAdminProducts({
   }, [fetchProducts])
 
   useEffect(() => {
+    // Only load 1000 products if user is viewing product/catalog tabs
+    const catalogTabs = ['products', 'categories', 'alerts', 'inward', 'bulk-update', 'csv-import', 'reports', 'forecast', 'banners', 'restaurant-report']
+    if (activeTab && !catalogTabs.includes(activeTab) && allProducts.length > 0) {
+      return
+    }
+
     let active = true
     const loadAllProducts = async () => {
       try {
@@ -149,8 +162,10 @@ export function useAdminProducts({
         const res = await fetch(`/api/products?limit=1000${storeQuery}&t=${Date.now()}`)
         if (res.ok && active) {
           const data = await res.json()
-          if (data.products) {
+          if (Array.isArray(data?.products)) {
             setAllProducts(data.products)
+          } else if (Array.isArray(data)) {
+            setAllProducts(data)
           }
         }
       } catch (err) {
@@ -161,7 +176,7 @@ export function useAdminProducts({
     return () => {
       active = false
     }
-  }, [selectedHubId])
+  }, [selectedHubId, activeTab])
 
   const handleNewProductTypeChange = (type: 'grocery' | 'cafe' | 'restaurant') => {
     setNewProductType(type)

@@ -13,6 +13,21 @@ interface UseAdminRealtimeProps {
   onOrderUpdated?: (order: any) => void
 }
 
+let sharedAudioContext: AudioContext | null = null
+
+function getAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null
+  const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+  if (!AudioContextClass) return null
+  if (!sharedAudioContext || sharedAudioContext.state === 'closed') {
+    sharedAudioContext = new AudioContextClass()
+  }
+  if (sharedAudioContext.state === 'suspended') {
+    sharedAudioContext.resume().catch(() => {})
+  }
+  return sharedAudioContext
+}
+
 export function useAdminRealtime({
   selectedHubId,
   initialOrders,
@@ -20,7 +35,7 @@ export function useAdminRealtime({
   onNewOrder,
   onOrderUpdated,
 }: UseAdminRealtimeProps) {
-  const [liveOrders, setLiveOrders] = useState<any[]>(initialOrders || [])
+  const [liveOrders, setLiveOrders] = useState<any[]>(Array.isArray(initialOrders) ? initialOrders : [])
   const [orderRefreshKey, setOrderRefreshKey] = useState(0)
   const [isChimeMuted, setIsChimeMuted] = useState(false)
 
@@ -33,9 +48,8 @@ export function useAdminRealtime({
   // Web Audio warning chime synthesizer
   const playWarningChime = useCallback(() => {
     try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
-      if (!AudioContextClass) return
-      const ctx = new AudioContextClass()
+      const ctx = getAudioContext()
+      if (!ctx) return
       const now = ctx.currentTime
 
       const osc1 = ctx.createOscillator()
@@ -72,9 +86,8 @@ export function useAdminRealtime({
   const playNewOrderChime = useCallback(() => {
     if (isChimeMuted) return
     try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
-      if (!AudioContextClass) return
-      const ctx = new AudioContextClass()
+      const ctx = getAudioContext()
+      if (!ctx) return
       const now = ctx.currentTime
 
       const osc1 = ctx.createOscillator()
@@ -114,7 +127,12 @@ export function useAdminRealtime({
       const res = await fetch(`/api/orders?all=true${storeQuery}`)
       if (res.ok) {
         const data = await res.json()
-        setLiveOrders(data)
+        const fetched = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.orders)
+          ? data.orders
+          : []
+        setLiveOrders(fetched)
       }
     } catch (err) {
       console.error('Failed to poll live orders:', err)
@@ -180,7 +198,9 @@ export function useAdminRealtime({
 
     let railwayWs: WebSocket | null = null
     try {
-      railwayWs = new WebSocket('wss://fastkirana-production-a4b8.up.railway.app/ws')
+      const rawFastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkiran-backend-production.up.railway.app'
+      const wsUrl = rawFastApiUrl.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + '/ws'
+      railwayWs = new WebSocket(wsUrl)
       railwayWs.onerror = () => {}
       railwayWs.onmessage = (event) => {
         try {
@@ -281,14 +301,14 @@ export function useAdminRealtime({
 
   // Memoized live pending orders
   const livePendingOrders = useMemo(() => {
-    return liveOrders
+    return (Array.isArray(liveOrders) ? liveOrders : [])
       .filter((o: any) => o.status === 'PENDING')
       .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
   }, [liveOrders])
 
   // Filter delayed orders
   const delayedOrders = useMemo(() => {
-    return liveOrders.filter((order) => {
+    return (Array.isArray(liveOrders) ? liveOrders : []).filter((order) => {
       const isRestaurant = !!order.restaurantId || order.orderType === 'RESTAURANT'
       if (order.status === 'PENDING') {
         const diffMs = new Date().getTime() - new Date(order.createdAt).getTime()
@@ -324,7 +344,7 @@ export function useAdminRealtime({
 
   const pickerDelays = useMemo(
     () =>
-      delayedOrders.filter(
+      (Array.isArray(delayedOrders) ? delayedOrders : []).filter(
         (o) =>
           !o.restaurantId &&
           o.orderType !== 'RESTAURANT' &&
@@ -335,7 +355,7 @@ export function useAdminRealtime({
 
   const chefDelays = useMemo(
     () =>
-      delayedOrders.filter(
+      (Array.isArray(delayedOrders) ? delayedOrders : []).filter(
         (o) =>
           (!!o.restaurantId || o.orderType === 'RESTAURANT') &&
           (o.status === 'PENDING' || o.status === 'CONFIRMED')
@@ -344,7 +364,7 @@ export function useAdminRealtime({
   )
 
   const riderDelays = useMemo(
-    () => delayedOrders.filter((o) => o.status === 'PACKED'),
+    () => (Array.isArray(delayedOrders) ? delayedOrders : []).filter((o) => o.status === 'PACKED'),
     [delayedOrders]
   )
 

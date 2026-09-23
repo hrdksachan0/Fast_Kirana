@@ -12,16 +12,16 @@ interface AdminOrdersProps {
 }
 
 export function AdminOrders({ initialOrders }: AdminOrdersProps) {
-  const [orders, setOrders] = useState(initialOrders)
+  const [orders, setOrders] = useState<any[]>(Array.isArray(initialOrders) ? initialOrders : [])
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [filterMode, setFilterMode] = useState<'ALL' | 'PENDING_APPROVAL' | 'PREMIUM' | 'COMBINED'>('ALL')
   const [cancelConfirmOrder, setCancelConfirmOrder] = useState<any | null>(null)
 
-  const pendingApprovalCount = orders.filter((o) => o.status === 'ADMIN_PENDING').length
-  const premiumCount = orders.filter((o) => o.notes?.includes('Premium') || o.miscFee === 15 || o.miscFee === 20).length
-  const combinedCount = orders.filter((o) => !!o.combinedId).length
+  const pendingApprovalCount = (Array.isArray(orders) ? orders : []).filter((o) => o.status === 'ADMIN_PENDING').length
+  const premiumCount = (Array.isArray(orders) ? orders : []).filter((o) => o.notes?.includes('Premium') || o.miscFee === 15 || o.miscFee === 20).length
+  const combinedCount = (Array.isArray(orders) ? orders : []).filter((o) => !!o.combinedId).length
 
-  const filteredOrders = orders.filter((o) => {
+  const filteredOrders = (Array.isArray(orders) ? orders : []).filter((o) => {
     if (filterMode === 'PENDING_APPROVAL') {
       return o.status === 'ADMIN_PENDING'
     }

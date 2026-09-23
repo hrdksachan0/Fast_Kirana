@@ -302,12 +302,12 @@ export function OrdersTab({
   const historyStatuses = ['DELIVERED', 'CANCELLED']
 
   const rawActiveList = React.useMemo(() => {
-    const list = orders.filter((o) => activeStatuses.includes(o.status))
+    const list = (Array.isArray(orders) ? orders : []).filter((o) => activeStatuses.includes(o.status))
     return consolidateOrders(list)
   }, [orders, consolidateOrders])
 
   const rawHistoryList = React.useMemo(() => {
-    const list = orders.filter((o) => historyStatuses.includes(o.status))
+    const list = (Array.isArray(orders) ? orders : []).filter((o) => historyStatuses.includes(o.status))
     return consolidateOrders(list)
   }, [orders, consolidateOrders])
 
@@ -572,7 +572,7 @@ export function OrdersTab({
   }
 
   // Filter Active Table by status, store, method & search query
-  const filteredActiveOrders = rawActiveList.filter((o) => {
+  const filteredActiveOrders = (Array.isArray(rawActiveList) ? rawActiveList : []).filter((o) => {
     const isUnpaidOnline = o.paymentStatus !== 'PAID' && o.paymentMethod !== 'COD'
     const matchesFilter = orderStatusFilter === 'ALL'
       ? (!isUnpaidOnline || o.status !== 'PENDING')
@@ -596,7 +596,7 @@ export function OrdersTab({
   })
 
   // Filter History Table by status, store, method & search query
-  const filteredHistoryOrders = rawHistoryList.filter((o) => {
+  const filteredHistoryOrders = (Array.isArray(rawHistoryList) ? rawHistoryList : []).filter((o) => {
     const matchesFilter = orderStatusFilter === 'ALL' || activeStatuses.includes(orderStatusFilter) || o.status === orderStatusFilter || (o.subOrders && o.subOrders.some((s: any) => s.status === orderStatusFilter))
     const matchesShop = orderShopFilter === 'ALL' || getOrderStoreType(o) === orderShopFilter
     const matchesMethod = orderMethodFilter === 'ALL' || getOrderMethod(o) === orderMethodFilter

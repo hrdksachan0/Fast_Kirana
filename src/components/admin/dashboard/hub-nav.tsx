@@ -70,7 +70,7 @@ export function DashboardHubNav({
           const isActive = activeHub === hub.key
           
           // Calculate aggregate badge count for this hub
-          const hubBadgeCount = tabConfig
+          const hubBadgeCount = (Array.isArray(tabConfig) ? tabConfig : [])
             .filter((tab) => (hub.tabs as readonly string[]).includes(tab.key))
             .reduce((acc, curr) => acc + (curr.count || 0), 0)
 
@@ -142,7 +142,7 @@ export function DashboardHubNav({
           {(() => {
             const activeHubData = hubs.find((h) => h.key === activeHub)
             const activeHubSubTabs = activeHubData
-              ? tabConfig.filter((tab) => (activeHubData.tabs as readonly string[]).includes(tab.key))
+              ? (Array.isArray(tabConfig) ? tabConfig : []).filter((tab) => (activeHubData.tabs as readonly string[]).includes(tab.key))
               : []
 
             return activeHubSubTabs.map((tab) => {
