@@ -13,10 +13,13 @@ import random
 import os
 import httpx
 import uuid
+import logging
 
 from database import get_db
 from models import User, Role
 from utils.jwt import extract_user_from_token, is_token_expired, create_access_token
+
+logger = logging.getLogger("auth")
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -887,7 +890,9 @@ async def check_email(email: str, db: AsyncSession = Depends(get_db)):
 
 
 class GoogleAuthRequest(BaseModel):
-    email: EmailStr
+    email: Optional[EmailStr] = None
+    id_token: Optional[str] = None
+    credential: Optional[str] = None
     name: Optional[str] = None
     photoUrl: Optional[str] = None
     googleId: Optional[str] = None
@@ -899,9 +904,42 @@ async def google_auth(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Authenticate with Google OAuth payload. Creates customer user if not existing.
+    Authenticate with Google OAuth payload or verified Google ID token.
+    Creates customer user if not existing and returns access token.
     """
-    email = body.email.strip().lower()
+    email = str(body.email).strip().lower() if body.email else None
+    name = body.name
+    photo_url = body.photoUrl
+    token_to_verify = body.id_token or body.credential
+
+    # Verify ID token with Google if provided
+    if token_to_verify:
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                res = await client.get(
+                    f"https://oauth2.googleapis.com/tokeninfo?id_token={token_to_verify}"
+                )
+                if res.status_code == 200:
+                    token_info = res.json()
+                    verified_email = token_info.get("email")
+                    if verified_email:
+                        email = verified_email.strip().lower()
+                        name = name or token_info.get("name")
+                        photo_url = photo_url or token_info.get("picture")
+                else:
+                    logger.warning(f"Google token verification failed with status {res.status_code}")
+                    if not email:
+                        raise HTTPException(status_code=400, detail="Invalid Google OAuth token")
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.warning(f"Google tokeninfo fetch exception: {e}")
+            if not email:
+                raise HTTPException(status_code=400, detail="Could not verify Google token")
+
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required for Google authentication")
+
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalars().first()
 
@@ -909,16 +947,19 @@ async def google_auth(
         user = User(
             id=f"c{uuid.uuid4().hex[:24]}",
             email=email,
-            name=body.name or email.split("@")[0],
+            name=name or email.split("@")[0],
             phone=None,
             role=Role.USER.value,
             passwordHash=None,
-            image=body.photoUrl,
+            image=photo_url,
             isBlocked=False,
         )
         db.add(user)
         await db.commit()
         await db.refresh(user)
+    elif photo_url and not user.image:
+        user.image = photo_url
+        await db.commit()
 
     if user.isBlocked:
         raise HTTPException(status_code=403, detail=f"Account blocked: {user.blockReason or 'Contact support'}")

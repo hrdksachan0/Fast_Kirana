@@ -236,3 +236,41 @@ async def get_buy_again_products(
         {"id": p.id, "name": p.name, "price": p.price, "imageUrl": p.imageUrl, "mrp": p.mrp}
         for p in products
     ]}
+
+
+search_router = APIRouter(prefix="/search", tags=["Search Alias"])
+
+@search_router.get("")
+async def search_products_alias(
+    q: Optional[str] = Query(None),
+    query: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    limit: int = Query(50),
+    db: AsyncSession = Depends(get_db)
+):
+    """Universal search endpoint alias mapping to products search."""
+    search_term = q or query or search or ""
+    stmt = select(Product).where(Product.isAvailable == True)
+    if search_term.strip():
+        stmt = stmt.where(Product.name.ilike(f"%{search_term.strip()}%"))
+    stmt = stmt.limit(limit)
+    res = await db.execute(stmt)
+    products = res.scalars().all()
+    return {
+        "products": [
+            {
+                "id": p.id,
+                "name": p.name,
+                "price": float(p.price or 0),
+                "mrp": float(p.mrp or p.price or 0),
+                "imageUrl": p.imageUrl,
+                "unit": p.unit,
+                "stock": p.stock,
+                "isAvailable": p.isAvailable,
+                "categoryId": p.categoryId,
+                "restaurantId": p.restaurantId,
+            }
+            for p in products
+        ],
+        "total": len(products)
+    }

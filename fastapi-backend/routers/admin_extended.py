@@ -1868,3 +1868,242 @@ async def admin_update_sort_rule(
     db: AsyncSession = Depends(get_db)
 ):
     return {"success": True, "rule": data.get("rule", "default")}
+
+
+# ============================================================
+# GEMINI AI SHOWCASE & BENTO CARDS GENERATOR
+# ============================================================
+
+AESTHETIC_PHOTOS: Dict[str, Dict[str, List[str]]] = {
+    "burger": {
+        "hero": [
+            "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&q=80",
+            "https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=800&q=80",
+            "https://images.unsplash.com/photo-1550547660-d9450f859349?w=800&q=80",
+        ],
+        "bento": [
+            "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&q=80",
+            "https://images.unsplash.com/photo-1576107232684-1279f3908594?w=400&q=80",
+            "https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=400&q=80",
+            "https://images.unsplash.com/photo-1550547660-d9450f859349?w=400&q=80",
+        ],
+    },
+    "pizza": {
+        "hero": [
+            "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&q=80",
+            "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&q=80",
+        ],
+        "bento": [
+            "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&q=80",
+            "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&q=80",
+            "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&q=80",
+            "https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?w=400&q=80",
+        ],
+    },
+    "biryani": {
+        "hero": [
+            "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800&q=80",
+            "https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=800&q=80",
+        ],
+        "bento": [
+            "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400&q=80",
+            "https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=400&q=80",
+            "https://images.unsplash.com/photo-1633945274405-b6c8069047b0?w=400&q=80",
+            "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=400&q=80",
+        ],
+    },
+    "fruits": {
+        "hero": [
+            "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=800&q=80",
+            "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=800&q=80",
+        ],
+        "bento": [
+            "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=400&q=80",
+            "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&q=80",
+            "https://images.unsplash.com/photo-1519996529931-28324d5a630e?w=400&q=80",
+            "https://images.unsplash.com/photo-1587132137056-bfbf0166836e?w=400&q=80",
+        ],
+    },
+    "dairy": {
+        "hero": [
+            "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=800&q=80",
+            "https://images.unsplash.com/photo-1528750997573-59b89d56f4f7?w=800&q=80",
+        ],
+        "bento": [
+            "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400&q=80",
+            "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&q=80",
+            "https://images.unsplash.com/photo-1528750997573-59b89d56f4f7?w=400&q=80",
+            "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=400&q=80",
+        ],
+    },
+    "snacks": {
+        "hero": [
+            "https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=800&q=80",
+            "https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=800&q=80",
+        ],
+        "bento": [
+            "https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=400&q=80",
+            "https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=400&q=80",
+            "https://images.unsplash.com/photo-1576107232684-1279f3908594?w=400&q=80",
+            "https://images.unsplash.com/photo-1621447504864-d8686e12698c?w=400&q=80",
+        ],
+    },
+    "desserts": {
+        "hero": [
+            "https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=800&q=80",
+            "https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=800&q=80",
+        ],
+        "bento": [
+            "https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=400&q=80",
+            "https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=400&q=80",
+            "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=400&q=80",
+            "https://images.unsplash.com/photo-1509722747041-616f39b57569?w=400&q=80",
+        ],
+    },
+}
+
+
+def _get_photo_pool(category_name: str, category_type: str) -> Dict[str, List[str]]:
+    name = category_name.lower()
+    if any(k in name for k in ("burg", "sandwich", "patty")):
+        return AESTHETIC_PHOTOS["burger"]
+    if any(k in name for k in ("pizz", "italian")):
+        return AESTHETIC_PHOTOS["pizza"]
+    if any(k in name for k in ("biryan", "rice", "roll", "tandoor", "curry")):
+        return AESTHETIC_PHOTOS["biryani"]
+    if any(k in name for k in ("fruit", "veg", "organic", "salad")):
+        return AESTHETIC_PHOTOS["fruits"]
+    if any(k in name for k in ("dairy", "milk", "bread", "egg", "paneer")):
+        return AESTHETIC_PHOTOS["dairy"]
+    if any(k in name for k in ("snack", "chip", "namkeen", "munch")):
+        return AESTHETIC_PHOTOS["snacks"]
+    if any(k in name for k in ("sweet", "dessert", "ice", "cake", "choco")):
+        return AESTHETIC_PHOTOS["desserts"]
+    return AESTHETIC_PHOTOS["burger"] if category_type == "food" else AESTHETIC_PHOTOS["fruits"]
+
+
+@router.post("/gemini-cards")
+async def generate_gemini_cards(
+    payload: Dict[str, Any] = Body(...),
+    current_admin: dict = Depends(require_admin)
+):
+    """
+    Generate high-aesthetic marketing cards using Google Gemini 2.5 Flash with creative fallback.
+    """
+    import json
+    import httpx
+
+    category_name = payload.get("categoryName", "Burgers & Fast Bites")
+    category_type = payload.get("categoryType", "food")
+    card_format = payload.get("cardFormat", "dark_showcase")
+    outlet_name = payload.get("outletName", "")
+    api_key = payload.get("apiKey") or os.environ.get("GEMINI_API_KEY", "")
+
+    pool = _get_photo_pool(category_name, category_type)
+    hero_image = random.choice(pool["hero"])
+    bento_images = pool["bento"]
+
+    if api_key:
+        try:
+            prompt = f"""You are a world-class luxury quick-commerce creative director for FastKirana.
+Create an irresistible, mouth-watering, highly aesthetic promotional card configuration for the category: "{category_name}" in "{category_type}" delivery mode.
+Card Format: "{card_format}" (options: dark_showcase, bento_grid, editorial).
+Optional Outlet/Brand: "{outlet_name or ('A.S. Restaurant' if category_type == 'food' else 'FastKirana Direct')}".
+
+Return ONLY a valid JSON object with these EXACT keys:
+{{
+  "eyebrowTag": "Short uppercase punchy badge (e.g. '🔥 SIZZLING FAST DROP', '🌿 100% FARM FRESH')",
+  "discountTitle": "Bold catchy headline in all-caps (e.g. 'DOUBLE CHEESE BURGER', 'FLAT 50% OFF')",
+  "subtitle": "Irresistible culinary or freshness description under 8 words",
+  "primaryBrand": "Short uppercase brand name",
+  "secondaryBrand": "Optional accent tag",
+  "ctaText": "Active conversion button text (e.g. 'ORDER NOW', 'EXPLORE MENU')",
+  "ctaBgColorHex": "Vibrant hex color (e.g. '#EF4444' or '#10B981')",
+  "ctaTextColorHex": "High contrast hex (e.g. '#FFFFFF')",
+  "cashbackTitle": "Attractive savings tag (e.g. 'FLAT 40% OFF')",
+  "cashbackSubtitle": "Perk string",
+  "disclaimerText": "Discreet asterisk disclaimer",
+  "backgroundColorHex": "Deep aesthetic background hex (e.g. '#09090B')"
+}}"""
+            gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                res = await client.post(
+                    gemini_url,
+                    json={
+                        "contents": [{"parts": [{"text": prompt}]}],
+                        "generationConfig": {
+                            "responseMimeType": "application/json",
+                            "temperature": 0.7
+                        }
+                    }
+                )
+                if res.status_code == 200:
+                    data = res.json()
+                    text_out = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text")
+                    if text_out:
+                        parsed = json.loads(text_out)
+                        return {
+                            "success": True,
+                            "generatedBy": "gemini-2.5-flash",
+                            "card": {
+                                **parsed,
+                                "cardType": card_format,
+                                "imageUrl": hero_image,
+                                "gridImages": bento_images,
+                                "hasWireframeGrid": (card_format == "dark_showcase"),
+                                "ctaUrl": f"/category/{re.sub(r'[^a-z0-9]+', '-', category_name.lower())}"
+                            }
+                        }
+        except Exception as e:
+            logger.warning(f"Gemini API call failed, falling back to creative engine: {e}")
+
+    # Fallback creative generation
+    is_food = (category_type == "food")
+    cat_upper = category_name.upper()
+    if is_food:
+        if "BURGER" in cat_upper:
+            fallback_title = "DOUBLE CHEESE CRUNCH"
+        elif "PIZZA" in cat_upper:
+            fallback_title = "LOADED CHEESY CRUST"
+        elif "BIRYANI" in cat_upper:
+            fallback_title = "ROYAL DUM BIRYANI"
+        else:
+            fallback_title = f"{cat_upper} SPECIAL"
+        fallback_sub = "Hot, fresh & delivered piping hot in 15 mins"
+    else:
+        if "FRUIT" in cat_upper:
+            fallback_title = "FARM FRESH GREENS"
+        elif "DAIRY" in cat_upper:
+            fallback_title = "FARM MILK & BAKERY"
+        elif "SNACK" in cat_upper:
+            fallback_title = "MUNCHIES & SODAS"
+        else:
+            fallback_title = f"{cat_upper} STAPLES"
+        fallback_sub = "Handpicked daily harvest delivered in 10 mins"
+
+    slug = re.sub(r'[^a-z0-9]+', '-', category_name.lower())
+
+    return {
+        "success": True,
+        "generatedBy": "creative-engine",
+        "card": {
+            "cardType": card_format,
+            "eyebrowTag": "🔥 SIZZLING FAST FOOD" if is_food else "🌿 DAILY HARVEST",
+            "discountTitle": fallback_title,
+            "subtitle": fallback_sub,
+            "primaryBrand": outlet_name or ("A.S. RESTAURANT" if is_food else "FASTKIRANA"),
+            "secondaryBrand": "FAST BITES" if is_food else "DIRECT",
+            "imageUrl": hero_image,
+            "gridImages": bento_images,
+            "hasWireframeGrid": (card_format == "dark_showcase"),
+            "ctaText": "ORDER NOW" if is_food else "SHOP FRESH",
+            "ctaUrl": f"/category/{slug}",
+            "ctaBgColorHex": "#EF4444" if is_food else "#10B981",
+            "ctaTextColorHex": "#FFFFFF",
+            "cashbackTitle": "FLAT 40% OFF",
+            "cashbackSubtitle": "+ Extra ₹50 on UPI Payment",
+            "disclaimerText": "*T&C Apply. Superfast express delivery in Ghatampur.",
+            "backgroundColorHex": "#0F172A"
+        }
+    }
+
