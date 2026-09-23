@@ -908,6 +908,19 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         restaurantId = item.product.restaurantId;
         break;
       }
+      if (isRestaurantProduct(item.product)) {
+        final reg = RestaurantRegistry.find(getOutletName(item.product));
+        if (reg != null) {
+          shopName = reg.name;
+          restaurantId = reg.id;
+          break;
+        }
+      }
+    }
+    // Safety fallback: If cart contains restaurant items, ensure valid non-null restaurantId
+    if (hasRestaurant && (restaurantId == null || restaurantId.isEmpty)) {
+      restaurantId = 'REST-101';
+      shopName = 'A.S. Restaurant & Cafe';
     }
 
     final orderId = 'FK-${(100000 + DateTime.now().millisecondsSinceEpoch % 900000)}';
@@ -983,30 +996,37 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         'lat': selectedAddress?.latitude,
         'lng': selectedAddress?.longitude,
         'shopName': (hasGrocery && hasRestaurant) ? 'FastKirana Dark Store' : shopName,
+        'restaurantId': restaurantId,
         'packagingOption': state.selectedPackaging,
         'packagingFee': packagingFee,
-        'items': cart.items.map((i) => {
-          'productId': i.product.id,
-          'quantity': i.quantity,
-          'price': i.product.price,
-          'name': i.product.name,
-          'selectedVariant': i.selectedVariant ?? (i.product.unit.isNotEmpty ? i.product.unit : null),
-          'variant': i.selectedVariant ?? (i.product.unit.isNotEmpty ? i.product.unit : null),
-          'unit': i.product.unit,
-          'restaurantId': i.product.restaurantId ?? i.product.restaurant?.id,
-          'menuSection': i.product.menuSection,
-          'tags': i.product.tags,
-          'product': {
-            'id': i.product.id,
-            'name': i.product.name,
+        'items': cart.items.map((i) {
+          final isRest = isRestaurantProduct(i.product);
+          final itemRestId = i.product.restaurantId ??
+              i.product.restaurant?.id ??
+              (isRest ? (RestaurantRegistry.find(getOutletName(i.product))?.id ?? restaurantId) : null);
+          return {
+            'productId': i.product.id,
+            'quantity': i.quantity,
             'price': i.product.price,
-            'imageUrl': i.product.imageUrl,
-            'slug': i.product.slug,
+            'name': i.product.name,
+            'selectedVariant': i.selectedVariant ?? (i.product.unit.isNotEmpty ? i.product.unit : null),
+            'variant': i.selectedVariant ?? (i.product.unit.isNotEmpty ? i.product.unit : null),
             'unit': i.product.unit,
-            'restaurantId': i.product.restaurantId ?? i.product.restaurant?.id,
+            'restaurantId': itemRestId,
             'menuSection': i.product.menuSection,
             'tags': i.product.tags,
-          }
+            'product': {
+              'id': i.product.id,
+              'name': i.product.name,
+              'price': i.product.price,
+              'imageUrl': i.product.imageUrl,
+              'slug': i.product.slug,
+              'unit': i.product.unit,
+              'restaurantId': itemRestId,
+              'menuSection': i.product.menuSection,
+              'tags': i.product.tags,
+            }
+          };
         }).toList(),
       };
 

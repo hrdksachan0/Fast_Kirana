@@ -75,7 +75,7 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
-    const apiDest = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://fastkiran-backend-production.up.railway.app';
+    const apiDest = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://fastkirana-production-a4b8.up.railway.app';
     return {
       beforeFiles: [
         // Phase 1: Safe Read-Only Catalog & Content Routes (Zero Financial Risk)

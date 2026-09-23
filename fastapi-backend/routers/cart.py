@@ -64,6 +64,21 @@ async def get_or_create_cart(user_id: str, db: AsyncSession) -> Optional[Cart]:
     return cart
 
 
+async def broadcast_cart_update(cart_id: str, user_id: Optional[str] = None):
+    try:
+        from routers.websockets import manager
+        await manager.broadcast_to_channel("general", {
+            "event": "CART_UPDATE",
+            "type": "cart-updated",
+            "cartId": cart_id,
+            "userId": user_id,
+            "timestamp": datetime.utcnow().isoformat(),
+        })
+    except Exception:
+        pass
+
+
+
 @router.get("")
 async def get_cart(
     current_user: Optional[dict] = Depends(get_current_user),
@@ -217,6 +232,7 @@ async def sync_cart(
 
     cart.updatedAt = datetime.utcnow()
     await db.commit()
+    await broadcast_cart_update(cart.id, user_id)
 
     return {
         "success": True,
@@ -291,6 +307,7 @@ async def add_to_cart(
 
     cart.updatedAt = datetime.utcnow()
     await db.commit()
+    await broadcast_cart_update(cart.id, user_id)
 
     return {"success": True, "message": "Item added to cart"}
 
@@ -334,6 +351,7 @@ async def update_cart_item(
     item.quantity = quantity
     cart.updatedAt = datetime.utcnow()
     await db.commit()
+    await broadcast_cart_update(cart.id, user_id)
 
     return {"success": True, "message": "Cart updated"}
 
@@ -371,6 +389,7 @@ async def remove_cart_item(
     await db.delete(item)
     cart.updatedAt = datetime.utcnow()
     await db.commit()
+    await broadcast_cart_update(cart.id, user_id)
 
     return {"success": True, "message": "Item removed from cart"}
 
@@ -404,5 +423,6 @@ async def clear_cart(
 
     cart.updatedAt = datetime.utcnow()
     await db.commit()
+    await broadcast_cart_update(cart.id, user_id)
 
     return {"success": True, "message": "Cart cleared"}

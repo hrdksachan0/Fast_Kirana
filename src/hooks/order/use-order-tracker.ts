@@ -416,13 +416,13 @@ export function useOrderTracker({
     return () => clearInterval(pollInterval)
   }, [order.id, order.status, compOrder?.id, compOrder?.status])
 
-  // Real-time Supabase subscription
+  // Real-time Supabase & Railway WebSocket subscription
   useEffect(() => {
     const channel = supabase
       .channel(`order-${order.id}-tracking`)
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'Order' },
+        { event: '*', schema: 'public', table: 'orders' },
         (payload: any) => {
           const updated = payload.new
           if (!updated) return
@@ -463,8 +463,38 @@ export function useOrderTracker({
       )
       .subscribe()
 
+    // Railway WebSocket connection for redundant live order & rider updates
+    let ws: WebSocket | null = null
+    try {
+      const rawFastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkirana-production-a4b8.up.railway.app'
+      const cleanUrl = rawFastApiUrl.replace(/\/+$/, '')
+      const wsUrl = cleanUrl.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + `/ws/orders/${order.id}`
+      ws = new WebSocket(wsUrl)
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data)
+          if (msg.event === 'STATUS_UPDATE' || msg.status) {
+            fetch(`/api/orders/${order.id}`)
+              .then(r => r.json())
+              .then(data => {
+                if (data?.status) setOrder(data)
+              })
+          }
+          if (msg.lat != null && msg.lng != null) {
+            setOrder(prev => ({
+              ...prev,
+              deliveryLat: Number(msg.lat),
+              deliveryLng: Number(msg.lng)
+            }))
+          }
+        } catch (_) {}
+      }
+      ws.onerror = () => {}
+    } catch (_) {}
+
     return () => {
       supabase.removeChannel(channel)
+      if (ws) ws.close()
     }
   }, [order.id, compOrder?.id])
 

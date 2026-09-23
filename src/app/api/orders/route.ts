@@ -532,18 +532,43 @@ export async function POST(request: NextRequest) {
       }
 
       if (isRestaurantItem && resolvedRestId) {
-        const rId = resolvedRestId as string
+        let rId = String(resolvedRestId).trim()
+        if (rId === 'as-restaurant' || rId === 'as-cafe' || rId === 'cms2p1lap0000n0id8alldboy') {
+          rId = 'REST-101'
+        } else if (rId === 'wedson-restaurant' || rId === 'wedson') {
+          rId = 'REST-102'
+        } else if (rId === 'bal-udyan-restaurant' || rId === 'bal-udyan') {
+          rId = 'REST-103'
+        } else if (rId === 'hot-pizza-lovers' || rId === 'pizza-lovers') {
+          rId = 'REST-104'
+        }
+
         if (!restaurantGroups[rId]) {
           let rObj = dbProduct.restaurant
           if (!rObj) {
-            rObj = await prisma.restaurant.findUnique({ where: { id: rId } })
+            rObj = await prisma.restaurant.findFirst({
+              where: {
+                OR: [
+                  { id: rId },
+                  { slug: rId }
+                ]
+              }
+            })
           }
-          restaurantGroups[rId] = {
-            restaurant: rObj,
-            items: []
+          if (!rObj) {
+            rObj = await prisma.restaurant.findUnique({ where: { id: 'REST-101' } })
           }
+          const canonicalId = rObj?.id || rId
+          if (!restaurantGroups[canonicalId]) {
+            restaurantGroups[canonicalId] = {
+              restaurant: rObj,
+              items: []
+            }
+          }
+          restaurantGroups[canonicalId].items.push(itemWithDb)
+        } else {
+          restaurantGroups[rId].items.push(itemWithDb)
         }
-        restaurantGroups[rId].items.push(itemWithDb)
       } else {
         groceryItems.push(itemWithDb)
       }

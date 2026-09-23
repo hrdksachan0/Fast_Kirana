@@ -325,11 +325,15 @@ async def create_order(
             prod_name = prod_dict.get("name") or raw_item.get("name", "Product")
             prod_slug = prod_dict.get("slug")
             prod_price = float(raw_item.get("price") or prod_dict.get("price", 0.0))
+            rest_id_payload = raw_item.get("restaurantId") or prod_dict.get("restaurantId")
+            addons_payload = raw_item.get("selectedAddons") or prod_dict.get("selectedAddons") or []
         elif isinstance(raw_item, dict):
             prod_id = raw_item.get("productId") or raw_item.get("id")
             prod_name = raw_item.get("name", "Product")
             prod_slug = raw_item.get("slug")
             prod_price = float(raw_item.get("price", 0.0))
+            rest_id_payload = raw_item.get("restaurantId")
+            addons_payload = raw_item.get("selectedAddons") or []
         else:
             continue
 
@@ -339,11 +343,15 @@ async def create_order(
                 "name": prod_name,
                 "slug": prod_slug,
                 "price": prod_price,
+                "restaurantId": rest_id_payload,
+                "selectedAddons": addons_payload,
             },
             "productId": str(prod_id).split("_")[0] if prod_id else None,
             "quantity": int(raw_item.get("quantity", 1)),
             "price": prod_price,
             "selectedVariant": raw_item.get("selectedVariant"),
+            "restaurantId": rest_id_payload,
+            "selectedAddons": addons_payload,
             "notes": raw_item.get("notes"),
         })
     items = normalized_items
@@ -529,7 +537,12 @@ async def create_order(
             if variant:
                 db_stock = variant.get("stock", 0)
 
-        is_restaurant = bool(db_prod.restaurantId)
+        resolved_rest_id = (
+            db_prod.restaurantId
+            or item.get("restaurantId")
+            or (item.get("product") or {}).get("restaurantId")
+        )
+        is_restaurant = bool(resolved_rest_id)
         if is_restaurant:
             db_stock = 999999
 
@@ -545,29 +558,51 @@ async def create_order(
 
         item_with_db = {**item, "dbProduct": db_prod}
         if is_restaurant:
-            r_id = db_prod.restaurantId
-            if r_id not in restaurant_groups:
-                # Load restaurant details from Restaurant table
-                rest_stmt = select(Restaurant).where(Restaurant.id == r_id)
+            r_id = str(resolved_rest_id).strip()
+            # Normalize common legacy aliases
+            if r_id in ["as-restaurant", "as-cafe", "cms2p1lap0000n0id8alldboy"]:
+                r_id = "REST-101"
+            elif r_id in ["wedson-restaurant", "wedson"]:
+                r_id = "REST-102"
+            elif r_id in ["bal-udyan-restaurant", "bal-udyan"]:
+                r_id = "REST-103"
+            elif r_id in ["hot-pizza-lovers", "pizza-lovers"]:
+                r_id = "REST-104"
+
+            matched_group_key = next((k for k in restaurant_groups if k == r_id or restaurant_groups[k].get("slug") == r_id), None)
+            if not matched_group_key:
+                # Load restaurant details from Restaurant table (search by ID or slug)
+                rest_stmt = select(Restaurant).where(or_(Restaurant.id == r_id, Restaurant.slug == r_id))
                 rest_res = await db.execute(rest_stmt)
                 restaurant = rest_res.scalars().first()
-                
+
+                if not restaurant:
+                    # Graceful fallback to default REST-101 instead of crashing
+                    def_stmt = select(Restaurant).where(Restaurant.id == "REST-101")
+                    def_res = await db.execute(def_stmt)
+                    restaurant = def_res.scalars().first()
+
                 if not restaurant or not restaurant.isOpen or not restaurant.isActive:
                     r_name = restaurant.name if restaurant else "Restaurant"
                     raise HTTPException(status_code=400, detail=f"{r_name} is temporarily closed.")
-                
-                # Load restaurant details
-                res_stmt = select(User).where(User.assignedRestaurantId == r_id)
+
+                canonical_r_id = restaurant.id
+                # Load restaurant owner details
+                res_stmt = select(User).where(User.assignedRestaurantId == canonical_r_id)
                 res_res = await db.execute(res_stmt)
                 owner = res_res.scalars().first()
-                owner_phone = owner.phone if owner else "+91 81128 49854"
-                
-                restaurant_groups[r_id] = {
+                owner_phone = owner.phone if owner else (restaurant.ownerPhone or "+91 81128 49854")
+
+                restaurant_groups[canonical_r_id] = {
+                    "id": canonical_r_id,
+                    "slug": restaurant.slug,
                     "name": restaurant.name,
                     "ownerPhone": owner_phone,
                     "items": []
                 }
-            restaurant_groups[r_id]["items"].append(item_with_db)
+                matched_group_key = canonical_r_id
+
+            restaurant_groups[matched_group_key]["items"].append(item_with_db)
         else:
             grocery_items.append(item_with_db)
 
@@ -988,6 +1023,7 @@ async def create_order(
         for order in created_orders:
             # Broadcast to general websocket
             await manager.broadcast_to_channel("general", {
+                "event": "NEW_ORDER",
                 "type": "new-order",
                 "orderId": order.id,
                 "readableId": order.readableId,
@@ -996,6 +1032,19 @@ async def create_order(
                 "total": float(order.total),
                 "createdAt": order.createdAt.isoformat(),
                 "restaurantId": order.restaurantId,
+            })
+            await manager.broadcast_to_channel("general", {
+                "event": "CART_UPDATE",
+                "type": "cart-updated",
+                "userId": user_id,
+            })
+            await manager.broadcast_to_channel(f"order_{order.id}", {
+                "event": "NEW_ORDER",
+                "type": "new-order",
+                "orderId": order.id,
+                "readableId": order.readableId,
+                "status": order.status.value,
+                "total": float(order.total),
             })
 
             # 1. FCM Push Notification directly to Customer
@@ -1044,6 +1093,24 @@ async def create_order(
                 background_tasks.add_task(send_whatsapp_alert, phone, admin_text)
 
         # Return full order object matching Flutter Order.fromJson expectations
+        main_order = next((o for o in created_orders if not o.restaurantId), created_orders[0]) if created_orders else new_order
+
+        # Build in-memory items payload safely without triggering async lazy-loading DetachedInstanceError
+        order_items_payload = []
+        for it in items:
+            p_data = it.get("product") or {}
+            raw_id = str(p_data.get("id") or it.get("productId") or "")
+            var_name = it.get("selectedVariant") or (raw_id.split("_")[1] if "_" in raw_id else None)
+            db_p = it.get("dbProduct")
+            order_items_payload.append({
+                "id": str(it.get("productId") or raw_id),
+                "name": str(p_data.get("name") or getattr(db_p, "name", "Item")),
+                "quantity": int(it.get("quantity", 1)),
+                "price": float(it.get("price") or getattr(db_p, "price", 0.0)),
+                "imageUrl": getattr(db_p, "imageUrl", None) or p_data.get("imageUrl"),
+                "selectedVariant": var_name
+            })
+
         result_payload = {
             "id": main_order.id,
             "readableId": main_order.readableId,
@@ -1067,8 +1134,8 @@ async def create_order(
             "shopPhone": main_order.shopPhone,
             "notes": main_order.notes,
             "couponCode": main_order.couponCode,
-            "customerName": user_obj.name,
-            "customerPhone": user_obj.phone or (address.phone if address else None),
+            "customerName": user_obj.name if user_obj else None,
+            "customerPhone": (user_obj.phone if user_obj else None) or (address.phone if address else None),
             "customerAddress": f"{address.houseNo or ''}, {address.street or ''}, {address.area or ''}, {address.city or ''}, {address.pincode or ''}" if address else None,
             "createdAt": main_order.createdAt.isoformat() if main_order.createdAt else None,
             "updatedAt": main_order.updatedAt.isoformat() if main_order.updatedAt else None,
@@ -1076,7 +1143,7 @@ async def create_order(
             "packedAt": main_order.packedAt.isoformat() if main_order.packedAt else None,
             "shippedAt": main_order.shippedAt.isoformat() if main_order.shippedAt else None,
             "deliveredAt": main_order.deliveredAt.isoformat() if main_order.deliveredAt else None,
-            "items": [{"id": i.id, "name": i.name, "quantity": i.quantity, "price": float(i.price), "imageUrl": i.imageUrl, "selectedVariant": i.selectedVariant} for i in main_order.items],
+            "items": order_items_payload,
             "address": {
                 "id": address.id,
                 "houseNo": address.houseNo,
@@ -1087,6 +1154,23 @@ async def create_order(
                 "phone": address.phone,
                 "label": address.label,
             } if address else None,
+            # Universal Web & Flutter compatibility wrappers
+            "order": {
+                "id": main_order.id,
+                "readableId": main_order.readableId,
+                "status": main_order.status.value,
+                "total": float(main_order.total or 0),
+                "restaurantId": main_order.restaurantId,
+                "shopName": main_order.shopName,
+            },
+            "orders": [{
+                "id": o.id,
+                "readableId": o.readableId,
+                "status": o.status.value,
+                "total": float(o.total or 0),
+                "restaurantId": o.restaurantId,
+                "shopName": o.shopName,
+            } for o in created_orders]
         }
 
         # Save idempotency cache

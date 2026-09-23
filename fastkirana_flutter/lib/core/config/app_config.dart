@@ -35,12 +35,12 @@ class AppConfig {
   // ─── Supabase Realtime ──────────────────────────────────────────
   static const String supabaseUrl = String.fromEnvironment(
     'SUPABASE_URL',
-    defaultValue: '',
+    defaultValue: 'https://bberzasmxwioxjynbuaf.supabase.co',
   );
 
   static const String supabaseAnonKey = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
-    defaultValue: '',
+    defaultValue: 'sb_publishable_txJDOmH1qWQuOLCKrnV69A_RQ1XS4o-',
   );
 
   // ─── Google Maps Platform ───────────────────────────────────────

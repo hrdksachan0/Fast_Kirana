@@ -196,32 +196,67 @@ export function useAdminRealtime({
       })
       .subscribe()
 
+    let isSubscribed = true
     let railwayWs: WebSocket | null = null
-    try {
-      const rawFastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkiran-backend-production.up.railway.app'
-      const wsUrl = rawFastApiUrl.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + '/ws'
-      railwayWs = new WebSocket(wsUrl)
-      railwayWs.onerror = () => {}
-      railwayWs.onmessage = (event) => {
-        try {
-          const payload = JSON.parse(event.data)
-          if (payload.event === 'NEW_ORDER' || payload.event === 'ORDER_CREATED') {
-            toast.success(`🛎️ New Order Received!`)
-            playNewOrderChime()
-            debouncedRefresh()
-          } else if (payload.event === 'CART_UPDATE' || payload.event === 'CART_ITEM_ADDED') {
-            setCartsRefreshKey((prev) => prev + 1)
+    let reconnectTimeout: NodeJS.Timeout | null = null
+
+    const connectRailwayWs = () => {
+      if (!isSubscribed) return
+      try {
+        const rawFastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkirana-production-a4b8.up.railway.app'
+        const cleanUrl = rawFastApiUrl.replace(/\/+$/, '')
+        const wsUrl = cleanUrl.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + '/ws'
+        railwayWs = new WebSocket(wsUrl)
+
+        railwayWs.onmessage = (event) => {
+          try {
+            const payload = JSON.parse(event.data)
+            const ev = payload.event || payload.type
+            if (ev === 'NEW_ORDER' || ev === 'ORDER_CREATED' || ev === 'new-order') {
+              toast.success(`🛎️ New Order Received!`)
+              playNewOrderChime()
+              debouncedRefresh()
+            } else if (
+              ev === 'CART_UPDATE' ||
+              ev === 'CART_ITEM_ADDED' ||
+              ev === 'cart-updated' ||
+              ev === 'cart-update'
+            ) {
+              setCartsRefreshKey((prev) => prev + 1)
+            } else if (
+              ev === 'STATUS_UPDATE' ||
+              ev === 'ORDER_UPDATED' ||
+              ev === 'order-status-update'
+            ) {
+              debouncedRefresh()
+            }
+          } catch (e) {
+            logger.warn('realtime', 'Failed to parse WebSocket payload', e)
           }
-        } catch (e) {
-          logger.warn('realtime', 'Failed to parse WebSocket payload', e)
+        }
+
+        railwayWs.onclose = () => {
+          if (isSubscribed) {
+            reconnectTimeout = setTimeout(connectRailwayWs, 3000)
+          }
+        }
+
+        railwayWs.onerror = () => {
+          railwayWs?.close()
+        }
+      } catch (e) {
+        if (isSubscribed) {
+          reconnectTimeout = setTimeout(connectRailwayWs, 5000)
         }
       }
-    } catch (e) {
-      logger.warn('realtime', 'Railway WebSocket connection error', e)
     }
 
+    connectRailwayWs()
+
     return () => {
+      isSubscribed = false
       supabase.removeChannel(channel)
+      if (reconnectTimeout) clearTimeout(reconnectTimeout)
       if (railwayWs) railwayWs.close()
       if (updateTimeout) clearTimeout(updateTimeout)
     }
@@ -246,8 +281,12 @@ export function useAdminRealtime({
       }
     }
     fetchCartsCount()
-    return () => { active = false }
-  }, [selectedHubId])
+    const countInterval = setInterval(fetchCartsCount, 15000)
+    return () => {
+      active = false
+      clearInterval(countInterval)
+    }
+  }, [selectedHubId, cartsRefreshKey])
 
   // Active carts detail polling when activeTab === 'liveops'
   useEffect(() => {
@@ -284,7 +323,7 @@ export function useAdminRealtime({
 
     if (activeTab === 'liveops') {
       fetchCartsDetail()
-      intervalId = setInterval(fetchCartsDetail, 120000)
+      intervalId = setInterval(fetchCartsDetail, 10000)
       if (typeof document !== 'undefined') {
         document.addEventListener('visibilitychange', handleVisibility)
       }
