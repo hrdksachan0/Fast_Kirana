@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
-from sqlalchemy import func, and_, or_, desc, text, update
+from sqlalchemy import func, and_, or_, desc, text, update, delete
 from datetime import datetime, date, time, timedelta
 import uuid
 import re
@@ -228,6 +228,36 @@ async def settle_rider_cash(
         "message": f"Successfully settled {deposit_amount:.2f} cash for rider!",
         "newCashInHand": float(wallet.cashInHand)
     }
+
+
+@router.delete("/rider-cash")
+async def delete_rider_cash_log(
+    id: Optional[str] = Query(None),
+    clearAll: Optional[bool] = Query(False),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete a specific cash deposit log or clear all deposit logs."""
+    try:
+        if id:
+            stmt = delete(CashDepositTransaction).where(CashDepositTransaction.id == id)
+            await db.execute(stmt)
+            await db.commit()
+            return {"success": True, "message": "Cash deposit log deleted."}
+
+        if clearAll:
+            stmt = delete(CashDepositTransaction)
+            res = await db.execute(stmt)
+            await db.commit()
+            return {"success": True, "message": "Cleared cash deposit logs."}
+
+        raise HTTPException(status_code=400, detail="Missing id or clearAll parameter")
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @router.patch("/settings")
@@ -1207,3 +1237,116 @@ async def get_admin_detailed_orders_report(
             } for o in orders
         ]
     }
+
+
+superadmin_router = APIRouter(prefix="/superadmin", tags=["Superadmin Dashboard"])
+
+@superadmin_router.get("/stats")
+async def get_superadmin_stats(
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Superadmin overview stats across all DarkStore hubs, staff, and multi-tenant stores.
+    """
+    now = datetime.utcnow()
+    # IST midnight offset
+    ist_now = now + timedelta(hours=5, minutes=30)
+    ist_start = datetime(ist_now.year, ist_now.month, ist_now.day)
+    start_of_today = ist_start - timedelta(hours=5, minutes=30)
+
+    # 1. Fetch dark stores
+    stores_stmt = select(DarkStore).order_by(DarkStore.createdAt.desc())
+    stores_res = await db.execute(stores_stmt)
+    stores = stores_res.scalars().all()
+
+    # 2. Today's orders
+    today_agg_stmt = select(
+        func.coalesce(func.sum(Order.total), 0.0),
+        func.count(Order.id)
+    ).where(and_(
+        Order.createdAt >= start_of_today,
+        Order.status != OrderStatus.CANCELLED
+    ))
+    today_total, today_count = (await db.execute(today_agg_stmt)).first() or (0.0, 0)
+
+    # 3. Delivered orders
+    del_agg_stmt = select(
+        func.coalesce(func.sum(Order.total), 0.0),
+        func.count(Order.id)
+    ).where(and_(
+        Order.createdAt >= start_of_today,
+        Order.status == OrderStatus.DELIVERED
+    ))
+    del_total, del_count = (await db.execute(del_agg_stmt)).first() or (0.0, 0)
+
+    # 4. Store-wise sales
+    store_sales_stmt = select(
+        Order.storeId,
+        func.count(Order.id).label("orderCount"),
+        func.coalesce(func.sum(case((Order.status != OrderStatus.CANCELLED, Order.total), else_=0.0)), 0.0).label("totalSales"),
+        func.coalesce(func.sum(case((Order.status == OrderStatus.DELIVERED, Order.total), else_=0.0)), 0.0).label("deliveredSales"),
+        func.coalesce(func.sum(case((and_(Order.status != OrderStatus.DELIVERED, Order.status != OrderStatus.CANCELLED), 1), else_=0)), 0).label("activeOrders"),
+        func.coalesce(func.sum(case((Order.status == OrderStatus.DELIVERED, 1), else_=0)), 0).label("deliveredOrders")
+    ).where(Order.createdAt >= start_of_today).group_by(Order.storeId)
+    store_sales_res = await db.execute(store_sales_stmt)
+    store_sales_rows = store_sales_res.all()
+
+    store_map = {s.id: s.name for s in stores}
+    formatted_store_wise_sales = [
+        {
+            "storeId": row.storeId,
+            "storeName": store_map.get(row.storeId, "Unassigned"),
+            "orderCount": int(row.orderCount),
+            "totalSales": float(row.totalSales),
+            "deliveredSales": float(row.deliveredSales),
+            "activeOrders": int(row.activeOrders),
+            "deliveredOrders": int(row.deliveredOrders)
+        }
+        for row in store_sales_rows
+    ]
+
+    # 5. Staff list
+    staff_stmt = select(User).where(User.role != Role.USER).order_by(User.createdAt.desc())
+    staff_res = await db.execute(staff_stmt)
+    staff_list = staff_res.scalars().all()
+
+    formatted_staff = [
+        {
+            "id": s.id,
+            "name": s.name,
+            "phone": s.phone,
+            "email": s.email,
+            "role": s.role.value if hasattr(s.role, "value") else str(s.role),
+            "assignedStoreId": s.assignedStoreId,
+            "storeName": store_map.get(s.assignedStoreId, s.assignedStoreId or "Unassigned"),
+            "assignedRestaurantId": s.assignedRestaurantId
+        }
+        for s in staff_list
+    ]
+
+    return {
+        "combined": {
+            "todaySales": float(today_total),
+            "todayNetRevenue": float(del_total),
+            "todayOrders": int(today_count),
+            "todayDeliveredOrders": int(del_count),
+            "totalStaff": len(staff_list),
+            "totalStores": len(stores),
+        },
+        "stores": [
+            {
+                "id": s.id,
+                "name": s.name,
+                "isActive": s.isActive,
+                "groceryOpen": s.groceryOpen,
+                "latitude": s.latitude,
+                "longitude": s.longitude,
+                "deliveryRadiusKm": s.deliveryRadiusKm,
+            }
+            for s in stores
+        ],
+        "storeWiseSales": formatted_store_wise_sales,
+        "staff": formatted_staff,
+    }
+

@@ -5,6 +5,8 @@ from sqlalchemy import or_, and_, not_, func, text
 from typing import List, Dict, Any, Optional
 import uuid
 import re
+import json
+import time
 
 from database import get_db
 from models import Restaurant, User, Product, Order, Category
@@ -673,3 +675,120 @@ async def get_restaurant_menu(
         "sections": final_sections,
         "totalDishesCount": len(products)
     }
+
+
+@router.get("/{id}/sections")
+async def get_restaurant_sections(
+    id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get configured menu sections for a restaurant.
+    """
+    stmt = select(Restaurant).where(or_(Restaurant.id == id, Restaurant.slug == id))
+    res = await db.execute(stmt)
+    restaurant = res.scalars().first()
+
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+
+    sections = []
+    if restaurant.menuSections:
+        if isinstance(restaurant.menuSections, str):
+            try:
+                sections = json.loads(restaurant.menuSections)
+            except Exception:
+                sections = []
+        elif isinstance(restaurant.menuSections, list):
+            sections = restaurant.menuSections
+
+    if not isinstance(sections, list):
+        sections = []
+
+    normalized = [
+        {
+            "id": s.get("id") or f"sec_{s.get('slug') or s.get('tag') or idx}",
+            "name": s.get("name") or s.get("title") or "Section",
+            "title": s.get("title") or s.get("name") or "Section",
+            "emoji": s.get("emoji") or "🍽️",
+            "description": s.get("description") or "",
+            "imageUrl": s.get("imageUrl") or s.get("image") or None,
+            "sortOrder": s.get("sortOrder") if s.get("sortOrder") is not None else idx + 1,
+            "disabled": bool(s.get("disabled", False)),
+        }
+        for idx, s in enumerate(sections)
+    ]
+
+    return {
+        "sections": normalized,
+        "restaurant": {
+            "id": restaurant.id,
+            "name": restaurant.name,
+            "slug": restaurant.slug,
+            "menuSections": restaurant.menuSections
+        }
+    }
+
+
+@router.post("/{id}/sections")
+async def create_restaurant_section(
+    id: str,
+    payload: Dict[str, Any] = Body(...),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Create a new menu section in the restaurant's menuSections JSON list.
+    """
+    section_title = str(payload.get("title") or payload.get("name") or "").strip()
+    if not section_title:
+        raise HTTPException(status_code=400, detail="Section title is required")
+
+    stmt = select(Restaurant).where(or_(Restaurant.id == id, Restaurant.slug == id))
+    res = await db.execute(stmt)
+    restaurant = res.scalars().first()
+
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+
+    current_sections = []
+    if restaurant.menuSections:
+        if isinstance(restaurant.menuSections, str):
+            try:
+                current_sections = json.loads(restaurant.menuSections)
+            except Exception:
+                current_sections = []
+        elif isinstance(restaurant.menuSections, list):
+            current_sections = list(restaurant.menuSections)
+
+    if not isinstance(current_sections, list):
+        current_sections = []
+
+    clean_slug = re.sub(r"[^a-z0-9]+", "-", section_title.lower()).strip("-")
+    unique_id = f"sec_{clean_slug}_{int(time.time())}"
+
+    new_section = {
+        "id": unique_id,
+        "name": section_title,
+        "title": section_title,
+        "slug": clean_slug,
+        "tag": clean_slug,
+        "emoji": str(payload.get("emoji") or "🍽️").strip(),
+        "description": str(payload.get("description") or "").strip(),
+        "imageUrl": payload.get("imageUrl") or None,
+        "sortOrder": int(payload.get("sortOrder", len(current_sections) + 1)),
+        "disabled": False,
+        "matchTags": [clean_slug]
+    }
+
+    updated_sections = current_sections + [new_section]
+    restaurant.menuSections = updated_sections
+
+    await db.commit()
+
+    return {
+        "success": True,
+        "section": new_section,
+        "sections": updated_sections,
+        "message": f"Category '{section_title}' created with ID: {unique_id}"
+    }
+

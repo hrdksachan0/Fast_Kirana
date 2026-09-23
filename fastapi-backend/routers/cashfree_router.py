@@ -324,6 +324,14 @@ async def verify_cashfree_payment(
     }
 
 
+@router.get("/payment/cashfree/webhook")
+async def cashfree_webhook_status():
+    """
+    Cashfree webhook health check/status endpoint.
+    """
+    return {"status": "active", "message": "Cashfree Webhook Endpoint Active"}
+
+
 @router.post("/payment/cashfree/webhook")
 async def cashfree_webhook(
     request: Request,

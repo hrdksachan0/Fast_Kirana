@@ -488,6 +488,104 @@ async def restaurant_dashboard_orders(
     }
 
 
+@restaurant_router.patch("/orders")
+async def restaurant_dashboard_update_order(
+    payload: Dict[str, Any] = Body(...),
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Accept, pack, or reject an order from the restaurant dashboard.
+    Actions: 'accept', 'pack', 'reject'.
+    """
+    from models import PaymentMethod, PaymentStatus
+    role = str(current_user.get("role", "")).upper()
+    if role not in ["RESTAURANT_OWNER", "ADMIN", "SUPER_ADMIN", "CHEF"]:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    order_id = payload.get("orderId")
+    action = payload.get("action")
+    restaurant_id = payload.get("restaurantId")
+
+    if not order_id or not action:
+        raise HTTPException(status_code=400, detail="orderId and action are required")
+
+    stmt = select(Order).options(selectinload(Order.items)).where(Order.id == order_id)
+    res = await db.execute(stmt)
+    order = res.scalars().first()
+
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    target_rest_id = restaurant_id or current_user.get("assignedRestaurantId")
+    if role not in ["ADMIN", "SUPER_ADMIN"] and order.restaurantId != target_rest_id:
+        raise HTTPException(status_code=403, detail="Forbidden: Order belongs to another restaurant")
+
+    now = datetime.utcnow()
+
+    if action == "accept":
+        curr_status = order.status.value if hasattr(order.status, "value") else str(order.status)
+        if curr_status != "PENDING":
+            raise HTTPException(status_code=400, detail="Can only accept PENDING orders")
+
+        curr_pm = order.paymentMethod.value if hasattr(order.paymentMethod, "value") else str(order.paymentMethod)
+        curr_ps = order.paymentStatus.value if hasattr(order.paymentStatus, "value") else str(order.paymentStatus)
+
+        if curr_pm != "COD" and curr_ps != "PAID":
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot accept order: Customer online payment is still pending."
+            )
+
+        order.status = OrderStatus.CONFIRMED
+        order.confirmedAt = now
+
+    elif action == "pack":
+        curr_status = order.status.value if hasattr(order.status, "value") else str(order.status)
+        if curr_status != "CONFIRMED":
+            raise HTTPException(status_code=400, detail="Can only pack CONFIRMED orders")
+
+        order.status = OrderStatus.PACKED
+        order.packedAt = now
+
+    elif action == "reject":
+        curr_status = order.status.value if hasattr(order.status, "value") else str(order.status)
+        if curr_status not in ["PENDING", "CONFIRMED"]:
+            raise HTTPException(status_code=400, detail="Cannot reject this order")
+
+        order.status = OrderStatus.CANCELLED
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action. Use: accept, pack, reject")
+
+    await db.commit()
+    await db.refresh(order)
+
+    # Broadcast real-time order status update
+    try:
+        await manager.broadcast({
+            "event": "ORDER_STATUS_UPDATED",
+            "orderId": order.id,
+            "readableId": order.readableId,
+            "status": order.status.value if hasattr(order.status, "value") else str(order.status),
+            "restaurantId": order.restaurantId,
+        })
+    except Exception:
+        pass
+
+    return {
+        "success": True,
+        "order": {
+            "id": order.id,
+            "readableId": order.readableId,
+            "status": order.status.value if hasattr(order.status, "value") else str(order.status),
+            "total": float(order.total),
+            "restaurantId": order.restaurantId,
+            "updatedAt": now.isoformat()
+        }
+    }
+
+
+
 @restaurant_router.get("/products")
 async def restaurant_dashboard_products(
     restaurantId: Optional[str] = Query(None),

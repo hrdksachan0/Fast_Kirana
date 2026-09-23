@@ -751,18 +751,37 @@ async def get_upsell_recommendations(
     is_wedson_cart = any(p.restaurantId == OUTLET_WEDSON_ID or any(t in ['wedson', 'wedson-restaurant'] for t in [tag.lower() for tag in (p.tags or [])]) for p in cart_products)
     is_cafe_category_cart = any((p.category.slug in ['cafe', 'fastkirana-cafe'] if p.category else False) or any(t in ['cafe', 'shakes'] for t in [tag.lower() for tag in (p.tags or [])]) for p in cart_products)
 
+    # Food/meal item detection in cart
+    has_food_item = any(
+        any(k in p.name.lower() for k in ['biryani', 'burger', 'pizza', 'roll', 'meal', 'thali', 'noodle', 'rice', 'chicken', 'paneer'])
+        or is_as_cart or is_wedson_cart or is_cafe_category_cart
+        for p in cart_products
+    )
+
     # Establish filter boundaries
     type_filters = []
     if is_as_cart:
         type_filters.append(or_(
             Product.restaurantId == OUTLET_AS_RESTAURANT_ID,
             func.array_to_string(Product.tags, ',').ilike('%as-restaurant%'),
-            func.array_to_string(Product.tags, ',').ilike('%as-cafe%')
+            func.array_to_string(Product.tags, ',').ilike('%as-cafe%'),
+            and_(Product.restaurantId == None, or_(
+                func.array_to_string(Product.tags, ',').ilike('%beverages%'),
+                func.array_to_string(Product.tags, ',').ilike('%ice-cream%'),
+                func.array_to_string(Product.tags, ',').ilike('%drinks%'),
+                func.array_to_string(Product.tags, ',').ilike('%cold-drink%')
+            ))
         ))
     elif is_wedson_cart:
         type_filters.append(or_(
             Product.restaurantId == OUTLET_WEDSON_ID,
-            func.array_to_string(Product.tags, ',').ilike('%wedson%')
+            func.array_to_string(Product.tags, ',').ilike('%wedson%'),
+            and_(Product.restaurantId == None, or_(
+                func.array_to_string(Product.tags, ',').ilike('%beverages%'),
+                func.array_to_string(Product.tags, ',').ilike('%ice-cream%'),
+                func.array_to_string(Product.tags, ',').ilike('%drinks%'),
+                func.array_to_string(Product.tags, ',').ilike('%cold-drink%')
+            ))
         ))
     elif is_cafe_category_cart:
         type_filters.append(or_(
@@ -790,6 +809,9 @@ async def get_upsell_recommendations(
 
     # Fallback to association rules based on tags
     target_tags = set()
+    if has_food_item:
+        target_tags.update(['beverages', 'cold-drink', 'drinks', 'ice-cream', 'shakes', 'coolers', 'thums-up', 'coke', 'pepsi', 'sprite', 'cold-coffee'])
+
     if is_as_cart or is_wedson_cart:
         target_tags.update(['north-indian', 'curry', 'roti', 'naan', 'south-indian', 'biryani-rice', 'chinese'])
     elif is_cafe_category_cart:
@@ -817,7 +839,7 @@ async def get_upsell_recommendations(
             Product.stock > 0,
             or_(*tag_match_conditions),
             *type_filters
-        ).limit(6)
+        ).limit(8)
         res_tags = await db.execute(stmt_tags)
         recommended_products.extend(res_tags.scalars().all())
 
@@ -830,11 +852,24 @@ async def get_upsell_recommendations(
             Product.stock > 0,
             Product.price < 200.0,
             *type_filters
-        ).order_by(Product.isBestSeller.desc(), Product.sortOrder.desc()).limit(6 - len(recommended_products))
+        ).order_by(Product.isBestSeller.desc(), Product.sortOrder.desc()).limit(8 - len(recommended_products))
         res_fallback = await db.execute(stmt_fallback)
         recommended_products.extend(res_fallback.scalars().all())
 
-    return {"products": recommended_products[:6]}
+    if has_food_item:
+        def food_upsell_rank(prod):
+            n = prod.name.lower()
+            tags_str = ",".join(prod.tags or []).lower()
+            if any(k in n or k in tags_str for k in ['thums up', 'thumsup', 'coke', 'coca cola', 'pepsi', 'sprite', 'cold drink', 'limca', 'fanta', 'frooti']):
+                return 0
+            if any(k in n or k in tags_str for k in ['ice cream', 'ice-cream', 'cornetto', 'chocobar', 'kulfi', 'cone', 'shake', 'cold coffee']):
+                return 1
+            if any(k in n or k in tags_str for k in ['beverage', 'drink', 'juice']):
+                return 2
+            return 3
+        recommended_products.sort(key=food_upsell_rank)
+
+    return {"products": recommended_products[:8]}
 
 
 @router.post("/validate-cart")

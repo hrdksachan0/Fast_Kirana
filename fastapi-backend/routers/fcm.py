@@ -5,12 +5,13 @@ from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import delete
 
 import firebase_admin
 from firebase_admin import credentials, messaging
 
 from database import get_db
-from models import FcmToken, User
+from models import FcmToken, User, PushSubscription
 from routers.auth import require_auth, get_current_user
 
 logger = logging.getLogger(__name__)
@@ -205,3 +206,35 @@ async def send_test_push_notification(
         data=data
     )
     return result
+
+
+@router.post("/unregister", status_code=status.HTTP_200_OK)
+async def unregister_fcm_token(
+    payload: Dict[str, Any] = Body(...),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Unregister an FCM token on logout or permission revoke.
+    """
+    token = payload.get("token")
+    if not token or not isinstance(token, str):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="FCM token is required"
+        )
+
+    try:
+        # Delete from fcm_tokens
+        await db.execute(delete(FcmToken).where(FcmToken.token == token))
+        # Also delete from push_subscriptions if matching endpoint
+        await db.execute(delete(PushSubscription).where(PushSubscription.endpoint == token))
+        await db.commit()
+        return {"success": True, "message": "FCM token unregistered successfully"}
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error unregistering FCM token: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
+

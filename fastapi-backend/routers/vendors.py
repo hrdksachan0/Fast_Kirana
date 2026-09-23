@@ -4,7 +4,7 @@ from sqlalchemy.future import select
 from sqlalchemy import func, and_, desc, or_, text
 from sqlalchemy.orm import selectinload
 from typing import List, Dict, Any, Optional
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import uuid
 
 from database import get_db
@@ -391,6 +391,202 @@ async def get_vendor_details(
             for p in payouts_list
         ],
         "lowStockItems": low_stock_items,
+    }
+
+
+@vendors_router.put("/{vendor_id}")
+async def update_vendor(
+    vendor_id: str,
+    payload: dict = Body(...),
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Update vendor profile and sync vendor name to linked products.
+    """
+    require_admin(current_user)
+    v_stmt = select(Vendor).where(Vendor.id == vendor_id)
+    v_res = await db.execute(v_stmt)
+    vendor = v_res.scalars().first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+
+    name = payload.get("name")
+    if not name or not str(name).strip():
+        raise HTTPException(status_code=400, detail="Name is required")
+
+    clean_name = str(name).strip()
+    vendor.name = clean_name
+    if "phone" in payload:
+        vendor.phone = str(payload["phone"]).strip() if payload["phone"] else None
+    if "email" in payload:
+        vendor.email = str(payload["email"]).strip() if payload["email"] else None
+    if "companyName" in payload:
+        vendor.companyName = str(payload["companyName"]).strip() if payload["companyName"] else None
+    if "gstin" in payload:
+        vendor.gstin = str(payload["gstin"]).strip() if payload["gstin"] else None
+    if "upiId" in payload:
+        vendor.upiId = str(payload["upiId"]).strip() if payload["upiId"] else None
+    if "bankName" in payload:
+        vendor.bankName = str(payload["bankName"]).strip() if payload["bankName"] else None
+    if "accountNo" in payload:
+        vendor.accountNo = str(payload["accountNo"]).strip() if payload["accountNo"] else None
+    if "ifscCode" in payload:
+        vendor.ifscCode = str(payload["ifscCode"]).strip() if payload["ifscCode"] else None
+    if "address" in payload:
+        vendor.address = str(payload["address"]).strip() if payload["address"] else None
+    if "isActive" in payload:
+        vendor.isActive = bool(payload["isActive"])
+    if "storeId" in payload:
+        vendor.storeId = payload["storeId"] or None
+    vendor.updatedAt = datetime.utcnow()
+
+    from sqlalchemy import update
+    await db.execute(
+        update(Product).where(Product.vendorId == vendor_id).values(vendor=clean_name)
+    )
+    await db.commit()
+    await db.refresh(vendor)
+
+    return {
+        "success": True,
+        "vendor": {
+            "id": vendor.id,
+            "vendorCode": vendor.vendorCode or f"VND-{vendor.id[-4:].upper()}",
+            "name": vendor.name,
+            "phone": vendor.phone or "",
+            "email": vendor.email or "",
+            "companyName": vendor.companyName or "",
+            "gstin": vendor.gstin or "",
+            "upiId": vendor.upiId or "",
+            "bankName": vendor.bankName or "",
+            "accountNo": vendor.accountNo or "",
+            "ifscCode": vendor.ifscCode or "",
+            "address": vendor.address or "",
+            "isActive": vendor.isActive,
+            "storeId": vendor.storeId,
+            "updatedAt": vendor.updatedAt.isoformat() if vendor.updatedAt else None
+        }
+    }
+
+
+@vendors_router.delete("/{vendor_id}")
+async def delete_vendor(
+    vendor_id: str,
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Delete vendor and unlink any connected products.
+    """
+    require_admin(current_user)
+    v_stmt = select(Vendor).where(Vendor.id == vendor_id)
+    v_res = await db.execute(v_stmt)
+    vendor = v_res.scalars().first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+
+    from sqlalchemy import update
+    await db.execute(
+        update(Product).where(Product.vendorId == vendor_id).values(vendorId=None)
+    )
+    await db.delete(vendor)
+    await db.commit()
+
+    return {"success": True, "message": "Vendor deleted successfully"}
+
+
+
+@vendors_router.get("/{vendor_id}/live-orders")
+async def get_vendor_live_orders(
+    vendor_id: str,
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get live/active orders for a vendor's products in real time.
+    Returns live orders matching this vendor's items with status, quantity, and cost value.
+    """
+    check_vendor_or_admin_access(current_user, vendor_id)
+
+    # 1. Fetch vendor
+    v_stmt = select(Vendor).where(Vendor.id == vendor_id)
+    v_res = await db.execute(v_stmt)
+    vendor = v_res.scalars().first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+
+    # 2. Get vendor's product IDs
+    p_stmt = select(Product).where(
+        or_(
+            Product.vendorId == vendor.id,
+            func.lower(Product.vendor) == vendor.name.lower().strip()
+        )
+    )
+    p_res = await db.execute(p_stmt)
+    vendor_products = p_res.scalars().all()
+    if not vendor_products:
+        return {"success": True, "orders": []}
+
+    vendor_prod_ids = [p.id for p in vendor_products]
+    prod_map = {p.id: p for p in vendor_products}
+
+    # 3. Fetch active orders containing vendor's products (last 48h active queue)
+    cutoff = datetime.utcnow() - timedelta(hours=48)
+    o_stmt = select(Order).options(
+        selectinload(Order.items)
+    ).where(
+        and_(
+            Order.createdAt >= cutoff,
+            Order.status != OrderStatus.CANCELLED,
+            Order.items.any(OrderItem.productId.in_(vendor_prod_ids))
+        )
+    ).order_by(desc(Order.createdAt)).limit(50)
+
+    o_res = await db.execute(o_stmt)
+    orders = o_res.scalars().all()
+
+    formatted_orders = []
+    for ord in orders:
+        matching_items = []
+        total_vendor_val = 0.0
+
+        for it in ord.items:
+            if it.productId in prod_map:
+                prod = prod_map[it.productId]
+                qty = it.quantity or 1
+                cost = float(it.costPrice if it.costPrice and it.costPrice > 0 else (prod.costPrice or 0.0))
+                price = float(it.price or prod.price or 0.0)
+                item_total = qty * cost
+                total_vendor_val += item_total
+
+                matching_items.append({
+                    "id": it.id,
+                    "productId": it.productId,
+                    "name": it.name or prod.name,
+                    "quantity": qty,
+                    "costPrice": cost,
+                    "sellingPrice": price,
+                    "unit": prod.unit or "",
+                    "imageUrl": prod.imageUrl or "",
+                })
+
+        if matching_items:
+            status_val = ord.status.value if hasattr(ord.status, "value") else str(ord.status)
+            formatted_orders.append({
+                "orderId": ord.id,
+                "readableId": getattr(ord, "readableId", None) or (ord.id[:8] if ord.id else ""),
+                "status": status_val,
+                "isDelivered": status_val == "DELIVERED",
+                "totalVendorValue": round(total_vendor_val, 2),
+                "totalOrderAmount": float(ord.total or 0.0),
+                "createdAt": ord.createdAt.isoformat() if ord.createdAt else "",
+                "items": matching_items,
+            })
+
+    return {
+        "success": True,
+        "orders": formatted_orders,
     }
 
 

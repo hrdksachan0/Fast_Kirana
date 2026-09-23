@@ -11,7 +11,7 @@ import logging
 logger = logging.getLogger("admin_extended")
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func, and_, desc, text, or_, case
+from sqlalchemy import func, and_, desc, text, or_, case, delete
 from sqlalchemy.orm import selectinload
 from datetime import datetime, date, timedelta
 from typing import Optional, List, Dict, Any
@@ -21,7 +21,13 @@ import string
 import re
 
 from database import get_db
-from models import User, Order, Product, Category, Coupon, OrderStatus, OrderType, Role, PaymentMethod, PaymentStatus, RiderWallet, StoreInventory, DarkStore, StoreSetting
+from models import (
+    User, Order, Product, Category, Coupon, OrderStatus, OrderType, Role,
+    PaymentMethod, PaymentStatus, RiderWallet, StoreInventory, DarkStore,
+    StoreSetting, StockAlert, PriceHistory, PromoBanner, RestaurantPayout,
+    CashDepositTransaction, VendorPayout, Vendor, RestaurantReview, Review,
+    Address, Restaurant
+)
 from routers.auth import require_admin
 from routers.cart import get_user_id
 
@@ -2216,4 +2222,1198 @@ Return ONLY a valid JSON object with these EXACT keys:
             "backgroundColorHex": "#0F172A"
         }
     }
+
+
+# ============================================================
+# ADMIN INVENTORY & PACKING ALERTS
+# ============================================================
+
+@router.get("/alerts")
+async def get_admin_inventory_alerts(
+    storeId: Optional[str] = Query(None),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Fetch all active inventory & packing delay alerts."""
+    now = datetime.utcnow()
+    seven_days = now + timedelta(days=7)
+
+    # 1. OUT OF STOCK
+    oos_stmt = select(Product).where(
+        Product.stock == 0,
+        Product.isAvailable == True,
+        Product.restaurantId.is_(None)
+    )
+    oos_res = await db.execute(oos_stmt)
+    oos_prods = oos_res.scalars().all()
+
+    # 2. LOW STOCK
+    low_stmt = select(Product).where(
+        Product.stock > 0,
+        Product.stock <= Product.minStock,
+        Product.isAvailable == True,
+        Product.restaurantId.is_(None)
+    )
+    low_res = await db.execute(low_stmt)
+    low_prods = low_res.scalars().all()
+
+    # 3. EXPIRING SOON
+    exp_soon_stmt = select(Product).where(
+        Product.expiryDate.is_not(None),
+        Product.expiryDate > now,
+        Product.expiryDate <= seven_days
+    )
+    exp_soon_res = await db.execute(exp_soon_stmt)
+    exp_soon_prods = exp_soon_res.scalars().all()
+
+    # 4. EXPIRED
+    exp_stmt = select(Product).where(
+        Product.expiryDate.is_not(None),
+        Product.expiryDate <= now
+    )
+    exp_res = await db.execute(exp_stmt)
+    exp_prods = exp_res.scalars().all()
+
+    # 5. PACKING DELAYS
+    ten_min_ago = now - timedelta(minutes=10)
+    thirty_min_ago = now - timedelta(minutes=30)
+    conf_stmt = select(Order).where(Order.status == OrderStatus.CONFIRMED)
+    if storeId and storeId != "all":
+        conf_stmt = conf_stmt.where(Order.storeId == storeId)
+    conf_res = await db.execute(conf_stmt)
+    conf_orders = conf_res.scalars().all()
+
+    delay_alerts = []
+    for o in conf_orders:
+        is_rest = bool(o.restaurantId) or str(o.orderType.value if hasattr(o.orderType, "value") else o.orderType) == "RESTAURANT"
+        cutoff = thirty_min_ago if is_rest else ten_min_ago
+        if o.updatedAt and o.updatedAt < cutoff:
+            delay_alerts.append({
+                "id": o.id,
+                "name": f"{'Food' if is_rest else 'Grocery'} Order #{o.readableId or o.id[:8]} accepted but not packed yet",
+                "slug": f"order-{o.id}",
+                "imageUrl": None,
+                "stock": 0,
+                "minStock": 0,
+                "expiryDate": o.updatedAt.isoformat(),
+                "categoryId": "orders",
+                "alertType": "PACKING_DELAY",
+            })
+
+    # Read snoozed alerts
+    snoozed_setting = (await db.execute(select(StoreSetting).where(StoreSetting.key == "snoozed_alerts"))).scalars().first()
+    snoozed_map = {}
+    if snoozed_setting and snoozed_setting.value:
+        try:
+            snoozed_map = json.loads(snoozed_setting.value)
+        except Exception:
+            pass
+
+    thirty_min_ago_ts = (now - timedelta(minutes=30)).timestamp()
+
+    def is_snoozed(target_id: str, alert_type: str) -> bool:
+        key = f"{target_id}:{alert_type}"
+        snoozed_at = snoozed_map.get(key)
+        if not snoozed_at:
+            return False
+        try:
+            return datetime.fromisoformat(snoozed_at).timestamp() >= thirty_min_ago_ts
+        except Exception:
+            return False
+
+    filtered_oos = [p for p in oos_prods if not is_snoozed(p.id, "OUT_OF_STOCK")]
+    filtered_low = [p for p in low_prods if not is_snoozed(p.id, "LOW_STOCK")]
+    filtered_exp_soon = [p for p in exp_soon_prods if not is_snoozed(p.id, "EXPIRING_SOON")]
+    filtered_exp = [p for p in exp_prods if not is_snoozed(p.id, "EXPIRED")]
+    filtered_delays = [d for d in delay_alerts if not is_snoozed(d["id"], "PACKING_DELAY")]
+
+    alerts = []
+    for p in filtered_oos:
+        alerts.append({
+            "id": p.id, "name": p.name, "slug": p.slug, "imageUrl": p.imageUrl,
+            "stock": p.stock, "minStock": p.minStock,
+            "expiryDate": p.expiryDate.isoformat() if p.expiryDate else None,
+            "categoryId": p.categoryId, "alertType": "OUT_OF_STOCK"
+        })
+    for p in filtered_low:
+        alerts.append({
+            "id": p.id, "name": p.name, "slug": p.slug, "imageUrl": p.imageUrl,
+            "stock": p.stock, "minStock": p.minStock,
+            "expiryDate": p.expiryDate.isoformat() if p.expiryDate else None,
+            "categoryId": p.categoryId, "alertType": "LOW_STOCK"
+        })
+    for p in filtered_exp_soon:
+        alerts.append({
+            "id": p.id, "name": p.name, "slug": p.slug, "imageUrl": p.imageUrl,
+            "stock": p.stock, "minStock": p.minStock,
+            "expiryDate": p.expiryDate.isoformat() if p.expiryDate else None,
+            "categoryId": p.categoryId, "alertType": "EXPIRING_SOON"
+        })
+    for p in filtered_exp:
+        alerts.append({
+            "id": p.id, "name": p.name, "slug": p.slug, "imageUrl": p.imageUrl,
+            "stock": p.stock, "minStock": p.minStock,
+            "expiryDate": p.expiryDate.isoformat() if p.expiryDate else None,
+            "categoryId": p.categoryId, "alertType": "EXPIRED"
+        })
+    alerts.extend(filtered_delays)
+
+    return {
+        "alerts": alerts,
+        "counts": {
+            "outOfStock": len(filtered_oos),
+            "lowStock": len(filtered_low),
+            "expiringSoon": len(filtered_exp_soon),
+            "expired": len(filtered_exp),
+            "packingDelay": len(filtered_delays),
+            "total": len(alerts),
+        }
+    }
+
+
+@router.post("/alerts")
+async def generate_admin_stock_alerts(
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Generate or refresh StockAlert records in database."""
+    now = datetime.utcnow()
+    seven_days = now + timedelta(days=7)
+
+    # Clear old unread alerts
+    await db.execute(delete(StockAlert).where(StockAlert.isRead == False))
+
+    oos_res = await db.execute(select(Product).where(Product.stock == 0, Product.isAvailable == True, Product.restaurantId.is_(None)))
+    oos_prods = oos_res.scalars().all()
+
+    low_res = await db.execute(select(Product).where(Product.stock > 0, Product.stock <= Product.minStock, Product.isAvailable == True, Product.restaurantId.is_(None)))
+    low_prods = low_res.scalars().all()
+
+    exp_soon_res = await db.execute(select(Product).where(Product.expiryDate.is_not(None), Product.expiryDate > now, Product.expiryDate <= seven_days))
+    exp_soon_prods = exp_soon_res.scalars().all()
+
+    exp_res = await db.execute(select(Product).where(Product.expiryDate.is_not(None), Product.expiryDate <= now))
+    exp_prods = exp_res.scalars().all()
+
+    records = []
+    for p in oos_prods:
+        records.append(StockAlert(id=str(uuid.uuid4()), productId=p.id, alertType="OUT_OF_STOCK", message=f"{p.name} is out of stock"))
+    for p in low_prods:
+        records.append(StockAlert(id=str(uuid.uuid4()), productId=p.id, alertType="LOW_STOCK", message=f"{p.name} is low on stock ({p.stock}/{p.minStock})"))
+    for p in exp_soon_prods:
+        days_left = max(1, (p.expiryDate - now).days)
+        records.append(StockAlert(id=str(uuid.uuid4()), productId=p.id, alertType="EXPIRING_SOON", message=f"{p.name} expires in {days_left} day(s)"))
+    for p in exp_prods:
+        records.append(StockAlert(id=str(uuid.uuid4()), productId=p.id, alertType="EXPIRED", message=f"{p.name} has expired"))
+
+    if records:
+        db.add_all(records)
+    await db.commit()
+
+    return {"success": True, "message": f"Generated {len(records)} alert(s)", "count": len(records)}
+
+
+@router.patch("/alerts")
+async def mark_alerts_as_read(
+    payload: Dict[str, Any] = Body(...),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Mark alerts as read."""
+    alert_ids = payload.get("alertIds") or []
+    mark_all = payload.get("markAllRead", False)
+
+    if not mark_all and not alert_ids:
+        raise HTTPException(status_code=400, detail="Provide alertIds array or set markAllRead to true")
+
+    if mark_all:
+        stmt = update(StockAlert).where(StockAlert.isRead == False).values(isRead=True)
+    else:
+        stmt = update(StockAlert).where(StockAlert.id.in_(alert_ids), StockAlert.isRead == False).values(isRead=True)
+
+    res = await db.execute(stmt)
+    await db.commit()
+    return {"success": True, "message": f"Marked alerts as read", "updatedCount": res.rowcount}
+
+
+@router.put("/alerts")
+async def snooze_alert(
+    payload: Dict[str, Any] = Body(...),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Snooze an alert for 30 minutes."""
+    target_id = payload.get("targetId")
+    alert_type = payload.get("alertType")
+    if not target_id or not alert_type:
+        raise HTTPException(status_code=400, detail="targetId and alertType are required")
+
+    setting_stmt = select(StoreSetting).where(StoreSetting.key == "snoozed_alerts")
+    setting = (await db.execute(setting_stmt)).scalars().first()
+    snoozed_map = {}
+    if setting and setting.value:
+        try:
+            snoozed_map = json.loads(setting.value)
+        except Exception:
+            pass
+
+    now = datetime.utcnow()
+    snoozed_map[f"{target_id}:{alert_type}"] = now.isoformat()
+
+    # Clean up old entries > 30 minutes
+    cutoff = (now - timedelta(minutes=30)).timestamp()
+    clean_map = {}
+    for k, v in snoozed_map.items():
+        try:
+            if datetime.fromisoformat(v).timestamp() >= cutoff:
+                clean_map[k] = v
+        except Exception:
+            pass
+
+    if setting:
+        setting.value = json.dumps(clean_map)
+    else:
+        db.add(StoreSetting(key="snoozed_alerts", value=json.dumps(clean_map)))
+
+    await db.commit()
+    return {"success": True, "message": "Alert actioned successfully"}
+
+
+# ============================================================
+# ADMIN PROMO BANNERS
+# ============================================================
+
+@router.get("/banners")
+async def get_admin_banners(
+    storeId: Optional[str] = Query(None),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Fetch promo banners for admin."""
+    stmt = select(PromoBanner).order_by(PromoBanner.sortOrder.asc())
+    if storeId and storeId != "all":
+        stmt = stmt.where(or_(PromoBanner.storeId == storeId, PromoBanner.storeId.is_(None)))
+    banners = (await db.execute(stmt)).scalars().all()
+
+    result = []
+    for b in banners:
+        extra = {}
+        if b.code and b.code.startswith("{") and b.code.endswith("}"):
+            try:
+                extra = json.loads(b.code)
+            except Exception:
+                pass
+        result.append({
+            "id": b.id,
+            "title": b.title,
+            "description": b.description,
+            "gradient": b.gradient,
+            "type": b.type,
+            "imageUrl": b.imageUrl,
+            "linkUrl": b.linkUrl,
+            "storeId": b.storeId or extra.get("storeId"),
+            "isActive": b.isActive,
+            "sortOrder": b.sortOrder,
+            "rawCode": b.code,
+            "code": extra.get("couponCode", b.code),
+            "cardType": extra.get("cardType", b.type or "standard"),
+            **extra
+        })
+    return result
+
+
+@router.post("/banners")
+async def create_admin_banner(
+    payload: Dict[str, Any] = Body(...),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a new promotional banner."""
+    title = str(payload.get("title") or "Promo Banner").strip()
+    description = str(payload.get("description") or "Media Banner").strip()
+    code = payload.get("code") or ""
+    card_type = payload.get("cardType") or payload.get("type") or "standard"
+
+    card_meta = {
+        "cardType": card_type,
+        "placement": payload.get("placement") or "hero",
+        "platform": payload.get("platform") or "all",
+        "storeId": payload.get("storeId"),
+        "eyebrowTag": payload.get("eyebrowTag"),
+        "primaryBrand": payload.get("primaryBrand"),
+        "secondaryBrand": payload.get("secondaryBrand"),
+        "cashbackTitle": payload.get("cashbackTitle"),
+        "cashbackSubtitle": payload.get("cashbackSubtitle"),
+        "disclaimerText": payload.get("disclaimerText"),
+        "ctaText": payload.get("ctaText"),
+        "ctaUrl": payload.get("ctaUrl"),
+        "ctaBgColorHex": payload.get("ctaBgColorHex"),
+        "ctaTextColorHex": payload.get("ctaTextColorHex"),
+        "gridImages": payload.get("gridImages"),
+        "hasWireframeGrid": payload.get("hasWireframeGrid", False),
+        "videoUrl": payload.get("videoUrl"),
+        "couponCode": code or None,
+    }
+    serialized_code = json.dumps(card_meta)
+
+    banner = PromoBanner(
+        id=str(uuid.uuid4()),
+        title=title,
+        description=description,
+        code=serialized_code,
+        gradient=payload.get("gradient") or "from-primary via-rose-500 to-orange-400",
+        type=payload.get("type") or "custom",
+        imageUrl=payload.get("imageUrl"),
+        linkUrl=payload.get("linkUrl"),
+        storeId=payload.get("storeId"),
+        isActive=bool(payload.get("isActive", True)),
+        sortOrder=int(payload.get("sortOrder") or 0)
+    )
+    db.add(banner)
+    await db.commit()
+    await db.refresh(banner)
+    return {"success": True, "banner": banner}
+
+
+@router.put("/banners")
+async def update_admin_banner(
+    payload: Dict[str, Any] = Body(...),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update an existing promo banner."""
+    banner_id = payload.get("id")
+    if not banner_id:
+        raise HTTPException(status_code=400, detail="Missing banner ID")
+
+    stmt = select(PromoBanner).where(PromoBanner.id == banner_id)
+    banner = (await db.execute(stmt)).scalars().first()
+    if not banner:
+        raise HTTPException(status_code=404, detail="Banner not found")
+
+    existing_meta = {}
+    if banner.code and banner.code.startswith("{") and banner.code.endswith("}"):
+        try:
+            existing_meta = json.loads(banner.code)
+        except Exception:
+            pass
+
+    card_meta = {
+        "cardType": payload.get("cardType") or payload.get("type") or existing_meta.get("cardType", "standard"),
+        "placement": payload.get("placement") if payload.get("placement") is not None else existing_meta.get("placement", "hero"),
+        "platform": payload.get("platform") if payload.get("platform") is not None else existing_meta.get("platform", "all"),
+        "storeId": payload.get("storeId") if payload.get("storeId") is not None else existing_meta.get("storeId"),
+        "eyebrowTag": payload.get("eyebrowTag"),
+        "primaryBrand": payload.get("primaryBrand"),
+        "secondaryBrand": payload.get("secondaryBrand"),
+        "cashbackTitle": payload.get("cashbackTitle"),
+        "cashbackSubtitle": payload.get("cashbackSubtitle"),
+        "disclaimerText": payload.get("disclaimerText"),
+        "ctaText": payload.get("ctaText"),
+        "ctaUrl": payload.get("ctaUrl"),
+        "ctaBgColorHex": payload.get("ctaBgColorHex"),
+        "ctaTextColorHex": payload.get("ctaTextColorHex"),
+        "gridImages": payload.get("gridImages"),
+        "hasWireframeGrid": payload.get("hasWireframeGrid", False),
+        "videoUrl": payload.get("videoUrl"),
+        "couponCode": payload.get("code") or existing_meta.get("couponCode"),
+    }
+    banner.code = json.dumps(card_meta)
+
+    if "title" in payload:
+        banner.title = str(payload["title"]).strip()
+    if "description" in payload:
+        banner.description = str(payload["description"]).strip()
+    if "gradient" in payload:
+        banner.gradient = payload["gradient"]
+    if "type" in payload:
+        banner.type = payload["type"]
+    if "imageUrl" in payload:
+        banner.imageUrl = payload["imageUrl"]
+    if "linkUrl" in payload:
+        banner.linkUrl = payload["linkUrl"]
+    if "isActive" in payload:
+        banner.isActive = bool(payload["isActive"])
+    if "sortOrder" in payload:
+        banner.sortOrder = int(payload["sortOrder"])
+
+    await db.commit()
+    await db.refresh(banner)
+    return {"success": True, "banner": banner}
+
+
+@router.delete("/banners")
+async def delete_admin_banner(
+    id: Optional[str] = Query(None),
+    payload: Optional[Dict[str, Any]] = Body(None),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete a promo banner."""
+    target_id = id or (payload.get("id") if payload else None)
+    if not target_id:
+        raise HTTPException(status_code=400, detail="Missing banner ID")
+
+    stmt = select(PromoBanner).where(PromoBanner.id == target_id)
+    banner = (await db.execute(stmt)).scalars().first()
+    if not banner:
+        raise HTTPException(status_code=404, detail="Banner not found")
+
+    await db.delete(banner)
+    await db.commit()
+    return {"success": True, "message": "Banner deleted successfully"}
+
+
+# ============================================================
+# ADMIN COUPONS
+# ============================================================
+
+@router.get("/coupons")
+async def get_admin_coupons(
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """List all coupons with restaurant and category details."""
+    stmt = select(Coupon).options(
+        selectinload(Coupon.restaurant),
+        selectinload(Coupon.category)
+    ).order_by(Coupon.createdAt.desc())
+    coupons = (await db.execute(stmt)).scalars().all()
+
+    return [
+        {
+            "id": c.id,
+            "code": c.code,
+            "discountType": c.discountType,
+            "bogoType": c.bogoType,
+            "triggerVariant": c.triggerVariant,
+            "rewardVariant": c.rewardVariant,
+            "defaultFreeDishId": c.defaultFreeDishId,
+            "maxFreeItems": c.maxFreeItems,
+            "value": float(c.value or 0.0),
+            "minOrder": float(c.minOrder or 0.0),
+            "maxDiscount": float(c.maxDiscount) if c.maxDiscount else None,
+            "maxUses": c.maxUses,
+            "usedCount": c.usedCount,
+            "isActive": c.isActive,
+            "expiresAt": c.expiresAt.isoformat() if c.expiresAt else None,
+            "createdAt": c.createdAt.isoformat() if c.createdAt else None,
+            "categoryId": c.categoryId,
+            "restaurantId": c.restaurantId,
+            "oncePerCustomer": c.oncePerCustomer,
+            "autoApply": bool(c.autoApply),
+            "badgeText": c.badgeText,
+            "menuSection": c.menuSection,
+            "restaurant": {
+                "id": c.restaurant.id,
+                "name": c.restaurant.name,
+                "slug": c.restaurant.slug,
+            } if c.restaurant else None,
+            "category": {
+                "id": c.category.id,
+                "name": c.category.name,
+            } if c.category else None,
+        }
+        for c in coupons
+    ]
+
+
+@router.post("/coupons")
+async def create_admin_coupon(
+    payload: Dict[str, Any] = Body(...),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a new coupon voucher."""
+    code = str(payload.get("code") or "").strip().upper()
+    discount_type = str(payload.get("discountType") or "").upper()
+
+    if not code or not discount_type:
+        raise HTTPException(status_code=400, detail="Missing required code or discountType")
+
+    valid_types = ["FLAT", "PERCENT", "BOGO", "FREE_DELIVERY"]
+    if discount_type not in valid_types:
+        raise HTTPException(status_code=400, detail="Invalid discount type")
+
+    # Check unique
+    existing = (await db.execute(select(Coupon).where(Coupon.code == code))).scalars().first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Coupon code already exists")
+
+    badge = payload.get("badgeText") or (
+        f"{payload.get('value', 0)}% OFF" if discount_type == "PERCENT" else
+        f"FLAT ₹{payload.get('value', 0)} OFF" if discount_type == "FLAT" else
+        "BUY 1 GET 1 FREE" if discount_type == "BOGO" else "FREE DELIVERY"
+    )
+
+    new_coupon = Coupon(
+        id=str(uuid.uuid4()),
+        code=code,
+        discountType=discount_type,
+        bogoType=payload.get("bogoType"),
+        triggerVariant=payload.get("triggerVariant"),
+        rewardVariant=payload.get("rewardVariant"),
+        defaultFreeDishId=payload.get("defaultFreeDishId"),
+        maxFreeItems=int(payload.get("maxFreeItems") or 3),
+        bogoDishId=payload.get("bogoDishId"),
+        autoApply=bool(payload.get("autoApply", False)),
+        badgeText=badge,
+        menuSection=payload.get("menuSection"),
+        value=float(payload.get("value") or 0.0),
+        minOrder=float(payload.get("minOrder") or 0.0),
+        maxDiscount=float(payload["maxDiscount"]) if payload.get("maxDiscount") is not None else None,
+        maxUses=int(payload["maxUses"]) if payload.get("maxUses") is not None else None,
+        usedCount=0,
+        isActive=bool(payload.get("isActive", True)),
+        expiresAt=datetime.fromisoformat(payload["expiresAt"]) if payload.get("expiresAt") else None,
+        createdAt=datetime.utcnow(),
+        categoryId=payload.get("categoryId"),
+        restaurantId=payload.get("restaurantId"),
+        oncePerCustomer=bool(payload.get("oncePerCustomer", False))
+    )
+    db.add(new_coupon)
+    await db.commit()
+    await db.refresh(new_coupon)
+    return new_coupon
+
+
+@router.patch("/coupons")
+async def update_admin_coupon(
+    payload: Dict[str, Any] = Body(...),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update a coupon."""
+    coupon_id = payload.get("couponId") or payload.get("id")
+    if not coupon_id:
+        raise HTTPException(status_code=400, detail="Missing coupon ID")
+
+    stmt = select(Coupon).where(Coupon.id == coupon_id)
+    coupon = (await db.execute(stmt)).scalars().first()
+    if not coupon:
+        raise HTTPException(status_code=404, detail="Coupon not found")
+
+    if "code" in payload:
+        clean_code = str(payload["code"]).strip().upper()
+        if clean_code != coupon.code:
+            dup = (await db.execute(select(Coupon).where(Coupon.code == clean_code, Coupon.id != coupon_id))).scalars().first()
+            if dup:
+                raise HTTPException(status_code=400, detail="Coupon code already exists")
+            coupon.code = clean_code
+
+    if "discountType" in payload:
+        coupon.discountType = str(payload["discountType"]).upper()
+    if "bogoType" in payload:
+        coupon.bogoType = payload["bogoType"]
+    if "value" in payload:
+        coupon.value = float(payload["value"])
+    if "minOrder" in payload:
+        coupon.minOrder = float(payload["minOrder"])
+    if "maxDiscount" in payload:
+        coupon.maxDiscount = float(payload["maxDiscount"]) if payload["maxDiscount"] is not None else None
+    if "maxUses" in payload:
+        coupon.maxUses = int(payload["maxUses"]) if payload["maxUses"] is not None else None
+    if "isActive" in payload:
+        coupon.isActive = bool(payload["isActive"])
+    if "expiresAt" in payload:
+        coupon.expiresAt = datetime.fromisoformat(payload["expiresAt"]) if payload["expiresAt"] else None
+    if "categoryId" in payload:
+        coupon.categoryId = payload["categoryId"]
+    if "restaurantId" in payload:
+        coupon.restaurantId = payload["restaurantId"]
+    if "badgeText" in payload:
+        coupon.badgeText = payload["badgeText"]
+    if "menuSection" in payload:
+        coupon.menuSection = payload["menuSection"]
+    if "autoApply" in payload:
+        coupon.autoApply = bool(payload["autoApply"])
+    if "oncePerCustomer" in payload:
+        coupon.oncePerCustomer = bool(payload["oncePerCustomer"])
+
+    await db.commit()
+    await db.refresh(coupon)
+    return coupon
+
+
+@router.delete("/coupons")
+async def delete_admin_coupon(
+    couponId: Optional[str] = Query(None),
+    id: Optional[str] = Query(None),
+    payload: Optional[Dict[str, Any]] = Body(None),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete a coupon."""
+    target_id = couponId or id or (payload.get("couponId") if payload else None) or (payload.get("id") if payload else None)
+    if not target_id:
+        raise HTTPException(status_code=400, detail="Missing coupon ID")
+
+    stmt = select(Coupon).where(Coupon.id == target_id)
+    coupon = (await db.execute(stmt)).scalars().first()
+    if not coupon:
+        raise HTTPException(status_code=404, detail="Coupon not found")
+
+    await db.delete(coupon)
+    await db.commit()
+    return {"success": True, "message": "Coupon deleted successfully"}
+
+
+# ============================================================
+# ADMIN REVIEWS
+# ============================================================
+
+@router.get("/reviews")
+async def get_admin_reviews(
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Fetch product and restaurant reviews merged and sorted by date."""
+    p_stmt = select(Review).options(
+        selectinload(Review.user),
+        selectinload(Review.product)
+    ).order_by(Review.createdAt.desc())
+    p_reviews = (await db.execute(p_stmt)).scalars().all()
+
+    r_stmt = select(RestaurantReview).options(
+        selectinload(RestaurantReview.user),
+        selectinload(RestaurantReview.restaurant)
+    ).order_by(RestaurantReview.createdAt.desc())
+    r_reviews = (await db.execute(r_stmt)).scalars().all()
+
+    all_reviews = []
+    for r in p_reviews:
+        all_reviews.append({
+            "id": r.id,
+            "userId": r.userId,
+            "rating": r.rating,
+            "comment": r.comment,
+            "createdAt": r.createdAt.isoformat() if r.createdAt else None,
+            "type": "PRODUCT",
+            "user": {"id": r.user.id, "name": r.user.name, "email": r.user.email} if r.user else None,
+            "product": {"id": r.product.id, "name": r.product.name, "slug": r.product.slug, "imageUrl": r.product.imageUrl} if r.product else None
+        })
+
+    for r in r_reviews:
+        all_reviews.append({
+            "id": r.id,
+            "userId": r.userId,
+            "rating": r.rating,
+            "comment": r.comment,
+            "createdAt": r.createdAt.isoformat() if r.createdAt else None,
+            "type": "RESTAURANT",
+            "user": {"id": r.user.id, "name": r.user.name, "email": r.user.email} if r.user else None,
+            "product": {
+                "id": r.restaurant.id if r.restaurant else "",
+                "name": f"Restaurant: {r.restaurant.name}" if r.restaurant else "Restaurant",
+                "slug": f"food/{r.restaurant.slug}" if r.restaurant else "",
+                "imageUrl": r.restaurant.logoUrl if r.restaurant else None,
+            }
+        })
+
+    all_reviews.sort(key=lambda x: x["createdAt"] or "", reverse=True)
+    return all_reviews
+
+
+@router.patch("/reviews")
+async def update_admin_review(
+    payload: Dict[str, Any] = Body(...),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update review rating or comment."""
+    review_id = payload.get("reviewId")
+    if not review_id:
+        raise HTTPException(status_code=400, detail="Missing review ID")
+
+    r_type = payload.get("type")
+    if r_type == "RESTAURANT":
+        stmt = select(RestaurantReview).where(RestaurantReview.id == review_id)
+        review = (await db.execute(stmt)).scalars().first()
+    else:
+        stmt = select(Review).where(Review.id == review_id)
+        review = (await db.execute(stmt)).scalars().first()
+
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+
+    if "rating" in payload:
+        review.rating = int(payload["rating"])
+    if "comment" in payload:
+        review.comment = payload["comment"]
+
+    await db.commit()
+    await db.refresh(review)
+    return review
+
+
+@router.delete("/reviews")
+async def delete_admin_review(
+    reviewId: Optional[str] = Query(None),
+    type: Optional[str] = Query(None),
+    payload: Optional[Dict[str, Any]] = Body(None),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete a review."""
+    target_id = reviewId or (payload.get("reviewId") if payload else None)
+    target_type = type or (payload.get("type") if payload else None)
+
+    if not target_id:
+        raise HTTPException(status_code=400, detail="Missing review ID")
+
+    if target_type == "RESTAURANT":
+        stmt = select(RestaurantReview).where(RestaurantReview.id == target_id)
+        review = (await db.execute(stmt)).scalars().first()
+    else:
+        stmt = select(Review).where(Review.id == target_id)
+        review = (await db.execute(stmt)).scalars().first()
+
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+
+    await db.delete(review)
+    await db.commit()
+    return {"success": True, "message": "Review deleted successfully"}
+
+
+# ============================================================
+# ADMIN PAYOUTS (RESTAURANT & VENDOR)
+# ============================================================
+
+@router.get("/payouts")
+async def get_admin_payouts(
+    type: Optional[str] = Query(None),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Fetch restaurant payouts."""
+    stmt = select(RestaurantPayout).options(selectinload(RestaurantPayout.restaurant)).order_by(RestaurantPayout.createdAt.desc())
+    if type:
+        stmt = stmt.where(RestaurantPayout.type == type)
+    payouts = (await db.execute(stmt)).scalars().all()
+
+    return [
+        {
+            "id": p.id,
+            "type": p.type,
+            "restaurantId": p.restaurantId,
+            "startDate": p.startDate.isoformat() if p.startDate else None,
+            "endDate": p.endDate.isoformat() if p.endDate else None,
+            "amount": float(p.amount),
+            "status": p.status,
+            "transactionId": p.transactionId,
+            "paidAt": p.paidAt.isoformat() if p.paidAt else None,
+            "notes": p.notes,
+            "restaurant": {
+                "name": p.restaurant.name if p.restaurant else "Restaurant",
+                "slug": p.restaurant.slug if p.restaurant else None,
+                "city": p.restaurant.city if p.restaurant else None,
+            } if p.restaurant else None
+        }
+        for p in payouts
+    ]
+
+
+@router.post("/payouts")
+async def create_admin_payout(
+    payload: Dict[str, Any] = Body(...),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Calculate and create a new restaurant payout."""
+    start_str = payload.get("startDate")
+    end_str = payload.get("endDate")
+    if not start_str or not end_str:
+        raise HTTPException(status_code=400, detail="Start date and End date are required")
+
+    start = datetime.fromisoformat(start_str.replace("Z", ""))
+    end = datetime.fromisoformat(end_str.replace("Z", ""))
+
+    direct_amount = payload.get("amount")
+    if direct_amount is not None:
+        final_amount = float(direct_amount)
+    else:
+        rest_id = payload.get("restaurantId")
+        o_stmt = select(Order).where(
+            Order.status == OrderStatus.DELIVERED,
+            Order.createdAt >= start,
+            Order.createdAt <= end
+        )
+        if rest_id:
+            o_stmt = o_stmt.where(Order.restaurantId == rest_id)
+        else:
+            o_stmt = o_stmt.where(or_(Order.orderType == OrderType.RESTAURANT, Order.restaurantId.is_not(None)))
+
+        orders = (await db.execute(o_stmt)).scalars().all()
+        total_share = 0.0
+        for o in orders:
+            food_sales = float(o.subtotal or 0.0) - float(o.discount or 0.0)
+            comm_rate = 0.15
+            total_share += food_sales * (1.0 - comm_rate)
+        final_amount = round(total_share, 2)
+
+    is_paid = payload.get("status") == "PAID"
+    payout = RestaurantPayout(
+        id=str(uuid.uuid4()),
+        type=payload.get("type", "RESTAURANT"),
+        restaurantId=payload.get("restaurantId"),
+        startDate=start,
+        endDate=end,
+        amount=final_amount,
+        status="PAID" if is_paid else "PENDING",
+        transactionId=payload.get("transactionId"),
+        paidAt=datetime.utcnow() if is_paid else None,
+        notes=payload.get("notes") or f"Payout settlement for {start_str} to {end_str}"
+    )
+    db.add(payout)
+    await db.commit()
+    await db.refresh(payout)
+    return payout
+
+
+@router.patch("/payouts")
+async def settle_admin_payout(
+    payload: Dict[str, Any] = Body(...),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Mark a payout as settled/paid."""
+    payout_id = payload.get("id")
+    if not payout_id:
+        raise HTTPException(status_code=400, detail="Payout ID is required")
+
+    stmt = select(RestaurantPayout).where(RestaurantPayout.id == payout_id)
+    payout = (await db.execute(stmt)).scalars().first()
+    if not payout:
+        raise HTTPException(status_code=404, detail="Payout not found")
+
+    payout.status = "PAID"
+    payout.transactionId = payload.get("transactionId") or payout.transactionId
+    payout.paidAt = datetime.utcnow()
+    if "notes" in payload:
+        payout.notes = payload["notes"]
+
+    await db.commit()
+    await db.refresh(payout)
+    return payout
+
+
+@router.delete("/vendors/payout")
+async def delete_vendor_payout(
+    payoutId: Optional[str] = Query(None),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete a vendor payout log."""
+    if not payoutId:
+        raise HTTPException(status_code=400, detail="Payout ID is required")
+
+    stmt = select(VendorPayout).where(VendorPayout.id == payoutId)
+    payout = (await db.execute(stmt)).scalars().first()
+    if not payout:
+        raise HTTPException(status_code=404, detail="Payout not found")
+
+    await db.delete(payout)
+    await db.commit()
+    return {"success": True, "message": "Payout deleted successfully"}
+
+
+# ============================================================
+# ADMIN BULK UPDATE & PRICE HISTORY
+# ============================================================
+
+def compute_new_bulk_val(old_val: float, mode: str, val: float) -> float:
+    if mode == "FLAT_INCREASE":
+        return old_val + val
+    elif mode == "FLAT_DECREASE":
+        return max(0.0, old_val - val)
+    elif mode == "PERCENT_INCREASE":
+        return old_val * (1.0 + val / 100.0)
+    elif mode == "PERCENT_DECREASE":
+        return max(0.0, old_val * (1.0 - val / 100.0))
+    elif mode == "SET_VALUE":
+        return val
+    return old_val
+
+
+@router.post("/bulk-update")
+async def apply_bulk_update(
+    payload: Dict[str, Any] = Body(...),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Apply (or preview) a bulk update on products."""
+    update_type = payload.get("updateType")
+    mode = payload.get("mode")
+    value = payload.get("value")
+    preview = payload.get("preview", False)
+    category_id = payload.get("categoryId")
+    restaurant_id = payload.get("restaurantId")
+    product_ids = payload.get("productIds")
+
+    if not update_type or not mode or value is None:
+        raise HTTPException(status_code=400, detail="Missing required fields: updateType, mode, value")
+
+    stmt = select(Product)
+    if product_ids and isinstance(product_ids, list):
+        stmt = stmt.where(Product.id.in_(product_ids))
+    else:
+        if restaurant_id and restaurant_id != "ALL":
+            if restaurant_id == "GROCERY":
+                stmt = stmt.where(Product.restaurantId.is_(None))
+            else:
+                stmt = stmt.where(Product.restaurantId == restaurant_id)
+        if category_id and category_id != "ALL":
+            stmt = stmt.where(Product.categoryId == category_id)
+
+    products = (await db.execute(stmt)).scalars().all()
+    if not products:
+        raise HTTPException(status_code=404, detail="No products found matching the criteria")
+
+    batch_id = f"batch_{int(time.time())}_{uuid.uuid4().hex[:6]}"
+    changes = []
+
+    for p in products:
+        if p.restaurantId and update_type in ["STOCK", "MIN_STOCK"]:
+            continue
+
+        if update_type == "PRICE":
+            old_v = float(p.price)
+            new_v = round(compute_new_bulk_val(old_v, mode, float(value)))
+            changes.append({"productId": p.id, "name": p.name, "oldValue": old_v, "newValue": new_v})
+        elif update_type == "STOCK":
+            old_v = float(p.stock or 0)
+            new_v = max(0, int(round(compute_new_bulk_val(old_v, mode, float(value)))))
+            changes.append({"productId": p.id, "name": p.name, "oldValue": old_v, "newValue": new_v})
+        elif update_type == "AVAILABILITY":
+            old_v = bool(p.isAvailable)
+            new_v = (value == 1 or value is True)
+            changes.append({"productId": p.id, "name": p.name, "oldValue": old_v, "newValue": new_v})
+        elif update_type == "MIN_STOCK":
+            old_v = float(p.minStock or 0)
+            new_v = max(0, int(round(compute_new_bulk_val(old_v, mode, float(value)))))
+            changes.append({"productId": p.id, "name": p.name, "oldValue": old_v, "newValue": new_v})
+
+    if preview:
+        return {
+            "success": True,
+            "preview": True,
+            "updated": len(changes),
+            "batchId": batch_id,
+            "changes": changes,
+        }
+
+    # Apply changes
+    p_map = {p.id: p for p in products}
+    for ch in changes:
+        prod = p_map.get(ch["productId"])
+        if not prod:
+            continue
+        if update_type == "PRICE":
+            old_price = float(prod.price)
+            prod.price = ch["newValue"]
+            # Price history
+            db.add(PriceHistory(
+                id=str(uuid.uuid4()),
+                productId=prod.id,
+                oldPrice=old_price,
+                newPrice=ch["newValue"],
+                oldMrp=float(prod.mrp or prod.price),
+                newMrp=float(prod.mrp or prod.price),
+                changeType=f"BULK_{mode}",
+                changedBy=current_admin.email or current_admin.name or "ADMIN",
+                batchId=batch_id,
+                createdAt=datetime.utcnow()
+            ))
+        elif update_type == "STOCK":
+            prod.stock = ch["newValue"]
+        elif update_type == "AVAILABILITY":
+            prod.isAvailable = ch["newValue"]
+        elif update_type == "MIN_STOCK":
+            prod.minStock = ch["newValue"]
+
+    await db.commit()
+    return {"success": True, "updated": len(changes), "batchId": batch_id, "changes": changes}
+
+
+@router.get("/bulk-update")
+async def get_bulk_update_history(
+    batchId: Optional[str] = Query(None),
+    limit: int = Query(20),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Fetch price change history batches."""
+    if batchId:
+        stmt = select(PriceHistory).options(selectinload(PriceHistory.product)).where(
+            PriceHistory.batchId == batchId
+        ).order_by(PriceHistory.createdAt.desc())
+        records = (await db.execute(stmt)).scalars().all()
+        return {
+            "success": True,
+            "batchId": batchId,
+            "count": len(records),
+            "records": [
+                {
+                    "id": r.id,
+                    "productId": r.productId,
+                    "productName": r.product.name if r.product else "Product",
+                    "oldPrice": float(r.oldPrice),
+                    "newPrice": float(r.newPrice),
+                    "oldMrp": float(r.oldMrp),
+                    "newMrp": float(r.newMrp),
+                    "changeType": r.changeType,
+                    "changedBy": r.changedBy,
+                    "batchId": r.batchId,
+                    "createdAt": r.createdAt.isoformat() if r.createdAt else None,
+                }
+                for r in records
+            ]
+        }
+
+    # Distinct batches
+    stmt = select(PriceHistory.batchId, PriceHistory.createdAt, PriceHistory.changeType).where(
+        PriceHistory.batchId.is_not(None)
+    ).distinct(PriceHistory.batchId).order_by(PriceHistory.createdAt.desc()).limit(limit)
+    rows = (await db.execute(stmt)).all()
+
+    return {
+        "success": True,
+        "totalBatches": len(rows),
+        "batches": [
+            {
+                "batchId": r[0],
+                "createdAt": r[1].isoformat() if r[1] else None,
+                "changeType": r[2],
+            }
+            for r in rows
+        ]
+    }
+
+
+@router.delete("/bulk-update")
+async def undo_bulk_update(
+    payload: Dict[str, Any] = Body(...),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Undo a bulk update by batchId."""
+    batch_id = payload.get("batchId")
+    if not batch_id:
+        raise HTTPException(status_code=400, detail="Missing required field: batchId")
+
+    stmt = select(PriceHistory).where(PriceHistory.batchId == batch_id)
+    records = (await db.execute(stmt)).scalars().all()
+    if not records:
+        raise HTTPException(status_code=404, detail="No records found for the given batchId")
+
+    for rec in records:
+        p_stmt = select(Product).where(Product.id == rec.productId)
+        prod = (await db.execute(p_stmt)).scalars().first()
+        if prod:
+            prod.price = rec.oldPrice
+            prod.mrp = rec.oldMrp
+        await db.delete(rec)
+
+    await db.commit()
+    return {"success": True, "reverted": len(records)}
+
+
+# ============================================================
+# ADMIN CATEGORIES SORT RULE
+# ============================================================
+
+@router.get("/categories/sort-rule")
+async def get_category_sort_rule(
+    categorySlug: str = Query(...),
+    db: AsyncSession = Depends(get_db)
+):
+    """Fetch sorting rule for a category."""
+    key = f"category_sort_{categorySlug}"
+    stmt = select(StoreSetting).where(StoreSetting.key == key)
+    setting = (await db.execute(stmt)).scalars().first()
+    return {"rule": setting.value if setting else "manual"}
+
+
+@router.post("/categories/sort-rule")
+async def save_category_sort_rule(
+    payload: Dict[str, Any] = Body(...),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Save sorting rule for a category."""
+    category_slug = payload.get("categorySlug")
+    rule = payload.get("rule")
+    if not category_slug or not rule:
+        raise HTTPException(status_code=400, detail="categorySlug and rule are required")
+
+    key = f"category_sort_{category_slug}"
+    stmt = select(StoreSetting).where(StoreSetting.key == key)
+    setting = (await db.execute(stmt)).scalars().first()
+    if setting:
+        setting.value = str(rule)
+    else:
+        db.add(StoreSetting(key=key, value=str(rule)))
+
+    await db.commit()
+    return {"success": True, "setting": {"key": key, "value": rule}}
+
+
+# ============================================================
+# ADMIN USER ADDRESSES
+# ============================================================
+
+@router.get("/users/{id}/addresses")
+async def get_admin_user_addresses(
+    id: str,
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Fetch saved addresses for a user."""
+    stmt = select(Address).where(
+        Address.userId == id,
+        not_(Address.label.in_(["STORE_PICKUP", "STORE_PICKUP_RESTAURANT", "STORE_PICKUP_CAFE"]))
+    ).order_by(Address.isDefault.desc())
+    addresses = (await db.execute(stmt)).scalars().all()
+    return addresses
+
+
+@router.post("/users/{id}/addresses")
+async def create_admin_user_address(
+    id: str,
+    payload: Dict[str, Any] = Body(...),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Add a new delivery address for a user on behalf of admin."""
+    label = payload.get("label")
+    house_no = payload.get("houseNo")
+    street = payload.get("street")
+    area = payload.get("area")
+    city = payload.get("city")
+    pincode = payload.get("pincode")
+    phone = payload.get("phone")
+
+    if not label or not house_no or not street or not area or not city or not pincode or not phone:
+        raise HTTPException(status_code=400, detail="Missing required fields")
+
+    clean_phone = re.sub(r"\D", "", str(phone))[-10:]
+
+    address = Address(
+        id=str(uuid.uuid4()),
+        userId=id,
+        label=str(label).strip(),
+        houseNo=str(house_no).strip(),
+        street=str(street).strip(),
+        area=str(area).strip(),
+        city=str(city).strip(),
+        pincode=str(pincode).strip(),
+        phone=clean_phone,
+        isDefault=False,
+    )
+    db.add(address)
+    await db.commit()
+    await db.refresh(address)
+    return address
+
 

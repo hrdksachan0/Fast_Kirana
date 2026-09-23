@@ -118,3 +118,38 @@ async def restaurant_console_websocket(websocket: WebSocket, restaurant_id: str)
             await manager.broadcast_to_channel(f"restaurant_{clean_rid}", payload)
     except WebSocketDisconnect:
         manager.disconnect(websocket, f"restaurant_{clean_rid}")
+
+
+from fastapi.responses import StreamingResponse
+from fastapi import Request
+import time
+import uuid
+
+sse_router = APIRouter(prefix="/sse", tags=["SSE Real-Time Stream"])
+
+@sse_router.get("/orders")
+async def sse_orders_stream(request: Request):
+    """
+    Server-Sent Events (SSE) stream for real-time order notifications.
+    Keeps connection alive with periodic heartbeats every 15 seconds.
+    """
+    async def event_generator():
+        # Yield initial connection event
+        yield f"data: {json.dumps({'type': 'connected', 'timestamp': int(time.time() * 1000)})}\n\n"
+
+        while True:
+            if await request.is_disconnected():
+                break
+            await asyncio.sleep(15.0)
+            yield f"data: {json.dumps({'type': 'ping', 'timestamp': int(time.time() * 1000)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+

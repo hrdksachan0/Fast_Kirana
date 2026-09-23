@@ -979,3 +979,200 @@ async def get_session(authorization: Optional[str] = Header(None)):
         phone=user_info.get("phone"),
         assignedRestaurantId=user_info.get("assignedRestaurantId"),
     )
+
+
+class EmailCheckRequest(BaseModel):
+    email: Optional[str] = None
+
+
+@router.post("/email/check")
+async def check_email(
+    payload: EmailCheckRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Check if user exists with provided email or Indian mobile number,
+    identify worker/admin privileges, password presence, and onboarding state.
+    """
+    raw_ident = payload.email
+    if not raw_ident or not isinstance(raw_ident, str):
+        raise HTTPException(status_code=400, detail="Identifier is required")
+
+    trimmed = raw_ident.strip()
+    normalized_email = trimmed.lower()
+    if normalized_email == "superadmin":
+        normalized_email = "superadmin@fastkirana.com"
+    if normalized_email == "admin":
+        normalized_email = "admin@fastkirana.com"
+
+    clean_digits = re.sub(r"\D", "", trimmed)
+    is_phone = len(clean_digits) == 10 or (len(clean_digits) > 10 and clean_digits.startswith("91") and len(clean_digits) == 12)
+
+    if is_phone:
+        phone_digits = clean_digits[-10:]
+        normalized_phone = f"+91{phone_digits}"
+        phone_patterns = [
+            normalized_phone,
+            phone_digits,
+            f"91{phone_digits}",
+            f"+91{phone_digits}",
+            f"wa-{phone_digits}@fastkirana.com",
+            trimmed.lower()
+        ]
+
+        stmt = select(User).where(
+            or_(
+                User.phone.in_(phone_patterns),
+                User.email.in_(phone_patterns)
+            )
+        )
+        res = await db.execute(stmt)
+        matching_users = res.scalars().all()
+
+        canonical_user = None
+        for u in matching_users:
+            role_str = u.role.value if hasattr(u.role, "value") else str(u.role)
+            if (phone_digits == "9170942500" and u.email == "superadmin@fastkirana.com") or \
+               (phone_digits == "7054470303" and u.email == "admin@fastkirana.com") or \
+               role_str in ["RESTAURANT_OWNER", "CHEF", "ADMIN"] or \
+               bool(u.assignedRestaurantId):
+                canonical_user = u
+                break
+
+        if not canonical_user and matching_users:
+            for u in matching_users:
+                role_str = u.role.value if hasattr(u.role, "value") else str(u.role)
+                if role_str != "USER" or bool(u.passwordHash):
+                    canonical_user = u
+                    break
+            if not canonical_user:
+                canonical_user = matching_users[0]
+
+        if canonical_user:
+            role_str = canonical_user.role.value if hasattr(canonical_user.role, "value") else str(canonical_user.role)
+            is_master_admin = (
+                phone_digits in ["7054470303", "9170942500"] or
+                canonical_user.email in ["admin@fastkirana.com", "superadmin@fastkirana.com"]
+            )
+            effective_role = "ADMIN" if is_master_admin else role_str
+            data = {
+                "exists": True,
+                "isWorker": effective_role != "USER",
+                "hasPassword": bool(canonical_user.passwordHash),
+                "needsProfileSetup": not canonical_user.name or not canonical_user.phone,
+                "role": effective_role,
+                "email": canonical_user.email,
+                "phone": canonical_user.phone or normalized_phone,
+            }
+            return {"success": True, "data": data, **data}
+        else:
+            data = {
+                "exists": False,
+                "isWorker": False,
+                "hasPassword": False,
+                "needsProfileSetup": True,
+                "role": "USER",
+                "email": f"phone:{phone_digits}",
+                "phone": normalized_phone,
+            }
+            return {"success": True, "data": data, **data}
+    else:
+        if "@" not in normalized_email:
+            raise HTTPException(status_code=400, detail="Please enter a valid email address or 10-digit mobile number")
+
+        stmt = select(User).where(User.email == normalized_email)
+        res = await db.execute(stmt)
+        user = res.scalars().first()
+
+        if not user:
+            data = {
+                "exists": False,
+                "isWorker": False,
+                "hasPassword": False,
+                "needsProfileSetup": True,
+                "role": "USER",
+                "email": normalized_email,
+            }
+            return {"success": True, "data": data, **data}
+
+        role_str = user.role.value if hasattr(user.role, "value") else str(user.role)
+        is_master_admin = (
+            normalized_email in ["admin@fastkirana.com", "superadmin@fastkirana.com"] or
+            (user.phone and ("7054470303" in user.phone or "9170942500" in user.phone))
+        )
+        effective_role = "ADMIN" if is_master_admin else role_str
+        data = {
+            "exists": True,
+            "isWorker": effective_role != "USER",
+            "hasPassword": bool(user.passwordHash),
+            "needsProfileSetup": not user.name or not user.phone,
+            "role": effective_role,
+            "email": normalized_email,
+        }
+        return {"success": True, "data": data, **data}
+
+
+@router.post("/bridge-session")
+async def bridge_session(
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user)
+):
+    """
+    Bridge NextAuth/FastAPI JWT authenticated session with Supabase Auth.
+    Generates magiclink token hash for seamless Supabase client auth.
+    """
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    supabase_url = os.getenv("NEXT_PUBLIC_SUPABASE_URL") or os.getenv("SUPABASE_URL")
+    service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
+    if not supabase_url or not service_role_key:
+        return {"status": "skipped", "message": "Supabase Auth bridge not active"}
+
+    email = current_user.get("email")
+    phone = current_user.get("phone")
+    if not email and not phone:
+        raise HTTPException(status_code=400, detail="No email or phone in session")
+
+    email_to_use = email or f"{phone}@fastkirana.com"
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            headers = {
+                "apikey": service_role_key,
+                "Authorization": f"Bearer {service_role_key}",
+                "Content-Type": "application/json"
+            }
+            res = await client.post(
+                f"{supabase_url.rstrip('/')}/auth/v1/admin/generate_link",
+                headers=headers,
+                json={"type": "magiclink", "email": email_to_use}
+            )
+            if res.status_code != 200:
+                await client.post(
+                    f"{supabase_url.rstrip('/')}/auth/v1/admin/users",
+                    headers=headers,
+                    json={
+                        "email": email_to_use,
+                        "phone": phone if phone else None,
+                        "email_confirm": True,
+                        "phone_confirm": True
+                    }
+                )
+                res = await client.post(
+                    f"{supabase_url.rstrip('/')}/auth/v1/admin/generate_link",
+                    headers=headers,
+                    json={"type": "magiclink", "email": email_to_use}
+                )
+            if res.status_code == 200:
+                data = res.json()
+                action_link = data.get("properties", {}).get("action_link", "")
+                from urllib.parse import urlparse, parse_qs
+                parsed = urlparse(action_link)
+                token_hash = parse_qs(parsed.query).get("token", [None])[0]
+                return {"token_hash": token_hash}
+            else:
+                return JSONResponse(status_code=500, content={"error": f"Failed to generate Supabase link: {res.text}"})
+    except Exception as e:
+        logger.error(f"Session bridge API error: {e}")
+        return JSONResponse(status_code=500, content={"error": f"Internal Server Error: {str(e)}"})
+

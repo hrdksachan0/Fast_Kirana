@@ -2,7 +2,7 @@ import io
 import base64
 import asyncio
 from typing import Optional
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Request
 from pydantic import BaseModel
 from PIL import Image, ImageOps
 
@@ -52,6 +52,56 @@ def optimize_image_bytes(raw_bytes: bytes, max_width: int = 800, quality: int = 
             return webp_bytes, new_w, new_h
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Image processing failed: {str(e)}")
+
+
+@router.post("")
+@router.post("/")
+async def upload_root(
+    request: Request,
+    file: Optional[UploadFile] = File(None),
+):
+    """
+    Universal upload endpoint matching Next.js /api/upload.
+    Accepts multipart/form-data with 'file', or JSON with 'file' or 'image' base64.
+    Returns { success: true, url: data_url }.
+    """
+    content_type = request.headers.get("content-type", "")
+    raw_content = None
+
+    if "multipart/form-data" in content_type and file:
+        raw_content = await file.read()
+    else:
+        try:
+            body = await request.json()
+            raw_data = body.get("file") or body.get("image") or ""
+            if raw_data:
+                if "," in raw_data:
+                    raw_data = raw_data.split(",")[1]
+                raw_content = base64.b64decode(raw_data)
+        except Exception:
+            pass
+
+    if not raw_content:
+        raise HTTPException(status_code=400, detail="No image file or base64 provided")
+
+    if len(raw_content) > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=413, detail=f"File exceeds maximum allowed size of {MAX_UPLOAD_SIZE // (1024*1024)}MB")
+
+    webp_bytes, width, height = await asyncio.to_thread(
+        optimize_image_bytes, raw_content, max_width=1200, quality=82
+    )
+
+    base64_encoded = base64.b64encode(webp_bytes).decode("utf-8")
+    data_url = f"data:image/webp;base64,{base64_encoded}"
+
+    return {
+        "success": True,
+        "url": data_url,
+        "format": "webp",
+        "width": width,
+        "height": height
+    }
+
 
 @router.post("/image")
 async def upload_and_optimize_image(

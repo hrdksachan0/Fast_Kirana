@@ -578,3 +578,55 @@ class VendorPayout(Base):
     updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     vendor = relationship("Vendor", back_populates="payouts")
+
+
+class WishlistItem(Base):
+    __tablename__ = "wishlist_items"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    userId: Mapped[str] = mapped_column(String, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    productId: Mapped[str] = mapped_column(String, ForeignKey("products.id", ondelete="CASCADE"), index=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    product = relationship("Product")
+    user = relationship("User")
+
+
+class PushSubscription(Base):
+    __tablename__ = "push_subscriptions"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    userId: Mapped[str] = mapped_column(String, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    endpoint: Mapped[str] = mapped_column(String, unique=True, index=True)
+    p256dh: Mapped[str] = mapped_column(String)
+    auth: Mapped[str] = mapped_column(String)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User")
+
+
+class PushNotification(Base):
+    __tablename__ = "push_notifications"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    title: Mapped[str] = mapped_column(String)
+    body: Mapped[str] = mapped_column(Text)
+    imageUrl: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    linkUrl: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    sentAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    successCount: Mapped[int] = mapped_column(Integer, default=0)
+    failureCount: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class StockAlert(Base):
+    __tablename__ = "stock_alerts"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    productId: Mapped[str] = mapped_column(String, ForeignKey("products.id", ondelete="CASCADE"), index=True)
+    alertType: Mapped[str] = mapped_column(String)
+    message: Mapped[str] = mapped_column(Text)
+    isRead: Mapped[bool] = mapped_column(Boolean, default=False)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    product = relationship("Product")

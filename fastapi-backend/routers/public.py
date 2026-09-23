@@ -135,3 +135,75 @@ async def geocode_address(
             params={"address": address, "key": api_key}
         )
         return response.json()
+
+
+# ============================================================
+# TELEMETRY & DIAGNOSTICS
+# ============================================================
+
+@router.post("/telemetry/errors")
+async def report_client_error(
+    payload: Dict[str, Any] = Body(...)
+):
+    """
+    Ingest client telemetry error logs.
+    """
+    message = payload.get("message", "Unknown client error")
+    severity = payload.get("severity", "ERROR")
+    route = payload.get("route", "unknown")
+    stack = payload.get("stack")
+    metadata = payload.get("metadata")
+    log_prefix = "🚨 [TELEMETRY_CRITICAL]" if severity == "CRITICAL" else "⚠️ [TELEMETRY_CLIENT_ERROR]"
+    print(f"{log_prefix} [{route}] {message} metadata={metadata} stack={stack[:200] if stack else None}")
+    return {"success": True, "received": True}
+
+
+@router.post("/revalidate-bridge")
+async def revalidate_bridge(
+    payload: Dict[str, Any] = Body(default={}),
+    x_api_secret: Optional[str] = None
+):
+    """
+    Bridge cache revalidation endpoint.
+    """
+    import os
+    auth_secret = os.getenv("AUTH_SECRET")
+    if auth_secret and x_api_secret != auth_secret:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return {"success": True}
+
+
+@router.get("/diagnostics")
+async def get_system_diagnostics(
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    System diagnostics report for admin and operations.
+    """
+    import os
+    from sqlalchemy import func
+    report = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "env": {
+            "NODE_ENV": os.getenv("NODE_ENV", "production"),
+            "APP_ENV": os.getenv("APP_ENV", "production"),
+            "DATABASE_URL": "CONFIGURED" if os.getenv("DATABASE_URL") else "MISSING",
+        },
+        "database": {
+            "status": "unknown",
+            "error": None,
+            "userCount": 0,
+        },
+        "smtp": {
+            "status": "CONFIGURED" if os.getenv("SMTP_HOST") else "NOT_CONFIGURED",
+        }
+    }
+    try:
+        res = await db.execute(select(func.count(User.id)))
+        report["database"]["userCount"] = res.scalar() or 0
+        report["database"]["status"] = "CONNECTED"
+    except Exception as e:
+        report["database"]["status"] = "FAILED"
+        report["database"]["error"] = str(e)
+
+    return report

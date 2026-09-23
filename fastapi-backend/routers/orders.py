@@ -2719,3 +2719,529 @@ async def convert_order_to_cod(
         "status": order.status.value,
         "paymentMethod": "COD"
     }
+
+
+def normalize_restaurant_id(rid: Optional[str]) -> Optional[str]:
+    if not rid:
+        return None
+    r = str(rid).strip().lower()
+    if "as-restaurant" in r or "as-cafe" in r or "101" in r or "cms2p1lap" in r:
+        return "REST-101"
+    if "wedson" in r or "102" in r:
+        return "REST-102"
+    if "bal-udyan" in r or "103" in r or "cmsbhxb6a" in r:
+        return "REST-103"
+    if "pizza" in r or "104" in r:
+        return "REST-104"
+    return str(rid).strip()
+
+
+@router.post("/{id}/edit")
+async def edit_order(
+    id: str,
+    payload: Dict[str, Any] = Body(...),
+    request: Request = None,
+    current_user: Optional[dict] = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Staff / Admin Order Editing Endpoint.
+    Supports single-domain editing as well as multi-domain order splitting (-G, -R, -R2)
+    with combined delivery fee threshold management.
+    """
+    effective_user_id = current_user.get("id") if current_user else None
+    effective_role = (current_user.get("role") or "").upper() if current_user else ""
+    assigned_restaurant_id = current_user.get("assignedRestaurantId") if current_user else None
+
+    # Fallback: check x-user-id header
+    if not effective_role or effective_role == "USER":
+        header_user_id = request.headers.get("x-user-id") if request else None
+        if header_user_id and not header_user_id.startswith("mock-id-"):
+            u_stmt = select(User).where(User.id == header_user_id)
+            u_res = await db.execute(u_stmt)
+            db_user = u_res.scalars().first()
+            if db_user and not getattr(db_user, "isBlocked", False):
+                effective_user_id = db_user.id
+                effective_role = db_user.role.value if hasattr(db_user.role, "value") else str(db_user.role)
+                assigned_restaurant_id = db_user.assignedRestaurantId
+
+    allowed_roles = ["ADMIN", "CHEF", "PICKER", "RESTAURANT_OWNER", "SUPER_ADMIN", "MANAGER"]
+    if effective_role not in allowed_roles:
+        raise HTTPException(status_code=403, detail="Unauthorized: insufficient role to edit orders")
+
+    updated_items = payload.get("updatedItems")
+    if not isinstance(updated_items, list):
+        raise HTTPException(status_code=400, detail="updatedItems must be an array")
+
+    out_of_stock_product_ids = payload.get("outOfStockProductIds") or []
+
+    # 1. Fetch current order by id or readableId
+    stmt = select(Order).options(
+        selectinload(Order.items),
+        selectinload(Order.user)
+    ).where(or_(Order.id == id, Order.readableId == id))
+    res = await db.execute(stmt)
+    order = res.scalars().first()
+
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    # Outlet isolation check for chef / restaurant owner
+    if effective_role in ["CHEF", "RESTAURANT_OWNER"]:
+        if assigned_restaurant_id and order.restaurantId:
+            norm_assigned = normalize_restaurant_id(assigned_restaurant_id)
+            norm_order_rest = normalize_restaurant_id(order.restaurantId)
+            if norm_assigned and norm_order_rest and norm_assigned != norm_order_rest:
+                raise HTTPException(status_code=403, detail="You can only edit orders for your assigned restaurant")
+
+    order_status_val = order.status.value if hasattr(order.status, "value") else str(order.status)
+    if effective_role not in ["ADMIN", "SUPER_ADMIN"]:
+        if order_status_val in ["PACKED", "SHIPPED", "DELIVERED", "CANCELLED"]:
+            raise HTTPException(status_code=400, detail=f"Order is already {order_status_val} and cannot be edited")
+    else:
+        if order_status_val == "DELIVERED":
+            raise HTTPException(status_code=400, detail="Delivered order cannot be edited")
+
+    # 2. Adjust out of stock products if provided
+    if out_of_stock_product_ids and isinstance(out_of_stock_product_ids, list):
+        for prod_id in out_of_stock_product_ids:
+            p_stmt = select(Product).where(Product.id == prod_id)
+            p_res = await db.execute(p_stmt)
+            p_obj = p_res.scalars().first()
+            if p_obj:
+                p_obj.isAvailable = False
+                p_obj.stock = 0
+
+    # 3. Revert stock of existing order items
+    for item in order.items:
+        if not item.productId:
+            continue
+        p_stmt = select(Product).where(Product.id == item.productId)
+        p_res = await db.execute(p_stmt)
+        p_obj = p_res.scalars().first()
+        if not p_obj or p_obj.restaurantId:
+            continue
+
+        if item.selectedVariant and p_obj.variants and isinstance(p_obj.variants, list):
+            updated_variants = []
+            for v in p_obj.variants:
+                if isinstance(v, dict) and v.get("name") == item.selectedVariant:
+                    v_copy = dict(v)
+                    v_copy["stock"] = int(v_copy.get("stock", 0)) + item.quantity
+                    updated_variants.append(v_copy)
+                else:
+                    updated_variants.append(v)
+            new_total = sum(int(v.get("stock", 0)) for v in updated_variants if isinstance(v, dict))
+            p_obj.variants = updated_variants
+            p_obj.stock = new_total
+        else:
+            p_obj.stock = (p_obj.stock or 0) + item.quantity
+
+    # 4. Classify new updated items into grocery vs restaurant
+    grocery_group = []
+    restaurant_groups = {}
+
+    for item in updated_items:
+        if not item or not isinstance(item, dict):
+            continue
+        qty = int(item.get("quantity") or 1)
+        if qty <= 0:
+            continue
+
+        prod_id = item.get("productId")
+        product = None
+        if prod_id and isinstance(prod_id, str) and not prod_id.startswith("custom_"):
+            prod_stmt = select(Product).options(
+                selectinload(Product.restaurant),
+                selectinload(Product.category)
+            ).where(Product.id == prod_id)
+            prod_res = await db.execute(prod_stmt)
+            product = prod_res.scalars().first()
+
+        item_price = float(product.price) if product else 0.0
+        if effective_role in ["ADMIN", "SUPER_ADMIN"]:
+            if item.get("price") is not None:
+                item_price = max(0.0, float(item["price"]))
+        elif not product and item.get("price") is not None:
+            item_price = max(0.0, float(item["price"]))
+
+        item_name = item.get("name") or (product.name if product else "Item")
+        item_rest_id = str(item.get("restaurantId") or "").strip() or None
+        item_shop_name = str(item.get("shopName") or "").strip() or None
+
+        is_restaurant = False
+        resolved_rest_id = None
+        resolved_shop_name = None
+        resolved_shop_phone = None
+
+        if product:
+            raw_rest_id = product.restaurantId or (product.restaurant.id if product.restaurant else None)
+            if raw_rest_id:
+                is_restaurant = True
+                resolved_rest_id = normalize_restaurant_id(raw_rest_id) or raw_rest_id
+                resolved_shop_name = product.restaurant.name if product.restaurant else item_shop_name or "Restaurant"
+                resolved_shop_phone = product.restaurant.ownerPhone if product.restaurant else None
+            else:
+                is_restaurant = False
+                resolved_rest_id = None
+                resolved_shop_name = "FastKirana Grocery"
+                resolved_shop_phone = None
+        else:
+            explicit_rest_id = normalize_restaurant_id(item_rest_id) if item_rest_id else None
+            if explicit_rest_id:
+                is_restaurant = True
+                resolved_rest_id = explicit_rest_id
+                resolved_shop_name = item_shop_name or "Restaurant"
+                resolved_shop_phone = order.shopPhone
+            elif str(order.orderType.value if hasattr(order.orderType, "value") else order.orderType) == "RESTAURANT" and order.restaurantId and effective_role in ["CHEF", "RESTAURANT_OWNER"]:
+                is_restaurant = True
+                resolved_rest_id = normalize_restaurant_id(order.restaurantId) or order.restaurantId
+                resolved_shop_name = order.shopName or "Restaurant"
+                resolved_shop_phone = order.shopPhone
+            else:
+                is_restaurant = False
+                resolved_rest_id = None
+                resolved_shop_name = "FastKirana Grocery"
+                resolved_shop_phone = None
+
+        classified = {
+            "item": item,
+            "product": product,
+            "itemPrice": item_price,
+            "itemQty": qty,
+            "itemName": item_name,
+            "isRestaurant": is_restaurant,
+            "restaurantId": resolved_rest_id,
+            "shopName": resolved_shop_name,
+            "shopPhone": resolved_shop_phone
+        }
+
+        if is_restaurant:
+            key = resolved_rest_id or normalize_restaurant_id(order.restaurantId) or "REST-101"
+            if key not in restaurant_groups:
+                restaurant_groups[key] = {
+                    "items": [],
+                    "shopName": resolved_shop_name or order.shopName or "Restaurant",
+                    "shopPhone": resolved_shop_phone or order.shopPhone
+                }
+            restaurant_groups[key]["items"].append(classified)
+        else:
+            grocery_group.append(classified)
+
+    has_grocery_items = len(grocery_group) > 0
+    restaurant_keys = list(restaurant_groups.keys())
+    has_restaurant_items = len(restaurant_keys) > 0
+    is_mixed = (has_grocery_items and has_restaurant_items) or len(restaurant_keys) > 1
+
+    # Fetch fee settings
+    settings_stmt = select(StoreSetting)
+    settings_res = await db.execute(settings_stmt)
+    settings_rows = settings_res.scalars().all()
+    settings_map = {s.key: s.value for s in settings_rows}
+
+    delivery_fee_setting = float(settings_map.get("delivery_fee") or 25.0)
+    misc_fee_setting = float(settings_map.get("misc_fee") or 5.0)
+
+    async def insert_items_for_order(target_order_id: str, items_list: list) -> float:
+        subtotal = 0.0
+        for ci in items_list:
+            subtotal += ci["itemPrice"] * ci["itemQty"]
+            order_item = OrderItem(
+                id=str(uuid.uuid4()),
+                orderId=target_order_id,
+                productId=ci["product"].id if ci["product"] else None,
+                name=ci["itemName"],
+                price=ci["itemPrice"],
+                quantity=ci["itemQty"],
+                selectedVariant=ci["item"].get("selectedVariant"),
+                imageUrl=ci["item"].get("imageUrl") or (ci["product"].imageUrl if ci["product"] else None),
+                notes=ci["item"].get("notes"),
+                costPrice=float(ci["product"].costPrice or 0.0) if ci["product"] else 0.0
+            )
+            db.add(order_item)
+
+            # Deduct stock for grocery items
+            if ci["product"] and not ci["isRestaurant"]:
+                p_item = ci["product"]
+                if ci["item"].get("selectedVariant") and p_item.variants and isinstance(p_item.variants, list):
+                    updated_v = []
+                    for v in p_item.variants:
+                        if isinstance(v, dict) and v.get("name") == ci["item"]["selectedVariant"]:
+                            v_copy = dict(v)
+                            v_copy["stock"] = max(0, int(v_copy.get("stock", 0)) - ci["itemQty"])
+                            updated_v.append(v_copy)
+                        else:
+                            updated_v.append(v)
+                    p_item.variants = updated_v
+                    p_item.stock = sum(int(v.get("stock", 0)) for v in updated_v if isinstance(v, dict))
+                else:
+                    p_item.stock = max(0, (p_item.stock or 0) - ci["itemQty"])
+
+        return subtotal
+
+    # =====================================================================
+    # SINGLE-DOMAIN PATH
+    # =====================================================================
+    if not is_mixed:
+        # Delete old items
+        await db.execute(delete(OrderItem).where(OrderItem.orderId == order.id))
+
+        all_items = grocery_group if has_grocery_items else [item for g in restaurant_groups.values() for item in g["items"]]
+        subtotal_val = await insert_items_for_order(order.id, all_items)
+
+        dynamic_order_type = order.orderType
+        dynamic_restaurant_id = order.restaurantId
+        dynamic_shop_name = order.shopName
+        dynamic_shop_phone = order.shopPhone
+
+        if has_restaurant_items:
+            first_key = normalize_restaurant_id(restaurant_keys[0]) or restaurant_keys[0]
+            first_group = restaurant_groups.get(restaurant_keys[0]) or restaurant_groups.get(first_key) or list(restaurant_groups.values())[0]
+            dynamic_order_type = OrderType.RESTAURANT
+            dynamic_restaurant_id = first_key
+
+            rest_stmt = select(Restaurant).where(Restaurant.id == first_key)
+            rest_res = await db.execute(rest_stmt)
+            db_rest = rest_res.scalars().first()
+
+            dynamic_shop_name = db_rest.name if db_rest else (first_group.get("shopName") or "Restaurant")
+            dynamic_shop_phone = db_rest.ownerPhone if db_rest else first_group.get("shopPhone")
+        elif has_grocery_items:
+            dynamic_order_type = OrderType.GROCERY
+            dynamic_restaurant_id = None
+            dynamic_shop_name = "FastKirana Grocery"
+            dynamic_shop_phone = None
+
+        # Delivery fee calculation
+        threshold = float(settings_map.get("grocery_free_delivery_threshold") or 200.0)
+        if str(dynamic_order_type) == "RESTAURANT":
+            threshold = float(settings_map.get("cafe_free_delivery_threshold") or 200.0)
+
+        calc_delivery_fee = 0.0
+        calc_misc_fee = 0.0
+        if str(order.deliveryMethod) == "DELIVERY":
+            calc_delivery_fee = 0.0 if subtotal_val >= threshold else delivery_fee_setting
+            calc_misc_fee = miscFee_setting = float(settings_map.get("misc_fee") or 5.0)
+
+        taxes_val = 0.0
+        total_val = subtotal_val + calc_delivery_fee + taxes_val + calc_misc_fee - float(order.discount or 0.0)
+
+        order.subtotal = subtotal_val
+        order.deliveryFee = calc_delivery_fee
+        order.miscFee = calc_misc_fee
+        order.taxes = taxes_val
+        order.total = total_val
+        order.orderType = dynamic_order_type
+        order.restaurantId = dynamic_restaurant_id
+        order.shopName = dynamic_shop_name
+        order.shopPhone = dynamic_shop_phone
+
+        if str(dynamic_order_type) == "GROCERY":
+            order.assignedChefId = None
+        elif str(dynamic_order_type) == "RESTAURANT":
+            order.assignedPickerId = None
+
+        await db.commit()
+        await db.refresh(order)
+
+        # Broadcast SSE / WebSocket
+        try:
+            await manager.broadcast_to_channel("general", {
+                "type": "order-edited",
+                "orderId": order.id,
+                "shopName": dynamic_shop_name,
+                "restaurantId": dynamic_restaurant_id,
+                "orderType": str(dynamic_order_type.value if hasattr(dynamic_order_type, "value") else dynamic_order_type)
+            })
+        except Exception:
+            pass
+
+        return {
+            "success": True,
+            "total": total_val,
+            "orderType": str(dynamic_order_type.value if hasattr(dynamic_order_type, "value") else dynamic_order_type),
+            "restaurantId": dynamic_restaurant_id,
+            "shopName": dynamic_shop_name
+        }
+
+    # =====================================================================
+    # MIXED-DOMAIN PATH (Order Splitting)
+    # =====================================================================
+    base_readable_id = re.sub(r"-(G|R\d*)$", "", order.readableId or "", flags=re.IGNORECASE)
+    combined_id = order.combinedId or f"combined_{uuid.uuid4().hex[:9]}_{int(datetime.utcnow().timestamp())}"
+    current_is_grocery = (str(order.orderType.value if hasattr(order.orderType, "value") else order.orderType) == "GROCERY") or not order.restaurantId
+
+    # Find existing companions
+    existing_companions = []
+    if order.combinedId:
+        c_stmt = select(Order).options(selectinload(Order.items)).where(
+            and_(Order.combinedId == order.combinedId, Order.id != order.id)
+        )
+        c_res = await db.execute(c_stmt)
+        existing_companions = c_res.scalars().all()
+
+    sub_orders = []
+    if has_grocery_items:
+        existing_grocery = order if current_is_grocery else next((c for c in existing_companions if str(c.orderType.value if hasattr(c.orderType, "value") else c.orderType) == "GROCERY"), None)
+        sub_orders.append({
+            "orderId": existing_grocery.id if existing_grocery else None,
+            "items": grocery_group,
+            "type": OrderType.GROCERY,
+            "restaurantId": None,
+            "shopName": "FastKirana Grocery",
+            "shopPhone": None,
+            "readableId": f"{base_readable_id}-G",
+            "isNew": existing_grocery is None
+        })
+
+    rest_idx = 0
+    for r_id in restaurant_keys:
+        rest_idx += 1
+        r_group = restaurant_groups[r_id]
+        normalized_r_id = normalize_restaurant_id(r_id)
+        existing_rest = order if (not current_is_grocery and normalize_restaurant_id(order.restaurantId) == normalized_r_id) else next(
+            (c for c in existing_companions if str(c.orderType.value if hasattr(c.orderType, "value") else c.orderType) == "RESTAURANT" and normalize_restaurant_id(c.restaurantId) == normalized_r_id),
+            None
+        )
+        suffix = "-R" if rest_idx == 1 else f"-R{rest_idx}"
+        sub_orders.append({
+            "orderId": existing_rest.id if existing_rest else None,
+            "items": r_group["items"],
+            "type": OrderType.RESTAURANT,
+            "restaurantId": normalized_r_id,
+            "shopName": r_group["shopName"],
+            "shopPhone": r_group["shopPhone"],
+            "readableId": f"{base_readable_id}{suffix}",
+            "isNew": existing_rest is None
+        })
+
+    # Ensure original order is claimed
+    if not any(s["orderId"] == order.id for s in sub_orders) and sub_orders:
+        cand = next((s for s in sub_orders if s["type"] == order.orderType and s["orderId"] is None), None) or \
+               next((s for s in sub_orders if s["orderId"] is None), None) or sub_orders[0]
+        cand["orderId"] = order.id
+        cand["isNew"] = False
+
+    prepared = []
+    all_order_ids = []
+
+    for spec in sub_orders:
+        target_id = spec["orderId"]
+        if spec["isNew"]:
+            new_ord = Order(
+                id=str(uuid.uuid4()),
+                userId=order.userId,
+                readableId=spec["readableId"],
+                addressId=order.addressId,
+                combinedId=combined_id,
+                orderType=spec["type"],
+                status=order.status,
+                subtotal=0.0,
+                discount=0.0,
+                deliveryFee=0.0,
+                taxes=0.0,
+                miscFee=0.0,
+                total=0.0,
+                paymentMethod=order.paymentMethod,
+                paymentStatus=order.paymentStatus,
+                deliveryMethod=order.deliveryMethod,
+                isB2B=order.isB2B,
+                storeId=order.storeId,
+                couponCode=order.couponCode,
+                shopName=spec["shopName"],
+                shopPhone=spec["shopPhone"],
+                restaurantId=spec["restaurantId"],
+                deliveryLat=order.deliveryLat,
+                deliveryLng=order.deliveryLng,
+                notes=order.notes,
+                assignedPickerId=order.assignedPickerId if spec["type"] == OrderType.GROCERY else None,
+                assignedChefId=order.assignedChefId if spec["type"] == OrderType.RESTAURANT else None,
+            )
+            db.add(new_ord)
+            await db.flush()
+            target_id = new_ord.id
+
+        await db.execute(delete(OrderItem).where(OrderItem.orderId == target_id))
+        all_order_ids.append(target_id)
+        subtotal_val = await insert_items_for_order(target_id, spec["items"])
+        prepared.append({
+            "targetOrderId": target_id,
+            "spec": spec,
+            "subtotalVal": subtotal_val
+        })
+
+    # Global combined delivery fee calculation
+    total_combined_subtotal = sum(p["subtotalVal"] for p in prepared)
+    combined_threshold = float(settings_map.get("combined_free_delivery_threshold") or 350.0)
+    is_combined_free = (str(order.deliveryMethod) != "DELIVERY") or (total_combined_subtotal >= combined_threshold)
+
+    single_delivery_assigned = is_combined_free
+    single_misc_assigned = (str(order.deliveryMethod) != "DELIVERY")
+
+    primary_total = 0.0
+    primary_order_type = ""
+    primary_restaurant_id = None
+    primary_shop_name = ""
+
+    for p in prepared:
+        calc_del = 0.0
+        if not single_delivery_assigned and p["subtotalVal"] > 0:
+            calc_del = delivery_fee_setting
+            single_delivery_assigned = True
+
+        calc_misc = 0.0
+        if not single_misc_assigned and p["subtotalVal"] > 0:
+            calc_misc = misc_fee_setting
+            single_misc_assigned = True
+
+        disc = 0.0 if p["spec"]["isNew"] else float(order.discount or 0.0)
+        tot = p["subtotalVal"] + calc_del + calc_misc - disc
+
+        u_ord_stmt = select(Order).where(Order.id == p["targetOrderId"])
+        u_ord_res = await db.execute(u_ord_stmt)
+        target_ord = u_ord_res.scalars().first()
+
+        target_ord.combinedId = combined_id
+        target_ord.readableId = p["spec"]["readableId"]
+        target_ord.subtotal = p["subtotalVal"]
+        target_ord.deliveryFee = calc_del
+        target_ord.miscFee = calc_misc
+        target_ord.total = tot
+        target_ord.orderType = p["spec"]["type"]
+        target_ord.restaurantId = p["spec"]["restaurantId"]
+        target_ord.shopName = p["spec"]["shopName"]
+
+        if p["targetOrderId"] == order.id:
+            primary_total = tot
+            primary_order_type = str(p["spec"]["type"].value if hasattr(p["spec"]["type"], "value") else p["spec"]["type"])
+            primary_restaurant_id = p["spec"]["restaurantId"]
+            primary_shop_name = p["spec"]["shopName"]
+
+    order.combinedId = combined_id
+
+    # Clean up orphaned companion orders
+    for ec in existing_companions:
+        if ec.id not in all_order_ids:
+            await db.execute(delete(OrderItem).where(OrderItem.orderId == ec.id))
+            await db.execute(delete(Order).where(Order.id == ec.id))
+
+    await db.commit()
+
+    return {
+        "success": True,
+        "total": primary_total,
+        "orderType": primary_order_type,
+        "restaurantId": primary_restaurant_id,
+        "shopName": primary_shop_name,
+        "split": True,
+        "subOrders": [
+            {
+                "orderId": p["targetOrderId"],
+                "type": str(p["spec"]["type"].value if hasattr(p["spec"]["type"], "value") else p["spec"]["type"]),
+                "readableId": p["spec"]["readableId"],
+                "shopName": p["spec"]["shopName"]
+            }
+            for p in prepared
+        ]
+    }
+
