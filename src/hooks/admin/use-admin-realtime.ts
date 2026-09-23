@@ -124,13 +124,13 @@ export function useAdminRealtime({
         selectedHubId && selectedHubId !== 'all'
           ? `&storeId=${encodeURIComponent(selectedHubId)}`
           : ''
-      const res = await fetch(`/api/orders?all=true${storeQuery}`)
+      const res = await fetch(`/api/admin/orders?limit=100${storeQuery}`)
       if (res.ok) {
         const data = await res.json()
-        const fetched = Array.isArray(data)
-          ? data
-          : Array.isArray(data?.orders)
+        const fetched = Array.isArray(data?.orders)
           ? data.orders
+          : Array.isArray(data)
+          ? data
           : []
         setLiveOrders(fetched)
       }

@@ -77,77 +77,7 @@ const nextConfig: NextConfig = {
   async rewrites() {
     const apiDest = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://fastkirana-production-a4b8.up.railway.app';
     return {
-      beforeFiles: [
-        // Phase 1: Safe Read-Only Catalog & Content Routes (Zero Financial Risk)
-        {
-          source: '/api/banners',
-          destination: `${apiDest}/api/banners`,
-        },
-        {
-          source: '/api/banners/:path*',
-          destination: `${apiDest}/api/banners/:path*`,
-        },
-        {
-          source: '/api/categories',
-          destination: `${apiDest}/api/categories`,
-        },
-        {
-          source: '/api/categories/:path*',
-          destination: `${apiDest}/api/categories/:path*`,
-        },
-        {
-          source: '/api/restaurants',
-          destination: `${apiDest}/api/restaurants`,
-        },
-        {
-          source: '/api/restaurants/:path*',
-          destination: `${apiDest}/api/restaurants/:path*`,
-        },
-        // Phase 2: Coupons Proxy
-        {
-          source: '/api/coupons',
-          destination: `${apiDest}/api/coupons`,
-        },
-        {
-          source: '/api/coupons/:path*',
-          destination: `${apiDest}/api/coupons/:path*`,
-        },
-        // Phase 3: Core Orders & Logistics Proxy
-        {
-          source: '/api/orders',
-          destination: `${apiDest}/api/orders`,
-        },
-        {
-          source: '/api/orders/:path*',
-          destination: `${apiDest}/api/orders/:path*`,
-        },
-        {
-          source: '/api/delivery/:path*',
-          destination: `${apiDest}/api/delivery/:path*`,
-        },
-        {
-          source: '/api/picker/:path*',
-          destination: `${apiDest}/api/picker/:path*`,
-        },
-        {
-          source: '/api/kot-broadcast',
-          destination: `${apiDest}/api/kot-broadcast`,
-        },
-        // Phase 4: Payments & Profile
-        {
-          source: '/api/payment/:path*',
-          destination: `${apiDest}/api/payment/:path*`,
-        },
-        {
-          source: '/api/payments/:path*',
-          destination: `${apiDest}/api/payments/:path*`,
-        },
-        {
-          source: '/api/profile/:path*',
-          destination: `${apiDest}/api/profile/:path*`,
-        },
-        // Phase 5: Admin Dashboard & Operations handled natively by Next.js App Router
-      ],
+      beforeFiles: [],
       afterFiles: [
         // Python AI microservices & WebSockets
         {
