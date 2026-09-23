@@ -75,10 +75,9 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
-    const apiDest = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://fastkirana-production-a4b8.up.railway.app';
+    const apiDest = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://fastkiran-backend-production.up.railway.app';
     return {
-      beforeFiles: [],
-      afterFiles: [
+      beforeFiles: [
         // Python AI microservices & WebSockets
         {
           source: '/api/python/:path*',
@@ -88,7 +87,85 @@ const nextConfig: NextConfig = {
           source: '/ws/:path*',
           destination: `${apiDest}/ws/:path*`,
         },
+        // Core High-Traffic Customer & Store APIs -> Railway FastAPI
+        {
+          source: '/api/products/:path*',
+          destination: `${apiDest}/api/products/:path*`,
+        },
+        {
+          source: '/api/products',
+          destination: `${apiDest}/api/products`,
+        },
+        {
+          source: '/api/categories/:path*',
+          destination: `${apiDest}/api/categories/:path*`,
+        },
+        {
+          source: '/api/categories',
+          destination: `${apiDest}/api/categories`,
+        },
+        {
+          source: '/api/restaurants/:path*',
+          destination: `${apiDest}/api/restaurants/:path*`,
+        },
+        {
+          source: '/api/restaurants',
+          destination: `${apiDest}/api/restaurants`,
+        },
+        {
+          source: '/api/cafe/:path*',
+          destination: `${apiDest}/api/cafe/:path*`,
+        },
+        {
+          source: '/api/cart/:path*',
+          destination: `${apiDest}/api/cart/:path*`,
+        },
+        {
+          source: '/api/coupons/:path*',
+          destination: `${apiDest}/api/coupons/:path*`,
+        },
+        {
+          source: '/api/stores/:path*',
+          destination: `${apiDest}/api/stores/:path*`,
+        },
+        {
+          source: '/api/store-settings/:path*',
+          destination: `${apiDest}/api/store-settings/:path*`,
+        },
+        {
+          source: '/api/store-status',
+          destination: `${apiDest}/api/store-status`,
+        },
+        {
+          source: '/api/banners/:path*',
+          destination: `${apiDest}/api/banners/:path*`,
+        },
+        {
+          source: '/api/banners',
+          destination: `${apiDest}/api/banners`,
+        },
+        {
+          source: '/api/wishlist/:path*',
+          destination: `${apiDest}/api/wishlist/:path*`,
+        },
+        {
+          source: '/api/wishlist',
+          destination: `${apiDest}/api/wishlist`,
+        },
+        {
+          source: '/api/vendors/:path*',
+          destination: `${apiDest}/api/vendors/:path*`,
+        },
+        {
+          source: '/api/picker/:path*',
+          destination: `${apiDest}/api/picker/:path*`,
+        },
+        {
+          source: '/api/delivery/:path*',
+          destination: `${apiDest}/api/delivery/:path*`,
+        },
       ],
+      afterFiles: [],
       fallback: [],
     };
   },

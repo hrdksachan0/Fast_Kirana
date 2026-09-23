@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase-client'
 import { getDistanceKm } from '@/lib/distance'
 import { toast } from 'sonner'
+import { playOrderChime } from '@/lib/audio'
 import {
   ShoppingBag,
   Package,
@@ -384,6 +385,7 @@ export function useOrderTracker({
               setOrder((prev) => {
                 if (JSON.stringify(data) !== JSON.stringify(prev)) {
                   if (data.status !== prev.status) {
+                    playOrderChime()
                     toast.success(`Order Update: ${data.status} ✅`)
                   }
                   return data
@@ -433,6 +435,9 @@ export function useOrderTracker({
               .then(res => res.json())
               .then(data => {
                 if (data && data.status) {
+                  if (data.status !== order.status) {
+                    playOrderChime()
+                  }
                   const wasEdited = data.status === order.status && data.total !== order.total
                   setOrder(data)
                   if (wasEdited) {
@@ -466,7 +471,7 @@ export function useOrderTracker({
     // Railway WebSocket connection for redundant live order & rider updates
     let ws: WebSocket | null = null
     try {
-      const rawFastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkirana-production-a4b8.up.railway.app'
+      const rawFastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://fastkiran-backend-production.up.railway.app'
       const cleanUrl = rawFastApiUrl.replace(/\/+$/, '')
       const wsUrl = cleanUrl.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + `/ws/orders/${order.id}`
       ws = new WebSocket(wsUrl)
