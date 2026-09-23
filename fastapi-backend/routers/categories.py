@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Body, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, and_, exists
 from typing import Dict, Any, Optional
 import uuid
 import re
@@ -10,7 +10,7 @@ import os
 import asyncio
 
 from database import get_db
-from models import Category, Product
+from models import Category, Product, StoreInventory
 from routers.auth import require_admin
 
 router = APIRouter(prefix="/categories", tags=["Categories"])
@@ -50,22 +50,45 @@ async def get_categories(
     response: Response,
     admin: Optional[str] = None,
     all: Optional[str] = None,
+    storeId: Optional[str] = None,
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get all categories. If not admin/all, filters out 'cafe' and 'restaurant'.
+    If storeId is provided, isolates product count and category availability by dark store hub.
     """
     include_all = (admin == "true") or (all == "true")
 
     try:
-        # Build query to include count of products in each category
-        stmt = (
-            select(Category, func.count(Product.id).label("product_count"))
-            .outerjoin(Product, Category.id == Product.categoryId)
-        )
+        if storeId and storeId != "all":
+            # Isolate by dark store inventory
+            stmt = (
+                select(Category, func.count(Product.id).label("product_count"))
+                .outerjoin(
+                    Product,
+                    and_(
+                        Category.id == Product.categoryId,
+                        Product.restaurantId.is_(None),
+                        exists().where(
+                            and_(
+                                StoreInventory.productId == Product.id,
+                                StoreInventory.storeId == storeId,
+                                StoreInventory.stock > 0
+                            )
+                        )
+                    )
+                )
+            )
+        else:
+            stmt = (
+                select(Category, func.count(Product.id).label("product_count"))
+                .outerjoin(Product, and_(Category.id == Product.categoryId, Product.restaurantId.is_(None)))
+            )
 
         if not include_all:
             stmt = stmt.where(~Category.slug.in_(["cafe", "restaurant"]))
+            if storeId and storeId != "all":
+                stmt = stmt.having(func.count(Product.id) > 0)
 
         stmt = stmt.group_by(Category.id).order_by(Category.sortOrder.asc())
 
@@ -84,7 +107,7 @@ async def get_categories(
                 }
             })
 
-        response.headers["Cache-Control"] = "public, s-maxage=120, stale-while-revalidate=300"
+        response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=180"
         return categories_data
     except Exception as e:
         raise HTTPException(

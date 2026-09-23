@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Body, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body, Response, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import or_, and_, not_, func, text, exists
@@ -7,10 +7,12 @@ from datetime import datetime, timedelta
 import uuid
 import re
 import math
+import hashlib
 
 from database import get_db
 from models import Product, Category, Review, Order, OrderItem, StoreInventory, Restaurant, User, StoreSetting, DarkStore
 from routers.auth import get_current_user, require_admin, require_auth
+from routers.websockets import manager
 import logging
 
 logger = logging.getLogger(__name__)
@@ -19,23 +21,109 @@ router = APIRouter(prefix="/products", tags=["Products"])
 
 # Synonym dictionary for Hinglish / common terms
 SYNONYM_DICTIONARY = {
+    # Vegetables & Fresh
     'aalu': ['potato', 'aloo'],
     'aloo': ['potato', 'aalu'],
     'pyaz': ['onion', 'pyaj'],
     'pyaj': ['onion', 'pyaz'],
-    'doodh': ['milk', 'dudh'],
-    'dudh': ['milk', 'doodh'],
-    'dahi': ['curd', 'yogurt'],
-    'anda': ['egg', 'eggs'],
     'tamatar': ['tomato', 'tomatoes'],
-    'makhan': ['butter'],
     'nimbu': ['lemon', 'lime'],
-    'chai': ['tea'],
-    'patti': ['tea'],
-    'pani': ['water'],
-    'chawal': ['rice'],
-    'chini': ['sugar'],
-    'namak': ['salt']
+    'adrak': ['ginger'],
+    'lahsun': ['garlic', 'lehsun'],
+    'lehsun': ['garlic', 'lahsun'],
+    'mirch': ['chilli', 'chili', 'mirchi'],
+    'mirchi': ['chilli', 'chili', 'mirch'],
+    'hari mirch': ['green chilli', 'chilli'],
+    'dhaniya': ['coriander', 'cilantro'],
+    'kheera': ['cucumber'],
+    'gobi': ['cauliflower', 'cabbage'],
+    'patta gobi': ['cabbage'],
+    'phool gobi': ['cauliflower'],
+    'matar': ['peas', 'green peas'],
+    'bhindi': ['lady finger', 'okra'],
+
+    # Dairy & Breakfast
+    'doodh': ['milk', 'dudh', 'amul'],
+    'dudh': ['milk', 'doodh', 'amul'],
+    'dahi': ['curd', 'yogurt'],
+    'makhan': ['butter', 'amul butter'],
+    'paneer': ['cottage cheese'],
+    'ghee': ['clarified butter', 'desi ghee'],
+    'anda': ['egg', 'eggs'],
+    'ande': ['egg', 'eggs'],
+    'bread': ['pav', 'bun', 'loaf'],
+    'rusk': ['toast', 'biscuit'],
+    'chai': ['tea', 'taj mahal', 'tata tea'],
+    'patti': ['tea', 'chai'],
+    'coffee': ['nescafe', 'bru'],
+
+    # Staples & Grains
+    'atta': ['flour', 'wheat', 'gehu', 'ashirvaad'],
+    'aata': ['flour', 'wheat', 'gehu', 'ashirvaad'],
+    'gehu': ['wheat', 'atta', 'flour'],
+    'maida': ['refined flour'],
+    'besan': ['gram flour', 'chana flour'],
+    'sooji': ['semolina', 'suji', 'rava'],
+    'suji': ['semolina', 'sooji', 'rava'],
+    'rava': ['semolina', 'sooji'],
+    'poha': ['flattened rice', 'chura'],
+    'chura': ['poha', 'flattened rice'],
+    'chawal': ['rice', 'basmati', 'kolam'],
+    'chini': ['sugar', 'cheeni', 'shakkar'],
+    'cheeni': ['sugar', 'chini', 'shakkar'],
+    'shakkar': ['sugar', 'jaggery', 'gud'],
+    'gud': ['jaggery'],
+    'namak': ['salt', 'tata salt'],
+
+    # Oils & Spices
+    'tel': ['oil', 'mustard oil', 'refine'],
+    'sarson': ['mustard', 'sarson tel', 'mustard oil'],
+    'sarson tel': ['mustard oil', 'oil'],
+    'refine': ['refined oil', 'fortune', 'oil'],
+    'haldi': ['turmeric', 'turmeric powder'],
+    'jeera': ['cumin', 'cumin seeds'],
+    'zeera': ['cumin'],
+    'laung': ['clove'],
+    'elaichi': ['cardamom'],
+    'dalchini': ['cinnamon'],
+    'saunf': ['fennel'],
+    'methi': ['fenugreek'],
+    'hing': ['asafoetida'],
+
+    # Dals & Pulses
+    'dal': ['lentils', 'pulses', 'daal'],
+    'daal': ['lentils', 'pulses', 'dal'],
+    'arhar': ['toor', 'tur dal', 'pigeon pea'],
+    'toor': ['arhar', 'tur dal'],
+    'moong': ['mung', 'green gram'],
+    'chana': ['chickpeas', 'gram'],
+    'urad': ['black gram'],
+    'masoor': ['red lentils'],
+    'rajma': ['kidney beans'],
+    'chhole': ['chickpeas', 'kabuli chana'],
+    'chole': ['chickpeas', 'kabuli chana'],
+
+    # Snacks, Beverages & Household
+    'biscuit': ['cookie', 'biscuits', 'parle', 'britannia', 'biskut'],
+    'biskut': ['biscuit', 'cookie'],
+    'namkeen': ['bhujia', 'mixture', 'haldiram', 'bikano'],
+    'bhujia': ['namkeen', 'sev'],
+    'chips': ['lays', 'kurkure', 'bingo', 'wafers'],
+    'kurkure': ['namkeen', 'chips', 'snacks'],
+    'maggi': ['noodles', 'instant noodles', 'yippee'],
+    'noodles': ['maggi', 'instant noodles', 'chowmein'],
+    'chowmein': ['noodles'],
+    'pani': ['water', 'bisleri', 'aquafina'],
+    'cold drink': ['colddrink', 'pepsi', 'coke', 'thums up', 'sprite', 'beverage', 'soda'],
+    'colddrink': ['cold drink', 'pepsi', 'coke', 'sprite', 'beverage'],
+    'sabun': ['soap', 'lifebuoy', 'dettol', 'lux', 'dove'],
+    'saboon': ['soap'],
+    'surf': ['detergent', 'washing powder', 'aerial', 'tide', 'wheel'],
+    'detergent': ['washing powder', 'surf'],
+    'manjan': ['toothpaste', 'colgate', 'pepsodent', 'paste'],
+    'paste': ['toothpaste', 'colgate'],
+    'shampoo': ['clinic plus', 'head and shoulders', 'sunsilk'],
+    'tel malish': ['hair oil', 'coconut oil', 'bajaj', 'dabur'],
 }
 
 # Stop words for product search (Hinglish + English)
@@ -142,6 +230,7 @@ def generate_slug(name: str) -> str:
 @router.get("")
 async def get_products(
     response: Response,
+    request: Request,
     category: Optional[str] = Query(None),
     categoryId: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
@@ -169,7 +258,7 @@ async def get_products(
     normalized_search = search.strip().lower().replace("  ", " ") if search else ""
 
     # Check search cache
-    cache_key = f"search:{normalized_search}:{category or ''}:{sort or ''}:{page}:{limit}:{is_worker}:{restaurantId or ''}:{restaurantSlug or ''}"
+    cache_key = f"search:{storeId or 'all'}:{normalized_search}:{category or ''}:{sort or ''}:{page}:{limit}:{is_worker}:{restaurantId or ''}:{restaurantSlug or ''}"
     if normalized_search and cache_key in search_cache:
         return search_cache[cache_key]
 
@@ -248,12 +337,15 @@ async def get_products(
             exists().where(and_(*inv_sub_conditions))
         )
 
-        rest_conditions = [Restaurant.storeId == storeId]
+        rest_conditions = []
         if store_city:
             rest_conditions.append(Restaurant.city.ilike(f"%{store_city}%"))
-        rest_scope = Product.restaurant.has(or_(*rest_conditions))
-
-        filters.append(or_(grocery_scope, rest_scope))
+        
+        if rest_conditions:
+            rest_scope = Product.restaurant.has(or_(*rest_conditions))
+            filters.append(or_(grocery_scope, rest_scope))
+        else:
+            filters.append(grocery_scope)
 
     # Category matching
     if categoryId:
@@ -337,19 +429,32 @@ async def get_products(
         filtered_words = [w for w in raw_words if w not in SEARCH_STOP_WORDS]
         search_words = filtered_words if filtered_words else raw_words
 
+        phrase_syns = SYNONYM_DICTIONARY.get(normalized_search, [])
         word_clauses = []
-        for w in search_words:
-            syns = SYNONYM_DICTIONARY.get(w, [])
-            word_options = [w] + syns
-
-            # Substrings matching across name, description, restaurant, and category
+        if phrase_syns:
+            all_opts = [normalized_search] + phrase_syns
             or_conditions = []
-            for opt in word_options:
+            for opt in all_opts:
                 or_conditions.append(Product.name.ilike(f"%{opt}%"))
                 or_conditions.append(Product.description.ilike(f"%{opt}%"))
+                or_conditions.append(func.array_to_string(Product.tags, ',').ilike(f"%{opt}%"))
                 or_conditions.append(Product.restaurant.has(Restaurant.name.ilike(f"%{opt}%")))
                 or_conditions.append(Product.category.has(Category.name.ilike(f"%{opt}%")))
             word_clauses.append(or_(*or_conditions))
+        else:
+            for w in search_words:
+                syns = SYNONYM_DICTIONARY.get(w, [])
+                word_options = list(set([w] + syns))
+
+                # Substrings matching across name, description, tags, restaurant, and category
+                or_conditions = []
+                for opt in word_options:
+                    or_conditions.append(Product.name.ilike(f"%{opt}%"))
+                    or_conditions.append(Product.description.ilike(f"%{opt}%"))
+                    or_conditions.append(func.array_to_string(Product.tags, ',').ilike(f"%{opt}%"))
+                    or_conditions.append(Product.restaurant.has(Restaurant.name.ilike(f"%{opt}%")))
+                    or_conditions.append(Product.category.has(Category.name.ilike(f"%{opt}%")))
+                word_clauses.append(or_(*or_conditions))
 
         stmt = select(Product).where(and_(*filters, *word_clauses))
         res = await db.execute(stmt)
@@ -368,7 +473,18 @@ async def get_products(
             p_tags = p.tags or []
             tag_score = 85.0 if any(get_fuzzy_score(normalized_search, t) > 60 for t in p_tags) else 0.0
             desc_score = get_fuzzy_score(normalized_search, p.description or "") * 0.5
-            score = max(name_score, tag_score, desc_score)
+
+            # Synonym match bonus
+            syn_score = 0.0
+            for opt in (phrase_syns if phrase_syns else []):
+                if opt in p.name.lower() or any(opt in t.lower() for t in p_tags):
+                    syn_score = max(syn_score, 80.0)
+            for w in search_words:
+                for syn in SYNONYM_DICTIONARY.get(w, []):
+                    if syn in p.name.lower() or any(syn in t.lower() for t in p_tags):
+                        syn_score = max(syn_score, 75.0)
+
+            score = max(name_score, tag_score, desc_score, syn_score, 50.0)
             scored_products.append((p, score))
 
         # Filter > 35 and sort by score
@@ -452,10 +568,22 @@ async def get_products(
         }
     }
 
-    # Save search cache
+    # Save search cache with bounded LRU eviction
     is_cacheable = not is_worker and not includeUnavailable and not admin
     if normalized_search and is_cacheable:
+        if len(search_cache) > 500:
+            for k in list(search_cache.keys())[:100]:
+                search_cache.pop(k, None)
         search_cache[cache_key] = response_data
+
+    # ETag generation and 304 Not Modified support
+    if is_cacheable and products:
+        etag_seed = f"{len(products)}:{products[0].id}:{products[-1].id}:{getattr(products[0], 'stock', 0)}:{getattr(products[-1], 'stock', 0)}"
+        etag = f'"{hashlib.md5(etag_seed.encode()).hexdigest()[:16]}"'
+        response.headers["ETag"] = etag
+        client_etag = request.headers.get("if-none-match")
+        if client_etag and client_etag.strip() == etag:
+            return Response(status_code=304, headers={"ETag": etag, "Cache-Control": "public, s-maxage=15, stale-while-revalidate=30"})
 
     response.headers["Cache-Control"] = "public, s-maxage=15, stale-while-revalidate=30" if is_cacheable else "no-store, max-age=0, must-revalidate"
     return response_data
@@ -603,10 +731,11 @@ async def check_live_stock(
 @router.get("/upsell")
 async def get_upsell_recommendations(
     productIds: str = Query(""),
+    storeId: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Get cross-selling upsell product recommendations based on cart contents.
+    Get cross-selling upsell product recommendations based on cart contents, isolated by local hub stock.
     """
     cart_product_ids = [pid for pid in productIds.split(",") if pid]
     if not cart_product_ids:
@@ -627,25 +756,35 @@ async def get_upsell_recommendations(
     if is_as_cart:
         type_filters.append(or_(
             Product.restaurantId == OUTLET_AS_RESTAURANT_ID,
-            Product.tags.op('?')('as-restaurant'),
-            Product.tags.op('?')('as-cafe')
+            func.array_to_string(Product.tags, ',').ilike('%as-restaurant%'),
+            func.array_to_string(Product.tags, ',').ilike('%as-cafe%')
         ))
     elif is_wedson_cart:
         type_filters.append(or_(
             Product.restaurantId == OUTLET_WEDSON_ID,
-            Product.tags.op('?')('wedson'),
-            Product.tags.op('?')('wedson-restaurant')
+            func.array_to_string(Product.tags, ',').ilike('%wedson%')
         ))
     elif is_cafe_category_cart:
         type_filters.append(or_(
             Product.category.has(Category.slug.in_(['cafe', 'fastkirana-cafe', 'ice-cream', 'beverages', 'shakes'])),
-            Product.tags.op('?|')(['cafe', 'ice-cream', 'beverages', 'shakes', 'mocktails'])
+            func.array_to_string(Product.tags, ',').ilike('%cafe%'),
+            func.array_to_string(Product.tags, ',').ilike('%beverages%')
         ))
     else:
-        type_filters.append(and_(
+        grocery_conditions = [
             Product.restaurantId == None,
-            not_(Product.tags.op('?|')(['as-restaurant', 'as-cafe', 'wedson', 'wedson-restaurant']))
-        ))
+        ]
+        if storeId and storeId != "all":
+            grocery_conditions.append(
+                exists().where(
+                    and_(
+                        StoreInventory.productId == Product.id,
+                        StoreInventory.storeId == storeId,
+                        StoreInventory.stock > 0
+                    )
+                )
+            )
+        type_filters.append(and_(*grocery_conditions))
 
     recommended_products = []
 
@@ -662,31 +801,34 @@ async def get_upsell_recommendations(
             target_tags.update(['bakery', 'snacks', 'hot-bite'])
     else:
         if 'staples' in cart_tags or 'cooking' in cart_tags:
-            target_tags.update(['dairy', 'breakfast'])
+            target_tags.update(['dairy', 'breakfast', 'oil', 'spices'])
         if 'breakfast' in cart_tags or 'dairy' in cart_tags:
-            target_tags.update(['bakery', 'bread', 'snacks'])
+            target_tags.update(['bakery', 'bread', 'snacks', 'tea', 'coffee'])
+        if 'atta' in cart_tags or 'wheat' in cart_tags:
+            target_tags.update(['oil', 'salt', 'rice'])
 
     exclude_ids = list(set(cart_product_ids + [p.id for p in recommended_products]))
 
     if target_tags:
+        tag_match_conditions = [func.array_to_string(Product.tags, ',').ilike(f"%{t}%") for t in target_tags]
         stmt_tags = select(Product).where(
             Product.id.not_in(exclude_ids),
             Product.isAvailable == True,
             Product.stock > 0,
-            Product.tags.op('?|')(list(target_tags)),
+            or_(*tag_match_conditions),
             *type_filters
         ).limit(6)
         res_tags = await db.execute(stmt_tags)
         recommended_products.extend(res_tags.scalars().all())
 
     # Fallback: general cheap popular items
-    if len(recommended_products) < 4:
+    if len(recommended_products) < 6:
         exclude_ids = list(set(cart_product_ids + [p.id for p in recommended_products]))
         stmt_fallback = select(Product).where(
             Product.id.not_in(exclude_ids),
             Product.isAvailable == True,
             Product.stock > 0,
-            Product.price < 150.0,
+            Product.price < 200.0,
             *type_filters
         ).order_by(Product.isBestSeller.desc(), Product.sortOrder.desc()).limit(6 - len(recommended_products))
         res_fallback = await db.execute(stmt_fallback)
@@ -995,7 +1137,7 @@ async def update_product(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    # Auth Guard checks - matching Next.js staff checks
+    # Auth Guard checks - matching Next.js staff checks with strict outlet isolation
     is_admin = (
         role == "ADMIN"
         or "8112849854" in phone
@@ -1003,13 +1145,61 @@ async def update_product(
         or email.startswith("admin")
         or "hrdk" in email
     )
-    is_chef = (role in ["CHEF", "RESTAURANT_OWNER"] or email.startswith("restaurant")) and (
-        is_admin or not assigned_restaurant_id or not product.restaurantId or assigned_restaurant_id == product.restaurantId
-    )
+    is_chef = role in ["CHEF", "RESTAURANT_OWNER"] or email.startswith("restaurant")
     is_picker = role == "PICKER"
 
     if not is_admin and not is_chef and not is_picker:
         raise HTTPException(status_code=403, detail="Unauthorized to edit this product")
+
+    # Strict isolation for Restaurant Staff:
+    if is_chef and not is_admin:
+        if not product.restaurantId:
+            raise HTTPException(
+                status_code=403,
+                detail="Restaurant staff can only edit dishes belonging to their assigned restaurant, not dark store grocery products."
+            )
+        
+        # Resolve user's assigned outlet
+        user_outlet = assigned_restaurant_id
+        if not user_outlet:
+            u_id = current_user.get("id") or current_user.get("sub")
+            if u_id:
+                u_res = await db.execute(select(User.assignedRestaurantId).where(User.id == u_id))
+                user_outlet = u_res.scalar_one_or_none()
+
+        if not user_outlet:
+            raise HTTPException(
+                status_code=403,
+                detail="No restaurant assigned to your staff account. Contact administrator."
+            )
+
+        # Allow match by ID or slug
+        rest_stmt = select(Restaurant.id, Restaurant.slug).where(
+            or_(Restaurant.id == user_outlet, Restaurant.slug == user_outlet)
+        )
+        rest_res = await db.execute(rest_stmt)
+        matched_rest = rest_res.mappings().first()
+
+        outlet_ids = {user_outlet}
+        if matched_rest:
+            outlet_ids.add(matched_rest["id"])
+            if matched_rest["slug"]:
+                outlet_ids.add(matched_rest["slug"])
+
+        if product.restaurantId not in outlet_ids:
+            raise HTTPException(
+                status_code=403,
+                detail="You do not have permission to edit products belonging to another restaurant outlet."
+            )
+
+        # Non-admin cannot reassign dish to another restaurant
+        if "restaurantId" in payload and payload["restaurantId"]:
+            new_rid = str(payload["restaurantId"]).strip()
+            if new_rid not in outlet_ids:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Cannot reassign dish to another restaurant outlet."
+                )
 
     # Strict isolation: Pickers can only edit grocery products (not restaurant dishes)
     if is_picker and not is_admin and product.restaurantId:
@@ -1154,6 +1344,24 @@ async def update_product(
         await db.commit()
         await db.refresh(product)
         search_cache.clear()
+
+        # Real-time WebSocket event dispatch with strict restaurant channel isolation
+        try:
+            evt_payload = {
+                "event": "PRODUCT_UPDATED",
+                "productId": product.id,
+                "name": product.name,
+                "isAvailable": product.isAvailable,
+                "stock": product.stock,
+                "price": float(product.price or 0.0),
+                "mrp": float(product.mrp or 0.0),
+                "restaurantId": product.restaurantId,
+            }
+            if product.restaurantId:
+                await manager.broadcast_to_channel(f"restaurant_{product.restaurantId}", evt_payload)
+            await manager.broadcast_to_channel("general", evt_payload)
+        except Exception as ws_err:
+            logger.warning(f"Could not broadcast product update: {ws_err}")
 
         # If local stock was updated for a store, return product dict with local stock
         if local_stock_val is not None:

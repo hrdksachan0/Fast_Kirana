@@ -14,10 +14,11 @@ from database import get_db
 from models import (
     User, Order, RiderWallet, CashDepositTransaction, Role, 
     OrderStatus, PaymentMethod, PaymentStatus, StoreSetting, 
-    Product, Category, OrderItem, Restaurant
+    Product, Category, OrderItem, Restaurant, DarkStore, Address
 )
 from schemas import CashDepositRequest, FinancialSummaryOut
 from routers.auth import require_admin
+from routers.websockets import manager
 import logging
 
 logger = logging.getLogger(__name__)
@@ -653,16 +654,25 @@ async def get_sales_reports(
 @router.get("/orders")
 async def get_admin_all_orders(
     status_filter: Optional[str] = None,
-    limit: int = 50,
+    storeId: Optional[str] = None,
+    limit: int = 100,
     current_admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get all orders across system for Admin view.
     """
-    stmt = select(Order).options(selectinload(Order.items), selectinload(Order.user), selectinload(Order.address))
-    if status_filter:
-        stmt = stmt.where(text(f"orders.status::text = '{status_filter}'"))
+    stmt = select(Order).options(
+        selectinload(Order.items),
+        selectinload(Order.user),
+        selectinload(Order.address),
+        selectinload(Order.deliveryUser)
+    )
+    if status_filter and status_filter != 'ALL':
+        from sqlalchemy import cast, String as SAString
+        stmt = stmt.where(cast(Order.status, SAString) == status_filter)
+    if storeId:
+        stmt = stmt.where(Order.storeId == storeId)
     stmt = stmt.order_by(desc(Order.createdAt)).limit(limit)
 
     res = await db.execute(stmt)
@@ -675,27 +685,71 @@ async def get_admin_all_orders(
             "readableId": o.readableId,
             "userId": o.userId,
             "addressId": o.addressId,
-            "status": o.status.value,
-            "subtotal": float(o.subtotal),
-            "discount": float(o.discount),
-            "deliveryFee": float(o.deliveryFee),
-            "taxes": float(o.taxes),
-            "miscFee": float(o.miscFee),
-            "total": float(o.total),
-            "paymentMethod": o.paymentMethod.value,
-            "paymentStatus": o.paymentStatus.value,
+            "restaurantId": o.restaurantId,
+            "combinedId": o.combinedId,
+            "orderType": o.orderType.value if hasattr(o.orderType, 'value') else str(o.orderType),
+            "deliveryMethod": o.deliveryMethod or "DELIVERY",
+            "storeId": o.storeId,
+            "notes": o.notes,
+            "isB2B": bool(o.isB2B),
+            "status": o.status.value if hasattr(o.status, 'value') else str(o.status),
+            "subtotal": float(o.subtotal or 0.0),
+            "discount": float(o.discount or 0.0),
+            "deliveryFee": float(o.deliveryFee or 0.0),
+            "taxes": float(o.taxes or 0.0),
+            "miscFee": float(o.miscFee or 0.0),
+            "total": float(o.total or 0.0),
+            "paymentMethod": o.paymentMethod.value if hasattr(o.paymentMethod, 'value') else str(o.paymentMethod),
+            "paymentStatus": o.paymentStatus.value if hasattr(o.paymentStatus, 'value') else str(o.paymentStatus),
             "estimatedDelivery": o.estimatedDelivery.isoformat() if o.estimatedDelivery else None,
             "createdAt": o.createdAt.isoformat() if o.createdAt else None,
+            "updatedAt": o.updatedAt.isoformat() if o.updatedAt else None,
+            "confirmedAt": o.confirmedAt.isoformat() if o.confirmedAt else None,
+            "packedAt": o.packedAt.isoformat() if o.packedAt else None,
+            "shippedAt": o.shippedAt.isoformat() if o.shippedAt else None,
+            "deliveredAt": o.deliveredAt.isoformat() if o.deliveredAt else None,
+            "deliveryUserId": o.deliveryUserId,
+            "assignedPickerId": o.assignedPickerId,
+            "assignedChefId": o.assignedChefId,
+            "deliveryLat": float(o.deliveryLat) if o.deliveryLat is not None else None,
+            "deliveryLng": float(o.deliveryLng) if o.deliveryLng is not None else None,
             "shopName": o.shopName,
-            "user": {"name": o.user.name or "Customer", "phone": o.user.phone} if o.user else None,
+            "shopPhone": o.shopPhone,
+            "couponCode": o.couponCode,
+            "user": {
+                "id": o.user.id if o.user else None,
+                "name": o.user.name or "Customer",
+                "phone": o.user.phone,
+                "email": o.user.email
+            } if o.user else None,
             "address": {
+                "id": o.address.id if o.address else None,
                 "houseNo": o.address.houseNo if o.address else "",
                 "street": o.address.street if o.address else "",
                 "area": o.address.area if o.address else "",
                 "city": o.address.city if o.address else "",
                 "pincode": o.address.pincode if o.address else "",
+                "phone": o.address.phone if o.address else "",
             } if o.address else None,
-            "items": [{"id": i.id, "name": i.name, "quantity": i.quantity, "price": float(i.price)} for i in o.items]
+            "deliveryUser": {
+                "id": o.deliveryUser.id if o.deliveryUser else None,
+                "name": o.deliveryUser.name if o.deliveryUser else "Rider",
+                "phone": o.deliveryUser.phone if o.deliveryUser else "",
+            } if o.deliveryUser else None,
+            "items": [
+                {
+                    "id": i.id,
+                    "orderId": i.orderId,
+                    "productId": i.productId,
+                    "name": i.name,
+                    "quantity": i.quantity,
+                    "price": float(i.price or 0.0),
+                    "imageUrl": i.imageUrl,
+                    "selectedVariant": i.selectedVariant,
+                    "notes": i.notes,
+                    "variants": i.variants,
+                } for i in (o.items or [])
+            ]
         } for o in orders
     ]
 
@@ -882,3 +936,274 @@ async def get_admin_inventory_forecast(
     except Exception as e:
         logger.error(f"Failed to generate inventory forecast: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate inventory forecast: {str(e)}")
+
+
+@router.get("/me")
+async def get_admin_me(
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get current logged in admin info and assigned store/hub.
+    """
+    store_name = None
+    if current_admin.assignedStoreId:
+        st_res = await db.execute(select(DarkStore).where(DarkStore.id == current_admin.assignedStoreId))
+        store_obj = st_res.scalars().first()
+        if store_obj:
+            store_name = store_obj.name
+
+    return {
+        "user": {
+            "id": current_admin.id,
+            "name": current_admin.name,
+            "email": current_admin.email,
+            "phone": current_admin.phone,
+            "role": current_admin.role.value if hasattr(current_admin.role, 'value') else str(current_admin.role),
+            "assignedStoreId": current_admin.assignedStoreId,
+        },
+        "assignedStoreId": current_admin.assignedStoreId,
+        "storeName": store_name
+    }
+
+
+@router.get("/riders")
+async def get_admin_riders(
+    storeId: Optional[str] = None,
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get active delivery riders/partners for order assignment.
+    """
+    stmt = select(User).where(User.role == Role.DELIVERY)
+    effective_store = storeId or current_admin.assignedStoreId
+    if effective_store and effective_store.lower() != 'all':
+        stmt = stmt.where(User.assignedStoreId == effective_store)
+    stmt = stmt.order_by(User.name.asc())
+
+    res = await db.execute(stmt)
+    riders = res.scalars().all()
+    return {
+        "success": True,
+        "riders": [
+            {
+                "id": r.id,
+                "name": r.name or "Delivery Partner",
+                "phone": r.phone or "",
+                "role": r.role.value if hasattr(r.role, 'value') else str(r.role),
+                "assignedStoreId": r.assignedStoreId,
+            } for r in riders
+        ]
+    }
+
+
+@router.get("/users/{user_id}/addresses")
+async def get_admin_user_addresses(
+    user_id: str,
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get addresses saved by a specific user for admin support.
+    """
+    stmt = select(Address).where(Address.userId == user_id).order_by(desc(Address.createdAt))
+    res = await db.execute(stmt)
+    addresses = res.scalars().all()
+    return [
+        {
+            "id": a.id,
+            "userId": a.userId,
+            "label": a.label,
+            "houseNo": a.houseNo,
+            "street": a.street,
+            "area": a.area,
+            "city": a.city,
+            "pincode": a.pincode,
+            "phone": a.phone,
+            "lat": a.lat,
+            "lng": a.lng,
+            "isDefault": a.isDefault,
+        } for a in addresses
+    ]
+
+
+@router.patch("/users/block")
+async def block_user_alias(
+    payload: dict = Body(...),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Block or unblock user account by payload { userId, isBlocked, blockReason }.
+    """
+    user_id = payload.get("userId") or payload.get("id")
+    is_blocked = bool(payload.get("isBlocked", True))
+    block_reason = payload.get("blockReason") or "Blocked by administrator"
+
+    if not user_id:
+        raise HTTPException(status_code=400, detail="userId is required")
+
+    stmt = select(User).where(User.id == user_id)
+    res = await db.execute(stmt)
+    user = res.scalars().first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.role == Role.ADMIN:
+        raise HTTPException(status_code=400, detail="Administrator accounts cannot be blocked")
+    if user.id == current_admin.id:
+        raise HTTPException(status_code=400, detail="You cannot block your own admin account")
+
+    user.isBlocked = is_blocked
+    user.blockReason = block_reason if is_blocked else None
+    user.blockedAt = datetime.utcnow() if is_blocked else None
+    await db.commit()
+
+    return {
+        "success": True,
+        "message": f"User {'blocked' if is_blocked else 'unblocked'} successfully",
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "isBlocked": user.isBlocked,
+            "blockReason": user.blockReason,
+        }
+    }
+
+
+@router.post("/orders/sync-razorpay")
+async def admin_sync_razorpay_order(
+    payload: dict = Body(...),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Reconcile pending order with Razorpay payment ID.
+    """
+    import httpx
+    from config import settings
+    payment_id = payload.get("paymentId")
+    order_id = payload.get("orderId")
+
+    if not payment_id and not order_id:
+        raise HTTPException(status_code=400, detail="Either paymentId or orderId is required")
+
+    target_order = None
+    if order_id:
+        stmt = select(Order).where(or_(Order.id == order_id, Order.readableId == str(order_id)))
+        res = await db.execute(stmt)
+        target_order = res.scalars().first()
+
+    if not target_order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    # If Razorpay payment ID is provided, verify directly with Razorpay API
+    if payment_id and settings.RAZORPAY_KEY_ID and settings.RAZORPAY_KEY_SECRET:
+        import base64
+        auth_str = base64.b64encode(f"{settings.RAZORPAY_KEY_ID}:{settings.RAZORPAY_KEY_SECRET}".encode()).decode()
+        async with httpx.AsyncClient() as client:
+            try:
+                rzp_res = await client.get(
+                    f"https://api.razorpay.com/v1/payments/{payment_id}",
+                    headers={"Authorization": f"Basic {auth_str}"}
+                )
+                if rzp_res.status_code == 200:
+                    rzp_data = rzp_res.json()
+                    if rzp_data.get("status") in ["captured", "authorized"]:
+                        target_order.paymentStatus = PaymentStatus.PAID
+                        if target_order.status in [OrderStatus.PENDING, OrderStatus.ADMIN_PENDING]:
+                            target_order.status = OrderStatus.CONFIRMED
+                        await db.commit()
+                        return {"success": True, "message": f"Payment {payment_id} verified. Order marked PAID."}
+                    else:
+                        raise HTTPException(status_code=400, detail=f"Razorpay status is {rzp_data.get('status')}")
+            except HTTPException:
+                raise
+            except Exception as rzp_err:
+                logger.warning(f"Razorpay live check error: {rzp_err}")
+
+    # Direct fallback: Mark order as verified by admin
+    target_order.paymentStatus = PaymentStatus.PAID
+    if target_order.status in [OrderStatus.PENDING, OrderStatus.ADMIN_PENDING]:
+        target_order.status = OrderStatus.CONFIRMED
+    await db.commit()
+
+    try:
+        status_evt = {
+            "event": "STATUS_UPDATE",
+            "orderId": target_order.id,
+            "status": target_order.status.value,
+            "restaurantId": target_order.restaurantId,
+            "order": {
+                "id": target_order.id,
+                "readableId": target_order.readableId,
+                "status": target_order.status.value,
+                "restaurantId": target_order.restaurantId,
+                "total": float(target_order.total),
+                "updatedAt": target_order.updatedAt.isoformat() if target_order.updatedAt else datetime.utcnow().isoformat()
+            }
+        }
+        await manager.broadcast_to_channel("general", status_evt)
+        await manager.broadcast_to_channel(f"order_{target_order.id}", status_evt)
+        if target_order.restaurantId:
+            await manager.broadcast_to_channel(f"restaurant_{target_order.restaurantId}", status_evt)
+    except Exception:
+        pass
+
+    return {"success": True, "message": f"Order #{target_order.readableId or target_order.id} marked PAID."}
+
+
+@router.get("/reports/orders")
+async def get_admin_detailed_orders_report(
+    startDate: Optional[str] = None,
+    endDate: Optional[str] = None,
+    storeId: Optional[str] = None,
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get detailed breakdown of orders with customers and financial totals.
+    """
+    stmt = select(Order).options(selectinload(Order.user), selectinload(Order.address))
+    if storeId and storeId.lower() != 'all':
+        stmt = stmt.where(Order.storeId == storeId)
+    if startDate:
+        try:
+            s_date = datetime.strptime(startDate, "%Y-%m-%d")
+            stmt = stmt.where(Order.createdAt >= s_date)
+        except Exception:
+            pass
+    if endDate:
+        try:
+            e_date = datetime.strptime(endDate, "%Y-%m-%d") + timedelta(days=1)
+            stmt = stmt.where(Order.createdAt < e_date)
+        except Exception:
+            pass
+
+    stmt = stmt.order_by(desc(Order.createdAt)).limit(500)
+    res = await db.execute(stmt)
+    orders = res.scalars().all()
+
+    return {
+        "orders": [
+            {
+                "id": o.id,
+                "readableId": o.readableId,
+                "status": o.status.value if hasattr(o.status, 'value') else str(o.status),
+                "total": float(o.total),
+                "subtotal": float(o.subtotal),
+                "discount": float(o.discount),
+                "deliveryFee": float(o.deliveryFee),
+                "taxes": float(o.taxes),
+                "miscFee": float(o.miscFee),
+                "paymentMethod": o.paymentMethod.value if hasattr(o.paymentMethod, 'value') else str(o.paymentMethod),
+                "paymentStatus": o.paymentStatus.value if hasattr(o.paymentStatus, 'value') else str(o.paymentStatus),
+                "createdAt": o.createdAt.isoformat() if o.createdAt else None,
+                "shopName": o.shopName,
+                "customerName": o.user.name if o.user else "Customer",
+                "customerPhone": o.user.phone if o.user else "",
+            } for o in orders
+        ]
+    }

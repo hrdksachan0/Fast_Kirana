@@ -121,7 +121,9 @@ app.include_router(paytm.router)
 app.include_router(fcm.router, prefix="/api")
 app.include_router(categories.router, prefix="/api")
 
-from routers import razorpay_router, cashfree_router, kot
+from routers import razorpay_router, cashfree_router, kot, vendors
+app.include_router(vendors.vendors_router, prefix="/api")
+app.include_router(vendors.vendors_router, prefix="/api/admin")
 app.include_router(razorpay_router.router, prefix="/api")
 app.include_router(razorpay_router.router)
 app.include_router(cashfree_router.router, prefix="/api")

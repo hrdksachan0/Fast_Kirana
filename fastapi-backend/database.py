@@ -5,12 +5,13 @@ from sqlalchemy.orm import declarative_base
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 from config import settings
 
-DEFAULT_SUPABASE_DB_URL = "postgresql+asyncpg://postgres.bberzasmxwioxjynbuaf:YuvrajHardik%402613@aws-0-ap-south-1.pooler.supabase.com:6543/postgres"
+# SECURITY: No hardcoded database credentials. DATABASE_URL must be set via environment variable.
+_MISSING_DB_URL_SENTINEL = "MISSING_DATABASE_URL"
 
 def clean_async_db_url(raw_url: str) -> str:
     url = (raw_url or os.getenv("DATABASE_URL", "")).strip()
     if not url:
-        return DEFAULT_SUPABASE_DB_URL
+        raise ValueError("CRITICAL: DATABASE_URL environment variable is not set! Cannot connect to database.")
 
     # Strip surrounding single or double quotes if present
     if (url.startswith('"') and url.endswith('"')) or (url.startswith("'") and url.endswith("'")):

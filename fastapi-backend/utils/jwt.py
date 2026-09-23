@@ -21,7 +21,11 @@ def get_clean_secret(key: str) -> str:
 
 
 # Get NextAuth secret (must be same as Next.js)
-AUTH_SECRET = get_clean_secret("AUTH_SECRET") or "supersecretkey1234567890abcdef123456"
+AUTH_SECRET = get_clean_secret("AUTH_SECRET")
+if not AUTH_SECRET:
+    import warnings
+    warnings.warn("CRITICAL: AUTH_SECRET environment variable is NOT set! JWT signing will fail.", RuntimeWarning)
+    AUTH_SECRET = ""  # Will cause JWT operations to fail explicitly
 
 
 import base64
@@ -93,7 +97,7 @@ def decode_nextauth_jwt(token: str) -> Optional[Dict[str, Any]]:
             algorithms=["HS256"],
             options={
                 "verify_signature": True,
-                "verify_exp": False,
+                "verify_exp": True,
             }
         )
         return payload
@@ -127,6 +131,7 @@ def extract_user_from_token(token: str) -> Optional[Dict[str, Any]]:
         "name": payload.get("name"),
         "role": payload.get("role", "USER"),
         "phone": payload.get("phone"),
+        "vendorId": payload.get("vendorId"),
         "assignedRestaurantId": payload.get("assignedRestaurantId"),
         "assignedStoreId": payload.get("assignedStoreId"),
         # Optional: track token expiry

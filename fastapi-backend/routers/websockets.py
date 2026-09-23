@@ -34,6 +34,10 @@ class ConnectionManager:
             for conn in disconnected:
                 self.disconnect(conn, channel_id)
 
+    async def broadcast(self, message: dict):
+        """Broadcast to the general channel."""
+        await self.broadcast_to_channel("general", message)
+
 manager = ConnectionManager()
 
 @router.websocket("")
@@ -89,3 +93,28 @@ async def rider_location_websocket(websocket: WebSocket, rider_id: str):
             await manager.broadcast_to_channel(f"rider_{rider_id}", payload)
     except WebSocketDisconnect:
         manager.disconnect(websocket, f"rider_{rider_id}")
+
+
+@router.websocket("/restaurant/{restaurant_id}")
+async def restaurant_console_websocket(websocket: WebSocket, restaurant_id: str):
+    """
+    Real-time restaurant kitchen & order stream strictly isolated for this restaurant outlet
+    """
+    clean_rid = restaurant_id.strip()
+    await manager.connect(websocket, f"restaurant_{clean_rid}")
+    try:
+        await websocket.send_text(json.dumps({
+            "event": "CONNECTED",
+            "channel": f"restaurant_{clean_rid}",
+            "restaurantId": clean_rid
+        }))
+        while True:
+            data = await websocket.receive_text()
+            try:
+                payload = json.loads(data)
+            except Exception:
+                payload = {"event": "MESSAGE", "data": data}
+            payload["restaurantId"] = clean_rid
+            await manager.broadcast_to_channel(f"restaurant_{clean_rid}", payload)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, f"restaurant_{clean_rid}")

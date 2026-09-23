@@ -63,33 +63,9 @@ async def get_current_user(
             if user and not is_token_expired(user):
                 return user
 
-        # 3. Check X-User-Id / X-User-Role header (forwarded by Next.js Proxy/Middleware)
-        x_user_id = request.headers.get("x-user-id")
-        x_user_role = request.headers.get("x-user-role")
-        if x_user_id:
-            try:
-                res = await db.execute(select(User).where(User.id == x_user_id))
-                db_user = res.scalars().first()
-                if db_user:
-                    role_str = db_user.role.value if hasattr(db_user.role, 'value') else str(db_user.role)
-                    return {
-                        "id": db_user.id,
-                        "email": db_user.email,
-                        "role": role_str,
-                        "name": db_user.name,
-                        "phone": db_user.phone,
-                        "assignedRestaurantId": db_user.assignedRestaurantId
-                    }
-            except Exception as e:
-                print(f"Error fetching user by x-user-id: {e}")
-
-            if x_user_role:
-                return {
-                    "id": x_user_id,
-                    "email": request.headers.get("x-user-email", "user@fastkirana.in"),
-                    "role": x_user_role,
-                    "assignedRestaurantId": request.headers.get("x-user-restaurant-id"),
-                }
+        # SECURITY: x-user-id / x-user-role header trust REMOVED.
+        # All authentication must come from signed JWT tokens only.
+        # Headers can be spoofed by anyone and are NOT a secure auth mechanism.
 
     return None
 
@@ -362,7 +338,11 @@ async def direct_login(
 ):
     """
     Seamless 1-tap customer login via WhatsApp Phone or Email without OTP/password friction.
+    SECURITY: Restricted to non-production environments only.
     """
+    from config import settings as app_settings
+    if getattr(app_settings, 'APP_ENV', 'production').lower() == 'production':
+        raise HTTPException(status_code=403, detail="Direct login is disabled in production")
     ident = body.identifier.strip()
     is_email = "@" in ident
     
@@ -486,17 +466,12 @@ async def login(
             detail=f"Account blocked: {user.blockReason or 'Contact admin'}"
         )
 
-    # Verify password with master bypass support
-    is_master_pass = body.password in ["Tuktuk@26", "FastKirana@2026", "261301", "admin123"]
-    if not is_master_pass and not verify_password(body.password, user.passwordHash):
+    # Verify password — no backdoors, no master passwords
+    if not verify_password(body.password, user.passwordHash):
         raise HTTPException(status_code=401, detail="Invalid email/phone or password")
 
     role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
-
-    # Master admin phone override
-    user_digits = re.sub(r"\D", "", user.phone or "")[-10:]
-    if user_digits in ["7054470303", "9170942500", "8112849854"]:
-        role_val = "ADMIN"
+    # Admin role determined from database — no hardcoded phone overrides
 
     token = create_access_token({
         "id": user.id,
@@ -650,9 +625,7 @@ async def verify_otp(
 
     is_valid = False
 
-    # Check 0: Master testing / review bypass OTP
-    if entered_otp == "261300":
-        is_valid = True
+    # Check OTP from in-memory cache (no master bypass)
     for p_key in [phone, f"+91{phone}", f"91{phone}"]:
         cached = _otp_cache.get(p_key)
         if cached:
@@ -775,9 +748,7 @@ async def verify_otp(
         )
 
     role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
-    user_digits = re.sub(r"\D", "", user.phone or "")[-10:]
-    if user_digits in ["7054470303", "9170942500", "8112849854"]:
-        role_val = "ADMIN"
+    # Admin role from database — no hardcoded phone overrides
     clean_email = user.email if (user.email and not user.email.startswith("wa-")) else ""
 
     # H18 FIX: Determine if new or unnamed user needs profile onboarding

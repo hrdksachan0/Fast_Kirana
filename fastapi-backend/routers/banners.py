@@ -62,7 +62,7 @@ async def get_banners(
             default_placement = "brand_card" if b.type in ["dark_showcase", "bento_grid", "editorial", "brand_offer"] else "hero"
             b_placement = extra.get("placement") or default_placement
             b_platform = extra.get("platform") or "all"
-            b_store_id = extra.get("storeId") or getattr(b, "storeId", None)
+            b_store_id = extra.get("storeId") or extra.get("hubId") or getattr(b, "storeId", None)
 
             # Filtering checks
             if placement and b_placement != placement and b_placement != "all":
@@ -92,7 +92,8 @@ async def get_banners(
                 "accentColor": extra.get("accentColor"),
             })
 
-        response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=120"
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
         return parsed_banners
     except Exception as e:
         raise HTTPException(

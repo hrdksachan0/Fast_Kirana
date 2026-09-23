@@ -24,15 +24,19 @@ def require_picker_or_chef(current_user: dict) -> dict:
 @picker_router.get("/orders")
 async def get_picker_orders(
     type: Optional[str] = Query(None),
+    storeId: Optional[str] = Query(None),
     current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get list of active PENDING/CONFIRMED orders to pick or cook (returns flat array matching Next.js).
+    Scoped to assigned dark store hub / restaurant.
     """
     require_picker_or_chef(current_user)
     user_role = current_user.get("role")
     assigned_restaurant_id = current_user.get("assignedRestaurantId")
+    assigned_store_id = current_user.get("assignedStoreId")
+    effective_store_id = storeId or assigned_store_id
 
     # Staff checks
     if user_role in ["CHEF", "RESTAURANT_OWNER"]:
@@ -48,6 +52,9 @@ async def get_picker_orders(
 
     # Build filters
     filters = [Order.status.in_([OrderStatus.PENDING, OrderStatus.CONFIRMED])]
+
+    if effective_store_id and effective_store_id != "all":
+        filters.append(or_(Order.storeId == effective_store_id, Order.storeId.is_(None)))
 
     if type == "cafe":
         if assigned_restaurant_id:
@@ -113,6 +120,9 @@ async def get_picker_orders(
             p_res = await db.execute(p_stmt)
             p_obj = p_res.scalars().first()
             
+            p_unit = (p_obj.unit or "").strip() if p_obj and p_obj.unit else None
+            effective_variant = i.selectedVariant or p_unit
+
             order_items.append({
                 "id": i.id,
                 "productId": i.productId,
@@ -120,12 +130,14 @@ async def get_picker_orders(
                 "price": float(i.price),
                 "quantity": i.quantity,
                 "imageUrl": i.imageUrl,
-                "selectedVariant": i.selectedVariant,
+                "selectedVariant": effective_variant,
+                "unit": p_unit or effective_variant,
                 "notes": i.notes,
                 "product": {
                     "id": p_obj.id,
                     "name": p_obj.name,
                     "imageUrl": p_obj.imageUrl,
+                    "unit": p_unit,
                     "variants": p_obj.variants,
                     "category": {
                         "id": p_obj.category.id,

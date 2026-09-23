@@ -122,14 +122,17 @@ async def broadcast_kot(
         logger.warning(f"[KOT Broadcast] Database queue note (table may not exist yet): {db_err}")
         await db.rollback()
 
-    # 2. Broadcast via internal WebSockets
+    # 2. Broadcast via internal WebSockets with strict restaurant outlet channel
     try:
-        await manager.broadcast({
+        kot_evt = {
             "event": "kot_broadcast",
             "orderId": clean_id,
             "restaurantId": target_restaurant_id,
             "payload": payload
-        })
+        }
+        if target_restaurant_id:
+            await manager.broadcast_to_channel(f"restaurant_{target_restaurant_id}", kot_evt)
+        await manager.broadcast(kot_evt)
     except Exception as ws_err:
         logger.warning(f"[KOT Broadcast] WebSocket broadcast note: {ws_err}")
 

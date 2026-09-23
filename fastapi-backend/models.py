@@ -17,6 +17,7 @@ class Role(str, enum.Enum):
     RESTAURANT_OWNER = "RESTAURANT_OWNER"
     DELIVERY = "DELIVERY"
     ADMIN = "ADMIN"
+    VENDOR = "VENDOR"
 
 
 class OrderStatus(str, enum.Enum):
@@ -533,7 +534,47 @@ class StockLog(Base):
     quantity: Mapped[int] = mapped_column(Integer)
     type: Mapped[str] = mapped_column(String)
     prevStock: Mapped[int] = mapped_column(Integer)
-    newStock: Mapped[int] = mapped_column(Integer)
-    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
-
     product = relationship("Product", back_populates="stockLogs")
+
+
+class Vendor(Base):
+    __tablename__ = "vendors"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    vendorCode: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    name: Mapped[str] = mapped_column(String, index=True)
+    phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    companyName: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    gstin: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    upiId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    bankName: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    accountNo: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    ifscCode: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    address: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    isActive: Mapped[bool] = mapped_column(Boolean, default=True)
+    storeId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    payouts = relationship("VendorPayout", back_populates="vendor", cascade="all, delete-orphan")
+
+
+class VendorPayout(Base):
+    __tablename__ = "vendor_payouts"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    vendorId: Mapped[str] = mapped_column(String, ForeignKey("vendors.id", ondelete="CASCADE"), index=True)
+    amount: Mapped[float] = mapped_column(Float)
+    startDate: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    endDate: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    paymentMethod: Mapped[str] = mapped_column(String, default="UPI")
+    transactionId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    paidAt: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    status: Mapped[str] = mapped_column(String, default="PAID")
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    storeId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    vendor = relationship("Vendor", back_populates="payouts")

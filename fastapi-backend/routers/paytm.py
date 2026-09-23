@@ -112,18 +112,5 @@ async def paytm_mock_success(
     data: Dict[str, Any] = Body(...),
     db: AsyncSession = Depends(get_db)
 ):
-    """Mock successful payment for testing."""
-    order_id = data.get("orderId")
-    if not order_id:
-        raise HTTPException(status_code=400, detail="orderId required")
-
-    result = await db.execute(select(Order).where(Order.id == order_id))
-    order = result.scalars().first()
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-
-    from models import PaymentStatus
-    order.paymentStatus = PaymentStatus.PAID
-    order.status = OrderStatus.CONFIRMED
-    await db.commit()
-    return {"success": True, "orderId": order.id, "status": "PAID"}
+    """Mock payment endpoint — DISABLED in production for security."""
+    raise HTTPException(status_code=403, detail="Mock payment endpoints are disabled in production")

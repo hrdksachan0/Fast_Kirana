@@ -1,9 +1,15 @@
 import io
 import base64
+import asyncio
 from typing import Optional
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from pydantic import BaseModel
 from PIL import Image, ImageOps
+
+# Guard against decompression bomb attacks
+Image.MAX_IMAGE_PIXELS = 50_000_000
+
+MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB limit
 
 router = APIRouter(prefix="/upload", tags=["Upload & Image Optimization"])
 
@@ -30,16 +36,18 @@ def optimize_image_bytes(raw_bytes: bytes, max_width: int = 800, quality: int = 
 
             # Proportional resize if larger than max_width
             orig_w, orig_h = img.size
-            if orig_w > max_width:
-                new_w = max_width
-                new_h = int(orig_h * (max_width / orig_w))
+            clamped_width = min(max(max_width, 50), 2000)
+            if orig_w > clamped_width:
+                new_w = clamped_width
+                new_h = int(orig_h * (clamped_width / orig_w))
                 img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
             else:
                 new_w, new_h = orig_w, orig_h
 
             # Encode to WebP
+            clamped_quality = min(max(quality, 10), 100)
             output_buf = io.BytesIO()
-            img.save(output_buf, format="WEBP", quality=quality, method=4)
+            img.save(output_buf, format="WEBP", quality=clamped_quality, method=4)
             webp_bytes = output_buf.getvalue()
             return webp_bytes, new_w, new_h
     except Exception as e:
@@ -64,8 +72,12 @@ async def upload_and_optimize_image(
 
     if orig_size == 0:
         raise HTTPException(status_code=400, detail="Empty file uploaded")
+    if orig_size > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=413, detail=f"File exceeds maximum allowed size of {MAX_UPLOAD_SIZE // (1024*1024)}MB")
 
-    webp_bytes, width, height = optimize_image_bytes(raw_content, max_width=max_width, quality=quality)
+    webp_bytes, width, height = await asyncio.to_thread(
+        optimize_image_bytes, raw_content, max_width=max_width, quality=quality
+    )
     webp_size = len(webp_bytes)
 
     base64_encoded = base64.b64encode(webp_bytes).decode("utf-8")
@@ -99,7 +111,13 @@ async def optimize_base64_image(payload: ImageBase64Payload):
         raise HTTPException(status_code=400, detail="Invalid base64 image data")
 
     orig_size = len(raw_bytes)
-    webp_bytes, width, height = optimize_image_bytes(
+    if orig_size == 0:
+        raise HTTPException(status_code=400, detail="Empty image data")
+    if orig_size > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=413, detail=f"Image exceeds maximum allowed size of {MAX_UPLOAD_SIZE // (1024*1024)}MB")
+
+    webp_bytes, width, height = await asyncio.to_thread(
+        optimize_image_bytes,
         raw_bytes,
         max_width=payload.maxWidth or 800,
         quality=payload.quality or 80,

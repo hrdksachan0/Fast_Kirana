@@ -9,6 +9,7 @@ import re
 from database import get_db
 from models import Restaurant, User, Product, Order, Category
 from routers.auth import get_current_user, require_admin, require_auth
+from routers.websockets import manager
 
 router = APIRouter(prefix="/restaurants", tags=["Restaurants"])
 
@@ -25,12 +26,13 @@ def generate_restaurant_slug(name: str) -> str:
 async def get_restaurants(
     cuisine: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
+    storeId: Optional[str] = Query(None),
     all: bool = Query(False),
     current_user: Optional[dict] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    List active or all restaurants, with cuisine and case-insensitive search queries.
+    List active or all restaurants, with cuisine, search, and storeId hub city isolation.
     """
     role = current_user.get("role") if current_user else None
     is_admin = role == "ADMIN"
@@ -38,6 +40,15 @@ async def get_restaurants(
     filters = []
     if not is_admin or not all:
         filters.append(Restaurant.isActive == True)
+
+    if storeId and storeId != "all":
+        from models import DarkStore
+        store_stmt = select(DarkStore.name).where(DarkStore.id == storeId)
+        store_res = await db.execute(store_stmt)
+        store_name = store_res.scalar() or ""
+        store_city = re.sub(r"\s+(Hub|Market|Central|Dark\s*Store|Branch).*$", "", store_name, flags=re.IGNORECASE).strip() if store_name else ""
+        if store_city:
+            filters.append(Restaurant.city.ilike(f"%{store_city}%"))
 
     if cuisine:
         filters.append(Restaurant.cuisineTags.op('?')(cuisine))
@@ -284,7 +295,16 @@ async def update_restaurant(
         raise HTTPException(status_code=404, detail="Restaurant not found")
 
     is_admin = role == "ADMIN"
-    is_owner_or_chef = role in ["RESTAURANT_OWNER", "CHEF"] and assigned_restaurant_id == restaurant.id
+    user_outlet = assigned_restaurant_id
+    if not user_outlet:
+        u_id = current_user.get("id") or current_user.get("sub")
+        if u_id:
+            u_res = await db.execute(select(User.assignedRestaurantId).where(User.id == u_id))
+            user_outlet = u_res.scalar_one_or_none()
+
+    is_owner_or_chef = role in ["RESTAURANT_OWNER", "CHEF"] and (
+        user_outlet in [restaurant.id, restaurant.slug]
+    )
 
     if not is_admin and not is_owner_or_chef:
         raise HTTPException(status_code=403, detail="Unauthorized to edit this restaurant")
@@ -370,6 +390,21 @@ async def update_restaurant(
 
         # Fetch fresh hydrated details
         fresh_dict = await get_restaurant_details(res_id, db)
+
+        # Real-time WebSocket broadcast for open/closed & rush badge status
+        try:
+            evt_payload = {
+                "event": "RESTAURANT_UPDATED",
+                "restaurantId": res_id,
+                "isOpen": restaurant.isOpen,
+                "discountBadge": restaurant.discountBadge,
+                "name": restaurant.name,
+            }
+            await manager.broadcast_to_channel(f"restaurant_{res_id}", evt_payload)
+            await manager.broadcast_to_channel("general", evt_payload)
+        except Exception:
+            pass
+
         return fresh_dict
     except Exception as e:
         await db.rollback()

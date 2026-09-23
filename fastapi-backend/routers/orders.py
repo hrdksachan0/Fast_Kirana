@@ -18,7 +18,7 @@ from database import get_db, AsyncSessionLocal
 from models import (
     Order, OrderItem, Product, User, Address, RiderWallet, 
     OrderStatus, PaymentStatus, PaymentMethod, OrderType, Role,
-    StoreSetting, Coupon, FcmToken, ProductBatch, StockLog, Restaurant, Cart, CartItem
+    StoreSetting, Coupon, FcmToken, ProductBatch, StockLog, Restaurant, Cart, CartItem, Vendor, DarkStore
 )
 from routers.auth import require_auth, get_current_user
 from routers.websockets import manager
@@ -228,6 +228,244 @@ async def send_pwa_notification_to_user(user_id: str, title: str, body: str, dat
                     await send_fcm_notification(tokens=tokens, title=title, body=body, data=data)
     except Exception as e:
         logger.error(f"Failed to dispatch FCM push notification to user: {str(e)}")
+
+
+async def dispatch_isolated_order_fcm_notifications(
+    order_id: str,
+    readable_id: str,
+    restaurant_id: Optional[str],
+    shop_name: Optional[str],
+    total: float,
+    status_val: str,
+    store_id: Optional[str] = None
+):
+    """
+    Dispatches order notifications with absolute isolation:
+    - Restaurant orders ONLY alert restaurant-specific topics & assigned staff. Never grocery pickers.
+    - Grocery orders ONLY alert darkstore pickers. Never restaurant consoles or chefs.
+    """
+    try:
+        now_ts = str(int(datetime.utcnow().timestamp() * 1000))
+        if restaurant_id:
+            # 1. RESTAURANT / KITCHEN ISOLATED NOTIFICATION
+            rest_title = f"👨‍🍳 New Order for {shop_name or 'Kitchen'}!"
+            rest_body = f"Order #{readable_id} received (₹{total:.2f})! Open kitchen console to prepare dishes."
+            rest_data = {
+                "orderId": order_id,
+                "readableId": str(readable_id),
+                "restaurantId": str(restaurant_id),
+                "status": status_val,
+                "screen": "restaurant-console",
+                "type": "NEW_ORDER",
+                "timestamp": now_ts,
+            }
+
+            # Broadcast to restaurant-specific topics ONLY
+            await send_fcm_topic_notification(f"restaurant_{restaurant_id}", rest_title, rest_body, rest_data)
+            await send_fcm_topic_notification(f"kitchen_{restaurant_id}", rest_title, rest_body, rest_data)
+            await send_fcm_topic_notification(f"restaurant_orders_{restaurant_id}", rest_title, rest_body, rest_data)
+
+            # Direct FCM push to chefs & owners assigned ONLY to this specific restaurant
+            async with AsyncSessionLocal() as session:
+                rest_res = await session.execute(select(Restaurant).where(Restaurant.id == restaurant_id))
+                rest_obj = rest_res.scalars().first()
+                clean_owner_phone = ""
+                if rest_obj and rest_obj.ownerPhone:
+                    clean_owner_phone = re.sub(r'\D', '', str(rest_obj.ownerPhone))[-10:]
+
+                user_filter = [User.assignedRestaurantId == restaurant_id]
+                if clean_owner_phone:
+                    user_filter.append(User.phone.contains(clean_owner_phone))
+
+                stmt = select(FcmToken.token).join(User).where(or_(*user_filter))
+                res = await session.execute(stmt)
+                tokens = list(set(res.scalars().all()))
+                if tokens:
+                    await send_fcm_notification(tokens=tokens, title=rest_title, body=rest_body, data=rest_data)
+
+                if clean_owner_phone:
+                    await send_fcm_topic_notification(f"phone_{clean_owner_phone}", rest_title, rest_body, rest_data)
+
+            # Notify Delivery Riders & Admins
+            admin_rider_title = f"🍽️ Food Order Placed #{readable_id}"
+            admin_rider_body = f"Order #{readable_id} for {shop_name or 'Restaurant'} (₹{total:.2f})."
+            admin_rider_data = {
+                "orderId": order_id,
+                "readableId": str(readable_id),
+                "restaurantId": str(restaurant_id),
+                "status": status_val,
+                "screen": "delivery",
+                "type": "NEW_ORDER",
+                "role": "DELIVERY",
+                "timestamp": now_ts,
+            }
+            await send_fcm_topic_notification("admin_orders", admin_rider_title, admin_rider_body, admin_rider_data)
+            await send_fcm_topic_notification("delivery_orders", admin_rider_title, admin_rider_body, admin_rider_data)
+
+        else:
+            # 2. GROCERY DARK STORE ISOLATED NOTIFICATION
+            store_label = f" [{store_id.replace('hub-', '').upper()}]" if store_id else ""
+            grocery_title = f"📦 New Order #{readable_id} to Pick!{store_label}"
+            grocery_body = f"New order #{readable_id} of ₹{total:.2f}. Tap to pack items."
+            grocery_data = {
+                "orderId": order_id,
+                "readableId": str(readable_id),
+                "storeId": str(store_id or ""),
+                "status": status_val,
+                "screen": "picker",
+                "type": "NEW_ORDER",
+                "role": "PICKER",
+                "timestamp": now_ts,
+            }
+
+            admin_rider_title = f"🛵 New Delivery Order #{readable_id}{store_label}"
+            admin_rider_body = f"New grocery order #{readable_id} of ₹{total:.2f} placed."
+            admin_rider_data = {
+                "orderId": order_id,
+                "readableId": str(readable_id),
+                "storeId": str(store_id or ""),
+                "status": status_val,
+                "screen": "delivery",
+                "type": "NEW_ORDER",
+                "role": "DELIVERY",
+                "timestamp": now_ts,
+            }
+
+            # STRICT HUB ISOLATION (Ghatampur vs Akbarpur):
+            if store_id:
+                # 1. Alert ONLY this specific hub's pickers & riders
+                await send_fcm_topic_notification(f"picker_orders_{store_id}", grocery_title, grocery_body, grocery_data)
+                await send_fcm_topic_notification(f"delivery_orders_{store_id}", admin_rider_title, admin_rider_body, admin_rider_data)
+                await send_fcm_topic_notification(f"staff_orders_{store_id}", grocery_title, grocery_body, grocery_data)
+                await send_fcm_topic_notification(f"admin_orders_{store_id}", admin_rider_title, admin_rider_body, admin_rider_data)
+
+                # 2. Direct FCM tokens to staff assigned STRICTLY to this hub
+                async with AsyncSessionLocal() as session:
+                    picker_stmt = select(FcmToken.token).join(User).where(
+                        and_(User.role == Role.PICKER, or_(User.assignedStoreId == store_id, User.assignedStoreId.is_(None)))
+                    )
+                    picker_res = await session.execute(picker_stmt)
+                    picker_tokens = list(set(picker_res.scalars().all()))
+                    if picker_tokens:
+                        await send_fcm_notification(tokens=picker_tokens, title=grocery_title, body=grocery_body, data=grocery_data)
+
+                    rider_stmt = select(FcmToken.token).join(User).where(
+                        and_(User.role.in_([Role.DELIVERY, Role.RIDER]), or_(User.assignedStoreId == store_id, User.assignedStoreId.is_(None)))
+                    )
+                    rider_res = await session.execute(rider_stmt)
+                    rider_tokens = list(set(rider_res.scalars().all()))
+                    if rider_tokens:
+                        await send_fcm_notification(tokens=rider_tokens, title=admin_rider_title, body=admin_rider_body, data=admin_rider_data)
+            else:
+                # Fallback only if no hub is assigned
+                await send_fcm_topic_notification("picker_orders", grocery_title, grocery_body, grocery_data)
+                await send_fcm_topic_notification("delivery_orders", admin_rider_title, admin_rider_body, admin_rider_data)
+                await send_fcm_topic_notification("staff_orders", grocery_title, grocery_body, grocery_data)
+
+            # Global admin topic (headquarters)
+            await send_fcm_topic_notification("admin_orders", admin_rider_title, admin_rider_body, admin_rider_data)
+    except Exception as e:
+        logger.error(f"Failed to dispatch isolated FCM push notification: {str(e)}")
+
+
+async def dispatch_isolated_status_update_notifications(
+    order_id: str,
+    readable_id: str,
+    restaurant_id: Optional[str],
+    shop_name: Optional[str],
+    status_val: str,
+    store_id: Optional[str] = None
+):
+    """
+    Dispatches order status update notifications with strict outlet isolation:
+    - Restaurant orders ONLY alert restaurant-specific topics & assigned chefs. Never grocery pickers or other restaurants.
+    - Grocery orders ONLY alert darkstore pickers. Never restaurant consoles or chefs.
+    """
+    try:
+        now_ts = str(int(datetime.utcnow().timestamp() * 1000))
+        base_order_no = re.sub(r'-[GR\d]+$', '', readable_id or "")
+
+        if restaurant_id:
+            # 1. RESTAURANT / KITCHEN ISOLATED STATUS UPDATE
+            rest_title = f"👨‍🍳 Order #{base_order_no} Status: {status_val}"
+            rest_body = f"Order #{base_order_no} for {shop_name or 'Kitchen'} updated to {status_val}."
+            rest_data = {
+                "orderId": order_id,
+                "readableId": str(readable_id),
+                "restaurantId": str(restaurant_id),
+                "status": status_val,
+                "screen": "restaurant-console",
+                "type": "ORDER_STATUS_UPDATE",
+                "timestamp": now_ts,
+            }
+
+            # Broadcast to this restaurant's specific topics ONLY
+            await send_fcm_topic_notification(f"restaurant_{restaurant_id}", rest_title, rest_body, rest_data)
+            await send_fcm_topic_notification(f"kitchen_{restaurant_id}", rest_title, rest_body, rest_data)
+            await send_fcm_topic_notification(f"restaurant_orders_{restaurant_id}", rest_title, rest_body, rest_data)
+
+            # Direct FCM push to chefs & owners assigned ONLY to this specific restaurant
+            async with AsyncSessionLocal() as session:
+                rest_res = await session.execute(select(Restaurant).where(Restaurant.id == restaurant_id))
+                rest_obj = rest_res.scalars().first()
+                clean_owner_phone = ""
+                if rest_obj and rest_obj.ownerPhone:
+                    clean_owner_phone = re.sub(r'\D', '', str(rest_obj.ownerPhone))[-10:]
+
+                user_filter = [User.assignedRestaurantId == restaurant_id]
+                if clean_owner_phone:
+                    user_filter.append(User.phone.contains(clean_owner_phone))
+
+                stmt = select(FcmToken.token).join(User).where(or_(*user_filter))
+                res = await session.execute(stmt)
+                tokens = list(set(res.scalars().all()))
+                if tokens:
+                    await send_fcm_notification(tokens=tokens, title=rest_title, body=rest_body, data=rest_data)
+
+            # Notify Delivery Riders & Admins
+            admin_rider_title = f"🍽️ Food Order #{base_order_no} -> {status_val}"
+            admin_rider_body = f"Order #{base_order_no} for {shop_name or 'Restaurant'} is now {status_val}."
+            admin_rider_data = {
+                "orderId": order_id,
+                "readableId": str(readable_id),
+                "restaurantId": str(restaurant_id),
+                "status": status_val,
+                "screen": "delivery",
+                "type": "ORDER_STATUS_UPDATE",
+                "role": "DELIVERY",
+                "timestamp": now_ts,
+            }
+            await send_fcm_topic_notification("admin_orders", admin_rider_title, admin_rider_body, admin_rider_data)
+            await send_fcm_topic_notification("delivery_orders", admin_rider_title, admin_rider_body, admin_rider_data)
+
+        else:
+            # 2. GROCERY DARK STORE ISOLATED STATUS UPDATE
+            store_label = f" [{store_id.replace('hub-', '').upper()}]" if store_id else ""
+            grocery_title = f"📦 Grocery Order #{base_order_no} -> {status_val}{store_label}"
+            grocery_body = f"Order #{base_order_no} status changed to {status_val}."
+            grocery_data = {
+                "orderId": order_id,
+                "readableId": str(readable_id),
+                "storeId": str(store_id or ""),
+                "status": status_val,
+                "screen": "picker",
+                "type": "ORDER_STATUS_UPDATE",
+                "role": "PICKER",
+                "timestamp": now_ts,
+            }
+
+            if store_id:
+                await send_fcm_topic_notification(f"picker_orders_{store_id}", grocery_title, grocery_body, grocery_data)
+                await send_fcm_topic_notification(f"staff_orders_{store_id}", grocery_title, grocery_body, grocery_data)
+                await send_fcm_topic_notification(f"delivery_orders_{store_id}", grocery_title, grocery_body, grocery_data)
+            else:
+                await send_fcm_topic_notification("picker_orders", grocery_title, grocery_body, grocery_data)
+                await send_fcm_topic_notification("staff_orders", grocery_title, grocery_body, grocery_data)
+                await send_fcm_topic_notification("delivery_orders", grocery_title, grocery_body, grocery_data)
+
+            await send_fcm_topic_notification("admin_orders", grocery_title, grocery_body, grocery_data)
+    except Exception as e:
+        logger.error(f"Failed to dispatch isolated status FCM push notification: {str(e)}")
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -441,40 +679,20 @@ async def create_order(
     if not address:
         raise HTTPException(status_code=400, detail="Selected address is invalid")
 
-    # Distance-based delivery zone validation
-    delivery_rules = None
-    if delivery_method == "DELIVERY":
-        p = (address.pincode or "").strip().replace(" ", "")
-        serviceable_pincode = settings_map.get("serviceable_pincode", "209206").strip().replace(" ", "")
-        allowed_pincodes = [serviceable_pincode, "209206", "209201", "209214", "209208", "208001", "208002", "208011", "208012", "208020"]
-        
-        if p and p not in allowed_pincodes and not (len(p) == 6 and p.isdigit()):
-            raise HTTPException(
-                status_code=400,
-                detail=f"Selected address pincode ({p}) is outside our delivery zone."
-            )
+    # Update phone if passed
+    raw_phone = payload.get("phone") or payload.get("customerPhone")
+    if raw_phone and address:
+        clean_p = "".join(filter(str.isdigit, str(raw_phone)))[-10:]
+        if len(clean_p) == 10:
+            address.phone = f"+91{clean_p}"
+            await db.commit()
 
-        c = (address.city or "").strip().lower()
-        allowed_cities = ["ghatampur", "kanpur", "nagar", "dehat", "up", "uttar pradesh"]
-        if c and not any(k in c for k in allowed_cities):
-            raise HTTPException(
-                status_code=400,
-                detail="Selected address city is outside our delivery zone."
-            )
-
-        # Update phone if passed
-        raw_phone = payload.get("phone") or payload.get("customerPhone")
-        if raw_phone and address:
-            clean_p = "".join(filter(str.isdigit, str(raw_phone)))[-10:]
-            if len(clean_p) == 10:
-                address.phone = f"+91{clean_p}"
-                await db.commit()
-
-        # Geocode if lat/lng is missing
-        target_lat = address.lat
-        target_lng = address.lng
-        if target_lat is None or target_lng is None:
-            address_query = f"{address.houseNo or ''} {address.street or ''} {address.area or ''}, {address.city or 'Ghatampur'}, {address.pincode or '209206'}"
+    # Geocode if lat/lng is missing
+    target_lat = address.lat
+    target_lng = address.lng
+    if (target_lat is None or target_lng is None) and address:
+        address_query = f"{address.houseNo or ''} {address.street or ''} {address.area or ''}, {address.city or ''}, {address.pincode or ''}".strip()
+        if address_query:
             coords = await geocode_address(address_query)
             if coords:
                 target_lat = coords["lat"]
@@ -483,7 +701,68 @@ async def create_order(
                 address.lng = target_lng
                 await db.commit()
 
-        if target_lat is not None and target_lng is not None:
+    # ── DYNAMIC MULTI-HUB RESOLUTION (100% Database-Driven, No Hardcoding) ──
+    # Fetch all active dark stores from PostgreSQL
+    dark_stores_res = await db.execute(select(DarkStore).where(DarkStore.isActive == True))
+    active_dark_stores = dark_stores_res.scalars().all()
+
+    matched_hub = None
+    if store_id:
+        matched_hub = next((s for s in active_dark_stores if s.id == store_id), None)
+
+    # If store_id not explicitly provided, find the closest active dark store by GPS distance
+    if not matched_hub and target_lat is not None and target_lng is not None and active_dark_stores:
+        hub_distances = []
+        for s in active_dark_stores:
+            dist = get_distance_km(s.latitude, s.longitude, target_lat, target_lng)
+            hub_distances.append((dist, s))
+        hub_distances.sort(key=lambda x: x[0])
+        closest_dist, closest_hub = hub_distances[0]
+        max_rad = float(closest_hub.deliveryRadiusKm or 5.0)
+        # If within serviceable radius, assign closest hub
+        if closest_dist <= max_rad:
+            matched_hub = closest_hub
+        else:
+            matched_hub = closest_hub
+
+    # Fallback match by City / Area / Name from database
+    if not matched_hub and address and active_dark_stores:
+        c_clean = (address.city or "").lower().strip()
+        a_clean = f"{(address.area or '')} {(address.street or '')}".lower().strip()
+        p_clean = (address.pincode or "").strip()
+        for s in active_dark_stores:
+            s_name = (s.name or "").lower()
+            s_city = (s.city or "").lower()
+            if (s_city and s_city in c_clean) or (s_name and (s_name in a_clean or s_name in c_clean)) or (p_clean and p_clean in s.id):
+                matched_hub = s
+                break
+
+    if not matched_hub and active_dark_stores:
+        matched_hub = active_dark_stores[0]
+
+    # Assign dynamically resolved storeId
+    if matched_hub:
+        store_id = matched_hub.id
+
+    # ── DYNAMIC DELIVERY ZONE & DISTANCE VALIDATION ──
+    delivery_rules = None
+    if delivery_method == "DELIVERY":
+        if target_lat is not None and target_lng is not None and matched_hub:
+            hub_lat = float(matched_hub.latitude)
+            hub_lng = float(matched_hub.longitude)
+            max_radius = float(matched_hub.deliveryRadiusKm or 5.0)
+            surge_charge = float(matched_hub.surgeCharge or 0.0)
+
+            dist_km = get_distance_km(hub_lat, hub_lng, target_lat, target_lng)
+            delivery_rules = get_delivery_rules(dist_km, max_radius, surge_charge)
+
+            if not delivery_rules["isServiceable"] or dist_km > max_radius:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Your location is {dist_km:.1f} km away. Delivery is strictly limited to {max_radius:.1f} km from {matched_hub.name}."
+                )
+        elif target_lat is not None and target_lng is not None:
+            # Fallback to StoreSettings if no dark_stores table entry
             store_lat = float(settings_map.get("store_lat", 26.1534185))
             store_lng = float(settings_map.get("store_lng", 80.1714024))
             max_radius = float(settings_map.get("delivery_radius", settings_map.get("max_delivery_radius", 5.0)))
@@ -495,7 +774,7 @@ async def create_order(
             if not delivery_rules["isServiceable"] or dist_km > max_radius:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Your location is {dist_km:.1f} km away. Delivery is strictly limited to {max_radius:.1f} km from Ghatampur Store."
+                    detail=f"Your location is {dist_km:.1f} km away. Delivery is limited to {max_radius:.1f} km."
                 )
 
     # Store timings check
@@ -511,7 +790,7 @@ async def create_order(
 
     p_stmt = select(Product).options(selectinload(Product.category)).where(
         or_(Product.id.in_(product_ids), Product.slug.in_(product_slugs))
-    )
+    ).with_for_update()
     p_res = await db.execute(p_stmt)
     db_products = p_res.scalars().all()
 
@@ -544,7 +823,10 @@ async def create_order(
         )
         is_restaurant = bool(resolved_rest_id)
         if is_restaurant:
-            db_stock = 999999
+            if db_prod.stock is not None and db_prod.stock <= 0:
+                db_stock = 0
+            else:
+                db_stock = 999999
 
         if db_stock < int(item["quantity"]):
             name_suffix = f" ({variant_name})" if variant_name else ""
@@ -693,34 +975,68 @@ async def create_order(
                         coupon_id = coupon.id
                         if coupon.discountType == "BOGO":
                             bogo_items = rest_items if coupon.restaurantId else items
-                            if coupon.menuSection:
+                            if coupon.bogoDishId:
+                                bogo_items = [
+                                    it for it in bogo_items
+                                    if it["product"]["id"].split("_")[0] == coupon.bogoDishId
+                                ]
+                            elif coupon.menuSection:
                                 sec_filters = [s.strip().lower() for s in coupon.menuSection.split(",") if s.strip()]
                                 if sec_filters:
+                                    known_sections = ['burger', 'sandwich', 'pasta', 'maggie', 'maggi', 'calzone', 'garlic', 'beverage', 'drink', 'dessert', 'icecream', 'biryani', 'pizza', 'shake']
                                     filtered_bogo = []
                                     for it in bogo_items:
                                         base_p = next((p for p in db_products if p.id == it["product"]["id"].split("_")[0]), None)
                                         m_sec = str((it.get("product") or {}).get("menuSection") or "").lower()
                                         tags = [str(t).lower() for t in (base_p.tags if base_p and base_p.tags else [])]
                                         name = str(base_p.name if base_p else (it.get("product") or {}).get("name") or "").lower()
-                                        if any(f in m_sec or any(f in t for t in tags) or f in name for f in sec_filters):
+                                        matches = False
+                                        for f in sec_filters:
+                                            if f in m_sec or any(f in t for t in tags):
+                                                matches = True
+                                                break
+                                            other_sections = [s for s in known_sections if f not in s and s not in f]
+                                            has_conflict = any(any(s in t for t in tags) for s in other_sections) or any(s in m_sec for s in other_sections)
+                                            if not has_conflict and f in name:
+                                                matches = True
+                                                break
+                                        if matches:
                                             filtered_bogo.append(it)
                                     bogo_items = filtered_bogo
+
+                            def parse_trigger_variant(raw):
+                                raw_str = str(raw or "").strip()
+                                size_match = re.search(r'\b(medium|large|small|regular|half|full)\b', raw_str, re.I)
+                                trigger_sz = size_match.group(1).lower() if size_match else None
+                                num_match = re.search(r'\b\d+\b', raw_str)
+                                min_qty = int(num_match.group(0)) if num_match else (int(raw_str) if raw_str and not trigger_sz else 1)
+                                return min_qty, trigger_sz
+
+                            def get_item_vtext(it):
+                                is_v = "_" in it["product"]["id"]
+                                var_name = it["product"]["id"].split("_")[1] if is_v else ""
+                                base_p = next((p for p in db_products if p.id == it["product"]["id"].split("_")[0]), None)
+                                unit_str = base_p.unit if base_p else ""
+                                nm = base_p.name if base_p else ""
+                                sel = str((it.get("product") or {}).get("selectedVariant") or "")
+                                var = str((it.get("product") or {}).get("variant") or "")
+                                return f"{var_name} {unit_str} {nm} {sel} {var}".lower()
 
                             if coupon.bogoType == "BUY_LARGE_GET_SMALL":
                                 trigger_var = (coupon.triggerVariant or "large").lower().strip()
                                 reward_var = (coupon.rewardVariant or "small").lower().strip()
 
-                                def get_item_vtext(it):
-                                    is_v = "_" in it["product"]["id"]
-                                    var_name = it["product"]["id"].split("_")[1] if is_v else ""
-                                    base_p = next((p for p in db_products if p.id == it["product"]["id"].split("_")[0]), None)
-                                    unit_str = base_p.unit if base_p else ""
-                                    nm = base_p.name if base_p else ""
-                                    return f"{var_name} {unit_str} {nm}".lower()
-
                                 trigger_items = [it for it in bogo_items if trigger_var in get_item_vtext(it)]
                                 total_trig_qty = sum(int(it.get("quantity", 1)) for it in trigger_items)
-                                reward_items = [it for it in bogo_items if reward_var in get_item_vtext(it)]
+
+                                reward_pool = bogo_items if coupon.bogoDishId else (bogo_items if coupon.menuSection else (rest_items if coupon.restaurantId else items))
+                                if coupon.defaultFreeDishId:
+                                    reward_items = [
+                                        it for it in (rest_items if coupon.restaurantId else items)
+                                        if it["product"]["id"].split("_")[0] == coupon.defaultFreeDishId
+                                    ]
+                                else:
+                                    reward_items = [it for it in reward_pool if reward_var in get_item_vtext(it)]
 
                                 if total_trig_qty > 0 and reward_items:
                                     allowed_free = min(total_trig_qty, coupon.maxFreeItems or 3)
@@ -738,14 +1054,40 @@ async def create_order(
                                         combined_discount = min(combined_discount, coupon.maxDiscount)
 
                             elif coupon.bogoType == "FREE_GIFT":
-                                min_trig = int(coupon.triggerVariant or 2)
-                                total_trig = sum(int(it.get("quantity", 1)) for it in bogo_items)
-                                if total_trig >= min_trig and coupon.defaultFreeDishId:
-                                    free_dish = next((p for p in db_products if p.id == coupon.defaultFreeDishId), None)
-                                    if free_dish:
-                                        combined_discount = float(free_dish.price)
+                                min_trig, trigger_size = parse_trigger_variant(coupon.triggerVariant)
+                                qualifying_items = [it for it in bogo_items if trigger_size in get_item_vtext(it)] if trigger_size else bogo_items
+                                total_trig = sum(int(it.get("quantity", 1)) for it in qualifying_items)
+
+                                if total_trig >= min_trig:
+                                    cart_pool = rest_items if coupon.restaurantId else items
+                                    reward_tag = re.sub(r'[^a-z0-9]', '', (coupon.rewardVariant or "").lower())
+                                    matching_gift = None
+                                    for it in cart_pool:
+                                        base_id = it["product"]["id"].split("_")[0]
+                                        if coupon.defaultFreeDishId and base_id == coupon.defaultFreeDishId:
+                                            matching_gift = it
+                                            break
+                                        if reward_tag:
+                                            base_p = next((p for p in db_products if p.id == base_id), None)
+                                            name = str(base_p.name if base_p else (it.get("product") or {}).get("name") or "").lower()
+                                            m_sec = str((it.get("product") or {}).get("menuSection") or "").lower()
+                                            tags = [str(t).lower() for t in (base_p.tags if base_p and base_p.tags else [])]
+                                            v_text = get_item_vtext(it)
+                                            if reward_tag in name or any(reward_tag in t for t in tags) or reward_tag in m_sec or reward_tag in v_text:
+                                                matching_gift = it
+                                                break
+                                    if matching_gift:
+                                        base_p = next((p for p in db_products if p.id == matching_gift["product"]["id"].split("_")[0]), None)
+                                        free_price = float(matching_gift.get("price", base_p.price if base_p else 0.0))
+                                        combined_discount = free_price
                                         if coupon.maxDiscount:
                                             combined_discount = min(combined_discount, coupon.maxDiscount)
+                                    elif coupon.defaultFreeDishId:
+                                        free_dish = next((p for p in db_products if p.id == coupon.defaultFreeDishId), None)
+                                        if free_dish:
+                                            combined_discount = float(free_dish.price)
+                                            if coupon.maxDiscount:
+                                                combined_discount = min(combined_discount, coupon.maxDiscount)
 
                             elif coupon.bogoType == "CHEAPEST_FREE":
                                 unit_prices = []
@@ -755,18 +1097,19 @@ async def create_order(
                                     qty = int(it.get("quantity", 1))
                                     for _ in range(qty):
                                         unit_prices.append(price)
+                                pend_free = coupon.maxFreeItems or 1
                                 if len(unit_prices) >= 2:
                                     unit_prices.sort()
-                                    combined_discount = unit_prices[0]
+                                    combined_discount = sum(unit_prices[:pend_free])
                                     if coupon.maxDiscount:
                                         combined_discount = min(combined_discount, coupon.maxDiscount)
                                 else:
                                     combined_discount = 0.0
+
                             elif coupon.bogoType == "SAME_ITEM" or not coupon.bogoType:
                                 eligible = bogo_items
                                 if coupon.bogoDishId:
                                     eligible = [it for it in bogo_items if it["product"]["id"].split("_")[0] == coupon.bogoDishId]
-                                # H9 FIX: Enforce max_free_cap
                                 max_free_cap = getattr(coupon, "maxFreeItems", 3) or 3
                                 for it in eligible:
                                     qty = int(it.get("quantity", 1))
@@ -913,8 +1256,7 @@ async def create_order(
         )
 
         db.add(new_order)
-        await db.commit()
-        await db.refresh(new_order)
+        # Order and items will be committed atomically at line 1021
 
         # Attach all items & decrement stock for grocery
         for item in items:
@@ -1061,16 +1403,16 @@ async def create_order(
                 address.phone if address else None
             )
 
-            # 2. FCM Push notifications to workers
-            title = "New Order Placed 🍲" if order.restaurantId else "New Grocery Order 📦"
-            body = f"Order #{order.readableId} of ₹{order.total:.2f} has been placed."
+            # 2. Strict Isolated FCM Push Notifications to Restaurant/Grocery Workers
             background_tasks.add_task(
-                send_pwa_notification_to_roles,
-                [Role.ADMIN, Role.CHEF, Role.DELIVERY, Role.PICKER],
-                title,
-                body,
-                {"orderId": order.id},
-                db
+                dispatch_isolated_order_fcm_notifications,
+                order.id,
+                order.readableId,
+                order.restaurantId,
+                order.shopName,
+                float(order.total),
+                order.status.value,
+                order.storeId
             )
 
             # WhatsApp alerts to Admins/Staff
@@ -1092,6 +1434,105 @@ async def create_order(
                 app_url = "fastkirana.com"
                 admin_text = f"New Order #{order.readableId} for [{order.shopName}] of ₹{order.total} from {user_obj.name or 'Customer'} ({address.phone or 'N/A'}). Manage: {app_url}/admin"
                 background_tasks.add_task(send_whatsapp_alert, phone, admin_text)
+
+            # 3. Dedicated Vendor Dispatch: Notify suppliers of their attached products!
+            try:
+                v_all_res = await db.execute(select(Vendor).where(Vendor.isActive.is_(True)))
+                active_vendors = v_all_res.scalars().all()
+                vendor_by_id = {v.id: v for v in active_vendors}
+                vendor_by_name = {v.name.lower().strip(): v for v in active_vendors if v.name}
+
+                vendor_groups = {} # vendor_id -> { "vendor": Vendor, "items": [] }
+                for it in items:
+                    db_p = it.get("dbProduct")
+                    if not db_p:
+                        raw_id = str((it.get("product") or {}).get("id") or it.get("productId") or "")
+                        p_id = raw_id.split("_")[0] if "_" in raw_id else raw_id
+                        db_p = next((p for p in db_products if p.id == p_id), None)
+                    if not db_p:
+                        continue
+
+                    matched_v = None
+                    if db_p.vendorId and db_p.vendorId in vendor_by_id:
+                        matched_v = vendor_by_id[db_p.vendorId]
+                    elif db_p.vendor and db_p.vendor.lower().strip() in vendor_by_name:
+                        matched_v = vendor_by_name[db_p.vendor.lower().strip()]
+
+                    if matched_v:
+                        if matched_v.id not in vendor_groups:
+                            vendor_groups[matched_v.id] = {
+                                "vendor": matched_v,
+                                "items": []
+                            }
+                        qty = int(it.get("quantity", 1))
+                        unit_cost = float(db_p.costPrice or db_p.price or 0.0)
+                        weight_variant = str(it.get("selectedVariant") or getattr(db_p, "unit", "") or "")
+                        vendor_groups[matched_v.id]["items"].append({
+                            "name": db_p.name,
+                            "quantity": qty,
+                            "cost": unit_cost,
+                            "weight": weight_variant,
+                        })
+
+                for v_id, v_data in vendor_groups.items():
+                    v_obj = v_data["vendor"]
+                    v_items = v_data["items"]
+                    total_val = sum(i["quantity"] * i["cost"] for i in v_items)
+
+                    # Real-time WebSocket to vendor console
+                    await manager.broadcast_to_channel(f"vendor_{v_id}", {
+                        "event": "NEW_VENDOR_ORDER",
+                        "type": "new-vendor-order",
+                        "orderId": order.id,
+                        "readableId": order.readableId,
+                        "items": v_items,
+                        "totalVendorCost": total_val,
+                        "createdAt": order.createdAt.isoformat(),
+                    })
+
+                    # Instant WhatsApp order alert to vendor phone
+                    clean_v_phone = ""
+                    if v_obj.phone:
+                        clean_v_phone = re.sub(r'\D', '', str(v_obj.phone))[-10:]
+                        if len(clean_v_phone) == 10:
+                            item_lines = "\n".join([f"• {i['quantity']}x {i['name']} {('[' + i['weight'] + ']') if i['weight'] else ''}" for i in v_items])
+                            v_alert_text = (
+                                f"🔔 *FastKirana New Order Alert #{order.readableId}*\n\n"
+                                f"Customer ordered items from your catalog:\n{item_lines}\n\n"
+                                f"💰 Total Supply Cost: ₹{total_val:.2f}\n"
+                                f"⚡ Please pack and keep ready for FastKirana picker pickup!"
+                            )
+                            background_tasks.add_task(send_whatsapp_alert, clean_v_phone, v_alert_text)
+
+                    # Specific High-Priority Push Notification to Vendor's App!
+                    vendor_topic = f"vendor_{v_id}"
+                    fcm_title = f"📦 New Order #{order.readableId} for Your Store!"
+                    fcm_body = f"{len(v_items)} item(s) to pack (₹{total_val:.0f}). Tap to view and mark ready!"
+                    fcm_data = {
+                        "type": "VENDOR_NEW_ORDER",
+                        "orderId": order.id,
+                        "readableId": str(order.readableId),
+                        "vendorId": v_id,
+                        "screen": "vendor-console",
+                        "click_action": "FLUTTER_NOTIFICATION_CLICK",
+                    }
+                    background_tasks.add_task(
+                        send_fcm_topic_notification,
+                        vendor_topic,
+                        fcm_title,
+                        fcm_body,
+                        fcm_data,
+                    )
+                    if clean_v_phone and len(clean_v_phone) == 10:
+                        background_tasks.add_task(
+                            send_fcm_topic_notification,
+                            f"phone_{clean_v_phone}",
+                            fcm_title,
+                            fcm_body,
+                            fcm_data,
+                        )
+            except Exception as vendor_notify_err:
+                logger.warning(f"Could not dispatch vendor notifications for order #{order.readableId}: {vendor_notify_err}")
 
         # Return full order object matching Flutter Order.fromJson expectations
         main_order = next((o for o in created_orders if not o.restaurantId), created_orders[0]) if created_orders else new_order
@@ -1677,12 +2118,38 @@ async def update_order(
             raise HTTPException(status_code=403, detail="Only delivery riders can ship or deliver orders")
 
     if is_restaurant_staff and not is_admin:
+        if not order.restaurantId:
+            raise HTTPException(
+                status_code=403,
+                detail="Restaurant staff cannot manage dark store grocery orders"
+            )
         if not assigned_restaurant_id:
             user_stmt = select(User.assignedRestaurantId).where(User.id == user_id)
             user_res = await db.execute(user_stmt)
             assigned_restaurant_id = user_res.scalar_one_or_none()
-        if assigned_restaurant_id and order.restaurantId and order.restaurantId != assigned_restaurant_id:
-            raise HTTPException(status_code=403, detail="You can only manage orders for your assigned restaurant")
+
+        if not assigned_restaurant_id:
+            raise HTTPException(
+                status_code=403,
+                detail="No restaurant assigned to your staff account"
+            )
+
+        rest_stmt = select(Restaurant.id, Restaurant.slug).where(
+            or_(Restaurant.id == assigned_restaurant_id, Restaurant.slug == assigned_restaurant_id)
+        )
+        rest_res = await db.execute(rest_stmt)
+        matched_rest = rest_res.mappings().first()
+        outlet_ids = {assigned_restaurant_id}
+        if matched_rest:
+            outlet_ids.add(matched_rest["id"])
+            if matched_rest["slug"]:
+                outlet_ids.add(matched_rest["slug"])
+
+        if order.restaurantId not in outlet_ids:
+            raise HTTPException(
+                status_code=403,
+                detail="You can only manage orders for your assigned restaurant outlet"
+            )
 
     # Claim locks
     if target_status == OrderStatus.CONFIRMED:
@@ -1897,40 +2364,83 @@ async def update_order(
     await manager.broadcast_to_channel(f"order_{order.id}", {
         "event": "STATUS_UPDATE",
         "orderId": order.id,
+        "restaurantId": order.restaurantId,
         "status": order.status.value,
         "lat": order.deliveryLat,
         "lng": order.deliveryLng
     })
 
-    # Trigger PWA Push Notification for customer and staff roles
-    status_labels = {
-        "CONFIRMED": "Confirmed by Store 🏪",
-        "PACKED": "Packed & Ready to Go 📦",
-        "SHIPPED": "Out for Delivery 🚴",
-        "DELIVERED": "Delivered Successfully 🎉",
-        "CANCELLED": "Cancelled ❌",
-    }
-    
+    # Strict restaurant channel real-time update
+    if order.restaurantId:
+        rest_ws_payload = {
+            "event": "STATUS_UPDATE",
+            "orderId": order.id,
+            "restaurantId": order.restaurantId,
+            "status": order.status.value,
+            "order": {
+                "id": order.id,
+                "readableId": order.readableId,
+                "status": order.status.value,
+                "restaurantId": order.restaurantId,
+                "total": float(order.total),
+                "updatedAt": order.updatedAt.isoformat()
+            }
+        }
+        await manager.broadcast_to_channel(f"restaurant_{order.restaurantId}", rest_ws_payload)
+        await manager.broadcast_to_channel(f"kitchen_{order.restaurantId}", rest_ws_payload)
+
+    # Trigger Rich PWA & Mobile Push Notification for customer and staff roles
     base_order_no = re.sub(r'-[GR\d]+$', '', order.readableId or "")
-    status_title = f"Order #{base_order_no}: {status_labels.get(order.status.value, order.status.value)}"
-    status_body = f"Your FastKirana order #{base_order_no} is now {status_labels.get(order.status.value, order.status.value)}."
+    st_val = order.status.value.upper()
+
+    stage_titles = {
+        "CONFIRMED": "🏪 Order Confirmed!",
+        "PREPARING": "👨‍🍳 Food Being Prepared!",
+        "COOKING": "👨‍🍳 Cooking in Progress!",
+        "PACKED": "📦 Items Packed & Ready!",
+        "SHIPPED": "🚴 Out for Delivery!",
+        "ARRIVING_SOON": "🛵 Delivery Partner Arriving in 2 Mins!",
+        "DELIVERED": "🎉 Order Delivered Successfully!",
+        "CANCELLED": "❌ Order Cancelled",
+    }
+
+    stage_bodies = {
+        "CONFIRMED": f"Store has accepted order #{base_order_no} and preparation has started.",
+        "PREPARING": f"The kitchen is freshly preparing your dishes for order #{base_order_no}.",
+        "COOKING": f"Chefs are putting final touches on order #{base_order_no}.",
+        "PACKED": f"Order #{base_order_no} is packed and ready for dispatch.",
+        "SHIPPED": f"Your delivery partner has picked up order #{base_order_no} and is on the way! ⚡",
+        "ARRIVING_SOON": f"Your delivery partner is right around the corner (~500m away). Get ready to collect order #{base_order_no}!",
+        "DELIVERED": f"Your order #{base_order_no} has arrived. Enjoy your meal / groceries!",
+        "CANCELLED": f"Order #{base_order_no} has been cancelled.",
+    }
+
+    status_title = stage_titles.get(st_val, f"Order #{base_order_no} Update 🔔")
+    status_body = stage_bodies.get(st_val, f"Your FastKirana order #{base_order_no} is now {st_val}.")
 
     background_tasks.add_task(
         send_pwa_notification_to_user,
         order.userId,
         status_title,
         status_body,
-        {"orderId": order.id, "status": order.status.value},
+        {
+            "orderId": order.id,
+            "readableId": order.readableId,
+            "status": order.status.value,
+            "type": "ORDER_STATUS_UPDATE"
+        },
         db
     )
 
+    # Strict outlet-isolated notifications (Never leak food order updates to grocery pickers, or vice versa)
     background_tasks.add_task(
-        send_pwa_notification_to_roles,
-        [Role.ADMIN, Role.CHEF, Role.DELIVERY, Role.PICKER],
-        f"Order #{base_order_no} Updated 🔄",
-        f"Order #{base_order_no} status changed to {status_labels.get(order.status.value, order.status.value)}.",
-        {"orderId": order.id, "status": order.status.value},
-        db
+        dispatch_isolated_status_update_notifications,
+        order.id,
+        order.readableId,
+        order.restaurantId,
+        order.shopName,
+        st_val,
+        order.storeId
     )
 
     return {

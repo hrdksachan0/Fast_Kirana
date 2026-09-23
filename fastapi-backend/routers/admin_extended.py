@@ -580,6 +580,7 @@ async def admin_update_order_status(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
+    old_status = order.status
     new_status = data.get("status")
     if new_status:
         try:
@@ -593,7 +594,57 @@ async def admin_update_order_status(
     await db.commit()
     await db.refresh(order)
 
-    # Trigger push notifications for status updates in the background
+    from routers.websockets import manager
+    from routers.orders import dispatch_isolated_order_fcm_notifications, dispatch_isolated_status_update_notifications
+
+    # Real-time WebSocket alerts
+    status_evt = {
+        "event": "STATUS_UPDATE",
+        "orderId": order.id,
+        "status": order.status.value,
+        "restaurantId": order.restaurantId,
+        "order": {
+            "id": order.id,
+            "readableId": order.readableId,
+            "status": order.status.value,
+            "restaurantId": order.restaurantId,
+            "total": float(order.total),
+            "updatedAt": order.updatedAt.isoformat()
+        }
+    }
+    try:
+        await manager.broadcast_to_channel("general", status_evt)
+        await manager.broadcast_to_channel(f"order_{order.id}", status_evt)
+        if order.restaurantId:
+            await manager.broadcast_to_channel(f"restaurant_{order.restaurantId}", status_evt)
+            await manager.broadcast_to_channel(f"kitchen_{order.restaurantId}", status_evt)
+    except Exception as ws_e:
+        logger.warning(f"Admin status ws broadcast note: {ws_e}")
+
+    # If admin just APPROVED an ADMIN_PENDING order to PENDING:
+    if old_status == OrderStatus.ADMIN_PENDING and order.status == OrderStatus.PENDING:
+        background_tasks.add_task(
+            dispatch_isolated_order_fcm_notifications,
+            order.id,
+            order.readableId,
+            order.restaurantId,
+            order.shopName,
+            float(order.total),
+            order.status.value,
+            order.storeId
+        )
+    elif new_status and old_status != order.status:
+        background_tasks.add_task(
+            dispatch_isolated_status_update_notifications,
+            order.id,
+            order.readableId,
+            order.restaurantId,
+            order.shopName,
+            order.status.value,
+            order.storeId
+        )
+
+    # Trigger push notifications for customer status updates in the background
     if new_status:
         status_notification_map = {
             OrderStatus.CONFIRMED: ("Order Confirmed! 🛒", f"Order #{order.readableId or order.id[:8]} has been confirmed by the store."),
@@ -886,7 +937,10 @@ async def admin_get_coupons(
          "minOrder": float(c.minOrder) if c.minOrder else 0, "maxDiscount": float(c.maxDiscount) if c.maxDiscount else None,
          "maxUses": c.maxUses, "usedCount": c.usedCount, "isActive": c.isActive,
          "expiresAt": c.expiresAt.isoformat() if c.expiresAt else None,
-         "categoryId": c.categoryId, "oncePerCustomer": c.oncePerCustomer}
+         "categoryId": c.categoryId, "restaurantId": c.restaurantId, "oncePerCustomer": c.oncePerCustomer,
+         "bogoType": c.bogoType, "triggerVariant": c.triggerVariant, "rewardVariant": c.rewardVariant,
+         "defaultFreeDishId": c.defaultFreeDishId, "bogoDishId": c.bogoDishId, "maxFreeItems": c.maxFreeItems,
+         "badgeText": c.badgeText, "menuSection": c.menuSection, "autoApply": c.autoApply}
         for c in coupons
     ]}
 
@@ -897,25 +951,81 @@ async def admin_create_coupon(
     current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    code = (data.get("code") or "").upper()
-    if not code or not data.get("discountType") or data.get("value") is None:
-        raise HTTPException(status_code=400, detail="Missing required fields")
-    if data["discountType"] not in ('FLAT', 'PERCENT'):
+    code = (data.get("code") or "").upper().strip()
+    discount_type = data.get("discountType")
+    if not code or not discount_type:
+        raise HTTPException(status_code=400, detail="Missing required fields (code, discountType)")
+    if discount_type not in ('FLAT', 'PERCENT', 'BOGO', 'FREE_DELIVERY'):
         raise HTTPException(status_code=400, detail="Invalid discount type")
 
+    raw_val = data.get("value")
+    val = float(raw_val) if raw_val is not None else (0.0 if discount_type in ('BOGO', 'FREE_DELIVERY') else 0.0)
+
     coupon = Coupon(
-        id=f"cpn_{uuid.uuid4().hex[:12]}", code=code, discountType=data["discountType"],
-        value=float(data["value"]), minOrder=float(data.get("minOrder", 0)),
+        id=f"cpn_{uuid.uuid4().hex[:12]}",
+        code=code,
+        discountType=discount_type,
+        value=val,
+        minOrder=float(data.get("minOrder", 0) or 0),
         maxDiscount=float(data["maxDiscount"]) if data.get("maxDiscount") else None,
         maxUses=int(data["maxUses"]) if data.get("maxUses") else None,
-        usedCount=0, isActive=data.get("isActive", True),
+        usedCount=0,
+        isActive=data.get("isActive", True),
         expiresAt=datetime.fromisoformat(data["expiresAt"]) if data.get("expiresAt") else None,
-        categoryId=data.get("categoryId"), oncePerCustomer=data.get("oncePerCustomer", False),
+        categoryId=data.get("categoryId"),
+        restaurantId=data.get("restaurantId"),
+        oncePerCustomer=data.get("oncePerCustomer", False),
+        bogoType=data.get("bogoType"),
+        triggerVariant=data.get("triggerVariant"),
+        rewardVariant=data.get("rewardVariant"),
+        defaultFreeDishId=data.get("defaultFreeDishId"),
+        bogoDishId=data.get("bogoDishId"),
+        maxFreeItems=int(data["maxFreeItems"]) if data.get("maxFreeItems") else 1,
+        badgeText=data.get("badgeText"),
+        menuSection=data.get("menuSection"),
+        autoApply=data.get("autoApply", False),
     )
     db.add(coupon)
     await db.commit()
     await db.refresh(coupon)
     return {"coupon": {"id": coupon.id, "code": coupon.code}}
+
+
+@router.patch("/coupons/{coupon_id}")
+async def admin_update_coupon(
+    coupon_id: str,
+    data: Dict[str, Any] = Body(...),
+    current_admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(Coupon).where(Coupon.id == coupon_id))
+    coupon = result.scalars().first()
+    if not coupon:
+        raise HTTPException(status_code=404, detail="Coupon not found")
+
+    updatable_fields = [
+        "code", "discountType", "value", "minOrder", "maxDiscount", "maxUses",
+        "isActive", "categoryId", "restaurantId", "oncePerCustomer",
+        "bogoType", "triggerVariant", "rewardVariant", "defaultFreeDishId",
+        "bogoDishId", "maxFreeItems", "badgeText", "menuSection", "autoApply"
+    ]
+    for field in updatable_fields:
+        if field in data:
+            val = data[field]
+            if field == "code" and val:
+                val = str(val).upper().strip()
+            elif field in ("value", "minOrder", "maxDiscount") and val is not None:
+                val = float(val)
+            elif field in ("maxUses", "maxFreeItems") and val is not None:
+                val = int(val)
+            setattr(coupon, field, val)
+
+    if "expiresAt" in data:
+        coupon.expiresAt = datetime.fromisoformat(data["expiresAt"]) if data["expiresAt"] else None
+
+    await db.commit()
+    await db.refresh(coupon)
+    return {"coupon": {"id": coupon.id, "code": coupon.code, "isActive": coupon.isActive}}
 
 
 @router.delete("/coupons/{coupon_id}")

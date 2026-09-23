@@ -139,32 +139,14 @@ async def verify_payment(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Verify payment signature and update order status.
-    Expected payload: {"orderId": "xxx", "paymentId": "xxx", "signature": "optional"}
+    Payment verification endpoint — DISABLED.
+    All payment verification must go through /razorpay/verify-signature
+    with proper HMAC signature verification.
     """
-    order_id = payload.get("orderId")
-    payment_id = payload.get("paymentId")
-
-    if not order_id:
-        raise HTTPException(status_code=400, detail="orderId is required")
-
-    stmt = select(Order).where(Order.id == order_id)
-    result = await db.execute(stmt)
-    order = result.scalars().first()
-
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-
-    order.paymentStatus = PaymentStatus.PAID
-    await db.commit()
-
-    return {
-        "success": True,
-        "message": "Payment verified successfully",
-        "orderId": order_id,
-        "paymentId": payment_id or "pay_simulated_123",
-        "status": "PAID"
-    }
+    raise HTTPException(
+        status_code=403,
+        detail="Direct payment verification is disabled. Use gateway-specific verification endpoints with proper signature validation."
+    )
 
 
 @router.post("/razorpay/sync-order")

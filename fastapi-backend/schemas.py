@@ -3,7 +3,7 @@ Pydantic schemas for FastAPI request/response validation.
 Provides type-safe, self-documenting API contracts.
 """
 
-from pydantic import BaseModel, Field, EmailStr, validator, constr
+from pydantic import BaseModel, Field, EmailStr, field_validator, ValidationInfo, constr
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
@@ -74,14 +74,17 @@ class ProductCreate(BaseModel):
     vendor: Optional[str] = None
     vendorId: Optional[str] = None
 
-    @validator('price')
-    def price_less_than_mrp(cls, v, values):
-        if 'mrp' in values and v > values['mrp']:
+    @field_validator('price')
+    @classmethod
+    def price_less_than_mrp(cls, v: float, info: ValidationInfo) -> float:
+        mrp = info.data.get('mrp') if info.data else None
+        if mrp is not None and v > mrp:
             raise ValueError('Selling price cannot exceed MRP')
         return v
 
-    @validator('name')
-    def name_not_empty(cls, v):
+    @field_validator('name')
+    @classmethod
+    def name_not_empty(cls, v: str) -> str:
         if not v or not v.strip():
             raise ValueError('Product name is required')
         return v.strip()
@@ -195,13 +198,14 @@ class OrderItem(BaseModel):
 class OrderCreate(BaseModel):
     addressId: str = Field(..., min_length=1)
     paymentMethod: str = Field(..., description="COD, ONLINE, or UPI")
-    items: List[OrderItem] = Field(..., min_items=1)
+    items: List[OrderItem] = Field(..., min_length=1)
     couponCode: Optional[str] = Field(None, max_length=50)
     notes: Optional[str] = Field(None, max_length=500)
 
-    @validator('paymentMethod')
-    def valid_payment_method(cls, v):
-        allowed = ['COD', 'ONLINE', 'UPI']
+    @field_validator('paymentMethod')
+    @classmethod
+    def valid_payment_method(cls, v: str) -> str:
+        allowed = ['COD', 'ONLINE', 'UPI', 'CARD', 'WALLET']
         if v.upper() not in allowed:
             raise ValueError(f'Payment method must be one of: {", ".join(allowed)}')
         return v.upper()
@@ -210,9 +214,10 @@ class OrderStatusUpdate(BaseModel):
     status: str = Field(..., description="New order status")
     notes: Optional[str] = Field(None, max_length=500)
 
-    @validator('status')
-    def valid_status(cls, v):
-        allowed = ['PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED']
+    @field_validator('status')
+    @classmethod
+    def valid_status(cls, v: str) -> str:
+        allowed = ['PENDING', 'ADMIN_PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED']
         if v.upper() not in allowed:
             raise ValueError(f'Status must be one of: {", ".join(allowed)}')
         return v.upper()
@@ -347,8 +352,9 @@ class CouponCreate(BaseModel):
     expiresAt: Optional[datetime] = None
     isActive: bool = Field(default=True)
 
-    @validator('discountType')
-    def valid_discount_type(cls, v):
+    @field_validator('discountType')
+    @classmethod
+    def valid_discount_type(cls, v: str) -> str:
         if v.upper() not in ['FLAT', 'PERCENT']:
             raise ValueError('discountType must be FLAT or PERCENT')
         return v.upper()

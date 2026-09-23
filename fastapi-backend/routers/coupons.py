@@ -4,6 +4,7 @@ from sqlalchemy.future import select
 from sqlalchemy import func, and_, or_, not_
 from typing import Dict, Any, Optional, List
 from datetime import datetime
+import re
 
 from database import get_db
 from models import Coupon, Order, Restaurant, Product
@@ -127,19 +128,41 @@ async def validate_coupon(
     # Calculate Discount
     discount_amount = 0.0
     free_items = []
+    free_gift_details = None
     nudge_message = None
+
+    def parse_trigger_variant(raw):
+        raw_str = str(raw or "").strip()
+        size_match = re.search(r'\b(medium|large|small|regular|half|full)\b', raw_str, re.I)
+        trigger_sz = size_match.group(1).lower() if size_match else None
+        num_match = re.search(r'\b\d+\b', raw_str)
+        min_qty = int(num_match.group(0)) if num_match else (int(raw_str) if raw_str and not trigger_sz else 1)
+        return min_qty, trigger_sz
+
+    def get_variant_text(it):
+        sel = str(it.get("selectedVariant") or "")
+        var = str(it.get("variant") or "")
+        unit = str(it.get("unit") or "")
+        nm = str(it.get("name") or "")
+        p_name = str((it.get("product") or {}).get("name") or "")
+        return f"{sel} {var} {unit} {nm} {p_name}".lower()
 
     if coupon.discountType == "BOGO":
         bogo_items = restaurant_items if coupon.restaurantId else items
-        if coupon.menuSection:
+        if coupon.bogoDishId:
+            bogo_items = [
+                it for it in bogo_items
+                if (it.get("productId") or it.get("id") or (it.get("product") or {}).get("id") or "").split("_")[0] == coupon.bogoDishId
+            ]
+        elif coupon.menuSection:
             sec_filters = [s.strip().lower() for s in coupon.menuSection.split(",") if s.strip()]
             if sec_filters:
                 known_sections = ['burger', 'sandwich', 'pasta', 'maggie', 'maggi', 'calzone', 'garlic', 'beverage', 'drink', 'dessert', 'icecream', 'biryani', 'pizza', 'shake']
                 filtered_bogo = []
                 for it in bogo_items:
-                    m_sec = str(it.get("menuSection") or "").lower()
-                    tags = [str(t).lower() for t in (it.get("tags") or [])]
-                    name = str(it.get("name") or "").lower()
+                    m_sec = str(it.get("menuSection") or (it.get("product") or {}).get("menuSection") or "").lower()
+                    tags = [str(t).lower() for t in (it.get("tags") or (it.get("product") or {}).get("tags") or [])]
+                    name = str(it.get("name") or (it.get("product") or {}).get("name") or "").lower()
 
                     matches = False
                     for f in sec_filters:
@@ -159,23 +182,25 @@ async def validate_coupon(
             trigger_var = (coupon.triggerVariant or "large").lower().strip()
             reward_var = (coupon.rewardVariant or "small").lower().strip()
 
-            def get_variant_text(it):
-                sel = str(it.get("selectedVariant") or "")
-                var = str(it.get("variant") or "")
-                unit = str(it.get("unit") or "")
-                nm = str(it.get("name") or "")
-                return f"{sel} {var} {unit} {nm}".lower()
-
             trigger_items = [it for it in bogo_items if trigger_var in get_variant_text(it)]
             total_trigger_qty = sum(int(it.get("quantity", 1)) for it in trigger_items)
             if total_trigger_qty == 0:
                 sec_label = f" ({coupon.menuSection})" if coupon.menuSection else ""
+                dish_label = " of selected dish" if coupon.bogoDishId else ""
                 raise HTTPException(
                     status_code=400,
-                    detail=f"This offer requires adding a {coupon.triggerVariant or 'Large'}{sec_label} item."
+                    detail=f"This offer requires adding a {coupon.triggerVariant or 'Large'}{sec_label}{dish_label}."
                 )
 
-            reward_items = [it for it in bogo_items if reward_var in get_variant_text(it)]
+            reward_pool = bogo_items if coupon.bogoDishId else (bogo_items if coupon.menuSection else (restaurant_items if coupon.restaurantId else items))
+            if coupon.defaultFreeDishId:
+                reward_items = [
+                    it for it in (restaurant_items if coupon.restaurantId else items)
+                    if (it.get("productId") or it.get("id") or (it.get("product") or {}).get("id") or "").split("_")[0] == coupon.defaultFreeDishId
+                ]
+            else:
+                reward_items = [it for it in reward_pool if reward_var in get_variant_text(it)]
+
             allowed_free = min(total_trigger_qty, coupon.maxFreeItems or 3)
             if not reward_items:
                 sec_label = f" ({coupon.menuSection})" if coupon.menuSection else ""
@@ -201,36 +226,65 @@ async def validate_coupon(
                         break
 
         elif coupon.bogoType == "FREE_GIFT":
-            min_trigger = int(coupon.triggerVariant or 2)
-            total_trigger = sum(int(it.get("quantity", 1)) for it in bogo_items)
+            min_trigger, trigger_size = parse_trigger_variant(coupon.triggerVariant)
+            qualifying_items = [it for it in bogo_items if trigger_size in get_variant_text(it)] if trigger_size else bogo_items
+            total_trigger = sum(int(it.get("quantity", 1)) for it in qualifying_items)
+
             if total_trigger < min_trigger:
                 sec_label = f" ({coupon.menuSection})" if coupon.menuSection else ""
+                size_label = f" {trigger_size.upper()}" if trigger_size else ""
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Add at least {min_trigger} dishes{sec_label} to unlock your FREE GIFT! 🎁"
+                    detail=f"Add at least {min_trigger}{size_label} qualifying dishes{sec_label} to unlock your FREE GIFT! 🎁"
                 )
+
             gift_dish = None
             if coupon.defaultFreeDishId:
                 p_stmt = select(Product).where(Product.id == coupon.defaultFreeDishId)
                 p_res = await db.execute(p_stmt)
                 gift_dish = p_res.scalars().first()
 
-            # H7 FIX: Only apply 100% discount if gift item is already present in user's cart
-            in_cart = False
-            if gift_dish:
-                in_cart = any((it.get("productId") or it.get("id") or "").split("_")[0] == gift_dish.id for it in items)
+            reward_tag = re.sub(r'[^a-z0-9]', '', (coupon.rewardVariant or "").lower())
 
-            if in_cart and gift_dish:
-                discount_amount = float(gift_dish.price)
+            # Find matching gift in user's cart
+            matching_gift_in_cart = None
+            cart_pool = restaurant_items if coupon.restaurantId else items
+            for it in cart_pool:
+                base_id = (it.get("productId") or it.get("id") or (it.get("product") or {}).get("id") or "").split("_")[0]
+                if coupon.defaultFreeDishId and base_id == coupon.defaultFreeDishId:
+                    matching_gift_in_cart = it
+                    break
+                if reward_tag:
+                    name = str(it.get("name") or (it.get("product") or {}).get("name") or "").lower()
+                    m_sec = str(it.get("menuSection") or (it.get("product") or {}).get("menuSection") or "").lower()
+                    tags = [str(t).lower() for t in (it.get("tags") or (it.get("product") or {}).get("tags") or [])]
+                    v_text = get_variant_text(it)
+                    if reward_tag in name or any(reward_tag in t for t in tags) or reward_tag in m_sec or reward_tag in v_text:
+                        matching_gift_in_cart = it
+                        break
+
+            if matching_gift_in_cart:
+                free_price = float(matching_gift_in_cart.get("price", gift_dish.price if gift_dish else 0.0))
+                discount_amount = free_price
                 free_items.append({
-                    "id": gift_dish.id,
-                    "productId": gift_dish.id,
-                    "name": gift_dish.name,
+                    "id": matching_gift_in_cart.get("id") or (gift_dish.id if gift_dish else None),
+                    "productId": matching_gift_in_cart.get("productId") or matching_gift_in_cart.get("id") or (gift_dish.id if gift_dish else None),
+                    "name": matching_gift_in_cart.get("name") or (gift_dish.name if gift_dish else "Free Gift"),
                     "freeQty": 1,
-                    "price": discount_amount
+                    "price": free_price
                 })
             elif gift_dish:
+                free_gift_details = {
+                    "id": gift_dish.id,
+                    "name": gift_dish.name,
+                    "price": float(gift_dish.price),
+                    "imageUrl": gift_dish.imageUrl,
+                    "eligibleQty": 1
+                }
                 nudge_message = f"🎁 Congratulations! Add 1x '{gift_dish.name}' to your cart to get it 100% FREE!"
+            else:
+                gift_label = (coupon.rewardVariant or "Free Gift Dish").upper()
+                nudge_message = f"Add any {gift_label} to get it 100% FREE! 🎁"
 
         elif coupon.bogoType == "CHEAPEST_FREE":
             total_qty = sum(int(it.get("quantity", 1)) for it in bogo_items)
@@ -255,8 +309,7 @@ async def validate_coupon(
         elif coupon.bogoType == "SAME_ITEM" or not coupon.bogoType:
             eligible = bogo_items
             if coupon.bogoDishId:
-                eligible = [it for it in bogo_items if (it.get("productId") or it.get("id")) == coupon.bogoDishId]
-            # H9 FIX: Enforce maxFreeCap (default 3)
+                eligible = [it for it in bogo_items if (it.get("productId") or it.get("id") or (it.get("product") or {}).get("id") or "").split("_")[0] == coupon.bogoDishId]
             max_free_cap = getattr(coupon, "maxFreeItems", 3) or 3
             for it in eligible:
                 qty = int(it.get("quantity", 1))
@@ -280,7 +333,6 @@ async def validate_coupon(
             discount_amount = coupon.maxDiscount
 
     elif coupon.discountType == "FREE_DELIVERY":
-        # H5 FIX: Flat ₹25 delivery discount
         discount_amount = 25.0
     elif coupon.discountType == "FLAT":
         discount_amount = min(coupon.value, eligible_subtotal)
@@ -296,10 +348,15 @@ async def validate_coupon(
             "code": coupon.code,
             "discountType": coupon.discountType,
             "bogoType": coupon.bogoType,
+            "triggerVariant": coupon.triggerVariant,
+            "rewardVariant": coupon.rewardVariant,
+            "bogoDishId": coupon.bogoDishId,
+            "defaultFreeDishId": coupon.defaultFreeDishId,
             "badgeText": coupon.badgeText,
             "value": coupon.value,
             "discountAmount": round(discount_amount, 2),
             "freeItems": free_items,
+            "freeGiftDetails": free_gift_details,
             "nudgeMessage": nudge_message,
         }
     }
