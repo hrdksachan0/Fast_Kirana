@@ -59,50 +59,42 @@ export async function requireRole(allowedRoles: string[], request?: Request) {
   }
 
   // 2. Second priority: Standard verified NextAuth Session
-  const sessionRole = session?.user?.role?.toUpperCase()
-  const userEmail = (session?.user?.email || '').toLowerCase()
-  const userPhone = (session?.user?.phone || '')
-  const phoneDigits = userPhone.replace(/\D/g, '').slice(-10)
-  const assignedStoreId = session?.user?.assignedStoreId
+  if (session?.user) {
+    let sessionRole = session.user.role?.toUpperCase()
+    let userEmail = (session.user.email || '').toLowerCase()
+    let userPhone = (session.user.phone || '')
+    let phoneDigits = userPhone.replace(/\D/g, '').slice(-10)
+    let assignedStoreId = session.user.assignedStoreId
 
-  const isSuper = isRootAdminAccount({
-    email: userEmail,
-    phone: userPhone,
-    role: sessionRole,
-  }) ||
-    userEmail.startsWith('admin') || 
-    userEmail.includes('hrdk') || 
-    isSuperadminPhone(phoneDigits) ||
-    (sessionRole === 'ADMIN' && !assignedStoreId)
-
-  if (isSuper || (sessionRole && (allowedRoles.includes(sessionRole) || sessionRole === 'ADMIN' || sessionRole === 'SUPER_ADMIN'))) {
-    return { error: null, session }
-  }
-
-  // 3. Fallback: If session role in JWT cookie is stale/missing, sync directly with DB
-  if (session?.user?.id) {
-    try {
-      const { prisma } = await import('@/lib/prisma')
-      const dbUser = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { id: true, role: true, email: true, phone: true, assignedStoreId: true, assignedRestaurantId: true }
-      })
-      if (dbUser) {
-        const dbRole = dbUser.role?.toUpperCase()
-        const dbEmail = (dbUser.email || '').toLowerCase()
-        const dbPhone = (dbUser.phone || '').replace(/\D/g, '').slice(-10)
-        const isDbSuper = isRootAdminAccount({ email: dbEmail, phone: dbPhone, role: dbRole }) ||
-          dbEmail.startsWith('admin') || dbEmail.includes('hrdk') || isSuperadminPhone(dbPhone) ||
-          (dbRole === 'ADMIN' && !dbUser.assignedStoreId)
-
-        if (isDbSuper || (dbRole && (allowedRoles.includes(dbRole) || dbRole === 'ADMIN' || dbRole === 'SUPER_ADMIN'))) {
-          session.user.role = dbRole as any
-          if (dbUser.assignedStoreId) session.user.assignedStoreId = dbUser.assignedStoreId
-          if (dbUser.assignedRestaurantId) session.user.assignedRestaurantId = dbUser.assignedRestaurantId
-          return { error: null, session }
+    // Always ensure assignedStoreId is fresh from DB for staff roles
+    if (session.user.id) {
+      try {
+        const { prisma } = await import('@/lib/prisma')
+        const dbUser = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { id: true, role: true, email: true, phone: true, assignedStoreId: true, assignedRestaurantId: true }
+        })
+        if (dbUser) {
+          sessionRole = dbUser.role?.toUpperCase() || sessionRole
+          session.user.role = sessionRole as any
+          session.user.assignedStoreId = dbUser.assignedStoreId || null
+          session.user.assignedRestaurantId = dbUser.assignedRestaurantId || null
+          assignedStoreId = dbUser.assignedStoreId || null
+          if (dbUser.phone) session.user.phone = dbUser.phone
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
+
+    const isSuper = isRootAdminAccount({
+      email: userEmail,
+      phone: userPhone,
+      role: sessionRole,
+      assignedStoreId,
+    }) || isSuperadminPhone(phoneDigits)
+
+    if (isSuper || (sessionRole && (allowedRoles.includes(sessionRole) || sessionRole === 'ADMIN' || sessionRole === 'SUPER_ADMIN'))) {
+      return { error: null, session }
+    }
   }
 
   // 4. Fallback from request x-user-id header (for API / dashboard calls)
@@ -218,4 +210,40 @@ export async function requireOrderAccess(orderUserId: string, extraRoles: string
     return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }), session: null }
   }
   return { error: null, session }
+}
+
+/**
+ * Resolves the effective storeId for an API request or dashboard view.
+ * For branch admins (who have assignedStoreId), STRICTLY returns their assignedStoreId.
+ * They are NEVER allowed to switch to or query data from another store hub.
+ * For superadmins, returns requestedStoreId if provided (or null for all).
+ */
+export function getEffectiveStoreId(session: any, requestedStoreId?: string | null): string | null {
+  const user = session?.user
+  if (!user) return null
+
+  const assignedStoreId = user.assignedStoreId
+  if (assignedStoreId) {
+    // Hub Branch Admin / Staff: strictly locked to their assigned store!
+    return assignedStoreId
+  }
+
+  const email = (user.email || '').toLowerCase()
+  const phone = (user.phone || '').replace(/\D/g, '').slice(-10)
+  const role = (user.role || '').toUpperCase()
+
+  const isSuper = isRootAdminAccount({
+    email,
+    phone,
+    role,
+    assignedStoreId: null,
+  }) || isSuperadminPhone(phone)
+
+  if (isSuper) {
+    return requestedStoreId && requestedStoreId !== 'ALL' && requestedStoreId !== 'all'
+      ? requestedStoreId
+      : null
+  }
+
+  return null
 }

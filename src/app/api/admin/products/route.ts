@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
-import { requireAdmin } from '@/lib/auth-guard'
+import { requireAdmin, getEffectiveStoreId } from '@/lib/auth-guard'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { extractCityFromStoreName } from '@/lib/store-resolver'
 
 export async function GET(request: Request) {
-  const adminResult = await requireAdmin()
+  const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
   const session = adminResult.session
 
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   const topPicks = searchParams.get('topPicks') === 'true'
   const bestSellers = searchParams.get('bestSellers') === 'true'
   const type = searchParams.get('type')
-  const storeId = searchParams.get('storeId') || (session?.user as any)?.assignedStoreId || null
+  const storeId = getEffectiveStoreId(session, searchParams.get('storeId'))
   
   const skip = (page - 1) * limit
 
@@ -84,24 +84,20 @@ export async function GET(request: Request) {
         OR: [
           {
             restaurantId: null,
-            OR: [
-              {
-                inventories: {
-                  some: {
-                    storeId
-                  }
-                }
-              },
-              {
-                inventories: {
-                  none: {}
-                }
+            inventories: {
+              some: {
+                storeId
               }
-            ]
+            }
           },
-          ...(storeCity ? [{
-            restaurant: { city: { contains: storeCity, mode: 'insensitive' as const } }
-          }] : [])
+          {
+            restaurant: {
+              OR: [
+                { storeId },
+                ...(storeCity ? [{ city: { contains: storeCity, mode: 'insensitive' as const } }] : [])
+              ]
+            }
+          }
         ]
       })
     }

@@ -820,6 +820,7 @@ export function RestaurantStorefront({ restaurant, products, recommendedAddons =
                               <ProductCard
                                 product={{
                                   ...product,
+                                  menuSection: product.menuSection || cat.tag || cat.title,
                                   restaurant,
                                   restaurantIsOpen: operatingStatus.isOpen,
                                 }}
@@ -835,6 +836,7 @@ export function RestaurantStorefront({ restaurant, products, recommendedAddons =
                               <ProductCard
                                 product={{
                                   ...product,
+                                  menuSection: product.menuSection || cat.tag || cat.title,
                                   restaurant,
                                   restaurantIsOpen: operatingStatus.isOpen,
                                 }}

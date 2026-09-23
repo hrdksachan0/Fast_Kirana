@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import type { CartItem } from '@/stores/cart-store'
 import { useCartStore } from '@/stores/cart-store'
+import { isProductEligibleForCoupon } from '@/lib/coupon-rules'
 import { isCafeProduct } from '@/lib/utils'
 import { getDistanceKm, getDeliveryRules } from '@/lib/distance'
 import { getRestaurantLocation } from '@/lib/restaurant-location'
@@ -60,9 +61,30 @@ export function useCheckoutPricing({
     deliveryFeeVal,
   } = settings
 
+  const cartHash = useMemo(
+    () => items.map((i) => `${i.product.id}:${i.quantity}:${i.product.price}`).join('|'),
+    [items]
+  )
+
   // Auto-validate coupon on checkout page load
   useEffect(() => {
     if (appliedCouponCode && items.length > 0) {
+      // Immediate client-side check: If BOGO offer is applied, ensure cart still has enough qualifying items
+      if (appliedCoupon?.discountType === 'BOGO') {
+        const qualifying = items.filter((it) => isProductEligibleForCoupon(it.product, appliedCoupon))
+        const qQty = qualifying.reduce((sum, it) => sum + (it.quantity || 1), 0)
+        if (appliedCoupon.bogoType === 'CHEAPEST_FREE' && qQty < 2) {
+          useCartStore.getState().setAppliedCouponCode(null)
+          setAppliedCoupon(null)
+          return
+        }
+        if (appliedCoupon.bogoType === 'SAME_ITEM' && !qualifying.some((it) => (it.quantity || 1) >= 2)) {
+          useCartStore.getState().setAppliedCouponCode(null)
+          setAppliedCoupon(null)
+          return
+        }
+      }
+
       setIsValidatingCoupon(true)
       fetch('/api/coupons/validate', {
         method: 'POST',
@@ -72,12 +94,17 @@ export function useCheckoutPricing({
           subtotal,
           items: items.map((i) => ({
             id: i.product.id,
+            productId: i.product.id,
             name: i.product.name,
             price: i.product.price,
-            categoryId: i.product.category?.id,
+            categoryId: i.product.category?.id || (i.product as any).categoryId,
+            restaurantId: i.product.restaurantId || (i.product.restaurant as any)?.id || (i.product as any).restaurant_id || null,
+            menuSection: (i.product as any).menuSection || null,
+            tags: i.product.tags || [],
             quantity: i.quantity,
-            selectedVariant: (i.product as any).selectedVariant || (i as any).selectedVariant,
-            variant: (i.product as any).variant || (i as any).variant,
+            selectedVariant: (i.product as any).selectedVariant || (i as any).selectedVariant || i.product.unit || null,
+            variant: (i.product as any).variant || (i as any).variant || i.product.unit || null,
+            unit: i.product.unit || null,
           })),
         }),
       })
@@ -86,15 +113,20 @@ export function useCheckoutPricing({
           throw new Error('Invalid')
         })
         .then((data) => {
-          setAppliedCoupon({
-            code: data.coupon.code,
-            discountAmount: data.coupon.discountAmount,
-            discountType: data.coupon.discountType,
-            bogoType: data.coupon.bogoType,
-            badgeText: data.coupon.badgeText,
-            freeGiftDetails: data.coupon.freeGiftDetails,
-            nudgeMessage: data.coupon.nudgeMessage,
-          })
+          if (data?.coupon && (data.coupon.discountAmount > 0 || data.coupon.nudgeMessage)) {
+            setAppliedCoupon({
+              code: data.coupon.code,
+              discountAmount: data.coupon.discountAmount,
+              discountType: data.coupon.discountType,
+              bogoType: data.coupon.bogoType,
+              badgeText: data.coupon.badgeText,
+              freeGiftDetails: data.coupon.freeGiftDetails,
+              nudgeMessage: data.coupon.nudgeMessage,
+            })
+          } else {
+            useCartStore.getState().setAppliedCouponCode(null)
+            setAppliedCoupon(null)
+          }
         })
         .catch(() => {
           useCartStore.getState().setAppliedCouponCode(null)
@@ -106,7 +138,7 @@ export function useCheckoutPricing({
     } else {
       setAppliedCoupon(null)
     }
-  }, [appliedCouponCode, items.length, subtotal])
+  }, [appliedCouponCode, cartHash, subtotal])
 
   const b2bDiscount = 0
   const adjustedSubtotal = subtotal - b2bDiscount

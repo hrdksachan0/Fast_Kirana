@@ -1,6 +1,6 @@
 import enum
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Any
 from sqlalchemy import (
     Column, String, Integer, Float, Boolean, DateTime, ForeignKey,
     Text, JSON, Index, UniqueConstraint, Enum as SAEnum
@@ -20,6 +20,7 @@ class Role(str, enum.Enum):
 
 
 class OrderStatus(str, enum.Enum):
+    ADMIN_PENDING = "ADMIN_PENDING"
     PENDING = "PENDING"
     CONFIRMED = "CONFIRMED"
     PACKED = "PACKED"
@@ -109,7 +110,7 @@ class Product(Base):
     slug: Mapped[str] = mapped_column(String, unique=True, index=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     imageUrl: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    categoryId: Mapped[str] = mapped_column(String, ForeignKey("categories.id"), index=True)
+    categoryId: Mapped[Optional[str]] = mapped_column(String, ForeignKey("categories.id"), nullable=True, index=True)
     restaurantId: Mapped[Optional[str]] = mapped_column(String, ForeignKey("restaurants.id"), nullable=True, index=True)
     mrp: Mapped[float] = mapped_column(Float)
     price: Mapped[float] = mapped_column(Float)
@@ -118,7 +119,8 @@ class Product(Base):
     stock: Mapped[int] = mapped_column(Integer, default=0)
     isAvailable: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     tags: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
-    variants: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    variants: Mapped[Optional[Any]] = mapped_column(JSON, nullable=True)
+    addons: Mapped[Optional[Any]] = mapped_column(JSON, nullable=True)
     minStock: Mapped[int] = mapped_column(Integer, default=10)
     expiryDate: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     costPrice: Mapped[float] = mapped_column(Float, default=0.0)
@@ -130,6 +132,8 @@ class Product(Base):
     availableStartTime: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     availableEndTime: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     barcode: Mapped[Optional[str]] = mapped_column(String, nullable=True, unique=True)
+    vendor: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    vendorId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
     updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -403,6 +407,15 @@ class Coupon(Base):
     categoryId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     restaurantId: Mapped[Optional[str]] = mapped_column(String, ForeignKey("restaurants.id", ondelete="CASCADE"), nullable=True)
     oncePerCustomer: Mapped[bool] = mapped_column(Boolean, default=False)
+    bogoType: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    triggerVariant: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    rewardVariant: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    defaultFreeDishId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    maxFreeItems: Mapped[Optional[int]] = mapped_column(Integer, default=3)
+    badgeText: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    menuSection: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    bogoDishId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    autoApply: Mapped[bool] = mapped_column(Boolean, default=False)
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 

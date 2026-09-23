@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
-from sqlalchemy import func, and_, or_, desc, text
+from sqlalchemy import func, and_, or_, desc, text, update
 from datetime import datetime, date, time, timedelta
 import uuid
 import re
@@ -33,7 +33,9 @@ async def get_admin_rider_cash_summary(
     today_start = datetime.combine(date.today(), time.min)
 
     # 1. Fetch riders using standard SQLAlchemy enum filter
-    rider_stmt = select(User).options(selectinload(User.riderWallet)).where(User.role == Role.DELIVERY)
+    rider_stmt = select(User).options(selectinload(User.riderWallet)).where(
+        User.role == Role.DELIVERY
+    )
     rider_res = await db.execute(rider_stmt)
     riders = rider_res.scalars().all()
 
@@ -58,17 +60,29 @@ async def get_admin_rider_cash_summary(
 
         pending_rider_cash += float(wallet.cashInHand)
 
-        # Fetch today's COD stats for rider
+        # Fetch today's COD stats for rider (M15 FIX: deliveredAt filtering)
         cod_stmt = select(func.count(Order.id), func.coalesce(func.sum(Order.total), 0.0)).where(
             and_(
                 Order.deliveryUserId == r.id,
                 Order.paymentMethod == PaymentMethod.COD,
                 Order.status == OrderStatus.DELIVERED,
-                Order.createdAt >= today_start
+                func.coalesce(Order.deliveredAt, Order.createdAt) >= today_start
             )
         )
         cod_res = await db.execute(cod_stmt)
         today_cod_count, today_cod_total = cod_res.first() or (0, 0.0)
+
+        # M16 FIX: Fetch today's Online/UPI stats for rider
+        online_rider_stmt = select(func.count(Order.id), func.coalesce(func.sum(Order.total), 0.0)).where(
+            and_(
+                Order.deliveryUserId == r.id,
+                Order.paymentMethod.in_([PaymentMethod.UPI, PaymentMethod.CARD, PaymentMethod.WALLET]),
+                Order.status == OrderStatus.DELIVERED,
+                func.coalesce(Order.deliveredAt, Order.createdAt) >= today_start
+            )
+        )
+        online_rider_res = await db.execute(online_rider_stmt)
+        today_online_count, today_online_total = online_rider_res.first() or (0, 0.0)
 
         # Fetch today's deposits
         dep_stmt = select(func.coalesce(func.sum(CashDepositTransaction.amount), 0.0)).where(
@@ -92,6 +106,8 @@ async def get_admin_rider_cash_summary(
             "totalDeposited": float(wallet.totalDeposited),
             "todayCodOrdersCount": today_cod_count,
             "todayCodTotal": float(today_cod_total),
+            "todayOnlineOrdersCount": today_online_count,
+            "todayOnlineTotal": float(today_online_total),
             "todayDepositedTotal": float(today_dep_total)
         })
 
@@ -109,7 +125,7 @@ async def get_admin_rider_cash_summary(
         and_(
             Order.paymentMethod == PaymentMethod.COD,
             Order.status == OrderStatus.DELIVERED,
-            Order.createdAt >= today_start
+            func.coalesce(Order.deliveredAt, Order.createdAt) >= today_start
         )
     )
     delivered_cod_today = (await db.execute(delivered_cod_stmt)).scalar() or 0.0
@@ -119,7 +135,7 @@ async def get_admin_rider_cash_summary(
             Order.paymentMethod == PaymentMethod.COD,
             Order.status == OrderStatus.DELIVERED,
             Order.deliveryUserId.is_(None),
-            Order.createdAt >= today_start
+            func.coalesce(Order.deliveredAt, Order.createdAt) >= today_start
         )
     )
     counter_cash_today = (await db.execute(counter_cash_stmt)).scalar() or 0.0
@@ -186,6 +202,20 @@ async def settle_rider_cash(
     )
     db.add(transaction)
 
+    # H22 FIX: Mark delivered COD orders for this rider as settled to admin
+    now = datetime.utcnow()
+    settle_stmt = (
+        update(Order)
+        .where(
+            Order.deliveryUserId == payload.riderId,
+            Order.status == OrderStatus.DELIVERED,
+            Order.paymentMethod == PaymentMethod.COD,
+            Order.cashSettledToAdmin == False
+        )
+        .values(cashSettledToAdmin=True, cashSettledAt=now)
+    )
+    await db.execute(settle_stmt)
+
     await db.commit()
     await db.refresh(wallet)
 
@@ -226,6 +256,21 @@ async def save_admin_settings(
             else:
                 new_s = StoreSetting(key=key, value=str_val)
                 db.add(new_s)
+
+        # M14 FIX: Sync active restaurants if restaurant timings updated
+        r_open = payload.get("restaurant_open_time")
+        r_close = payload.get("restaurant_close_time")
+        if r_open or r_close:
+            try:
+                r_update = {}
+                if r_open:
+                    r_update["openTime"] = str(r_open)
+                if r_close:
+                    r_update["closeTime"] = str(r_close)
+                if r_update:
+                    await db.execute(update(Restaurant).where(Restaurant.isActive == True).values(**r_update))
+            except Exception as r_err:
+                pass
 
         if changed_entries:
             await db.commit()

@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
             OR
             (o.status::text = 'DELIVERED' AND (o."deliveryUserId" = ${effectiveUserId} OR o."deliveryUserId" IS NULL) AND COALESCE(o."deliveredAt", o."updatedAt", o."createdAt") >= CURRENT_DATE)
           )
-          AND (${riderStoreId}::text IS NULL OR o."storeId" = ${riderStoreId} OR o."storeId" IS NULL)
+          AND (${riderStoreId}::text IS NULL OR o."storeId" = ${riderStoreId})
         ORDER BY o."createdAt" DESC
       `
     } else {
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
         WHERE (o."deliveryMethod" = 'DELIVERY' OR o."deliveryMethod" IS NULL)
           AND (o."paymentMethod" = 'COD' OR o."paymentStatus" = 'PAID')
           AND o.status::text IN ('CONFIRMED', 'PREPARING', 'PACKED', 'SHIPPED', 'DELIVERED')
-          AND (${riderStoreId}::text IS NULL OR o."storeId" = ${riderStoreId} OR o."storeId" IS NULL)
+          AND (${riderStoreId}::text IS NULL OR o."storeId" = ${riderStoreId})
         ORDER BY o."createdAt" DESC
         LIMIT 50
       `

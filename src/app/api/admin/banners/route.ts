@@ -1,17 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/auth-guard'
+import { requireAdmin, getEffectiveStoreId } from '@/lib/auth-guard'
 import { revalidateTag } from 'next/cache'
 import { revalidateStorefront } from '@/lib/revalidate'
 
-// GET: Retrieve all banners (for admin console list)
-export async function GET() {
+// GET: Retrieve banners scoped by store hub
+export async function GET(request: NextRequest) {
   try {
-    const adminResult = await requireAdmin()
+    const adminResult = await requireAdmin(request)
     if (adminResult.error) return adminResult.error
     const session = adminResult.session
 
+    const { searchParams } = new URL(request.url)
+    const effectiveStoreId = getEffectiveStoreId(session, searchParams.get('storeId'))
+
+    const where: any = {}
+    if (effectiveStoreId && effectiveStoreId !== 'all') {
+      where.OR = [
+        { storeId: effectiveStoreId },
+        { storeId: null } // Global banners also visible in hub
+      ]
+    }
+
     const banners = await prisma.promoBanner.findMany({
+      where,
       orderBy: {
         sortOrder: 'asc'
       }
@@ -30,6 +42,7 @@ export async function GET() {
         rawCode: b.code,
         code: extra.couponCode !== undefined ? extra.couponCode : b.code,
         cardType: extra.cardType || b.type || 'standard',
+        storeId: b.storeId || extra.storeId || null,
       }
     })
 
@@ -59,6 +72,7 @@ export async function POST(request: NextRequest) {
       cardType: body.cardType || type || 'standard',
       placement: body.placement || (['dark_showcase', 'bento_grid', 'editorial', 'brand_offer'].includes(type) ? 'brand_card' : 'hero'),
       platform: body.platform || 'all',
+      storeId: body.storeId || null,
       eyebrowTag: body.eyebrowTag || null,
       primaryBrand: body.primaryBrand || null,
       secondaryBrand: body.secondaryBrand || null,
@@ -74,6 +88,8 @@ export async function POST(request: NextRequest) {
       videoUrl: body.videoUrl || null,
       couponCode: code || null,
     }
+    const effectiveStoreId = getEffectiveStoreId(session, body.storeId)
+    cardMeta.storeId = effectiveStoreId || null
     serializedCode = JSON.stringify(cardMeta)
 
     const banner = await prisma.promoBanner.create({
@@ -85,6 +101,7 @@ export async function POST(request: NextRequest) {
         type: type || 'custom',
         imageUrl: imageUrl || null,
         linkUrl: linkUrl || null,
+        storeId: effectiveStoreId || null,
         isActive: isActive !== undefined ? isActive : true,
         sortOrder: sortOrder !== undefined ? parseInt(String(sortOrder), 10) : 0,
       }
@@ -133,6 +150,7 @@ export async function PUT(request: NextRequest) {
       cardType: body.cardType || type || existing.type || 'standard',
       placement: body.placement !== undefined ? body.placement : (existingMeta.placement || 'hero'),
       platform: body.platform !== undefined ? body.platform : (existingMeta.platform || 'all'),
+      storeId: body.storeId !== undefined ? body.storeId : (existingMeta.storeId || null),
       eyebrowTag: body.eyebrowTag !== undefined ? body.eyebrowTag : null,
       primaryBrand: body.primaryBrand !== undefined ? body.primaryBrand : null,
       secondaryBrand: body.secondaryBrand !== undefined ? body.secondaryBrand : null,

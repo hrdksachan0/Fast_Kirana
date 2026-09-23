@@ -183,6 +183,16 @@ export function StoreControlBar({
               </div>
             )}
 
+            {/* Branch Admin Locked Hub Badge */}
+            {!isSuperAdmin && userAssignedStoreId && (
+              <div className="flex items-center gap-1.5 bg-muted/50 px-3 py-1.5 rounded-2xl border border-border/70">
+                <span className="text-[11px] font-black uppercase tracking-wider text-text-primary flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+                  🔒 {displayStoreName} (Hub Locked)
+                </span>
+              </div>
+            )}
+
             {/* SuperAdmin Kitchen Quick Switcher */}
             {isSuperAdmin && restaurantsList && restaurantsList.length > 0 && (
               <select

@@ -38,6 +38,7 @@ interface Coupon {
   rewardVariant?: string | null
   badgeText?: string | null
   autoApply?: boolean
+  defaultFreeDishId?: string | null
   value: number
   minOrder: number | string
   maxDiscount: number | string | null
@@ -58,6 +59,7 @@ interface CouponEditForm {
   bogoType?: string
   triggerVariant?: string
   rewardVariant?: string
+  defaultFreeDishId?: string
   restaurantId?: string
   menuSection?: string
   badgeText?: string
@@ -95,6 +97,219 @@ interface CouponsTabProps {
   startEditingCoupon: (c: Coupon) => void
 }
 
+function getRestaurantMenuSections(rest: any): Array<{ tag: string; title: string }> {
+  if (!rest || !rest.menuSections) return []
+  try {
+    const raw = typeof rest.menuSections === 'string' ? JSON.parse(rest.menuSections) : rest.menuSections
+    if (Array.isArray(raw)) {
+      return raw
+        .map((s: any) => ({
+          tag: s.tag || s.title?.toLowerCase().replace(/[^a-z0-9]/g, '') || '',
+          title: s.title || s.tag || '',
+        }))
+        .filter((s: any) => !!s.tag)
+    }
+  } catch {}
+  return []
+}
+
+function MenuSectionMultiSelect({
+  value,
+  onChange,
+  restaurant,
+}: {
+  value: string | null | undefined
+  onChange: (val: string) => void
+  restaurant: any
+}) {
+  const [customTag, setCustomTag] = useState('')
+  const [showAddCustom, setShowAddCustom] = useState(false)
+
+  const selectedTags = useMemo(() => {
+    if (!value) return []
+    return value
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean)
+  }, [value])
+
+  const availableSections = useMemo(() => {
+    const fromRest = getRestaurantMenuSections(restaurant)
+    const defaults = [
+      { tag: 'pizza', title: 'Pizza' },
+      { tag: 'burger', title: 'Burger' },
+      { tag: 'sandwich', title: 'Sandwich' },
+      { tag: 'pasta', title: 'Pasta' },
+      { tag: 'beverages', title: 'Beverages' },
+      { tag: 'chinese', title: 'Chinese' },
+      { tag: 'biryani', title: 'Biryani' },
+      { tag: 'desserts', title: 'Desserts' },
+    ]
+    const map = new Map<string, { tag: string; title: string }>()
+    fromRest.forEach((s) => {
+      if (s.tag) map.set(s.tag.toLowerCase(), s)
+    })
+    defaults.forEach((d) => {
+      if (!map.has(d.tag.toLowerCase())) {
+        map.set(d.tag.toLowerCase(), d)
+      }
+    })
+    selectedTags.forEach((t) => {
+      if (!map.has(t)) {
+        map.set(t, { tag: t, title: t.charAt(0).toUpperCase() + t.slice(1) })
+      }
+    })
+    return Array.from(map.values())
+  }, [restaurant, selectedTags])
+
+  const toggleTag = (tag: string) => {
+    const clean = tag.toLowerCase()
+    let next: string[]
+    if (selectedTags.includes(clean)) {
+      next = selectedTags.filter((t) => t !== clean)
+    } else {
+      next = [...selectedTags, clean]
+    }
+    onChange(next.join(','))
+  }
+
+  const selectAll = () => {
+    onChange('')
+  }
+
+  const handleAddCustom = (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    const clean = customTag.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '')
+    if (!clean) return
+    if (!selectedTags.includes(clean)) {
+      onChange([...selectedTags, clean].join(','))
+    }
+    setCustomTag('')
+    setShowAddCustom(false)
+  }
+
+  return (
+    <div className="space-y-2 p-2.5 rounded-xl bg-muted/20 border border-border">
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-[10px] font-bold text-text-secondary flex items-center gap-1.5">
+          <span>Restricted Menu Tags / Sections (Optional)</span>
+          {selectedTags.length > 0 ? (
+            <span className="px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-orange-500 text-white">
+              {selectedTags.length} active
+            </span>
+          ) : (
+            <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-green-500/15 text-green-700 dark:text-green-400">
+              All Sections (Whole Restaurant)
+            </span>
+          )}
+        </label>
+        {selectedTags.length > 0 && (
+          <button
+            type="button"
+            onClick={selectAll}
+            className="text-[10px] font-bold text-orange-600 hover:underline"
+          >
+            Clear (Apply to All)
+          </button>
+        )}
+      </div>
+
+      {/* Badges / Chips */}
+      <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
+        <button
+          type="button"
+          onClick={selectAll}
+          className={cn(
+            'px-2.5 py-1 text-xs rounded-lg border font-bold transition-all flex items-center gap-1',
+            selectedTags.length === 0
+              ? 'bg-primary text-white border-primary shadow-sm'
+              : 'bg-background hover:bg-muted/40 text-text-secondary border-border'
+          )}
+        >
+          {selectedTags.length === 0 && <span>✓</span>}
+          <span>All Menu Sections</span>
+        </button>
+
+        {availableSections.map((sec) => {
+          const isSelected = selectedTags.includes(sec.tag.toLowerCase())
+          return (
+            <button
+              key={sec.tag}
+              type="button"
+              onClick={() => toggleTag(sec.tag)}
+              className={cn(
+                'px-2.5 py-1 text-xs rounded-lg border transition-all flex items-center gap-1',
+                isSelected
+                  ? 'bg-orange-500 text-white border-orange-600 font-bold shadow-sm ring-1 ring-orange-500/40'
+                  : 'bg-background hover:bg-muted/40 text-text-secondary border-border font-medium'
+              )}
+            >
+              <span>{isSelected ? '✓' : '+'}</span>
+              <span>{sec.title}</span>
+            </button>
+          )
+        })}
+
+        {!showAddCustom ? (
+          <button
+            type="button"
+            onClick={() => setShowAddCustom(true)}
+            className="px-2 py-1 text-xs rounded-lg border border-dashed border-border text-text-muted hover:text-text-primary hover:border-text-secondary transition-all"
+          >
+            + Custom Tag
+          </button>
+        ) : (
+          <div className="flex items-center gap-1">
+            <input
+              type="text"
+              placeholder="tag name..."
+              value={customTag}
+              onChange={(e) => setCustomTag(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleAddCustom()
+                }
+              }}
+              className="px-2 py-1 text-xs w-24 rounded-lg border bg-background text-text-primary font-medium focus:outline-none focus:ring-1 focus:ring-orange-500"
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={() => handleAddCustom()}
+              className="px-2 py-1 text-xs rounded-lg bg-orange-500 text-white font-bold"
+            >
+              Add
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAddCustom(false)}
+              className="px-1.5 py-1 text-xs text-text-muted hover:text-text-primary"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="text-[9.5px] text-text-muted">
+        {selectedTags.length === 0 ? (
+          <span className="text-green-700 dark:text-green-400 font-medium">
+            ✓ Offer &amp; badges will apply to all dishes matching this restaurant.
+          </span>
+        ) : (
+          <span>
+            Offer &amp; badges will <strong className="text-text-primary">ONLY</strong> apply to dishes matching:{' '}
+            <span className="font-bold text-orange-600">
+              {selectedTags.join(', ')}
+            </span>
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function CouponsTab({
   coupons,
   categories,
@@ -118,6 +333,7 @@ export function CouponsTab({
 }: CouponsTabProps) {
   const [restaurants, setRestaurants] = useState<Array<{ id: string; name: string; slug: string; menuSections?: any }>>([])
   const [previewTab, setPreviewTab] = useState<'card' | 'menu' | 'cart'>('card')
+  const [restaurantDishes, setRestaurantDishes] = useState<Array<{ id: string; name: string; price: number; imageUrl?: string | null }>>([])
 
   useEffect(() => {
     fetch('/api/restaurants?all=true')
@@ -130,35 +346,58 @@ export function CouponsTab({
       .catch((err) => console.warn('Failed to load restaurants for coupons tab:', err))
   }, [])
 
-  const getRestaurantMenuSections = (rest: any) => {
-    if (!rest || !rest.menuSections) return []
-    try {
-      const raw = typeof rest.menuSections === 'string' ? JSON.parse(rest.menuSections) : rest.menuSections
-      if (Array.isArray(raw)) {
-        return raw
-          .map((s: any) => ({
-            tag: s.tag || s.title?.toLowerCase().replace(/[^a-z0-9]/g, '') || '',
-            title: s.title || s.tag || '',
-          }))
-          .filter((s: any) => !!s.tag)
-      }
-    } catch {}
-    return []
-  }
+  // Load dishes for active restaurant (for Free Gift Dish selector)
+  useEffect(() => {
+    const targetRestId = editingCoupon ? couponEditForm.restaurantId : newCoupon.restaurantId
+    if (!targetRestId) {
+      setRestaurantDishes([])
+      return
+    }
+    fetch(`/api/restaurants/${targetRestId}/menu`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.sections && Array.isArray(data.sections)) {
+          const dishes = data.sections.flatMap((s: any) => s.dishes || [])
+          setRestaurantDishes(dishes)
+        } else {
+          setRestaurantDishes([])
+        }
+      })
+      .catch((err) => console.warn('Failed to load restaurant dishes:', err))
+  }, [newCoupon.restaurantId, couponEditForm.restaurantId, editingCoupon])
 
   // Auto-generate suggested badge text based on inputs
   const autoGeneratedBadge = useMemo(() => {
     if (newCoupon.discountType === 'BOGO') {
+      if (newCoupon.bogoType === 'FREE_GIFT') {
+        const qty = newCoupon.triggerVariant || '2'
+        const giftDish = restaurantDishes.find((d) => d.id === newCoupon.defaultFreeDishId)
+        const sec = newCoupon.menuSection
+          ? ` ${newCoupon.menuSection.split(',').map((s: string) => s.trim().toUpperCase()).filter(Boolean).join(' & ')}`
+          : ' ITEMS'
+        const giftName = giftDish
+          ? giftDish.name.toUpperCase()
+          : (newCoupon.rewardVariant ? newCoupon.rewardVariant.toUpperCase() : 'FREE GIFT')
+        return `BUY ${qty}${sec} GET ${giftName} FREE`
+      }
       if (newCoupon.bogoType === 'BUY_LARGE_GET_SMALL') {
         const trig = (newCoupon.triggerVariant || 'Large').toUpperCase()
         const rew = (newCoupon.rewardVariant || 'Small').toUpperCase()
-        const sec = newCoupon.menuSection ? ` ${newCoupon.menuSection.toUpperCase()}` : ''
+        const sec = newCoupon.menuSection
+          ? ` ${newCoupon.menuSection.split(',').map((s: string) => s.trim().toUpperCase()).filter(Boolean).join(' & ')}`
+          : ''
         return `BUY ${trig}${sec} GET ${rew} FREE`
       }
       if (newCoupon.bogoType === 'CHEAPEST_FREE') {
-        return 'BUY ANY 2, CHEAPEST FREE'
+        const sec = newCoupon.menuSection
+          ? ` ${newCoupon.menuSection.split(',').map((s: string) => s.trim().toUpperCase()).filter(Boolean).join(' & ')}`
+          : ''
+        return sec ? `BUY 2${sec}, CHEAPEST FREE` : 'BUY ANY 2, CHEAPEST FREE'
       }
-      return 'BUY 1 GET 1 FREE'
+      const sec = newCoupon.menuSection
+        ? ` ${newCoupon.menuSection.split(',').map((s: string) => s.trim().toUpperCase()).filter(Boolean).join(' & ')}`
+        : ''
+      return sec ? `BUY 1 GET 1 FREE ON${sec}` : 'BUY 1 GET 1 FREE'
     }
     if (newCoupon.discountType === 'FREE_DELIVERY') {
       return 'FREE DELIVERY'
@@ -170,7 +409,7 @@ export function CouponsTab({
       return `FLAT ₹${newCoupon.value || '50'} OFF`
     }
     return 'EXCLUSIVE OFFER'
-  }, [newCoupon.discountType, newCoupon.bogoType, newCoupon.triggerVariant, newCoupon.rewardVariant, newCoupon.menuSection, newCoupon.value])
+  }, [newCoupon.discountType, newCoupon.bogoType, newCoupon.triggerVariant, newCoupon.rewardVariant, newCoupon.defaultFreeDishId, newCoupon.menuSection, newCoupon.value, restaurantDishes])
 
   const selectedRestaurant = restaurants.find((r) => r.id === newCoupon.restaurantId)
   const effectiveBadge = newCoupon.badgeText?.trim() || autoGeneratedBadge
@@ -327,29 +566,11 @@ export function CouponsTab({
                           ✓ Scoped to {selectedRestaurant?.name}
                         </span>
                         <div className="pt-1">
-                          <label className="text-[10px] font-bold text-text-secondary block mb-1">
-                            Restricted Menu Tag / Section (Optional)
-                          </label>
-                          <select
-                            value={newCoupon.menuSection || ''}
-                            onChange={(e) => setNewCoupon({ ...newCoupon, menuSection: e.target.value })}
-                            className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-semibold"
-                          >
-                            <option value="">All Menu Sections (Whole Restaurant)</option>
-                            {getRestaurantMenuSections(selectedRestaurant).map((sec: any) => (
-                              <option key={sec.tag} value={sec.tag}>
-                                {sec.title} ({sec.tag})
-                              </option>
-                            ))}
-                            <option value="pizza">Pizza (pizza)</option>
-                            <option value="burger">Burger (burger)</option>
-                            <option value="sandwich">Sandwich (sandwich)</option>
-                            <option value="pasta">Pasta (pasta)</option>
-                            <option value="beverages">Beverages (beverages)</option>
-                          </select>
-                          <span className="text-[9.5px] text-text-muted px-1 block">
-                            Offer and badges will ONLY apply to dishes matching this menu section.
-                          </span>
+                          <MenuSectionMultiSelect
+                            value={newCoupon.menuSection}
+                            onChange={(val) => setNewCoupon({ ...newCoupon, menuSection: val })}
+                            restaurant={selectedRestaurant}
+                          />
                         </div>
                       </div>
                     )}
@@ -402,8 +623,18 @@ export function CouponsTab({
                   </div>
 
                   {/* Subtype radio options */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
                     {[
+                      {
+                        key: 'FREE_GIFT',
+                        title: '🎁 Free Gift Dish',
+                        desc: 'Buy 2, Get Specific Dish (e.g. Cake/Sandwich) Free',
+                      },
+                      {
+                        key: 'CHEAPEST_FREE',
+                        title: 'Cheapest Free',
+                        desc: 'Buy 2, lowest priced dish is 100% Free',
+                      },
                       {
                         key: 'BUY_LARGE_GET_SMALL',
                         title: 'Variant BOGO',
@@ -413,11 +644,6 @@ export function CouponsTab({
                         key: 'SAME_ITEM',
                         title: 'Same Dish BOGO',
                         desc: 'Buy 1, get second of same dish at ₹0',
-                      },
-                      {
-                        key: 'CHEAPEST_FREE',
-                        title: 'Cheapest Free',
-                        desc: 'Buy 2, lowest priced dish is 100% Free',
                       },
                     ].map((opt) => {
                       const sel = newCoupon.bogoType === opt.key
@@ -441,6 +667,67 @@ export function CouponsTab({
                       )
                     })}
                   </div>
+
+                  {/* Free Gift Configuration */}
+                  {newCoupon.bogoType === 'FREE_GIFT' && (
+                    <div className="space-y-3 p-3 rounded-xl bg-background/80 border border-border animate-slide-down">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[10px] font-black text-text-secondary block mb-1">
+                            Min Dishes to Buy (Trigger Qty)
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            placeholder="e.g. 2"
+                            value={newCoupon.triggerVariant || '2'}
+                            onChange={(e) => setNewCoupon({ ...newCoupon, triggerVariant: e.target.value })}
+                            className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-bold"
+                          />
+                          <span className="text-[9px] text-text-muted mt-0.5 block">
+                            Customer must buy at least this many dishes (e.g. 2 Pizzas).
+                          </span>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-black text-text-secondary block mb-1">
+                            Select Free Gift Dish (100% Free 🎁)
+                          </label>
+                          <select
+                            value={newCoupon.defaultFreeDishId || ''}
+                            onChange={(e) => setNewCoupon({ ...newCoupon, defaultFreeDishId: e.target.value })}
+                            className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-bold"
+                          >
+                            <option value="">Choose Restaurant Dish (e.g. Choco Lava Cake)...</option>
+                            {restaurantDishes.map((d) => (
+                              <option key={d.id} value={d.id}>
+                                {d.name} — ₹{d.price}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="text-[9px] text-text-muted mt-0.5 block">
+                            This specific dish will be 100% Free when condition is met.
+                          </span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-black text-text-secondary block mb-1">
+                          Or Free Dish Section / Keyword (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. sandwich, chocolava, beverage"
+                          value={newCoupon.rewardVariant || ''}
+                          onChange={(e) => setNewCoupon({ ...newCoupon, rewardVariant: e.target.value })}
+                          className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-bold"
+                        />
+                        <span className="text-[9px] text-text-muted mt-0.5 block">
+                          If set, any dish matching this section/tag added by customer will be Free.
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Variant match inputs if BUY_LARGE_GET_SMALL */}
                   {newCoupon.bogoType === 'BUY_LARGE_GET_SMALL' && (
@@ -1062,11 +1349,72 @@ export function CouponsTab({
                           onChange={(e) => setCouponEditForm({ ...couponEditForm, bogoType: e.target.value })}
                           className="w-full px-3 py-2 text-xs rounded-lg border bg-background font-bold text-text-primary"
                         >
+                          <option value="CHEAPEST_FREE">Buy 2 or more ➔ Get Cheapest Item Free</option>
+                          <option value="FREE_GIFT">🎁 Free Gift (Buy 2 Pizzas ➔ Get Sandwich/Cake Free)</option>
                           <option value="BUY_LARGE_GET_SMALL">Buy Large/Medium ➔ Get Small 100% Free</option>
                           <option value="SAME_ITEM">Buy 1 ➔ Get Exactly Same Item Free</option>
-                          <option value="CHEAPEST_FREE">Buy 2 or more ➔ Get Cheapest Item Free</option>
                         </select>
                       </div>
+
+                      {couponEditForm.bogoType === 'FREE_GIFT' && (
+                        <div className="space-y-3 pt-1">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-[10px] font-bold text-text-secondary block mb-1">
+                                Min Dishes to Buy (Trigger Qty)
+                              </label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={couponEditForm.triggerVariant || '2'}
+                                onChange={(e) => setCouponEditForm({ ...couponEditForm, triggerVariant: e.target.value })}
+                                placeholder="e.g. 2 (Buy 2 Pizzas)"
+                                className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-semibold"
+                              />
+                              <span className="text-[9px] text-text-muted mt-0.5 block">
+                                Customer must buy at least this many dishes (e.g. 2 Pizzas).
+                              </span>
+                            </div>
+
+                            <div>
+                              <label className="text-[10px] font-bold text-text-secondary block mb-1">
+                                Select Free Gift Dish (100% Free 🎁)
+                              </label>
+                              <select
+                                value={couponEditForm.defaultFreeDishId || ''}
+                                onChange={(e) => setCouponEditForm({ ...couponEditForm, defaultFreeDishId: e.target.value })}
+                                className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-semibold"
+                              >
+                                <option value="">Choose Restaurant Dish (e.g. Choco Lava Cake)...</option>
+                                {restaurantDishes.map((d) => (
+                                  <option key={d.id} value={d.id}>
+                                    {d.name} — ₹{d.price}
+                                  </option>
+                                ))}
+                              </select>
+                              <span className="text-[9px] text-text-muted mt-0.5 block">
+                                This dish will be given at ₹0 when condition is met!
+                              </span>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] font-bold text-text-secondary block mb-1">
+                              Or Free Gift Tag / Section (Optional)
+                            </label>
+                            <input
+                              type="text"
+                              value={couponEditForm.rewardVariant || ''}
+                              onChange={(e) => setCouponEditForm({ ...couponEditForm, rewardVariant: e.target.value })}
+                              placeholder="e.g. sandwich, chocolava, beverage"
+                              className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-semibold"
+                            />
+                            <span className="text-[9px] text-text-muted mt-0.5 block">
+                              If set, any dish matching this section/tag added by customer will be Free.
+                            </span>
+                          </div>
+                        </div>
+                      )}
 
                       {couponEditForm.bogoType === 'BUY_LARGE_GET_SMALL' && (
                         <div className="grid grid-cols-2 gap-3 pt-1">
@@ -1188,30 +1536,12 @@ export function CouponsTab({
 
                 {/* Restricted Restaurant Menu Tag / Section */}
                 {couponEditForm.restaurantId && (
-                  <div>
-                    <label className="text-[10px] font-bold text-text-secondary block mb-1">
-                      Restricted Menu Tag / Section (Optional)
-                    </label>
-                    <select
-                      value={couponEditForm.menuSection || ''}
-                      onChange={(e) => setCouponEditForm({ ...couponEditForm, menuSection: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
-                    >
-                      <option value="">All Menu Sections (No restriction)</option>
-                      {getRestaurantMenuSections(restaurants.find((r) => r.id === couponEditForm.restaurantId)).map((sec: any) => (
-                        <option key={sec.tag} value={sec.tag}>
-                          {sec.title} ({sec.tag})
-                        </option>
-                      ))}
-                      <option value="pizza">Pizza (pizza)</option>
-                      <option value="burger">Burger (burger)</option>
-                      <option value="sandwich">Sandwich (sandwich)</option>
-                      <option value="pasta">Pasta (pasta)</option>
-                      <option value="beverages">Beverages (beverages)</option>
-                    </select>
-                    <span className="text-[9.5px] text-text-muted mt-0.5 block">
-                      Offer &amp; badges will only apply to dishes matching this menu tag.
-                    </span>
+                  <div className="md:col-span-2">
+                    <MenuSectionMultiSelect
+                      value={couponEditForm.menuSection}
+                      onChange={(val) => setCouponEditForm({ ...couponEditForm, menuSection: val })}
+                      restaurant={restaurants.find((r) => r.id === couponEditForm.restaurantId)}
+                    />
                   </div>
                 )}
 

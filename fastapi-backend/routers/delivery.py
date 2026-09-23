@@ -308,47 +308,60 @@ async def confirm_doorstep_qr_payment(
 @router.get("/location")
 async def get_rider_delivery_location(
     orderId: str = Query(...),
-    current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Get live location coordinates of delivery partner, store (restaurant), and customer.
+    H21 FIX: Public endpoint to get live tracking coordinates of rider, store, and customer.
+    No auth required so customer tracking links work without login friction.
+    Gracefully handles unassigned rider state without throwing 400.
     """
+    clean_id = orderId.strip().lstrip("#")
     stmt = select(Order).options(
         selectinload(Order.address),
         selectinload(Order.restaurant)
-    ).where(Order.id == orderId)
+    ).where(or_(Order.id == clean_id, Order.readableId == clean_id))
     res = await db.execute(stmt)
     order = res.scalars().first()
 
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
+    rest_lat = float(order.restaurant.lat) if (order.restaurant and order.restaurant.lat is not None) else 26.1534185
+    rest_lng = float(order.restaurant.lng) if (order.restaurant and order.restaurant.lng is not None) else 80.1714024
+    cust_lat = float(order.address.lat) if (order.address and order.address.lat is not None) else rest_lat
+    cust_lng = float(order.address.lng) if (order.address and order.address.lng is not None) else rest_lng
+
     if not order.deliveryUserId:
-        raise HTTPException(status_code=400, detail="No delivery agent assigned")
+        return {
+            "rider": None,
+            "restaurant": {"lat": rest_lat, "lng": rest_lng},
+            "customer": {"lat": cust_lat, "lng": cust_lng},
+            "status": order.status.value,
+            "message": "Order is being prepared. Delivery partner will be assigned shortly."
+        }
 
     # Fetch active coordinates from User model
     r_stmt = select(User).where(User.id == order.deliveryUserId)
     r_res = await db.execute(r_stmt)
     rider = r_res.scalars().first()
 
-    lat = rider.liveLat if (rider and rider.liveLat is not None) else (order.restaurant.lat if order.restaurant else 26.1534185)
-    lng = rider.liveLng if (rider and rider.liveLng is not None) else (order.restaurant.lng if order.restaurant else 80.1714024)
+    lat = rider.liveLat if (rider and rider.liveLat is not None) else (order.deliveryLat or rest_lat)
+    lng = rider.liveLng if (rider and rider.liveLng is not None) else (order.deliveryLng or rest_lng)
 
     return {
         "rider": {
-            "name": rider.name if rider else "Rider",
+            "name": rider.name if rider else "Delivery Partner",
             "phone": rider.phone if rider else None,
-            "lat": float(lat) if lat is not None else 26.1534185,
-            "lng": float(lng) if lng is not None else 80.1714024,
+            "lat": float(lat),
+            "lng": float(lng),
         },
         "restaurant": {
-            "lat": float(order.restaurant.lat) if (order.restaurant and order.restaurant.lat is not None) else 26.1534185,
-            "lng": float(order.restaurant.lng) if (order.restaurant and order.restaurant.lng is not None) else 80.1714024,
+            "lat": rest_lat,
+            "lng": rest_lng,
         },
         "customer": {
-            "lat": float(order.address.lat) if (order.address and order.address.lat is not None) else 26.1534185,
-            "lng": float(order.address.lng) if (order.address and order.address.lng is not None) else 80.1714024,
+            "lat": cust_lat,
+            "lng": cust_lng,
         },
         "status": order.status.value
     }
@@ -361,12 +374,13 @@ async def update_rider_live_location(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Update rider's live tracking GPS coordinates.
+    Update rider's live tracking GPS coordinates and active order coordinates.
     """
     require_delivery_or_admin(current_user)
     user_id = current_user.get("id") or current_user.get("sub")
     lat = payload.get("lat")
     lng = payload.get("lng")
+    order_id = payload.get("orderId")
 
     if lat is None or lng is None:
         raise HTTPException(status_code=400, detail="Missing lat or lng coordinates")
@@ -379,6 +393,17 @@ async def update_rider_live_location(
         if user:
             user.liveLat = float(lat)
             user.liveLng = float(lng)
+
+            # Also update active Order delivery coordinates if orderId provided
+            if order_id:
+                clean_oid = str(order_id).strip().lstrip("#")
+                o_stmt = select(Order).where(or_(Order.id == clean_oid, Order.readableId == clean_oid))
+                o_res = await db.execute(o_stmt)
+                active_order = o_res.scalars().first()
+                if active_order:
+                    active_order.deliveryLat = float(lat)
+                    active_order.deliveryLng = float(lng)
+
             await db.commit()
             return {"success": True}
         else:

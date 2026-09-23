@@ -3,6 +3,7 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { OrderStatus, PaymentStatus, PaymentMethod, Role } from '@prisma/client'
 import { ApiResponder } from '@/lib/api-response'
+import { getEffectiveStoreId } from '@/lib/auth-guard'
 import { GROCERY_FREE_DELIVERY_THRESHOLD, CAFE_FREE_DELIVERY_THRESHOLD, COMBINED_FREE_DELIVERY_THRESHOLD, DELIVERY_FEE, TAX_RATE } from '@/lib/constants'
 import { STORE_PINCODE, GROCERY_PICKUP_ADDRESS, RESTAURANT_PICKUP_ADDRESS, resolvePincode } from '@/lib/store-config'
 import { orderLimiter, apiReadLimiter } from '@/lib/rate-limit'
@@ -690,14 +691,20 @@ export async function POST(request: NextRequest) {
                 })
 
                 if (coupon.menuSection) {
-                  const sec = coupon.menuSection.toLowerCase().replace(/[^a-z0-9]/g, '')
-                  rItems = rItems.filter((item: any) => {
-                    const dbProduct = dbProducts.find((p) => p.id === item.product.id.split('_')[0])
-                    const name = `${dbProduct?.name || ''} ${item.product?.name || ''}`.toLowerCase().replace(/[^a-z0-9]/g, '')
-                    const tags = (dbProduct?.tags || []).map((t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, ''))
-                    const mSec = String((dbProduct as any)?.menuSection || (item.product as any)?.menuSection || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-                    return name.includes(sec) || tags.some((t: string) => t.includes(sec)) || mSec.includes(sec)
-                  })
+                  const secFilters = coupon.menuSection
+                    .split(',')
+                    .map((s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]/g, ''))
+                    .filter(Boolean)
+
+                  if (secFilters.length > 0) {
+                    rItems = rItems.filter((item: any) => {
+                      const dbProduct = dbProducts.find((p) => p.id === item.product.id.split('_')[0])
+                      const name = `${dbProduct?.name || ''} ${item.product?.name || ''}`.toLowerCase().replace(/[^a-z0-9]/g, '')
+                      const tags = (dbProduct?.tags || []).map((t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, ''))
+                      const mSec = String((dbProduct as any)?.menuSection || (item.product as any)?.menuSection || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+                      return secFilters.some((sec: string) => name.includes(sec) || tags.some((t: string) => t.includes(sec)) || mSec.includes(sec))
+                    })
+                  }
                 }
 
                 const getItemVarText = (it: any) => {
@@ -749,9 +756,75 @@ export async function POST(request: NextRequest) {
                   if (coupon.maxDiscount) {
                     combinedDiscount = Math.min(combinedDiscount, coupon.maxDiscount)
                   }
+                } else if (coupon.bogoType === 'FREE_GIFT') {
+                  const minTriggerQty = parseInt(coupon.triggerVariant || '2') || 2
+                  const totalTriggerQty = rItems.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0)
+
+                  if (totalTriggerQty >= minTriggerQty) {
+                    const rewardTag = (coupon.rewardVariant || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
+                    // Find if gift item is in order items
+                    const giftInOrder = rItems.find((it: any) => {
+                      const baseId = it.product.id.split('_')[0]
+                      if (coupon.defaultFreeDishId && baseId === coupon.defaultFreeDishId) return true
+                      if (rewardTag) {
+                        const name = String(it.product?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+                        const tags = (it.product?.tags || []).map((t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, ''))
+                        const mSec = String((it.product as any)?.menuSection || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+                        return name.includes(rewardTag) || tags.some((t: string) => t.includes(rewardTag)) || mSec.includes(rewardTag)
+                      }
+                      return false
+                    })
+
+                    if (giftInOrder) {
+                      const baseId = giftInOrder.product.id.split('_')[0]
+                      const dbProduct = dbProducts.find((p) => p.id === baseId)
+                      let itemPrice = dbProduct ? dbProduct.price : 0
+                      const isVariant = giftInOrder.product.id.includes('_')
+                      if (dbProduct && isVariant && dbProduct.variants && Array.isArray(dbProduct.variants)) {
+                        const [_, vName] = giftInOrder.product.id.split('_')
+                        const variant = (dbProduct.variants as any[]).find((v) => v.name === vName)
+                        if (variant) itemPrice = variant.price
+                      }
+                      combinedDiscount = itemPrice
+                    } else if (coupon.defaultFreeDishId) {
+                      const dbProduct = dbProducts.find((p) => p.id === coupon.defaultFreeDishId)
+                      if (dbProduct) {
+                        combinedDiscount = dbProduct.price
+                      }
+                    }
+
+                    if (coupon.maxDiscount) {
+                      combinedDiscount = Math.min(combinedDiscount, coupon.maxDiscount)
+                    }
+                  }
                 } else if (coupon.bogoType === 'CHEAPEST_FREE') {
+                  let eligibleRItems = rItems
+                  if (coupon.menuSection) {
+                    const secFilters = coupon.menuSection
+                      .split(',')
+                      .map((s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]/g, ''))
+                      .filter(Boolean)
+                    if (secFilters.length > 0) {
+                      eligibleRItems = rItems.filter((it: any) => {
+                        const dbProduct = dbProducts.find((p) => p.id === it.product.id.split('_')[0])
+                        const mSec = String(it.product.menuSection || (it as any).menuSection || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+                        const tags = (dbProduct?.tags || it.product.tags || []).map((t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, ''))
+                        const name = String(dbProduct?.name || it.product.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+                        return secFilters.some((secFilter: string) =>
+                          mSec.includes(secFilter) || tags.some((t: string) => t.includes(secFilter)) || name.includes(secFilter)
+                        )
+                      })
+                    }
+                  }
+                  if (coupon.categoryId) {
+                    eligibleRItems = eligibleRItems.filter((it: any) => {
+                      const dbProduct = dbProducts.find((p) => p.id === it.product.id.split('_')[0])
+                      return (dbProduct?.categoryId || it.product.categoryId) === coupon.categoryId
+                    })
+                  }
+
                   const unitPrices: number[] = []
-                  for (const it of rItems) {
+                  for (const it of eligibleRItems) {
                     const dbProduct = dbProducts.find((p) => p.id === it.product.id.split('_')[0])
                     let itemPrice = dbProduct ? dbProduct.price : 0
                     const isVariant = it.product.id.includes('_')
@@ -763,10 +836,15 @@ export async function POST(request: NextRequest) {
                     const qty = it.quantity || 1
                     for (let i = 0; i < qty; i++) unitPrices.push(itemPrice)
                   }
-                  unitPrices.sort((a, b) => a - b)
-                  combinedDiscount = unitPrices[0] || 0
-                  if (coupon.maxDiscount) {
-                    combinedDiscount = Math.min(combinedDiscount, coupon.maxDiscount)
+
+                  if (unitPrices.length >= 2) {
+                    unitPrices.sort((a, b) => a - b)
+                    combinedDiscount = unitPrices[0] || 0
+                    if (coupon.maxDiscount) {
+                      combinedDiscount = Math.min(combinedDiscount, coupon.maxDiscount)
+                    }
+                  } else {
+                    combinedDiscount = 0
                   }
                 } else {
                   // SAME_ITEM BOGO
@@ -1434,14 +1512,14 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const all = searchParams.get('all') === 'true'
-    const storeId = searchParams.get('storeId') || (session?.user as any)?.assignedStoreId || null
+    const effectiveStoreId = getEffectiveStoreId(session, searchParams.get('storeId'))
     const isStaff = session?.user?.role === 'ADMIN' || session?.user?.role === 'CHEF' || session?.user?.role === 'PICKER' || session?.user?.role === 'DELIVERY'
 
     let orders: any[] = []
 
     if (isStaff && all) {
-      // Staff queries orders with associated customer details, filtered by store
-      if (storeId && storeId !== 'all') {
+      // Staff queries orders with associated customer details, strictly filtered by store
+      if (effectiveStoreId) {
         orders = await prisma.$queryRaw`
           SELECT o.id, o."userId", o."addressId", o."readableId",
                  o.status::text as status,
@@ -1454,7 +1532,7 @@ export async function GET(request: NextRequest) {
                  u.name as "userName", u.email as "userEmail", u.phone as "userPhone"
           FROM orders o
           LEFT JOIN users u ON o."userId" = u.id
-          WHERE o."storeId" = ${storeId}
+          WHERE o."storeId" = ${effectiveStoreId}
           ORDER BY o."createdAt" DESC
           LIMIT 1000
         `

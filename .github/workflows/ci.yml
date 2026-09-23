@@ -1,4 +1,4 @@
-name: FastKirana CI Pipeline
+name: FastKirana CI/CD Pipeline
 
 on:
   push:
@@ -6,8 +6,73 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  typecheck-and-lint:
+  # ─── 1. FastAPI Backend Quality Gate ──────────────────────────────
+  fastapi-backend:
+    name: Backend Tests (FastAPI & Pytest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'fastapi-backend/requirements.txt'
+
+      - name: Install Python Dependencies
+        working-directory: fastapi-backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+
+      - name: Run Pytest Test Suite
+        working-directory: fastapi-backend
+        env:
+          PYTHONPATH: .
+          DATABASE_URL: sqlite+aiosqlite:///./test.db
+        run: |
+          pytest -v
+
+  # ─── 2. Flutter Mobile Quality Gate ───────────────────────────────
+  flutter-mobile:
+    name: Mobile Tests & Lint (Flutter)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+          cache-key: "flutter-:os:-:channel:-:version:-:arch:-:hash:"
+
+      - name: Install Flutter Dependencies
+        working-directory: fastkirana_flutter
+        run: flutter pub get
+
+      - name: Flutter Static Analysis
+        working-directory: fastkirana_flutter
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run Flutter Test Suite
+        working-directory: fastkirana_flutter
+        run: flutter test
+
+  # ─── 3. Next.js Web Frontend Quality Gate ────────────────────────
+  web-frontend:
+    name: Web Frontend TypeCheck & Lint
     runs-on: ubuntu-latest
 
     steps:
@@ -33,3 +98,6 @@ jobs:
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
         run: npm run lint
+
+      - name: Run Unit Tests
+        run: npm run test:unit

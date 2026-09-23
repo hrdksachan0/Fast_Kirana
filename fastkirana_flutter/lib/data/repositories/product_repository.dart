@@ -14,15 +14,17 @@ class ProductRepository {
   // ─── In-memory cache partitioned by hubId ───────────────────
   static final Map<String, List<Product>> _hubCachedProducts = {};
   static final Map<String, DateTime> _hubLastFetchTime = {};
+  static final Map<String, List<Product>> _categoryCachedProducts = {};
+  static final Map<String, DateTime> _categoryLastFetchTime = {};
   static List<Category>? _cachedCategories;
   // Keyed in-flight fetch map to prevent cross-contamination between different query types
   static final Map<String, Future<List<Product>>> _inFlightFetches = {};
 
   // ─── Disk cache keys ────────────────────────────────────────
-  static String _diskProductsKey(String hubId) => 'cached_products_${hubId}_v5';
-  static String _diskFetchTimestampKey(String hubId) => 'cached_products_ts_${hubId}_v5';
-  static const _diskCategoriesKey = 'cached_categories_v4';
-  static const _diskCategoryTimestampKey = 'cached_categories_timestamp_v4';
+  static String _diskProductsKey(String hubId) => 'cached_products_${hubId}_v6';
+  static String _diskFetchTimestampKey(String hubId) => 'cached_products_ts_${hubId}_v6';
+  static const _diskCategoriesKey = 'cached_categories_v5';
+  static const _diskCategoryTimestampKey = 'cached_categories_timestamp_v5';
   static const _cacheTTLMinutes = 15; // 15 minutes TTL (with instant stale-while-revalidate)
 
   // ─── Preload disk cache into memory ──────────────────────────
@@ -109,7 +111,7 @@ class ProductRepository {
     try {
       final effectiveHub = (hubId != null && hubId.isNotEmpty) ? hubId : AppConfig.darkstoreId;
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_diskProductsKey(effectiveHub)) ?? prefs.getString('cached_products_v4');
+      final raw = prefs.getString(_diskProductsKey(effectiveHub)) ?? prefs.getString('cached_products_v5');
       if (raw == null || raw.isEmpty) return null;
       final List<dynamic> jsonList = jsonDecode(raw);
       return jsonList
@@ -160,6 +162,8 @@ class ProductRepository {
   static Future<void> invalidateAllCache() async {
     _hubCachedProducts.clear();
     _hubLastFetchTime.clear();
+    _categoryCachedProducts.clear();
+    _categoryLastFetchTime.clear();
     _cachedCategories = null;
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -177,6 +181,8 @@ class ProductRepository {
       await prefs.remove('cached_categories_timestamp_v3');
       await prefs.remove('cached_products_v4');
       await prefs.remove('cached_products_timestamp_v4');
+      await prefs.remove('cached_products_v5');
+      await prefs.remove('cached_products_timestamp_v5');
       await prefs.remove(_diskCategoriesKey);
       await prefs.remove(_diskCategoryTimestampKey);
     } catch (e) { LoggerService.error('ProductRepository: cache invalidation failed', e); }
@@ -186,6 +192,8 @@ class ProductRepository {
   static Future<void> invalidateHubCache(String hubId) async {
     _hubCachedProducts.remove(hubId);
     _hubLastFetchTime.remove(hubId);
+    _categoryCachedProducts.removeWhere((key, _) => key.startsWith('$hubId|'));
+    _categoryLastFetchTime.removeWhere((key, _) => key.startsWith('$hubId|'));
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_diskProductsKey(hubId));
@@ -193,22 +201,78 @@ class ProductRepository {
     } catch (e) { LoggerService.error('ProductRepository: hub cache invalidation failed ($hubId)', e); }
   }
 
+  /// Resolves any category slug or ID to its canonical Category ID in the database.
+  static String resolveCategoryId(String slugOrId) {
+    switch (slugOrId.toLowerCase().trim()) {
+      case 'fruits-vegetables':
+      case 'fruits-and-vegetables':
+      case 'vegetables':
+      case 'fruits':
+        return 'CAT-101';
+      case 'fresh-fruits':
+        return 'SUB-101-01';
+      case 'fresh-vegetables':
+        return 'SUB-101-02';
+      case 'beverages':
+      case 'cold-drinks':
+      case 'beverages-drinks':
+      case 'drinks':
+        return 'CAT-108';
+      case 'ice-cream':
+      case 'ice-cream-desserts':
+      case 'desserts':
+        return 'CAT-105';
+      case 'dairy-products':
+      case 'dairy':
+      case 'dairy-breakfast':
+        return 'CAT-116';
+      case 'kitchen-ration':
+      case 'kitchen-needs':
+        return 'CAT-113';
+      case 'packaged-items':
+      case 'packaged-foods':
+        return 'CAT-104';
+      case 'dry-fruits-super-foods':
+      case 'dry-fruits':
+        return 'CAT-114';
+      case 'cakes-chocolates':
+      case 'chocolates':
+        return 'CAT-115';
+      case 'personal-care':
+        return 'CAT-109';
+      case 'household-essentials':
+      case 'home-needs-and-cleaning':
+        return 'CAT-107';
+      default:
+        return slugOrId;
+    }
+  }
+
   /// Build a stable cache key from query parameters including limit
-  static String _cacheKey({String? search, String? restaurantId, String? category, String? storeId, int limit = 500}) {
-    return '${search ?? ''}|${restaurantId ?? ''}|${category ?? ''}|${storeId ?? ''}|$limit';
+  static String _cacheKey({String? search, String? restaurantId, String? category, String? categoryId, String? storeId, int limit = 1000}) {
+    return '${search ?? ''}|${restaurantId ?? ''}|${category ?? ''}|${categoryId ?? ''}|${storeId ?? ''}|$limit';
   }
 
   Future<List<Product>> getProducts({
+    String? categoryId,
     String? category,
     String? search,
     String? restaurantId,
     String? storeId,
-    int limit = 500,
+    int limit = 1000,
     bool forceRefresh = false,
+    bool? includeRestaurants,
   }) async {
     final effectiveStoreId = (storeId != null && storeId.isNotEmpty)
         ? storeId
         : (AppConfig.darkstoreId.isNotEmpty ? AppConfig.darkstoreId : 'hub-209206');
+
+    // Canonical Category ID resolution (ID-wise authoritative database fetch)
+    final resolvedId = (categoryId != null && categoryId.isNotEmpty)
+        ? resolveCategoryId(categoryId)
+        : ((category != null && category.isNotEmpty && category != 'all') ? resolveCategoryId(category) : null);
+
+    final isCategoryQuery = (resolvedId != null && resolvedId.isNotEmpty && resolvedId != 'all');
 
     // Wait for disk preload to finish so cached data is available before checking
     if (!_preloadComplete) {
@@ -217,11 +281,57 @@ class ProductRepository {
 
     try {
       final now = DateTime.now();
+
+      // Case A: Specific Category Query (ID-wise authoritative fetch)
+      if (isCategoryQuery) {
+        final catCacheKey = '$effectiveStoreId|$resolvedId|${category ?? ''}';
+        final cachedCatProds = _categoryCachedProducts[catCacheKey];
+        final lastCatTime = _categoryLastFetchTime[catCacheKey];
+
+        if (!forceRefresh &&
+            cachedCatProds != null &&
+            cachedCatProds.isNotEmpty &&
+            lastCatTime != null &&
+            now.difference(lastCatTime).inMinutes < _cacheTTLMinutes) {
+          debugPrint('[ProductRepo] category cache HIT for $catCacheKey: ${cachedCatProds.length} items');
+          return _filterProducts(cachedCatProds, category: category, search: search, restaurantId: restaurantId);
+        }
+
+        final key = _cacheKey(search: search, restaurantId: restaurantId, category: category, categoryId: resolvedId, storeId: effectiveStoreId, limit: limit);
+        if (_inFlightFetches.containsKey(key) && !forceRefresh) {
+          final products = await _inFlightFetches[key]!;
+          return _filterProducts(products, category: category, search: search, restaurantId: restaurantId);
+        }
+
+        final future = _fetchLiveProducts(
+          limit: limit,
+          search: search,
+          restaurantId: restaurantId,
+          category: category,
+          categoryId: resolvedId,
+          storeId: effectiveStoreId,
+          includeRestaurants: includeRestaurants,
+        );
+        _inFlightFetches[key] = future;
+        final liveProducts = await future;
+        _inFlightFetches.remove(key);
+
+        if (liveProducts.isNotEmpty) {
+          _categoryCachedProducts[catCacheKey] = liveProducts;
+          _categoryLastFetchTime[catCacheKey] = DateTime.now();
+        }
+
+        return _filterProducts(liveProducts, category: category, search: search, restaurantId: restaurantId);
+      }
+
+      // Case B: Full Catalog / Search / Restaurant Query
       final cached = _hubCachedProducts[effectiveStoreId];
       final lastTime = _hubLastFetchTime[effectiveStoreId];
 
-      // 1. In-memory cache hit for this specific hub (fastest path: 0ms render)
+      // 1. In-memory cache hit for full catalog of this specific hub
       if (!forceRefresh &&
+          search == null &&
+          restaurantId == null &&
           cached != null &&
           cached.length >= 150 &&
           lastTime != null &&
@@ -231,9 +341,9 @@ class ProductRepository {
       }
 
       // 2. Disk cache hit for this specific hub (survives app restarts)
-      if (!forceRefresh) {
+      if (!forceRefresh && search == null && restaurantId == null) {
         final diskProducts = await _loadProductsFromDisk(effectiveStoreId);
-        if (diskProducts != null && (limit < 100 ? diskProducts.isNotEmpty : diskProducts.length >= 150)) {
+        if (diskProducts != null && diskProducts.length >= 150) {
           _hubCachedProducts[effectiveStoreId] = diskProducts;
           final diskFresh = await _isDiskCacheFresh(effectiveStoreId);
           if (diskFresh) {
@@ -247,14 +357,16 @@ class ProductRepository {
             search: search,
             restaurantId: restaurantId,
             category: category,
+            categoryId: resolvedId,
             storeId: effectiveStoreId,
+            includeRestaurants: includeRestaurants,
           ).catchError((_) => <Product>[]);
           return _filterProducts(diskProducts, category: category, search: search, restaurantId: restaurantId);
         }
       }
 
-      // 3. If a network fetch with the same parameters is already in flight, reuse it
-      final key = _cacheKey(search: search, restaurantId: restaurantId, category: category, storeId: effectiveStoreId, limit: limit);
+      // 3. In-flight fetch reuse
+      final key = _cacheKey(search: search, restaurantId: restaurantId, category: category, categoryId: resolvedId, storeId: effectiveStoreId, limit: limit);
       if (_inFlightFetches.containsKey(key) && !forceRefresh) {
         final products = await _inFlightFetches[key]!;
         return _filterProducts(products, category: category, search: search, restaurantId: restaurantId);
@@ -266,7 +378,9 @@ class ProductRepository {
         search: search,
         restaurantId: restaurantId,
         category: category,
+        categoryId: resolvedId,
         storeId: effectiveStoreId,
+        includeRestaurants: includeRestaurants,
       );
       _inFlightFetches[key] = future;
       final liveProducts = await future;
@@ -274,9 +388,18 @@ class ProductRepository {
 
       return _filterProducts(liveProducts, category: category, search: search, restaurantId: restaurantId);
     } catch (e, st) {
-      LoggerService.error('ProductRepository: fetchProducts failed ($search, cat=$category, rid=$restaurantId, store=$effectiveStoreId)', e, st);
-      _inFlightFetches.remove(_cacheKey(search: search, restaurantId: restaurantId, category: category, storeId: effectiveStoreId, limit: limit));
-      // 5. Fallback chain: hub in-memory → hub disk → hardcoded static
+      LoggerService.error('ProductRepository: fetchProducts failed ($search, cat=$category, catId=$resolvedId, rid=$restaurantId, store=$effectiveStoreId)', e, st);
+      _inFlightFetches.remove(_cacheKey(search: search, restaurantId: restaurantId, category: category, categoryId: resolvedId, storeId: effectiveStoreId, limit: limit));
+
+      // Fallback chain: category cache -> hub in-memory -> hub disk -> static
+      if (isCategoryQuery) {
+        final catCacheKey = '$effectiveStoreId|$resolvedId|${category ?? ''}';
+        final cachedCatProds = _categoryCachedProducts[catCacheKey];
+        if (cachedCatProds != null && cachedCatProds.isNotEmpty) {
+          return _filterProducts(cachedCatProds, category: category, search: search, restaurantId: restaurantId);
+        }
+      }
+
       final memFallback = _hubCachedProducts[effectiveStoreId];
       if (memFallback != null && memFallback.isNotEmpty) {
         return _filterProducts(memFallback, category: category, search: search, restaurantId: restaurantId);
@@ -287,7 +410,6 @@ class ProductRepository {
         _hubLastFetchTime[effectiveStoreId] = DateTime.now();
         return _filterProducts(diskProducts, category: category, search: search, restaurantId: restaurantId);
       }
-      // Absolute last resort — hardcoded products
       return _filterProducts(_getStaticFallbackProducts(), category: category, search: search, restaurantId: restaurantId);
     }
   }
@@ -297,22 +419,37 @@ class ProductRepository {
     String? search,
     String? restaurantId,
     String? category,
+    String? categoryId,
     String? storeId,
+    bool? includeRestaurants,
   }) async {
     final effectiveStoreId = (storeId != null && storeId.isNotEmpty)
         ? storeId
         : (AppConfig.darkstoreId.isNotEmpty ? AppConfig.darkstoreId : null);
 
+    // Only include restaurant dishes when explicitly requested (e.g. restaurant screens or search)
+    final bool shouldIncludeRestaurants = includeRestaurants ??
+        ((restaurantId != null && restaurantId.isNotEmpty) ||
+         (search != null && search.isNotEmpty) ||
+         (category != null && (category.contains('restaurant') || category.contains('cafe'))));
+
+    final effectiveCatId = (categoryId != null && categoryId.isNotEmpty)
+        ? categoryId
+        : ((category != null && (category.toUpperCase().startsWith('CAT-') || category.toUpperCase().startsWith('SUB-'))) ? category : null);
+
+    final effectiveCatSlug = (category != null && !category.toUpperCase().startsWith('CAT-') && !category.toUpperCase().startsWith('SUB-'))
+        ? category
+        : null;
+
     final response = await dio.get(
       '/api/products',
       queryParameters: {
         'limit': limit,
-        'includeRestaurants': 'true',
+        if (shouldIncludeRestaurants) 'includeRestaurants': 'true',
         if (search != null && search.isNotEmpty) 'search': search,
         if (restaurantId != null && restaurantId.isNotEmpty) 'restaurantId': restaurantId,
-        if (category != null && category.isNotEmpty) ...{
-          'category': category,
-        },
+        if (effectiveCatId != null) 'categoryId': effectiveCatId,
+        if (effectiveCatSlug != null) 'category': effectiveCatSlug,
         if (effectiveStoreId != null) 'storeId': effectiveStoreId,
       },
     );
@@ -332,8 +469,9 @@ class ProductRepository {
     // Stably place in-stock products first, then sortOrder desc, then createdAt desc (1:1 Web App parity)
     liveProducts.sort((a, b) => compareProductsSystematic(a, b));
 
-    // Cache in memory and on disk ONLY when fetching the comprehensive catalog without filters
+    // Cache in memory and on disk ONLY when fetching the comprehensive grocery catalog without filters
     final isFullCatalog = (category == null || category.isEmpty) &&
+        (categoryId == null || categoryId.isEmpty) &&
         (search == null || search.isEmpty) &&
         (restaurantId == null || restaurantId.isEmpty) &&
         limit >= 100 &&
@@ -521,18 +659,17 @@ class ProductRepository {
     } catch (e, st) { LoggerService.error('ProductRepository: categories fallback failed', e, st); }
 
     final fallbacks = [
-      const Category(id: 'CAT-101', name: 'Fruits & Vegetables', slug: 'fruits-vegetables', imageUrl: '/fruits_vegetables_category.png', sortOrder: 0),
-      const Category(id: 'CAT-102', name: 'Dairy & Breakfast', slug: 'dairy-breakfast', imageUrl: '/dairy_breakfast_category.png', sortOrder: 1),
-      const Category(id: 'CAT-103', name: 'Snacks & Munchies', slug: 'snacks-munchies', imageUrl: '/snacks_munchies_category.png', sortOrder: 2),
-      const Category(id: 'CAT-104', name: 'Kitchen Needs', slug: 'kitchen-needs', imageUrl: '/atta_rice_dal_category.png', sortOrder: 3),
-      const Category(id: 'CAT-105', name: 'Packaged Foods', slug: 'packaged-foods', imageUrl: '/packaged_foods_category.png', sortOrder: 4),
-      const Category(id: 'CAT-106', name: 'Ice Cream & Desserts', slug: 'ice-cream', imageUrl: '/ice_cream_category.png', sortOrder: 5),
-      const Category(id: 'CAT-107', name: 'Chocolates & Sweets', slug: 'chocolates', imageUrl: '/chocolates_category.png', sortOrder: 6),
-      const Category(id: 'CAT-108', name: 'Home Needs & Cleaning', slug: 'home-needs-and-cleaning', imageUrl: '/household_category.png', sortOrder: 7),
-      const Category(id: 'CAT-109', name: 'Cold Drinks & Juices', slug: 'beverages', imageUrl: '/beverages_category.png', sortOrder: 8),
-      const Category(id: 'CAT-110', name: 'Personal Care', slug: 'personal-care', imageUrl: '/personal_care_category.png', sortOrder: 9),
-      const Category(id: 'CAT-111', name: 'Healthy Foods', slug: 'healthy-foods', imageUrl: '/healthy_foods_category.png', sortOrder: 10),
-      const Category(id: 'CAT-112', name: 'Bakery & Biscuits', slug: 'bakery', imageUrl: '/bakery_biscuits_category.png', sortOrder: 11),
+      const Category(id: 'CAT-101', name: 'Fruits & Vegetables', slug: 'fruits-vegetables', imageUrl: '/fruits_vegetables_category.png', sortOrder: 1),
+      const Category(id: 'CAT-116', name: 'Dairy Products', slug: 'dairy-products', imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1789230143014-0cjv7m.webp', sortOrder: 0),
+      const Category(id: 'CAT-113', name: 'Kitchen & Ration', slug: 'kitchen-ration', imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1789047720250-xu6kpy.webp', sortOrder: 2),
+      const Category(id: 'CAT-104', name: 'Packaged Items', slug: 'packaged-items', imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/categories/CAT-104.webp', sortOrder: 3),
+      const Category(id: 'SUB-115-01', name: 'Cookies & Namkeen', slug: 'cookies-namkeen', imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1789579040785-w7gcgz.jpg', sortOrder: 3),
+      const Category(id: 'CAT-114', name: 'Dry Fruits & Super Foods', slug: 'dry-fruits-super-foods', imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1789067277061-gfywnh.jpg', sortOrder: 4),
+      const Category(id: 'CAT-115', name: 'Cakes & Chocolates', slug: 'cakes-chocolates', imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1789580069746-5jc34m.webp', sortOrder: 5),
+      const Category(id: 'CAT-108', name: 'Beverages & Drinks', slug: 'beverages', imageUrl: '/beverages_category.png', sortOrder: 6),
+      const Category(id: 'CAT-105', name: 'Ice Cream & Desserts', slug: 'ice-cream', imageUrl: '/ice_cream_category.png', sortOrder: 7),
+      const Category(id: 'CAT-109', name: 'Personal Care & Hygiene', slug: 'personal-care', imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1789065601003-5xq1gj.jpg', sortOrder: 8),
+      const Category(id: 'CAT-107', name: 'Household Essentials', slug: 'household-essentials', imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/categories/CAT-107.webp', sortOrder: 9),
     ];
     _cachedCategories = fallbacks;
     return fallbacks;

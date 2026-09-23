@@ -56,6 +56,7 @@ enum BogoType {
   SAME_ITEM
   BUY_LARGE_GET_SMALL
   CHEAPEST_FREE
+  FREE_GIFT
 }
 
 model Account {
@@ -521,11 +522,15 @@ model PromoBanner {
   type        String   @default("custom") // e.g. festival, first-order, fresh, snacks
   imageUrl    String?
   linkUrl     String?
+  storeId     String?  // Null = Global (All Hubs), or specific DarkStore ID
   isActive    Boolean  @default(true)
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  store       DarkStore? @relation("StorePromoBanners", fields: [storeId], references: [id], onDelete: SetNull)
+
+  @@index([storeId])
   @@map("promo_banners")
 }
 
@@ -606,6 +611,8 @@ model DarkStore {
   inventories     StoreInventory[]
   orders          Order[]
   staffMembers    User[]           @relation("StoreStaff")
+  restaurants     Restaurant[]     @relation("StoreRestaurants")
+  promoBanners    PromoBanner[]    @relation("StorePromoBanners")
 
   @@map("dark_stores")
 }
@@ -686,7 +693,10 @@ model Restaurant {
   payouts         RestaurantPayout[]
   reviews         RestaurantReview[]
   coupons         Coupon[]
+  storeId         String?
+  store           DarkStore? @relation("StoreRestaurants", fields: [storeId], references: [id], onDelete: SetNull)
 
+  @@index([storeId])
   @@map("restaurants")
 }
 

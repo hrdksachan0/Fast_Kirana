@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
-import { requireAdmin } from '@/lib/auth-guard'
+import { requireAdmin, getEffectiveStoreId } from '@/lib/auth-guard'
 
 export async function GET(request: Request) {
   const adminResult = await requireAdmin(request)
@@ -15,8 +15,9 @@ export async function GET(request: Request) {
   const status = searchParams.get('status')
   const search = searchParams.get('search')
   const paramStoreId = searchParams.get('storeId')
-  const userAssignedStoreId = (session?.user as any)?.assignedStoreId
-  const effectiveStoreId = userAssignedStoreId || (paramStoreId && paramStoreId !== 'ALL' ? paramStoreId : null)
+  
+  // Strictly enforce hub isolation: branch admins CANNOT query other hubs or ALL!
+  const effectiveStoreId = getEffectiveStoreId(session, paramStoreId)
   
   const skip = (page - 1) * limit
 

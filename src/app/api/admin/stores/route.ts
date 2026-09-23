@@ -167,26 +167,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Auto-seed initial store inventory for grocery dark store only if explicitly requested
+    // Every new store hub starts clean with zero cross-hub inventory contamination.
+    // Stock and products must be explicitly inwarded/added per hub via GRN.
     if (seedInventory === true) {
-      try {
-        const products = await prisma.product.findMany({
-          where: { isAvailable: true },
-          select: { id: true, stock: true }
-        })
-        if (products.length > 0) {
-          await prisma.storeInventory.createMany({
-            data: products.map(p => ({
-              storeId: store.id,
-              productId: p.id,
-              stock: 0
-            })),
-            skipDuplicates: true
-          })
-        }
-      } catch (seedErr) {
-        console.error('Inventory seed error (non-fatal):', seedErr)
-      }
+      console.log(`[StoreCreation] Store ${store.id} initialized clean with zero cross-hub dummy inventory.`)
     }
 
     return NextResponse.json(store)

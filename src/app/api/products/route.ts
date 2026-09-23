@@ -124,9 +124,14 @@ export async function GET(request: NextRequest) {
               }
             }
           },
-          ...(storeCity ? [{
-            restaurant: { city: { contains: storeCity, mode: 'insensitive' as const } }
-          }] : [])
+          {
+            restaurant: {
+              OR: [
+                { storeId },
+                ...(storeCity ? [{ city: { contains: storeCity, mode: 'insensitive' as const } }] : [])
+              ]
+            }
+          }
         ]
       }
       where.AND = where.AND ? (Array.isArray(where.AND) ? [...where.AND, storeScope] : [where.AND, storeScope]) : [storeScope]

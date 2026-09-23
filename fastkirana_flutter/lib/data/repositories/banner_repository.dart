@@ -15,8 +15,8 @@ class BannerRepository {
   static const List<Banner> defaultFoodBanners = [];
   static List<Banner> get defaultBanners => defaultGroceryBanners;
 
-  Future<List<Banner>> getBanners({String? type, bool forceRefresh = false}) async {
-    final key = type ?? 'all';
+  Future<List<Banner>> getBanners({String? type, String? storeId, bool forceRefresh = false}) async {
+    final key = '${type ?? "all"}_${storeId ?? "global"}';
 
     // 1. In-memory cache hit
     if (!forceRefresh && _inMemoryBanners.containsKey(key)) {
@@ -28,13 +28,13 @@ class BannerRepository {
       final diskBanners = await _loadBannersFromDisk(key);
       if (diskBanners != null) {
         _inMemoryBanners[key] = diskBanners;
-        _fetchFromNetwork(type: type);
+        _fetchFromNetwork(type: type, storeId: storeId);
         return diskBanners;
       }
     }
 
     // 3. Network fetch (first load or pull-to-refresh)
-    final networkBanners = await _fetchFromNetwork(type: type);
+    final networkBanners = await _fetchFromNetwork(type: type, storeId: storeId);
     if (networkBanners != null) {
       _inMemoryBanners[key] = networkBanners;
       return networkBanners;
@@ -44,13 +44,14 @@ class BannerRepository {
     return const [];
   }
 
-  Future<List<Banner>?> _fetchFromNetwork({String? type}) async {
-    final key = type ?? 'all';
+  Future<List<Banner>?> _fetchFromNetwork({String? type, String? storeId}) async {
+    final key = '${type ?? "all"}_${storeId ?? "global"}';
     try {
       final response = await dio.get(
         '/api/banners',
         queryParameters: {
           if (type != null && type.isNotEmpty) 'type': type,
+          if (storeId != null && storeId.isNotEmpty) 'storeId': storeId,
           'platform': 'mobile',
         },
       );

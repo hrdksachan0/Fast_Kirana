@@ -159,8 +159,11 @@ function GroceryVariantCard({
       restaurantId: (product as any).restaurantId || (product as any).restaurant?.id,
       restaurantName: (product as any).restaurantName || (product as any).restaurant?.name,
       restaurant: (product as any).restaurant,
+      menuSection: (product as any).menuSection || null,
+      selectedVariant: resolvedName || (variant as any)?.name || product.unit || null,
+      variant: resolvedName || (variant as any)?.name || product.unit || null,
     }),
-    [product, resolvedName, resolvedId, resolvedMrp, resolvedPrice, discount, resolvedStock, resolvedIsAvailable]
+    [product, resolvedName, resolvedId, resolvedMrp, resolvedPrice, discount, resolvedStock, resolvedIsAvailable, variant]
   )
 
   const isVariantSoldOut =

@@ -3,9 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_bounceable/flutter_bounceable.dart';
 import '../../core/theme/design_system.dart';
-import '../../data/models/product.dart';
-import '../../data/models/category.dart';
 import '../../data/models/address.dart';
 import '../../data/repositories/product_repository.dart';
 import '../../providers/cart_provider.dart';
@@ -25,7 +25,10 @@ import '../../core/services/location_service.dart';
 import '../../widgets/app_update_dialog.dart';
 import '../../widgets/dynamic_hero_banner_carousel.dart';
 import '../../providers/banner_provider.dart';
-import '../../providers/restaurant_provider.dart';
+import '../../providers/hub_availability_provider.dart';
+import '../../providers/store_hub_provider.dart';
+import 'widgets/hub_coming_soon_view.dart';
+import 'widgets/outside_delivery_zone_view.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -36,7 +39,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isGrocerySelected = false; // Food mode default (Food first, then Grocery)
-  int _selectedFilterIndex = 0;
+  final int _selectedFilterIndex = 0;
   Timer? _orderSyncTimer;
 
   // Infinite Product Feed Scroll & Pagination State (Zepto/Blinkit architecture)
@@ -148,6 +151,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final hubStatus = ref.watch(hubAvailabilityProvider);
+
     return Scaffold(
       backgroundColor: AppDesignSystem.background,
       body: SafeArea(
@@ -161,6 +166,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 await ProductRepository.invalidateAllCache();
                 ref.invalidate(cartProvider);
                 ref.invalidate(categoriesProvider);
+                ref.invalidate(activeStoreHubsProvider);
+                ref.invalidate(hubAvailabilityProvider);
                 ref.invalidate(bannersProvider('grocery'));
                 ref.invalidate(bannersProvider('food'));
                 ref.invalidate(brandOfferCardsProvider('grocery'));
@@ -178,41 +185,228 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 slivers: [
                   const SliverToBoxAdapter(child: HomeTopHeader()),
-                  const SliverToBoxAdapter(child: UnserviceableLocationBanner()),
-                  SliverToBoxAdapter(
-                    child: HomeCategoryToggle(
-                      isGrocerySelected: _isGrocerySelected,
-                      onModeChanged: (val) {
-                        HapticFeedback.selectionClick();
-                        setState(() {
-                          _isGrocerySelected = val;
-                        });
-                      },
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: DynamicHeroBannerCarousel(
-                      key: ValueKey('hero_carousel_${_isGrocerySelected ? "grocery" : "food"}'),
-                      type: _isGrocerySelected ? 'grocery' : 'food',
-                    ),
-                  ),
-                  if (_isGrocerySelected) ...[
-                    const SliverToBoxAdapter(child: HomeTopCategoriesGrid()),
+
+                  // 1. Outside All Serviceable Delivery Zones
+                  if (hubStatus.isOutsideZone) ...[
                     SliverToBoxAdapter(
-                      child: HomeBuyAgainShelf(isGrocerySelected: _isGrocerySelected),
-                    ),
-                    const SliverToBoxAdapter(child: HomeProductSections()),
-                    ...HomeInfiniteFeed.buildSlivers(
-                      context: context,
-                      ref: ref,
-                      scrollController: _homeScrollController,
-                      visibleGridCount: _visibleGridCount,
-                      selectedFilterIndex: _selectedFilterIndex,
+                      child: OutsideDeliveryZoneView(
+                        nearestHub: hubStatus.hub,
+                        distanceKm: hubStatus.distanceKm,
+                      ),
                     ),
                     const SliverToBoxAdapter(child: HomeFooter()),
-                  ] else ...[
-                    const SliverToBoxAdapter(child: HomeFoodStorefront()),
+                  ]
+
+                  // 2. Inside Zone, but Hub is Launching Soon (0 grocery & 0 restaurant)
+                  else if (hubStatus.isComingSoon) ...[
+                    SliverToBoxAdapter(
+                      child: HubComingSoonView(hub: hubStatus.hub),
+                    ),
                     const SliverToBoxAdapter(child: HomeFooter()),
+                  ]
+
+                  // 3. Fully Active Operational Hub Storefront
+                  else ...[
+                    const SliverToBoxAdapter(child: UnserviceableLocationBanner()),
+                    SliverToBoxAdapter(
+                      child: HomeCategoryToggle(
+                        isGrocerySelected: _isGrocerySelected,
+                        onModeChanged: (val) {
+                          HapticFeedback.selectionClick();
+                          setState(() {
+                            _isGrocerySelected = val;
+                          });
+                        },
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: DynamicHeroBannerCarousel(
+                        key: ValueKey('hero_carousel_${_isGrocerySelected ? "grocery" : "food"}'),
+                        type: _isGrocerySelected ? 'grocery' : 'food',
+                      ),
+                    ),
+                    if (_isGrocerySelected) ...[
+                      if (hubStatus.isHybridFoodOnly) ...[
+                        SliverToBoxAdapter(
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                            padding: const EdgeInsets.all(22),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppDesignSystem.orange200),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppDesignSystem.orange500.withValues(alpha: 0.08),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: const BoxDecoration(
+                                    color: AppDesignSystem.orange50,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Text('🥕', style: TextStyle(fontSize: 28)),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Grocery Stocking Up Soon!',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: Responsive.scaledFontSize(context, 18),
+                                    fontWeight: FontWeight.w800,
+                                    color: AppDesignSystem.slate900,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Our local dark store in ${hubStatus.hub.city} is currently stocking up. In the meantime, order hot & fresh meals from top partner restaurants!',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 12.5),
+                                    fontWeight: FontWeight.w500,
+                                    color: AppDesignSystem.slate600,
+                                    height: 1.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Bounceable(
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    setState(() => _isGrocerySelected = false);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: AppDesignSystem.orange600,
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.restaurant_rounded, color: Colors.white, size: 16),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Order Food Now',
+                                          style: GoogleFonts.inter(
+                                            fontSize: Responsive.scaledFontSize(context, 13),
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        const SliverToBoxAdapter(child: HomeTopCategoriesGrid()),
+                        SliverToBoxAdapter(
+                          child: HomeBuyAgainShelf(isGrocerySelected: _isGrocerySelected),
+                        ),
+                        const SliverToBoxAdapter(child: HomeProductSections()),
+                        ...HomeInfiniteFeed.buildSlivers(
+                          context: context,
+                          ref: ref,
+                          scrollController: _homeScrollController,
+                          visibleGridCount: _visibleGridCount,
+                          selectedFilterIndex: _selectedFilterIndex,
+                        ),
+                      ],
+                      const SliverToBoxAdapter(child: HomeFooter()),
+                    ] else ...[
+                      if (hubStatus.isHybridGroceryOnly) ...[
+                        SliverToBoxAdapter(
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                            padding: const EdgeInsets.all(22),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: const Color(0xFFFDE68A)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.04),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFFEF3C7),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Text('🍕', style: TextStyle(fontSize: 28)),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Food Delivery Coming Soon!',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: Responsive.scaledFontSize(context, 18),
+                                    fontWeight: FontWeight.w800,
+                                    color: AppDesignSystem.slate900,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Partner kitchens are currently onboarding in ${hubStatus.hub.city}. You can enjoy ultra-fast 10-minute grocery delivery right now!',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 12.5),
+                                    fontWeight: FontWeight.w500,
+                                    color: AppDesignSystem.slate600,
+                                    height: 1.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Bounceable(
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    setState(() => _isGrocerySelected = true);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF16A34A),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 16),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Shop Groceries in 10 Mins',
+                                          style: GoogleFonts.inter(
+                                            fontSize: Responsive.scaledFontSize(context, 13),
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        const SliverToBoxAdapter(child: HomeFoodStorefront()),
+                      ],
+                      const SliverToBoxAdapter(child: HomeFooter()),
+                    ],
                   ],
                   const SliverToBoxAdapter(child: SizedBox(height: 80)),
                 ],

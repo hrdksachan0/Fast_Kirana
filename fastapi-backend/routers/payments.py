@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import or_
 from typing import Dict, Any, List
+from datetime import datetime
 import hmac
 import hashlib
 import logging
@@ -162,4 +164,98 @@ async def verify_payment(
         "orderId": order_id,
         "paymentId": payment_id or "pay_simulated_123",
         "status": "PAID"
+    }
+
+
+@router.post("/razorpay/sync-order")
+async def sync_razorpay_order_in_payments(
+    payload: Dict[str, Any] = Body(...),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Sync order with Razorpay: query Razorpay API for captured payment and mark order as PAID.
+    """
+    order_id = payload.get("orderId")
+    if not order_id:
+        raise HTTPException(status_code=400, detail="orderId is required")
+
+    clean_id = str(order_id).strip()
+    stmt = select(Order).where(or_(Order.id == clean_id, Order.readableId == clean_id))
+    res = await db.execute(stmt)
+    order = res.scalars().first()
+
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    if order.paymentStatus == PaymentStatus.PAID:
+        return {
+            "success": True,
+            "paymentStatus": "PAID",
+            "status": order.status.value,
+            "updated": False,
+        }
+
+    matched_payment = None
+    try:
+        client = get_razorpay_client()
+        rzp_payments = client.payment.all({"count": 50})
+        items = rzp_payments.get("items", [])
+        order_total_paise = int(round(float(order.total) * 100))
+        target_readable = str(order.readableId or "")
+
+        for p in items:
+            if p.get("status") not in ["captured", "authorized"]:
+                continue
+            notes = p.get("notes") or {}
+            notes_order_id = str(notes.get("orderId", ""))
+            notes_readable_id = str(notes.get("readableId", ""))
+            desc = str(p.get("description", ""))
+
+            has_match = (
+                notes_order_id == order.id
+                or (target_readable and notes_readable_id == target_readable)
+                or (target_readable and target_readable in desc)
+            )
+
+            if has_match and int(p.get("amount", 0)) == order_total_paise:
+                matched_payment = p
+                break
+    except Exception as e:
+        logger.warning(f"Razorpay sync check error: {e}")
+
+    if not matched_payment:
+        return {
+            "success": True,
+            "paymentStatus": order.paymentStatus.value,
+            "status": order.status.value,
+            "updated": False,
+            "message": "No captured online payment detected on Razorpay yet.",
+        }
+
+    now = datetime.utcnow()
+    if order.combinedId:
+        comb_stmt = select(Order).where(Order.combinedId == order.combinedId)
+        comb_res = await db.execute(comb_stmt)
+        for o in comb_res.scalars().all():
+            o.paymentStatus = PaymentStatus.PAID
+            if o.status == OrderStatus.PENDING or o.status == OrderStatus.ADMIN_PENDING:
+                o.status = OrderStatus.CONFIRMED
+            o.confirmedAt = now
+            o.updatedAt = now
+    else:
+        order.paymentStatus = PaymentStatus.PAID
+        if order.status == OrderStatus.PENDING or order.status == OrderStatus.ADMIN_PENDING:
+            order.status = OrderStatus.CONFIRMED
+        order.confirmedAt = now
+        order.updatedAt = now
+
+    await db.commit()
+    await db.refresh(order)
+
+    return {
+        "success": True,
+        "paymentStatus": "PAID",
+        "status": order.status.value,
+        "updated": True,
+        "message": "Order payment verified and confirmed successfully!",
     }

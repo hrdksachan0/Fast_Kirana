@@ -39,6 +39,7 @@ export default async function AdminPage(props: {
     email: dbUser?.email || session.user?.email,
     phone: dbUser?.phone || (session.user as any)?.phone,
     role: dbUser?.role || session.user?.role,
+    assignedStoreId: userAssignedStoreId,
   })
 
   const role = (dbUser?.role || session.user?.role)?.toUpperCase()
@@ -47,10 +48,10 @@ export default async function AdminPage(props: {
   }
 
   const searchParams = props.searchParams ? await props.searchParams : undefined
-  // For branch/hub admins (like Akbarpur), STRICTLY lock initialStoreId to their assigned store!
-  const initialStoreId = isMaster
-    ? (searchParams?.storeId || userAssignedStoreId || null)
-    : (userAssignedStoreId || searchParams?.storeId || null)
+  // For branch/hub admins (like Pakur, Akbarpur), STRICTLY lock initialStoreId to their assigned store!
+  const initialStoreId = userAssignedStoreId
+    ? userAssignedStoreId
+    : (isMaster ? (searchParams?.storeId || null) : null)
 
   // 1. Fetch all store data in parallel
   let orderCount = 0

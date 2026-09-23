@@ -61,6 +61,7 @@ interface PromoBanner {
   rawCode?: string
   placement?: 'hero' | 'brand_card'
   platform?: 'all' | 'mobile' | 'web'
+  storeId?: string | null
 }
 
 // Predefined Gradient Options
@@ -496,6 +497,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
   // Placement & Target Platform States (Defaults to Brand Card for Curated Carousel)
   const [placement, setPlacement] = useState<'hero' | 'brand_card'>('brand_card')
   const [platform, setPlatform] = useState<'all' | 'mobile' | 'web'>('all')
+  const [storeId, setStoreId] = useState<string>('all')
 
   // Registered List Filtering Tabs
   const [activeListTab, setActiveListTab] = useState<'hero' | 'brand_card'>('brand_card')
@@ -898,6 +900,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
     setCardFormat('standard')
     setPlacement('hero')
     setPlatform('all')
+    setStoreId('all')
     setTitle('')
     setDescription('')
     setCode('')
@@ -948,6 +951,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
     setPlacement(isBrandCard ? 'brand_card' : 'hero')
     setActiveListTab(isBrandCard ? 'brand_card' : 'hero')
     setPlatform(b.platform || 'all')
+    setStoreId(b.storeId || 'all')
 
     setTitle(b.title)
     setDescription(b.description)
@@ -1078,6 +1082,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
         id: editingId || undefined,
         placement,
         platform,
+        storeId: storeId === 'all' ? null : storeId,
         title: finalTitle,
         description: finalDesc,
         code: code.trim().toUpperCase(),
@@ -1207,8 +1212,8 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
           <form onSubmit={handleSubmit} className="space-y-4 bg-muted/20 border border-border p-5 rounded-2xl">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
-              {/* Placement / Mode / Platform Selectors */}
-              <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-card border border-border/60 rounded-2xl">
+              {/* Placement / Mode / Platform / Store Hub Selectors */}
+              <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3 bg-card border border-border/60 rounded-2xl">
                 {/* 1. Placement Selector */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-wider text-text-secondary block">
@@ -1318,6 +1323,22 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                       <span>Web</span>
                     </button>
                   </div>
+                </div>
+
+                {/* 4. Target Store Hub Selector */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-text-secondary block">
+                    4. Target Hub / City *
+                  </label>
+                  <select
+                    value={storeId}
+                    onChange={(e) => setStoreId(e.target.value)}
+                    className="w-full py-2.5 px-3 text-[11px] font-bold rounded-xl bg-card border border-border text-text-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-xs cursor-pointer"
+                  >
+                    <option value="all">🌐 All Hubs (Global)</option>
+                    <option value="store-ghatampur">🏪 Ghatampur Hub</option>
+                    <option value="store-akbarpur">📍 Akbarpur Hub</option>
+                  </select>
                 </div>
               </div>
 
@@ -2115,6 +2136,17 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                           {/* Platform Badge */}
                           <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-muted text-text-secondary border border-border">
                             {b.platform === 'mobile' ? '📱 MOBILE ONLY' : b.platform === 'web' ? '💻 WEB ONLY' : '🌐 ALL DEVICES'}
+                          </span>
+
+                          {/* Hub Badge */}
+                          <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded border ${
+                            b.storeId === 'store-akbarpur'
+                              ? 'bg-purple-500/10 text-purple-600 border-purple-500/20'
+                              : b.storeId === 'store-ghatampur'
+                              ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                              : 'bg-blue-500/10 text-blue-600 border-blue-500/20'
+                          }`}>
+                            {b.storeId === 'store-akbarpur' ? '📍 AKBARPUR' : b.storeId === 'store-ghatampur' ? '🏪 GHATAMPUR' : '🌐 ALL HUBS'}
                           </span>
 
                           {b.videoUrl && (

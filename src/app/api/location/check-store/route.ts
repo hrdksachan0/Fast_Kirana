@@ -126,12 +126,16 @@ export async function GET(request: NextRequest) {
     let restaurantCount = 0
     if (targetStore.id) {
       try {
+        const storeCity = targetStore.name.replace(/\s+(Hub|Market|Central|Dark\s*Store|Express).*$/i, '').trim()
         const [invCount, restCount] = await Promise.all([
           prisma.storeInventory.count({
             where: { storeId: targetStore.id, stock: { gt: 0 } }
           }),
           prisma.restaurant.count({
-            where: { isActive: true }
+            where: {
+              isActive: true,
+              ...(storeCity ? { city: { contains: storeCity, mode: 'insensitive' as const } } : {})
+            }
           })
         ])
         inventoryCount = invCount
@@ -141,6 +145,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const isComingSoon = isInsideZone && inventoryCount === 0 && restaurantCount === 0
+
     return NextResponse.json({
       ...targetStore,
       isServiceable: isInsideZone,
@@ -149,7 +155,7 @@ export async function GET(request: NextRequest) {
       inventoryCount,
       hasRestaurants: restaurantCount > 0,
       restaurantCount,
-      isComingSoon: !isInsideZone || (inventoryCount === 0 && restaurantCount === 0),
+      isComingSoon,
     })
   } catch (error: any) {
     console.error('Error in check-store API:', error)

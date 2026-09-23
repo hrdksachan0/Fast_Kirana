@@ -49,7 +49,8 @@ class ProductCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     slug: str = Field(..., min_length=1, max_length=100)
     description: Optional[str] = Field(None, max_length=2000)
-    categoryId: str = Field(..., min_length=1)
+    categoryId: Optional[str] = None
+    restaurantId: Optional[str] = None
     mrp: float = Field(..., gt=0, le=100000)
     price: float = Field(..., gt=0, le=100000)
     discount: float = Field(default=0, ge=0, le=100)
@@ -58,9 +59,11 @@ class ProductCreate(BaseModel):
     isAvailable: bool = Field(default=True)
     tags: List[str] = Field(default_factory=list)
     variants: Optional[List[Dict[str, Any]]] = None
+    addons: Optional[List[Dict[str, Any]]] = None
     minStock: int = Field(default=10, ge=0)
     costPrice: float = Field(default=0, ge=0)
     imageUrl: Optional[str] = None
+    location: Optional[str] = None
     isFlashDeal: bool = Field(default=False)
     isTopPick: bool = Field(default=False)
     isBestSeller: bool = Field(default=False)
@@ -68,6 +71,8 @@ class ProductCreate(BaseModel):
     availableStartTime: Optional[str] = None
     availableEndTime: Optional[str] = None
     barcode: Optional[str] = None
+    vendor: Optional[str] = None
+    vendorId: Optional[str] = None
 
     @validator('price')
     def price_less_than_mrp(cls, v, values):
@@ -86,6 +91,7 @@ class ProductUpdate(BaseModel):
     slug: Optional[str] = Field(None, min_length=1, max_length=100)
     description: Optional[str] = Field(None, max_length=2000)
     categoryId: Optional[str] = None
+    restaurantId: Optional[str] = None
     mrp: Optional[float] = Field(None, gt=0, le=100000)
     price: Optional[float] = Field(None, gt=0, le=100000)
     discount: Optional[float] = Field(None, ge=0, le=100)
@@ -94,9 +100,11 @@ class ProductUpdate(BaseModel):
     isAvailable: Optional[bool] = None
     tags: Optional[List[str]] = None
     variants: Optional[List[Dict[str, Any]]] = None
+    addons: Optional[List[Dict[str, Any]]] = None
     minStock: Optional[int] = Field(None, ge=0)
     costPrice: Optional[float] = Field(None, ge=0)
     imageUrl: Optional[str] = None
+    location: Optional[str] = None
     isFlashDeal: Optional[bool] = None
     isTopPick: Optional[bool] = None
     isBestSeller: Optional[bool] = None
@@ -104,6 +112,9 @@ class ProductUpdate(BaseModel):
     availableStartTime: Optional[str] = None
     availableEndTime: Optional[str] = None
     barcode: Optional[str] = None
+    vendor: Optional[str] = None
+    vendorId: Optional[str] = None
+    storeId: Optional[str] = None
 
 
 class CategoryOut(BaseModel):
@@ -140,7 +151,7 @@ class ProductOut(BaseModel):
     slug: str
     description: Optional[str] = None
     imageUrl: Optional[str] = None
-    categoryId: str
+    categoryId: Optional[str] = None
     restaurantId: Optional[str] = None
     mrp: float
     price: float
@@ -150,8 +161,10 @@ class ProductOut(BaseModel):
     isAvailable: bool = True
     tags: Optional[List[str]] = None
     variants: Optional[List[Dict[str, Any]]] = None
+    addons: Optional[Any] = None
     minStock: int = 10
     costPrice: float = 0.0
+    location: Optional[str] = None
     isFlashDeal: bool = False
     isTopPick: bool = False
     isBestSeller: bool = False
@@ -159,6 +172,8 @@ class ProductOut(BaseModel):
     availableStartTime: Optional[str] = None
     availableEndTime: Optional[str] = None
     barcode: Optional[str] = None
+    vendor: Optional[str] = None
+    vendorId: Optional[str] = None
     createdAt: Optional[datetime] = None
     updatedAt: Optional[datetime] = None
     category: Optional[CategoryOut] = None

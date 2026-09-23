@@ -16,6 +16,10 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../data/models/address.dart';
+import '../../data/models/store_hub.dart';
+import '../../providers/store_hub_provider.dart';
+import '../../providers/cart_provider.dart';
+import '../../widgets/hub_conflict_dialog.dart';
 import 'doorstep_details_screen.dart';
 
 class MapPickerScreen extends ConsumerStatefulWidget {
@@ -34,32 +38,38 @@ class MapPickerScreen extends ConsumerStatefulWidget {
 
 class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
     with SingleTickerProviderStateMixin {
-  // Store default coordinates (Ghatampur Central Hub)
-  static const double storeLat = 26.1534185;
-  static const double storeLng = 80.1714024;
-  static const double maxRadiusKm = 5.0;
-
   late final MapController _mapController;
   late double _currentLat;
   late double _currentLng;
 
   bool _isLocating = false;
-  String _areaName = 'Ghatampur Central';
-  String _fullAddress = 'Ghatampur, Kanpur Nagar, Uttar Pradesh 209206, India';
+  String _areaName = 'Locating area...';
+  String _fullAddress = 'Fetching address...';
   double _distanceKm = 0.0;
   bool _isServiceable = true;
+  StoreHub? _matchedHub;
+  List<StoreHub> _activeHubs = [];
 
   late final AnimationController _pulseController;
   late final Animation<double> _pulseAnim;
 
   static const Color slateDark = AppDesignSystem.slate900;
 
+  String _calculateEtaText(double distanceKm) {
+    if (distanceKm <= 2.5) return '10-15 mins';
+    if (distanceKm <= 4.5) return '15-25 mins';
+    return '20-30 mins';
+  }
+
   @override
   void initState() {
     super.initState();
     _mapController = MapController();
-    _currentLat = widget.initialLat ?? storeLat;
-    _currentLng = widget.initialLng ?? storeLng;
+    const defaultHub = StoreHub.defaultGhatampur;
+    _currentLat = widget.initialLat ?? defaultHub.latitude;
+    _currentLng = widget.initialLng ?? defaultHub.longitude;
+    _matchedHub = defaultHub;
+    _activeHubs = StoreHub.defaultHubs;
 
     _pulseController = AnimationController(
       vsync: this,
@@ -70,7 +80,12 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    _updateLocationDetails(_currentLat, _currentLng);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final hubs = ref.read(activeStoreHubsProvider).valueOrNull ?? StoreHub.defaultHubs;
+      setState(() => _activeHubs = hubs);
+      _updateLocationDetails(_currentLat, _currentLng);
+    });
+
     _fetchCurrentGpsLocation();
   }
 
@@ -90,15 +105,40 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
   }
 
   Future<void> _updateLocationDetails(double lat, double lng) async {
-    final dist = _calculateDistance(storeLat, storeLng, lat, lng);
-    final serviceable = dist <= maxRadiusKm;
+    final hubs = _activeHubs.isNotEmpty
+        ? _activeHubs
+        : (ref.read(activeStoreHubsProvider).valueOrNull ?? StoreHub.defaultHubs);
+
+    StoreHub nearest = hubs.first;
+    double minDistanceKm = double.infinity;
+    StoreHub? matchedZoneHub;
+
+    for (final hub in hubs) {
+      if (!hub.isActive) continue;
+      final dist = _calculateDistance(hub.latitude, hub.longitude, lat, lng);
+      if (hub.isPointInsideGeofence(lat, lng) || dist <= hub.deliveryRadiusKm) {
+        matchedZoneHub = hub;
+      }
+      if (dist < minDistanceKm) {
+        minDistanceKm = dist;
+        nearest = hub;
+      }
+    }
+
+    final activeHub = matchedZoneHub ?? nearest;
+    final distKm = matchedZoneHub != null
+        ? _calculateDistance(matchedZoneHub.latitude, matchedZoneHub.longitude, lat, lng)
+        : minDistanceKm;
+    final serviceable = matchedZoneHub != null;
 
     if (mounted) {
       setState(() {
         _currentLat = lat;
         _currentLng = lng;
-        _distanceKm = dist;
+        _distanceKm = distKm;
         _isServiceable = serviceable;
+        _matchedHub = activeHub;
+        _activeHubs = hubs;
       });
     }
 
@@ -109,8 +149,8 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
           final place = placemarks.first;
           final area = place.subLocality?.isNotEmpty == true
               ? place.subLocality!
-              : (place.locality?.isNotEmpty == true ? place.locality! : 'Ghatampur');
-          final full = '${place.name ?? ''}, ${place.subLocality ?? ''}, ${place.locality ?? 'Ghatampur'}, ${place.postalCode ?? '209206'}, Uttar Pradesh, India'
+              : (place.locality?.isNotEmpty == true ? place.locality! : activeHub.city);
+          final full = '${place.name ?? ''}, ${place.subLocality ?? ''}, ${place.locality ?? activeHub.city}, ${place.postalCode ?? (activeHub.city.toLowerCase().contains('akbarpur') ? '224122' : '209206')}, Uttar Pradesh, India'
               .replaceAll(RegExp(r',\s*,'), ',')
               .trim();
 
@@ -125,8 +165,8 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
 
     if (mounted) {
       setState(() {
-        _areaName = dist <= 0.8 ? 'Ghatampur Central' : 'Sihari / Ghatampur';
-        _fullAddress = 'Ghatampur, Kanpur Nagar, Uttar Pradesh 209206, India';
+        _areaName = distKm <= 1.0 ? '${activeHub.city} Central' : '${activeHub.city} Area';
+        _fullAddress = '${activeHub.name}, ${activeHub.city}, Uttar Pradesh, India';
       });
     }
   }
@@ -204,18 +244,70 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                   tileProvider: CachedMapTileProvider(),
                 ),
 
-                // 5.0 KM Service Zone Circular Boundary
+                // Dynamic Multi-Hub Service Zone Circular Boundaries
                 CircleLayer(
-                  circles: [
-                    CircleMarker(
-                      point: const LatLng(storeLat, storeLng),
-                      radius: 5000,
+                  circles: (_activeHubs.isNotEmpty ? _activeHubs : StoreHub.defaultHubs).map((hub) {
+                    final isThisMatched = _matchedHub?.id == hub.id;
+                    final isInsideThis = _isServiceable && isThisMatched;
+                    return CircleMarker(
+                      point: LatLng(hub.latitude, hub.longitude),
+                      radius: (hub.deliveryRadiusKm * 1000).toDouble(),
                       useRadiusInMeter: true,
-                      color: AppDesignSystem.green600.withValues(alpha: 0.08),
-                      borderColor: AppDesignSystem.green600.withValues(alpha: 0.4),
-                      borderStrokeWidth: 2,
-                    ),
-                  ],
+                      color: isInsideThis
+                          ? AppDesignSystem.green600.withValues(alpha: 0.12)
+                          : (isThisMatched
+                              ? AppDesignSystem.orange600.withValues(alpha: 0.09)
+                              : const Color(0xFF6366F1).withValues(alpha: 0.05)),
+                      borderColor: isInsideThis
+                          ? AppDesignSystem.green600.withValues(alpha: 0.75)
+                          : (isThisMatched
+                              ? AppDesignSystem.orange600.withValues(alpha: 0.5)
+                              : const Color(0xFF6366F1).withValues(alpha: 0.35)),
+                      borderStrokeWidth: isThisMatched ? 2.5 : 1.5,
+                    );
+                  }).toList(),
+                ),
+
+                // Hub Center Markers with Badges
+                MarkerLayer(
+                  markers: (_activeHubs.isNotEmpty ? _activeHubs : StoreHub.defaultHubs).map((hub) {
+                    return Marker(
+                      point: LatLng(hub.latitude, hub.longitude),
+                      width: 110,
+                      height: 52,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                            decoration: BoxDecoration(
+                              color: AppDesignSystem.slate900,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: const [
+                                BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('🏪', style: TextStyle(fontSize: 10)),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '${hub.city} Hub',
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white,
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_drop_down, color: AppDesignSystem.slate900, size: 14),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                 ),
               ],
             ),
@@ -246,15 +338,15 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          _isServiceable ? Icons.check_circle_rounded : Icons.warning_rounded,
-                          size: 13,
+                          _isServiceable ? Icons.bolt_rounded : Icons.warning_rounded,
+                          size: 14,
                           color: Colors.white,
                         ),
                         const SizedBox(width: 5),
                         Text(
                           _isServiceable
-                              ? 'Order will be delivered here'
-                              : 'Outside 5.0 km Delivery Zone',
+                              ? '⚡ ~${_calculateEtaText(_distanceKm)} • ${_distanceKm.toStringAsFixed(1)} km (${_matchedHub?.name ?? "Hub"})'
+                              : '🟠 ${(_distanceKm - (_matchedHub?.deliveryRadiusKm ?? 5.0)).clamp(0.1, 99.0).toStringAsFixed(1)} km outside zone (${_matchedHub?.city ?? "Hub"})',
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: FontWeight.w800,
@@ -316,85 +408,158 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
             ),
           ),
 
-          // 3. TOP APP BAR & SEARCH BAR
+          // 3. TOP APP BAR & SEARCH BAR + QUICK HUB CHIPS
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Back Button
-                  Bounceable(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.12),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
+                  Row(
+                    children: [
+                      // Back Button
+                      Bounceable(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.12),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                        ],
+                          child: const Icon(Icons.arrow_back_rounded, color: slateDark, size: 20),
+                        ),
                       ),
-                      child: const Icon(Icons.arrow_back_rounded, color: slateDark, size: 20),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
+                      const SizedBox(width: 10),
 
-                  // Search Pill (Interactive Area Search)
-                  Expanded(
-                    child: Bounceable(
-                      onTap: _openAreaSearchSheet,
-                      child: Container(
-                        height: 46,
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
-                              blurRadius: 12,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.search_rounded, size: 20, color: AppDesignSystem.orange600),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                _areaName.isNotEmpty ? _areaName : 'Search area, colony or landmark...',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 13.5),
-                                  fontWeight: FontWeight.w700,
-                                  color: slateDark,
+                      // Search Pill (Interactive Area Search)
+                      Expanded(
+                        child: Bounceable(
+                          onTap: _openAreaSearchSheet,
+                          child: Container(
+                            height: 46,
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.08),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 3),
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                              ],
                             ),
-                            Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFFFF7ED),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.tune_rounded,
-                                size: 14,
-                                color: AppDesignSystem.orange600,
-                              ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.search_rounded, size: 20, color: AppDesignSystem.orange600),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    _areaName.isNotEmpty ? _areaName : 'Search area, colony or landmark...',
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 13.5),
+                                      fontWeight: FontWeight.w700,
+                                      color: slateDark,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFFFF7ED),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.tune_rounded,
+                                    size: 14,
+                                    color: AppDesignSystem.orange600,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
+
+                  // Quick Store Hub Pills
+                  if (_activeHubs.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 32,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _activeHubs.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) {
+                          final hub = _activeHubs[index];
+                          final isSelected = _matchedHub?.id == hub.id;
+                          return Bounceable(
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              _mapController.move(LatLng(hub.latitude, hub.longitude), 15.5);
+                              _updateLocationDetails(hub.latitude, hub.longitude);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: isSelected ? AppDesignSystem.slate900 : Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isSelected ? AppDesignSystem.slate900 : const Color(0xFFE2E8F0),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.08),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    isSelected ? '📍 ' : '🏪 ',
+                                    style: const TextStyle(fontSize: 11),
+                                  ),
+                                  Text(
+                                    '${hub.city} Hub',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: isSelected ? Colors.white : AppDesignSystem.slate800,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '(${hub.deliveryRadiusKm.toInt()}km)',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: isSelected ? Colors.white70 : AppDesignSystem.slate500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -527,7 +692,43 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                       ],
                     ),
 
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 12),
+
+                    // Live Delivery ETA & Distance Pill
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _isServiceable ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _isServiceable ? const Color(0xFFBBF7D0) : const Color(0xFFFECACA),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _isServiceable ? Icons.bolt_rounded : Icons.info_outline_rounded,
+                            size: 16,
+                            color: _isServiceable ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _isServiceable
+                                  ? '⚡ ~${_calculateEtaText(_distanceKm)} Delivery • ${_distanceKm.toStringAsFixed(1)} km from ${_matchedHub?.name ?? "Hub"}'
+                                  : 'Outside active zone (${_distanceKm.toStringAsFixed(1)} km to nearest hub)',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 11.5),
+                                fontWeight: FontWeight.w700,
+                                color: _isServiceable ? const Color(0xFF15803D) : const Color(0xFFB91C1C),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
 
                     // Confirm & Proceed Button
                     Bounceable(
@@ -543,8 +744,23 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                           return;
                         }
 
-                        HapticFeedback.mediumImpact();
                         final nav = Navigator.of(context);
+
+                        // Smart Cart Protection: Check if user has grocery items from a different hub
+                        if (_matchedHub != null) {
+                          final conflictingHubId = ref.read(cartProvider.notifier).checkHubConflict(_matchedHub!.id);
+                          if (conflictingHubId != null) {
+                            final currentHub = ref.read(currentStoreHubProvider);
+                            final proceed = await HubConflictDialog.show(
+                              context,
+                              oldHubName: currentHub.name,
+                              newHubName: _matchedHub!.name,
+                            );
+                            if (!proceed || !mounted) return;
+                          }
+                        }
+
+                        HapticFeedback.mediumImpact();
                         final savedAddress = await nav.push<Address>(
                           FadeSlideRoute(
                             page: DoorstepDetailsScreen(
@@ -701,6 +917,42 @@ class _AreaSearchModalState extends State<_AreaSearchModal> {
       'lat': 26.1480,
       'lng': 80.1760,
       'tag': 'Transit',
+    },
+    // Akbarpur Hub Landmarks
+    {
+      'title': 'Akbarpur Tehsil & Court',
+      'subtitle': 'Main Tehsil Complex, Akbarpur, Ambedkar Nagar, 224122',
+      'lat': 26.4380,
+      'lng': 82.5400,
+      'tag': 'Landmark',
+    },
+    {
+      'title': 'Akbarpur Railway Station',
+      'subtitle': 'Station Road, Akbarpur Junction, 224122',
+      'lat': 26.4420,
+      'lng': 82.5480,
+      'tag': 'Transit',
+    },
+    {
+      'title': 'Shahzadpur Main Market',
+      'subtitle': 'Cloth, Electronics & Grocery Bazaar, Akbarpur, 224122',
+      'lat': 26.4310,
+      'lng': 82.5360,
+      'tag': 'Market',
+    },
+    {
+      'title': 'Patel Nagar Akbarpur',
+      'subtitle': 'Residential Colony, Near Bus Station, Akbarpur, 224122',
+      'lat': 26.4350,
+      'lng': 82.5420,
+      'tag': 'Colony',
+    },
+    {
+      'title': 'Dostpur Road Akbarpur',
+      'subtitle': 'Dostpur Bypass Road, Akbarpur, 224122',
+      'lat': 26.4280,
+      'lng': 82.5330,
+      'tag': 'Area',
     },
     {
       'title': 'Kushmanda Devi Mandir',

@@ -202,7 +202,7 @@ class CartItemRow extends ConsumerWidget {
                   child: InkWell(
                     borderRadius: const BorderRadius.horizontal(right: Radius.circular(9)),
                     onTap: () {
-                      if (qty >= prod.stock) {
+                      if (prod.stock > 0 && qty >= prod.stock) {
                         HapticFeedback.heavyImpact();
                         ScaffoldMessenger.of(context).hideCurrentSnackBar();
                         ScaffoldMessenger.of(context).showSnackBar(

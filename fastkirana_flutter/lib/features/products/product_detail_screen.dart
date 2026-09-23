@@ -1110,7 +1110,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                       child: InkWell(
                                         borderRadius: const BorderRadius.horizontal(right: Radius.circular(13)),
                                         onTap: () {
-                                          if (inCartQty >= p.stock) {
+                                           if (p.stock > 0 && inCartQty >= p.stock) {
                                             HapticFeedback.heavyImpact();
                                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
                                             ScaffoldMessenger.of(context).showSnackBar(

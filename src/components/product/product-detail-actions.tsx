@@ -64,6 +64,7 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
     restaurantId: (product as any).restaurantId || (product as any).restaurant?.id,
     restaurantName: (product as any).restaurantName || (product as any).restaurant?.name,
     restaurant: (product as any).restaurant,
+    menuSection: (product as any).menuSection || null,
   }), [product, resolvedMrp, resolvedPrice, resolvedDiscount, resolvedStock, resolvedIsAvailable])
 
   const { subscribe } = usePushNotification()

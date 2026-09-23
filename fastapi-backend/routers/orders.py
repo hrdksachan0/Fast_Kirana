@@ -24,6 +24,7 @@ from routers.auth import require_auth, get_current_user
 from routers.websockets import manager
 from utils.firebase import send_fcm_notification, send_fcm_topic_notification
 from routers.orders_service import generate_id, get_last_10_digits, get_distance_km, validate_order_status_transition
+from utils.idempotency import generate_order_cart_signature, acquire_idempotency_lock, save_idempotency_response, release_idempotency_lock
 
 logger = logging.getLogger("orders")
 
@@ -137,7 +138,8 @@ async def send_whatsapp_alert(phone: str, text: str) -> bool:
     phone_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
 
     if not token or not phone_id:
-        return False
+        logger.info(f"[WHATSAPP MOCK] To {phone}: {text}")
+        return True
 
     clean_phone = f"91{phone}" if len(phone) == 10 else phone
     url = f"https://graph.facebook.com/v20.0/{phone_id}/messages"
@@ -165,18 +167,13 @@ async def send_whatsapp_alert(phone: str, text: str) -> bool:
         return False
 
 
-async def upload_to_cloudinary(base64_image: str, cloud_name: str, upload_preset: str) -> str:
-    file_data = base64_image
-    if not file_data.startswith("data:"):
-        file_data = f"data:image/jpeg;base64,{base64_image}"
-async def send_whatsapp_alert(phone: str, message: str):
-    logger.info(f"[WHATSAPP MOCK] To {phone}: {message}")
-
-
 async def upload_to_cloudinary(base64_data: str, cloud_name: str, upload_preset: str) -> str:
+    file_data = base64_data
+    if not file_data.startswith("data:"):
+        file_data = f"data:image/jpeg;base64,{base64_data}"
     url = f"https://api.cloudinary.com/v1_1/{cloud_name}/image/upload"
     async with httpx.AsyncClient(timeout=15.0) as client:
-        resp = await client.post(url, data={"file": base64_data, "upload_preset": upload_preset})
+        resp = await client.post(url, data={"file": file_data, "upload_preset": upload_preset})
         if resp.status_code != 200:
             raise Exception(f"Cloudinary upload failed: {resp.status_code} - {resp.text}")
         res_json = resp.json()
@@ -235,6 +232,7 @@ async def send_pwa_notification_to_user(user_id: str, title: str, body: str, dat
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_order(
+    request: Request,
     payload: Dict[str, Any] = Body(...),
     current_user: Optional[dict] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -242,6 +240,7 @@ async def create_order(
 ):
     """
     Place a secure checkout order. Evaluates store timings, geocodes, stocks, and promo codes.
+    Includes H2 idempotency lock to prevent duplicate orders on double-tap or retries.
     """
     user_id = current_user.get("id") or current_user.get("sub") if current_user else payload.get("userId")
     
@@ -264,6 +263,21 @@ async def create_order(
             db.add(guest_user)
             await db.flush()
         user_id = guest_user.id
+
+    # H2 FIX: Idempotency lock check
+    idempotency_key = (
+        request.headers.get("x-idempotency-key")
+        or request.headers.get("idempotency-key")
+        or generate_order_cart_signature(user_id, payload.get("items", []), payload.get("addressId"), payload.get("paymentMethod"))
+    )
+    is_dup, is_proc, cached_resp = acquire_idempotency_lock(idempotency_key)
+    if is_dup:
+        if cached_resp:
+            return {**cached_resp, "idempotencyReplayed": True}
+        raise HTTPException(
+            status_code=409,
+            detail="An order with these items is already being processed. Please wait a moment."
+        )
 
     # Check if account is blocked
     user_stmt = select(User).where(User.id == user_id)
@@ -585,7 +599,10 @@ async def create_order(
             if variant:
                 item_price = float(variant.get("price", item_price))
 
-        combined_subtotal += item_price * int(item["quantity"])
+        # Include food addons in subtotal (C2 fix)
+        selected_addons_sub = item.get("selectedAddons") or item.get("product", {}).get("selectedAddons") or []
+        addon_total_sub = sum(float(a.get("price", 0)) for a in selected_addons_sub if isinstance(a, dict))
+        combined_subtotal += (item_price + addon_total_sub) * int(item["quantity"])
 
     if combined_subtotal < 20.0:
         raise HTTPException(status_code=400, detail="Minimum order value of ₹20 is required to place an order.")
@@ -638,7 +655,96 @@ async def create_order(
 
                     if meets_min_order:
                         coupon_id = coupon.id
-                        if coupon.discountType == "FLAT":
+                        if coupon.discountType == "BOGO":
+                            bogo_items = rest_items if coupon.restaurantId else items
+                            if coupon.menuSection:
+                                sec_filters = [s.strip().lower() for s in coupon.menuSection.split(",") if s.strip()]
+                                if sec_filters:
+                                    filtered_bogo = []
+                                    for it in bogo_items:
+                                        base_p = next((p for p in db_products if p.id == it["product"]["id"].split("_")[0]), None)
+                                        m_sec = str((it.get("product") or {}).get("menuSection") or "").lower()
+                                        tags = [str(t).lower() for t in (base_p.tags if base_p and base_p.tags else [])]
+                                        name = str(base_p.name if base_p else (it.get("product") or {}).get("name") or "").lower()
+                                        if any(f in m_sec or any(f in t for t in tags) or f in name for f in sec_filters):
+                                            filtered_bogo.append(it)
+                                    bogo_items = filtered_bogo
+
+                            if coupon.bogoType == "BUY_LARGE_GET_SMALL":
+                                trigger_var = (coupon.triggerVariant or "large").lower().strip()
+                                reward_var = (coupon.rewardVariant or "small").lower().strip()
+
+                                def get_item_vtext(it):
+                                    is_v = "_" in it["product"]["id"]
+                                    var_name = it["product"]["id"].split("_")[1] if is_v else ""
+                                    base_p = next((p for p in db_products if p.id == it["product"]["id"].split("_")[0]), None)
+                                    unit_str = base_p.unit if base_p else ""
+                                    nm = base_p.name if base_p else ""
+                                    return f"{var_name} {unit_str} {nm}".lower()
+
+                                trigger_items = [it for it in bogo_items if trigger_var in get_item_vtext(it)]
+                                total_trig_qty = sum(int(it.get("quantity", 1)) for it in trigger_items)
+                                reward_items = [it for it in bogo_items if reward_var in get_item_vtext(it)]
+
+                                if total_trig_qty > 0 and reward_items:
+                                    allowed_free = min(total_trig_qty, coupon.maxFreeItems or 3)
+                                    sorted_rewards = sorted(reward_items, key=lambda x: float(x.get("price", 0.0)))
+                                    rem_free = allowed_free
+                                    for it in sorted_rewards:
+                                        base_p = next((p for p in db_products if p.id == it["product"]["id"].split("_")[0]), None)
+                                        price = float(it.get("price", base_p.price if base_p else 0.0))
+                                        free_q = min(int(it.get("quantity", 1)), rem_free)
+                                        combined_discount += free_q * price
+                                        rem_free -= free_q
+                                        if rem_free <= 0:
+                                            break
+                                    if coupon.maxDiscount:
+                                        combined_discount = min(combined_discount, coupon.maxDiscount)
+
+                            elif coupon.bogoType == "FREE_GIFT":
+                                min_trig = int(coupon.triggerVariant or 2)
+                                total_trig = sum(int(it.get("quantity", 1)) for it in bogo_items)
+                                if total_trig >= min_trig and coupon.defaultFreeDishId:
+                                    free_dish = next((p for p in db_products if p.id == coupon.defaultFreeDishId), None)
+                                    if free_dish:
+                                        combined_discount = float(free_dish.price)
+                                        if coupon.maxDiscount:
+                                            combined_discount = min(combined_discount, coupon.maxDiscount)
+
+                            elif coupon.bogoType == "CHEAPEST_FREE":
+                                unit_prices = []
+                                for it in bogo_items:
+                                    base_p = next((p for p in db_products if p.id == it["product"]["id"].split("_")[0]), None)
+                                    price = float(it.get("price", base_p.price if base_p else 0.0))
+                                    qty = int(it.get("quantity", 1))
+                                    for _ in range(qty):
+                                        unit_prices.append(price)
+                                if len(unit_prices) >= 2:
+                                    unit_prices.sort()
+                                    combined_discount = unit_prices[0]
+                                    if coupon.maxDiscount:
+                                        combined_discount = min(combined_discount, coupon.maxDiscount)
+                                else:
+                                    combined_discount = 0.0
+                            elif coupon.bogoType == "SAME_ITEM" or not coupon.bogoType:
+                                eligible = bogo_items
+                                if coupon.bogoDishId:
+                                    eligible = [it for it in bogo_items if it["product"]["id"].split("_")[0] == coupon.bogoDishId]
+                                # H9 FIX: Enforce max_free_cap
+                                max_free_cap = getattr(coupon, "maxFreeItems", 3) or 3
+                                for it in eligible:
+                                    qty = int(it.get("quantity", 1))
+                                    if qty >= 2:
+                                        pairs = min(qty // 2, max_free_cap)
+                                        base_p = next((p for p in db_products if p.id == it["product"]["id"].split("_")[0]), None)
+                                        price = float(it.get("price", base_p.price if base_p else 0.0))
+                                        combined_discount += pairs * price
+                                if coupon.maxDiscount and combined_discount > coupon.maxDiscount:
+                                    combined_discount = coupon.maxDiscount
+                        elif coupon.discountType == "FREE_DELIVERY":
+                            # H5 FIX: Flat ₹25 delivery discount
+                            combined_discount = 25.0
+                        elif coupon.discountType == "FLAT":
                             combined_discount = min(coupon.value, eligible_subtotal)
                         elif coupon.discountType == "PERCENT":
                             combined_discount = (eligible_subtotal * coupon.value) / 100.0
@@ -733,13 +839,24 @@ async def create_order(
                 await db.flush()
             order_address_id = pickup_address.id
 
+        # C1 FIX: Never trust client-claimed payment status.
+        # Payment is only verified server-side via Razorpay/Cashfree verify endpoints.
+        # Orders start as unpaid; payment verification happens in verify-signature/webhook.
+        is_online_paid = False
+        if payment_method != "COD":
+            # For online payments, order starts unpaid. Client must call verify-signature after.
+            pass
+        auto_approve_setting = settings_map.get("admin_auto_approve_orders", "true")
+        is_auto_approve = auto_approve_setting.lower() == "true"
+        initial_order_status = OrderStatus.PENDING if (is_online_paid or is_auto_approve) else OrderStatus.ADMIN_PENDING
+
         new_order = Order(
             id=generate_id("ord_"),
             readableId=readable_id,
             userId=user_id,
             addressId=order_address_id,
             orderType=OrderType.RESTAURANT if restaurant_id else OrderType.GROCERY,
-            status=OrderStatus.PENDING,
+            status=initial_order_status,
             subtotal=round(subtotal, 2),
             discount=round(discount, 2),
             deliveryFee=round(delivery_fee_charge, 2),
@@ -747,7 +864,7 @@ async def create_order(
             miscFee=round(misc_fee_charge, 2),
             total=round(final_total, 2),
             paymentMethod=PaymentMethod(payment_method),
-            paymentStatus=PaymentStatus.PAID if (payload.get("paymentStatus") == "PAID" or payload.get("paymentId")) else PaymentStatus.PENDING,
+            paymentStatus=PaymentStatus.PAID if is_online_paid else PaymentStatus.PENDING,
             estimatedDelivery=estimated_delivery,
             deliveryMethod=delivery_method,
             isB2B=is_b2b,
@@ -766,38 +883,77 @@ async def create_order(
         # Attach all items & decrement stock for grocery
         for item in items:
             prod = item["dbProduct"]
-            is_var = "_" in item["product"]["id"]
-            var_name = item["product"]["id"].split("_")[1] if is_var else None
+            raw_id = str(item["product"].get("id", ""))
+            is_var = "_" in raw_id
+            var_name = item.get("selectedVariant") or (raw_id.split("_")[1] if is_var else None)
 
             cost_price = prod.costPrice or 0.0
             item_price = prod.price
-            if is_var and prod.variants:
+            if var_name and prod.variants and isinstance(prod.variants, list):
                 variant = next((v for v in prod.variants if v.get("name") == var_name), None)
                 if variant:
                     item_price = float(variant.get("price", item_price))
-                    cost_price = float(variant.get("costPrice", cost_price))
+                    if variant.get("costPrice") is not None:
+                        cost_price = float(variant.get("costPrice"))
+
+            # Food Addons Calculation & Storage
+            selected_addons = item.get("selectedAddons") or []
+            addon_total = sum(float(a.get("price", 0)) for a in selected_addons if isinstance(a, dict))
+            final_item_price = item_price + addon_total
+
+            order_item_variants = {
+                "productVariants": prod.variants,
+                "selectedAddons": selected_addons
+            } if selected_addons else prod.variants
 
             order_item = OrderItem(
                 id=generate_id("oi_"),
                 orderId=new_order.id,
                 productId=prod.id,
                 name=prod.name,
-                price=item_price,
+                price=final_item_price,
                 quantity=int(item["quantity"]),
                 imageUrl=prod.imageUrl,
                 selectedVariant=var_name,
                 costPrice=cost_price,
-                variants=prod.variants,
+                variants=order_item_variants,
                 notes=item.get("notes")
             )
             db.add(order_item)
 
             # Stock deduction for grocery items
-            if not prod.restaurantId and prod.stock > 0:
+            if not prod.restaurantId:
                 qty = int(item["quantity"])
                 prev_stock = prod.stock
                 new_stock = max(0, prev_stock - qty)
-                prod.stock = new_stock
+
+                # If item has variant, update variant stock in prod.variants JSON
+                if var_name and prod.variants and isinstance(prod.variants, list):
+                    updated_variants = []
+                    for v in prod.variants:
+                        v_copy = dict(v)
+                        if v_copy.get("name") == var_name:
+                            v_copy["stock"] = max(0, int(v_copy.get("stock", 0)) - qty)
+                        updated_variants.append(v_copy)
+                    prod.variants = updated_variants
+                    prod.stock = sum(int(v.get("stock", 0)) for v in updated_variants)
+                else:
+                    prod.stock = new_stock
+
+                # Localized Store Inventory deduction (if store_id is provided)
+                if store_id:
+                    try:
+                        from models import StoreInventory
+                        inv_stmt = select(StoreInventory).where(
+                            StoreInventory.productId == prod.id,
+                            StoreInventory.storeId == store_id
+                        )
+                        inv_res = await db.execute(inv_stmt)
+                        existing_inv = inv_res.scalars().first()
+                        if existing_inv:
+                            existing_inv.stock = max(0, existing_inv.stock - qty)
+                    except Exception as inv_err:
+                        logger.warning(f"Could not decrement StoreInventory for product {prod.id} at store {store_id}: {inv_err}")
 
                 log = StockLog(
                     id=generate_id("sl_"),
@@ -805,7 +961,7 @@ async def create_order(
                     quantity=-qty,
                     type="ONLINE_ORDER",
                     prevStock=prev_stock,
-                    newStock=new_stock
+                    newStock=prod.stock
                 )
                 db.add(log)
 
@@ -888,7 +1044,7 @@ async def create_order(
                 background_tasks.add_task(send_whatsapp_alert, phone, admin_text)
 
         # Return full order object matching Flutter Order.fromJson expectations
-        return {
+        result_payload = {
             "id": main_order.id,
             "readableId": main_order.readableId,
             "userId": main_order.userId,
@@ -933,9 +1089,17 @@ async def create_order(
             } if address else None,
         }
 
+        # Save idempotency cache
+        if idempotency_key:
+            save_idempotency_response(idempotency_key, result_payload)
+
+        return result_payload
+
     except Exception as e:
         await db.rollback()
         logger.error(f"Failed to place order: {str(e)}")
+        if "idempotency_key" in locals() and idempotency_key:
+            release_idempotency_lock(idempotency_key)
         raise HTTPException(status_code=500, detail=f"Failed to place order: {str(e)}")
 
 
@@ -1407,7 +1571,14 @@ async def update_order(
 
     # Strict Role Assignment for Status Transitions
     if target_status == OrderStatus.CANCELLED:
-        if not (is_owner or is_admin or is_picker or is_restaurant_staff or is_delivery):
+        if is_owner and not is_admin:
+            # C8 FIX: Customers can only cancel PENDING or ADMIN_PENDING orders
+            if order.status not in [OrderStatus.PENDING, OrderStatus.ADMIN_PENDING]:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Order cannot be cancelled after it has been confirmed. Please contact support."
+                )
+        elif not (is_admin or is_picker or is_restaurant_staff or is_delivery):
             raise HTTPException(status_code=403, detail="Unauthorized to cancel this order")
     elif target_status in [OrderStatus.CONFIRMED, OrderStatus.PACKED]:
         if is_restaurant_order:
@@ -1441,20 +1612,11 @@ async def update_order(
         if order.deliveryUserId and order.deliveryUserId != user_id:
             raise HTTPException(status_code=409, detail="Order is already claimed by another delivery rider")
 
-    # Deduct stock on PACKED state transition
+    # C3 FIX: Stock is already deducted at order creation (lines 896-938).
+    # Do NOT deduct again on PACKED to avoid double deduction.
+    # The PACKED transition only marks the order as physically packed.
     if target_status == OrderStatus.PACKED and order.status != OrderStatus.PACKED:
-        items_stmt = select(OrderItem).where(OrderItem.orderId == order.id)
-        items_res = await db.execute(items_stmt)
-        order_items = items_res.scalars().all()
-        
-        for item in order_items:
-            if not item.productId:
-                continue
-            prod_stmt = select(Product).where(Product.id == item.productId)
-            prod_res = await db.execute(prod_stmt)
-            product = prod_res.scalars().first()
-            if product:
-                product.stock = max(0, product.stock - item.quantity)
+        pass  # No stock deduction — already done at creation
 
     # Restore stock on CANCELLED state transition
     if target_status == OrderStatus.CANCELLED and order.status != OrderStatus.CANCELLED:
@@ -1498,6 +1660,21 @@ async def update_order(
                     product.stock = sum(b.quantity for b in batches)
                 else:
                     product.stock += item.quantity
+
+            # If order was associated with a dark store, restore localized stock in StoreInventory
+            if order.storeId:
+                try:
+                    from models import StoreInventory
+                    inv_stmt = select(StoreInventory).where(
+                        StoreInventory.productId == item.productId,
+                        StoreInventory.storeId == order.storeId
+                    )
+                    inv_res = await db.execute(inv_stmt)
+                    existing_inv = inv_res.scalars().first()
+                    if existing_inv:
+                        existing_inv.stock += item.quantity
+                except Exception as inv_restore_err:
+                    logger.warning(f"Could not restore StoreInventory for product {item.productId} at store {order.storeId}: {inv_restore_err}")
 
     # Cloudinary upload on deliver pings
     final_delivery_photo = delivery_photo
@@ -1596,15 +1773,20 @@ async def update_order(
         if prep_time and str(prep_time).isdigit():
             order.estimatedDelivery = datetime.utcnow() + timedelta(minutes=int(prep_time))
 
-    # Sibling synchronization
+    # Sibling synchronization (H6 FIX: outlet isolation, never cascade-cancel sibling)
+    is_explicit_all = payload.get("scope") == "ALL" or payload.get("updateCombined") is True
+    is_customer_cancel = is_owner and target_status == OrderStatus.CANCELLED
+    should_sync_status = is_explicit_all or is_customer_cancel or target_status in [OrderStatus.SHIPPED, OrderStatus.DELIVERED]
+
     if order.combinedId:
         sibling_stmt = select(Order).where(Order.combinedId == order.combinedId, Order.id != order.id)
         sibling_res = await db.execute(sibling_stmt)
         companion = sibling_res.scalars().first()
 
         if companion:
-            companion.status = order.status
-            companion.updatedAt = datetime.utcnow()
+            if should_sync_status:
+                companion.status = order.status
+                companion.updatedAt = datetime.utcnow()
             if order.deliveryUserId:
                 companion.deliveryUserId = order.deliveryUserId
             if target_status == OrderStatus.DELIVERED:
@@ -1865,4 +2047,80 @@ async def update_order_payment(
         "orderId": order.id,
         "paymentMethod": order.paymentMethod.value,
         "paymentStatus": order.paymentStatus.value
+    }
+
+
+@router.post("/{id}/convert-to-cod")
+async def convert_order_to_cod(
+    id: str,
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Customer / Staff fallback: Convert an unpaid online order to Cash on Delivery (COD).
+    Updates order status to CONFIRMED so preparation can begin immediately.
+    """
+    user_id = current_user.get("id") or current_user.get("sub")
+    role = current_user.get("role")
+
+    clean_id = id.strip()
+    stmt = select(Order).where(or_(Order.id == clean_id, Order.readableId == clean_id))
+    res = await db.execute(stmt)
+    order = res.scalars().first()
+
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    is_owner = bool(user_id and order.userId == user_id)
+    is_admin = role == "ADMIN"
+    if not is_owner and not is_admin and user_id:
+        raise HTTPException(status_code=403, detail="Unauthorized to modify this order")
+
+    if order.paymentStatus == PaymentStatus.PAID:
+        raise HTTPException(status_code=400, detail="Order has already been paid online")
+
+    if order.status == OrderStatus.CANCELLED:
+        raise HTTPException(status_code=400, detail="Order has been cancelled and cannot be converted")
+
+    now = datetime.utcnow()
+
+    # If part of combined order group, convert all companion sub-orders
+    if order.combinedId:
+        combined_stmt = select(Order).where(Order.combinedId == order.combinedId)
+        comb_res = await db.execute(combined_stmt)
+        related_orders = comb_res.scalars().all()
+        for o in related_orders:
+            o.paymentMethod = PaymentMethod.COD
+            o.paymentStatus = PaymentStatus.PENDING
+            o.status = OrderStatus.CONFIRMED
+            o.confirmedAt = now
+            o.updatedAt = now
+    else:
+        order.paymentMethod = PaymentMethod.COD
+        order.paymentStatus = PaymentStatus.PENDING
+        order.status = OrderStatus.CONFIRMED
+        order.confirmedAt = now
+        order.updatedAt = now
+
+    await db.commit()
+    await db.refresh(order)
+
+    # Broadcast real-time WebSocket update
+    try:
+        await manager.broadcast_to_channel("general", {
+            "type": "order-converted-cod",
+            "orderId": order.id,
+            "readableId": order.readableId,
+            "status": order.status.value,
+            "paymentMethod": "COD"
+        })
+    except Exception as ws_err:
+        logger.warning(f"Failed to broadcast convert-to-cod via websocket: {ws_err}")
+
+    return {
+        "success": True,
+        "message": "Order converted to Cash on Delivery successfully",
+        "orderId": order.id,
+        "status": order.status.value,
+        "paymentMethod": "COD"
     }

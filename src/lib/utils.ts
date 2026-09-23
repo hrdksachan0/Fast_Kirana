@@ -196,7 +196,17 @@ export function getProductType(p: any): 'RESTAURANT' | 'CAFE' | 'BYPASS' | 'GROC
   const tags = (p.tags || []).map((t: any) => (typeof t === 'string' ? t.toLowerCase().trim() : ''))
   const name = (p.name || '').toLowerCase()
 
-  // 1. Check BYPASS (Beverages, Ice Cream, Desserts, Packaged drinks) BEFORE restaurantId
+  // 1. Restaurant / Cafe items attached to a specific restaurant are NEVER standalone darkstore BYPASS!
+  const hasRestId = Boolean(p.restaurantId || (p.restaurant && typeof p.restaurant === 'object' && p.restaurant.id))
+  if (hasRestId) {
+    const restSlug = ((p.restaurant && typeof p.restaurant === 'object' ? p.restaurant.slug : p.restaurantSlug) || '').toLowerCase()
+    if (restSlug.includes('cafe') || slug.includes('cafe') || tags.includes('cafe')) {
+      return 'CAFE'
+    }
+    return 'RESTAURANT'
+  }
+
+  // 2. Check BYPASS (Beverages, Ice Cream, Desserts, Packaged drinks) ONLY for standalone darkstore grocery products
   if (
     slug === 'ice-cream' ||
     slug === 'beverages' ||
@@ -212,11 +222,7 @@ export function getProductType(p: any): 'RESTAURANT' | 'CAFE' | 'BYPASS' | 'GROC
     return 'BYPASS'
   }
 
-  // 2. Check restaurantId for actual restaurant food dishes
-  if (p.restaurantId) {
-    return 'RESTAURANT'
-  }
-
+  // 3. Category / Tag checks
   if (
     slug === 'restaurant' ||
     slug.includes('restaurant') ||
@@ -246,7 +252,13 @@ import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
 
 export function isProductStoreClosed(
   p: any,
-  status: { groceryMartOpen: boolean; cafeOpen?: boolean; restaurantOpen?: boolean; [key: string]: any },
+  status: { 
+    groceryMartOpen: boolean; 
+    cafeOpen?: boolean; 
+    restaurantOpen?: boolean; 
+    outletStatus?: Record<string, boolean>;
+    [key: string]: any 
+  },
   categoryStatus?: Record<string, boolean>
 ): boolean {
   if (!p) return !status.groceryMartOpen
@@ -266,12 +278,21 @@ export function isProductStoreClosed(
     return !opStatus.isOpen
   }
 
-  const restId = p.restaurantId
-  if (restId) {
-    if (status[`outlet_open_${restId}`] !== undefined) {
+  // 4. Check restaurantId or restaurantSlug in outletStatus / status
+  const restId = p.restaurantId || (p.restaurant && typeof p.restaurant === 'string' ? p.restaurant : null)
+  const restSlug = p.restaurantSlug || (p.restaurant && typeof p.restaurant === 'object' ? p.restaurant.slug : null)
+  if (restId || restSlug) {
+    if (status.outletStatus) {
+      if (restId && status.outletStatus[restId] !== undefined) {
+        return !status.outletStatus[restId]
+      }
+      if (restSlug && status.outletStatus[restSlug] !== undefined) {
+        return !status.outletStatus[restSlug]
+      }
+    }
+    if (restId && status[`outlet_open_${restId}`] !== undefined) {
       return status[`outlet_open_${restId}`] === 'false' || status[`outlet_open_${restId}`] === false
     }
-    const restSlug = p.restaurantSlug
     if (restSlug && status[`outlet_open_${restSlug}`] !== undefined) {
       return status[`outlet_open_${restSlug}`] === 'false' || status[`outlet_open_${restSlug}`] === false
     }
@@ -279,16 +300,20 @@ export function isProductStoreClosed(
 
   const type = getProductType(p)
 
-  // 4. Fallback checks for unassigned restaurant items vs cafe items (cafe off logic removed)
-  if (type === 'RESTAURANT' || type === 'CAFE') {
-    return false
+  // 5. Fallback checks for restaurant items vs cafe items vs grocery items
+  if (type === 'RESTAURANT') {
+    return status.restaurantOpen !== undefined ? !status.restaurantOpen : false
+  }
+
+  if (type === 'CAFE') {
+    return status.cafeOpen !== undefined ? !status.cafeOpen : false
   }
 
   if (type === 'BYPASS') {
     return !status.groceryMartOpen
   }
 
-  // 5. Grocery Mart items: controlled by main Mart toggle
+  // 6. Grocery Mart items: controlled by main Mart toggle
   return !status.groceryMartOpen
 }
 export function getDeliveryPin(orderId: string): string {

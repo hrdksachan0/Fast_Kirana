@@ -252,6 +252,9 @@ export function AdminDashboard({
   }, [sessionAssignedStoreId, urlStoreId, initialStoreId, isSuperAdmin, selectedHubId])
 
   const handleSelectHub = (hubId: string) => {
+    if (sessionAssignedStoreId && !isSuperAdmin) {
+      return // Branch admin is strictly locked to their assigned hub
+    }
     setSelectedHubId(hubId)
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href)

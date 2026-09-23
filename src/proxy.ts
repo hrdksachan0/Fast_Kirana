@@ -18,6 +18,7 @@ export async function proxy(req: NextRequest) {
       email: token?.email as string,
       phone: token?.phone as string,
       role: token?.role as string,
+      assignedStoreId: (token as any)?.assignedStoreId,
     })
 
   const effectiveRole = isMasterAdmin ? 'ADMIN' : (token?.role as string | undefined)

@@ -664,7 +664,7 @@ class AddToCartButton extends ConsumerWidget {
               if (hasVariants) {
                 VariantSelectorSheet.show(context, product);
               } else {
-                if (inCartQty >= product.stock) {
+                if (product.stock > 0 && inCartQty >= product.stock) {
                   HapticFeedback.heavyImpact();
                   _showStockLimitSnackbar();
                   return;
@@ -927,21 +927,26 @@ class _ProductCardState extends ConsumerState<ProductCard> {
         final pSlug = product.slug.toLowerCase();
         final pSec = (product.menuSection ?? '').toLowerCase();
 
-        bool qualifies = true;
+        bool qualifies = false;
         // If offer specifies pizza or buy large, strictly restrict to pizza items / large-variant items
         if (up.contains('PIZZA') || up.contains('BUY LARGE')) {
-          final isPizza = pTags.contains('pizza') || pTags.any((t) => t.contains('pizza')) || pSec.contains('pizza') || pName.contains('pizza') || pSlug.contains('pizza');
+          final isConflicting = pTags.contains('burger') || pSec.contains('burger') || pTags.contains('sandwich') || pSec.contains('sandwich') || pTags.contains('maggie') || pTags.contains('maggi');
+          final isPizza = !isConflicting && (pTags.contains('pizza') || pTags.any((t) => t.contains('pizza')) || pSec.contains('pizza') || pName.contains('pizza') || pSlug.contains('pizza'));
           final hasLarge = (product.variants ?? []).any((v) => v.name.toLowerCase().contains('large'));
-          if (!isPizza && !hasLarge) {
-            qualifies = false;
+          if (isPizza || hasLarge) {
+            qualifies = true;
           }
         } else if (up.contains('BURGER')) {
-          if (!pTags.contains('burger') && !pSec.contains('burger') && !pName.contains('burger')) {
-            qualifies = false;
+          if (pTags.contains('burger') || pSec.contains('burger') || pName.contains('burger')) {
+            qualifies = true;
           }
         } else if (up.contains('SANDWICH')) {
-          if (!pTags.contains('sandwich') && !pSec.contains('sandwich') && !pName.contains('sandwich')) {
-            qualifies = false;
+          if (pTags.contains('sandwich') || pSec.contains('sandwich') || pName.contains('sandwich')) {
+            qualifies = true;
+          }
+        } else if (up.contains('PASTA')) {
+          if (pTags.contains('pasta') || pSec.contains('pasta') || pName.contains('pasta')) {
+            qualifies = true;
           }
         }
 

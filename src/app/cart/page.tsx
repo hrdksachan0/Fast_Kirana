@@ -18,6 +18,7 @@ import { useCartStore } from '@/stores/cart-store'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CartConflictDialog } from '@/components/cart/cart-conflict-dialog'
 import { BogoCartGiftCard } from '@/components/cart/bogo-cart-gift-card'
+import { isProductEligibleForCoupon } from '@/lib/coupon-rules'
 
 export default function CartPage() {
   const { data: session } = useSession()
@@ -112,6 +113,11 @@ export default function CartPage() {
     })
   }
 
+  const cartHash = useMemo(
+    () => items.map((i) => `${i.product.id}:${i.quantity}:${i.product.price}`).join('|'),
+    [items]
+  )
+
   // Auto-validate or auto-apply coupon when cart items or subtotal change
   useEffect(() => {
     if (items.length === 0) {
@@ -124,6 +130,22 @@ export default function CartPage() {
 
     // 1. If coupon code is already applied, re-validate against current items
     if (appliedCouponCode) {
+      // Immediate client-side check: If BOGO offer is applied, ensure cart still has enough qualifying items
+      if (appliedCoupon?.discountType === 'BOGO') {
+        const qualifying = items.filter((it) => isProductEligibleForCoupon(it.product, appliedCoupon))
+        const qQty = qualifying.reduce((sum, it) => sum + (it.quantity || 1), 0)
+        if (appliedCoupon.bogoType === 'CHEAPEST_FREE' && qQty < 2) {
+          setAppliedCoupon(null)
+          setAppliedCouponCode(null)
+          return
+        }
+        if (appliedCoupon.bogoType === 'SAME_ITEM' && !qualifying.some((it) => (it.quantity || 1) >= 2)) {
+          setAppliedCoupon(null)
+          setAppliedCouponCode(null)
+          return
+        }
+      }
+
       fetch('/api/coupons/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -135,7 +157,7 @@ export default function CartPage() {
       })
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
-          if (data?.coupon) {
+          if (data?.coupon && (data.coupon.discountAmount > 0 || data.coupon.nudgeMessage)) {
             setAppliedCoupon({
               code: data.coupon.code,
               discountAmount: data.coupon.discountAmount,
@@ -170,6 +192,14 @@ export default function CartPage() {
       .then(async (coupons: any[]) => {
         const autoCoupons = (coupons || []).filter((c: any) => c.autoApply && c.isActive)
         for (const c of autoCoupons) {
+          // Pre-check: only test coupons whose basic item requirements are present
+          const qualifying = items.filter((it) => isProductEligibleForCoupon(it.product, c))
+          const qQty = qualifying.reduce((sum, it) => sum + (it.quantity || 1), 0)
+          if (c.discountType === 'BOGO') {
+            if (c.bogoType === 'CHEAPEST_FREE' && qQty < 2) continue
+            if (c.bogoType === 'SAME_ITEM' && !qualifying.some((it) => (it.quantity || 1) >= 2)) continue
+          }
+
           try {
             const valRes = await fetch('/api/coupons/validate', {
               method: 'POST',
@@ -209,7 +239,7 @@ export default function CartPage() {
         }
       })
       .catch(() => {})
-  }, [appliedCouponCode, items.length, subtotal])
+  }, [appliedCouponCode, cartHash, subtotal])
 
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -336,9 +366,12 @@ export default function CartPage() {
 
     // 2. Fallback client-side matching if server freeItems wasn't received yet or BOGO is active
     if (map.size === 0 && appliedCoupon.discountType === 'BOGO') {
+      const qualifyingCafeItems = cafeItems.filter((it) => isProductEligibleForCoupon(it.product, appliedCoupon))
+      const totalQualifyingQty = qualifyingCafeItems.reduce((acc, it) => acc + (it.quantity || 1), 0)
+
       if (appliedCoupon.bogoType === 'BUY_LARGE_GET_SMALL') {
         const rewardVar = (appliedCoupon.rewardVariant || 'small').toLowerCase()
-        const smallItems = cafeItems.filter((it) => {
+        const smallItems = qualifyingCafeItems.filter((it) => {
           const text = `${it.product.unit || ''} ${it.product.name || ''} ${(it.product as any).selectedVariant || ''}`.toLowerCase()
           return text.includes(rewardVar)
         })
@@ -346,23 +379,23 @@ export default function CartPage() {
           const sorted = [...smallItems].sort((a, b) => a.product.price - b.product.price)
           map.set(sorted[0].product.id, {
             freeQty: 1,
-            badgeText: '100% FREE (BOGO)',
+            badgeText: appliedCoupon.badgeText || '100% FREE (BOGO)',
           })
         }
-      } else if (appliedCoupon.bogoType === 'CHEAPEST_FREE' && cafeItems.length >= 2) {
-        const sorted = [...cafeItems].sort((a, b) => a.product.price - b.product.price)
+      } else if (appliedCoupon.bogoType === 'CHEAPEST_FREE' && totalQualifyingQty >= 2) {
+        const sorted = [...qualifyingCafeItems].sort((a, b) => a.product.price - b.product.price)
         map.set(sorted[0].product.id, {
           freeQty: 1,
-          badgeText: 'CHEAPEST FREE',
+          badgeText: appliedCoupon.badgeText || 'CHEAPEST FREE',
         })
       } else if (appliedCoupon.bogoType === 'SAME_ITEM' || !appliedCoupon.bogoType) {
-        for (const it of cafeItems) {
+        for (const it of qualifyingCafeItems) {
           if (appliedCoupon.bogoDishId && (it.product.id === appliedCoupon.bogoDishId || it.product.id.startsWith(`${appliedCoupon.bogoDishId}_`))) {
-            map.set(it.product.id, { freeQty: 1, badgeText: '100% FREE (BOGO)' })
+            map.set(it.product.id, { freeQty: 1, badgeText: appliedCoupon.badgeText || '100% FREE (BOGO)' })
             break
           }
           if (it.quantity >= 2) {
-            map.set(it.product.id, { freeQty: Math.floor(it.quantity / 2), badgeText: '100% FREE (BOGO)' })
+            map.set(it.product.id, { freeQty: Math.floor(it.quantity / 2), badgeText: appliedCoupon.badgeText || '100% FREE (BOGO)' })
             break
           }
         }

@@ -282,6 +282,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
       restaurantId: (product as any).restaurantId || (product as any).restaurant?.id,
       restaurantName: (product as any).restaurantName || (product as any).restaurant?.name,
       restaurant: (product as any).restaurant,
+      menuSection: (product as any).menuSection || null,
     }
     
     addItem(cartProduct)

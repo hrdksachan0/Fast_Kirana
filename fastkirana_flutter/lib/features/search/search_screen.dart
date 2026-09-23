@@ -1337,7 +1337,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           if (hasVariants) {
                             VariantSelectorSheet.show(context, product);
                           } else {
-                            if (inCartQty >= product.stock) {
+                            if (product.stock > 0 && inCartQty >= product.stock) {
                               HapticFeedback.heavyImpact();
                               ScaffoldMessenger.of(context).hideCurrentSnackBar();
                               ScaffoldMessenger.of(context).showSnackBar(

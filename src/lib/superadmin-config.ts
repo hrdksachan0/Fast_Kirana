@@ -75,20 +75,24 @@ export function isRootAdminAccount(identifier?: {
   email?: string | null
   phone?: string | null
   role?: string | null
+  assignedStoreId?: string | null
 } | null): boolean {
   if (!identifier) return false
   const email = (identifier.email || '').toLowerCase().trim()
   const phone = (identifier.phone || '').replace(/\D/g, '').slice(-10)
   const role = (identifier.role || '').toUpperCase().trim()
+  const assignedStoreId = identifier.assignedStoreId
 
-  // 1. Explicit admin and superadmin emails
+  // If explicitly assigned to a specific store hub, this is a Hub Branch Admin, NEVER Root/SuperAdmin!
+  if (assignedStoreId) {
+    return false
+  }
+
+  // 1. Explicit global superadmin emails (HQ Master accounts)
   if (
     email === 'admin@fastkirana.com' ||
     email === 'superadmin@fastkirana.com' ||
-    email.startsWith('admin@') ||
-    email.startsWith('superadmin@') ||
-    email.endsWith('@admin.fastkirana.in') ||
-    email.startsWith('admin.')
+    email.startsWith('superadmin@')
   ) {
     return true
   }
@@ -98,9 +102,12 @@ export function isRootAdminAccount(identifier?: {
     return true
   }
 
-  // 3. Explicit role
-  if (role === 'ADMIN') {
-    return true
+  // 3. Admin account without any assigned store hub is a global HQ Admin
+  if ((role === 'ADMIN' || role === 'SUPER_ADMIN') && !assignedStoreId) {
+    // Exclude auto-generated branch emails like admin.hub-224122@fastkirana.in
+    if (!email.startsWith('admin.hub-') && !email.endsWith('@users.fastkirana.in')) {
+      return true
+    }
   }
 
   return false

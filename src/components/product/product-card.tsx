@@ -237,29 +237,45 @@ function ProductCardComponent({ product, isCompact = false }: ProductCardProps) 
 
   const restaurantOffer = (product as any).restaurant?.discountOffer || (product as any).restaurant?.discountBadge
   const bogoOfferText = useMemo(() => {
+    // 1. Direct server/rule-attached badge takes highest precedence
     if ((product as any).bogoBadge) return (product as any).bogoBadge
+
+    // 2. Direct product tag match
+    const pTags = (product.tags || []).map((t: string) => String(t).toLowerCase())
+    if (pTags.includes('bogo') || pTags.some((t: string) => t.includes('bogo'))) {
+      return 'BOGO'
+    }
+
+    // 3. Fallback: Only if restaurantOffer explicitly specifies this item's section/category
     if (!restaurantOffer) return null
     const up = String(restaurantOffer).toUpperCase()
     if (up.includes('BOGO') || up.includes('BUY 1') || up.includes('BUY LARGE') || up.includes('CHEAPEST')) {
-      const pTags = (product.tags || []).map((t: string) => t.toLowerCase())
       const pName = (product.name || '').toLowerCase()
       const pSec = String((product as any).menuSection || '').toLowerCase()
       const pSlug = (product.slug || '').toLowerCase()
 
-      // If offer specifies pizza or large pizza, only show on pizza / large-variant items
+      // If offer explicitly specifies pizza or large pizza
       if (up.includes('PIZZA') || up.includes('BUY LARGE')) {
         const isPizza = pTags.includes('pizza') || pSec.includes('pizza') || pName.includes('pizza') || pSlug.includes('pizza')
         const hasLarge = variantsList.some(v => (v.name || '').toLowerCase().includes('large'))
-        if (!isPizza && !hasLarge) return null
+        if (isPizza || hasLarge) {
+          return up.includes('BUY LARGE') ? 'BUY 1 GET 1' : (up.includes('CHEAPEST') ? 'BUY 2 GET 1' : 'BOGO DEAL')
+        }
       }
 
-      // If offer specifies other specific sections
-      if (up.includes('BURGER') && !pTags.includes('burger') && !pSec.includes('burger') && !pName.includes('burger')) return null
-      if (up.includes('SANDWICH') && !pTags.includes('sandwich') && !pSec.includes('sandwich') && !pName.includes('sandwich')) return null
+      // If offer explicitly specifies other specific sections
+      if (up.includes('BURGER') && (pTags.includes('burger') || pSec.includes('burger') || pName.includes('burger'))) {
+        return up.includes('CHEAPEST') ? 'BUY 2 GET 1' : 'BOGO DEAL'
+      }
+      if (up.includes('SANDWICH') && (pTags.includes('sandwich') || pSec.includes('sandwich') || pName.includes('sandwich'))) {
+        return up.includes('CHEAPEST') ? 'BUY 2 GET 1' : 'BOGO DEAL'
+      }
+      if (up.includes('PASTA') && (pTags.includes('pasta') || pSec.includes('pasta') || pName.includes('pasta'))) {
+        return up.includes('CHEAPEST') ? 'BUY 2 GET 1' : 'BOGO DEAL'
+      }
 
-      if (up.includes('BUY LARGE')) return 'BUY 1 GET 1'
-      if (up.includes('CHEAPEST')) return 'BUY 2 GET 1'
-      return 'BOGO DEAL'
+      // Do NOT blindly show BOGO on all items for generic strings like "BUY 2 GET CHEAPEST FREE"
+      return null
     }
     return null
   }, [product, restaurantOffer, variantsList])

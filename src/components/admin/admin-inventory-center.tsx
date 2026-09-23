@@ -29,6 +29,8 @@ import {
 } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
+import { InventoryImportTab } from '@/components/admin/inventory/inventory-import-tab'
+import { InventoryHistoryTab } from '@/components/admin/inventory/inventory-history-tab'
 
 interface Product {
   id: string
@@ -649,65 +651,7 @@ export function AdminInventoryCenter({ onInventoryUpdated, storeId }: AdminInven
     }
   }
 
-  // =========================================================================
-  // TAB 3: BULK IMPORT (GOOGLE SHEET PASTE)
-  // =========================================================================
-  const [importText, setImportText] = useState('')
-  const [importPreview, setImportPreview] = useState<any[]>([])
-  const [importing, setImporting] = useState(false)
 
-  const handleParseImport = () => {
-    if (!importText.trim()) return
-
-    const rows = importText.trim().split('\n')
-    const parsed = rows.map((row, idx) => {
-      const cols = row.split('\t') // split by tabs (standard copy-paste from Sheets)
-      if (cols.length < 3) return null
-
-      // Expecting order: Barcode | Name | Category Slug | Brand | MRP | Selling Price | Stock Qty | Unit | Image URL
-      return {
-        barcode: cols[0]?.trim() || '',
-        name: cols[1]?.trim() || '',
-        categorySlug: cols[2]?.trim().toLowerCase() || 'other-essentials',
-        brand: cols[3]?.trim() || 'Generic',
-        mrp: parseFloat(cols[4]) || 0,
-        price: parseFloat(cols[5]) || 0,
-        stockQty: parseInt(cols[6], 10) || 0,
-        unit: cols[7]?.trim() || '1 pc',
-        imageUrl: cols[8]?.trim() || ''
-      }
-    }).filter(Boolean)
-
-    setImportPreview(parsed)
-    toast.info(`Parsed ${parsed.length} rows. Please verify preview before importing.`)
-  }
-
-  const handleRunImport = async () => {
-    if (importPreview.length === 0) return
-
-    try {
-      setImporting(true)
-      const res = await fetch('/api/admin/inventory/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: importPreview, storeId: storeId || undefined })
-      })
-
-      if (!res.ok) throw new Error('Bulk import failed')
-      const data = await res.json()
-
-      toast.success(data.message)
-      setImportPreview([])
-      setImportText('')
-      fetchCatalog()
-      fetchHistory()
-    } catch (err) {
-      console.error(err)
-      toast.error('Bulk import process failed')
-    } finally {
-      setImporting(false)
-    }
-  }
 
   // =========================================================================
   // TAB 4: STOCK HISTORY LOGS
@@ -1513,199 +1457,22 @@ export function AdminInventoryCenter({ onInventoryUpdated, storeId }: AdminInven
 
           {/* TAB 3: BULK IMPORT */}
           {activeTab === 'import' && (
-            <motion.div
-              key="import-tab"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-6"
-            >
-              <div className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-6">
-                <div>
-                  <h3 className="text-sm font-black text-text-primary flex items-center gap-2">
-                    <FileSpreadsheet className="h-5 w-5 text-accent" />
-                    Google Sheets / Excel Bulk Import
-                  </h3>
-                  <p className="text-xs text-text-secondary mt-0.5">
-                    Copy columns from your grocery spreadsheet and paste them directly below to import or update inventory.
-                  </p>
-                </div>
-
-                {/* Import Textbox */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                    Paste Spreadsheet Rows (TAB Separated)
-                  </label>
-                  <textarea
-                    rows={8}
-                    value={importText}
-                    onChange={(e) => setImportText(e.target.value)}
-                    placeholder="Barcode&#9;Product Name&#9;Category Slug&#9;Brand&#9;MRP&#9;Selling Price&#9;Stock Quantity&#9;Unit&#9;Image URL"
-                    className="w-full bg-muted/40 border border-border/80 p-4 rounded-xl text-xs focus:outline-none focus:border-accent focus:bg-card font-mono leading-relaxed"
-                  />
-                  <div className="flex justify-between items-center">
-                    <span className="text-[9px] text-text-muted font-bold">
-                      Format: Barcode [Tab] Name [Tab] CategorySlug [Tab] Brand [Tab] MRP [Tab] Price [Tab] StockQty [Tab] Unit [Tab] ImageURL
-                    </span>
-                    <button
-                      onClick={handleParseImport}
-                      className="px-4 py-1.5 bg-accent hover:bg-accent-dark text-white rounded-lg text-xs font-extrabold cursor-pointer transition-colors shadow"
-                    >
-                      Preview & Validate Data
-                    </button>
-                  </div>
-                </div>
-
-                {/* Preview Grid */}
-                {importPreview.length > 0 && (
-                  <div className="space-y-4 pt-4 border-t border-border/40">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                        Data Preview Grid ({importPreview.length} items parsed)
-                      </span>
-                      <button
-                        onClick={handleRunImport}
-                        disabled={importing}
-                        className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-black tracking-wider uppercase transition-colors shadow flex items-center gap-1.5 cursor-pointer"
-                      >
-                        {importing ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : <Sparkles className="h-4.5 w-4.5" />}
-                        Apply Bulk Import & Sync
-                      </button>
-                    </div>
-
-                    <div className="overflow-x-auto border border-border rounded-xl">
-                      <table className="w-full text-left border-collapse text-[10px] font-semibold">
-                        <thead>
-                          <tr className="bg-muted/50 border-b border-border text-text-secondary uppercase text-[8px] font-extrabold tracking-wider">
-                            <th className="px-4 py-3">Barcode</th>
-                            <th className="px-4 py-3">Product Name</th>
-                            <th className="px-4 py-3">Category</th>
-                            <th className="px-4 py-3">Brand</th>
-                            <th className="px-4 py-3 text-right">MRP</th>
-                            <th className="px-4 py-3 text-right">Sale Price</th>
-                            <th className="px-4 py-3 text-center">Qty to Add</th>
-                            <th className="px-4 py-3">Unit</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                          {importPreview.map((item, idx) => (
-                            <tr key={idx} className="hover:bg-muted/10 transition-colors">
-                              <td className="px-4 py-2.5 font-mono text-text-primary">{item.barcode || '—'}</td>
-                              <td className="px-4 py-2.5 text-text-primary font-bold">{item.name}</td>
-                              <td className="px-4 py-2.5 text-text-secondary">{item.categorySlug}</td>
-                              <td className="px-4 py-2.5 text-text-secondary">{item.brand}</td>
-                              <td className="px-4 py-2.5 text-right text-text-secondary">₹{item.mrp}</td>
-                              <td className="px-4 py-2.5 text-right text-accent font-bold">₹{item.price}</td>
-                              <td className="px-4 py-2.5 text-center text-text-primary font-bold">+{item.stockQty}</td>
-                              <td className="px-4 py-2.5 text-text-secondary">{item.unit}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </motion.div>
+            <InventoryImportTab
+              storeId={storeId}
+              onImportSuccess={() => {
+                fetchCatalog()
+                fetchHistory()
+              }}
+            />
           )}
 
           {/* TAB 4: STOCK HISTORY LOGS */}
           {activeTab === 'history' && (
-            <motion.div
-              key="history-tab"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-6"
-            >
-              <div className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-6">
-                <div className="flex justify-between items-center gap-4">
-                  <div>
-                    <h3 className="text-sm font-black text-text-primary flex items-center gap-2">
-                      <History className="h-5 w-5 text-accent" />
-                      Stock Audit Trail Logs
-                    </h3>
-                    <p className="text-xs text-text-secondary mt-0.5">
-                      Review all historic additions, sales, and bulk modifications of inventory.
-                    </p>
-                  </div>
-                  <button
-                    onClick={fetchHistory}
-                    disabled={loadingHistory}
-                    className="p-2 border border-border rounded-xl hover:bg-muted/50 cursor-pointer"
-                  >
-                    <RotateCcw className={`h-4 w-4 text-text-secondary ${loadingHistory ? 'animate-spin' : ''}`} />
-                  </button>
-                </div>
-
-                {loadingHistory && historyLogs.length === 0 ? (
-                  <div className="py-20 flex justify-center items-center">
-                    <Loader2 className="h-6 w-6 text-accent animate-spin" />
-                  </div>
-                ) : historyLogs.length === 0 ? (
-                  <div className="py-20 text-center text-xs text-text-secondary">
-                    No stock transaction logs recorded yet.
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="overflow-x-auto border border-border rounded-xl">
-                      <table className="w-full text-left border-collapse text-[11px] font-semibold">
-                        <thead>
-                          <tr className="bg-muted/50 border-b border-border text-text-secondary uppercase text-[8px] font-extrabold tracking-wider">
-                            <th className="px-4 py-3.5">Date & Time</th>
-                            <th className="px-4 py-3.5">Product Name</th>
-                            <th className="px-4 py-3.5">Barcode / ID</th>
-                            <th className="px-4 py-3.5 text-center">Change Qty</th>
-                            <th className="px-4 py-3.5">Action Type</th>
-                            <th className="px-4 py-3.5 text-right">Prev Stock</th>
-                            <th className="px-4 py-3.5 text-right">New Stock</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                          {historyLogs.map(log => {
-                            const isPositive = log.quantity > 0
-                            return (
-                              <tr key={log.id} className="hover:bg-muted/10 transition-colors">
-                                <td className="px-4 py-3 text-text-secondary">
-                                  {new Date(log.createdAt).toLocaleString('en-IN', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })}
-                                </td>
-                                <td className="px-4 py-3 text-text-primary font-black">
-                                  {log.product?.name || 'Deleted Product'}
-                                </td>
-                                <td className="px-4 py-3 font-mono text-text-muted">
-                                  {log.product?.barcode || `FK${String(log.product?.readableId || '').padStart(6, '0')}`}
-                                </td>
-                                <td className={`px-4 py-3 text-center font-black ${isPositive ? 'text-emerald-500' : 'text-danger'}`}>
-                                  {isPositive ? `+${log.quantity}` : log.quantity} {log.product?.unit}
-                                </td>
-                                <td className="px-4 py-3">
-                                  <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border ${
-                                    log.type === 'INWARD_GRN' ? 'bg-emerald-500/10 border-emerald-500/10 text-emerald-500' :
-                                    log.type === 'RETAIL_POS' ? 'bg-amber-500/10 border-amber-500/10 text-amber-500' :
-                                    log.type === 'ONLINE_ORDER' ? 'bg-blue-500/10 border-blue-500/10 text-blue-500' :
-                                    'bg-indigo-500/10 border-indigo-500/10 text-indigo-500'
-                                  }`}>
-                                    {log.type.replace('_', ' ')}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 text-right text-text-muted">{log.prevStock}</td>
-                                <td className="px-4 py-3 text-right text-text-primary font-bold">{log.newStock}</td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-              </div>
-            </motion.div>
+            <InventoryHistoryTab
+              historyLogs={historyLogs}
+              loadingHistory={loadingHistory}
+              fetchHistory={fetchHistory}
+            />
           )}
 
         </AnimatePresence>

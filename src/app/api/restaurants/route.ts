@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
-import { requireAdmin } from '@/lib/auth-guard'
+import { requireAdmin, getEffectiveStoreId } from '@/lib/auth-guard'
 import { apiReadLimiter, apiWriteLimiter } from '@/lib/rate-limit'
 import { revalidateStorefront, revalidateRestaurant } from '@/lib/revalidate'
 
@@ -58,31 +58,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 2. Filter by storeId: If browsing by dark store hub (or store-assigned admin), only restaurants from that store's city!
-    let userAssignedStoreId = session?.user?.assignedStoreId
-    if (!userAssignedStoreId && session?.user?.id) {
-      const dbUser = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { assignedStoreId: true }
-      })
-      if (dbUser?.assignedStoreId) {
-        userAssignedStoreId = dbUser.assignedStoreId
-      }
-    }
-    const storeId = searchParams.get('storeId') || userAssignedStoreId
-    if (storeId && storeId !== 'all') {
+    // 2. Strict Filter by storeId: Only restaurants belonging to this store hub!
+    const effectiveStoreId = getEffectiveStoreId(session, searchParams.get('storeId'))
+    if (effectiveStoreId && effectiveStoreId !== 'all') {
       const store = await prisma.darkStore.findUnique({
-        where: { id: storeId },
+        where: { id: effectiveStoreId },
         select: { name: true }
       })
       const storeCity = store ? extractCityFromStoreName(store.name) : ''
-      if (storeCity) {
-        where.city = { contains: storeCity, mode: 'insensitive' }
-      } else if (store) {
-        where.city = { contains: store.name, mode: 'insensitive' }
-      } else {
-        where.city = '__NO_MATCHING_CITY__'
-      }
+      where.OR = [
+        { storeId: effectiveStoreId },
+        ...(storeCity ? [{ city: { contains: storeCity, mode: 'insensitive' as const } }] : [])
+      ]
     }
 
     const restaurants = await prisma.restaurant.findMany({
@@ -193,6 +180,9 @@ export async function POST(request: NextRequest) {
     }
 
     const targetStoreId = body.storeId || (session?.user as any)?.assignedStoreId
+    if (targetStoreId) {
+      createData.storeId = targetStoreId
+    }
     if (targetStoreId && (!createData.city || createData.city.trim() === '')) {
       const store = await prisma.darkStore.findUnique({
         where: { id: targetStoreId },

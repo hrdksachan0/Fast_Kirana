@@ -123,12 +123,18 @@ final dioProvider = Provider<Dio>((ref) {
 
               final retryResponse = await dio.fetch(requestOptions);
               return handler.resolve(retryResponse);
+            } else {
+              // Token refresh returned empty - clean up local credentials
+              await SecureStorage.deleteAll();
             }
-          } catch (e, _) { LoggerService.error('ApiClient: token refresh', e); }
+          } catch (e, _) {
+            LoggerService.error('ApiClient: token refresh failed', e);
+            await SecureStorage.deleteAll();
+          }
         }
       }
 
-      // ─── 2. Safe Transient Network Retry (Exponential Backoff for Idempotent/GET calls) ──
+      // ─── 2. Safe Transient Network Retry (3-Step Backoff: 3s, 6s, 9s) ──
       // NEVER auto-retry KOT broadcast, order mutations, or payments to prevent duplicates
       final isNonRetryable = error.requestOptions.path.contains('kot-broadcast') ||
           error.requestOptions.path.contains('broadcast') ||
@@ -145,11 +151,15 @@ final dioProvider = Provider<Dio>((ref) {
 
       final retryCount = (error.requestOptions.extra['retry_count'] as int?) ?? 0;
 
-      if (isTransientError && !isNonRetryable && isIdempotent && retryCount < 2) {
+      if (isTransientError && !isNonRetryable && isIdempotent && retryCount < kNetworkRetryDelays.length) {
         try {
           final nextRetry = retryCount + 1;
-          final delayMs = nextRetry * 600; // 600ms, 1200ms backoff
-          await Future.delayed(Duration(milliseconds: delayMs));
+          final delay = (error.requestOptions.extra['override_retry_delay'] as Duration?) ??
+              kNetworkRetryDelays[retryCount];
+          LoggerService.warning(
+            'ApiClient: Transient network failure (${error.type}), retrying in ${delay.inSeconds}s (attempt $nextRetry of ${kNetworkRetryDelays.length})...',
+          );
+          await Future.delayed(delay);
 
           final newOptions = error.requestOptions;
           newOptions.extra['retry_count'] = nextRetry;
@@ -157,7 +167,7 @@ final dioProvider = Provider<Dio>((ref) {
           final retryResponse = await dio.fetch(newOptions);
           return handler.resolve(retryResponse);
         } catch (retryErr, _) {
-          LoggerService.error('ApiClient: transient retry failed (attempt $retryCount)', retryErr);
+          LoggerService.error('ApiClient: transient retry failed (attempt ${retryCount + 1})', retryErr);
         }
       }
 
@@ -202,6 +212,13 @@ final dioProvider = Provider<Dio>((ref) {
   return dio;
 });
 
+/// 3-step exponential backoff delays for network disconnections (3s, 6s, 9s)
+const List<Duration> kNetworkRetryDelays = [
+  Duration(seconds: 3),
+  Duration(seconds: 6),
+  Duration(seconds: 9),
+];
+
 // ─── Token Refresh Concurrency Queue ───────────────────────────────────────
 bool _isRefreshingToken = false;
 Completer<String?>? _refreshCompleter;
@@ -215,8 +232,18 @@ Future<String?> _refreshToken() async {
   _refreshCompleter = Completer<String?>();
 
   try {
-    final currentToken = SecureStorage.cachedToken;
-    final refreshToken = SecureStorage.cachedRefreshToken ?? currentToken;
+    var currentToken = SecureStorage.cachedToken;
+    var refreshToken = SecureStorage.cachedRefreshToken;
+
+    if (refreshToken == null || refreshToken.isEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      refreshToken = prefs.getString('refresh_token') ?? await SecureStorage.read('refresh_token');
+    }
+    if (currentToken == null || currentToken.isEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      currentToken = prefs.getString('auth_token') ?? await SecureStorage.read('auth_token');
+    }
+    refreshToken ??= currentToken;
 
     if (refreshToken == null || refreshToken.isEmpty) {
       _refreshCompleter!.complete(null);
@@ -234,7 +261,8 @@ Future<String?> _refreshToken() async {
       '/api/auth/refresh',
       data: {'refreshToken': refreshToken},
       options: Options(headers: {
-        'Authorization': 'Bearer $currentToken',
+        if (currentToken != null && currentToken.isNotEmpty)
+          'Authorization': 'Bearer $currentToken',
       }),
     );
 
@@ -250,8 +278,12 @@ Future<String?> _refreshToken() async {
         _refreshCompleter!.complete(newToken);
         return newToken;
       }
+    } else if (res.statusCode == 401 || res.statusCode == 403) {
+      await SecureStorage.deleteAll();
     }
-  } catch (e, _) { LoggerService.error('ApiClient: token refresh', e); } finally {
+  } catch (e, _) {
+    LoggerService.error('ApiClient: token refresh error', e);
+  } finally {
     _isRefreshingToken = false;
   }
 

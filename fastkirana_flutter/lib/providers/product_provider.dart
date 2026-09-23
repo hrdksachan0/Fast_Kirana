@@ -25,18 +25,29 @@ final trendingProductsProvider = FutureProvider<List<Product>>((ref) async {
   return repo.getProducts(limit: 10, storeId: hub.id);
 });
 
-final productsProvider = FutureProvider.family<List<Product>, String?>((ref, categoryId) async {
+final productsProvider = FutureProvider.family<List<Product>, String?>((ref, categoryKey) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
   final hub = ref.watch(currentStoreHubProvider);
-  return repo.getProducts(category: categoryId, limit: 500, storeId: hub.id);
+  if (categoryKey == null || categoryKey.isEmpty) {
+    return repo.getProducts(limit: 500, storeId: hub.id, includeRestaurants: false);
+  }
+  final resolvedId = ProductRepository.resolveCategoryId(categoryKey);
+  final isId = resolvedId.toUpperCase().startsWith('CAT-') || resolvedId.toUpperCase().startsWith('SUB-');
+  return repo.getProducts(
+    categoryId: isId ? resolvedId : null,
+    category: isId ? null : categoryKey,
+    limit: 500,
+    storeId: hub.id,
+    includeRestaurants: false,
+  );
 });
 
 final productsByRestaurantProvider = FutureProvider.family<List<Product>, String>((ref, restaurantId) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
   final hub = ref.watch(currentStoreHubProvider);
-  return repo.getProducts(restaurantId: restaurantId, limit: 500, storeId: hub.id);
+  return repo.getProducts(restaurantId: restaurantId, limit: 500, storeId: hub.id, includeRestaurants: true);
 });
 
 // Single shared product catalog for home screen — fetches ALL products once,
@@ -45,7 +56,7 @@ final homeProductCatalogProvider = FutureProvider<List<Product>>((ref) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
   final hub = ref.watch(currentStoreHubProvider);
-  return repo.getProducts(limit: 1000, storeId: hub.id);
+  return repo.getProducts(limit: 1000, storeId: hub.id, includeRestaurants: false);
 });
 
 final cartUpsellProductsProvider = FutureProvider.family<List<Product>, List<String>>((ref, productIds) async {

@@ -86,8 +86,10 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Watch category products using slug (prefer slug matching web app /category/[slug], or id as fallback)
-    final catKey = widget.category.slug.isNotEmpty ? widget.category.slug : widget.category.id;
+    // Watch category products using ID first (exact DB partition match), or slug as fallback
+    final catKey = (widget.category.id.isNotEmpty && (widget.category.id.toUpperCase().startsWith('CAT-') || widget.category.id.toUpperCase().startsWith('SUB-')))
+        ? widget.category.id
+        : (widget.category.slug.isNotEmpty ? widget.category.slug : widget.category.id);
     final productsAsync = ref.watch(productsProvider(catKey));
     final catalogProducts = ref.watch(homeProductCatalogProvider).valueOrNull ?? [];
     final categoriesAsync = ref.watch(categoriesProvider);
@@ -549,6 +551,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                             onRefresh: () async {
                               await ProductRepository.invalidateAllCache();
                               ref.invalidate(productsProvider(widget.category.slug));
+                              ref.invalidate(productsProvider(widget.category.id));
                             },
                             child: CustomScrollView(
                               controller: _scrollController,

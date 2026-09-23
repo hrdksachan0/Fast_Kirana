@@ -4,6 +4,11 @@ from sqlalchemy.future import select
 from sqlalchemy import or_
 from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
+import re
+import uuid
+import logging
+
+logger = logging.getLogger("settings")
 
 from database import get_db
 from models import Store, StoreSetting
@@ -176,8 +181,47 @@ async def update_settings(
 
 
 # ============================================================
-# LOCATION CHECKS
+# LOCATION CHECKS & WAITLIST
 # ============================================================
+
+from models import DarkStore, StoreInventory, Restaurant
+import math
+import json
+from sqlalchemy import func, text
+
+
+def is_point_in_polygon(point: dict, polygon: list) -> bool:
+    x = point.get("lat", 0.0)
+    y = point.get("lng", 0.0)
+    inside = False
+    j = len(polygon) - 1
+    for i in range(len(polygon)):
+        xi = polygon[i].get("lat", 0.0)
+        yi = polygon[i].get("lng", 0.0)
+        xj = polygon[j].get("lat", 0.0)
+        yj = polygon[j].get("lng", 0.0)
+
+        intersect = ((yi > y) != (yj > y)) and (x < (xj - xi) * (y - yi) / (yj - yi if (yj - yi) != 0 else 0.000001) + xi)
+        if intersect:
+            inside = not inside
+        j = i
+    return inside
+
+
+def calculate_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    R = 6371.0
+    d_lat = (lat2 - lat1) * (math.pi / 180.0)
+    d_lon = (lon2 - lon1) * (math.pi / 180.0)
+    a = (
+        math.sin(d_lat / 2.0) * math.sin(d_lat / 2.0)
+        + math.cos(lat1 * (math.pi / 180.0))
+        * math.cos(lat2 * (math.pi / 180.0))
+        * math.sin(d_lon / 2.0)
+        * math.sin(d_lon / 2.0)
+    )
+    c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+    return R * c
+
 
 location_router = APIRouter(prefix="/location", tags=["Location"])
 
@@ -186,39 +230,192 @@ location_router = APIRouter(prefix="/location", tags=["Location"])
 async def check_nearest_store(
     lat: Optional[float] = Query(None),
     lng: Optional[float] = Query(None),
-    pincode: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db)
 ):
-    """Check if location is within a store's delivery zone."""
-    # Simple check - find nearest store
-    stmt = select(Store).where(Store.isActive == True)
-    result = await db.execute(stmt)
-    stores = result.scalars().all()
+    """
+    Check if location is within a dark store's delivery polygon or radius.
+    Returns full hub details, serviceability status, distance, inventory count, and coming soon status.
+    """
+    if lat is None or lng is None:
+        raise HTTPException(status_code=400, detail="Missing coordinates (lat, lng required)")
 
-    if not stores:
-        return {"available": False, "message": "No stores found"}
+    try:
+        # Fetch all active dark stores
+        stmt = select(DarkStore).where(DarkStore.isActive == True)
+        res = await db.execute(stmt)
+        stores = res.scalars().all()
 
-    # If lat/lng provided, find nearest (simplified)
-    # In production, use PostGIS for proper distance calculation
-    nearest = None
-    if lat is not None and lng is not None:
+        matched_store = None
+        matched_distance_km = 0.0
+
+        # 1. Check delivery polygon containment first
         for s in stores:
-            if s.lat is not None and s.lng is not None:
-                nearest = s
-                break
+            if s.deliveryPolygon:
+                try:
+                    poly = s.deliveryPolygon
+                    if isinstance(poly, str):
+                        poly = json.loads(poly)
+                    if isinstance(poly, list) and len(poly) >= 3:
+                        if is_point_in_polygon({"lat": lat, "lng": lng}, poly):
+                            matched_store = s
+                            matched_distance_km = calculate_distance_km(lat, lng, float(s.latitude), float(s.longitude))
+                            break
+                except Exception as e:
+                    pass
 
-    if pincode:
-        # Match by pincode
+        # 2. Check circular delivery radius (Haversine distance)
+        if not matched_store:
+            closest_store = None
+            min_dist = float("inf")
+            for s in stores:
+                dist = calculate_distance_km(lat, lng, float(s.latitude), float(s.longitude))
+                allowed_radius = float(s.deliveryRadiusKm or 5.0)
+                if dist <= allowed_radius and dist < min_dist:
+                    min_dist = dist
+                    closest_store = s
+
+            if closest_store:
+                matched_store = closest_store
+                matched_distance_km = min_dist
+
+        is_inside_zone = matched_store is not None
+
+        # 3. Overall closest hub for distance reporting if outside zone
+        closest_hub = None
+        closest_hub_distance = float("inf")
         for s in stores:
-            if s.address and pincode in s.address:
-                nearest = s
-                break
+            dist = calculate_distance_km(lat, lng, float(s.latitude), float(s.longitude))
+            if dist < closest_hub_distance:
+                closest_hub_distance = dist
+                closest_hub = s
 
-    if nearest:
+        target_store = matched_store or closest_hub or (stores[0] if stores else None)
+
+        if not target_store:
+            # Fallback mock central hub
+            return {
+                "id": "hub-209206",
+                "name": "Ghatampur Central Hub",
+                "latitude": 26.1534,
+                "longitude": 80.1714,
+                "isActive": True,
+                "surgeCharge": 0.0,
+                "groceryOpen": True,
+                "deliveryPolygon": None,
+                "deliveryRadiusKm": 5.0,
+                "isServiceable": False,
+                "distanceKm": 0.0,
+                "hasInventory": False,
+                "inventoryCount": 0,
+                "hasRestaurants": False,
+                "restaurantCount": 0,
+                "isComingSoon": False,
+            }
+
+        # Check inventory & restaurant availability for this hub
+        inventory_count = 0
+        restaurant_count = 0
+        try:
+            inv_stmt = select(func.count(StoreInventory.productId)).where(
+                StoreInventory.storeId == target_store.id,
+                StoreInventory.stock > 0
+            )
+            inv_res = await db.execute(inv_stmt)
+            inventory_count = inv_res.scalar() or 0
+
+            # City match for restaurants
+            clean_name = target_store.name or ""
+            # M10 FIX: Strip hub descriptor suffixes rather than clipping to first word
+            store_city = re.sub(r"\s+(Hub|Market|Central|Dark\s*Store|Express).*$", "", clean_name, flags=re.IGNORECASE).strip() if clean_name else ""
+            rest_stmt = select(func.count(Restaurant.id)).where(Restaurant.isActive == True)
+            if store_city:
+                rest_stmt = rest_stmt.where(Restaurant.city.ilike(f"%{store_city}%"))
+            rest_res = await db.execute(rest_stmt)
+            restaurant_count = rest_res.scalar() or 0
+        except Exception:
+            pass
+
+        is_coming_soon = is_inside_zone and inventory_count == 0 and restaurant_count == 0
+
+        poly_data = target_store.deliveryPolygon
+        if isinstance(poly_data, str):
+            try:
+                poly_data = json.loads(poly_data)
+            except Exception:
+                poly_data = None
+
         return {
-            "available": True,
-            "storeId": nearest.id,
-            "storeName": nearest.name,
-            "storeType": nearest.type,
+            "id": target_store.id,
+            "name": target_store.name,
+            "latitude": float(target_store.latitude),
+            "longitude": float(target_store.longitude),
+            "isActive": target_store.isActive,
+            "surgeCharge": float(target_store.surgeCharge or 0.0),
+            "groceryOpen": getattr(target_store, "groceryOpen", True),
+            "deliveryPolygon": poly_data,
+            "deliveryRadiusKm": float(target_store.deliveryRadiusKm or 5.0),
+            "isServiceable": is_inside_zone,
+            "distanceKm": round(matched_distance_km if is_inside_zone else closest_hub_distance, 2),
+            "hasInventory": inventory_count > 0,
+            "inventoryCount": inventory_count,
+            "hasRestaurants": restaurant_count > 0,
+            "restaurantCount": restaurant_count,
+            "isComingSoon": is_coming_soon,
         }
-    return {"available": False, "message": "No store in your area"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"check-store error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@location_router.post("/notify-waitlist")
+async def register_waitlist(payload: Dict[str, Any] = Body(...), db: AsyncSession = Depends(get_db)):
+    """
+    Registers customer phone for waitlist notification when an upcoming hub goes live.
+    """
+    phone = str(payload.get("phone", "")).strip()
+    if not phone or len(re.sub(r"\D", "", phone)) < 10:
+        raise HTTPException(status_code=400, detail="Please enter a valid 10-digit mobile number")
+
+    cleaned_phone = re.sub(r"\D", "", phone)[-10:]
+    lat = float(payload.get("latitude")) if payload.get("latitude") is not None else None
+    lng = float(payload.get("longitude")) if payload.get("longitude") is not None else None
+    final_hub = str(payload.get("hubName", "Upcoming Zone")).strip()
+    final_area = str(payload.get("areaName", "")).strip() or None
+
+    try:
+        # Dynamically ensure table exists
+        await db.execute(text("""
+            CREATE TABLE IF NOT EXISTS hub_waitlist (
+                id TEXT PRIMARY KEY,
+                phone TEXT NOT NULL,
+                latitude DOUBLE PRECISION,
+                longitude DOUBLE PRECISION,
+                hub_name TEXT,
+                area_name TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            );
+        """))
+        record_id = f"wait_{int(datetime.utcnow().timestamp())}_{uuid.uuid4().hex[:6]}"
+        await db.execute(text("""
+            INSERT INTO hub_waitlist (id, phone, latitude, longitude, hub_name, area_name, created_at)
+            VALUES (:id, :phone, :lat, :lng, :hub_name, :area_name, NOW())
+            ON CONFLICT (id) DO NOTHING;
+        """), {
+            "id": record_id,
+            "phone": cleaned_phone,
+            "lat": lat,
+            "lng": lng,
+            "hub_name": final_hub,
+            "area_name": final_area
+        })
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        logger.warning(f"Waitlist insert error: {e}")
+
+    return {
+        "success": True,
+        "message": f"Thanks! We will notify {cleaned_phone} on WhatsApp the moment FastKirana goes live in {final_hub}!"
+    }

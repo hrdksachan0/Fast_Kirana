@@ -116,6 +116,7 @@ app.include_router(categories.router, prefix="/api")
 
 from routers import razorpay_router, cashfree_router, kot
 app.include_router(razorpay_router.router, prefix="/api")
+app.include_router(razorpay_router.router)
 app.include_router(cashfree_router.router, prefix="/api")
 app.include_router(cashfree_router.router)
 app.include_router(kot.router)

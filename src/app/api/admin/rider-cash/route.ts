@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
+import { getEffectiveStoreId } from '@/lib/auth-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     todayStart.setHours(0, 0, 0, 0)
 
     const { searchParams } = new URL(request.url)
-    const storeId = searchParams.get('storeId') || (session?.user as any)?.assignedStoreId || null
+    const storeId = getEffectiveStoreId(session, searchParams.get('storeId'))
 
     const riderWhere: any = { role: 'DELIVERY' }
     if (storeId && storeId !== 'all') {

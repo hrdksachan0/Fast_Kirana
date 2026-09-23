@@ -6,6 +6,7 @@ from typing import Optional, Dict, Any, List
 import httpx
 import json
 import logging
+import os
 import re
 import time
 from datetime import datetime
@@ -279,9 +280,8 @@ async def verify_cashfree_payment(
         payment_id_str = str(successful_payment.get("cf_payment_id", "")) if successful_payment else f"CF_{sanitized_check_id}"
         order.paymentStatus = PaymentStatus.PAID
         order.paymentMethod = PaymentMethod.ONLINE
-        if order.status == OrderStatus.PENDING:
-            order.status = OrderStatus.CONFIRMED
-            order.confirmedAt = datetime.utcnow()
+        if order.status == OrderStatus.ADMIN_PENDING:
+            order.status = OrderStatus.PENDING
 
         # Handle companion combined orders if present
         if order.combinedId:
@@ -290,9 +290,8 @@ async def verify_cashfree_payment(
             for co in comb_res.scalars().all():
                 co.paymentStatus = PaymentStatus.PAID
                 co.paymentMethod = PaymentMethod.ONLINE
-                if co.status == OrderStatus.PENDING:
-                    co.status = OrderStatus.CONFIRMED
-                    co.confirmedAt = datetime.utcnow()
+                if co.status == OrderStatus.ADMIN_PENDING:
+                    co.status = OrderStatus.PENDING
 
         await db.commit()
 
@@ -334,9 +333,26 @@ async def cashfree_webhook(
     Webhook endpoint to receive Cashfree server-to-server transaction notifications.
     """
     try:
-        payload = await request.json()
+        raw_body = await request.body()
+        payload = json.loads(raw_body) if raw_body else {}
     except Exception:
         return Response(status_code=400, content="Invalid JSON")
+
+    # C5 FIX: Verify Cashfree webhook signature
+    webhook_secret = os.environ.get("CASHFREE_WEBHOOK_SECRET", "")
+    if webhook_secret:
+        signature = request.headers.get("x-webhook-signature", "")
+        timestamp = request.headers.get("x-webhook-timestamp", "")
+        if signature and timestamp:
+            import hmac, hashlib
+            sign_payload = timestamp + raw_body.decode("utf-8")
+            expected = hmac.new(
+                webhook_secret.encode("utf-8"),
+                sign_payload.encode("utf-8"),
+                hashlib.sha256
+            ).hexdigest()
+            if not hmac.compare_digest(expected, signature):
+                return Response(status_code=401, content="Invalid webhook signature")
 
     data = payload.get("data", {})
     order_data = data.get("order", {})
@@ -360,9 +376,8 @@ async def cashfree_webhook(
         if order and order.paymentStatus != PaymentStatus.PAID:
             order.paymentStatus = PaymentStatus.PAID
             order.paymentMethod = PaymentMethod.ONLINE
-            if order.status == OrderStatus.PENDING:
-                order.status = OrderStatus.CONFIRMED
-                order.confirmedAt = datetime.utcnow()
+            if order.status == OrderStatus.ADMIN_PENDING:
+                order.status = OrderStatus.PENDING
 
             if order.combinedId:
                 comb_stmt = select(Order).where(Order.combinedId == order.combinedId)
@@ -370,9 +385,8 @@ async def cashfree_webhook(
                 for co in comb_res.scalars().all():
                     co.paymentStatus = PaymentStatus.PAID
                     co.paymentMethod = PaymentMethod.ONLINE
-                    if co.status == OrderStatus.PENDING:
-                        co.status = OrderStatus.CONFIRMED
-                        co.confirmedAt = datetime.utcnow()
+                    if co.status == OrderStatus.ADMIN_PENDING:
+                        co.status = OrderStatus.PENDING
 
             await db.commit()
 

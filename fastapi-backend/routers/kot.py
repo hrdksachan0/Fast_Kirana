@@ -41,14 +41,17 @@ async def broadcast_kot(
 
     clean_id = req.orderId.strip().lstrip("#")
     clean_readable = (req.readableId or "").strip().lstrip("#")
-    base_readable = clean_readable.split("-")[0] if clean_readable else ""
+    # C12 FIX: Strip suborder suffix (-R, -G, -1) rather than splitting on first hyphen
+    # which collapsed all FK-* orders to "FK"
+    import re
+    base_readable = re.sub(r"-[GR\d]+$", "", clean_readable, flags=re.IGNORECASE) if clean_readable else ""
     now = time.time()
 
     # 10-second deduplication
     last_broadcast = max(
         recent_broadcast_timestamps.get(clean_id, 0),
         recent_broadcast_timestamps.get(clean_readable, 0) if clean_readable else 0,
-        recent_broadcast_timestamps.get(base_readable, 0) if base_readable else 0
+        recent_broadcast_timestamps.get(base_readable, 0) if (base_readable and base_readable != "FK") else 0
     )
 
     if last_broadcast > 0 and (now - last_broadcast) < 10.0:
@@ -58,7 +61,7 @@ async def broadcast_kot(
     recent_broadcast_timestamps[clean_id] = now
     if clean_readable:
         recent_broadcast_timestamps[clean_readable] = now
-    if base_readable:
+    if base_readable and base_readable != "FK":
         recent_broadcast_timestamps[base_readable] = now
 
     target_restaurant_id = req.restaurantId

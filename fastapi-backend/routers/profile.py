@@ -1,13 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import text
+from sqlalchemy import text, delete
 from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
+import random
+import uuid
+import logging
 
 from database import get_db
 from models import User, OtpToken
-from routers.auth import require_auth, normalize_phone
+from routers.auth import require_auth, normalize_phone, send_whatsapp_otp
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/profile", tags=["User Profile"])
 
@@ -154,6 +159,139 @@ async def update_name(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update name: {str(e)}"
+        )
+
+
+@router.post("/send-phone-otp")
+async def send_phone_otp(
+    payload: Dict[str, Any] = Body(...),
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Generate and send OTP to phone number via WhatsApp for profile update.
+    """
+    try:
+        user_id = get_user_id(current_user)
+        phone = payload.get("phone")
+        if not phone or not isinstance(phone, str):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Mobile number is required"
+            )
+
+        normalized_phone = normalize_phone(phone)
+        if len(normalized_phone) != 10:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Please enter a valid 10-digit mobile number"
+            )
+
+        # Check if another user has this phone number already
+        stmt_user = select(User).where(User.phone == normalized_phone)
+        res_user = await db.execute(stmt_user)
+        existing_user = res_user.scalars().first()
+
+        if existing_user and existing_user.id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This phone number is already registered to another account"
+            )
+
+        # Generate 6-digit OTP & 5 min expiry
+        otp = str(random.randint(100000, 999999))
+        expires_at = datetime.utcnow() + timedelta(minutes=5)
+        token_key = f"phone-verify-{normalized_phone}"
+
+        # Delete any existing OTP tokens for this phone verification
+        stmt_del = delete(OtpToken).where(OtpToken.email == token_key)
+        await db.execute(stmt_del)
+
+        new_otp = OtpToken(
+            id=str(uuid.uuid4()),
+            email=token_key,
+            token=otp,
+            expiresAt=expires_at
+        )
+        db.add(new_otp)
+        await db.commit()
+
+        # Dispatch OTP via WhatsApp
+        try:
+            await send_whatsapp_otp(normalized_phone, otp)
+        except Exception as we:
+            logger.warning(f"Failed to send WhatsApp OTP: {we}")
+
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Send Phone OTP error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send verification code"
+        )
+
+
+@router.post("/send-email-otp")
+async def send_email_otp(
+    payload: Dict[str, Any] = Body(...),
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Generate and send OTP to email for profile update.
+    """
+    try:
+        user_id = get_user_id(current_user)
+        email = payload.get("email")
+        if not email or not isinstance(email, str) or "@" not in email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Please enter a valid email address"
+            )
+
+        normalized_email = email.strip().lower()
+
+        # Check if another user has this email already
+        stmt_user = select(User).where(User.email == normalized_email)
+        res_user = await db.execute(stmt_user)
+        existing_user = res_user.scalars().first()
+
+        if existing_user and existing_user.id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This email is already registered to another account"
+            )
+
+        # Generate 6-digit OTP & 5 min expiry
+        otp = str(random.randint(100000, 999999))
+        expires_at = datetime.utcnow() + timedelta(minutes=5)
+
+        # Clear existing OTP tokens for this email
+        stmt_del = delete(OtpToken).where(OtpToken.email == normalized_email)
+        await db.execute(stmt_del)
+
+        new_otp = OtpToken(
+            id=str(uuid.uuid4()),
+            email=normalized_email,
+            token=otp,
+            expiresAt=expires_at
+        )
+        db.add(new_otp)
+        await db.commit()
+
+        logger.info(f"Verification OTP for {normalized_email}: {otp}")
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Send Email OTP error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send verification code"
         )
 
 

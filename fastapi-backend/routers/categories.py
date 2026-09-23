@@ -297,18 +297,22 @@ async def get_categories_catalog(
 ):
     """
     Get structured grocery categories catalog with product counts and preview items.
+    Matches Next.js /api/categories/catalog: root categories only, nested subcategories with counts.
     """
     stmt = (
         select(Category)
-        .where(~Category.slug.in_(["restaurant-food", "restaurant", "cafe"]))
+        .where(
+            Category.parentId.is_(None),
+            ~Category.slug.in_(["restaurant-food", "restaurant", "cafe"])
+        )
         .order_by(Category.sortOrder.asc())
     )
     res = await db.execute(stmt)
-    categories = res.scalars().all()
+    root_categories = res.scalars().all()
 
-    formatted = []
-    for cat in categories:
-        # Product count
+    formatted_catalog = []
+    for cat in root_categories:
+        # Product count for root category
         count_stmt = select(func.count(Product.id)).where(
             Product.categoryId == cat.id,
             Product.restaurantId.is_(None),
@@ -316,6 +320,33 @@ async def get_categories_catalog(
         )
         count_res = await db.execute(count_stmt)
         p_count = count_res.scalar() or 0
+
+        # Subcategories (children)
+        sub_stmt = (
+            select(Category)
+            .where(Category.parentId == cat.id)
+            .order_by(Category.sortOrder.asc())
+        )
+        sub_res = await db.execute(sub_stmt)
+        children = sub_res.scalars().all()
+
+        formatted_subs = []
+        for sub in children:
+            sub_count_stmt = select(func.count(Product.id)).where(
+                Product.categoryId == sub.id,
+                Product.restaurantId.is_(None),
+                Product.isAvailable == True
+            )
+            sub_count_res = await db.execute(sub_count_stmt)
+            sub_p_count = sub_count_res.scalar() or 0
+            formatted_subs.append({
+                "id": sub.id,
+                "name": sub.name,
+                "slug": sub.slug,
+                "imageUrl": sub.imageUrl,
+                "sortOrder": sub.sortOrder,
+                "productCount": sub_p_count
+            })
 
         cat_dict = {
             "id": cat.id,
@@ -325,35 +356,58 @@ async def get_categories_catalog(
             "parentId": cat.parentId,
             "sortOrder": cat.sortOrder,
             "productCount": p_count,
+            "subcategories": formatted_subs,
             "products": []
         }
 
         if includeProducts:
-            prods_stmt = select(Product).where(
-                Product.categoryId == cat.id,
-                Product.restaurantId.is_(None),
-                Product.isAvailable == True
-            ).order_by(Product.sortOrder.desc(), Product.createdAt.desc()).limit(limitPerCat)
+            prods_stmt = (
+                select(Product)
+                .where(
+                    Product.categoryId == cat.id,
+                    Product.restaurantId.is_(None),
+                    Product.isAvailable == True
+                )
+                .order_by(
+                    Product.sortOrder.desc(),
+                    Product.isBestSeller.desc(),
+                    Product.createdAt.desc()
+                )
+                .limit(limitPerCat)
+            )
             prods_res = await db.execute(prods_stmt)
             prods = prods_res.scalars().all()
             cat_dict["products"] = [{
                 "id": p.id,
                 "name": p.name,
                 "slug": p.slug,
+                "description": p.description,
+                "imageUrl": p.imageUrl,
                 "price": p.price,
                 "mrp": p.mrp,
                 "discount": p.discount,
                 "unit": p.unit,
                 "stock": p.stock,
-                "imageUrl": p.imageUrl
+                "isAvailable": p.isAvailable,
+                "tags": p.tags,
+                "categoryId": p.categoryId
             } for p in prods]
 
-        formatted.append(cat_dict)
+        formatted_catalog.append(cat_dict)
+
+    # Total grocery products count
+    total_prods_stmt = select(func.count(Product.id)).where(
+        Product.restaurantId.is_(None),
+        Product.isAvailable == True
+    )
+    total_prods_res = await db.execute(total_prods_stmt)
+    total_grocery_products = total_prods_res.scalar() or 0
 
     return {
         "success": True,
-        "totalCategories": len(formatted),
-        "categories": formatted
+        "totalCategories": len(formatted_catalog),
+        "totalGroceryProducts": total_grocery_products,
+        "categories": formatted_catalog
     }
 
 

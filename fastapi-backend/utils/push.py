@@ -58,3 +58,11 @@ async def send_push_notification(
     except Exception as e:
         logger.error(f"Exception occurred while sending push notification to Next.js API: {str(e)}")
         return False
+
+
+# Re-export FCM direct notifications for compatibility
+try:
+    from utils.firebase import send_fcm_topic_notification, send_fcm_notification
+except Exception:
+    pass
+

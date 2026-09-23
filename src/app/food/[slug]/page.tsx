@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { RestaurantStorefront } from '@/components/food/restaurant-storefront'
 import { OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID, OUTLET_BAL_UDYAN_ID, OUTLET_PARI_MILK_ID } from '@/lib/constants'
 import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
+import { resolveProductBogoBadge } from '@/lib/coupon-rules'
 
 async function findRestaurantBySlug(rawSlug: string) {
   const decodedSlug = decodeURIComponent(rawSlug || '').trim().toLowerCase().replace(/\/+$/, '')
@@ -118,7 +119,8 @@ export default async function FoodRestaurantPage({ params }: { params: Promise<{
     notFound()
   }
 
-  const [restaurantProducts, darkstoreProducts] = await Promise.all([
+  const now = new Date()
+  const [restaurantProducts, darkstoreProducts, activeCoupons] = await Promise.all([
     prisma.product.findMany({
       where: {
         isAvailable: true,
@@ -151,8 +153,37 @@ export default async function FoodRestaurantPage({ params }: { params: Promise<{
         { isBestSeller: 'desc' },
         { sortOrder: 'desc' },
       ],
-    })
+    }),
+    prisma.coupon.findMany({
+      where: {
+        restaurantId: restaurant.id,
+        isActive: true,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: now } },
+        ],
+      },
+      select: {
+        id: true,
+        code: true,
+        discountType: true,
+        bogoType: true,
+        badgeText: true,
+        menuSection: true,
+        categoryId: true,
+        restaurantId: true,
+        bogoDishId: true,
+        isActive: true,
+        expiresAt: true,
+      },
+    }),
   ])
+
+  // Attach bogoBadge strictly to qualifying dishes
+  const decoratedProducts = restaurantProducts.map((p) => ({
+    ...p,
+    bogoBadge: resolveProductBogoBadge(p, activeCoupons),
+  }))
 
   const opStatus = checkStoreOperatingStatus(restaurant)
   const mappedRestaurant = {
@@ -165,7 +196,7 @@ export default async function FoodRestaurantPage({ params }: { params: Promise<{
 
   // Serialize dates for client component
   const serializedRestaurant = JSON.parse(JSON.stringify(mappedRestaurant))
-  const serializedProducts = JSON.parse(JSON.stringify(restaurantProducts))
+  const serializedProducts = JSON.parse(JSON.stringify(decoratedProducts))
   const serializedRecommendedAddons = JSON.parse(JSON.stringify(darkstoreProducts))
 
   return (

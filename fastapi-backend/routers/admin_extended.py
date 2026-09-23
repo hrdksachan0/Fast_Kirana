@@ -18,9 +18,10 @@ from typing import Optional, List, Dict, Any
 import uuid
 import random
 import string
+import re
 
 from database import get_db
-from models import User, Order, Product, Category, Coupon, OrderStatus, OrderType, Role, PaymentMethod, PaymentStatus, RiderWallet
+from models import User, Order, Product, Category, Coupon, OrderStatus, OrderType, Role, PaymentMethod, PaymentStatus, RiderWallet, StoreInventory, DarkStore, StoreSetting
 from routers.auth import require_admin
 from routers.cart import get_user_id
 
@@ -185,21 +186,66 @@ async def admin_create_product(
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new product."""
+    raw_rest_id = data.get("restaurantId")
+    clean_rest_id = str(raw_rest_id).strip() if raw_rest_id else None
+    raw_cat_id = data.get("categoryId")
+    clean_cat_id = str(raw_cat_id).strip() if raw_cat_id else None
+
+    if clean_rest_id:
+        final_rest_id = clean_rest_id
+        final_cat_id = None
+    else:
+        final_rest_id = None
+        final_cat_id = clean_cat_id
+
+    raw_mrp = float(data.get("mrp", 0))
+    raw_price = float(data.get("price", 0))
+    variants = data.get("variants")
+    if variants and isinstance(variants, list) and len(variants) > 0:
+        variants = sorted(variants, key=lambda x: float(x.get("price", 0)))
+        raw_price = float(variants[0].get("price", raw_price))
+        raw_mrp = float(variants[0].get("mrp", raw_price))
+
+    discount = max(0.0, round(((raw_mrp - raw_price) / raw_mrp) * 100.0)) if raw_mrp > raw_price else 0.0
+
+    addons = data.get("addons")
+    if addons and not isinstance(addons, list):
+        addons = None
+
+    slug = data.get("slug")
+    if not slug:
+        import re
+        base_name = data.get("name", "product").lower().strip()
+        slug = re.sub(r"[^a-z0-9]+", "-", base_name).strip("-") or "product"
+        slug = f"{slug}-{uuid.uuid4().hex[:6]}"
+
+    readable_id = None
+    try:
+        from sqlalchemy import func
+        max_res = await db.execute(select(func.max(Product.readableId)))
+        max_id = max_res.scalar() or 200000
+        readable_id = int(max_id) + 1
+    except Exception:
+        pass
+
     product = Product(
         id=f"prod_{uuid.uuid4().hex[:12]}",
+        readableId=readable_id,
         name=data.get("name", ""),
-        slug=data.get("slug", ""),
+        slug=slug,
         description=data.get("description"),
-        imageUrl=data.get("imageUrl"),
-        categoryId=data.get("categoryId", ""),
-        mrp=float(data.get("mrp", 0)),
-        price=float(data.get("price", 0)),
-        discount=float(data.get("discount", 0)),
-        unit=data.get("unit", ""),
-        stock=int(data.get("stock", 0)),
+        imageUrl=data.get("imageUrl") or "📦",
+        categoryId=final_cat_id,
+        restaurantId=final_rest_id,
+        mrp=raw_mrp,
+        price=raw_price,
+        discount=discount,
+        unit=data.get("unit", "pcs"),
+        stock=99999 if final_rest_id else int(data.get("stock", 0)),
         isAvailable=data.get("isAvailable", True),
         tags=data.get("tags", []),
-        variants=data.get("variants"),
+        variants=variants if isinstance(variants, (list, dict)) else None,
+        addons=addons,
         minStock=int(data.get("minStock", 10)),
         costPrice=float(data.get("costPrice", 0)),
         location=data.get("location"),
@@ -210,8 +256,34 @@ async def admin_create_product(
         availableStartTime=data.get("availableStartTime"),
         availableEndTime=data.get("availableEndTime"),
         barcode=data.get("barcode"),
+        vendor=data.get("vendor"),
+        vendorId=data.get("vendorId"),
     )
     db.add(product)
+    await db.flush()
+
+    # Seed StoreInventory
+    initial_stock_num = 99999 if final_rest_id else int(data.get("stock", 0))
+    target_store_id = data.get("storeId") if data.get("storeId") != "all" else None
+    from models import StoreInventory, DarkStore
+    try:
+        if target_store_id:
+            db.add(StoreInventory(
+                productId=product.id,
+                storeId=target_store_id,
+                stock=initial_stock_num
+            ))
+        else:
+            stores_res = await db.execute(select(DarkStore.id))
+            for sid in stores_res.scalars().all():
+                db.add(StoreInventory(
+                    productId=product.id,
+                    storeId=sid,
+                    stock=initial_stock_num
+                ))
+    except Exception as e:
+        logger.warning(f"StoreInventory seed error in admin_create_product: {e}")
+
     await db.commit()
     await db.refresh(product)
     return {"product": ProductOut.model_validate(product).model_dump()}
@@ -230,26 +302,95 @@ async def admin_update_product(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    for field in ["name", "slug", "description", "imageUrl", "categoryId", "unit", "location",
-                  "availableStartTime", "availableEndTime", "barcode"]:
+    for field in ["name", "slug", "description", "imageUrl", "unit", "location",
+                  "availableStartTime", "availableEndTime", "barcode", "vendor", "vendorId"]:
         if field in data:
             setattr(product, field, data[field])
 
-    for field in ["mrp", "price", "discount", "costPrice"]:
-        if field in data:
-            setattr(product, field, float(data[field]))
+    # Restaurant ID & Category ID auto-alignment
+    if "restaurantId" in data:
+        raw_rest_id = data.get("restaurantId")
+        clean_rest_id = str(raw_rest_id).strip() if raw_rest_id else None
+        if clean_rest_id:
+            product.restaurantId = clean_rest_id
+            product.categoryId = None
+        else:
+            product.restaurantId = None
+    elif "categoryId" in data and data.get("categoryId"):
+        product.categoryId = str(data["categoryId"]).strip()
+        product.restaurantId = None
 
-    for field in ["stock", "minStock", "sortOrder"]:
-        if field in data:
+    # Variants & pricing
+    raw_mrp = data.get("mrp")
+    raw_price = data.get("price")
+    final_mrp = float(raw_mrp) if raw_mrp is not None else product.mrp
+    final_price = float(raw_price) if raw_price is not None else product.price
+
+    if "variants" in data:
+        variants = data["variants"]
+        if isinstance(variants, list) and len(variants) > 0:
+            sorted_variants = sorted(variants, key=lambda x: float(x.get("price", 0)))
+            product.variants = sorted_variants
+            final_price = float(sorted_variants[0].get("price", final_price))
+            final_mrp = float(sorted_variants[0].get("mrp", final_price))
+            if not product.unit or product.unit in ['1 pc', '1 unit', '1 Serving']:
+                product.unit = sorted_variants[0].get("name", product.unit)
+        else:
+            product.variants = variants if isinstance(variants, (list, dict)) else None
+
+    product.price = final_price
+    product.mrp = final_mrp
+    product.discount = max(0.0, round(((final_mrp - final_price) / final_mrp) * 100.0)) if final_mrp > final_price else 0.0
+
+    if "addons" in data:
+        addons = data["addons"]
+        if isinstance(addons, list) and len(addons) > 0:
+            product.addons = addons
+        else:
+            product.addons = None
+
+    if "costPrice" in data and data["costPrice"] is not None:
+        product.costPrice = float(data["costPrice"])
+
+    target_store_id = data.get("storeId")
+    if "stock" in data and data["stock"] is not None:
+        parsed_stock = int(data["stock"])
+        if target_store_id and target_store_id != 'all' and target_store_id != 'hub-209206':
+            pass
+        else:
+            product.stock = parsed_stock
+
+    if target_store_id and target_store_id != 'all' and "stock" in data and data["stock"] is not None:
+        val = int(data["stock"])
+        try:
+            inv_stmt = select(StoreInventory).where(
+                StoreInventory.productId == product.id,
+                StoreInventory.storeId == target_store_id
+            )
+            inv_res = await db.execute(inv_stmt)
+            existing_inv = inv_res.scalars().first()
+            if existing_inv:
+                existing_inv.stock = val
+            else:
+                new_inv = StoreInventory(
+                    productId=product.id,
+                    storeId=target_store_id,
+                    stock=val
+                )
+                db.add(new_inv)
+        except Exception as inv_err:
+            print(f"Warning: Failed to update StoreInventory: {inv_err}")
+
+    for field in ["minStock", "sortOrder"]:
+        if field in data and data[field] is not None:
             setattr(product, field, int(data[field]))
 
     for field in ["isAvailable", "isFlashDeal", "isTopPick", "isBestSeller"]:
-        if field in data:
+        if field in data and data[field] is not None:
             setattr(product, field, bool(data[field]))
 
-    for field in ["tags", "variants"]:
-        if field in data:
-            setattr(product, field, data[field])
+    if "tags" in data:
+        product.tags = data["tags"]
 
     await db.commit()
     await db.refresh(product)
@@ -550,6 +691,113 @@ async def admin_block_user(
 
     await db.commit()
     return {"success": True, "isBlocked": user.isBlocked}
+
+
+@router.patch("/users")
+@router.patch("/users/{user_id}")
+async def admin_update_user(
+    user_id: Optional[str] = None,
+    data: Dict[str, Any] = Body(...),
+    current_admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    H19 FIX: Admin updates user details (role, name, phone, assignedStoreId, assignedRestaurantId).
+    Includes safeguard against downgrading root admin accounts.
+    """
+    target_id = user_id or data.get("userId")
+    if not target_id:
+        raise HTTPException(status_code=400, detail="userId is required")
+
+    result = await db.execute(select(User).where(User.id == target_id))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if "name" in data and data["name"]:
+        user.name = str(data["name"]).strip()
+    if "phone" in data and data["phone"]:
+        user.phone = str(data["phone"]).strip()
+    if "assignedStoreId" in data:
+        user.assignedStoreId = data["assignedStoreId"] or None
+    if "assignedRestaurantId" in data:
+        user.assignedRestaurantId = data["assignedRestaurantId"] or None
+
+    new_role = data.get("role")
+    if new_role:
+        new_role_upper = str(new_role).upper().strip()
+        if new_role_upper not in [r.value for r in Role]:
+            raise HTTPException(status_code=400, detail="Invalid role")
+
+        # Root admin safeguard
+        clean_user_phone = re.sub(r"\D", "", user.phone or "")[-10:]
+        is_root_admin = (
+            user.email in ["admin@fastkirana.com", "superadmin@fastkirana.com"]
+            or clean_user_phone in ["7054470303", "9170942500", "8112849854"]
+        )
+        if is_root_admin and new_role_upper != "ADMIN":
+            raise HTTPException(status_code=403, detail="Root Admin accounts cannot be downgraded")
+
+        user.role = Role(new_role_upper)
+
+    await db.commit()
+    await db.refresh(user)
+
+    return {
+        "success": True,
+        "message": "User details updated successfully",
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "phone": user.phone,
+            "role": user.role.value if hasattr(user.role, "value") else str(user.role),
+            "assignedStoreId": user.assignedStoreId,
+            "assignedRestaurantId": user.assignedRestaurantId
+        }
+    }
+
+
+@router.post("/users")
+async def admin_set_worker_password(
+    data: Dict[str, Any] = Body(...),
+    current_admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    H20 FIX: Admin sets/updates worker password.
+    Syncs across all linked accounts sharing phone number.
+    """
+    user_id = data.get("userId")
+    password = data.get("password")
+
+    if not user_id or not password:
+        raise HTTPException(status_code=400, detail="userId and password are required")
+
+    if len(str(password)) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
+    from routers.auth import hash_password
+    pw_hash = hash_password(str(password))
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.passwordHash = pw_hash
+
+    # Sync across matching phone records if present
+    if user.phone:
+        digits = re.sub(r"\D", "", user.phone)[-10:]
+        patterns = [user.phone, digits, f"+91{digits}", f"91{digits}", f"wa-{digits}@fastkirana.com"]
+        sync_stmt = select(User).where(or_(User.phone.in_(patterns), User.email.in_(patterns)))
+        sync_res = await db.execute(sync_stmt)
+        for u in sync_res.scalars().all():
+            u.passwordHash = pw_hash
+
+    await db.commit()
+    return {"success": True, "message": "Worker password updated successfully"}
 
 
 @router.get("/users/assignable")
@@ -1168,7 +1416,7 @@ async def admin_send_push(
 
 
 # ============================================================
-# STORES
+# STORES & DARKSTORE HUBS
 # ============================================================
 
 @router.get("/stores")
@@ -1176,19 +1424,216 @@ async def admin_get_stores(
     current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get all stores."""
-    from models import Store
-    result = await db.execute(select(Store))
+    """Get all dark stores with full geo-fencing and operational controls."""
+    from models import DarkStore, StoreInventory
+    result = await db.execute(select(DarkStore).order_by(DarkStore.createdAt.asc()))
     stores = result.scalars().all()
-    return {"stores": [
-        {"id": s.id, "name": s.name, "type": s.type, "isActive": s.isActive,
-         "address": s.address, "phone": s.phone}
-        for s in stores
-    ]}
+
+    store_list = []
+    for s in stores:
+        # Get active stock count for this store
+        inv_stmt = select(func.count(StoreInventory.productId)).where(
+            StoreInventory.storeId == s.id,
+            StoreInventory.stock > 0
+        )
+        inv_res = await db.execute(inv_stmt)
+        inv_count = inv_res.scalar() or 0
+
+        store_list.append({
+            "id": s.id,
+            "name": s.name,
+            "latitude": float(s.latitude),
+            "longitude": float(s.longitude),
+            "deliveryRadiusKm": float(s.deliveryRadiusKm or 5.0),
+            "deliveryPolygon": s.deliveryPolygon,
+            "groceryOpen": getattr(s, "groceryOpen", True),
+            "surgeCharge": float(s.surgeCharge or 0.0),
+            "isActive": s.isActive,
+            "inventoryCount": inv_count,
+            "createdAt": s.createdAt.isoformat() if s.createdAt else None,
+        })
+
+    return {"stores": store_list}
+
+
+@router.post("/stores")
+async def admin_create_store(
+    payload: Dict[str, Any] = Body(...),
+    current_admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a new DarkStore hub with isolated settings and optional manager."""
+    name = payload.get("name")
+    if not name or not str(name).strip():
+        raise HTTPException(status_code=400, detail="Store name is required")
+
+    name = str(name).strip()
+    pincode = payload.get("pincode")
+    clean_pincode = re.sub(r"\D", "", str(pincode or ""))[:6]
+    slug_name = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    store_id = (payload.get("id") or "").strip() or (f"hub-{clean_pincode}" if len(clean_pincode) == 6 else f"hub-{slug_name}")
+
+    lat = float(payload.get("latitude") or payload.get("lat") or 26.1534)
+    lng = float(payload.get("longitude") or payload.get("lng") or 80.1714)
+    radius = float(payload.get("deliveryRadiusKm") or 5.0)
+    surge = float(payload.get("surgeCharge") or 0.0)
+    grocery_open = payload.get("groceryOpen", True)
+    polygon = payload.get("deliveryPolygon")
+
+    store = DarkStore(
+        id=store_id,
+        name=name,
+        latitude=lat,
+        longitude=lng,
+        deliveryRadiusKm=radius,
+        surgeCharge=surge,
+        groceryOpen=grocery_open,
+        deliveryPolygon=polygon,
+        isActive=True
+    )
+    db.add(store)
+    await db.flush()
+
+    # Automatically initialize isolated store-scoped settings for this new hub
+    try:
+        city_name = re.sub(r"\s+(Hub|Market|Central|Dark\s*Store|Branch).*$", "", name, flags=re.IGNORECASE).strip()
+        address = payload.get("address") or payload.get("contactAddress")
+        pickup = payload.get("pickupAddress") or payload.get("groceryPickupAddress")
+        phone = payload.get("phone") or payload.get("storePhone") or payload.get("managerPhone") or "+918112849854"
+        upi = payload.get("upiVpa") or payload.get("storeUpiVpa") or ""
+
+        resolved_address = (address or f"{city_name}{', ' + clean_pincode if clean_pincode else ''}").strip()
+        resolved_pickup = (pickup or f"FastKirana Dark Store, {city_name}{' - ' + clean_pincode if clean_pincode else ''}").strip()
+        resolved_phone = str(phone).strip()
+        resolved_upi = str(upi).strip()
+
+        initial_settings = [
+            (f"store:{store.id}:store_address", resolved_address),
+            (f"store:{store.id}:contact_address", resolved_address),
+            (f"store:{store.id}:grocery_pickup_address", resolved_pickup),
+            (f"store:{store.id}:contact_phone", resolved_phone),
+            (f"store:{store.id}:store_phone", resolved_phone),
+            (f"store:{store.id}:store_pincode", clean_pincode or ""),
+            (f"store:{store.id}:store_lat", str(store.latitude)),
+            (f"store:{store.id}:store_lng", str(store.longitude)),
+            (f"store:{store.id}:delivery_radius", str(store.deliveryRadiusKm or 5.0)),
+            (f"store:{store.id}:grocery_mart_open", "true" if store.groceryOpen else "false"),
+            (f"store:{store.id}:trusted_text", f"✨ Trusted by families in {city_name}"),
+            (f"store:{store.id}:delivery_fee_tier1", "25"),
+            (f"store:{store.id}:delivery_threshold_tier1", "199"),
+            (f"store:{store.id}:delivery_fee_tier2", "35"),
+            (f"store:{store.id}:delivery_threshold_tier2", "299"),
+            (f"store:{store.id}:delivery_fee_tier3", "50"),
+            (f"store:{store.id}:delivery_threshold_tier3", "399"),
+        ]
+        if resolved_upi:
+            initial_settings.append((f"store:{store.id}:store_upi_vpa", resolved_upi))
+
+        for k, v in initial_settings:
+            s_res = await db.execute(select(StoreSetting).where(StoreSetting.key == k))
+            existing_s = s_res.scalars().first()
+            if existing_s:
+                existing_s.value = v
+                existing_s.updatedAt = datetime.utcnow()
+            else:
+                db.add(StoreSetting(key=k, value=v, updatedAt=datetime.utcnow()))
+    except Exception as setting_err:
+        logger.error(f"Failed to initialize isolated settings for new store (non-fatal): {setting_err}")
+
+    # Assign Hub Manager / Admin Phone Number
+    manager_phone = payload.get("managerPhone")
+    if manager_phone and isinstance(manager_phone, str):
+        try:
+            clean_manager_phone = re.sub(r"\D", "", manager_phone)[-10:]
+            if len(clean_manager_phone) == 10:
+                formatted_phone = f"+91{clean_manager_phone}"
+                u_res = await db.execute(select(User).where(
+                    or_(
+                        User.phone == formatted_phone,
+                        User.phone == clean_manager_phone,
+                        User.phone.endswith(clean_manager_phone)
+                    )
+                ))
+                existing_u = u_res.scalars().first()
+                if existing_u:
+                    existing_u.role = Role.ADMIN
+                    existing_u.assignedStoreId = store.id
+                else:
+                    db.add(User(
+                        id=str(uuid.uuid4()),
+                        phone=formatted_phone,
+                        name=f"{name} Admin",
+                        email=f"admin.{store.id}@fastkirana.in",
+                        role=Role.ADMIN,
+                        assignedStoreId=store.id
+                    ))
+        except Exception as admin_err:
+            logger.error(f"Hub Admin assignment error (non-fatal): {admin_err}")
+
+    await db.commit()
+    await db.refresh(store)
+    return {"success": True, "store": {
+        "id": store.id,
+        "name": store.name,
+        "latitude": store.latitude,
+        "longitude": store.longitude,
+        "deliveryRadiusKm": store.deliveryRadiusKm,
+        "surgeCharge": store.surgeCharge,
+        "groceryOpen": store.groceryOpen,
+        "isActive": store.isActive
+    }}
+
+
+@router.patch("/stores")
+@router.patch("/stores/{store_id}")
+async def admin_update_store(
+    payload: Dict[str, Any] = Body(...),
+    store_id: Optional[str] = None,
+    current_admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update DarkStore hub settings (groceryOpen, surgeCharge, deliveryPolygon, etc.)."""
+    from models import DarkStore
+    target_id = store_id or payload.get("id") or payload.get("storeId")
+    if not target_id:
+        raise HTTPException(status_code=400, detail="storeId is required")
+
+    stmt = select(DarkStore).where(DarkStore.id == target_id)
+    res = await db.execute(stmt)
+    store = res.scalars().first()
+    if not store:
+        raise HTTPException(status_code=404, detail="Store not found")
+
+    if "name" in payload:
+        store.name = str(payload["name"])
+    if "groceryOpen" in payload:
+        store.groceryOpen = bool(payload["groceryOpen"])
+    if "isActive" in payload:
+        store.isActive = bool(payload["isActive"])
+    if "surgeCharge" in payload:
+        store.surgeCharge = float(payload["surgeCharge"])
+    if "deliveryRadiusKm" in payload:
+        store.deliveryRadiusKm = float(payload["deliveryRadiusKm"])
+    if "deliveryPolygon" in payload:
+        store.deliveryPolygon = payload["deliveryPolygon"]
+    if "latitude" in payload or "lat" in payload:
+        store.latitude = float(payload.get("latitude") or payload.get("lat"))
+    if "longitude" in payload or "lng" in payload:
+        store.longitude = float(payload.get("longitude") or payload.get("lng"))
+
+    await db.commit()
+    await db.refresh(store)
+    return {"success": True, "store": {
+        "id": store.id,
+        "name": store.name,
+        "groceryOpen": store.groceryOpen,
+        "surgeCharge": store.surgeCharge,
+        "isActive": store.isActive
+    }}
 
 
 # ============================================================
-# ORDERS DELETE / CREATE ON BEHALF
+# ORDERS DELETE / CLEAN CANCELLED / REFUND
 # ============================================================
 
 @router.delete("/orders/{order_id}")
@@ -1210,6 +1655,7 @@ async def admin_delete_order(
 
 
 @router.post("/orders/delete-cancelled")
+@router.post("/orders/clean-cancelled")
 async def admin_delete_cancelled(
     current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
@@ -1222,7 +1668,85 @@ async def admin_delete_cancelled(
     for o in cancelled:
         await db.delete(o)
     await db.commit()
-    return {"deleted": count}
+    return {"deleted": count, "success": True}
+
+
+@router.post("/orders/{id}/refund")
+@router.post("/orders/{order_id}/refund")
+async def admin_refund_order(
+    order_id: str,
+    payload: Dict[str, Any] = Body(...),
+    current_admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    C13 FIX: Process partial or full refund for an order.
+    Appends refund details to notes, marks paymentStatus as REFUNDED if full refund,
+    preserves order status (does NOT force CANCELLED), and only restocks if explicitly requested.
+    """
+    clean_id = order_id.strip()
+    stmt = select(Order).options(selectinload(Order.items)).where(
+        or_(Order.id == clean_id, Order.readableId == clean_id)
+    )
+    res = await db.execute(stmt)
+    order = res.scalars().first()
+
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    raw_amount = payload.get("amount")
+    item_id = payload.get("itemId")
+    reason = str(payload.get("reason") or "").strip()
+
+    try:
+        refund_value = float(raw_amount) if raw_amount is not None else float(order.total or 0.0)
+    except (ValueError, TypeError):
+        refund_value = float(order.total or 0.0)
+
+    if refund_value <= 0:
+        raise HTTPException(status_code=400, detail="Valid refund amount greater than 0 is required")
+
+    refunded_item_name = ""
+    if item_id and order.items:
+        target_item = next((i for i in order.items if i.id == item_id), None)
+        if target_item:
+            refunded_item_name = target_item.name
+            target_item.notes = f"{target_item.notes} | ₹{refund_value:.2f} Refunded" if target_item.notes else f"₹{refund_value:.2f} Refunded"
+
+    is_full_refund = refund_value >= float(order.total or 0.0)
+
+    refund_note = f"₹{refund_value:.2f} Refunded"
+    if refunded_item_name:
+        refund_note += f" ({refunded_item_name})"
+    if reason:
+        refund_note += f" - {reason}"
+
+    order.notes = f"{order.notes}\n{refund_note}" if order.notes else refund_note
+    order.updatedAt = datetime.utcnow()
+
+    if is_full_refund:
+        order.paymentStatus = PaymentStatus.REFUNDED
+
+    # Optional restocking only if explicitly requested
+    restock = payload.get("restock", False)
+    if restock and order.items:
+        for it in order.items:
+            p_stmt = select(Product).where(Product.id == it.productId)
+            p_res = await db.execute(p_stmt)
+            prod = p_res.scalars().first()
+            if prod and not prod.restaurantId:
+                prod.stock += it.quantity
+
+    await db.commit()
+    await db.refresh(order)
+
+    return {
+        "success": True,
+        "message": f"Refund of ₹{refund_value:.2f} processed for Order #{order.readableId or order.id}.",
+        "orderId": order.id,
+        "isFullRefund": is_full_refund,
+        "paymentStatus": order.paymentStatus.value
+    }
 
 
 @router.post("/orders/create-on-behalf")
@@ -1231,9 +1755,9 @@ async def admin_create_order_behalf(
     current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    """Admin creates order on behalf of customer."""
-    # Placeholder - uses same logic as regular order creation
-    return {"orderId": f"ord_{uuid.uuid4().hex[:12]}", "message": "Order created on behalf"}
+    """C14 FIX: Admin creates order on behalf of customer using full order creation engine."""
+    from routers.orders import create_order
+    return await create_order(payload=data, current_user=current_admin, db=db)
 
 
 # ============================================================

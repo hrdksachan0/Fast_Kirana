@@ -161,7 +161,7 @@ export interface Coupon {
   id: string
   code: string
   discountType: 'FLAT' | 'PERCENT' | 'BOGO' | 'FREE_DELIVERY'
-  bogoType?: 'SAME_ITEM' | 'BUY_LARGE_GET_SMALL' | 'CHEAPEST_FREE' | null
+  bogoType?: 'SAME_ITEM' | 'BUY_LARGE_GET_SMALL' | 'CHEAPEST_FREE' | 'FREE_GIFT' | null
   triggerVariant?: string | null
   rewardVariant?: string | null
   defaultFreeDishId?: string | null

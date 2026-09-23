@@ -44,9 +44,17 @@ interface UIState {
   setUserCoords: (coords: UserCoords | null) => void
   setAvailableHubs: (hubs: any[]) => void
   setIsLocationServiceable: (serviceable: boolean, distanceKm?: number | null) => void
-  setShopDetails: (name: string, phone: string) => void
-  setStoreStatus: (groceryOpen: boolean, cafeOpen: boolean, restaurantOpen: boolean, radius: number, categoryStatus: Record<string, boolean>) => void
+  outletStatus: Record<string, boolean>
+  setStoreStatus: (
+    groceryOpen: boolean, 
+    cafeOpen: boolean, 
+    restaurantOpen: boolean, 
+    radius: number, 
+    categoryStatus: Record<string, boolean>,
+    outletStatus?: Record<string, boolean>
+  ) => void
   setSettings: (settings: Record<string, string>) => void
+  setShopDetails: (name: string, phone: string) => void
   hydrateLocation: () => void
 }
 
@@ -147,6 +155,7 @@ export const useUIStore = create<UIState>((set) => ({
   cafeOpen: true,
   restaurantOpen: true,
   categoryStatus: {},
+  outletStatus: {},
   deliveryRadius: 5,
   isLocationServiceable: true,
   userDistanceKm: null,
@@ -231,7 +240,7 @@ export const useUIStore = create<UIState>((set) => ({
       activeCity: evalRes.matchedCity || state.activeCity,
     })
   },
-  setShopDetails: (name, phone) => {
+  setShopDetails: (name: string, phone: string) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('fk-shop-name', name)
       localStorage.setItem('fk-shop-phone', phone)

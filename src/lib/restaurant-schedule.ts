@@ -175,7 +175,7 @@ export function checkStoreOperatingStatus(restaurant?: {
   // 2. Check if owner manually paused the store today during active hours
   const isOwnerPaused = restaurant.isOpen === false || restaurant.isOpen === 'false' || restaurant.isOpen === 0
   if (isOwnerPaused) {
-    if (restaurant.updatedAt && isManuallyPausedToday(restaurant)) {
+    if (!restaurant.updatedAt || isManuallyPausedToday(restaurant)) {
       return {
         isOpen: false,
         isClosedBySchedule: false,

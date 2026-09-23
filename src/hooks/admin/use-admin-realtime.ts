@@ -143,14 +143,21 @@ export function useAdminRealtime({
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders' },
         (payload) => {
+          const orderData = payload.new as any
+          const orderStoreId = orderData?.storeId
+          
+          // Strict Hub Isolation: Ignore orders belonging to other store hubs
+          if (selectedHubId && selectedHubId !== 'all' && orderStoreId && orderStoreId !== selectedHubId) {
+            return
+          }
+
           if (payload.eventType === 'INSERT') {
-            const newOrder = payload.new as any
-            toast.success(`🛎️ New Order Received: #${(newOrder.readableId || newOrder.id).slice(0, 8)}`)
+            toast.success(`🛎️ New Order Received: #${(orderData.readableId || orderData.id).slice(0, 8)}`)
             playNewOrderChime()
-            onNewOrder?.(payload.new)
+            onNewOrder?.(orderData)
             debouncedRefresh()
           } else if (payload.eventType === 'UPDATE') {
-            onOrderUpdated?.(payload.new)
+            onOrderUpdated?.(orderData)
             debouncedRefresh()
           }
         }
