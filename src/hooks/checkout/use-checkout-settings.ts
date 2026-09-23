@@ -63,57 +63,57 @@ export function useCheckoutSettings(): CheckoutSettings {
       .then((data) => {
         if (data && typeof data === 'object') {
           setStoreSettingsMap(data)
-        }
-        if (data.grocery_mart_open !== undefined) {
-          setGroceryMartOpen(data.grocery_mart_open === 'true')
-        }
-        if (data.cafe_open !== undefined) {
-          setCafeOpen(data.cafe_open === 'true')
-        }
-        if (data.restaurant_open !== undefined) {
-          setRestaurantOpen(data.restaurant_open === 'true')
-        }
-        if (data.delivery_radius) {
-          setDeliveryRadius(parseFloat(data.delivery_radius))
-        }
-        if (data.store_lat) {
-          setStoreLat(parseFloat(data.store_lat))
-        }
-        if (data.store_lng) {
-          setStoreLng(parseFloat(data.store_lng))
-        }
-        if (data.only_cod !== undefined) {
-          setOnlyCod(data.only_cod === 'true')
-        }
-        if (data.tax_rate !== undefined) {
-          setTaxRate(0.0)
-        }
-        if (data.misc_fee !== undefined) {
-          setMiscFee(parseFloat(data.misc_fee))
-        }
-        if (data.misc_fee_label !== undefined) {
-          setMiscFeeLabel(data.misc_fee_label)
-        }
-        if (data.contact_phone) {
-          setContactPhone(data.contact_phone)
-        }
-        if (data.grocery_free_delivery_threshold) {
-          setGroceryThreshold(parseFloat(data.grocery_free_delivery_threshold))
-        }
-        if (data.cafe_free_delivery_threshold) {
-          setCafeThreshold(parseFloat(data.cafe_free_delivery_threshold))
-        }
-        if (data.combined_free_delivery_threshold) {
-          setCombinedThreshold(parseFloat(data.combined_free_delivery_threshold))
-        }
-        if (data.delivery_fee) {
-          setDeliveryFeeVal(parseFloat(data.delivery_fee))
-        }
-        if (data.grocery_close_time) {
-          setGroceryCloseTime(data.grocery_close_time)
-        }
-        if (data.cafe_close_time) {
-          setCafeCloseTime(data.cafe_close_time)
+          if (data.grocery_mart_open !== undefined) {
+            setGroceryMartOpen(data.grocery_mart_open === 'true')
+          }
+          if (data.cafe_open !== undefined) {
+            setCafeOpen(data.cafe_open === 'true')
+          }
+          if (data.restaurant_open !== undefined) {
+            setRestaurantOpen(data.restaurant_open === 'true')
+          }
+          if (data.delivery_radius) {
+            setDeliveryRadius(parseFloat(data.delivery_radius))
+          }
+          if (data.store_lat) {
+            setStoreLat(parseFloat(data.store_lat))
+          }
+          if (data.store_lng) {
+            setStoreLng(parseFloat(data.store_lng))
+          }
+          if (data.only_cod !== undefined) {
+            setOnlyCod(data.only_cod === 'true')
+          }
+          if (data.tax_rate !== undefined) {
+            setTaxRate(0.0)
+          }
+          if (data.misc_fee !== undefined) {
+            setMiscFee(parseFloat(data.misc_fee))
+          }
+          if (data.misc_fee_label !== undefined) {
+            setMiscFeeLabel(data.misc_fee_label)
+          }
+          if (data.contact_phone) {
+            setContactPhone(data.contact_phone)
+          }
+          if (data.grocery_free_delivery_threshold) {
+            setGroceryThreshold(parseFloat(data.grocery_free_delivery_threshold))
+          }
+          if (data.cafe_free_delivery_threshold) {
+            setCafeThreshold(parseFloat(data.cafe_free_delivery_threshold))
+          }
+          if (data.combined_free_delivery_threshold) {
+            setCombinedThreshold(parseFloat(data.combined_free_delivery_threshold))
+          }
+          if (data.delivery_fee) {
+            setDeliveryFeeVal(parseFloat(data.delivery_fee))
+          }
+          if (data.grocery_close_time) {
+            setGroceryCloseTime(data.grocery_close_time)
+          }
+          if (data.cafe_close_time) {
+            setCafeCloseTime(data.cafe_close_time)
+          }
         }
         setIsSettingsLoading(false)
       })

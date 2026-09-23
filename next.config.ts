@@ -103,23 +103,7 @@ const nextConfig: NextConfig = {
           source: '/api/restaurants/:path*',
           destination: `${apiDest}/api/restaurants/:path*`,
         },
-        // Phase 2: User Addresses, Cart Sync & Coupons Proxy (Low Risk)
-        {
-          source: '/api/addresses',
-          destination: `${apiDest}/api/addresses`,
-        },
-        {
-          source: '/api/addresses/:path*',
-          destination: `${apiDest}/api/addresses/:path*`,
-        },
-        {
-          source: '/api/cart',
-          destination: `${apiDest}/api/cart`,
-        },
-        {
-          source: '/api/cart/:path*',
-          destination: `${apiDest}/api/cart/:path*`,
-        },
+        // Phase 2: Coupons Proxy
         {
           source: '/api/coupons',
           destination: `${apiDest}/api/coupons`,

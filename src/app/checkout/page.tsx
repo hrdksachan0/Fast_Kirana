@@ -193,28 +193,30 @@ export default function CheckoutPage() {
   })
 
   // Early Return Barriers
-  if (items.length === 0) {
+  const validItems = items.filter((item) => item && item.product)
+
+  if (items.length === 0 || validItems.length === 0) {
     return <EmptyCartScreen />
   }
 
-  const hasInventoryIssues = items.some(
+  const hasInventoryIssues = validItems.some(
     (item) =>
-      item.quantity > item.product.stock ||
-      item.product.stock <= 0 ||
+      item.quantity > (item.product.stock ?? 0) ||
+      (item.product.stock ?? 0) <= 0 ||
       item.product.isAvailable === false
   )
 
   if (hasInventoryIssues && !isSettingsLoading) {
     return (
       <InventoryIssueScreen
-        items={items}
+        items={validItems}
         removeItem={removeItem}
         updateQuantity={updateQuantity}
       />
     )
   }
 
-  const closedItems = items.filter((item) =>
+  const closedItems = validItems.filter((item) =>
     isProductStoreClosed(item.product, { groceryMartOpen, cafeOpen, restaurantOpen })
   )
 
