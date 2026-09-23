@@ -3,7 +3,9 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import or_
 import bcrypt
+import re
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any

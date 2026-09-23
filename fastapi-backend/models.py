@@ -491,11 +491,12 @@ class DarkStore(Base):
     name: Mapped[str] = mapped_column(String)
     latitude: Mapped[float] = mapped_column(Float)
     longitude: Mapped[float] = mapped_column(Float)
+    deliveryRadiusKm: Mapped[Optional[float]] = mapped_column(Float, default=5.0, nullable=True)
+    city: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     deliveryPolygon: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     isActive: Mapped[bool] = mapped_column(Boolean, default=True)
     surgeCharge: Mapped[float] = mapped_column(Float, default=0.0)
     groceryOpen: Mapped[bool] = mapped_column(Boolean, default=True)
-    cafeOpen: Mapped[bool] = mapped_column(Boolean, default=True)
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -178,7 +178,7 @@ async def get_picker_orders(
             "notes": o.notes,
             "restaurantId": o.restaurantId,
             "items": order_items,
-            "user": user_data,
+            "user": {"name": o.user.name, "phone": o.user.phone, "email": o.user.email} if o.user else None,
             "assignedPicker": assigned_picker,
             "assignedChef": assigned_chef,
             "address": {

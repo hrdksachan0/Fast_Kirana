@@ -7,7 +7,7 @@ import uuid
 import re
 
 from database import get_db
-from models import Restaurant, User, Product, Order
+from models import Restaurant, User, Product, Order, Category
 from routers.auth import get_current_user, require_admin, require_auth
 
 router = APIRouter(prefix="/restaurants", tags=["Restaurants"])

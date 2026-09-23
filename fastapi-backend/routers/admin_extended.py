@@ -36,6 +36,26 @@ def generate_readable_id(prefix: str, db: AsyncSession, model_class) -> str:
     today = date.today().strftime("%Y%m%d")
     return f"{prefix}-{today}-{random.randint(1000, 9999)}"
 
+
+def serialize_product(p: Product) -> Dict[str, Any]:
+    return {
+        "id": p.id,
+        "name": p.name,
+        "slug": p.slug,
+        "description": p.description,
+        "price": float(p.price) if p.price is not None else 0.0,
+        "mrp": float(p.mrp) if p.mrp is not None else 0.0,
+        "discount": float(p.discount) if p.discount is not None else 0.0,
+        "stock": int(p.stock) if p.stock is not None else 0,
+        "unit": p.unit,
+        "imageUrl": p.imageUrl,
+        "categoryId": p.categoryId,
+        "restaurantId": p.restaurantId,
+        "isAvailable": bool(p.isAvailable),
+        "tags": p.tags,
+        "variants": p.variants,
+    }
+
 # ============================================================
 # DASHBOARD
 # ============================================================
@@ -286,7 +306,7 @@ async def admin_create_product(
 
     await db.commit()
     await db.refresh(product)
-    return {"product": ProductOut.model_validate(product).model_dump()}
+    return {"product": serialize_product(product)}
 
 
 @router.patch("/products/{product_id}")
@@ -394,7 +414,7 @@ async def admin_update_product(
 
     await db.commit()
     await db.refresh(product)
-    return {"product": ProductOut.model_validate(product).model_dump()}
+    return {"product": serialize_product(product)}
 
 
 @router.delete("/products/{product_id}")
@@ -1374,21 +1394,37 @@ async def admin_get_live_carts(
     db: AsyncSession = Depends(get_db)
 ):
     """Get users with active carts."""
-    from models import Cart, CartItem
-    stmt = select(User).join(Cart, Cart.userId == User.id).where(User.deletedAt.is_(None)).options(selectinload(Cart, Cart.items))
+    from models import Cart, CartItem, Product, User
+    from sqlalchemy.orm import selectinload
+    stmt = (
+        select(Cart)
+        .options(selectinload(Cart.items).selectinload(CartItem.product), selectinload(Cart.user))
+        .join(Cart.items)
+        .order_by(desc(Cart.updatedAt))
+    )
     result = await db.execute(stmt)
-    users = result.scalars().all()
+    carts_db = result.scalars().unique().all()
 
     carts = []
-    for u in users:
-        if u.cart and u.cart.items:
-            subtotal = sum(item.product.price * item.quantity if item.product else 0 for item in u.cart.items)
-            carts.append({
-                "userId": u.id, "name": u.name, "phone": u.phone, "email": u.email,
-                "itemsCount": len(u.cart.items), "subtotal": round(subtotal, 2),
-                "updatedAt": u.cart.updatedAt.isoformat() if u.cart.updatedAt else None,
-            })
-    return {"carts": carts}
+    for c in carts_db:
+        if not c.items:
+            continue
+        subtotal = sum(item.product.price * item.quantity if item.product else 0 for item in c.items)
+        user_name = c.user.name if c.user else f"Guest ({c.id[-6:]})"
+        user_email = c.user.email if c.user else "guest@fastkirana.com"
+        user_phone = c.user.phone if c.user else None
+        carts.append({
+            "id": c.id,
+            "userId": c.userId,
+            "userName": user_name,
+            "name": user_name,
+            "phone": user_phone,
+            "email": user_email,
+            "itemsCount": len(c.items),
+            "subtotal": round(subtotal, 2),
+            "updatedAt": c.updatedAt.isoformat() if c.updatedAt else None,
+        })
+    return {"success": True, "carts": carts, "count": len(carts)}
 
 
 @router.post("/live-carts/notify")

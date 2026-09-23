@@ -8,7 +8,7 @@ from datetime import datetime, time
 import urllib.parse
 
 from database import get_db
-from models import Order, OrderItem, RiderWallet, CashDepositTransaction, User, Address, OrderStatus, PaymentMethod, PaymentStatus
+from models import Order, OrderItem, RiderWallet, CashDepositTransaction, User, Address, OrderStatus, PaymentMethod, PaymentStatus, StoreSetting
 from routers.auth import require_auth
 
 

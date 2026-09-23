@@ -162,11 +162,7 @@ const nextConfig: NextConfig = {
           source: '/api/profile/:path*',
           destination: `${apiDest}/api/profile/:path*`,
         },
-        // Phase 5: Admin Dashboard & Operations
-        {
-          source: '/api/admin/:path*',
-          destination: `${apiDest}/api/admin/:path*`,
-        },
+        // Phase 5: Admin Dashboard & Operations handled natively by Next.js App Router
       ],
       afterFiles: [
         // Python AI microservices & WebSockets

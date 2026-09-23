@@ -18,6 +18,9 @@ from models import (
 )
 from schemas import CashDepositRequest, FinancialSummaryOut
 from routers.auth import require_admin
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["Admin Reconciliation & Reports"])
 
@@ -609,7 +612,7 @@ async def get_sales_reports(
             "success": True,
             "summary": {
                 "totalSales": round(total_rev, 2),
-                "totalCollected": round(total_rev + totalDeliveryFee + totalTaxes + totalMiscFee, 2),
+                "totalCollected": round(total_rev + total_delivery_fee + total_taxes + total_misc_fee, 2),
                 "totalProfit": round(total_profit, 2),
                 "totalCost": round(total_cost, 2),
                 "totalOrders": total_orders,
@@ -820,7 +823,7 @@ async def get_admin_inventory_forecast(
             if is_at_risk:
                 if p.stock == 0:
                     reorder_by_day = "TODAY"
-                    suggestion = f"🔴 Out of stock! Reorder {recommendedReorder} units immediately."
+                    suggestion = f"🔴 Out of stock! Reorder {recommended_reorder} units immediately."
                 elif days_remaining <= 1:
                     reorder_by_day = "TODAY"
                     suggestion = f"🚨 Critical: Stock runs out in 1 day. Reorder {recommended_reorder} units today."

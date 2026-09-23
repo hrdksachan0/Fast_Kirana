@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Body, BackgroundT
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
-from sqlalchemy import desc, and_, or_, func, text, not_
+from sqlalchemy import desc, and_, or_, func, text, not_, delete
 import os
 import re
 import json
@@ -556,7 +556,8 @@ async def create_order(
             name_suffix = f" ({variant_name})" if variant_name else ""
             raise HTTPException(status_code=400, detail=f"Maximum order limit of {limit} units exceeded for product \"{db_prod.name}{name_suffix}\"")
 
-        item_with_db = {**item, "dbProduct": db_prod}
+        item["dbProduct"] = db_prod
+        item_with_db = item
         if is_restaurant:
             r_id = str(resolved_rest_id).strip()
             # Normalize common legacy aliases
@@ -786,12 +787,6 @@ async def create_order(
                             if coupon.maxDiscount:
                                 combined_discount = min(combined_discount, coupon.maxDiscount)
 
-    # Packaging and handling charge
-    server_misc_fee = float(settings_map.get("misc_fee", 5.0))
-    packaging_fee_input = float(payload.get("packagingFee", payload.get("packaging_fee", 0.0)))
-    is_premium_packaging = packaging_option == "PREMIUM" or packaging_fee == 15.0 or packaging_fee_input > 0
-    resolved_packaging_fee = packaging_fee_input if packaging_fee_input > 0 else (15.0 if is_premium_packaging else (server_misc_fee if restaurant_id else 5.0))
-
     def get_order_subtotal(item_list: list) -> float:
         sub = 0.0
         for it in item_list:
@@ -822,6 +817,12 @@ async def create_order(
     restaurant_obj = restaurant_groups.get(restaurant_id) if restaurant_id else None
     final_shop_name = restaurant_obj["name"] if restaurant_obj else "FastKirana Grocery"
     final_shop_phone = restaurant_obj.get("ownerPhone", default_support_phone) if restaurant_obj else default_support_phone
+
+    # Packaging and handling charge
+    server_misc_fee = float(settings_map.get("misc_fee", 5.0))
+    packaging_fee_input = float(payload.get("packagingFee", payload.get("packaging_fee", 0.0)))
+    is_premium_packaging = packaging_option == "PREMIUM" or packaging_fee == 15.0 or packaging_fee_input > 0
+    resolved_packaging_fee = packaging_fee_input if packaging_fee_input > 0 else (15.0 if is_premium_packaging else (server_misc_fee if restaurant_id else 5.0))
 
     # Calculate unified order amounts
     subtotal = combined_subtotal
@@ -1957,7 +1958,7 @@ async def update_order(
         "shopPhone": order.shopPhone,
         "notes": order.notes,
         "couponCode": order.couponCode,
-        "deliveryUser": delivery_user,
+        "deliveryUser": {"name": order.deliveryUser.name, "phone": order.deliveryUser.phone} if getattr(order, "deliveryUser", None) else None,
     }
 
 

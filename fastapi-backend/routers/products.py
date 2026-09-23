@@ -11,6 +11,9 @@ import math
 from database import get_db
 from models import Product, Category, Review, Order, OrderItem, StoreInventory, Restaurant, User, StoreSetting, DarkStore
 from routers.auth import get_current_user, require_admin, require_auth
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
@@ -373,7 +376,7 @@ async def get_products(
         matches.sort(key=lambda x: x[1], reverse=True)
 
         # M3 FIX: Prioritize in-stock items before out-of-stock for customer searches
-        if not is_worker and not include_unavailable:
+        if not is_worker and not includeUnavailable:
             matches.sort(key=lambda x: (x[0].stock > 0), reverse=True)
 
         if sort == "price-asc":
@@ -930,7 +933,7 @@ async def create_product(
 
         # C9 FIX: Multi-Hub Store Inventory Seeding
         initial_stock_num = 99999 if final_rest_id else int(payload.get("stock", 0))
-        target_store_id = (payload.get("storeId") if payload.get("storeId") != "all" else None) or current_user.get("assignedStoreId")
+        target_store_id = (payload.get("storeId") if payload.get("storeId") != "all" else None) or admin_user.get("assignedStoreId")
 
         from models import StoreInventory, DarkStore
         try:
