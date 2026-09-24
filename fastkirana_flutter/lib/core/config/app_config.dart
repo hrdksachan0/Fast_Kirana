@@ -122,7 +122,7 @@ class AppConfig {
     return supabaseUrl.isNotEmpty &&
         supabaseAnonKey.isNotEmpty &&
         googleMapsApiKey.isNotEmpty &&
-        razorpayKeyId.isNotEmpty;
+        cashfreeAppId.isNotEmpty;
   }
 
   /// Returns a list of missing required configuration keys.
@@ -131,7 +131,7 @@ class AppConfig {
     if (supabaseUrl.isEmpty) missing.add('SUPABASE_URL');
     if (supabaseAnonKey.isEmpty) missing.add('SUPABASE_ANON_KEY');
     if (googleMapsApiKey.isEmpty) missing.add('GOOGLE_MAPS_API_KEY');
-    if (razorpayKeyId.isEmpty) missing.add('RAZORPAY_KEY_ID');
+    if (cashfreeAppId.isEmpty) missing.add('CASHFREE_APP_ID');
     return missing;
   }
 

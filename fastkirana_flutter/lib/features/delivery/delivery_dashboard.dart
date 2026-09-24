@@ -19,6 +19,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
 import '../../core/services/supabase_service.dart';
 import '../../core/services/offline_sync_service.dart';
 import '../../core/utils/restaurant_utils.dart';
+import '../../core/utils/order_item_helper.dart';
 import '../../data/models/restaurant.dart';
 import '../../data/repositories/restaurant_repository.dart';
 import '../../providers/auth_provider.dart';
@@ -515,7 +516,19 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         final parsed = data
             .map((o) {
               final map = Map<String, dynamic>.from(o as Map);
-              map['items'] = (map['order_items'] as List<dynamic>?) ?? [];
+              final rawItems = (map['order_items'] as List<dynamic>?) ?? [];
+              map['items'] = rawItems.map((it) {
+                if (it is Map) {
+                  final itMap = Map<String, dynamic>.from(it);
+                  final resolved = OrderItemHelper.resolveImageUrl(itMap);
+                  if (resolved.isNotEmpty) {
+                    itMap['imageUrl'] ??= resolved;
+                    itMap['image'] ??= resolved;
+                  }
+                  return itMap;
+                }
+                return it;
+              }).toList();
               map['address'] = map['addresses'];
               if (map['restaurant'] != null && map['restaurant'] is Map) {
                 try {
@@ -528,9 +541,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
             .where((o) => !_isSelfPickupOrder(o))
             .toList();
 
-        final merged = _mergeCombinedOrders(parsed);
-
-        if (mounted) {
+        if (parsed.isNotEmpty && mounted) {
+          final merged = _mergeCombinedOrders(parsed);
           setState(() {
             _orders = merged;
             _isLoading = false;
@@ -575,6 +587,21 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         final parsed = list
             .map((e) {
               final map = Map<String, dynamic>.from(e as Map);
+              if (map['items'] is List) {
+                final rawItems = map['items'] as List<dynamic>;
+                map['items'] = rawItems.map((it) {
+                  if (it is Map) {
+                    final itMap = Map<String, dynamic>.from(it);
+                    final resolved = OrderItemHelper.resolveImageUrl(itMap);
+                    if (resolved.isNotEmpty) {
+                      itMap['imageUrl'] ??= resolved;
+                      itMap['image'] ??= resolved;
+                    }
+                    return itMap;
+                  }
+                  return it;
+                }).toList();
+              }
               if (map['restaurant'] != null && map['restaurant'] is Map) {
                 try {
                   final r = Restaurant.fromJson(Map<String, dynamic>.from(map['restaurant'] as Map));
@@ -650,6 +677,11 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         for (final item in rawSubItems) {
           if (item is Map) {
             final itemMap = Map<String, dynamic>.from(item);
+            final resolved = OrderItemHelper.resolveImageUrl(itemMap);
+            if (resolved.isNotEmpty) {
+              itemMap['imageUrl'] ??= resolved;
+              itemMap['image'] ??= resolved;
+            }
             if (subRestId != null && itemMap['restaurantId'] == null) {
               itemMap['restaurantId'] = subRestId;
             }

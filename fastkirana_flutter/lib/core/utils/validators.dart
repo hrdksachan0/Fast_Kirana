@@ -58,8 +58,22 @@ class Helpers {
   }
 
   static String getImageUrl(String? path) {
-    if (path == null || path.isEmpty) return '';
-    if (path.startsWith('http')) return path;
-    return '${AppConfig.apiBaseUrl}$path';
+    if (path == null) return '';
+    final str = path.trim();
+    if (str.isEmpty || str == 'null') return '';
+    if (str.startsWith('http://') || str.startsWith('https://') || str.startsWith('data:image')) {
+      return str;
+    }
+    if (str.startsWith('//')) {
+      return 'https:$str';
+    }
+    if (str.startsWith('products/') || str.startsWith('/products/')) {
+      final clean = str.startsWith('/') ? str.substring(1) : str;
+      return 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/$clean';
+    }
+    if (str.startsWith('/')) {
+      return 'https://www.fastkirana.in$str';
+    }
+    return 'https://www.fastkirana.in/$str';
   }
 }

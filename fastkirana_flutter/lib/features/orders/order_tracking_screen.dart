@@ -11,7 +11,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfsession/cfsession.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfpaymentgateway/cfpaymentgatewayservice.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfwebcheckoutpayment.dart';
@@ -87,8 +86,6 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   Timer? _pollTimer;
   Timer? _etaUpdateTimer;
   StreamSubscription<String>? _sseLineSubscription;
-  Razorpay? _razorpay;
-  String? _pendingRazorpayOrderId;
   final CFPaymentGatewayService _cfService = CFPaymentGatewayService();
   bool _isProcessingPayment = false;
   bool _isCancelling = false;
@@ -131,7 +128,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
     _initCustomMarkers();
     _checkAndRequestLocationPermission();
-    _initRazorpay();
+    _initCashfree();
     _fetchLiveOrder();
     _initSupabaseRealtime();
 
@@ -160,7 +157,6 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     _riderAnimController.dispose();
     _confettiController.dispose();
     _mapController?.dispose();
-    _razorpay?.clear();
     _audioPlayer.dispose();
     for (final ch in _supabaseChannels) {
       SupabaseService.unsubscribe(ch);
@@ -170,41 +166,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     super.dispose();
   }
 
-  void _initRazorpay() {
+  void _initCashfree() {
     try {
-      _razorpay = Razorpay();
-      _razorpay?.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-      _razorpay?.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-      _razorpay?.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
       _cfService.setCallback(_handleCashfreeSuccess, _handleCashfreeError);
     } catch (e) {
       debugPrint('Payment gateway init error: $e');
-    }
-  }
-
-  void _handleExternalWallet(ExternalWalletResponse response) {
-    HapticFeedback.lightImpact();
-    if (mounted) {
-      setState(() => _isProcessingPayment = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFF1E293B),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          content: Row(
-            children: [
-              const Icon(Icons.account_balance_wallet_outlined, color: Colors.white, size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Redirecting to ${response.walletName ?? "external wallet"}... Complete payment in your wallet app.',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
     }
   }
 
@@ -297,113 +263,6 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
   }
 
-  Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
-    HapticFeedback.heavyImpact();
-    setState(() => _isProcessingPayment = true);
-    try {
-      final dio = ref.read(dioProvider);
-      final rzpOrderId = response.orderId ?? _pendingRazorpayOrderId;
-      final paymentId = response.paymentId;
-      final signature = response.signature;
-
-      bool isVerified = false;
-
-      // 1. Cryptographic HMAC-SHA256 signature verification with backend
-      if (paymentId != null && signature != null && signature.isNotEmpty && rzpOrderId != null) {
-        try {
-          final verifyRes = await dio.post('/api/payment/razorpay/verify-signature', data: {
-            'orderId': widget.orderId,
-            'razorpay_order_id': rzpOrderId,
-            'razorpay_payment_id': paymentId,
-            'razorpay_signature': signature,
-          });
-          if (verifyRes.statusCode == 200) {
-            isVerified = true;
-          }
-        } catch (verifyErr) {
-          debugPrint('Razorpay signature verification endpoint error: $verifyErr');
-        }
-      }
-
-      // 2. Fallback: Query Razorpay API directly from server if signature is missing or for external wallet flows
-      if (!isVerified) {
-        try {
-          final syncRes = await dio.post('/api/payment/razorpay/sync-order', data: {
-            'orderId': widget.orderId,
-          });
-          if (syncRes.data != null && (syncRes.data['paymentStatus'] == 'PAID' || syncRes.data['success'] == true)) {
-            isVerified = true;
-          }
-        } catch (syncErr) {
-          debugPrint('Razorpay sync-order error: $syncErr');
-        }
-      }
-
-      if (isVerified) {
-        await _fetchLiveOrder();
-        if (mounted) {
-          setState(() => _isProcessingPayment = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: brandGreen,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              content: Row(
-                children: [
-                  const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '🎉 Payment Verified! Order #${_order?.readableId ?? widget.orderId} is now PAID.',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-      } else {
-        // Payment was NOT verified — never mark as paid!
-        if (mounted) {
-          setState(() => _isProcessingPayment = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: primaryRed,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              content: Text(
-                'Payment could not be verified by gateway. If money was deducted, it will automatically update shortly.',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white),
-              ),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint('Error verifying paid status from Razorpay: $e');
-      if (mounted) setState(() => _isProcessingPayment = false);
-    }
-  }
-
-  void _handlePaymentError(PaymentFailureResponse response) {
-    HapticFeedback.lightImpact();
-    if (mounted) {
-      setState(() => _isProcessingPayment = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: primaryRed,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          content: Text(
-            'Payment Incomplete: ${response.message ?? "Transaction cancelled"}',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white),
-          ),
-        ),
-      );
-    }
-  }
-
   Future<void> _payOrderOnline() async {
     final grandTotal = _order?.total ?? 0.0;
     if (grandTotal <= 0) return;
@@ -416,8 +275,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     final email = prefs.getString('user_email') ?? 'customer@fastkirana.in';
     final customerName = _order?.customerName ?? 'FastKirana Customer';
 
-    // 1. Primary Gateway: Cashfree PG
-    bool cashfreeLaunched = false;
+    // Cashfree PG
     try {
       final dio = ref.read(dioProvider);
       final cfRes = await dio.post(
@@ -459,46 +317,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
             .build();
 
         _cfService.doPayment(cfPayment);
-        cashfreeLaunched = true;
         return;
       }
     } catch (cfErr) {
-      debugPrint('Cashfree create-order error, falling back to Razorpay: $cfErr');
-    }
-
-    // 2. Fallback Gateway: Razorpay
-    if (!cashfreeLaunched && _razorpay != null) {
-      try {
-        final dio = ref.read(dioProvider);
-        final rzpOrderRes = await dio.post('/api/payment/razorpay/create-order', data: {
-          'orderId': widget.orderId,
-          'amount': grandTotal,
-        });
-
-        final rzpOrderId = rzpOrderRes.data?['razorpayOrderId']?.toString();
-        _pendingRazorpayOrderId = rzpOrderId;
-        final rzpKey = rzpOrderRes.data?['keyId']?.toString() ?? AppConfig.razorpayKeyId;
-
-        final options = {
-          'key': rzpKey,
-          'amount': (grandTotal * 100).toInt(),
-          'name': 'FastKirana Express',
-          'description': 'Order Payment #${_order?.readableId ?? widget.orderId}',
-          if (rzpOrderId != null && rzpOrderId.isNotEmpty) 'order_id': rzpOrderId,
-          'prefill': {
-            if (cleanPhone.isNotEmpty) 'contact': cleanPhone,
-            'email': email,
-          },
-          'theme': {
-            'color': '#00A344',
-          },
-        };
-
-        _razorpay?.open(options);
-        return;
-      } catch (e) {
-        debugPrint('Razorpay create-order / open error: $e');
-      }
+      debugPrint('Cashfree create-order error: $cfErr');
     }
 
     if (mounted) {

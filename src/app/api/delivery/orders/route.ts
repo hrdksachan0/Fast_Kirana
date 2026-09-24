@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
             where: { orderId: { in: allOrderIds } },
             include: {
               product: {
-                select: { unit: true }
+                select: { unit: true, imageUrl: true }
               }
             }
           })

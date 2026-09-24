@@ -131,56 +131,6 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
         }
       } catch (cfErr) {}
     }
-
-    // Auto-heal / Auto-sync with Razorpay if order is still unpaid
-    if (order && order.paymentStatus !== 'PAID') {
-      try {
-        const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
-        const keySecret = process.env.RAZORPAY_KEY_SECRET
-        if (!keyId || !keySecret) throw new Error('Razorpay credentials not configured')
-        const authHeader = 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64')
-        const rzpRes = await fetch('https://api.razorpay.com/v1/payments?count=50', {
-          headers: { Authorization: authHeader },
-          cache: 'no-store',
-        })
-        if (rzpRes.ok) {
-          const rzpData = await rzpRes.json()
-          const items = rzpData.items || []
-          const orderTotalPaise = Math.round(Number(order.total) * 100)
-          const targetReadableId = String(order.readableId || '')
-
-          const matchedPayment = items.find((p: any) => {
-            if (p.status !== 'captured' && p.status !== 'authorized') return false
-            const hasExplicitIdMatch = 
-              (p.notes?.orderId && p.notes.orderId === order.id) ||
-              (targetReadableId && p.notes?.readableId === targetReadableId) ||
-              (targetReadableId && p.description && p.description.includes(targetReadableId)) ||
-              (p.order_id && (order as any).razorpayOrderId && p.order_id === (order as any).razorpayOrderId)
-            
-            if (hasExplicitIdMatch && p.amount === orderTotalPaise) {
-              return true
-            }
-            return false
-          })
-
-          if (matchedPayment) {
-            order.paymentStatus = 'PAID'
-            order.paymentMethod = 'UPI'
-            if (order.combinedId) {
-              await prisma.$executeRaw`
-                UPDATE orders SET "paymentStatus" = 'PAID'::"PaymentStatus", "paymentMethod" = 'UPI'::"PaymentMethod", "updatedAt" = NOW() WHERE "combinedId" = ${order.combinedId}
-              `
-            } else {
-              await prisma.$executeRaw`
-                UPDATE orders SET "paymentStatus" = 'PAID'::"PaymentStatus", "paymentMethod" = 'UPI'::"PaymentMethod", "updatedAt" = NOW() WHERE id = ${order.id}
-              `
-            }
-          }
-        }
-      } catch (checkErr) {
-        console.warn('Order page auto-sync check notice:', checkErr)
-      }
-    }
   } catch (error) {
     console.error('Database connection error after retries: failed to fetch order details', error)
     throw error

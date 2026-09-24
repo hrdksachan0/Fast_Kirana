@@ -7,6 +7,7 @@ import 'package:fastkirana_flutter/core/theme/design_system.dart';
 import '../../../core/utils/restaurant_utils.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/utils/order_item_helper.dart';
+import '../../../core/widgets/app_cached_image.dart';
 
 /// Opens the high-end "Photo View" Cart Modal for riders.
 void showRiderCartModal(BuildContext context, Map<String, dynamic> order) {
@@ -181,8 +182,8 @@ class RiderCartPreviewWidget extends StatelessWidget {
                 return Row(
                   children: [
                     ...displayItems.map((item) {
-                      final rawImg = item['imageUrl'] ?? item['image'];
-                      final imgUrl = Helpers.getImageUrl(rawImg?.toString());
+                      final itemName = (item is Map ? (item['name'] ?? item['title']) : null)?.toString() ?? 'Item';
+                      final imgUrl = OrderItemHelper.resolveImageUrl(item);
                       final qty = item['quantity'] ?? 1;
                       final weight = OrderItemHelper.resolveWeightOrVariant(item);
 
@@ -211,28 +212,25 @@ class RiderCartPreviewWidget extends StatelessWidget {
                               borderRadius: BorderRadius.circular(11),
                               child: Center(
                                 child: imgUrl.isNotEmpty
-                                    ? CachedNetworkImage(
+                                    ? AppCachedImage(
                                         imageUrl: imgUrl,
                                         width: thumbSize - 6,
                                         height: thumbSize - 6,
                                         fit: BoxFit.contain,
-                                        placeholder: (_, __) => const Center(
-                                          child: SizedBox(
-                                            width: 16,
-                                            height: 16,
-                                            child: CircularProgressIndicator(strokeWidth: 2),
+                                        memCacheWidth: 120,
+                                        memCacheHeight: 120,
+                                        errorWidget: Center(
+                                          child: Text(
+                                            OrderItemHelper.resolveFallbackEmoji(itemName),
+                                            style: TextStyle(fontSize: thumbSize * 0.42),
                                           ),
                                         ),
-                                        errorWidget: (_, __, ___) => const Icon(
-                                          Icons.fastfood_outlined,
-                                          size: 20,
-                                          color: AppDesignSystem.slate400,
-                                        ),
                                       )
-                                    : const Icon(
-                                        Icons.fastfood_outlined,
-                                        size: 20,
-                                        color: AppDesignSystem.slate400,
+                                    : Center(
+                                        child: Text(
+                                          OrderItemHelper.resolveFallbackEmoji(itemName),
+                                          style: TextStyle(fontSize: thumbSize * 0.42),
+                                        ),
                                       ),
                               ),
                             ),
@@ -720,8 +718,7 @@ class RiderCartModal extends StatelessWidget {
               final unitPrice = (item['price'] as num?)?.toDouble() ?? 0.0;
               final lineTotal = unitPrice * qty;
               final weightVariant = OrderItemHelper.resolveWeightOrVariant(item, title);
-              final rawImg = item['imageUrl'] ?? item['image'];
-              final imgUrl = Helpers.getImageUrl(rawImg?.toString());
+              final imgUrl = OrderItemHelper.resolveImageUrl(item);
               final isRefunded = item['isRefunded'] == true || (item['refundAmount'] as num? ?? 0) > 0;
 
               return Column(
@@ -747,28 +744,25 @@ class RiderCartModal extends StatelessWidget {
                             borderRadius: BorderRadius.circular(13),
                             child: Center(
                               child: imgUrl.isNotEmpty
-                                  ? CachedNetworkImage(
+                                  ? AppCachedImage(
                                       imageUrl: imgUrl,
-                                      width: 46,
-                                      height: 46,
+                                      width: 48,
+                                      height: 48,
                                       fit: BoxFit.contain,
-                                      placeholder: (_, __) => const Center(
-                                        child: SizedBox(
-                                          width: 14,
-                                          height: 14,
-                                          child: CircularProgressIndicator(strokeWidth: 1.8),
+                                      memCacheWidth: 140,
+                                      memCacheHeight: 140,
+                                      errorWidget: Center(
+                                        child: Text(
+                                          OrderItemHelper.resolveFallbackEmoji(title),
+                                          style: const TextStyle(fontSize: 22),
                                         ),
                                       ),
-                                      errorWidget: (_, __, ___) => const Icon(
-                                        Icons.fastfood_outlined,
-                                        size: 22,
-                                        color: Color(0xFF94A3B8),
-                                      ),
                                     )
-                                  : const Icon(
-                                      Icons.fastfood_outlined,
-                                      size: 22,
-                                      color: Color(0xFF94A3B8),
+                                  : Center(
+                                      child: Text(
+                                        OrderItemHelper.resolveFallbackEmoji(title),
+                                        style: const TextStyle(fontSize: 22),
+                                      ),
                                     ),
                             ),
                           ),

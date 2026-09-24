@@ -33,7 +33,7 @@ async def get_payment_methods():
         "methods": [
             {"id": "COD", "name": "Cash on Delivery", "enabled": True, "icon": "cash"},
             {"id": "UPI", "name": "UPI / QR Code", "enabled": True, "icon": "qr_code"},
-            {"id": "ONLINE", "name": "Online Payment (Razorpay/Stripe)", "enabled": True, "icon": "credit_card"},
+            {"id": "ONLINE", "name": "Online Payment (Cashfree)", "enabled": True, "icon": "credit_card"},
             {"id": "WALLET", "name": "FastKirana Wallet", "enabled": True, "icon": "wallet"}
         ]
     }

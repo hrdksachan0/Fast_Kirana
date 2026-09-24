@@ -56,6 +56,109 @@ class OrderItemHelper {
     return '';
   }
 
+  /// Robustly extracts and normalizes the product image URL from any item representation.
+  /// Handles:
+  /// - Map keys: imageUrl, image_url, image, productImage, product_image, photo, thumbnail
+  /// - Nested item['product'] structures
+  /// - OrderItem model instances
+  /// - Supabase storage relative paths & fastkirana.in paths
+  /// - Fallback to deterministic Supabase storage URL via productId
+  static String resolveImageUrl(dynamic item) {
+    if (item == null) return '';
+
+    dynamic rawImg;
+    String? productId;
+
+    if (item is Map) {
+      rawImg = item['imageUrl'] ??
+          item['image_url'] ??
+          item['image'] ??
+          item['productImage'] ??
+          item['product_image'] ??
+          item['photo'] ??
+          item['photoUrl'] ??
+          item['thumbnail'];
+
+      if (rawImg == null && item['product'] is Map) {
+        final p = item['product'];
+        rawImg = p['imageUrl'] ?? p['image_url'] ?? p['image'] ?? p['thumbnail'];
+        productId ??= p['id']?.toString() ?? p['productId']?.toString();
+      }
+
+      productId ??= item['productId']?.toString() ?? item['product_id']?.toString();
+    } else {
+      // Might be an OrderItem instance or custom object
+      try {
+        rawImg = (item as dynamic).imageUrl;
+      } catch (_) {}
+      try {
+        productId = (item as dynamic).productId?.toString();
+      } catch (_) {}
+    }
+
+    String str = rawImg?.toString().trim() ?? '';
+
+    // If no direct image URL is provided, fallback to Supabase product image storage via productId
+    if (str.isEmpty && productId != null && productId.trim().isNotEmpty) {
+      final cleanPid = productId.trim();
+      // Supabase product images are named {productId}.webp
+      str = 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/$cleanPid.webp';
+    }
+
+    if (str.isEmpty || str == 'null') return '';
+
+    if (str.startsWith('http://') || str.startsWith('https://') || str.startsWith('data:image')) {
+      return str;
+    }
+
+    if (str.startsWith('//')) {
+      return 'https:$str';
+    }
+
+    if (str.startsWith('products/') || str.startsWith('/products/')) {
+      final clean = str.startsWith('/') ? str.substring(1) : str;
+      return 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/$clean';
+    }
+
+    if (str.startsWith('/')) {
+      return 'https://www.fastkirana.in$str';
+    }
+
+    return 'https://www.fastkirana.in/$str';
+  }
+
+  /// Returns a contextual emoji for an item name to provide a delightful, app-native fallback.
+  static String resolveFallbackEmoji(String name) {
+    final lower = name.toLowerCase().trim();
+    if (lower.contains('burger')) return '🍔';
+    if (lower.contains('pizza')) return '🍕';
+    if (lower.contains('sandwich')) return '🥪';
+    if (lower.contains('roll') || lower.contains('wrap')) return '🌯';
+    if (lower.contains('noodle') || lower.contains('chowmein') || lower.contains('maggi')) return '🍜';
+    if (lower.contains('pasta')) return '🍝';
+    if (lower.contains('dosa') || lower.contains('idli') || lower.contains('vada')) return '🥞';
+    if (lower.contains('coffee') || lower.contains('cappuccino') || lower.contains('latte')) return '☕';
+    if (lower.contains('tea') || lower.contains('chai')) return '🍵';
+    if (lower.contains('shake') || lower.contains('smoothie') || lower.contains('coke') || lower.contains('pepsi') || lower.contains('drink') || lower.contains('juice')) return '🥤';
+    if (lower.contains('ice cream') || lower.contains('kulfi') || lower.contains('dessert') || lower.contains('cake') || lower.contains('pastry')) return '🍦';
+    if (lower.contains('biryani') || lower.contains('fried rice') || lower.contains('rice') || lower.contains('chawal')) return '🍚';
+    if (lower.contains('paneer') || lower.contains('cheese')) return '🧀';
+    if (lower.contains('milk') || lower.contains('dahi') || lower.contains('curd')) return '🥛';
+    if (lower.contains('butter') || lower.contains('ghee')) return '🧈';
+    if (lower.contains('bread') || lower.contains('pav') || lower.contains('bun')) return '🍞';
+    if (lower.contains('egg') || lower.contains('anda') || lower.contains('omelette')) return '🥚';
+    if (lower.contains('samosa') || lower.contains('fry') || lower.contains('fries') || lower.contains('pakoda')) return '🍟';
+    if (lower.contains('momo')) return '🥟';
+    if (lower.contains('roti') || lower.contains('naan') || lower.contains('paratha')) return '🫓';
+    if (lower.contains('dal') || lower.contains('soup') || lower.contains('gravy') || lower.contains('curry')) return '🥣';
+    if (lower.contains('chips') || lower.contains('kurkure') || lower.contains('namkeen') || lower.contains('biscuit')) return '🍪';
+    if (lower.contains('apple') || lower.contains('banana') || lower.contains('fruit')) return '🍎';
+    if (lower.contains('oil') || lower.contains('tel')) return '🛢️';
+    if (lower.contains('atta') || lower.contains('flour') || lower.contains('sugar') || lower.contains('salt')) return '🌾';
+    if (lower.contains('soap') || lower.contains('shampoo') || lower.contains('wash')) return '🧼';
+    return '🍽️';
+  }
+
   /// Builds a prominent, high-visibility weight/pack-size badge.
   static Widget buildWeightBadge(
     BuildContext context,

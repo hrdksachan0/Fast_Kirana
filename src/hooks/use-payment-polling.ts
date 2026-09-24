@@ -8,7 +8,7 @@ interface PaymentPollingOptions {
   /** Which Cashfree order ID (for Cashfree provider) */
   cfOrderId?: string
   /** Payment gateway provider */
-  provider: 'cashfree' | 'razorpay'
+  provider?: 'cashfree'
   /** Whether polling is active */
   enabled: boolean
   /** Callback fired when payment is confirmed as PAID */
@@ -20,23 +20,12 @@ interface PaymentPollingOptions {
 }
 
 /**
- * Unified payment verification polling hook.
- *
- * Replaces 5 duplicated setInterval+fetch loops across:
- * - checkout/page.tsx (Cashfree + Razorpay = 2 loops)
- * - doorstep-pay/[orderId]/page.tsx (1 loop)
- * - components/order/pay-online-button.tsx (1 loop)
- * - delivery/components/upi-qr-modal.tsx (1 loop)
- *
- * Features:
- * - Auto-verify on document visibility change (user returns from PhonePe/GPay)
- * - Automatic cleanup on unmount
- * - Configurable interval and max poll count
+ * Unified payment verification polling hook for Cashfree.
  */
 export function usePaymentPolling({
   orderId,
   cfOrderId,
-  provider,
+  provider = 'cashfree',
   enabled,
   onPaid,
   intervalMs = 2500,
@@ -52,15 +41,8 @@ export function usePaymentPolling({
     if (isPaidRef.current || !orderId) return false
 
     try {
-      const endpoint =
-        provider === 'cashfree'
-          ? '/api/payment/cashfree/verify'
-          : '/api/payment/razorpay/sync-order'
-
-      const body =
-        provider === 'cashfree'
-          ? JSON.stringify({ orderId, cfOrderId })
-          : JSON.stringify({ orderId })
+      const endpoint = '/api/payment/cashfree/verify'
+      const body = JSON.stringify({ orderId, cfOrderId })
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -71,10 +53,7 @@ export function usePaymentPolling({
       if (!res.ok) return false
       const data = await res.json()
 
-      const isPaid =
-        provider === 'cashfree'
-          ? data.paymentStatus === 'PAID'
-          : data.paymentStatus === 'PAID' || data.status === 'captured'
+      const isPaid = data.paymentStatus === 'PAID'
 
       if (isPaid) {
         isPaidRef.current = true

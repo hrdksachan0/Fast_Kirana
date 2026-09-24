@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfsession/cfsession.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfpaymentgateway/cfpaymentgatewayservice.dart';
@@ -52,7 +51,6 @@ class CheckoutState {
   final String? customReceiverName;
   final String? customReceiverPhone;
   final String? pendingOrderId;
-  final String? pendingRazorpayOrderId;
   final String? pendingCashfreeOrderId;
   final Cart? pendingCart;
   final double? pendingGrandTotal;
@@ -68,7 +66,6 @@ class CheckoutState {
     this.customReceiverName,
     this.customReceiverPhone,
     this.pendingOrderId,
-    this.pendingRazorpayOrderId,
     this.pendingCashfreeOrderId,
     this.pendingCart,
     this.pendingGrandTotal,
@@ -85,7 +82,6 @@ class CheckoutState {
     String? customReceiverName,
     String? customReceiverPhone,
     String? pendingOrderId,
-    String? pendingRazorpayOrderId,
     String? pendingCashfreeOrderId,
     Cart? pendingCart,
     double? pendingGrandTotal,
@@ -102,7 +98,6 @@ class CheckoutState {
       customReceiverName: clearReceiverDetails ? null : (customReceiverName ?? this.customReceiverName),
       customReceiverPhone: clearReceiverDetails ? null : (customReceiverPhone ?? this.customReceiverPhone),
       pendingOrderId: pendingOrderId ?? this.pendingOrderId,
-      pendingRazorpayOrderId: pendingRazorpayOrderId ?? this.pendingRazorpayOrderId,
       pendingCashfreeOrderId: pendingCashfreeOrderId ?? this.pendingCashfreeOrderId,
       pendingCart: pendingCart ?? this.pendingCart,
       pendingGrandTotal: pendingGrandTotal ?? this.pendingGrandTotal,
@@ -121,7 +116,6 @@ final checkoutControllerProvider =
 
 class CheckoutController extends StateNotifier<CheckoutState> {
   final Ref ref;
-  Razorpay? _razorpay;
   final CFPaymentGatewayService _cfService = CFPaymentGatewayService();
   BuildContext? _currentContext;
 
@@ -151,21 +145,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     }
 
     if (!kIsWeb) {
-      _razorpay = Razorpay();
-      _razorpay!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onRazorpaySuccess);
-      _razorpay!.on(Razorpay.EVENT_PAYMENT_ERROR, _onRazorpayError);
-      _razorpay!.on(Razorpay.EVENT_EXTERNAL_WALLET, _onExternalWallet);
-
       _cfService.setCallback(_onCashfreeSuccess, _onCashfreeError);
     }
-  }
-
-  @override
-  void dispose() {
-    if (!kIsWeb) {
-      _razorpay?.clear();
-    }
-    super.dispose();
   }
 
   // ─── State Modifiers ───────────────────────────────────────────────────────
@@ -213,102 +194,6 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
   void updateNotes(String notes) {
     _customDeliveryNotes = notes;
-  }
-
-  // ─── Razorpay Payment Handlers ─────────────────────────────────────────────
-
-  Future<void> _onRazorpaySuccess(PaymentSuccessResponse response) async {
-    HapticFeedback.heavyImpact();
-    final cart = state.pendingCart ?? ref.read(cartProvider).value;
-    if (cart == null) {
-      state = state.copyWith(isPlacingOrder: false);
-      return;
-    }
-
-    final dio = ref.read(dioProvider);
-
-    if (response.paymentId != null) {
-      try {
-        final targetId = state.pendingOrderId ?? state.pendingRazorpayOrderId ?? response.orderId;
-        if (targetId != null) {
-          await dio.post('/api/payment/razorpay/verify-signature', data: {
-            'orderId': targetId,
-            'razorpay_order_id': response.orderId ?? state.pendingRazorpayOrderId,
-            'razorpay_payment_id': response.paymentId,
-            'razorpay_signature': response.signature ?? '',
-          });
-        }
-      } catch (e) {
-        debugPrint('Razorpay signature verification note: $e');
-      }
-    }
-
-    if (_currentContext != null) {
-      await completeOrderPlacement(
-        _currentContext!,
-        cart: cart,
-        paymentId: response.paymentId ?? 'RZP_${DateTime.now().millisecondsSinceEpoch}',
-      );
-    }
-  }
-
-  void _onRazorpayError(PaymentFailureResponse response) {
-    HapticFeedback.lightImpact();
-    state = state.copyWith(isPlacingOrder: false);
-
-    final context = _currentContext;
-    if (context == null || !context.mounted) return;
-
-    final isCancelled = response.code == Razorpay.PAYMENT_CANCELLED;
-    final errorMsg = isCancelled
-        ? 'Payment cancelled. You can retry or pay with Cash on Delivery (COD).'
-        : 'Payment could not be completed (${response.message ?? "Transaction declined"}). Please retry or choose COD.';
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: isCancelled ? AppDesignSystem.warning : AppDesignSystem.primary,
-        content: Row(
-          children: [
-            Icon(
-              isCancelled ? Icons.info_outline_rounded : Icons.error_outline_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                errorMsg,
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                  fontSize: Responsive.scaledFontSize(context, 12),
-                ),
-              ),
-            ),
-          ],
-        ),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
-  void _onExternalWallet(ExternalWalletResponse response) {
-    state = state.copyWith(isPlacingOrder: false);
-    final context = _currentContext;
-    if (context == null || !context.mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: AppDesignSystem.blue700,
-        content: Text(
-          'Redirecting to ${response.walletName ?? "external wallet"} to complete your payment...',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
-        ),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
   }
 
   // ─── Cashfree Payment Handlers ─────────────────────────────────────────────
@@ -1118,7 +1003,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       orderId: placedOrder.displayId,
       totalAmount: grandTotal,
       deliveryAddress: selectedAddr,
-      paymentMethod: state.selectedPayment == 'online' ? 'RAZORPAY (PAID)' : 'CASH ON DELIVERY',
+      paymentMethod: state.selectedPayment == 'online' ? 'CASHFREE (PAID)' : 'CASH ON DELIVERY',
       order: placedOrder,
     );
 

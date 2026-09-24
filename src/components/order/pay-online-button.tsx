@@ -44,20 +44,6 @@ export function PayOnlineButton({
     })
   }
 
-  const loadRazorpayScript = (): Promise<boolean> => {
-    return new Promise((resolve) => {
-      if ((window as any).Razorpay) {
-        resolve(true)
-        return
-      }
-      const script = document.createElement('script')
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
-      script.onload = () => resolve(true)
-      script.onerror = () => resolve(false)
-      document.body.appendChild(script)
-    })
-  }
-
   const [isCheckingStatus, setIsCheckingStatus] = useState(false)
 
   const handleCheckPaymentStatus = async () => {
@@ -79,22 +65,7 @@ export function PayOnlineButton({
         return
       }
 
-      const res = await fetch('/api/payment/razorpay/sync-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId }),
-      })
-      const data = await res.json()
-      if (res.ok && data.paymentStatus === 'PAID') {
-        toast.success('🎉 Online Payment Verified as PAID!')
-        if (onPaymentSuccess) {
-          onPaymentSuccess()
-        } else {
-          window.location.reload()
-        }
-      } else {
-        toast.info(cfData.message || data.message || 'No confirmed online payment received yet.')
-      }
+      toast.info(cfData.message || 'No confirmed online payment received yet.')
     } catch (err: any) {
       toast.error(err.message || 'Failed to check payment status')
     } finally {
@@ -194,111 +165,8 @@ export function PayOnlineButton({
         }
       }
 
-      // Fallback to Razorpay if Cashfree session could not be created
-      const res = await fetch('/api/payment/razorpay/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, amount }),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        toast.error(data.detail || data.error || 'Failed to initiate payment')
-        setIsProcessing(false)
-        return
-      }
-
-      // 2. Load SDK
-      const loaded = await loadRazorpayScript()
-      if (!loaded) {
-        toast.error('Failed to load Razorpay Payment Gateway. Check internet connection.')
-        setIsProcessing(false)
-        return
-      }
-
-      const displayId = readableId ? `#${readableId}` : `#${orderId.slice(0, 8).toUpperCase()}`
-
-      // 3. Launch Razorpay Modal
-      const options = {
-        key: data.keyId,
-        amount: data.amount,
-        currency: data.currency,
-        name: 'FastKirana',
-        description: `Order ${displayId} Payment`,
-        order_id: data.razorpayOrderId,
-        prefill: {
-          name: customerName || '',
-          contact: customerPhone || '',
-        },
-        theme: {
-          color: '#059669',
-        },
-        handler: async function (response: any) {
-          setIsVerifying(true)
-          try {
-            const verifyRes = await fetch('/api/payment/razorpay/verify-signature', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                orderId,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              }),
-            })
-
-            const verifyData = await verifyRes.json()
-
-            if (verifyRes.ok) {
-              try {
-                triggerHaptic('success')
-              } catch (e) {}
-              toast.success('🎉 Payment Successful! Your order is now Paid Online.')
-              if (onPaymentSuccess) {
-                onPaymentSuccess()
-              } else {
-                window.location.reload()
-              }
-            } else {
-              toast.error(verifyData.error || 'Payment verification failed.')
-            }
-          } catch (err: any) {
-            toast.error(err.message || 'Error verifying payment')
-          } finally {
-            setIsVerifying(false)
-            setIsProcessing(false)
-          }
-        },
-        modal: {
-          ondismiss: async function () {
-            setIsProcessing(false)
-            // Auto check payment status in background if customer returned from UPI intent
-            setTimeout(async () => {
-              try {
-                const syncRes = await fetch('/api/payment/razorpay/sync-order', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ orderId }),
-                })
-                const syncData = await syncRes.json()
-                if (syncRes.ok && syncData.paymentStatus === 'PAID') {
-                  toast.success('🎉 Online Payment Verified!')
-                  if (onPaymentSuccess) onPaymentSuccess()
-                  else window.location.reload()
-                }
-              } catch (_) {}
-            }, 1500)
-          },
-        },
-      }
-
-      const rzp = new (window as any).Razorpay(options)
-      rzp.on('payment.failed', function (response: any) {
-        toast.error(`Payment Failed: ${response.error.description || 'Transaction declined'}`)
-        setIsProcessing(false)
-      })
-      rzp.open()
+      toast.error('Unable to initiate online payment session. Please retry or choose Cash on Delivery.')
+      setIsProcessing(false)
     } catch (err: any) {
       console.error('Pay Online Error:', err)
       toast.error(err.message || 'Failed to open payment gateway')
