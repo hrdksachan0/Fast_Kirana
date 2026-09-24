@@ -22,9 +22,14 @@ export async function GET(request: Request) {
 
   try {
     const where: any = {
-      NOT: {
-        email: { startsWith: 'guest-' }
-      }
+      OR: [
+        { email: null },
+        {
+          NOT: {
+            email: { startsWith: 'guest-' }
+          }
+        }
+      ]
     }
     const andClauses: any[] = []
 
