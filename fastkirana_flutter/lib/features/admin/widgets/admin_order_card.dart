@@ -29,7 +29,7 @@ class AdminOrderCard extends ConsumerWidget {
   final void Function(String phone, String orderId)? onWhatsappCustomer;
   final void Function(String phone)? onCallCustomer;
   final void Function(Order order, OrderItem item)? onShowSubstitution;
-  final void Function(Order order)? onVerifyRazorpay;
+  final void Function(Order order)? onVerifyPayment;
   final void Function(Order order)? onConvertToCOD;
   final void Function(Order order)? onSendWhatsAppPaymentReminder;
   final void Function(Order order)? onOpenSuperOrderEdit;
@@ -51,7 +51,7 @@ class AdminOrderCard extends ConsumerWidget {
     this.onWhatsappCustomer,
     this.onCallCustomer,
     this.onShowSubstitution,
-    this.onVerifyRazorpay,
+    this.onVerifyPayment,
     this.onConvertToCOD,
     this.onSendWhatsAppPaymentReminder,
     this.onOpenSuperOrderEdit,
@@ -999,7 +999,7 @@ class AdminOrderCard extends ConsumerWidget {
                               ),
                             ),
                             Text(
-                              'Online payment incomplete. Verify Razorpay, convert to COD, or send WhatsApp link.',
+                              'Online payment incomplete. Verify Cashfree, convert to COD, or send WhatsApp link.',
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 10.5),
                                 color: const Color(0xFFBE123C),
@@ -1016,7 +1016,7 @@ class AdminOrderCard extends ConsumerWidget {
                       // 1. Verify Online
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: onVerifyRazorpay != null ? () => onVerifyRazorpay!(order) : null,
+                          onPressed: onVerifyPayment != null ? () => onVerifyPayment!(order) : null,
                           icon: const Icon(Icons.bolt_rounded, size: 14, color: Colors.white),
                           label: Text(
                             'Verify',

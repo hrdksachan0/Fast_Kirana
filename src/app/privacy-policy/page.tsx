@@ -65,7 +65,7 @@ export default function PrivacyPolicyPage() {
             </p>
             <ul className="list-disc pl-5 mt-2 space-y-1 text-muted-foreground">
               <li>To facilitate our Service (e.g. database services, image hosting).</li>
-              <li>To process transactions securely (e.g. Razorpay payment integration).</li>
+              <li>To process transactions securely (e.g. Cashfree payment integration).</li>
               <li>To send transactional SMS notifications (OTP) and push notifications.</li>
             </ul>
           </section>

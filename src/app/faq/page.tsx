@@ -72,7 +72,7 @@ export default async function FAQPage() {
       items: [
         {
           q: 'What payment methods are supported?',
-          a: 'We accept Cash on Delivery (COD), UPI (Google Pay, PhonePe, Paytm, BHIM), Net Banking, and Debit/Credit cards via secure Razorpay payment gateway.',
+          a: 'We accept Cash on Delivery (COD), UPI (Google Pay, PhonePe, Paytm, BHIM), Net Banking, and Debit/Credit cards via secure Cashfree payment gateway.',
         },
         {
           q: 'How fast is the delivery in Ghatampur?',

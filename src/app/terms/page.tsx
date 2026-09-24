@@ -44,7 +44,7 @@ export default function TermsPage() {
             <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
               <li>All prices listed on FastKirana are in Indian Rupees (INR ₹) inclusive of applicable taxes unless stated otherwise.</li>
               <li>We accept payments via UPI (Google Pay, PhonePe, Paytm, BHIM), Credit/Debit Cards, Net Banking, Digital Wallets, and Cash on Delivery (COD).</li>
-              <li>Payments made online are processed securely through RBI-compliant, PCI-DSS certified payment gateway partners (such as Cashfree / Razorpay).</li>
+              <li>Payments made online are processed securely through RBI-compliant, PCI-DSS certified payment gateway partners (such as Cashfree).</li>
               <li>Delivery charges are calculated dynamically based on distance from our dark store/restaurants as per our <Link href="/shipping-policy" className="text-rose-600 hover:underline font-medium">Shipping Policy</Link>.</li>
             </ul>
           </section>

@@ -7,7 +7,6 @@
 //     --dart-define=SUPABASE_URL=https://xxx.supabase.co \
 //     --dart-define=SUPABASE_ANON_KEY=eyJhb... \
 //     --dart-define=GOOGLE_MAPS_API_KEY=AIza... \
-//     --dart-define=RAZORPAY_KEY_ID=rzp_live_...
 //
 // A CI/CD pipeline (GitHub Actions, Codemagic, etc.) should inject these
 // from environment variables so they never appear in the repo or build logs.
@@ -17,7 +16,7 @@ import 'package:flutter/foundation.dart';
 class AppConfig {
   // ─── API Endpoints ──────────────────────────────────────────────
   static const String primaryApiUrl =
-      'https://fastkiran-backend-production.up.railway.app';
+      'https://fastkirana-production-0cdd.up.railway.app';
   static const String secondaryApiUrl = 'https://www.fastkirana.in';
 
   /// Primary URL, overridable at build time via --dart-define=API_BASE_URL=...
@@ -50,11 +49,6 @@ class AppConfig {
   );
 
   // ─── Payment Gateways ───────────────────────────────────────────
-  static const String razorpayKeyId = String.fromEnvironment(
-    'RAZORPAY_KEY_ID',
-    defaultValue: 'rzp_live_TRvyzlqHiRGWbr',
-  );
-
   static const String cashfreeAppId = String.fromEnvironment(
     'CASHFREE_APP_ID',
     defaultValue: '14063870a97e08f92d03df853487836041',

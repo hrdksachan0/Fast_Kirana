@@ -1,5 +1,4 @@
 import 'package:intl/intl.dart';
-import '../config/app_config.dart';
 
 class Validators {
   static String? required(String? value, [String fieldName = 'This field']) {

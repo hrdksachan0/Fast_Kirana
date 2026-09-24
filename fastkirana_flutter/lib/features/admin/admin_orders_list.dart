@@ -1191,20 +1191,19 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     return !isCOD && !isPaid;
   }
 
-  Future<void> _verifyRazorpayPayment(Order order) async {
+  Future<void> _verifyOnlinePayment(Order order) async {
     HapticFeedback.heavyImpact();
     AppToast.showInfo(
       context,
-      'Verifying Razorpay Payment...',
-      subtitle: 'Checking live payment status for #${order.readableId ?? order.id}',
+      'Verifying Online Payment...',
+      subtitle: 'Checking Cashfree payment status for #${order.readableId ?? order.id}',
     );
 
     try {
       final dio = ref.read(dioProvider);
       final res = await dio.post(
-        '/api/admin/orders/sync-razorpay',
+        '/api/payment/cashfree/verify',
         data: {'orderId': order.id},
-        options: await AdminAuthorization.optionsAsync(),
       );
 
       if (mounted) {
@@ -1216,7 +1215,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
           );
           _fetchAdminOrders();
         } else {
-          final msg = res.data?['error']?.toString() ?? 'No captured Razorpay payment found.';
+          final msg = res.data?['message']?.toString() ?? res.data?['error']?.toString() ?? 'No completed payment found on Cashfree.';
           AppToast.showError(
             context,
             'Verification Notice',
@@ -1225,11 +1224,11 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
         }
       }
     } catch (e) {
-      String errStr = 'No captured Razorpay payment found for this order.';
+      String errStr = 'No completed payment found for this order on Cashfree.';
       if (e is DioException && e.response?.data != null) {
         final d = e.response!.data;
-        if (d is Map && d['error'] != null) {
-          errStr = d['error'].toString();
+        if (d is Map && (d['message'] != null || d['error'] != null)) {
+          errStr = (d['message'] ?? d['error']).toString();
         }
       }
       if (mounted) {
@@ -1854,7 +1853,7 @@ $formattedItems
                                   onWhatsappCustomer: _whatsappCustomer,
                                   onCallCustomer: _callCustomer,
                                   onShowSubstitution: _showSubstitutionModal,
-                                  onVerifyRazorpay: _verifyRazorpayPayment,
+                                  onVerifyPayment: _verifyOnlinePayment,
                                   onConvertToCOD: _convertToCOD,
                                   onSendWhatsAppPaymentReminder: _sendWhatsAppPaymentReminder,
                                   onOpenSuperOrderEdit: _openSuperOrderEditModal,

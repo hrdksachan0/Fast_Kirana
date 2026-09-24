@@ -782,7 +782,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         if (dId != null && dId.isNotEmpty && dId != _currentUserId) return false;
       }
       final pm = (o['paymentMethod'] ?? '').toString().toUpperCase().trim();
-      final isOnlinePaid = pm == 'UPI' || pm == 'ONLINE' || pm == 'RAZORPAY';
+      final isOnlinePaid = pm == 'UPI' || pm == 'ONLINE' || pm == 'CASHFREE' || pm == 'RAZORPAY';
       final isCod = (pm == 'COD' || pm.isEmpty) && !isOnlinePaid;
       final isPaid = o['paymentStatus'] == 'PAID' || o['status'] == 'DELIVERED';
       final createdStr = o['createdAt']?.toString();

@@ -290,7 +290,7 @@ export function PayOnlineButton({
           {isCheckingStatus ? (
             <>
               <Loader2 className="h-3 w-3 animate-spin" />
-              <span>Checking Razorpay payment...</span>
+              <span>Checking payment status...</span>
             </>
           ) : (
             <span>Already paid via UPI or App? Tap here to sync 🔄</span>

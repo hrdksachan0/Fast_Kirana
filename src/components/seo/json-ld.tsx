@@ -109,7 +109,7 @@ export function JsonLdSchema() {
         name: 'What payment options are available on FastKirana?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'FastKirana supports Cash on Delivery (COD), UPI payments (Google Pay, PhonePe, Paytm, BHIM), and Razorpay Debit/Credit card options.',
+          text: 'FastKirana supports Cash on Delivery (COD), UPI payments (Google Pay, PhonePe, Paytm, BHIM), and Cashfree Debit/Credit card options.',
         },
       },
     ],
