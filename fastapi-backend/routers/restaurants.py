@@ -44,13 +44,7 @@ async def get_restaurants(
         filters.append(Restaurant.isActive == True)
 
     if storeId and storeId != "all":
-        from models import DarkStore
-        store_stmt = select(DarkStore.name).where(DarkStore.id == storeId)
-        store_res = await db.execute(store_stmt)
-        store_name = store_res.scalar() or ""
-        store_city = re.sub(r"\s+(Hub|Market|Central|Dark\s*Store|Branch).*$", "", store_name, flags=re.IGNORECASE).strip() if store_name else ""
-        if store_city:
-            filters.append(Restaurant.city.ilike(f"%{store_city}%"))
+        filters.append(Restaurant.storeId == storeId)
 
     if cuisine:
         filters.append(Restaurant.cuisineTags.op('?')(cuisine))

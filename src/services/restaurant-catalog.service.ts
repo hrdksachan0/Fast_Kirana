@@ -24,8 +24,6 @@ export interface CreateDishInput {
   menuSectionId?: string
 }
 
-import { extractCityFromStoreName } from '@/lib/store-resolver'
-
 export class RestaurantCatalogService {
   /**
    * Fetches menu items and restaurant metadata for dashboard
@@ -35,13 +33,8 @@ export class RestaurantCatalogService {
     
     if (restaurantId === 'ALL') {
       if (storeId && storeId !== 'all') {
-        const store = await prisma.darkStore.findUnique({
-          where: { id: storeId },
-          select: { name: true }
-        })
-        const city = store ? extractCityFromStoreName(store.name) : ''
         const storeRestaurants = await prisma.restaurant.findMany({
-          where: city ? { city: { contains: city, mode: 'insensitive' } } : {},
+          where: { storeId: storeId },
           select: { id: true }
         })
         const ids = storeRestaurants.map(r => r.id)

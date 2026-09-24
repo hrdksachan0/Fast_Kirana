@@ -393,44 +393,22 @@ async def get_products(
 
     # H10 FIX: Strict Store Isolation (Exclude restaurants from other cities, require localized store inventory for grocery)
     if storeId and storeId != "all":
-        store_stmt = select(DarkStore.name).where(DarkStore.id == storeId)
-        store_res = await db.execute(store_stmt)
-        store_name = store_res.scalar() or ""
-        store_city = re.sub(r"\s+(Hub|Market|Central|Dark\s*Store|Branch).*$", "", store_name, flags=re.IGNORECASE).strip() if store_name else ""
+        # Grocery: Only products that have inventory in this store!
+        inv_sub_conditions = [
+            StoreInventory.productId == Product.id,
+            StoreInventory.storeId == storeId
+        ]
+        if not is_worker and not includeUnavailable and not admin:
+            inv_sub_conditions.append(StoreInventory.stock > 0)
 
-        # Check if this store has any inventory records seeded
-        has_inv_stmt = select(func.count(StoreInventory.productId)).where(StoreInventory.storeId == storeId)
-        has_inv_res = await db.execute(has_inv_stmt)
-        has_inv = (has_inv_res.scalar() or 0) > 0
+        grocery_scope = and_(
+            Product.restaurantId.is_(None),
+            exists().where(and_(*inv_sub_conditions))
+        )
 
-        if has_inv:
-            inv_sub_conditions = [
-                StoreInventory.productId == Product.id,
-                StoreInventory.storeId == storeId
-            ]
-            if not is_worker and not includeUnavailable and not admin:
-                inv_sub_conditions.append(StoreInventory.stock > 0)
-
-            grocery_scope = and_(
-                Product.restaurantId.is_(None),
-                exists().where(and_(*inv_sub_conditions))
-            )
-        else:
-            grocery_scope = and_(
-                Product.restaurantId.is_(None),
-                Product.isAvailable == True,
-                Product.stock > 0 if not is_worker and not includeUnavailable and not admin else True
-            )
-
-        rest_conditions = []
-        if store_city:
-            rest_conditions.append(Restaurant.city.ilike(f"%{store_city}%"))
-        
-        if rest_conditions:
-            rest_scope = Product.restaurant.has(or_(*rest_conditions))
-            filters.append(or_(grocery_scope, rest_scope))
-        else:
-            filters.append(grocery_scope)
+        # Restaurant dishes: Only restaurants belonging to this storeId!
+        rest_scope = Product.restaurant.has(Restaurant.storeId == storeId)
+        filters.append(or_(grocery_scope, rest_scope))
 
     # Category matching (Supports both direct category and child subcategories under parent)
     if categoryId:
@@ -667,7 +645,13 @@ async def get_products(
 
     serialized_products = []
     for p in products:
-        local_stk = inv_map.get(p.id) if (storeId and storeId != "all" and p.id in inv_map) else None
+        if storeId and storeId != "all":
+            if p.restaurantId:
+                local_stk = p.stock or 99999
+            else:
+                local_stk = inv_map.get(p.id, 0)
+        else:
+            local_stk = None
         serialized_products.append(serialize_product(p, local_stock=local_stk))
 
     response_data = {

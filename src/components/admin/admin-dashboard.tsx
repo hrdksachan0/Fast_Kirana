@@ -335,6 +335,7 @@ export function AdminDashboard({
     initialReviews,
     initialCoupons,
     activeTab,
+    selectedHubId,
   })
 
   // Fetch settings function
@@ -410,6 +411,7 @@ export function AdminDashboard({
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          storeId: selectedHubId && selectedHubId !== 'all' ? selectedHubId : undefined,
           grocery_mart_open: nextState ? 'true' : 'false',
           grocery_auto_timing: 'false',
         }),
@@ -772,27 +774,21 @@ export function AdminDashboard({
 
   // Dynamically compute active category count for the current store hub (0 for empty store)
   const storeCategoryCount = useMemo(() => {
-    if (!selectedHubId || selectedHubId === 'all') {
-      return categoryHook.categories.filter((c: any) => c.slug !== 'cafe' && c.slug !== 'restaurant').length
-    }
     // If store has 0 products, the store has 0 active stocked categories
     if (productHook.productTotal === 0) return 0
     const catIds = new Set(productHook.allProducts?.map((p: any) => p.categoryId).filter(Boolean))
     return catIds.size
-  }, [selectedHubId, categoryHook.categories, productHook.productTotal, productHook.allProducts])
+  }, [productHook.productTotal, productHook.allProducts])
 
   // Store-isolated alerts count state (0 for empty store)
   const [storeAlertsCount, setStoreAlertsCount] = useState<number>(() => {
-    if (initialStoreId && initialStoreId !== 'all') {
-      return 0
-    }
-    return stats?.lowStockCount || 0
+    return 0
   })
 
   // Synchronize dynamic store alerts count whenever selectedHubId or product count changes
   useEffect(() => {
-    if (!selectedHubId || selectedHubId === 'all') {
-      setStoreAlertsCount(stats?.lowStockCount || 0)
+    if (!selectedHubId) {
+      setStoreAlertsCount(0)
       return
     }
     // A store with 0 products has 0 alerts
@@ -1231,6 +1227,8 @@ export function AdminDashboard({
             <BannersTab
               categories={categoryHook.categories}
               products={productHook.allProducts}
+              storeId={selectedHubId}
+              stores={storesList}
             />
           )}
 
@@ -1244,7 +1242,7 @@ export function AdminDashboard({
 
           {activeTab === 'push-notifications' && <PushNotificationsTab />}
 
-          {activeTab === 'flash-deals' && <FlashDealsTab />}
+          {activeTab === 'flash-deals' && <FlashDealsTab storeId={selectedHubId} />}
 
           {activeTab === 'rider-cash' && <AdminRidersFleetTab storeId={selectedHubId} />}
 

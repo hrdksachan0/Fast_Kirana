@@ -366,13 +366,10 @@ async def check_nearest_store(
             inv_res = await db.execute(inv_stmt)
             inventory_count = inv_res.scalar() or 0
 
-            # City match for restaurants
-            clean_name = target_store.name or ""
-            # M10 FIX: Strip hub descriptor suffixes rather than clipping to first word
-            store_city = re.sub(r"\s+(Hub|Market|Central|Dark\s*Store|Express).*$", "", clean_name, flags=re.IGNORECASE).strip() if clean_name else ""
-            rest_stmt = select(func.count(Restaurant.id)).where(Restaurant.isActive == True)
-            if store_city:
-                rest_stmt = rest_stmt.where(Restaurant.city.ilike(f"%{store_city}%"))
+            rest_stmt = select(func.count(Restaurant.id)).where(
+                Restaurant.isActive == True,
+                Restaurant.storeId == target_store.id
+            )
             rest_res = await db.execute(rest_stmt)
             restaurant_count = rest_res.scalar() or 0
         except Exception:

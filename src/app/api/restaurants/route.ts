@@ -61,15 +61,7 @@ export async function GET(request: NextRequest) {
     // 2. Strict Filter by storeId: Only restaurants belonging to this store hub!
     const effectiveStoreId = getEffectiveStoreId(session, searchParams.get('storeId'))
     if (effectiveStoreId && effectiveStoreId !== 'all') {
-      const store = await prisma.darkStore.findUnique({
-        where: { id: effectiveStoreId },
-        select: { name: true }
-      })
-      const storeCity = store ? extractCityFromStoreName(store.name) : ''
-      where.OR = [
-        { storeId: effectiveStoreId },
-        ...(storeCity ? [{ city: { contains: storeCity, mode: 'insensitive' as const } }] : [])
-      ]
+      where.storeId = effectiveStoreId
     }
 
     const restaurants = await prisma.restaurant.findMany({

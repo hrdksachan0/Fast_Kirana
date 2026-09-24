@@ -160,12 +160,9 @@ export function StoreControlBar({
                   className="bg-card border border-border/80 hover:border-primary text-text-primary text-xs font-black uppercase tracking-wider rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer shadow-2xs transition-all"
                   title="Switch between Darkstore Hubs"
                 >
-                  <option value="all" className="bg-card text-text-primary font-bold">
-                    🌐 All Hubs ({storesList.length})
-                  </option>
                   {storesList.map((store) => (
                     <option key={store.id} value={store.id} className="bg-card text-text-primary font-bold">
-                      🏢 {store.name}
+                      🏢 {store.name} ({store.id})
                     </option>
                   ))}
                 </select>

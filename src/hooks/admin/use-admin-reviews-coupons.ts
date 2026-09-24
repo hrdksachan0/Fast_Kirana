@@ -8,12 +8,14 @@ interface UseAdminReviewsCouponsProps {
   initialReviews?: any[]
   initialCoupons?: any[]
   activeTab: string
+  selectedHubId?: string | null
 }
 
 export function useAdminReviewsCoupons({
   initialReviews,
   initialCoupons,
   activeTab,
+  selectedHubId,
 }: UseAdminReviewsCouponsProps) {
   const { data: session } = useSession()
   const authHeaders = useMemo(() => ({
@@ -91,13 +93,14 @@ export function useAdminReviewsCoupons({
     oncePerCustomer: false,
   })
 
-  // Lazy load reviews
+  // Lazy load reviews scoped by selectedHubId
   useEffect(() => {
-    if (activeTab === 'reviews' && reviews.length === 0) {
+    if (activeTab === 'reviews') {
       const loadReviews = async () => {
         setIsLoadingReviews(true)
         try {
-          const res = await fetch(`/api/admin/reviews?t=${Date.now()}`, { headers: authHeaders })
+          const storeQuery = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
+          const res = await fetch(`/api/admin/reviews?t=${Date.now()}${storeQuery}`, { headers: authHeaders })
           if (res.ok) {
             const data = await res.json()
             setReviews(data)
@@ -110,7 +113,7 @@ export function useAdminReviewsCoupons({
       }
       loadReviews()
     }
-  }, [activeTab, reviews.length, authHeaders])
+  }, [activeTab, selectedHubId, authHeaders])
 
   // Lazy load coupons
   useEffect(() => {

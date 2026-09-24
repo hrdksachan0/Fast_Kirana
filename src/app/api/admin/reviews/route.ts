@@ -3,14 +3,47 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { requireAdmin } from '@/lib/auth-guard'
 
-export async function GET() {
+export async function GET(request: Request) {
   const adminResult = await requireAdmin()
   if (adminResult.error) return adminResult.error
   const session = adminResult.session
 
+  const { searchParams } = new URL(request.url)
+  const storeId = searchParams.get('storeId')
+
+  const productWhere: any = {}
+  const restaurantWhere: any = {}
+
+  if (storeId && storeId !== 'all') {
+    productWhere.OR = [
+      {
+        product: {
+          restaurantId: null,
+          inventories: {
+            some: {
+              storeId
+            }
+          }
+        }
+      },
+      {
+        product: {
+          restaurant: {
+            storeId
+          }
+        }
+      }
+    ]
+
+    restaurantWhere.restaurant = {
+      storeId
+    }
+  }
+
   try {
     const [reviews, restaurantReviews] = await Promise.all([
       prisma.review.findMany({
+        where: productWhere,
         orderBy: { createdAt: 'desc' },
         include: {
           user: { select: { id: true, name: true, email: true } },
@@ -18,6 +51,7 @@ export async function GET() {
         },
       }),
       prisma.restaurantReview.findMany({
+        where: restaurantWhere,
         orderBy: { createdAt: 'desc' },
         include: {
           user: { select: { id: true, name: true, email: true } },

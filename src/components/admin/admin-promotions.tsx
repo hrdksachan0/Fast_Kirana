@@ -25,7 +25,11 @@ interface Product {
 
 type HighlightType = 'flash' | 'toppicks' | 'bestsellers'
 
-export function AdminPromotions() {
+interface AdminPromotionsProps {
+  storeId?: string
+}
+
+export function AdminPromotions({ storeId }: AdminPromotionsProps = {}) {
   const [activeTab, setActiveTab] = useState<'highlights' | 'search'>('highlights')
   const [activeHighlightType, setActiveHighlightType] = useState<HighlightType>('flash')
   const [searchQuery, setSearchQuery] = useState('')
@@ -43,15 +47,16 @@ export function AdminPromotions() {
 
   useEffect(() => {
     fetchActivePromotions()
-  }, [])
+  }, [storeId])
 
   const fetchActivePromotions = async () => {
     setIsLoading(true)
     try {
+      const storeParam = storeId && storeId !== 'all' ? `&storeId=${encodeURIComponent(storeId)}` : ''
       const [flashRes, topRes, bestRes] = await Promise.all([
-        fetch('/api/admin/products?flashDeals=true&limit=100').then(r => r.json()),
-        fetch('/api/admin/products?topPicks=true&limit=100').then(r => r.json()),
-        fetch('/api/admin/products?bestSellers=true&limit=100').then(r => r.json()),
+        fetch(`/api/admin/products?flashDeals=true&limit=100${storeParam}`).then(r => r.json()),
+        fetch(`/api/admin/products?topPicks=true&limit=100${storeParam}`).then(r => r.json()),
+        fetch(`/api/admin/products?bestSellers=true&limit=100${storeParam}`).then(r => r.json()),
       ])
       
       setFlashProducts(flashRes.products || [])
@@ -70,7 +75,8 @@ export function AdminPromotions() {
 
     setIsLoading(true)
     try {
-      const res = await fetch(`/api/admin/products?search=${encodeURIComponent(searchQuery)}&limit=50`)
+      const storeParam = storeId && storeId !== 'all' ? `&storeId=${encodeURIComponent(storeId)}` : ''
+      const res = await fetch(`/api/admin/products?search=${encodeURIComponent(searchQuery)}&limit=50${storeParam}`)
       if (res.ok) {
         const data = await res.json()
         setSearchProducts(data.products || [])

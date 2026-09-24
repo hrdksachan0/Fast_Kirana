@@ -483,9 +483,16 @@ function AdminVideoPreview({
 interface AdminBannersProps {
   categories?: any[]
   products?: any[]
+  storeId?: string
+  stores?: any[]
 }
 
-export function AdminBanners({ categories = [], products = [] }: AdminBannersProps) {
+export function AdminBanners({
+  categories = [],
+  products = [],
+  storeId: propStoreId,
+  stores = [],
+}: AdminBannersProps) {
   const [banners, setBanners] = useState<PromoBanner[]>([])
   const [loading, setLoading] = useState(true)
   
@@ -497,7 +504,15 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
   // Placement & Target Platform States (Defaults to Brand Card for Curated Carousel)
   const [placement, setPlacement] = useState<'hero' | 'brand_card'>('brand_card')
   const [platform, setPlatform] = useState<'all' | 'mobile' | 'web'>('all')
-  const [storeId, setStoreId] = useState<string>('all')
+  const [storeId, setStoreId] = useState<string>(() => propStoreId || stores[0]?.id || 'hub-209206')
+
+  useEffect(() => {
+    if (propStoreId && propStoreId !== 'all') {
+      setStoreId(propStoreId)
+    } else if (stores.length > 0 && !stores.some((s) => s.id === storeId)) {
+      setStoreId(stores[0].id)
+    }
+  }, [propStoreId, stores])
 
   // Registered List Filtering Tabs
   const [activeListTab, setActiveListTab] = useState<'hero' | 'brand_card'>('brand_card')
@@ -577,11 +592,13 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
     fetchRestaurants()
   }, [])
 
-  // Load Banners on Mount
+  // Load Banners on Mount or when store changes
   const fetchBanners = async () => {
     try {
       setLoading(true)
-      const res = await fetch('/api/admin/banners')
+      const targetStoreId = (propStoreId && propStoreId !== 'all') ? propStoreId : storeId
+      const q = targetStoreId ? `?storeId=${encodeURIComponent(targetStoreId)}` : ''
+      const res = await fetch(`/api/admin/banners${q}`)
       if (!res.ok) throw new Error('Failed to load banners')
       const data = await res.json()
       setBanners(data || [])
@@ -595,7 +612,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
 
   useEffect(() => {
     fetchBanners()
-  }, [])
+  }, [propStoreId])
 
   // Core Image upload function (compresses & uploads to /api/upload)
   const uploadImageFile = async (file: File) => {
@@ -900,7 +917,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
     setCardFormat('standard')
     setPlacement('hero')
     setPlatform('all')
-    setStoreId('all')
+    setStoreId(propStoreId || stores[0]?.id || 'hub-209206')
     setTitle('')
     setDescription('')
     setCode('')
@@ -951,7 +968,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
     setPlacement(isBrandCard ? 'brand_card' : 'hero')
     setActiveListTab(isBrandCard ? 'brand_card' : 'hero')
     setPlatform(b.platform || 'all')
-    setStoreId(b.storeId || 'all')
+    setStoreId(b.storeId || propStoreId || stores[0]?.id || 'hub-209206')
 
     setTitle(b.title)
     setDescription(b.description)
@@ -1082,7 +1099,7 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
         id: editingId || undefined,
         placement,
         platform,
-        storeId: storeId === 'all' ? null : storeId,
+        storeId: storeId,
         title: finalTitle,
         description: finalDesc,
         code: code.trim().toUpperCase(),
@@ -1328,16 +1345,26 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                 {/* 4. Target Store Hub Selector */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-wider text-text-secondary block">
-                    4. Target Hub / City *
+                    4. Target Store Hub *
                   </label>
                   <select
                     value={storeId}
                     onChange={(e) => setStoreId(e.target.value)}
                     className="w-full py-2.5 px-3 text-[11px] font-bold rounded-xl bg-card border border-border text-text-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-xs cursor-pointer"
                   >
-                    <option value="all">🌐 All Hubs (Global)</option>
-                    <option value="store-ghatampur">🏪 Ghatampur Hub</option>
-                    <option value="store-akbarpur">📍 Akbarpur Hub</option>
+                    {stores && stores.length > 0 ? (
+                      stores.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          🏢 {s.name} ({s.id})
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="hub-209206">🏪 Ghatampur Central Hub (hub-209206)</option>
+                        <option value="hub-224122">🏢 Akbarpur Central Hub (hub-224122)</option>
+                        <option value="hub-816107">🏢 Pakur Central Hub (hub-816107)</option>
+                      </>
+                    )}
                   </select>
                 </div>
               </div>
@@ -2139,14 +2166,8 @@ export function AdminBanners({ categories = [], products = [] }: AdminBannersPro
                           </span>
 
                           {/* Hub Badge */}
-                          <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded border ${
-                            b.storeId === 'store-akbarpur'
-                              ? 'bg-purple-500/10 text-purple-600 border-purple-500/20'
-                              : b.storeId === 'store-ghatampur'
-                              ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                              : 'bg-blue-500/10 text-blue-600 border-blue-500/20'
-                          }`}>
-                            {b.storeId === 'store-akbarpur' ? '📍 AKBARPUR' : b.storeId === 'store-ghatampur' ? '🏪 GHATAMPUR' : '🌐 ALL HUBS'}
+                          <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded border bg-primary/10 text-primary border-primary/20 font-mono">
+                            {stores.find((s) => s.id === b.storeId)?.name || b.storeId || 'NO STORE ID'}
                           </span>
 
                           {b.videoUrl && (

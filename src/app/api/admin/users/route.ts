@@ -57,11 +57,19 @@ export async function GET(request: Request) {
     if (storeId && storeId !== 'all') {
       if (role === 'DELIVERY' || role === 'PICKER') {
         andClauses.push({ assignedStoreId: storeId })
-      } else {
+      } else if (role === 'USER') {
         const userStoreFilter = await getStoreUserFilter(storeId)
         if (Object.keys(userStoreFilter).length > 0) {
           andClauses.push(userStoreFilter)
         }
+      } else {
+        const userStoreFilter = await getStoreUserFilter(storeId)
+        andClauses.push({
+          OR: [
+            { assignedStoreId: storeId },
+            ...(Object.keys(userStoreFilter).length > 0 ? [userStoreFilter] : [])
+          ]
+        })
       }
     }
 

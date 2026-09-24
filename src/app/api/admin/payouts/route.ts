@@ -22,15 +22,8 @@ export async function GET(request: NextRequest) {
 
     const where: any = type ? { type } : {}
     if (storeId && storeId !== 'all') {
-      const store = await prisma.darkStore.findUnique({
-        where: { id: storeId },
-        select: { name: true }
-      })
-      const storeCity = store ? extractCityFromStoreName(store.name) : ''
-      if (storeCity) {
-        where.restaurant = {
-          city: { contains: storeCity, mode: 'insensitive' }
-        }
+      where.restaurant = {
+        storeId: storeId
       }
     }
 

@@ -65,7 +65,7 @@ export async function GET(request: Request) {
       // If storeId is provided, show banners matching this storeId OR global banners (storeId is null, empty, or 'all')
       // If banner has a specific storeId that does NOT match the requested storeId, filter it out!
       if (storeId && storeId !== 'all') {
-        if (b.storeId && b.storeId !== 'all' && b.storeId !== storeId) {
+        if (b.storeId !== storeId) {
           return false
         }
       }

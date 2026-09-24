@@ -481,6 +481,7 @@ class PromoBanner(Base):
     type: Mapped[str] = mapped_column(String, default="custom")
     imageUrl: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     linkUrl: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    storeId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     isActive: Mapped[bool] = mapped_column(Boolean, default=True)
     sortOrder: Mapped[int] = mapped_column(Integer, default=0)
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

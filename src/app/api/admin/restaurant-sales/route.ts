@@ -37,17 +37,10 @@ export async function GET(request: NextRequest) {
       end.setHours(23, 59, 59, 999)
     }
 
-    // 2. Fetch active restaurants from DB filtered by store/city
+    // 2. Fetch active restaurants from DB filtered by storeId
     const restWhere: any = { isActive: true }
     if (storeId && storeId !== 'all') {
-      const store = await prisma.darkStore.findUnique({
-        where: { id: storeId },
-        select: { name: true }
-      })
-      const storeCity = store ? extractCityFromStoreName(store.name) : ''
-      if (storeCity) {
-        restWhere.city = { contains: storeCity, mode: 'insensitive' }
-      }
+      restWhere.storeId = storeId
     }
 
     const restaurants = await prisma.restaurant.findMany({

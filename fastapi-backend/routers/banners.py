@@ -69,8 +69,9 @@ async def get_banners(
                 continue
             if platform and b_platform != platform and b_platform != "all":
                 continue
-            if storeId and b_store_id and b_store_id != storeId and b_store_id != "all":
-                continue
+            if storeId and storeId != "all":
+                if b_store_id != storeId:
+                    continue
 
             parsed_banners.append({
                 "id": b.id,

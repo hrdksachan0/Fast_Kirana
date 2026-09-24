@@ -16,10 +16,7 @@ export async function GET(request: NextRequest) {
 
     const where: any = {}
     if (effectiveStoreId && effectiveStoreId !== 'all') {
-      where.OR = [
-        { storeId: effectiveStoreId },
-        { storeId: null } // Global banners also visible in hub
-      ]
+      where.storeId = effectiveStoreId
     }
 
     const banners = await prisma.promoBanner.findMany({
@@ -178,6 +175,7 @@ export async function PUT(request: NextRequest) {
         type: type !== undefined ? type : existing.type,
         imageUrl: imageUrl !== undefined ? imageUrl : existing.imageUrl,
         linkUrl: linkUrl !== undefined ? linkUrl : existing.linkUrl,
+        storeId: body.storeId !== undefined ? body.storeId : existing.storeId,
         isActive: isActive !== undefined ? isActive : existing.isActive,
         sortOrder: sortOrder !== undefined ? parseInt(String(sortOrder), 10) : existing.sortOrder,
       }

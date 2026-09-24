@@ -108,11 +108,6 @@ export async function GET(request: NextRequest) {
 
     // Strict Store Isolation: Exclude restaurants from other cities and require localized inventory for grocery
     if (storeId && storeId !== 'all') {
-      const store = await prisma.darkStore.findUnique({
-        where: { id: storeId },
-        select: { name: true }
-      })
-      const storeCity = store ? extractCityFromStoreName(store.name) : ''
       const storeScope: Prisma.ProductWhereInput = {
         OR: [
           {
@@ -126,10 +121,7 @@ export async function GET(request: NextRequest) {
           },
           {
             restaurant: {
-              OR: [
-                { storeId },
-                ...(storeCity ? [{ city: { contains: storeCity, mode: 'insensitive' as const } }] : [])
-              ]
+              storeId
             }
           }
         ]
@@ -358,11 +350,12 @@ export async function GET(request: NextRequest) {
         })
         const inventoryMap = new Map(inventories.map(inv => [inv.productId, inv.stock]))
         finalProducts = finalProducts.map(p => {
-          const localStock = inventoryMap.get(p.id) ?? 0
+          const isRest = !!p.restaurantId
+          const localStock = isRest ? p.stock : (inventoryMap.get(p.id) ?? 0)
           return {
             ...p,
             stock: localStock,
-            isAvailable: p.isAvailable && localStock > 0
+            isAvailable: isRest ? p.isAvailable : (p.isAvailable && localStock > 0)
           }
         })
       }
@@ -559,11 +552,12 @@ export async function GET(request: NextRequest) {
       })
       const inventoryMap = new Map(inventories.map(inv => [inv.productId, inv.stock]))
       products = products.map(p => {
-        const localStock = inventoryMap.get(p.id) ?? 0
+        const isRest = !!p.restaurantId
+        const localStock = isRest ? p.stock : (inventoryMap.get(p.id) ?? 0)
         return {
           ...p,
           stock: localStock,
-          isAvailable: p.isAvailable && localStock > 0
+          isAvailable: isRest ? p.isAvailable : (p.isAvailable && localStock > 0)
         }
       })
     }

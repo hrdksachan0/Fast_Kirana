@@ -28,6 +28,7 @@ router = APIRouter(prefix="/admin", tags=["Admin Reconciliation & Reports"])
 
 @router.get("/rider-cash")
 async def get_admin_rider_cash_summary(
+    storeId: Optional[str] = Query(None),
     current_admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
@@ -36,10 +37,14 @@ async def get_admin_rider_cash_summary(
     """
     today_start = datetime.combine(date.today(), time.min)
 
-    # 1. Fetch riders using standard SQLAlchemy enum filter
+    # 1. Fetch riders using standard SQLAlchemy enum filter scoped by store
     rider_stmt = select(User).options(selectinload(User.riderWallet)).where(
         User.role == Role.DELIVERY
     )
+    effective_store = storeId or current_admin.assignedStoreId
+    if effective_store and effective_store.lower() != 'all':
+        rider_stmt = rider_stmt.where(User.assignedStoreId == effective_store)
+
     rider_res = await db.execute(rider_stmt)
     riders = rider_res.scalars().all()
 

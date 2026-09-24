@@ -2,12 +2,14 @@
 
 import { AdminPromotions } from '@/components/admin/admin-promotions'
 
-interface FlashDealsTabProps {}
+interface FlashDealsTabProps {
+  storeId?: string
+}
 
-export function FlashDealsTab({}: FlashDealsTabProps) {
+export function FlashDealsTab({ storeId }: FlashDealsTabProps) {
   return (
     <div className="animate-fade-in">
-      <AdminPromotions />
+      <AdminPromotions storeId={storeId} />
     </div>
   )
 }

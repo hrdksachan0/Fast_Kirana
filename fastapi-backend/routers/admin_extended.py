@@ -124,6 +124,7 @@ async def admin_get_products(
     topPicks: bool = Query(False),
     bestSellers: bool = Query(False),
     type: Optional[str] = Query(None),
+    storeId: Optional[str] = Query(None),
     current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
@@ -151,6 +152,24 @@ async def admin_get_products(
                 Product.description.ilike(f"%{search}%")
             )
         )
+    if type == 'cafe' or type == 'restaurant':
+        and_clauses.append(Product.restaurantId.isnot(None))
+    elif type == 'grocery':
+        and_clauses.append(Product.restaurantId.is_(None))
+
+    if storeId and storeId != "all":
+        from models import StoreInventory, Restaurant
+        grocery_scope = and_(
+            Product.restaurantId.is_(None),
+            exists().where(
+                and_(
+                    StoreInventory.productId == Product.id,
+                    StoreInventory.storeId == storeId
+                )
+            )
+        )
+        rest_scope = Product.restaurant.has(Restaurant.storeId == storeId)
+        and_clauses.append(or_(grocery_scope, rest_scope))
 
     if and_clauses:
         stmt = stmt.where(and_(*and_clauses))
@@ -166,9 +185,30 @@ async def admin_get_products(
     result = await db.execute(stmt)
     products = result.scalars().all()
 
+    # Localize inventory stock if storeId is specified
+    inv_map = {}
+    if storeId and storeId != "all" and products:
+        from models import StoreInventory
+        prod_ids = [p.id for p in products]
+        inv_stmt = select(StoreInventory).where(
+            StoreInventory.storeId == storeId,
+            StoreInventory.productId.in_(prod_ids)
+        )
+        inv_res = await db.execute(inv_stmt)
+        inv_map = {inv.productId: inv.stock for inv in inv_res.scalars().all()}
+
     from schemas import ProductOut
-    product_list = [
-        ProductOut(
+    product_list = []
+    for p in products:
+        if storeId and storeId != "all":
+            if p.restaurantId:
+                local_stk = p.stock or 99999
+            else:
+                local_stk = inv_map.get(p.id, 0)
+        else:
+            local_stk = p.stock
+
+        product_list.append(ProductOut(
             id=p.id,
             name=p.name,
             slug=p.slug,
@@ -179,8 +219,8 @@ async def admin_get_products(
             price=p.price,
             discount=p.discount,
             unit=p.unit,
-            stock=p.stock,
-            isAvailable=p.isAvailable,
+            stock=local_stk,
+            isAvailable=p.isAvailable and (local_stk > 0 if not p.restaurantId else True) if storeId and storeId != "all" else p.isAvailable,
             tags=p.tags,
             variants=p.variants,
             costPrice=p.costPrice or 0,
@@ -198,9 +238,7 @@ async def admin_get_products(
                 "name": p.category.name if p.category else "",
                 "slug": p.category.slug if p.category else "",
             } if p.category else None,
-        )
-        for p in products
-    ]
+        ))
 
     return {"products": product_list, "total": total, "page": page, "limit": limit}
 
@@ -2562,7 +2600,7 @@ async def get_admin_banners(
     """Fetch promo banners for admin."""
     stmt = select(PromoBanner).order_by(PromoBanner.sortOrder.asc())
     if storeId and storeId != "all":
-        stmt = stmt.where(or_(PromoBanner.storeId == storeId, PromoBanner.storeId.is_(None)))
+        stmt = stmt.where(PromoBanner.storeId == storeId)
     banners = (await db.execute(stmt)).scalars().all()
 
     result = []
@@ -2934,20 +2972,37 @@ async def delete_admin_coupon(
 
 @router.get("/reviews")
 async def get_admin_reviews(
+    storeId: Optional[str] = Query(None),
     current_admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    """Fetch product and restaurant reviews merged and sorted by date."""
+    """Fetch product and restaurant reviews merged and sorted by date with storeId scoping."""
     p_stmt = select(Review).options(
         selectinload(Review.user),
         selectinload(Review.product)
     ).order_by(Review.createdAt.desc())
-    p_reviews = (await db.execute(p_stmt)).scalars().all()
 
     r_stmt = select(RestaurantReview).options(
         selectinload(RestaurantReview.user),
         selectinload(RestaurantReview.restaurant)
     ).order_by(RestaurantReview.createdAt.desc())
+
+    if storeId and storeId != "all":
+        from models import StoreInventory, Restaurant
+        grocery_scope = and_(
+            Product.restaurantId.is_(None),
+            exists().where(
+                and_(
+                    StoreInventory.productId == Product.id,
+                    StoreInventory.storeId == storeId
+                )
+            )
+        )
+        rest_scope = Product.restaurant.has(Restaurant.storeId == storeId)
+        p_stmt = p_stmt.join(Product, Review.productId == Product.id).where(or_(grocery_scope, rest_scope))
+        r_stmt = r_stmt.join(Restaurant, RestaurantReview.restaurantId == Restaurant.id).where(Restaurant.storeId == storeId)
+
+    p_reviews = (await db.execute(p_stmt)).scalars().all()
     r_reviews = (await db.execute(r_stmt)).scalars().all()
 
     all_reviews = []

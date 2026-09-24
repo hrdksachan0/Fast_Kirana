@@ -75,11 +75,6 @@ export async function GET(request: Request) {
     }
 
     if (storeId && storeId !== 'all') {
-      const store = await prisma.darkStore.findUnique({
-        where: { id: storeId },
-        select: { name: true }
-      })
-      const storeCity = store ? extractCityFromStoreName(store.name) : ''
       andClauses.push({
         OR: [
           {
@@ -92,10 +87,7 @@ export async function GET(request: Request) {
           },
           {
             restaurant: {
-              OR: [
-                { storeId },
-                ...(storeCity ? [{ city: { contains: storeCity, mode: 'insensitive' as const } }] : [])
-              ]
+              storeId
             }
           }
         ]
@@ -150,9 +142,7 @@ export async function GET(request: Request) {
         if (p.restaurantId) {
           localStock = p.stock
         } else {
-          localStock = inventoryMap.has(p.id)
-            ? (inventoryMap.get(p.id) ?? 0)
-            : (storeId === 'hub-209206' ? p.stock : 0)
+          localStock = inventoryMap.get(p.id) ?? 0
         }
       }
 

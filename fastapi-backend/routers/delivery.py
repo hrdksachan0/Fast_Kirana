@@ -166,7 +166,7 @@ async def get_delivery_orders(
     )
 
     if effective_store_id and effective_store_id != "all":
-        stmt = stmt.where(or_(Order.storeId == effective_store_id, Order.storeId.is_(None)))
+        stmt = stmt.where(Order.storeId == effective_store_id)
 
     stmt = stmt.order_by(Order.createdAt.desc())
 
