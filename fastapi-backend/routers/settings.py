@@ -129,19 +129,46 @@ def check_is_store_open(settings_map: Dict[str, str], prefix: str) -> bool:
 @router.get("")
 async def get_public_settings(
     response: Response,
+    storeId: Optional[str] = Query(None),
+    hubId: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get public app settings (delivery zones, payment config, etc.)
-    with dynamic open/close scheduler under IST timezone.
+    with dynamic open/close scheduler under IST timezone and multi-hub layering.
     """
+    effective_store_id = storeId or hubId
     try:
         result = await db.execute(select(StoreSetting))
         settings_list = result.scalars().all()
 
         settings_map = DEFAULT_SETTINGS.copy()
         for s in settings_list:
-            settings_map[s.key] = s.value
+            if not s.key.startswith("store:"):
+                settings_map[s.key] = s.value
+
+        # Layer store-scoped overrides if a specific dark store hub is queried
+        if effective_store_id and effective_store_id != "all":
+            store_prefix = f"store:{effective_store_id}:"
+            for s in settings_list:
+                if s.key.startswith(store_prefix):
+                    sub_key = s.key[len(store_prefix):]
+                    settings_map[sub_key] = s.value
+
+            try:
+                hub_res = await db.execute(select(DarkStore).where(DarkStore.id == effective_store_id))
+                hub = hub_res.scalars().first()
+                if hub:
+                    settings_map["store_id"] = hub.id
+                    settings_map["store_name"] = hub.name
+                    settings_map["store_lat"] = str(hub.latitude)
+                    settings_map["store_lng"] = str(hub.longitude)
+                    if hub.deliveryRadiusKm:
+                        settings_map["delivery_radius"] = str(hub.deliveryRadiusKm)
+                    if hub.groceryOpen is not None:
+                        settings_map["grocery_mart_open"] = "true" if hub.groceryOpen else "false"
+            except Exception as hub_err:
+                logger.warning(f"Failed to query specific hub {effective_store_id}: {hub_err}")
 
         # Dynamically evaluate store opening status in IST
         settings_map["grocery_mart_open"] = "true" if check_is_store_open(settings_map, "grocery") else "false"
@@ -151,6 +178,7 @@ async def get_public_settings(
         response.headers["Cache-Control"] = "public, max-age=5, stale-while-revalidate=30"
         return settings_map
     except Exception as e:
+        logger.error(f"Error in get_public_settings: {e}")
         # Fallback to defaults
         settings_map = DEFAULT_SETTINGS.copy()
         settings_map["grocery_mart_open"] = "true" if check_is_store_open(settings_map, "grocery") else "false"
@@ -167,15 +195,30 @@ async def update_settings(
     current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    """Update app settings (admin only)."""
+    """Update app settings (admin only). Supports storeId scoped overrides."""
+    store_id = data.pop("storeId", None)
+    is_store_scoped = bool(store_id and store_id != "all")
+    prefix = f"store:{store_id}:" if is_store_scoped else ""
+
     for key, value in data.items():
-        result = await db.execute(select(StoreSetting).where(StoreSetting.key == key))
+        scoped_key = f"{prefix}{key}" if is_store_scoped else key
+        result = await db.execute(select(StoreSetting).where(StoreSetting.key == scoped_key))
         setting = result.scalars().first()
         if setting:
             setting.value = str(value)
         else:
-            setting = StoreSetting(key=key, value=str(value))
+            setting = StoreSetting(key=scoped_key, value=str(value))
             db.add(setting)
+
+        # If base Ghatampur hub, sync un-scoped legacy keys too
+        if store_id == "hub-209206":
+            base_res = await db.execute(select(StoreSetting).where(StoreSetting.key == key))
+            base_setting = base_res.scalars().first()
+            if base_setting:
+                base_setting.value = str(value)
+            else:
+                db.add(StoreSetting(key=key, value=str(value)))
+
     await db.commit()
     return {"success": True}
 

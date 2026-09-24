@@ -397,6 +397,12 @@ async def get_products(
     elif sort == "discount-desc":
         order_by_clauses = [Product.discount.desc()]
 
+    # M3 FIX: For customer views, always push in-stock items above out-of-stock
+    if not is_worker and not includeUnavailable and not admin:
+        from sqlalchemy import case
+        stock_first = case((Product.stock > 0, 0), else_=1).asc()
+        order_by_clauses = [stock_first] + order_by_clauses
+
     # Trending items check
     if trending:
         # Load best selling items

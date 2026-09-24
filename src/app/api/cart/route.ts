@@ -67,7 +67,6 @@ export async function GET(request: NextRequest) {
           data: {
             phone: `+91${cleanPhone}`,
             name: `Customer ${cleanPhone.slice(-4)}`,
-            email: `customer_${cleanPhone}@fastkirana.in`,
             role: 'USER',
           }
         })

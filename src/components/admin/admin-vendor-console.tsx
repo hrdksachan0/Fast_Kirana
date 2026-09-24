@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import {
   Truck,
   Plus,
@@ -108,6 +109,15 @@ interface AdminVendorConsoleProps {
 }
 
 export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
+  const { data: session } = useSession()
+  const authHeaders = useMemo(() => ({
+    'Content-Type': 'application/json',
+    ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
+    ...((session?.user as any)?.role ? { 'x-user-role': (session?.user as any).role } : { 'x-user-role': 'ADMIN' }),
+    ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
+    ...((session?.user as any)?.phone ? { 'x-user-phone': (session?.user as any).phone } : {}),
+  }), [session])
+
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [selectedVendorId, setSelectedVendorId] = useState<string>('')
   const [loadingVendors, setLoadingVendors] = useState<boolean>(true)
@@ -167,14 +177,14 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
   const [storesList, setStoresList] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
-    fetch('/api/admin/stores')
+    fetch('/api/admin/stores', { headers: authHeaders })
       .then((res) => res.json())
       .then((data) => {
         const list = Array.isArray(data.stores) ? data.stores : (Array.isArray(data) ? data : [])
         setStoresList(list)
       })
       .catch(() => {})
-  }, [])
+  }, [authHeaders])
 
   // Record Payout Modal
   const [showPayoutModal, setShowPayoutModal] = useState(false)
@@ -194,7 +204,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
     setLoadingVendors(true)
     try {
       const storeParam = storeId && storeId !== 'all' ? `?storeId=${encodeURIComponent(storeId)}` : ''
-      const res = await fetch(`/api/admin/vendors${storeParam}`)
+      const res = await fetch(`/api/admin/vendors${storeParam}`, { headers: authHeaders })
       if (res.ok) {
         const data = await res.json()
         const list = Array.isArray(data.vendors) ? data.vendors : []
@@ -209,7 +219,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
     } finally {
       setLoadingVendors(false)
     }
-  }, [selectedVendorId, storeId])
+  }, [selectedVendorId, storeId, authHeaders])
 
   useEffect(() => {
     fetchVendors()
@@ -222,7 +232,8 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
     try {
       const storeParam = storeId && storeId !== 'all' ? `&storeId=${encodeURIComponent(storeId)}` : ''
       const res = await fetch(
-        `/api/admin/vendors/${selectedVendorId}?startDate=${startDate}&endDate=${endDate}${storeParam}`
+        `/api/admin/vendors/${selectedVendorId}?startDate=${startDate}&endDate=${endDate}${storeParam}`,
+        { headers: authHeaders }
       )
       if (res.ok) {
         const data = await res.json()
@@ -338,7 +349,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
     try {
       const res = await fetch('/api/admin/vendors', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           ...vendorFormData,
           storeId: vendorFormData.storeId || null,
@@ -387,7 +398,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
     try {
       const res = await fetch('/api/admin/vendors/payout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           vendorId: selectedVendorId,
           amount: amountNum,
@@ -421,6 +432,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
     try {
       const res = await fetch(`/api/admin/vendors/payout?payoutId=${encodeURIComponent(payoutId)}`, {
         method: 'DELETE',
+        headers: authHeaders,
       })
       if (res.ok) {
         toast.success('Payout deleted')

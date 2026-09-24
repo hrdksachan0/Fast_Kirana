@@ -287,7 +287,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
           const canonical = findCanonicalUser(matchingUsers, cleanDigits)
           if (canonical) {
             canonicalUser = matchingUsers.find(u =>
-              u.email?.toLowerCase() === canonical.email.toLowerCase() &&
+              (canonical.email ? u.email?.toLowerCase() === canonical.email.toLowerCase() : u.id === canonical.id) &&
               (u.assignedRestaurantId === canonical.assignedRestaurantId || !u.assignedRestaurantId)
             )
           }
@@ -343,7 +343,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
         })
         const canonicalPostOtp = cleanDigits ? findCanonicalUser(matchingUsersPostOtp, cleanDigits) : null
         const canonicalUserPostOtp = canonicalPostOtp
-          ? matchingUsersPostOtp.find(u => u.email?.toLowerCase() === canonicalPostOtp.email.toLowerCase())
+          ? matchingUsersPostOtp.find(u => canonicalPostOtp.email ? u.email?.toLowerCase() === canonicalPostOtp.email.toLowerCase() : u.id === canonicalPostOtp.id)
           : undefined
         let user = canonicalUserPostOtp || canonicalUser || matchingUsersPostOtp.find(u => u.role !== 'USER' || !!u.passwordHash) || matchingUsersPostOtp[0] || null
 

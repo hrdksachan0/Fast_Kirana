@@ -55,7 +55,6 @@ export async function POST(request: Request) {
         if (!customer) {
           customer = await prisma.user.create({
             data: {
-              email: `${cleanPhone}@customer.fastkirana.in`,
               phone: `+91${cleanPhone}`,
               name: customerName || 'FastKirana Customer',
               role: Role.USER

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import { 
   Calendar, 
@@ -123,6 +124,22 @@ interface AdminReportsProps {
 }
 
 export function AdminReports({ storeId }: AdminReportsProps = {}) {
+  const { data: session } = useSession()
+  const sessionUserId = session?.user?.id || ''
+  const sessionUserRole = session?.user?.role || ''
+  const sessionUserEmail = session?.user?.email || ''
+  const sessionUserPhone = (session?.user as any)?.phone || ''
+
+  const authHeaders = useMemo(() => ({
+    'Content-Type': 'application/json',
+    ...(sessionUserId ? {
+      'x-user-id': sessionUserId,
+      'x-user-role': sessionUserRole,
+      ...(sessionUserEmail ? { 'x-user-email': sessionUserEmail } : {}),
+      ...(sessionUserPhone ? { 'x-user-phone': sessionUserPhone } : {}),
+    } : { 'x-user-role': 'ADMIN' })
+  }), [sessionUserId, sessionUserRole, sessionUserEmail, sessionUserPhone])
+
   const [rangePreset, setRangePreset] = useState<'today' | 'yesterday' | '7days' | '30days' | 'custom'>('30days')
   const [startDate, setStartDate] = useState(() => {
     const d = new Date()
@@ -185,7 +202,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
       setLoading(true)
       const storeParam = storeId ? `&storeId=${encodeURIComponent(storeId)}` : ''
       const url = `/api/admin/reports?startDate=${startDate}&endDate=${endDate}${storeParam}&t=${Date.now()}`
-      const res = await fetch(url)
+      const res = await fetch(url, { headers: authHeaders })
       if (!res.ok) throw new Error('Failed to fetch report data')
       
       const data = await res.json()
@@ -206,7 +223,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
     if (startDate && endDate) {
       fetchReport()
     }
-  }, [startDate, endDate, storeId])
+  }, [startDate, endDate, storeId, authHeaders])
 
   // Filtered Products based on Selected Category & Search Query
   const filteredProducts = useMemo(() => {

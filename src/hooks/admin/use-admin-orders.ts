@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 
 interface UseAdminOrdersProps {
   initialOrders?: any[]
@@ -15,6 +16,15 @@ export function useAdminOrders({
   selectedHubId,
   orderRefreshKey,
 }: UseAdminOrdersProps) {
+  const { data: session } = useSession()
+  const authHeaders = useMemo(() => ({
+    'Content-Type': 'application/json',
+    ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
+    ...((session?.user as any)?.role ? { 'x-user-role': (session?.user as any).role } : { 'x-user-role': 'ADMIN' }),
+    ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
+    ...((session?.user as any)?.phone ? { 'x-user-phone': (session?.user as any).phone } : {}),
+  }), [session])
+
   const [orders, setOrders] = useState<any[]>(Array.isArray(initialOrders) ? initialOrders : [])
   const [orderCounts, setOrderCounts] = useState<Record<string, number>>(() => {
     if (initialOrderCounts) return initialOrderCounts
@@ -67,7 +77,8 @@ export function useAdminOrders({
       const res = await fetch(
         `/api/admin/orders?page=${orderPage}&limit=10&status=${orderStatusFilter}&search=${encodeURIComponent(
           orderSearchQuery
-        )}${storeQueryParam}&t=${Date.now()}`
+        )}${storeQueryParam}&t=${Date.now()}`,
+        { headers: authHeaders }
       )
       if (res.ok) {
         const data = await res.json()
@@ -93,7 +104,7 @@ export function useAdminOrders({
     } finally {
       setIsLoadingOrders(false)
     }
-  }, [orderPage, orderStatusFilter, orderSearchQuery, selectedHubId])
+  }, [orderPage, orderStatusFilter, orderSearchQuery, selectedHubId, authHeaders])
 
   useEffect(() => {
     fetchOrders()
@@ -126,7 +137,7 @@ export function useAdminOrders({
     setSelectedOrderForTracking(order)
     setIsLoadingOrderItems(true)
     try {
-      const res = await fetch(`/api/orders/${order.id}`)
+      const res = await fetch(`/api/orders/${order.id}`, { headers: authHeaders })
       if (res.ok) {
         const fullData = await res.json()
         setSelectedOrderForTracking((prev: any) => ({ ...prev, ...fullData }))

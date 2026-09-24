@@ -169,6 +169,14 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
   const { data: session, status } = useSession()
   const router = useRouter()
   
+  const authHeaders = useMemo(() => ({
+    'Content-Type': 'application/json',
+    ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
+    ...((session?.user as any)?.role ? { 'x-user-role': (session?.user as any).role } : {}),
+    ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
+    ...((session?.user as any)?.phone ? { 'x-user-phone': (session?.user as any).phone } : {}),
+  }), [session])
+  
   const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -371,7 +379,10 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
     
     try {
       const restParam = `&restaurantId=${encodeURIComponent(effectiveRestaurantId)}`
-      const res = await fetch(`/api/picker/orders?type=restaurant${restParam}&t=${Date.now()}`, { cache: 'no-store' })
+      const res = await fetch(`/api/picker/orders?type=restaurant${restParam}&t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: authHeaders,
+      })
       if (res.ok) {
         const data = await res.json()
         setOrders(data)
@@ -615,7 +626,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
     try {
       const res = await fetch(`/api/orders/${order.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ status: 'CONFIRMED', prepTime: selectedPrepTime }),
       })
 
@@ -643,7 +654,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
     try {
       const res = await fetch(`/api/orders/${order.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ status: 'CONFIRMED', prepTime: 30 }),
       })
 
@@ -673,7 +684,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
       // 1. Confirm order
       const confirmRes = await fetch(`/api/orders/${order.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ status: 'CONFIRMED', prepTime: 15 }),
       })
       if (!confirmRes.ok) throw new Error('Failed to confirm order')
@@ -681,7 +692,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
       // 2. Pack order
       const packRes = await fetch(`/api/orders/${order.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ status: 'PACKED' }),
       })
       if (!packRes.ok) throw new Error('Failed to pack order')
@@ -708,7 +719,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
     try {
       const res = await fetch(`/api/orders/${orderId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ status: 'PACKED' }),
       })
 
@@ -823,7 +834,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
       const url = order.restaurantId
         ? `/api/products?restaurantId=${order.restaurantId}&includeUnavailable=true&limit=200`
         : `/api/products?category=restaurant&includeUnavailable=true&limit=200`
-      const res = await fetch(url)
+      const res = await fetch(url, { headers: authHeaders })
       if (res.ok) {
         const data = await res.json()
         setAllProducts(data.products || [])
@@ -935,7 +946,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
     try {
       const res = await fetch(`/api/orders/${editingOrder.id}/edit`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           updatedItems: editItems,
           outOfStockProductIds: outOfStockIds

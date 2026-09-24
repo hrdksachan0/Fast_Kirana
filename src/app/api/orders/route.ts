@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
         dbUser = await prisma.user.create({
           data: {
             phone: `+91${cleanRecipientPhone}`,
-            email: body.email || `customer_${cleanRecipientPhone}@fastkirana.in`,
+            email: body.email || null,
             name: recipientName.toString(),
             role: Role.USER,
           }

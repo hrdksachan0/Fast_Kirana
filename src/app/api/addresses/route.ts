@@ -65,7 +65,6 @@ async function resolveUserId(request: NextRequest | Request, session: any): Prom
         data: {
           phone: `+91${cleanPhone}`,
           name: `Customer ${cleanPhone.slice(-4)}`,
-          email: `customer_${cleanPhone}@fastkirana.in`,
           role: 'USER',
         },
         select: { id: true },

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 
 interface UseAdminCategoriesProps {
@@ -8,6 +9,15 @@ interface UseAdminCategoriesProps {
 }
 
 export function useAdminCategories({ initialCategories }: UseAdminCategoriesProps = {}) {
+  const { data: session } = useSession()
+  const authHeaders = useMemo(() => ({
+    'Content-Type': 'application/json',
+    ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
+    ...((session?.user as any)?.role ? { 'x-user-role': (session?.user as any).role } : { 'x-user-role': 'ADMIN' }),
+    ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
+    ...((session?.user as any)?.phone ? { 'x-user-phone': (session?.user as any).phone } : {}),
+  }), [session])
+
   const [categories, setCategories] = useState(initialCategories || [])
   const [categorySubView, setCategorySubView] = useState<'grocery' | 'cafe' | 'restaurant'>('grocery')
   const [showAddCategory, setShowAddCategory] = useState(false)
@@ -41,7 +51,7 @@ export function useAdminCategories({ initialCategories }: UseAdminCategoriesProp
     try {
       const res = await fetch('/api/categories', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           name: newCategory.name,
           imageUrl: newCategory.imageUrl,
@@ -88,7 +98,7 @@ export function useAdminCategories({ initialCategories }: UseAdminCategoriesProp
     try {
       const res = await fetch(`/api/categories/${editingCategory.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           name: categoryEditForm.name,
           imageUrl: categoryEditForm.imageUrl,
@@ -121,6 +131,7 @@ export function useAdminCategories({ initialCategories }: UseAdminCategoriesProp
     try {
       const res = await fetch(`/api/categories/${categoryId}`, {
         method: 'DELETE',
+        headers: authHeaders,
       })
 
       if (res.ok) {

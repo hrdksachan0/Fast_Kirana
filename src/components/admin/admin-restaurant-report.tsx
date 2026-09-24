@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import { 
   IndianRupee, 
@@ -62,6 +63,22 @@ interface AdminRestaurantReportProps {
 }
 
 export function AdminRestaurantReport({ storeId }: AdminRestaurantReportProps = {}) {
+  const { data: session } = useSession()
+  const sessionUserId = session?.user?.id || ''
+  const sessionUserRole = session?.user?.role || ''
+  const sessionUserEmail = session?.user?.email || ''
+  const sessionUserPhone = (session?.user as any)?.phone || ''
+
+  const authHeaders = useMemo(() => ({
+    'Content-Type': 'application/json',
+    ...(sessionUserId ? {
+      'x-user-id': sessionUserId,
+      'x-user-role': sessionUserRole,
+      ...(sessionUserEmail ? { 'x-user-email': sessionUserEmail } : {}),
+      ...(sessionUserPhone ? { 'x-user-phone': sessionUserPhone } : {}),
+    } : { 'x-user-role': 'ADMIN' })
+  }), [sessionUserId, sessionUserRole, sessionUserEmail, sessionUserPhone])
+
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<RestaurantSalesData[]>([])
   
@@ -122,7 +139,7 @@ export function AdminRestaurantReport({ storeId }: AdminRestaurantReportProps = 
     try {
       const storeParam = storeId ? `&storeId=${encodeURIComponent(storeId)}` : ''
       const url = `/api/admin/restaurant-sales?startDate=${startDate}&endDate=${endDate}${storeParam}`
-      const res = await fetch(url)
+      const res = await fetch(url, { headers: authHeaders })
       if (!res.ok) throw new Error('Failed to fetch data')
       const json = await res.json()
       setData(json.restaurants || json)
@@ -138,7 +155,7 @@ export function AdminRestaurantReport({ storeId }: AdminRestaurantReportProps = 
     setLoadingPayouts(true)
     try {
       const storeParam = storeId ? `?storeId=${encodeURIComponent(storeId)}` : ''
-      const res = await fetch(`/api/admin/payouts${storeParam}`)
+      const res = await fetch(`/api/admin/payouts${storeParam}`, { headers: authHeaders })
       if (!res.ok) throw new Error('Failed to load payouts')
       const json = await res.json()
       setPastPayouts(json || [])
@@ -154,7 +171,7 @@ export function AdminRestaurantReport({ storeId }: AdminRestaurantReportProps = 
       fetchReport()
     }
     fetchPastPayouts()
-  }, [startDate, endDate, rangePreset, storeId])
+  }, [startDate, endDate, rangePreset, storeId, authHeaders])
 
   const handleOpenSettleModal = (rest: RestaurantSalesData) => {
     setSettlingRest(rest)
@@ -216,7 +233,7 @@ export function AdminRestaurantReport({ storeId }: AdminRestaurantReportProps = 
     try {
       const res = await fetch(`/api/restaurants/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ commissionRate: Number(commValue) / 100 })
       })
       if (!res.ok) throw new Error('Failed to update')

@@ -59,6 +59,8 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
   const { data: session } = useSession()
   const sessionUserId = session?.user?.id || ''
   const sessionUserRole = session?.user?.role || ''
+  const sessionUserEmail = session?.user?.email || ''
+  const sessionUserPhone = (session?.user as any)?.phone || ''
 
   const isEditing = !!restaurant
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -357,7 +359,12 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
         method,
         headers: { 
           'Content-Type': 'application/json',
-          ...(sessionUserId ? { 'x-user-id': sessionUserId, 'x-user-role': sessionUserRole } : {})
+          ...(sessionUserId ? { 
+            'x-user-id': sessionUserId, 
+            'x-user-role': sessionUserRole,
+            ...(sessionUserEmail ? { 'x-user-email': sessionUserEmail } : {}),
+            ...(sessionUserPhone ? { 'x-user-phone': sessionUserPhone } : {}),
+          } : {})
         },
         body: JSON.stringify(payload)
       })
@@ -365,7 +372,7 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
       const responseData = await res.json().catch(() => ({}))
 
       if (!res.ok) {
-        throw new Error(responseData.error || responseData.message || 'Failed to save restaurant')
+        throw new Error(responseData.error || responseData.detail || responseData.message || 'Failed to save restaurant')
       }
 
       toast.success(isEditing ? 'Outlet profile updated successfully! 🎉' : 'New Outlet created and Head assigned successfully! 🎉')

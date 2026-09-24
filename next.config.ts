@@ -121,20 +121,22 @@ const nextConfig: NextConfig = {
           destination: `${apiDest}/api/cart/:path*`,
         },
         {
+          source: '/api/cart',
+          destination: `${apiDest}/api/cart`,
+        },
+        {
           source: '/api/coupons/:path*',
           destination: `${apiDest}/api/coupons/:path*`,
         },
         {
-          source: '/api/stores/:path*',
-          destination: `${apiDest}/api/stores/:path*`,
+          source: '/api/coupons',
+          destination: `${apiDest}/api/coupons`,
         },
+        // Note: /api/stores and /api/store-status are kept local to Next.js where handlers exist,
+        // preventing 404s until Railway deployment completes.
         {
           source: '/api/store-settings/:path*',
           destination: `${apiDest}/api/store-settings/:path*`,
-        },
-        {
-          source: '/api/store-status',
-          destination: `${apiDest}/api/store-status`,
         },
         {
           source: '/api/banners/:path*',

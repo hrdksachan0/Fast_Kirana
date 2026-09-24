@@ -57,7 +57,7 @@ class User(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    email: Mapped[str] = mapped_column(String, unique=True, index=True)
+    email: Mapped[Optional[str]] = mapped_column(String, unique=True, index=True, nullable=True)
     emailVerified: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     image: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     phone: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
@@ -386,6 +386,8 @@ class Restaurant(Base):
     ownerPhone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     ownerEmail: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     isActive: Mapped[bool] = mapped_column(Boolean, default=True)
+    deliveryRadiusKm: Mapped[float] = mapped_column(Float, default=5.0)
+    storeId: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
     menuSections: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -630,3 +632,39 @@ class StockAlert(Base):
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     product = relationship("Product")
+
+
+class PriceHistory(Base):
+    __tablename__ = "price_history"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    productId: Mapped[str] = mapped_column(String, ForeignKey("products.id", ondelete="CASCADE"), index=True)
+    oldPrice: Mapped[float] = mapped_column(Float)
+    newPrice: Mapped[float] = mapped_column(Float)
+    oldMrp: Mapped[float] = mapped_column(Float)
+    newMrp: Mapped[float] = mapped_column(Float)
+    changeType: Mapped[str] = mapped_column(String)
+    changedBy: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    batchId: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    product = relationship("Product")
+
+
+class RestaurantPayout(Base):
+    __tablename__ = "restaurant_payouts"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    type: Mapped[str] = mapped_column(String, default="RESTAURANT")
+    restaurantId: Mapped[Optional[str]] = mapped_column(String, ForeignKey("restaurants.id"), nullable=True, index=True)
+    startDate: Mapped[datetime] = mapped_column(DateTime)
+    endDate: Mapped[datetime] = mapped_column(DateTime)
+    amount: Mapped[float] = mapped_column(Float)
+    status: Mapped[str] = mapped_column(String, default="PENDING")
+    transactionId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    paidAt: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    restaurant = relationship("Restaurant")

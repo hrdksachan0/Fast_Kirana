@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
 import { 
@@ -64,6 +65,22 @@ interface AdminAnalyticsProps {
 }
 
 export function AdminAnalytics({ products, orders, categories, stats, storeId }: AdminAnalyticsProps) {
+  const { data: session } = useSession()
+  const sessionUserId = session?.user?.id || ''
+  const sessionUserRole = session?.user?.role || ''
+  const sessionUserEmail = session?.user?.email || ''
+  const sessionUserPhone = (session?.user as any)?.phone || ''
+
+  const authHeaders = useMemo(() => ({
+    'Content-Type': 'application/json',
+    ...(sessionUserId ? {
+      'x-user-id': sessionUserId,
+      'x-user-role': sessionUserRole,
+      ...(sessionUserEmail ? { 'x-user-email': sessionUserEmail } : {}),
+      ...(sessionUserPhone ? { 'x-user-phone': sessionUserPhone } : {}),
+    } : { 'x-user-role': 'ADMIN' })
+  }), [sessionUserId, sessionUserRole, sessionUserEmail, sessionUserPhone])
+
   const [forecast, setForecast] = useState<any[]>([])
   const [loadingForecast, setLoadingForecast] = useState(true)
   const [inwardingId, setInwardingId] = useState<string | null>(null)
@@ -72,7 +89,9 @@ export function AdminAnalytics({ products, orders, categories, stats, storeId }:
     try {
       setLoadingForecast(true)
       const storeParam = storeId && storeId !== 'all' ? `?storeId=${encodeURIComponent(storeId)}` : ''
-      const res = await fetch(`/api/admin/inventory/forecast${storeParam}`)
+      const res = await fetch(`/api/admin/inventory/forecast${storeParam}`, {
+        headers: authHeaders
+      })
       if (res.ok) {
         const data = await res.json()
         setForecast(data.forecast || [])
@@ -86,7 +105,7 @@ export function AdminAnalytics({ products, orders, categories, stats, storeId }:
 
   useEffect(() => {
     fetchForecast()
-  }, [storeId])
+  }, [storeId, authHeaders])
 
   const handleQuickRestock = async (product: any) => {
     if (product.suggestedRestock <= 0) return
@@ -94,7 +113,7 @@ export function AdminAnalytics({ products, orders, categories, stats, storeId }:
       setInwardingId(product.id)
       const res = await fetch('/api/admin/inward', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           productId: product.id,
           batchCode: `AUTO_AI_${Date.now().toString().slice(-6)}`,

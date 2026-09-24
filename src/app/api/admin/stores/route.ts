@@ -4,8 +4,8 @@ import { auth } from '@/auth'
 import { requireAdmin } from '@/lib/auth-guard'
 
 // GET - Retrieve all dark stores (Admin authenticated)
-export async function GET() {
-  const adminResult = await requireAdmin()
+export async function GET(request: NextRequest) {
+  const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
   const session = adminResult.session
 
@@ -35,7 +35,7 @@ export async function GET() {
 
 // POST - Create a new dark store with polygon geofence (Admin authenticated)
 export async function POST(request: NextRequest) {
-  const adminResult = await requireAdmin()
+  const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
   const session = adminResult.session
 
@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
 
 // PATCH - Update dark store details/toggles (Admin authenticated)
 export async function PATCH(request: NextRequest) {
-  const adminResult = await requireAdmin()
+  const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
   const session = adminResult.session
 

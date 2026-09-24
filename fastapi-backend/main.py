@@ -48,8 +48,12 @@ app = FastAPI(
     version="2.0.0",
     docs_url="/docs" if settings.APP_ENV != "production" else "/docs",
     redoc_url="/redoc",
-    lifespan=lifespan
+    lifespan=lifespan,
+    redirect_slashes=False,
 )
+
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 import uuid
 

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Building2, 
@@ -65,6 +66,22 @@ export function StoreHubsManager({
   isHubAdmin = false,
   assignedStoreId = null
 }: StoreHubsManagerProps) {
+  const { data: session } = useSession()
+  const sessionUserId = session?.user?.id || ''
+  const sessionUserRole = session?.user?.role || ''
+  const sessionUserEmail = session?.user?.email || ''
+  const sessionUserPhone = (session?.user as any)?.phone || ''
+
+  const authHeaders = {
+    'Content-Type': 'application/json',
+    ...(sessionUserId ? {
+      'x-user-id': sessionUserId,
+      'x-user-role': sessionUserRole,
+      ...(sessionUserEmail ? { 'x-user-email': sessionUserEmail } : {}),
+      ...(sessionUserPhone ? { 'x-user-phone': sessionUserPhone } : {}),
+    } : {})
+  }
+
   const [activeTab, setActiveTab] = useState<'hierarchy' | 'new-hub' | 'new-outlet'>('hierarchy')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -125,7 +142,7 @@ export function StoreHubsManager({
     try {
       const res = await fetch('/api/admin/stores', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           name: newHubName.trim(),
           pincode: newHubPincode.trim(),
@@ -145,7 +162,7 @@ export function StoreHubsManager({
         })
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (res.ok) {
         toast.success(`Store Hub "${newHubName}" (${data.id || computedHubId}) created successfully!`)
         setNewHubName('')
@@ -159,7 +176,7 @@ export function StoreHubsManager({
         setActiveTab('hierarchy')
         onRefresh()
       } else {
-        toast.error(data.error || 'Failed to create Store Hub')
+        toast.error(data.error || data.detail || data.message || 'Failed to create Store Hub')
       }
     } catch (err: any) {
       toast.error(err.message || 'Error creating store hub')
@@ -178,20 +195,20 @@ export function StoreHubsManager({
     try {
       const res = await fetch('/api/admin/stores', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           id: storeId,
           managerPhone: editManagerPhoneInput.trim()
         })
       })
+      const data = await res.json().catch(() => ({}))
       if (res.ok) {
         toast.success('Store Hub Manager assigned successfully!')
         setEditingManagerStoreId(null)
         setEditManagerPhoneInput('')
         onRefresh()
       } else {
-        const data = await res.json()
-        toast.error(data.error || 'Failed to update manager')
+        toast.error(data.error || data.detail || data.message || 'Failed to update manager')
       }
     } catch (err: any) {
       toast.error(err.message || 'Error updating manager')
@@ -219,7 +236,7 @@ export function StoreHubsManager({
 
       const res = await fetch('/api/restaurants', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           name: newOutletName.trim(),
           slug,
@@ -233,7 +250,7 @@ export function StoreHubsManager({
         })
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (res.ok) {
         toast.success(`Restaurant Outlet "${newOutletName}" (${data.id}) created successfully!`)
         setNewOutletName('')
@@ -242,7 +259,7 @@ export function StoreHubsManager({
         setActiveTab('hierarchy')
         onRefresh()
       } else {
-        toast.error(data.error || 'Failed to create restaurant outlet')
+        toast.error(data.error || data.detail || data.message || 'Failed to create restaurant outlet')
       }
     } catch (err: any) {
       toast.error(err.message || 'Error creating restaurant outlet')
@@ -257,14 +274,15 @@ export function StoreHubsManager({
       const newStatus = !store.groceryOpen
       const res = await fetch('/api/admin/stores', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ id: store.id, groceryOpen: newStatus })
       })
+      const data = await res.json().catch(() => ({}))
       if (res.ok) {
         toast.success(`${store.name} Grocery Mart is now ${newStatus ? 'OPEN' : 'CLOSED'}`)
         onRefresh()
       } else {
-        toast.error('Failed to update grocery status')
+        toast.error(data.error || data.detail || data.message || 'Failed to update grocery status')
       }
     } catch (err: any) {
       toast.error(err.message)
@@ -277,14 +295,15 @@ export function StoreHubsManager({
       const newStatus = !restaurant.isOpen
       const res = await fetch(`/api/restaurants/${restaurant.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ isOpen: newStatus })
       })
+      const data = await res.json().catch(() => ({}))
       if (res.ok) {
         toast.success(`${restaurant.name} Kitchen is now ${newStatus ? 'OPEN' : 'CLOSED'}`)
         onRefresh()
       } else {
-        toast.error('Failed to update kitchen status')
+        toast.error(data.error || data.detail || data.message || 'Failed to update kitchen status')
       }
     } catch (err: any) {
       toast.error(err.message)

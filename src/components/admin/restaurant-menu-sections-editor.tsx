@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import { Plus, Trash2, Edit2, ArrowUp, ArrowDown, Save, Loader2, ListCollapse, Upload } from 'lucide-react'
 import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS, CafeMenuSection } from '@/lib/constants'
@@ -85,6 +86,12 @@ interface RestaurantMenuSectionsEditorProps {
 }
 
 export function RestaurantMenuSectionsEditor({ assignedRestaurantId }: RestaurantMenuSectionsEditorProps) {
+  const { data: session } = useSession()
+  const sessionUserId = session?.user?.id || ''
+  const sessionUserRole = session?.user?.role || ''
+  const sessionUserEmail = session?.user?.email || ''
+  const sessionUserPhone = (session?.user as any)?.phone || ''
+
   const [menuSections, setMenuSections] = useState<CafeMenuSection[]>([])
   
   // Section Editing Form States
@@ -283,11 +290,20 @@ export function RestaurantMenuSectionsEditor({ assignedRestaurantId }: Restauran
 
       const res = await fetch(`/api/restaurants/${assignedRestaurantId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(sessionUserId ? {
+            'x-user-id': sessionUserId,
+            'x-user-role': sessionUserRole,
+            ...(sessionUserEmail ? { 'x-user-email': sessionUserEmail } : {}),
+            ...(sessionUserPhone ? { 'x-user-phone': sessionUserPhone } : {}),
+          } : {})
+        },
         body: JSON.stringify({ menuSections: normalizedSections })
       })
 
-      if (!res.ok) throw new Error('Failed to update sections')
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || data.detail || data.message || 'Failed to update sections')
       
       setMenuSections(normalizedSections)
       toast.success('Menu categories updated successfully!')

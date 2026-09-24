@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { 
@@ -33,6 +34,22 @@ interface RestaurantManagerProps {
 
 export function RestaurantManager({ initialRestaurants }: RestaurantManagerProps) {
   const router = useRouter()
+  const { data: session } = useSession()
+  const sessionUserId = session?.user?.id || ''
+  const sessionUserRole = session?.user?.role || ''
+  const sessionUserEmail = session?.user?.email || ''
+  const sessionUserPhone = (session?.user as any)?.phone || ''
+
+  const authHeaders = {
+    'Content-Type': 'application/json',
+    ...(sessionUserId ? {
+      'x-user-id': sessionUserId,
+      'x-user-role': sessionUserRole,
+      ...(sessionUserEmail ? { 'x-user-email': sessionUserEmail } : {}),
+      ...(sessionUserPhone ? { 'x-user-phone': sessionUserPhone } : {}),
+    } : {})
+  }
+
   const [restaurants, setRestaurants] = useState(initialRestaurants)
   const [searchQuery, setSearchQuery] = useState('')
   const [isUpdating, setIsUpdating] = useState<string | null>(null)
@@ -49,11 +66,12 @@ export function RestaurantManager({ initialRestaurants }: RestaurantManagerProps
       setIsUpdating(id)
       const res = await fetch(`/api/restaurants/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ isOpen: !currentStatus })
       })
 
-      if (!res.ok) throw new Error('Failed to update status')
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || data.detail || data.message || 'Failed to update status')
 
       setRestaurants(restaurants.map(r => 
         r.id === id ? { ...r, isOpen: !currentStatus } : r
@@ -61,8 +79,8 @@ export function RestaurantManager({ initialRestaurants }: RestaurantManagerProps
       
       toast.success(currentStatus ? 'Restaurant closed' : 'Restaurant opened')
       router.refresh()
-    } catch (error) {
-      toast.error('Failed to update restaurant status')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update restaurant status')
       console.error(error)
     } finally {
       setIsUpdating(null)
@@ -74,11 +92,12 @@ export function RestaurantManager({ initialRestaurants }: RestaurantManagerProps
       setIsUpdating(id)
       const res = await fetch(`/api/restaurants/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ isActive: !currentActive })
       })
 
-      if (!res.ok) throw new Error('Failed to update active status')
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || data.detail || data.message || 'Failed to update active status')
 
       setRestaurants(restaurants.map(r => 
         r.id === id ? { ...r, isActive: !currentActive } : r
@@ -86,8 +105,8 @@ export function RestaurantManager({ initialRestaurants }: RestaurantManagerProps
       
       toast.success(!currentActive ? 'Restaurant activated & live on Web & App! 🚀' : 'Restaurant deactivated (hidden from apps)')
       router.refresh()
-    } catch (error) {
-      toast.error('Failed to update active status')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update active status')
       console.error(error)
     } finally {
       setIsUpdating(null)
@@ -101,15 +120,17 @@ export function RestaurantManager({ initialRestaurants }: RestaurantManagerProps
       setIsDeleting(id)
       const res = await fetch(`/api/restaurants/${id}`, {
         method: 'DELETE',
+        headers: authHeaders,
       })
 
-      if (!res.ok) throw new Error('Failed to delete')
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || data.detail || data.message || 'Failed to delete')
 
       setRestaurants(restaurants.filter(r => r.id !== id))
       toast.success('Restaurant deleted successfully')
       router.refresh()
-    } catch (error) {
-      toast.error('Failed to delete restaurant')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete restaurant')
       console.error(error)
     } finally {
       setIsDeleting(null)

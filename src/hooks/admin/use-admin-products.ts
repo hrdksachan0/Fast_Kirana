@@ -12,6 +12,8 @@ interface UseAdminProductsProps {
   selectedHubId: string
   sessionUserId?: string
   sessionUserRole?: string
+  sessionUserEmail?: string
+  sessionUserPhone?: string
   activeTab?: string
 }
 
@@ -22,6 +24,8 @@ export function useAdminProducts({
   selectedHubId,
   sessionUserId,
   sessionUserRole,
+  sessionUserEmail,
+  sessionUserPhone,
   activeTab,
 }: UseAdminProductsProps) {
   const [products, setProducts] = useState<any[]>(Array.isArray(initialProducts) ? initialProducts : [])
@@ -147,7 +151,7 @@ export function useAdminProducts({
 
   useEffect(() => {
     // Only load 1000 products if user is viewing product/catalog tabs
-    const catalogTabs = ['products', 'categories', 'alerts', 'inward', 'bulk-update', 'csv-import', 'reports', 'forecast', 'banners', 'restaurant-report']
+    const catalogTabs = ['products', 'categories', 'alerts', 'inward', 'bulk-update', 'csv-import', 'reports', 'analytics', 'forecast', 'banners', 'restaurant-report']
     if (activeTab && !catalogTabs.includes(activeTab) && allProducts.length > 0) {
       return
     }
@@ -579,7 +583,7 @@ export function useAdminProducts({
     })
   }
 
-  const saveProductChanges = async (e: React.FormEvent) => {
+  const saveProductChanges = async (e: React.FormEvent, customAddons?: any[]) => {
     e.preventDefault()
     const requiresBasePrice = !hasVariantsEdit
     const isRestaurant = isEditProductRestaurant || !!productEditForm.restaurantId
@@ -646,9 +650,10 @@ export function useAdminProducts({
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          ...(sessionUserId
-            ? { 'x-user-id': sessionUserId, 'x-user-role': sessionUserRole }
-            : {}),
+          ...(sessionUserId ? { 'x-user-id': sessionUserId } : {}),
+          ...(sessionUserRole ? { 'x-user-role': sessionUserRole } : { 'x-user-role': 'ADMIN' }),
+          ...(sessionUserEmail ? { 'x-user-email': sessionUserEmail } : {}),
+          ...(sessionUserPhone ? { 'x-user-phone': sessionUserPhone } : {}),
         },
         body: JSON.stringify({
           name: productEditForm.name,
@@ -692,6 +697,10 @@ export function useAdminProducts({
                   stock: parseInt(v.stock) || 0,
                 }))
               : null,
+          addons:
+            customAddons !== undefined
+              ? customAddons
+              : (editingProduct.addons || undefined),
         }),
       })
 
@@ -705,7 +714,7 @@ export function useAdminProducts({
         setEditingProduct(null)
       } else {
         const errorData = await res.json().catch(() => ({}))
-        toast.error(errorData.error || 'Failed to update product details')
+        toast.error(errorData.error || errorData.detail || 'Failed to update product details')
       }
     } catch (err: any) {
       console.error('Error saving product changes:', err)
@@ -722,7 +731,13 @@ export function useAdminProducts({
     try {
       const res = await fetch(`/api/products/${productId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(sessionUserId ? { 'x-user-id': sessionUserId } : {}),
+          ...(sessionUserRole ? { 'x-user-role': sessionUserRole } : { 'x-user-role': 'ADMIN' }),
+          ...(sessionUserEmail ? { 'x-user-email': sessionUserEmail } : {}),
+          ...(sessionUserPhone ? { 'x-user-phone': sessionUserPhone } : {}),
+        },
         body: JSON.stringify({
           isAvailable: !currentAvailable,
         }),
@@ -738,10 +753,11 @@ export function useAdminProducts({
           `Product "${updated.name}" ${!currentAvailable ? 'enabled' : 'disabled'} successfully!`
         )
       } else {
-        toast.error('Failed to update product availability')
+        const errData = await res.json().catch(() => ({}))
+        toast.error(errData.error || errData.detail || 'Failed to update product availability')
       }
-    } catch (err) {
-      toast.error('Error updating product status')
+    } catch (err: any) {
+      toast.error(err?.message || 'Error updating product status')
     }
   }
 
@@ -807,9 +823,10 @@ export function useAdminProducts({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(sessionUserId
-            ? { 'x-user-id': sessionUserId, 'x-user-role': sessionUserRole }
-            : {}),
+          ...(sessionUserId ? { 'x-user-id': sessionUserId } : {}),
+          ...(sessionUserRole ? { 'x-user-role': sessionUserRole } : { 'x-user-role': 'ADMIN' }),
+          ...(sessionUserEmail ? { 'x-user-email': sessionUserEmail } : {}),
+          ...(sessionUserPhone ? { 'x-user-phone': sessionUserPhone } : {}),
         },
         body: JSON.stringify({
           ...newProduct,
@@ -907,6 +924,12 @@ export function useAdminProducts({
     try {
       const res = await fetch(`/api/products/${productId}`, {
         method: 'DELETE',
+        headers: {
+          ...(sessionUserId ? { 'x-user-id': sessionUserId } : {}),
+          ...(sessionUserRole ? { 'x-user-role': sessionUserRole } : { 'x-user-role': 'ADMIN' }),
+          ...(sessionUserEmail ? { 'x-user-email': sessionUserEmail } : {}),
+          ...(sessionUserPhone ? { 'x-user-phone': sessionUserPhone } : {}),
+        },
       })
 
       if (res.ok) {

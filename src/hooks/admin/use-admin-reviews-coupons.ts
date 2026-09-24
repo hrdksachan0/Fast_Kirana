@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 
 interface UseAdminReviewsCouponsProps {
@@ -14,6 +15,15 @@ export function useAdminReviewsCoupons({
   initialCoupons,
   activeTab,
 }: UseAdminReviewsCouponsProps) {
+  const { data: session } = useSession()
+  const authHeaders = useMemo(() => ({
+    'Content-Type': 'application/json',
+    ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
+    ...((session?.user as any)?.role ? { 'x-user-role': (session?.user as any).role } : { 'x-user-role': 'ADMIN' }),
+    ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
+    ...((session?.user as any)?.phone ? { 'x-user-phone': (session?.user as any).phone } : {}),
+  }), [session])
+
   // Reviews state
   const [reviews, setReviews] = useState(initialReviews || [])
   const [isLoadingReviews, setIsLoadingReviews] = useState(false)
@@ -87,7 +97,7 @@ export function useAdminReviewsCoupons({
       const loadReviews = async () => {
         setIsLoadingReviews(true)
         try {
-          const res = await fetch(`/api/admin/reviews?t=${Date.now()}`)
+          const res = await fetch(`/api/admin/reviews?t=${Date.now()}`, { headers: authHeaders })
           if (res.ok) {
             const data = await res.json()
             setReviews(data)
@@ -100,7 +110,7 @@ export function useAdminReviewsCoupons({
       }
       loadReviews()
     }
-  }, [activeTab, reviews.length])
+  }, [activeTab, reviews.length, authHeaders])
 
   // Lazy load coupons
   useEffect(() => {
@@ -108,7 +118,7 @@ export function useAdminReviewsCoupons({
       const loadCoupons = async () => {
         setIsLoadingCoupons(true)
         try {
-          const res = await fetch(`/api/admin/coupons?t=${Date.now()}`)
+          const res = await fetch(`/api/admin/coupons?t=${Date.now()}`, { headers: authHeaders })
           if (res.ok) {
             const data = await res.json()
             setCoupons(data)
@@ -121,7 +131,7 @@ export function useAdminReviewsCoupons({
       }
       loadCoupons()
     }
-  }, [activeTab, coupons.length])
+  }, [activeTab, coupons.length, authHeaders])
 
   // Reviews handlers
   const startEditingReview = (r: any) => {
@@ -140,7 +150,7 @@ export function useAdminReviewsCoupons({
     try {
       const res = await fetch('/api/admin/reviews', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           reviewId: editingReview.id,
           rating: reviewEditForm.rating,
@@ -177,7 +187,7 @@ export function useAdminReviewsCoupons({
     try {
       const res = await fetch('/api/admin/reviews', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ reviewId, type: reviewType }),
       })
       if (res.ok) {
@@ -219,7 +229,7 @@ export function useAdminReviewsCoupons({
 
       const res = await fetch('/api/admin/coupons', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify(payload),
       })
 
@@ -296,7 +306,7 @@ export function useAdminReviewsCoupons({
       const isBogoOrFreeDelivery = couponEditForm.discountType === 'BOGO' || couponEditForm.discountType === 'FREE_DELIVERY'
       const res = await fetch('/api/admin/coupons', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           couponId: editingCoupon.id,
           code: couponEditForm.code,
@@ -343,7 +353,7 @@ export function useAdminReviewsCoupons({
     try {
       const res = await fetch('/api/admin/coupons', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ couponId, isActive: !currentActive }),
       })
 
@@ -367,7 +377,7 @@ export function useAdminReviewsCoupons({
     try {
       const res = await fetch('/api/admin/coupons', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ couponId }),
       })
       if (res.ok) {

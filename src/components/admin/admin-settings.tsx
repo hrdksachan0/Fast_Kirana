@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import { Sliders, Save, Loader2, Eye, Heart, Star, Package, FileText, MessageSquare, Smartphone, Download, AlertCircle, RefreshCw } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -16,6 +17,14 @@ interface AdminSettingsProps {
 }
 
 export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminSettingsProps) {
+  const { data: session } = useSession()
+  const authHeaders = useMemo(() => ({
+    ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
+    ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
+    ...((session?.user as any)?.phone ? { 'x-user-phone': (session?.user as any).phone } : {}),
+    ...((session?.user as any)?.role ? { 'x-user-role': (session?.user as any).role } : { 'x-user-role': 'ADMIN' }),
+  }), [session])
+
   const [settingsTab, setSettingsTab] = useState<'ops' | 'cosmetics' | 'finance' | 'greetings' | 'app' | 'surge'>('ops')
   const [surgeMode, setSurgeMode] = useState<'AUTO' | 'MANUAL_ON' | 'MANUAL_OFF'>('AUTO')
   const [surgeRainAmount, setSurgeRainAmount] = useState('20')
@@ -183,16 +192,37 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
       try {
         setLoading(true)
         
-        // Fetch categories first
-        const catRes = await fetch('/api/categories')
-        if (!catRes.ok) throw new Error('Failed to load categories')
-        const cats = await catRes.json()
-        setCategories(cats)
-
         const storeQuery = storeId && storeId !== 'all' ? `?storeId=${encodeURIComponent(storeId)}` : ''
-        const res = await fetch(`/api/settings${storeQuery}`, { cache: 'no-store' })
-        if (!res.ok) throw new Error('Failed to load settings')
-        const data = await res.json()
+
+        const [catResult, settingsResult] = await Promise.allSettled([
+          fetch('/api/categories', { headers: authHeaders }).then(async (r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`)
+            return r.json()
+          }),
+          fetch(`/api/settings${storeQuery}`, { cache: 'no-store', headers: authHeaders }).then(async (r) => {
+            if (!r.ok) {
+              const errBody = await r.json().catch(() => ({}))
+              throw new Error(errBody.error || errBody.detail || `HTTP ${r.status}`)
+            }
+            return r.json()
+          }),
+        ])
+
+        let loadedCats: any[] = []
+        if (catResult.status === 'fulfilled' && Array.isArray(catResult.value)) {
+          loadedCats = catResult.value
+          setCategories(loadedCats)
+        } else if (catResult.status === 'rejected') {
+          console.warn('Categories failed to load for settings tab:', catResult.reason)
+        }
+
+        if (settingsResult.status === 'rejected') {
+          console.error('Failed to load store settings:', settingsResult.reason)
+          toast.error(`Could not fetch store settings: ${settingsResult.reason?.message || 'Server error'}`)
+          return
+        }
+
+        const data = settingsResult.value || {}
         
         if (data.deliveries_count) setDeliveriesCount(data.deliveries_count)
         if (data.rating_value) setRatingValue(data.rating_value)
@@ -287,23 +317,22 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
 
         // Parse category statuses
         const catStatusMap: Record<string, boolean> = {}
-        if (Array.isArray(cats)) {
-          setCategories(cats)
-          cats.forEach((cat: any) => {
+        if (Array.isArray(loadedCats)) {
+          loadedCats.forEach((cat: any) => {
             catStatusMap[cat.slug] = data[`category_open_${cat.slug}`] !== 'false'
           })
         }
         setCategoryStatuses(catStatusMap)
       } catch (err: any) {
         console.error(err)
-        toast.error('Could not fetch store settings')
+        toast.error(err?.message || 'Could not fetch store settings')
       } finally {
         setLoading(false)
       }
     }
 
     loadSettings()
-  }, [storeId])
+  }, [storeId, authHeaders])
 
   // Save settings handler
   const handleSave = async (e: React.FormEvent) => {
@@ -330,7 +359,10 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
 
       const res = await fetch('/api/admin/settings', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders,
+        },
         body: JSON.stringify({
           storeId: storeId && storeId !== 'all' ? storeId : undefined,
           deliveries_count: deliveriesCount.trim(),
@@ -410,13 +442,16 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
         }),
       })
 
-      if (!res.ok) throw new Error('Failed to update settings')
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || errData.detail || `Failed to update settings: HTTP ${res.status}`)
+      }
       
       toast.success('Store settings updated successfully!')
       if (onSettingsSaved) onSettingsSaved()
     } catch (err: any) {
       console.error(err)
-      toast.error(err.message || 'Error saving store settings')
+      toast.error(err?.message || 'Error saving store settings')
     } finally {
       setSaving(false)
     }

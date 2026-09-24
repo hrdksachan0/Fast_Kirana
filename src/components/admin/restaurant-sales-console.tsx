@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useSession } from 'next-auth/react'
 import { Calendar, IndianRupee, TrendingUp, ShoppingBag, Percent, RefreshCw, FileSpreadsheet, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
@@ -51,6 +52,22 @@ interface RestaurantSalesConsoleProps {
 }
 
 export function RestaurantSalesConsole({ restaurantId }: RestaurantSalesConsoleProps = {}) {
+  const { data: session } = useSession()
+  const sessionUserId = session?.user?.id || ''
+  const sessionUserRole = session?.user?.role || ''
+  const sessionUserEmail = session?.user?.email || ''
+  const sessionUserPhone = (session?.user as any)?.phone || ''
+
+  const authHeaders = {
+    'Content-Type': 'application/json',
+    ...(sessionUserId ? {
+      'x-user-id': sessionUserId,
+      'x-user-role': sessionUserRole,
+      ...(sessionUserEmail ? { 'x-user-email': sessionUserEmail } : {}),
+      ...(sessionUserPhone ? { 'x-user-phone': sessionUserPhone } : {}),
+    } : {})
+  }
+
   const [loading, setLoading] = useState(true)
   const [selectedChannel, setSelectedChannel] = useState<'all' | 'delivery' | 'pickup'>('all')
   const [summary, setSummary] = useState<Summary>({
@@ -110,7 +127,7 @@ export function RestaurantSalesConsole({ restaurantId }: RestaurantSalesConsoleP
     try {
       const restParam = restaurantId ? `&restaurantId=${encodeURIComponent(restaurantId)}` : ''
       const url = `/api/restaurant/reports?startDate=${startDate}&endDate=${endDate}${restParam}&t=${Date.now()}`
-      const res = await fetch(url)
+      const res = await fetch(url, { headers: authHeaders })
       if (!res.ok) throw new Error('Failed to load restaurant financials')
       
       const data = await res.json()

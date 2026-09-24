@@ -61,7 +61,7 @@ export interface Category {
 export interface ProductEditModalProps {
   editingProduct: any | null
   productEditForm: ProductEditForm
-  saveProductChanges: (e: React.FormEvent) => Promise<void>
+  saveProductChanges: (e: React.FormEvent, customAddons?: any[]) => Promise<void>
   setEditingProduct: (product: any | null) => void
   setProductEditForm: (form: ProductEditForm | ((prev: ProductEditForm) => ProductEditForm)) => void
   setHasVariantsEdit: (value: boolean) => void
@@ -216,8 +216,9 @@ export function ProductEditModal({
 
   const handleSaveWithAddons = async (e: React.FormEvent) => {
     e.preventDefault()
+    let cleanAddons: any[] | undefined = undefined
     if (editingProduct?.id && isRestaurantMode) {
-      const cleanAddons = addonGroups
+      cleanAddons = addonGroups
         .filter((g) => g.title.trim() && g.items.length > 0)
         .map((g) => ({
           title: g.title.trim(),
@@ -230,18 +231,8 @@ export function ProductEditModal({
               price: parseFloat(i.price) || 0,
             })),
         }))
-
-      try {
-        await fetch(`/api/products/${editingProduct.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ addons: cleanAddons }),
-        })
-      } catch (err) {
-        console.error('Failed to sync addons:', err)
-      }
     }
-    return saveProductChanges(e)
+    return saveProductChanges(e, cleanAddons)
   }
 
   const handleToggleVeg = (veg: boolean) => {

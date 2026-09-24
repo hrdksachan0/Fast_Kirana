@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/date-helpers'
 
@@ -17,6 +18,15 @@ export function useAdminUsers({
   selectedHubId,
   activeTab,
 }: UseAdminUsersProps) {
+  const { data: session } = useSession()
+  const authHeaders = useMemo(() => ({
+    'Content-Type': 'application/json',
+    ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
+    ...((session?.user as any)?.role ? { 'x-user-role': (session?.user as any).role } : { 'x-user-role': 'ADMIN' }),
+    ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
+    ...((session?.user as any)?.phone ? { 'x-user-phone': (session?.user as any).phone } : {}),
+  }), [session])
+
   const [users, setUsers] = useState<any[]>(Array.isArray(initialUsers) ? initialUsers : [])
   const [userPage, setUserPage] = useState(1)
   const [userTotal, setUserTotal] = useState(initialUserCount || (Array.isArray(initialUsers) ? initialUsers.length : 0))
@@ -52,7 +62,8 @@ export function useAdminUsers({
       const res = await fetch(
         `/api/admin/users?page=${userPage}&limit=10&search=${encodeURIComponent(
           userSearch
-        )}&role=${userRoleFilter}&status=${userStatusFilter}${storeQuery}&t=${Date.now()}`
+        )}&role=${userRoleFilter}&status=${userStatusFilter}${storeQuery}&t=${Date.now()}`,
+        { headers: authHeaders }
       )
       if (res.ok) {
         const data = await res.json()
@@ -69,7 +80,7 @@ export function useAdminUsers({
     } finally {
       setIsLoadingUsers(false)
     }
-  }, [userPage, userSearch, userRoleFilter, userStatusFilter, selectedHubId])
+  }, [userPage, userSearch, userRoleFilter, userStatusFilter, selectedHubId, authHeaders])
 
   useEffect(() => {
     if (activeTab === 'users') {
@@ -82,7 +93,7 @@ export function useAdminUsers({
     try {
       const res = await fetch('/api/admin/users/block', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           userId: userToBlock.id,
           isBlocked,
@@ -118,7 +129,7 @@ export function useAdminUsers({
   const handleExportCustomersCsv = async () => {
     setIsExportingUsers(true)
     try {
-      const res = await fetch(`/api/admin/users?limit=10000&role=USER&t=${Date.now()}`)
+      const res = await fetch(`/api/admin/users?limit=10000&role=USER&t=${Date.now()}`, { headers: authHeaders })
       if (!res.ok) throw new Error('Failed to fetch customers')
       const data = await res.json()
       const customers = data.users || []
@@ -174,7 +185,7 @@ export function useAdminUsers({
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ userId, role: newRole }),
       })
 
@@ -195,7 +206,7 @@ export function useAdminUsers({
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ userId, assignedStoreId: newStoreId }),
       })
 
@@ -221,7 +232,7 @@ export function useAdminUsers({
     try {
       const res = await fetch('/api/admin/users', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ userId, password: passwordInput }),
       })
       if (res.ok) {
@@ -249,7 +260,7 @@ export function useAdminUsers({
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ userId, phone: phoneInput.trim() }),
       })
 

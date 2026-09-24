@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Search, ToggleLeft, ToggleRight, Check, X, Sparkles, SlidersHorizontal, RefreshCw, Utensils, IndianRupee } from 'lucide-react'
+import { useSession } from 'next-auth/react'
+import { Search, ToggleLeft, ToggleRight, Check, X, Sparkles, SlidersHorizontal, RefreshCw, Utensils, IndianRupee, Plus, Loader2, Image as ImageIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
 import { RestaurantPayoutsLedger } from './restaurant-payouts-ledger'
 import { compressImageClient } from '@/lib/image-compression'
+import { PRESET_KITCHEN_PHOTOS } from '@/lib/preset-photos'
 
 interface Product {
   id: string
@@ -29,11 +31,16 @@ interface AdminRestaurantConsoleProps {
   storeId?: string
 }
 
-import { Plus, Loader2, Image as ImageIcon } from 'lucide-react'
-
-import { PRESET_KITCHEN_PHOTOS } from '@/lib/preset-photos'
-
 export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestaurantConsoleProps) {
+  const { data: session } = useSession()
+  const authHeaders = useMemo(() => ({
+    'Content-Type': 'application/json',
+    ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
+    ...((session?.user as any)?.role ? { 'x-user-role': (session?.user as any).role } : { 'x-user-role': 'ADMIN' }),
+    ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
+    ...((session?.user as any)?.phone ? { 'x-user-phone': (session?.user as any).phone } : {}),
+  }), [session])
+
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -62,7 +69,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
   // Fetch outlets dynamically scoped by storeId
   useEffect(() => {
     const storeParam = storeId && storeId !== 'all' ? `?storeId=${encodeURIComponent(storeId)}` : ''
-    fetch(`/api/restaurants${storeParam}`)
+    fetch(`/api/restaurants${storeParam}`, { headers: authHeaders })
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         const list = Array.isArray(data) ? data : (data?.restaurants || [])
@@ -75,13 +82,13 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
         }
       })
       .catch(console.error)
-  }, [storeId])
+  }, [storeId, authHeaders])
 
   // Fetch all store products & categories so local media gallery shows ALL photos in system
   useEffect(() => {
     Promise.all([
-      fetch('/api/products?limit=2000').then(r => r.ok ? r.json() : null),
-      fetch('/api/categories').then(r => r.ok ? r.json() : null)
+      fetch('/api/products?limit=2000', { headers: authHeaders }).then(r => r.ok ? r.json() : null),
+      fetch('/api/categories', { headers: authHeaders }).then(r => r.ok ? r.json() : null)
     ]).then(([prodData, catData]) => {
       if (prodData?.products) setGlobalProducts(prodData.products)
       if (catData) {
@@ -194,7 +201,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
         // Edit existing dish — use restaurant-dashboard API for proper scoping
         const res = await fetch(`/api/restaurant-dashboard/products/${editingDish.id}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders,
           body: JSON.stringify({
             name: dishForm.name,
             price: parseFloat(dishForm.price),
@@ -215,7 +222,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
         // Add new dish — use restaurant-dashboard API which handles restaurantId properly
         const res = await fetch('/api/restaurant-dashboard/products', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders,
           body: JSON.stringify({
             name: dishForm.name,
             price: parseFloat(dishForm.price),
@@ -290,7 +297,10 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
           params.set('storeId', storeId)
         }
       }
-      const res = await fetch(`/api/restaurant-dashboard/products?${params.toString()}`, { cache: 'no-store' })
+      const res = await fetch(`/api/restaurant-dashboard/products?${params.toString()}`, { 
+        cache: 'no-store',
+        headers: authHeaders,
+      })
       if (!res.ok) throw new Error('Failed to fetch catalog')
       const data = await res.json()
       setProducts(data.products || [])
@@ -317,7 +327,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
     try {
       const res = await fetch(`/api/restaurant-dashboard/products/${product.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ isAvailable: newStatus }),
       })
       if (res.ok) {
@@ -341,7 +351,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
     try {
       const res = await fetch(`/api/restaurant-dashboard/products/${product.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ stock: newStock }),
       })
       if (res.ok) {
@@ -370,7 +380,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
     try {
       const res = await fetch(`/api/restaurant-dashboard/products/${product.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ price: priceNum, mrp: mrpNum }),
       })
       if (res.ok) {

@@ -309,6 +309,8 @@ export function AdminDashboard({
     selectedHubId,
     sessionUserId,
     sessionUserRole,
+    sessionUserEmail,
+    sessionUserPhone,
     activeTab,
   })
 
