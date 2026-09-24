@@ -75,7 +75,7 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
-    const apiDest = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://fastkiran-backend-production.up.railway.app';
+    const apiDest = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://fastkirana-production-0cdd.up.railway.app';
     return {
       beforeFiles: [
         // Python AI microservices & WebSockets
@@ -258,6 +258,51 @@ const nextConfig: NextConfig = {
         {
           source: '/api/admin/reviews',
           destination: `${apiDest}/api/admin/reviews`,
+        },
+        // Admin Stores Hub Management -> FastAPI
+        {
+          source: '/api/admin/stores/:path*',
+          destination: `${apiDest}/api/admin/stores/:path*`,
+        },
+        {
+          source: '/api/admin/stores',
+          destination: `${apiDest}/api/admin/stores`,
+        },
+        // Admin Products & Catalog Management -> FastAPI
+        {
+          source: '/api/admin/products/:path*',
+          destination: `${apiDest}/api/admin/products/:path*`,
+        },
+        {
+          source: '/api/admin/products',
+          destination: `${apiDest}/api/admin/products`,
+        },
+        // Admin Users & Staff Management -> FastAPI
+        {
+          source: '/api/admin/users/:path*',
+          destination: `${apiDest}/api/admin/users/:path*`,
+        },
+        {
+          source: '/api/admin/users',
+          destination: `${apiDest}/api/admin/users`,
+        },
+        // Admin Order Management & Actions -> FastAPI
+        {
+          source: '/api/admin/orders/:path*',
+          destination: `${apiDest}/api/admin/orders/:path*`,
+        },
+        {
+          source: '/api/admin/orders',
+          destination: `${apiDest}/api/admin/orders`,
+        },
+        // Online Payment Gateway (Cashfree) -> FastAPI
+        {
+          source: '/api/payment/cashfree/:path*',
+          destination: `${apiDest}/api/payment/cashfree/:path*`,
+        },
+        {
+          source: '/api/payments/cashfree/:path*',
+          destination: `${apiDest}/api/payments/cashfree/:path*`,
         },
       ],
       afterFiles: [],
