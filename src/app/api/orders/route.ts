@@ -710,19 +710,24 @@ export async function POST(request: NextRequest) {
               couponId = coupon.id
               if (coupon.discountType === 'BOGO') {
                 const maxFreeCap = coupon.maxFreeItems || 3
-                let rItems = items.filter((item: any) => {
+                let allRestaurantItems = items.filter((item: any) => {
                   const dbProduct = dbProducts.find((p) => p.id === item.product.id.split('_')[0])
                   return dbProduct && dbProduct.restaurantId === coupon.restaurantId
                 })
 
-                if (coupon.menuSection) {
+                let bogoItems = allRestaurantItems
+                if (coupon.bogoDishId) {
+                  bogoItems = bogoItems.filter((item: any) => {
+                    return item.product.id.split('_')[0] === coupon.bogoDishId
+                  })
+                } else if (coupon.menuSection) {
                   const secFilters = coupon.menuSection
                     .split(',')
                     .map((s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]/g, ''))
                     .filter(Boolean)
 
                   if (secFilters.length > 0) {
-                    rItems = rItems.filter((item: any) => {
+                    bogoItems = bogoItems.filter((item: any) => {
                       const dbProduct = dbProducts.find((p) => p.id === item.product.id.split('_')[0])
                       const name = `${dbProduct?.name || ''} ${item.product?.name || ''}`.toLowerCase().replace(/[^a-z0-9]/g, '')
                       const tags = (dbProduct?.tags || []).map((t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, ''))
@@ -742,14 +747,17 @@ export async function POST(request: NextRequest) {
                   const triggerVariant = (coupon.triggerVariant || 'large').toLowerCase().trim()
                   const rewardVariant = (coupon.rewardVariant || 'small').toLowerCase().trim()
 
-                  const triggerItems = rItems.filter((it: any) => {
+                  const triggerItems = bogoItems.filter((it: any) => {
                     return getItemVarText(it).includes(triggerVariant)
                   })
                   const totalTriggerQty = triggerItems.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0)
 
-                  const rewardItems = rItems.filter((it: any) => {
-                    return getItemVarText(it).includes(rewardVariant)
-                  })
+                  const rewardPool = coupon.bogoDishId ? bogoItems : (coupon.menuSection ? bogoItems : allRestaurantItems)
+                  const rewardItems = coupon.defaultFreeDishId
+                    ? allRestaurantItems.filter((it: any) => it.product.id.split('_')[0] === coupon.defaultFreeDishId)
+                    : rewardPool.filter((it: any) => {
+                        return getItemVarText(it).includes(rewardVariant)
+                      })
 
                   const allowedFree = Math.min(totalTriggerQty, maxFreeCap)
                   let bogoSavings = 0
@@ -782,20 +790,31 @@ export async function POST(request: NextRequest) {
                     combinedDiscount = Math.min(combinedDiscount, coupon.maxDiscount)
                   }
                 } else if (coupon.bogoType === 'FREE_GIFT') {
-                  const minTriggerQty = parseInt(coupon.triggerVariant || '2') || 2
-                  const totalTriggerQty = rItems.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0)
+                  const rawTrigger = (coupon.triggerVariant || '').trim()
+                  const sizeMatch = rawTrigger.match(/\b(medium|large|small|regular|half|full)\b/i)
+                  const triggerSize = sizeMatch ? sizeMatch[1].toLowerCase() : null
+
+                  const numMatch = rawTrigger.match(/\b\d+\b/)
+                  const minTriggerQty = numMatch ? parseInt(numMatch[0]) : (rawTrigger && !sizeMatch ? parseInt(rawTrigger) || 1 : 1)
+
+                  const qualifyingTriggerItems = triggerSize
+                    ? bogoItems.filter((it: any) => getItemVarText(it).includes(triggerSize))
+                    : bogoItems
+
+                  const totalTriggerQty = qualifyingTriggerItems.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0)
 
                   if (totalTriggerQty >= minTriggerQty) {
                     const rewardTag = (coupon.rewardVariant || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
                     // Find if gift item is in order items
-                    const giftInOrder = rItems.find((it: any) => {
+                    const giftInOrder = allRestaurantItems.find((it: any) => {
                       const baseId = it.product.id.split('_')[0]
                       if (coupon.defaultFreeDishId && baseId === coupon.defaultFreeDishId) return true
                       if (rewardTag) {
                         const name = String(it.product?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')
                         const tags = (it.product?.tags || []).map((t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, ''))
                         const mSec = String((it.product as any)?.menuSection || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-                        return name.includes(rewardTag) || tags.some((t: string) => t.includes(rewardTag)) || mSec.includes(rewardTag)
+                        const vText = getItemVarText(it)
+                        return name.includes(rewardTag) || tags.some((t: string) => t.includes(rewardTag)) || mSec.includes(rewardTag) || vText.includes(rewardTag)
                       }
                       return false
                     })
@@ -823,14 +842,14 @@ export async function POST(request: NextRequest) {
                     }
                   }
                 } else if (coupon.bogoType === 'CHEAPEST_FREE') {
-                  let eligibleRItems = rItems
+                  let eligibleRItems = bogoItems
                   if (coupon.menuSection) {
                     const secFilters = coupon.menuSection
                       .split(',')
                       .map((s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]/g, ''))
                       .filter(Boolean)
                     if (secFilters.length > 0) {
-                      eligibleRItems = rItems.filter((it: any) => {
+                      eligibleRItems = allRestaurantItems.filter((it: any) => {
                         const dbProduct = dbProducts.find((p) => p.id === it.product.id.split('_')[0])
                         const mSec = String(it.product.menuSection || (it as any).menuSection || '').toLowerCase().replace(/[^a-z0-9]/g, '')
                         const tags = (dbProduct?.tags || it.product.tags || []).map((t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, ''))
@@ -873,9 +892,9 @@ export async function POST(request: NextRequest) {
                   }
                 } else {
                   // SAME_ITEM BOGO
-                  let eligibleItems = rItems
+                  let eligibleItems = bogoItems
                   if (coupon.bogoDishId) {
-                    eligibleItems = rItems.filter((it: any) => it.product.id.split('_')[0] === coupon.bogoDishId)
+                    eligibleItems = bogoItems.filter((it: any) => it.product.id.split('_')[0] === coupon.bogoDishId)
                   }
                   let totalBogo = 0
                   let freeUnlocked = 0
@@ -1143,8 +1162,8 @@ export async function POST(request: NextRequest) {
         const orderItemsData = orderInfo.items.map((item: any) => {
           const rawId = item.product.id || ''
           const isVariant = rawId.includes('_')
-          const [_, variantNameFromId] = isVariant ? rawId.split('_') : [rawId, null]
-          const variantName = item.selectedVariant || variantNameFromId
+          const variantNameFromId = isVariant ? rawId.split('_')[1] : null
+          const variantName = item.selectedVariant || variantNameFromId || (item.dbProduct?.unit && item.dbProduct.unit.trim().length > 0 ? item.dbProduct.unit.trim() : null)
           
           let itemPrice = item.dbProduct.price
           let itemCostPrice = item.dbProduct.costPrice || 0

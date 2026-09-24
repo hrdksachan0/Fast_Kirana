@@ -106,6 +106,7 @@ export async function GET(
       {
         productId: string
         name: string
+        unit: string
         categoryName: string
         barcode: string | null
         unitsSold: number
@@ -128,6 +129,7 @@ export async function GET(
       itemSalesSummary[prod.id] = {
         productId: prod.id,
         name: prod.name,
+        unit: prod.unit || '',
         categoryName: prod.category?.name || 'Uncategorized',
         barcode: prod.barcode || null,
         unitsSold: 0,
@@ -194,6 +196,7 @@ export async function GET(
         return {
           id: p.id,
           name: p.name,
+          unit: p.unit || '',
           barcode: p.barcode,
           stock,
           minStock,
@@ -239,6 +242,7 @@ export async function GET(
       products: products.map((p) => ({
         id: p.id,
         name: p.name,
+        unit: p.unit || '',
         barcode: p.barcode,
         price: p.price,
         mrp: p.mrp,

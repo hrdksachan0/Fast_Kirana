@@ -140,9 +140,14 @@ export async function POST(request: NextRequest) {
           return ` (${parts.join(', ')})`
         }
 
-        // If coupon has restricted menu section(s) (e.g. "pizza", "burger,sandwich")
+        // If coupon has a specific trigger dish or restricted menu section(s)
         let bogoItems = restaurantItems
-        if (coupon.menuSection) {
+        if (coupon.bogoDishId) {
+          bogoItems = bogoItems.filter((it: any) => {
+            const baseId = String(it.id || it.productId || '').split('_')[0]
+            return baseId === coupon.bogoDishId
+          })
+        } else if (coupon.menuSection) {
           const secFilters = coupon.menuSection
             .split(',')
             .map((s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]/g, ''))
@@ -245,14 +250,33 @@ export async function POST(request: NextRequest) {
           }
         } 
         else if (coupon.bogoType === 'FREE_GIFT') {
-          // Trigger Requirement: e.g. Buy 2 items from restricted menu section (e.g. 2 Pizzas)
-          const minTriggerQty = parseInt(coupon.triggerVariant || '2') || 2
-          const totalTriggerQty = bogoItems.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0)
+          // Parse required size variant (e.g. "Medium", "Large") vs required quantity (e.g. 1, 2)
+          const rawTrigger = (coupon.triggerVariant || '').trim()
+          const sizeMatch = rawTrigger.match(/\b(medium|large|small|regular|half|full)\b/i)
+          const triggerSize = sizeMatch ? sizeMatch[1].toLowerCase() : null
+
+          const numMatch = rawTrigger.match(/\b\d+\b/)
+          const minTriggerQty = numMatch ? parseInt(numMatch[0]) : (rawTrigger && !sizeMatch ? parseInt(rawTrigger) || 1 : 1)
+
+          // Filter bogoItems by required size if specified
+          const qualifyingTriggerItems = triggerSize
+            ? bogoItems.filter((it: any) => getItemVariantText(it).includes(triggerSize))
+            : bogoItems
+
+          const totalTriggerQty = qualifyingTriggerItems.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0)
 
           if (totalTriggerQty < minTriggerQty) {
+            let reqDishName = ''
+            if (coupon.bogoDishId) {
+              try {
+                const bDish = await prisma.product.findUnique({ where: { id: coupon.bogoDishId }, select: { name: true } })
+                reqDishName = bDish ? ` ${bDish.name}` : ''
+              } catch {}
+            }
+            const sizeStr = triggerSize ? ` ${triggerSize.toUpperCase()}` : ''
             const secName = formatSecNames(coupon.menuSection)
             return NextResponse.json({
-              error: `Add at least ${minTriggerQty} dishes${secName} from ${restaurant?.name || 'this restaurant'} to unlock your FREE GIFT! 🎁`,
+              error: `Add at least ${minTriggerQty}${sizeStr}${reqDishName}${secName} from ${restaurant?.name || 'this restaurant'} to unlock your FREE GIFT! 🎁`,
             }, { status: 400 })
           }
 
@@ -269,7 +293,7 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Check if reward section is specified (e.g. rewardVariant="sandwich" or "chocolava")
+          // Check if reward section or variant is specified (e.g. rewardVariant="burger", "sandwich", "small")
           const rewardTag = (coupon.rewardVariant || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
 
           // Check if customer already added the free gift dish or an item from the reward section
@@ -280,7 +304,8 @@ export async function POST(request: NextRequest) {
               const name = String(it.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')
               const tags = (it.tags || []).map((t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, ''))
               const mSec = String(it.menuSection || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-              return name.includes(rewardTag) || tags.some((t: string) => t.includes(rewardTag)) || mSec.includes(rewardTag)
+              const vText = getItemVariantText(it)
+              return name.includes(rewardTag) || tags.some((t: string) => t.includes(rewardTag)) || mSec.includes(rewardTag) || vText.includes(rewardTag)
             }
             return false
           })
@@ -308,7 +333,7 @@ export async function POST(request: NextRequest) {
             nudgeMessage = `Congratulations! You unlocked FREE ${giftDish.name}! 🎁`
             discountAmount = 0
           } else {
-            const giftLabel = coupon.rewardVariant || 'Free Gift Dish'
+            const giftLabel = coupon.rewardVariant ? coupon.rewardVariant.toUpperCase() : 'Free Gift Dish'
             nudgeMessage = `Add any ${giftLabel} to get it 100% FREE! 🎁`
             discountAmount = 0
           }

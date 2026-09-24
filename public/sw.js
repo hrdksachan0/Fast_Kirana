@@ -1,11 +1,12 @@
-const CACHE_NAME = 'fastkirana-v3'
+const CACHE_NAME = 'fastkirana-v4'
 const STATIC_ASSETS = [
   '/',
   '/offline',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
-  '/brand/fastkirana_app_icon.png'
+  '/brand/fastkirana_app_icon.png',
+  '/sounds/order_chime.mp3'
 ]
 
 self.addEventListener('install', (event) => {
@@ -32,8 +33,13 @@ self.addEventListener('fetch', (event) => {
   
   if (event.request.method !== 'GET') return
 
-  // Only cache request from the same origin or Cloudinary image assets
-  if (url.origin !== self.location.origin && !url.href.includes('cloudinary.com')) return
+  const isMediaCDN = 
+    url.origin === self.location.origin ||
+    url.href.includes('cloudinary.com') ||
+    url.href.includes('supabase.co') ||
+    url.href.includes('images.unsplash.com')
+
+  if (!isMediaCDN) return
 
   // 1. API Calls (Network-First, fallback to cached copy when offline)
   if (url.pathname.startsWith('/api/') && !url.pathname.includes('/auth/')) {
@@ -55,14 +61,17 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // 2. Static JS/CSS Assets & Images (Cache-First, falling back to Network)
-  const isStaticAsset = 
+  // 2. Static JS/CSS Assets, Sounds & Multi-CDN Images (Cache-First, falling back to Network)
+  const isStaticOrMedia = 
     url.pathname.startsWith('/_next/static/') || 
     url.pathname.includes('/icons/') || 
-    url.pathname.match(/\.(png|jpg|jpeg|gif|webp|svg|ico|woff2)$/i) || 
-    url.href.includes('cloudinary.com')
+    url.pathname.includes('/sounds/') || 
+    url.pathname.match(/\.(png|jpg|jpeg|gif|webp|svg|ico|woff2|mp3)$/i) || 
+    url.href.includes('cloudinary.com') ||
+    url.href.includes('supabase.co') ||
+    url.href.includes('images.unsplash.com')
 
-  if (isStaticAsset) {
+  if (isStaticOrMedia) {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
         if (cachedResponse) return cachedResponse
@@ -104,20 +113,34 @@ self.addEventListener('fetch', (event) => {
   }
 })
 
-// Web Push Notification Listeners (Preserved)
+// Web Push Notification Listeners (With Live Stage Alerts & Vibration)
 self.addEventListener('push', (event) => {
   if (!event.data) return;
   try {
     const payload = event.data.json();
-    const title = payload.title || 'FastKirana Update';
+    const title = payload.title || 'FastKirana Express ⚡';
+    const isOrderUpdate = Boolean(
+      payload.data?.orderId ||
+      payload.data?.status ||
+      payload.data?.type === 'ORDER_STATUS_UPDATE' ||
+      title.includes('Order') ||
+      title.includes('Rider') ||
+      title.includes('Arriving')
+    );
+
     const options = {
       body: payload.body,
       icon: payload.icon || '/icons/icon-192.png',
       badge: payload.badge || '/icons/badge.png',
-      tag: payload.tag || undefined,
-      renotify: payload.tag ? true : false,
+      tag: payload.tag || (payload.data?.orderId ? `order_${payload.data.orderId}` : undefined),
+      renotify: true,
       data: payload.data || {},
-      vibrate: [100, 50, 100],
+      vibrate: isOrderUpdate ? [200, 100, 200, 100, 300] : [100, 50, 100],
+      sound: '/sounds/order_chime.mp3',
+      actions: isOrderUpdate ? [
+        { action: 'track', title: '📍 Track Live' },
+        { action: 'close', title: 'Dismiss' }
+      ] : []
     };
     event.waitUntil(self.registration.showNotification(title, options));
   } catch (err) {

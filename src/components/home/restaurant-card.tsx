@@ -34,9 +34,6 @@ export function RestaurantCard({ restaurant, index = 0 }: RestaurantCardProps) {
     ? restaurant.cuisineTags.slice(0, 3).join(', ')
     : 'North Indian, Fast Food, Biryani'
 
-  // Approximate cost
-  const costForOne = '₹200 for one'
-
   // Image resolution
   const effectiveImage = restaurant.bannerUrl || 
     (restaurant.slug?.includes('as-') || restaurant.name?.toLowerCase().includes('a.s') 
@@ -139,10 +136,9 @@ export function RestaurantCard({ restaurant, index = 0 }: RestaurantCardProps) {
                 </div>
               </div>
 
-              {/* Row 2: Cuisines + Price for One */}
-              <div className="flex items-center justify-between text-xs sm:text-[13px] text-zinc-500 dark:text-zinc-400 font-medium mt-1">
-                <span className="truncate pr-2">{cuisinesList}</span>
-                <span className="shrink-0 text-zinc-600 dark:text-zinc-300 font-semibold">{costForOne}</span>
+              {/* Row 2: Cuisines */}
+              <div className="text-xs sm:text-[13px] text-zinc-500 dark:text-zinc-400 font-medium mt-1 truncate">
+                {cuisinesList}
               </div>
 
               {/* Row 3: Location / Area */}

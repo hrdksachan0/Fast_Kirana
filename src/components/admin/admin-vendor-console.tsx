@@ -68,6 +68,7 @@ interface VendorPayout {
 interface ItemizedSale {
   productId: string
   name: string
+  unit?: string
   categoryName: string
   barcode: string | null
   unitsSold: number
@@ -80,6 +81,7 @@ interface ItemizedSale {
 interface LowStockItem {
   id: string
   name: string
+  unit?: string
   barcode: string | null
   stock: number
   minStock: number
@@ -90,6 +92,7 @@ interface LowStockItem {
 interface ProductItem {
   id: string
   name: string
+  unit?: string
   barcode: string | null
   price: number
   mrp: number
@@ -448,6 +451,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
       const qty = orderQuantities[item.id] || Math.max(10, item.minStock * 2 - item.stock)
       return {
         name: item.name,
+        unit: item.unit || '',
         qty,
         stock: item.stock,
       }
@@ -470,7 +474,8 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
     message += `*Items Required Immediately:*\n`
 
     itemsToOrder.forEach((item, index) => {
-      message += `${index + 1}. *${item.name}* - *Qty: ${item.qty}* (Current Stock: ${item.stock})\n`
+      const unitLabel = item.unit ? ` (${item.unit})` : ''
+      message += `${index + 1}. *${item.name}${unitLabel}* - *Qty: ${item.qty}* (Current Stock: ${item.stock})\n`
     })
 
     message += `\nPlease confirm dispatch time and estimated invoice. Thank you!\n`
@@ -1035,7 +1040,16 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
                   ) : (
                     filteredSales.map((item) => (
                       <tr key={item.productId} className="hover:bg-muted/30 transition">
-                        <td className="p-3 font-bold text-text-primary">{item.name}</td>
+                        <td className="p-3 font-bold text-text-primary">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span>{item.name}</span>
+                            {item.unit && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-muted text-text-secondary border border-border">
+                                {item.unit}
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="p-3 text-text-secondary">{item.categoryName}</td>
                         <td className="p-3 font-mono text-[11px] text-text-muted">
                           {item.barcode || '—'}
@@ -1212,7 +1226,14 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
                                 </div>
                               )}
                               <div>
-                                <span className="font-bold text-text-primary block">{prod.name}</span>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-bold text-text-primary">{prod.name}</span>
+                                  {prod.unit && (
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-muted text-text-secondary border border-border">
+                                      {prod.unit}
+                                    </span>
+                                  )}
+                                </div>
                                 <span className="text-[10px] text-text-muted font-mono">ID: {prod.id.slice(0, 10)}...</span>
                               </div>
                             </div>
@@ -1330,7 +1351,16 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
 
                       return (
                         <tr key={item.id} className="hover:bg-muted/30 transition">
-                          <td className="p-3 font-bold text-text-primary">{item.name}</td>
+                          <td className="p-3 font-bold text-text-primary">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span>{item.name}</span>
+                              {item.unit && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-muted text-text-secondary border border-border">
+                                  {item.unit}
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td className="p-3 font-mono text-[11px] text-text-muted">
                             {item.barcode || '—'}
                           </td>

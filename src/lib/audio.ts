@@ -18,7 +18,6 @@ export function playCartPop() {
   if (!ctx) return
 
   try {
-    // Resume context if suspended (browser security autoplays policy)
     if (ctx.state === 'suspended') {
       ctx.resume()
     }
@@ -31,12 +30,10 @@ export function playCartPop() {
 
     osc.type = 'sine'
     
-    // Quick frequency sweep upwards to make it feel bouncy
     const startTime = ctx.currentTime
     osc.frequency.setValueAtTime(140, startTime)
     osc.frequency.exponentialRampToValueAtTime(520, startTime + 0.1)
 
-    // Volume envelope: fast attack, quick decay
     gain.gain.setValueAtTime(0, startTime)
     gain.gain.linearRampToValueAtTime(0.25, startTime + 0.015)
     gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.1)
@@ -62,7 +59,6 @@ export function playSuccessChime() {
 
     const startTime = ctx.currentTime
 
-    // We play two overlapping tones for harmony (C5 and G5)
     const playTone = (freq: number, delay: number, duration: number, volume: number) => {
       const osc = ctx.createOscillator()
       const gain = ctx.createGain()
@@ -70,7 +66,7 @@ export function playSuccessChime() {
       osc.connect(gain)
       gain.connect(ctx.destination)
 
-      osc.type = 'triangle' // Softer, warmer harmonic content than sine
+      osc.type = 'triangle'
       osc.frequency.setValueAtTime(freq, startTime + delay)
 
       gain.gain.setValueAtTime(0, startTime + delay)
@@ -81,7 +77,6 @@ export function playSuccessChime() {
       osc.stop(startTime + delay + duration + 0.05)
     }
 
-    // Beautiful major fifth interval: C5 (523.25 Hz) then G5 (783.99 Hz)
     playTone(523.25, 0, 0.4, 0.15)
     playTone(783.99, 0.08, 0.5, 0.15)
   } catch {
@@ -121,7 +116,6 @@ export function playNotificationChime() {
       osc.stop(startTime + delay + duration + 0.05)
     }
 
-    // Ascending arpeggio (E5 -> A5)
     playTone(659.25, 0, 0.3, 0.12)
     playTone(880.00, 0.07, 0.4, 0.12)
   } catch {
@@ -175,10 +169,29 @@ export function playKitchenAlarmChime() {
       osc.stop(startTime + delay + duration + 0.05)
     }
 
-    // Loud repeating chime pattern: G5 (783.99 Hz) and C6 (1046.50 Hz)
     playTone(783.99, 0, 0.35, 0.25)
     playTone(1046.50, 0.12, 0.45, 0.25)
   } catch {
     console.warn('Web Audio Playback failed')
+  }
+}
+
+/**
+ * Play the custom FastKirana order stage chime file or synthesized fallback
+ */
+export function playOrderChime() {
+  if (typeof window === 'undefined') return
+  try {
+    const audio = new Audio('/sounds/order_chime.mp3')
+    audio.volume = 0.8
+    const playPromise = audio.play()
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        // Fallback to synthesized sweet chime if audio file is blocked by browser
+        playSuccessChime()
+      })
+    }
+  } catch {
+    playSuccessChime()
   }
 }

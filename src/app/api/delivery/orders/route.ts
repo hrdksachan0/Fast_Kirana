@@ -114,7 +114,14 @@ export async function GET(request: NextRequest) {
 
     const [allItems, allUsers, allAddresses, allRestaurants] = await Promise.all([
       allOrderIds.length > 0
-        ? prisma.orderItem.findMany({ where: { orderId: { in: allOrderIds } } })
+        ? prisma.orderItem.findMany({
+            where: { orderId: { in: allOrderIds } },
+            include: {
+              product: {
+                select: { unit: true }
+              }
+            }
+          })
         : [],
       userIds.length > 0
         ? prisma.user.findMany({ where: { id: { in: userIds as string[] } }, select: { id: true, name: true, phone: true } })
